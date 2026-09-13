@@ -5,6 +5,12 @@ dist-bin/
 coverage/
 .env
 .env.local
+# Backup de `.env` — o `bootstrap` e o instalador escrevem cópias datadas antes
+# de mexer no arquivo, e uma delas chegou a ser COMMITADA (`.env.bak-2026-09-08`,
+# entrou num commit de merge por `git add -A`). O conteúdo era o literal de
+# exemplo, mas o arquivo é por construção uma cópia de segredo local.
+.env.bak*
+.env.*.bak
 
 # Elixir (apps/engine tem seu próprio .gitignore mais específico)
 apps/engine/_build/

@@ -93,6 +93,7 @@ const sidebars: SidebarsConfig = {
         'reference/internal-api',
         'reference/scripts',
         'reference/rulesets',
+        'reference/brb',
         'security-surface',
         {
           type: 'category',
@@ -123,6 +124,9 @@ const sidebars: SidebarsConfig = {
         'explanation/gates',
         'explanation/auditoria-fluxo-vs-codigo',
         'explanation/historico-de-fases',
+        'explanation/fase-28-pasta-do-usuario',
+        'explanation/fase-29-instalacao-de-uma-linha',
+        'explanation/fase-30-runner-por-maquina',
       ],
     },
     {

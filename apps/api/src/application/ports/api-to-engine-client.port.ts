@@ -13,9 +13,27 @@ import type { PosturaDeRede } from '../../domain/containers/project-container';
  * pt-BR de propósito — é o vocabulário que atravessa engine/runner desde o
  * ADR 0128/0130, e esta é só mais uma parada da mesma composição, não um
  * contrato novo.
+ *
+ * São DEZ campos, e a contagem importa: `EntradaDeEspecificacao` tem onze, e
+ * o único que não está aqui é `raizDoProjeto`. Esta interface nasceu com NOVE
+ * — sem `projectId` —, e a consequência foi que `container_start_via_runner`
+ * NUNCA subiu container nenhum desde que existe: o runner passa o mapa
+ * recebido direto a `especificacaoValidada`, que exige texto não vazio em
+ * `projectId` e recusava a especificação inteira antes de qualquer `docker
+ * run`. O dado sempre esteve à mão (`SpecDeContainer.projectId`, o MESMO que
+ * o broker recebe por `GET .../container-spec` e por isso funciona) — só não
+ * era copiado. A corrente é testada em
+ * `test/contract/especificacao-de-container-para-runner.contract.spec.ts`,
+ * contra o validador de verdade: campo que falte aqui reprova lá.
  */
 export interface EspecificacaoDeContainerParaRunner {
   workspaceDirName: string;
+  /**
+   * Vira o rótulo `brabo.project.id` do container. Barato de mandar e caro de
+   * esquecer: `especificacaoValidada` o exige como texto não vazio, e sem ele
+   * o runner recusa a especificação inteira.
+   */
+  projectId: string;
   projectSlug: string;
   workspaceId: string;
   imagem: string;
@@ -25,6 +43,15 @@ export interface EspecificacaoDeContainerParaRunner {
   memoriaMb: number;
   pidsLimit: number;
 }
+
+/**
+ * O que o engine respondeu a `disconnectRunnerOfUser` — os quatro desfechos
+ * de `Engine.Runners.Revogacao.derrubar/2`, mais `timeout`. Nenhum deles é
+ * erro: `sem_runner` é o caso normal de quem revoga uma chave órfã, e
+ * `de_outro_dono` é a conexão de outro usuário seguindo de pé, como deve.
+ */
+export type DesfechoDeDesconexaoDeRunner =
+  'derrubado' | 'sem_runner' | 'de_outro_dono' | 'timeout';
 
 export interface ContainerIniciadoViaRunner {
   containerId: string;
@@ -288,4 +315,24 @@ export abstract class ApiToEngineClient {
     projectId: string,
     workspaceDirName: string,
   ): Promise<void>;
+
+  /**
+   * Pede ao engine para DERRUBAR a conexão viva do runner de `userId` neste
+   * projeto (ADR 0147 ponto 6, RN-520). Chamado quando uma chave de
+   * dispositivo é revogada: revogar só impedia ticket NOVO, e o runner já
+   * conectado seguia executando comando aprovado com a chave revogada.
+   *
+   * O alvo é `{projeto, usuário}`, NUNCA `{chave}` — a identidade da
+   * credencial que originou o ticket morre no `PatAuthGuard` e nunca chega ao
+   * socket do engine (ver `Engine.Runners.Revogacao`). Custo declarado: um
+   * runner do MESMO usuário conectado com PAT, ou com outra chave, também
+   * cai; ele reconecta sozinho se a credencial dele ainda valer.
+   *
+   * Devolve o desfecho, para o chamador LOGAR — nunca para decidir nada. Um
+   * `sem_runner` é o caso normal de quem revoga uma chave órfã, não erro.
+   */
+  abstract disconnectRunnerOfUser(
+    projectId: string,
+    userId: string,
+  ): Promise<DesfechoDeDesconexaoDeRunner>;
 }

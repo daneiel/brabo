@@ -598,7 +598,7 @@ event** in `session_events`, with the real actor
 
 | event | actor | when |
 |---|---|---|
-| `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied` |
+| `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied`; `payload.reason` says which rule of `decide()` produced it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | the **user** who clicked | only on manual approval (including `approve_always`) |
 | `proposed_action.denied` | the **user** who refused | with `payload.reason` |
 | `action.executed` / `action.failed` | `system` | execution outcome |
@@ -609,7 +609,14 @@ document describes:
 - **human decision** = count `proposed_action.approved` events;
 - **policy decision** = `proposed_action.created` with `status:
   auto_approved` and an agent actor. It never produces a `.approved`, and
-  so it's never confused with a click.
+  so it's never confused with a click. Its `reason` says **which** rule
+  auto-approved — `agent_autonomy: auto_approve`, a `permissions.json allow`
+  line, the container floor, `escopo: cd dentro da pasta do projeto` — in
+  the exact wording `decide()` uses. Events recorded before
+  [RN-567](../business-rules.md#rn-567) have no `reason`: read that as "not
+  recorded", not as "no rule". The reason names the rule, not the scope
+  root, so ADR 0055 point 7 is only partly covered. The outbox row carries
+  no `reason` — no engine consumer reads it.
 
 This wasn't true until Phase 12e. The first three rows went **only to the
 outbox**, which is transport — drained, marked with `processed_at`, and

@@ -31,7 +31,7 @@ x-app-hardening: &app-hardening
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -58,7 +58,7 @@ services:
   # (senha precisa ter >= 8 caracteres) — a validação não é nossa, mas o
   # efeito é o mesmo, "sem fallback silencioso para um valor público".
   neo4j:
-    image: neo4j:5.26-community
+    image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
     restart: unless-stopped
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-}
@@ -294,9 +294,31 @@ services:
       SECOPS_SCAN_TIMEOUT_MS: ${SECOPS_SCAN_TIMEOUT_MS:-180000}
       # Agentes de fundo desligados por default AQUI (não em dev): este compose
       # existe pra validar as imagens, e Psicólogo/Anamnese começariam a
-      # consumir LLM sem provider configurado. Suba com `true` pra exercitar.
+      # consumir LLM sem provider configurado.
+      #
+      # As quatro `START_*` são CHAVES DE BOOT (`start_*?`, decidem se o
+      # `kickoff/0` do tick é agendado); as `*_ENABLED` são as flags de
+      # PRODUTO (RN-115/RN-117), que decidem se uma rodada NOVA pode
+      # acontecer. São coisas diferentes, e exercitar a Anamnese exige as
+      # DUAS em `true` — o comentário anterior dizia "suba com `true` pra
+      # exercitar" e era falso, porque `ANAMNESE_ENABLED` não estava mapeada
+      # e nunca chegava ao processo (RN-540).
+      #
+      # Só o Psicólogo e a Anamnese são desligados aqui: `START_MODEL_SYNC` e
+      # `START_GATE_RESCUE` repetem o `true` do código porque não gastam LLM
+      # (um sincroniza catálogo, o outro roda uma consulta quase sempre
+      # vazia) — a linha existe para EXISTIR o caminho de desligar, e não
+      # para mudar o que já valia. Os tetos de custo continuam
+      # deliberadamente FORA daqui: têm default bom no `runtime.exs` e este
+      # compose não os aperta.
       START_OUTBOX_DRAIN: ${START_OUTBOX_DRAIN:-false}
       START_ANAMNESE: ${START_ANAMNESE:-false}
+      START_MODEL_SYNC: ${START_MODEL_SYNC:-true}
+      START_GATE_RESCUE: ${START_GATE_RESCUE:-true}
+      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-false}
+      PSYCHOLOGIST_ENABLED: ${PSYCHOLOGIST_ENABLED:-false}
+      GRAPH_TEMPLATES_ENABLED: ${GRAPH_TEMPLATES_ENABLED:-false}
+      GRAPH_INSTRUCTION_TEMPLATES_ENABLED: ${GRAPH_INSTRUCTION_TEMPLATES_ENABLED:-false}
     ports:
       - "${ENGINE_PORT:-4000}:4000"
     volumes:
@@ -315,12 +337,17 @@ services:
   # montado, aqui como no compose de desenvolvimento. Não monte esse socket em
   # nenhum outro.
   #
-  # Sob `profiles`, pelo mesmo motivo do `llm` abaixo e um a mais: nada o chama
-  # para ESCREVER ainda (quem propõe subir container é o Infra Lead, por
-  # `proposed_action`, e isso é outro PR), então tê-lo de pé por padrão daria
-  # acesso ao Docker do host em troca de nada. `docker/smoke.sh` roda sem
-  # profile e portanto não o levanta — o smoke continua provando as MESMAS
-  # três imagens.
+  # Sob `profiles`, e AQUI SÓ — o compose de desenvolvimento deixou de usá-lo
+  # no ADR 0146 (ponto 3). NÃO "uniformize" os dois arquivos: a diferença é a
+  # decisão.
+  #
+  # O que separa os dois lados é o que o socket significa em cada um. Numa
+  # máquina de desenvolvimento, quem sobe a stack já tem o socket (está rodando
+  # `docker compose`), então o broker recebê-lo não concede nada que o operador
+  # já não possua. Aqui é o oposto: o socket é fronteira de privilégio de
+  # verdade, o operador não é o desenvolvedor, e nada na FASE 28 muda o modo
+  # padrão de uma instalação de produção. `docker/smoke.sh` roda sem profile e
+  # portanto não o levanta — o smoke continua provando as MESMAS três imagens.
   #
   #   docker compose -f docker/docker-compose.prod.yml \
   #     --profile container-broker up -d broker
@@ -354,8 +381,10 @@ services:
       # A SEGUNDA raiz do broker: a base dos projetos MONTADOS, também no HOST
       # (ADR 0141). Deriva de `BRABO_PROJECTS_BASE`, que já é um caminho de
       # host por definição — é ela que `api`/`engine` montam por identidade.
-      # Nada a consome ainda; a linha nasce junto com a base para não aparecer
-      # meia release depois, longe do arquivo que a explica.
+      # Consumida desde o ADR 0144 (RN-503): projeto `mounted` sobe container
+      # PELO broker, contra ESTA raiz — a api manda um localizador
+      # DISCRIMINADO, e faltando a raiz o `start` recusa nomeando-a em vez de
+      # cair na outra.
       BRABO_PROJECTS_HOST_BASE: ${BRABO_PROJECTS_HOST_BASE:-${BRABO_PROJECTS_BASE:-}}
     # SEM `ports:` — a primeira camada da contenção. Só a api o alcança, pela
     # rede `broker` (`internal: true`), e nada no host precisa dele.
@@ -369,6 +398,64 @@ services:
     # nomeia com a dica do grupo.
     group_add:
       - "${DOCKER_GID:-999}"
+
+  # Backup e restore contra compose (ADR 0152). A QUINTA imagem do bake nunca
+  # tinha serviço aqui — ela era construída e usada só no k8s, e era por isso
+  # que migrar uma instalação por compose não tinha caminho provado.
+  #
+  # É um JOB, não um daemon: `restart: "no"` (sobrepondo o `unless-stopped` do
+  # bloco comum) e sob `profiles`, então `up -d` e `docker/smoke.sh` continuam
+  # subindo exatamente os mesmos serviços de antes. `docker compose run` liga o
+  # profile do alvo sozinho, então nada precisa ser passado na linha:
+  #
+  #   docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-backup
+  #   docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore
+  #   bash docker/backup/test-restore-compose.sh   # os dois acima, com veredito
+  backup:
+    image: brabo-backup:prod
+    build:
+      context: ..
+      dockerfile: docker/backup/Dockerfile.prod
+    profiles: ["backup"]
+    <<: *app-hardening
+    restart: "no"
+    tmpfs:
+      # HOME e TMPDIR da imagem: o aws-cli escreve `~/.aws` e o pg_restore usa
+      # temporários. É o que permite o rootfs subir read-only.
+      - /tmp
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
+      # Destino em DISCO por padrão — a decisão 2 do ADR 0152. Numa instalação
+      # de máquina única, exigir um bucket para poder migrar é exigir
+      # infraestrutura que o instalador não pede. Para usar S3 em vez de disco,
+      # esvazie esta variável (`BACKUP_DIR=` no .env) e preencha as cinco
+      # `BACKUP_S3_*`; elas só são exigidas quando o destino É o S3.
+      BACKUP_DIR: ${BACKUP_DIR-/backups}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      GIT_REPOS_DIR: /data/git-repos
+    volumes:
+      # O volume que o ADR 0152 descobriu estar sem backup nenhum. MESMO
+      # caminho de `api` e `engine` — é isso que faz `brabo-restore-git`
+      # escrever onde os dois já leem, sem passo de reconciliação.
+      #
+      # Montado RW e não `:ro` porque o mesmo serviço restaura: dois serviços
+      # idênticos, um por sentido, divergiriam na primeira variável nova.
+      # `backup.sh` só LÊ daqui.
+      - git_local_repos:/data/git-repos
+      # Onde os backups caem. O default é um volume nomeado, que serve para
+      # VERIFICAR o backup (`test-restore-compose.sh`) e é o destino ERRADO
+      # para migrar: `docker compose down -v` o apaga junto com o que ele
+      # deveria salvar. Aponte `BRABO_BACKUP_HOST_DIR` para uma pasta do host
+      # antes de qualquer migração — é o que o runbook manda fazer.
+      - ${BRABO_BACKUP_HOST_DIR:-backup_local}:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   web:
     image: brabo-web:prod
@@ -423,7 +510,7 @@ services:
     # sem aviso, e um upgrade silencioso de Ollama já quebrou build antes
     # (mudança de rota da API). Atualizar é decisão manual — subir o número
     # aqui, não seguir `latest`.
-    image: ollama/ollama:0.33.1
+    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
     profiles: ["llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -444,7 +531,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama:0.33.1
+    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
     profiles: ["llm"]
     depends_on:
       ollama:
@@ -477,3 +564,9 @@ volumes:
   # linha de volume de `api`/`engine` continuar válida quando a variável não
   # está definida. Nada escreve dentro dele.
   brabo_projects_base:
+  # Destino dos backups quando `BRABO_BACKUP_HOST_DIR` não aponta para uma pasta
+  # do host (ADR 0152). NÃO entra na classificação dos sete acima: ele não é
+  # dado a proteger, ele É a proteção — e um backup que mora num volume do mesmo
+  # daemon morre com a máquina que deveria salvar. Serve para VERIFICAR
+  # (`test-restore-compose.sh`), nunca para migrar.
+  backup_local:

@@ -7,7 +7,7 @@
  * membros dela são um por módulo do `module_map`, por projeto, e vêm de
  * `agent_areas`/`agent_area_members` (RN-094).
  */
-import type { AreaDef } from './agents';
+import type { AgentKey, AreaDef } from './agents';
 
 export const AREAS: Record<string, AreaDef> = {
   dev: {
@@ -29,3 +29,16 @@ export const AREAS: Record<string, AreaDef> = {
     members: ['infra-workflows'],
   },
 };
+
+/**
+ * Agentes conversacionais SOLO — sem área, sem subagentes (ADR 0109).
+ * `satisfies` e não anotação: um nome fora de `AgentKey` quebra o build
+ * do web, e a lista segue com os literais (nenhum cast alarga o tipo).
+ */
+export const SOLO_CONVERSATIONAL_AGENTS = [
+  'criativo',
+  'po',
+  'arquiteto',
+  'ux-designer',
+  'staff',
+] as const satisfies readonly AgentKey[];

@@ -5,8 +5,14 @@ import { Button } from './ui/Button';
 import { RunnerOnboardingPanel } from './RunnerOnboardingPanel';
 import { Alert } from './ui/Alert';
 import { FolderIcon, FileIcon, ServerIcon, UserIcon } from './ui/icons';
-import { criarFsBrowserViaApi, type FsBrowser, type FsEntrada } from '../lib/fs-browser';
+import {
+  criarFsBrowserViaApi,
+  type FsBrowser,
+  type FsEntrada,
+  type MotivoDeFalhaDoAgente,
+} from '../lib/fs-browser';
 import { connectFsBrowserChannel } from '../lib/fs-browser-channel';
+import { EsperaDoRunner } from './EsperaDoRunner';
 import styles from './FolderBrowserModal.module.css';
 
 /**
@@ -40,6 +46,7 @@ interface ResultadoListagem {
   path: string;
   entradas: FsEntrada[];
   erro?: string;
+  motivo?: MotivoDeFalhaDoAgente;
   arquivos?: number;
   simbolicos?: number;
   truncado?: boolean;
@@ -85,6 +92,27 @@ function segmentosDoPath(path: string): { rotulo: string; caminho: string }[] {
  * `origem` decide são só as três coisas que MUDAM de verdade: qual fábrica
  * chamar, quais atalhos oferecer e se `RunnerOnboardingPanel` faz sentido.
  *
+ * ## De QUEM é o disco, dito (RN-533)
+ *
+ * As duas origens leem discos DIFERENTES, e nada na tela dizia isso — o único
+ * sinal era o rótulo de um atalho ("Base de projetos" × "Pasta pessoal"), que
+ * nomeia um lugar e não uma máquina. Quem estivesse escolhendo onde o projeto
+ * vai morar podia navegar a base do SERVIDOR achando que via o próprio
+ * computador, e só descobriria pelo conteúdo. Agora cada origem abre com uma
+ * linha dizendo de onde a lista veio, e a diferença é justamente o que o
+ * assistente decide quando pergunta o modo de execução.
+ *
+ * ## Quando o agente local não responde (RN-533)
+ *
+ * O motivo vem DISCRIMINADO do transporte (`MotivoDeFalhaDoAgente`), nunca de
+ * um `includes` numa frase em pt-BR do engine, e os dois não colapsam:
+ * `sem-agente` é o servidor AFIRMANDO que não há runner, `sem-resposta` é
+ * ninguém ter respondido a tempo — que não prova nada, e a tela diz isso
+ * (RN-088/RN-468). Os dois levam ao mesmo lugar útil: a `EsperaDoRunner` da
+ * RN-474 — três estados e TETO, reusada e não reescrita —, que refaz a
+ * listagem sozinha quando o agente aparece, e o `RunnerOnboardingPanel` logo
+ * abaixo, com a espera dele desligada para não haver duas.
+ *
  * O painel de detalhes só mostra o que dá pra derivar client-side: nome,
  * tipo, e a contagem de itens quando o item exibido é a pasta JÁ ABERTA
  * (nunca de uma pasta só selecionada, que exigiria um fetch a mais). O
@@ -104,6 +132,10 @@ export function FolderBrowserModal({
   const [entradas, setEntradas] = useState<FsEntrada[] | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  // POR QUE a leitura falhou, quando o transporte sabe dizer. `null` é "não
+  // falhou, ou falhou de um jeito que não é sobre o agente local" — o
+  // transporte de api nunca preenche.
+  const [motivo, setMotivo] = useState<MotivoDeFalhaDoAgente | null>(null);
   // Nome do item SELECIONADO (um clique) dentro da listagem atual — sempre
   // uma pasta, porque arquivos não são selecionáveis. `null` quando nada
   // está selecionado: aí o "alvo" é a pasta aberta no momento.
@@ -132,9 +164,11 @@ export function FolderBrowserModal({
     );
     if (resultado.erro) {
       setErro(resultado.erro);
+      setMotivo(resultado.motivo ?? null);
       setEntradas(null);
     } else {
       setErro(null);
+      setMotivo(null);
       setEntradas(resultado.entradas);
     }
   }, []);
@@ -145,6 +179,7 @@ export function FolderBrowserModal({
       if (!canal) return;
       setCarregando(true);
       setErro(null);
+      setMotivo(null);
 
       if (alvo) {
         aplicar(await canal.listarDiretorio(alvo));
@@ -155,6 +190,7 @@ export function FolderBrowserModal({
       if (inicial.erro || !inicial.path) {
         setCarregando(false);
         setErro(inicial.erro ?? t('folderBrowserModal.initialDirError'));
+        setMotivo(inicial.motivo ?? null);
         return;
       }
       aplicar(await canal.listarDiretorio(inicial.path));
@@ -185,9 +221,10 @@ export function FolderBrowserModal({
   }, [origem.tipo, ancora]);
 
   // Só faz sentido no transporte do runner: pelo caminho da api não existe
-  // runner nenhum para onboardar, e a mensagem de recusa dela é outra.
-  const semRunner =
-    origem.tipo === 'runner' && (erro?.includes('Nenhum runner conectado') ?? false);
+  // agente local para onboardar, e a mensagem de recusa dela é outra (ela
+  // ENSINA — nomeia a base e diz o que fazer). Por isso o transporte de api
+  // nunca preenche `motivo`, e este bloco nunca é alcançado por ele.
+  const agenteNaoRespondeu = origem.tipo === 'runner' && motivo !== null;
 
   // O "alvo" que o botão final usa: o item selecionado (se houver — sempre
   // pasta), senão a pasta atualmente aberta.
@@ -205,18 +242,60 @@ export function FolderBrowserModal({
 
   return (
     <Modal title={t('folderBrowserModal.title')} icon={<FolderIcon size={16} />} onClose={onClose} size="full">
-      {origem.tipo === 'runner' && semRunner && (
-        <RunnerOnboardingPanel
-          projectId={origem.projectId}
-          mensagem={erro ?? undefined}
-          onRetry={() => void carregar(path || caminhoInicial)}
-          retrying={carregando}
-        />
+      {origem.tipo === 'runner' && agenteNaoRespondeu && (
+        <div className={styles.corpo}>
+          <p className={styles.origemNota}>{t('folderBrowserModal.origemRunner')}</p>
+
+          {/*
+            "Ninguém respondeu" NÃO é "não há agente" (RN-088/RN-468). O
+            servidor afirmando que não há runner conectado é um fato e vem
+            escrito na mensagem do próprio painel; um teto estourado é
+            ignorância, e ela é dita como ignorância — sem esta linha os dois
+            desfechos ficariam indistinguíveis para quem lê a tela.
+          */}
+          {motivo === 'sem-resposta' && (
+            <p className={styles.origemNota}>{t('folderBrowserModal.semRespostaRessalva')}</p>
+          )}
+
+          {/*
+            A espera da RN-474, reusada e não reescrita: mesmos três estados,
+            mesmo teto, mesma redação. Quando o carimbo muda — o agente
+            conectou e reportou a pasta —, ela refaz a listagem sozinha, em
+            vez de deixar a pessoa clicando "Já instalei, conectar" para
+            descobrir. `mostrarEspera={false}` abaixo é o que impede a
+            segunda espera dentro do painel.
+          */}
+          <EsperaDoRunner
+            projectId={origem.projectId}
+            onConfirmado={() => void carregar(path || caminhoInicial)}
+          />
+
+          <RunnerOnboardingPanel
+            projectId={origem.projectId}
+            mensagem={erro ?? undefined}
+            onRetry={() => void carregar(path || caminhoInicial)}
+            retrying={carregando}
+            mostrarEspera={false}
+          />
+        </div>
       )}
 
-      {!semRunner && (
+      {!agenteNaoRespondeu && (
         <div className={styles.corpo}>
-          {erro && !semRunner && (
+          {/*
+            De QUEM é o disco que esta lista descreve. Duas frases, uma por
+            origem, e nenhuma delas opcional: a do runner existe porque o
+            picker lê a máquina de quem está olhando, e a da api existe porque
+            sem ela a primeira pareceria um aviso especial em vez de uma
+            informação que as duas devem.
+          */}
+          <p className={styles.origemNota}>
+            {origem.tipo === 'runner'
+              ? t('folderBrowserModal.origemRunner')
+              : t('folderBrowserModal.origemApi')}
+          </p>
+
+          {erro && (
             <Alert tone="danger" role="alert">
               {erro}
             </Alert>

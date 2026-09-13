@@ -54,11 +54,15 @@ const {
   detectarPlataformaMock,
   configurarPastaAutomaticamenteMock,
   baixarKitManualMock,
+  listWorkspacesMock,
+  listRunnerDeviceKeysMock,
 } = vi.hoisted(() => ({
   suportaEscritaDeArquivosMock: vi.fn(),
   detectarPlataformaMock: vi.fn(),
   configurarPastaAutomaticamenteMock: vi.fn(),
   baixarKitManualMock: vi.fn(),
+  listWorkspacesMock: vi.fn(),
+  listRunnerDeviceKeysMock: vi.fn(),
 }));
 
 vi.mock('../lib/runner-bootstrap', () => ({
@@ -71,10 +75,25 @@ vi.mock('../lib/runner-bootstrap', () => ({
 
 vi.mock('../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
+  // Campo explícito e não parâmetro-propriedade: `erasableSyntaxOnly` recusa
+  // o atalho, e o `tsconfig` do web o liga.
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number) {
+      super(`api error ${status}`);
+      this.status = status;
+    }
+  },
   // A `EsperaDoRunner` sonda o projeto; sem runner nenhum, o carimbo fica
   // nulo e ela permanece em "procurando" — que é o estado certo aqui.
   getProject: () =>
     Promise.resolve({ id: 'proj-1', workspaceVerifiedAt: null, workspacePath: null }),
+  // As duas perguntas do reconhecimento de máquina já pareada (RN-548): o
+  // papel de quem olha e as chaves de dispositivo dele. O default é o estado
+  // de ANTES da FASE 30 — papel que alcança, e nenhuma chave de máquina — para
+  // que os testes que já existiam continuem afirmando o mesmo painel.
+  listWorkspaces: (...a: unknown[]) => listWorkspacesMock(...a),
+  listRunnerDeviceKeys: (...a: unknown[]) => listRunnerDeviceKeysMock(...a),
 }));
 
 beforeEach(() => {
@@ -82,6 +101,10 @@ beforeEach(() => {
   detectarPlataformaMock.mockReset();
   configurarPastaAutomaticamenteMock.mockReset();
   baixarKitManualMock.mockReset();
+  listWorkspacesMock.mockReset();
+  listRunnerDeviceKeysMock.mockReset();
+  listWorkspacesMock.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]);
+  listRunnerDeviceKeysMock.mockResolvedValue([]);
 });
 
 /**
@@ -313,6 +336,164 @@ describe('RunnerOnboardingPanel', () => {
     );
 
     expect(screen.getByText('nenhum runner conectado a este projeto')).toBeInTheDocument();
+    cleanup();
+  });
+});
+
+/**
+ * O reconhecimento de agente local de MÁQUINA já pareado (RN-548, ADR 0154).
+ *
+ * O que a derivação decide tem prova PRÓPRIA em `lib/agente-de-maquina.test.ts`
+ * (sete estados, nenhum virando o outro). Aqui se prova o que só o componente
+ * pode provar: o que a tela DIZ, e — sobretudo — o que ela NÃO diz.
+ */
+describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', () => {
+  const chaveDeMaquina = {
+    id: 'chave-1',
+    name: 'laptop',
+    projectId: null,
+    especie: 'maquina' as const,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    revokedAt: null,
+    lastUsedAt: '2026-09-10T08:00:00.000Z',
+  };
+
+  it('com chave de máquina ativa: anuncia o pareamento, o gesto é o SERVIÇO, e parear vira o segundo caminho', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/sua conta já tem máquina pareada: laptop/i),
+    ).toBeInTheDocument();
+    // O gesto é conferir o serviço na máquina pareada — nunca refazer o
+    // pareamento que ela já tem.
+    expect(
+      screen.getByText('brabo-runner service status --project proj-1'),
+    ).toBeInTheDocument();
+
+    // O caminho do ADR 0118 NÃO é removido: ele fica atrás de um rótulo que
+    // nomeia o caso em que ainda é a resposta (BRB-031 é decisão à parte).
+    expect(
+      screen.getByText(/estou em outra máquina — parear esta também/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('reconhecer NÃO é dizer que o agente está de pé, nem que ESTA máquina é a pareada', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/chave registrada não é agente rodando/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/a lista é da sua CONTA, não deste navegador/i),
+    ).toBeInTheDocument();
+    // E o custo da ESPÉCIE é dito: ela atende todos os projetos do dono.
+    expect(
+      screen.getByText(/revogá-la derruba o agente local em todos eles/i),
+    ).toBeInTheDocument();
+    // A espera da RN-474 continua sendo quem responde pelo AGORA — e é UMA só.
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('configurar mesmo assim pelo `<details>`: a espera continua sendo UMA, a do sucesso', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
+    configurarPastaAutomaticamenteMock.mockResolvedValue({
+      instrucaoFinal: 'cd /home/user/proj && ./brabo-runner',
+      pasta: 'proj',
+      falhaDoBinario: null,
+    });
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    await screen.findByText(/sua conta já tem máquina pareada/i);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    );
+
+    expect(await screen.findByText(/configurada/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('chave de máquina REVOGADA não vira pareamento: o painel volta a mandar parear', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([
+      { ...chaveDeMaquina, revokedAt: '2026-09-11T00:00:00.000Z' },
+    ]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/está revogada/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/estou em outra máquina — parear esta também/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('consulta falhada diz que NÃO SABE — nunca que não há máquina pareada', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockRejectedValue(new Error('boom'));
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/quer dizer que não sei/i)).toBeInTheDocument();
+    expect(screen.queryByText(/sua conta já tem máquina pareada/i)).not.toBeInTheDocument();
+    // E o painel de sempre segue de pé: ignorância não tranca o pareamento.
+    expect(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('papel abaixo de developer: a tela não pergunta, e diz por quê UMA vez, em texto', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listWorkspacesMock.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'viewer' }]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/exige papel developer neste projeto/i)).toBeInTheDocument();
+    // Quem recusa é o `RolesGuard`: a tela só para de perguntar o que a api
+    // negaria — e por isso não chega a chamar a rota.
+    expect(listRunnerDeviceKeysMock).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
+  it('sem projectId (wizard antes da criação antecipada) não há a quem perguntar', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId={null} />);
+
+    await waitFor(() => expect(listRunnerDeviceKeysMock).not.toHaveBeenCalled());
+    expect(screen.queryByText(/sua conta já tem máquina pareada/i)).not.toBeInTheDocument();
+
     cleanup();
   });
 });

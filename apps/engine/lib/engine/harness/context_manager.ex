@@ -34,6 +34,13 @@ defmodule Engine.Harness.ContextManager.Default do
   `assistant` com `toolCalls` e os `role: "tool"` que a respondem viajam
   juntos para o mesmo lado do corte, ou o protocolo de tool-use do provider
   quebra (mensagem de resultado sem a chamada correspondente no histórico).
+
+  O PROMPT de sumarização resolve o template versionado do grafo
+  (`context-manager-summarize`, RN-413/RN-417) quando
+  `:graph_templates_enabled?` está ligada, com o texto inline como FALLBACK
+  obrigatório — ver `prompt/1`. O fallback determinístico de quando o MODELO
+  falha (`"(N turnos anteriores omitidos)"`) é outra coisa e não passa por
+  template nenhum.
   """
 
   @behaviour Engine.Harness.ContextManager
@@ -123,13 +130,12 @@ defmodule Engine.Harness.ContextManager.Default do
   end
 
   defp summarize(ctx, older) do
-    body =
+    turnos =
       Enum.map_join(older, "\n\n", fn m ->
         "#{Map.get(m, "role", "?")}: #{Map.get(m, "content", "")}"
       end)
 
-    prompt = "Resuma concisamente os turnos abaixo, preservando decisões e fatos:\n\n#{body}"
-    messages = [%{"role" => "user", "content" => prompt}]
+    messages = [%{"role" => "user", "content" => prompt(turnos)}]
 
     case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, @summarizer_agent, messages, []) do
       {:ok, %{"message" => %{"content" => content}}} when is_binary(content) and content != "" ->
@@ -137,10 +143,52 @@ defmodule Engine.Harness.ContextManager.Default do
 
       _ ->
         # Fallback determinístico se o sumarizador falhar: nunca perde o fio
-        # (mantém um resumo textual mínimo em vez de descartar tudo).
+        # (mantém um resumo textual mínimo em vez de descartar tudo). Ele NÃO
+        # passa pelo template — é comportamento de código, não texto de prompt
+        # (o próprio `prompts/context-manager-summarize.md` declara isso).
         "(#{length(older)} turnos anteriores omitidos)"
     end
   end
+
+  # Grafo de conhecimento (ADR 0099/0101): resolve o template
+  # `context-manager-summarize` do grafo quando a flag está ligada; qualquer
+  # desfecho que não seja um corpo binário não-vazio (api fora do ar, template
+  # ainda não semeado — `{:error, :not_found}` —, ou flag desligada) cai no
+  # FALLBACK inline abaixo, que nunca sai do código. As DUAS trilhas recebem o
+  # MESMO texto de turnos montado por `summarize/2` — só o molde ao redor dele
+  # muda —, pra o prompt não divergir entre os dois caminhos além da forma do
+  # template. Mesmo desenho de `Engine.Workers.PsychologistWorker.
+  # render_kickoff/4` e `Engine.Workers.AnamneseWorker.initial_message/1`.
+  defp prompt(turnos) do
+    if graph_templates_enabled?() do
+      case EngineApiClient.get_prompt_template("context-manager-summarize") do
+        {:ok, %{"body" => body}} when is_binary(body) and body != "" ->
+          render_template(body, turnos)
+
+        _falha_ou_ainda_nao_semeado ->
+          prompt_inline(turnos)
+      end
+    else
+      prompt_inline(turnos)
+    end
+  end
+
+  # MESMA flag `:graph_templates_enabled?` que o Psicólogo e a Anamnese já
+  # usam (ver `config/runtime.exs`): rollout de "consumo de template do grafo"
+  # é decisão por PRODUTO, compartilhada entre os agentes, não um nome por
+  # agente. Default DESLIGADO — ligada ou não, falha/ausência do template
+  # degrada pro inline sem erro e sem log de erro.
+  defp graph_templates_enabled?,
+    do: Application.get_env(:engine, :graph_templates_enabled?, false)
+
+  # Render PRÓPRIO, e não um helper compartilhado: cada consumidor de template
+  # tem o seu (o Psicólogo com `String.replace/3` encadeado, a Anamnese com um
+  # mapa reduzido sobre o corpo) — o conjunto de placeholders é do template,
+  # não do mecanismo.
+  defp render_template(body, turnos), do: String.replace(body, "{{turnos}}", turnos)
+
+  defp prompt_inline(turnos),
+    do: "Resuma concisamente os turnos abaixo, preservando decisões e fatos:\n\n#{turnos}"
 
   # Conta `content` de TODA mensagem (inclui `role: "tool"`, cujo resultado
   # já viajava por este campo) MAIS a serialização JSON de `toolCalls` de

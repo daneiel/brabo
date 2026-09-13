@@ -30,6 +30,18 @@
  * o vetor de escape por link simbólico — a mesma ressalva que o ADR 0055 já
  * registra para o container.
  *
+ * ## Três helpers EXPORTADOS, e por quê (RN-516)
+ *
+ * `semBarraFinal`, `dentroDoEscopo` e `realpathMaisProximo` deixaram de ser
+ * privados quando `espelho-guard.ts` nasceu (ADR 0147 ponto 2). Ele é IRMÃO
+ * deste módulo, não uma extensão dele — responde outra pergunta (o destino do
+ * espelho não é o `cwd` de um comando, e a recusa dele é sobre um LAÇO, não
+ * sobre escapar de uma raiz) —, mas a comparação de caminho do produto tem
+ * UMA fonte, e a dupla passada léxica-depois-realpath de
+ * `validarCwdDentroDaRaiz` é exatamente o que pega symlink num segmento do
+ * meio. Reimplementá-la lá seria a segunda cópia da mesma régua, e é a cópia
+ * que um dia diverge. A ressalva de TOCTOU acima vale igual para os dois.
+ *
  * ## `validarDirDentroDoHomeNoLinux` — checagem de STARTUP, não de `exec`
  *
  * Segunda checagem deste módulo, sem relação com o `cwd` de um comando: valida
@@ -91,13 +103,13 @@ export class CwdForaDaRaizError extends Error {
  * `project-workspaces-root.ts` (evita a classe de ReDoS que o CodeQL já
  * apontou no produto para `\/+$`).
  */
-function semBarraFinal(caminho: string): string {
+export function semBarraFinal(caminho: string): string {
   const partes = caminho.split('/').filter((p) => p.length > 0);
   return `/${partes.join('/')}`;
 }
 
 /** Está `alvo` dentro de `raiz` (ou é a própria raiz)? Comparação por segmento. */
-function dentroDoEscopo(alvo: string, raiz: string): boolean {
+export function dentroDoEscopo(alvo: string, raiz: string): boolean {
   if (alvo === raiz) return true;
   return alvo.startsWith(raiz.endsWith('/') ? raiz : raiz + '/');
 }
@@ -108,7 +120,7 @@ function dentroDoEscopo(alvo: string, raiz: string): boolean {
  * própria pasta de trabalho antes de usá-la, por exemplo). Symlink em
  * qualquer ancestral já resolvido é o que este passo pega.
  */
-function realpathMaisProximo(caminho: string): string {
+export function realpathMaisProximo(caminho: string): string {
   let atual = caminho;
   // Teto de segurança: número de segmentos do caminho é o máximo de subidas
   // possíveis até a raiz do FS — nunca laço sem fim.

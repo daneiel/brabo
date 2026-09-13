@@ -86,20 +86,27 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
-  // LIMITAÇÃO CONHECIDA, não corrigida aqui: `deriveAgentRoster` também
-  // decide QA/SecOps por `gatesEverOpened`, calculado por dentro de
-  // `rosterFactsFromEvents` direto sobre a MESMA janela de 200 eventos —
-  // sofre da classe de defeito acima. O resumo já carrega o valor agregado
-  // certo (`ProjectCardSummary.roster.gatesEverOpened`), mas corrigi-lo aqui
-  // exigiria mudar a ASSINATURA de `deriveAgentRoster`/`rosterFactsFromEvents`
-  // (aceitar um override, como já existe para `executionActivated`) — fora
-  // do escopo desta correção, que não deve tocar `lib/agent-status.ts`.
+  // RN-568 — a presença de QA/SecOps (`gatesEverOpened`) e dos membros de
+  // área (`delegatedSubagents`) sofria da MESMA classe de defeito acima: o
+  // `pr.gate_changed` e as delegações saem da janela de 200 numa sessão
+  // longa. O resumo já agrega os dois sobre a sessão inteira, e vai como
+  // `agregado` — que SOMA à janela, nunca a substitui. Só entra quando o
+  // resumo é da MESMA sessão que a tela lê: sem resumo, ou com ele apontando
+  // outra sessão, a janela decide sozinha, como antes.
+  const agregado =
+    projectSummary && projectSummary.latestSessionId === sessionId
+      ? {
+          gatesEverOpened: projectSummary.roster.gatesEverOpened,
+          delegatedSubagents: projectSummary.roster.delegatedSubagents,
+        }
+      : undefined;
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
     executionActivated,
     handoffs,
     pendingActionAgentIds,
+    agregado,
   );
   // A task/branch corrente por agente já era derivada aqui perto, mas só
   // alimentava a ExecutionSection — o mesmo dev aparecia duas vezes na tela,

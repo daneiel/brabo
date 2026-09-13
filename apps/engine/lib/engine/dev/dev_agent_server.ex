@@ -80,6 +80,7 @@ defmodule Engine.Dev.DevAgentServer do
   alias Engine.Harness.ToolLoop
   alias Engine.Harness.Hooks
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Runners.CredencialDeGit
   alias Engine.Sessions.EngineApiClient
 
   # Marca da implementação no estado durável: a reidratação sobe o server
@@ -406,8 +407,14 @@ defmodule Engine.Dev.DevAgentServer do
       {:error, reason} ->
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
 
+        # RN-558: a recusa da credencial no runner tem motivo e ORIGEM próprios
+        # (`politica`, ADR 0020) — nunca `codigo`, que mandaria quem tria a
+        # rodada seguinte procurar uma cláusula que ninguém escreveu. Qualquer
+        # outra falha mantém o desfecho de sempre.
+        {motivo, origem} = CredencialDeGit.desfecho(reason)
+
         state
-        |> AgentIo.block_task("falha ao preparar o worktree", inspect(reason), "codigo")
+        |> AgentIo.block_task(motivo, inspect(reason), origem)
         |> finish_task(:blocked)
     end
   end

@@ -17,9 +17,10 @@ documentação de projeto.
 | **Conteúdo da imagem do engine** | **Sim, se a imagem for publicada** | o binário sai empacotado dentro dela |
 | **Fontes do design system** | **Sim, se a imagem do web for publicada** | desde o ADR 0036 os `.woff2` são auto-hospedados e saem dentro da imagem |
 
-Hoje **nenhuma imagem é publicada em registry**. Enquanto isso for verdade, o
-que segue é informativo. No dia em que uma imagem for publicada, a seção 1 vira
-obrigação.
+As quatro imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
+final ([ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). A
+seção 1 **é obrigação**, não informativo — esta frase dizia o contrário desde
+2026-07-27 e ficou para trás quando a publicação passou a acontecer de verdade.
 
 ---
 
@@ -64,7 +65,7 @@ aceitos, do mais simples ao mais trabalhoso:
    a versão exata — que é o que as tabelas acima já dão. É o caminho normal
    para quem só reempacota binários oficiais sem modificá-los.
 2. **Não publicar a imagem** e distribuir só o Dockerfile, que baixa cada
-   binário do upstream no build. É a situação de hoje.
+   binário do upstream no build. **Deixou de ser a situação** com o ADR 0119.
 3. **Separar os scanners** num sidecar próprio, deixando a imagem do engine
    livre de copyleft. Mais trabalho, e muda o desenho do deploy.
 
@@ -72,8 +73,30 @@ A LGPL-2.1 do semgrep e a MPL-2.0 do `certifi`/`pathspec` são copyleft **fraco*
 a obrigação alcança modificações naquelas bibliotecas, e nós não modificamos
 nenhuma.
 
-> **TODO(humano):** decidir entre os caminhos 1 e 3 **antes** do primeiro push
-> para registry. O caminho 1 é uma seção neste arquivo; o 3 é um ADR.
+### O caminho tomado, e o que falta decidir
+
+**O caminho 1 está EXERCITADO**: desde o PR que acrescentou esta seção, este
+arquivo viaja **dentro** da imagem do engine, em
+`/usr/share/doc/brabo/THIRD_PARTY_NOTICES.md`. A oferta escrita precisa
+acompanhar o binário — quem faz `docker pull` não tem o repositório, e uma
+oferta que só existe no GitHub não acompanha a cópia que a pessoa recebeu.
+Confira com:
+
+```bash
+docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:<tag> \
+  -c 'cat /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md'
+```
+
+> **TODO(humano):** o caminho 1 cobre a obrigação com o desenho atual, e é o
+> que está no ar. O **caminho 3** (separar os scanners num sidecar, deixando a
+> imagem do engine livre de copyleft) continua aberto como escolha de
+> ARQUITETURA, não de conformidade — ele muda o desenho do deploy e por isso
+> pede ADR. Nada obriga a tomá-lo; o que não se pode é publicar sem nenhum dos
+> dois, que era o estado até aqui.
+>
+> Esta seção descreve o que o repositório FAZ. Ela não é parecer jurídico, e a
+> validação da suficiência da oferta escrita para cada licença embutida segue
+> sendo do mantenedor.
 
 ### Fonte destes dados
 

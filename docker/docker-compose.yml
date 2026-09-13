@@ -2,7 +2,7 @@ name: brabo
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -26,7 +26,7 @@ services:
   # default público que vira fallback silencioso" que o resto do compose segue
   # (ADR 0059).
   neo4j:
-    image: neo4j:5.26-community
+    image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-dev-neo4j-password-change-me}
       # NÃO defina NEO4J_USERNAME/NEO4J_PASSWORD aqui (só NEO4J_AUTH acima) —
@@ -82,7 +82,7 @@ services:
     # `latest` muda sob o pé sem aviso, e um upgrade silencioso de Ollama já
     # quebrou build antes (mudança de rota da API). Atualizar é decisão
     # manual — subir o número aqui, não seguir `latest`.
-    image: ollama/ollama:0.33.1
+    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
     profiles: ["local-llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -122,7 +122,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama:0.33.1
+    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
     profiles: ["local-llm"]
     depends_on:
       ollama:
@@ -248,9 +248,12 @@ services:
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
       # Broker de container (ADR 0130) — o único processo com acesso ao daemon
       # Docker. A api é a ÚNICA que o alcança (rede `broker`, `internal: true`,
-      # sem porta publicada). Vazia é estado NORMAL: sem o profile
-      # `container-broker`, o serviço nem sobe, e quem lê o estado observado
-      # DIZ "não observado" em vez de herdar o registrado (RN-468).
+      # sem porta publicada). Vazia é estado NORMAL — quem lê o estado
+      # observado DIZ "não observado" em vez de herdar o registrado (RN-468) —,
+      # mas aqui ela é o que RESTA configurar: desde o ADR 0146 (RN-512) o
+      # serviço sobe por padrão neste compose, e é esta variável que liga a api
+      # a ele. No compose de PRODUÇÃO o serviço segue sob profile, e lá vazia é
+      # também o caso comum.
       BROKER_URL: ${BROKER_URL:-}
     ports:
       - "${API_PORT:-3000}:3000"
@@ -307,6 +310,28 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Sem isto, `docker compose up --wait` NÃO prova nada sobre este serviço:
+    # ele espera "running" e segue em frente, que foi como o broker morreu em
+    # silêncio antes de ganhar o healthcheck abaixo. A imagem de PRODUÇÃO já
+    # tinha o `HEALTHCHECK` (docker/api/Dockerfile.prod:131) — é ele,
+    # deliberadamente o MESMO teste, que atravessa para o desenvolvimento aqui.
+    #
+    # `/health` (não `/live`) porque a pergunta é readiness: o processo fala
+    # com o Postgres. É essa a pergunta que `scripts/dev/reset-total.sh` faz
+    # depois de apagar e recriar os schemas — "esta api está de pé CONTRA o
+    # banco migrado?" —, e `/live` responderia "ok" com o banco vazio.
+    #
+    # `wget` do busybox (o `node:24-alpine` não traz `curl`) e contra
+    # `127.0.0.1`, como no broker. `start_period` alto porque o CMD de dev roda
+    # `pnpm install` e `pnpm db:migrate` ANTES de o Nest escutar — numa primeira
+    # subida com os volumes de node_modules vazios isso passa de dois minutos,
+    # e um teto curto reprovaria um boot que só estava começando.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 300s
+      retries: 5
 
   engine:
     build:
@@ -373,8 +398,31 @@ services:
       LLM_TURN_TIMEOUT_MS: ${LLM_TURN_TIMEOUT_MS:-300000}
       # Ver runtime.exs: desligar os agentes de fundo libera o provider local
       # pros agentes de execução. Default ligado.
+      #
+      # Estas quatro são CHAVES DE BOOT (`start_*?`): decidem se o `kickoff/0`
+      # do tick periódico é chamado em `Engine.Application`. NÃO confunda com
+      # as flags de PRODUTO (`*_ENABLED`, mais abaixo) — `START_ANAMNESE=true`
+      # com `ANAMNESE_ENABLED=false` agenda o tick e cada rodada no-opa.
       START_OUTBOX_DRAIN: ${START_OUTBOX_DRAIN:-true}
       START_ANAMNESE: ${START_ANAMNESE:-true}
+      START_MODEL_SYNC: ${START_MODEL_SYNC:-true}
+      START_GATE_RESCUE: ${START_GATE_RESCUE:-true}
+      # As flags de PRODUTO dos dois agentes de fundo (RN-115/RN-117), e as
+      # duas de rollout do grafo. Todas com o MESMO default do `runtime.exs` —
+      # esta linha não muda decisão de produto nenhuma, ela só faz existir o
+      # caminho de LIGAR.
+      #
+      # Por que estão aqui (RN-540): variável que o `runtime.exs` lê e que o
+      # `environment:` não mapeia NUNCA chega ao processo — o Compose não
+      # repassa o ambiente do host —, então `ANAMNESE_ENABLED=true` no `.env`
+      # era inerte e o engine caía no default `"false"` em silêncio, com três
+      # lugares no código prometendo que "ligar de volta é `X=true` e
+      # reiniciar". `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova a
+      # próxima que faltar.
+      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-false}
+      PSYCHOLOGIST_ENABLED: ${PSYCHOLOGIST_ENABLED:-false}
+      GRAPH_TEMPLATES_ENABLED: ${GRAPH_TEMPLATES_ENABLED:-false}
+      GRAPH_INSTRUCTION_TEMPLATES_ENABLED: ${GRAPH_INSTRUCTION_TEMPLATES_ENABLED:-false}
       # Triagem do Psicólogo (Fase 4b). Os defaults foram calibrados pensando
       # em modelo forte; num 7B local o modelo gasta tentativas hallucinando
       # event id (e sendo corretamente rejeitado) antes de acertar, então subir
@@ -425,26 +473,60 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Mesmo motivo e mesmo teste do serviço `api`, acima — e o mesmo
+    # `HEALTHCHECK` que a imagem de produção já tem
+    # (docker/engine/Dockerfile.prod:172). `/health` toca o banco; `/live` não,
+    # e é justamente o banco que o reset acabou de derrubar embaixo deste
+    # processo.
+    #
+    # `start_period` ainda mais alto que o da api: o CMD de dev roda
+    # `mix deps.get` e compila o projeto inteiro antes de o Phoenix escutar, e
+    # numa primeira subida (volumes `_build`/`deps` vazios) isso leva minutos.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 420s
+      retries: 5
 
   # Broker de container (ADR 0130) — o ÚNICO serviço com `/var/run/docker.sock`
   # montado, e o único que precisa dele. Não monte esse socket em nenhum outro.
   #
-  # `profiles: ["container-broker"]`, mesmo mecanismo do `local-llm` acima: um
-  # `docker compose up` sem `--profile` NÃO sobe este serviço. A escolha é
-  # deliberada — dar acesso ao Docker do host a um processo que nada chama
-  # ainda seria uma mudança de postura para toda máquina de desenvolvimento, em
-  # troca de nada. Para ligar:
+  # SEM `profiles` aqui, e COM `profiles: ["container-broker"]` no compose de
+  # PRODUÇÃO. A assimetria é o ponto, e ela é do ADR 0146 (ponto 3).
   #
-  #   docker compose -f docker/docker-compose.yml --env-file .env \
-  #     --profile container-broker up -d broker
+  # Este serviço nasceu sob profile com esta justificativa (ADR 0130): "dar
+  # acesso ao Docker do host a um processo que nada chama ainda seria uma
+  # mudança de postura para toda máquina de desenvolvimento, em troca de nada".
+  # As duas metades morreram. "Nada o chama" é falso desde os ADRs 0133/0134/
+  # 0136 — o broker tem quatro chamadores reais. E "em troca de nada" deixou de
+  # descrever a troca quando o ADR 0144 fez `mounted` subir container PELO
+  # BROKER e o ADR 0146 tornou `mounted` o padrão local: com o profile
+  # desligado, o modo padrão termina em `BrokerIndisponivelError`.
   #
-  # e, no `.env`, `BROKER_URL=http://broker:8090` mais
-  # `PROJECT_WORKSPACES_HOST_DIR` (ver .env.example).
+  # O que sustenta subir aqui e não lá é o que o socket SIGNIFICA de cada lado.
+  # Quem roda `pnpm dev` já tem o socket do Docker — está rodando `docker
+  # compose`, contra o daemon do próprio host —, então o broker recebê-lo não
+  # concede nada que o operador já não possua. A superfície marginal é o HTTP
+  # deste serviço, que não publica porta (abaixo), vive numa rede
+  # `internal: true` que só a api alcança, e compara `BRABO_SERVICE_TOKEN` em
+  # tempo constante. Em produção o cálculo é o oposto: o socket é fronteira de
+  # privilégio de verdade e o operador não é o desenvolvedor.
   #
-  # NENHUM serviço tem `depends_on` dele, e isso é obrigatório: um serviço FORA
-  # do profile dependendo de um DENTRO faz o Compose recusar o arquivo inteiro
-  # com "depends on undefined service" — o mesmo achado registrado no serviço
-  # `ollama`, acima.
+  # As cinco camadas de contenção (ADR 0130) não mudam. Isto muda QUANDO o
+  # broker roda, nunca O QUE ele aceita: ele continua recebendo `projectId` e
+  # uma das cinco operações, continua indo à api ler a decisão do Arquiteto, e
+  # continua sem parâmetro nenhum onde se escreva `privileged`, `cap_add`,
+  # `network: host` ou um `-v` livre. A contenção nunca foi o profile.
+  #
+  # `DOCKER_GID` passa a importar para TODA máquina de desenvolvimento, e não
+  # só para quem ligava o profile de propósito — ver o `group_add` no fim deste
+  # serviço. `scripts/dev/preflight.mjs` relata o estado dele a cada `pnpm dev`.
+  #
+  # NENHUM serviço tem `depends_on` dele, e isso segue obrigatório enquanto o
+  # de PRODUÇÃO estiver sob profile: um serviço FORA do profile dependendo de
+  # um DENTRO faz o Compose recusar o arquivo inteiro com "depends on undefined
+  # service" — o mesmo achado registrado no serviço `ollama`, acima.
   broker:
     build:
       context: ..
@@ -452,7 +534,6 @@ services:
       args:
         DEV_UID: ${DEV_UID:-1000}
         DEV_GID: ${DEV_GID:-1000}
-    profiles: ["container-broker"]
     working_dir: /workspace
     environment:
       BROKER_PORT: 8090
@@ -478,10 +559,11 @@ services:
       # explícito ganha, senão vale `BRABO_PROJECTS_BASE`, que já é um caminho
       # de host por definição (é montado por identidade em `api`/`engine`).
       #
-      # Nada a consome ainda: quem resolve `mounted` contra esta raiz é o PR do
-      # container de projeto montado. A linha nasce aqui porque a base nasce
-      # aqui, e uma variável de host que aparece meia release depois é uma
-      # variável que ninguém liga ao arquivo que a explica.
+      # Consumida desde o ADR 0144 (RN-503): projeto `mounted` sobe container
+      # PELO broker, e a api manda um localizador DISCRIMINADO dizendo contra
+      # QUAL das duas raízes o segmento relativo vale. Faltando esta, `start` de
+      # um projeto montado recusa NOMEANDO-A, e nunca cai na de cima — o mesmo
+      # nome de pasta aponta para projetos diferentes em cada raiz.
       BRABO_PROJECTS_HOST_BASE: ${BRABO_PROJECTS_HOST_BASE:-${BRABO_PROJECTS_BASE:-}}
     # SEM `ports:`. É a primeira camada da contenção: quem alcança este processo
     # alcança o Docker do host por procuração, e nada no host precisa alcançá-lo.
@@ -502,8 +584,37 @@ services:
     # (`getent group docker | cut -d: -f3`) — o default 999 é o mais comum e
     # está errado em várias distribuições. Errar aqui dá "permission denied" no
     # socket, que o `DockerIndisponivelError` nomeia com a dica do grupo.
+    #
+    # Desde o ADR 0146 (este serviço sem profile) isso vale para TODA máquina de
+    # desenvolvimento, e não só para quem ligava o profile de propósito — por
+    # isso `scripts/dev/preflight.mjs` passa a RELATAR o estado dele a cada
+    # `pnpm dev`, em vez de a divergência aparecer só quando alguém propõe
+    # `container_start` e o socket recusa.
     group_add:
       - "${DOCKER_GID:-999}"
+    # Healthcheck, e ele é METADE da correção — não um enfeite. Sem healthcheck,
+    # `up --wait` (que é como `scripts/dev/reset-total.sh` sobe a stack) dá
+    # `brabo-broker-1 Healthy` assim que o container INICIA, e o reset anuncia
+    # "reset completo" com o processo morto cinco segundos depois. Foi assim que
+    # a queda por corepack/registry passou despercebida: verde falso.
+    #
+    # `wget` do busybox porque `node:24-alpine` não traz `curl`, e contra
+    # `127.0.0.1` porque este serviço não publica porta nenhuma — o teste roda
+    # DENTRO do container, que é a única forma que sobra e a que a contenção
+    # quer. Mesmo teste do `HEALTHCHECK` do `Dockerfile.prod`, deliberadamente.
+    #
+    # `/health` fala do PROCESSO, nunca do daemon: reiniciar o broker não
+    # conserta um Docker fora do ar, e reprovar por isso produziria um laço de
+    # reinício que não resolve nada.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8090/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      # A primeira subida depois de um `--build` copia os três `node_modules`
+      # da imagem para os volumes (ver `docker/broker/entrypoint.sh`); as
+      # seguintes não copiam nada e o processo escuta em menos de um segundo.
+      start_period: 60s
+      retries: 5
 
   web:
     build:
@@ -527,6 +638,20 @@ services:
     depends_on:
       - api
       - engine
+    # O terceiro e último serviço de dev que `--wait` não sabia avaliar. Aqui
+    # não há `/health` para bater: quem responde é o servidor do Vite, e a
+    # pergunta honesta é a que a imagem de produção também faz — "este processo
+    # entrega a página?". `/` serve o `index.html`; um 404 ou um socket fechado
+    # reprovam.
+    #
+    # `start_period` como o da api, pelo mesmo motivo: `pnpm install` roda antes
+    # do `vite`.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 300s
+      retries: 5
 
 networks:
   # Rede PRÓPRIA do broker, `internal: true` (ADR 0130). Duas consequências, e

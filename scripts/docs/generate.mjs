@@ -18,9 +18,15 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
+import {
+  arquivos,
+  eventosEmitidosPor,
+  grepTodos,
+  ler,
+} from './fontes.mjs';
 
 const CHECAR = process.argv.includes('--check');
 const AVISO =
@@ -64,10 +70,6 @@ function nomesCitados(doc) {
 const pendencias = [];
 
 // --------------------------------------------------------------- utilidades
-
-function ler(rel) {
-  return readFileSync(join(RAIZ, rel), 'utf8');
-}
 
 function escrever(rel, conteudo) {
   const atual = (() => {
@@ -118,31 +120,10 @@ function escreverBloco(rel, id, corpo) {
   escrever(rel, novo);
 }
 
-function git(...args) {
-  return execFileSync('git', args, { cwd: RAIZ, encoding: 'utf8' });
-}
-
-function arquivos(glob) {
-  return git('ls-files', glob).split('\n').filter(Boolean);
-}
-
-function grepTodos(padrao, caminhos) {
-  const achados = new Map(); // valor -> Set(arquivos)
-  for (const caminho of caminhos) {
-    let texto;
-    try {
-      texto = ler(caminho);
-    } catch {
-      continue;
-    }
-    for (const m of texto.matchAll(padrao)) {
-      const valor = m[1];
-      if (!achados.has(valor)) achados.set(valor, new Set());
-      achados.get(valor).add(caminho);
-    }
-  }
-  return achados;
-}
+// `ler`, `arquivos` e `grepTodos` moram em `./fontes.mjs`: a varredura do
+// repositório passou a ter um segundo consumidor (o teste cruzado de
+// vocabulário `dev.*` em `scripts/ci/`), e duas cópias do mesmo regex
+// respondendo "o que o engine emite?" é exatamente o defeito que ele pega.
 
 // ------------------------------------------------------- 1. scripts.md
 
@@ -214,12 +195,26 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
 // ------------------------------------- 2. inventário de variáveis de ambiente
 
 function gerarEnv() {
+  // A quarta coluna de cada fonte é o ESCOPO, e ela é o conteúdo, não o
+  // enfeite: `produto` é o que quem OPERA a instalação configura no `.env` do
+  // deploy; `ferramenta` é o que só o CI e quem desenvolve usam. Sem essa
+  // distinção `E2E_PASSWORD` aparece ao lado de `SMTP_HOST` numa lista que um
+  // operador lê para configurar a máquina dele, e a lista fica PIOR do que
+  // estava incompleta.
   const fontes = [
-    ['api', arquivos('apps/api/src/**/*.ts').filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g],
+    // DOIS globs para a api pelo mesmo motivo do broker, logo abaixo: o `**/`
+    // do pathspec do git exige pelo menos um nível de diretório, então os
+    // arquivos que moram direto em `apps/api/src/` escapavam. O preço estava
+    // medido e pago: `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`) é
+    // variável de PRODUTO — o teto do corpo JSON que a api aceita — e não
+    // aparecia em inventário nenhum.
+    ['api',
+      [...arquivos('apps/api/src/*.ts'), ...arquivos('apps/api/src/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'produto'],
     ['engine', [...arquivos('apps/engine/lib/**/*.ex'), ...arquivos('apps/engine/config/*.exs')],
-      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g],
-    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g],
+      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g, 'produto'],
+    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g, 'produto'],
     // O broker (ADR 0130) entra porque é SERVIÇO da instalação: o que ele lê
     // do ambiente é configuração de quem opera, igual à da api e à do engine.
     // `apps/runner` continua de FORA de propósito — ele roda na máquina do
@@ -227,14 +222,29 @@ function gerarEnv() {
     // pelo `.env` do deploy.
     // DOIS globs, e não um: o `**/` do pathspec do git exige PELO MENOS um
     // nível de diretório, então `apps/broker/src/**/*.ts` devolve VAZIO
-    // enquanto todos os arquivos do broker moram direto em `src/`. (O mesmo
-    // vale para a api, onde os 6 arquivos de `src/` também escapam do glob
-    // acima — pré-existente, não mexido aqui.) Um inventário que nasce vazio
-    // não avisa: ele passa verde.
+    // enquanto todos os arquivos do broker moram direto em `src/`. Um
+    // inventário que nasce vazio não avisa: ele passa verde.
     ['broker',
       [...arquivos('apps/broker/src/*.ts'), ...arquivos('apps/broker/src/**/*.ts')]
         .filter((f) => !f.includes('.spec.')),
-      /env\.([A-Z_0-9]{3,})/g],
+      /env\.([A-Z_0-9]{3,})/g, 'produto'],
+    // As duas fontes de FERRAMENTA. Ficaram de fora até 2026-09-12 e o
+    // inventário passou verde o tempo todo — cinco variáveis lidas de verdade,
+    // nenhuma citada em `configuration.md`. Caem na MESMA armadilha do `**/`:
+    // `seed-golden-set-qa.ts` mora direto em `apps/api/scripts/` e
+    // `playwright.config.ts` direto em `e2e/`, então são dois globs cada.
+    //
+    // `e2e/` não é membro do workspace (ADR 0120, mesmo desenho do
+    // `website/`), e foi por isso que escapou da varredura — mas o gerador
+    // LÊ arquivo, não pacote, e membership não muda nada aqui.
+    ['api/scripts',
+      [...arquivos('apps/api/scripts/*.ts'), ...arquivos('apps/api/scripts/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
+    ['e2e',
+      [...arquivos('e2e/*.ts'), ...arquivos('e2e/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
   ];
 
   // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
@@ -248,10 +258,10 @@ function gerarEnv() {
   let total = 0;
   let naoDocumentadas = 0;
 
-  for (const [app, caminhos, padrao] of fontes) {
+  for (const [app, caminhos, padrao, escopo] of fontes) {
     const achados = [...grepTodos(padrao, caminhos).entries()].sort(([a], [b]) => a.localeCompare(b));
     total += achados.length;
-    corpo += `\n**${app}** — ${achados.length} variables\n\n`;
+    corpo += `\n**${app}** — ${achados.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
     for (const [nome, arqs] of achados) {
       // Does the prose above document it? If not, the gap shows up here
       // instead of passing silently.
@@ -266,7 +276,10 @@ function gerarEnv() {
     (naoDocumentadas > 0
       ? ` **${naoDocumentadas}** still have no description in the tables above.`
       : ' All have a description in the tables above.') +
-    '\n';
+    '\n\nEach source is marked **product** — what whoever operates the installation' +
+    ' sets in the deployment `.env` — or **tooling**, read only by CI and by' +
+    ' whoever develops the product. A tooling variable never belongs in an' +
+    " operator's `.env`.\n";
 
   escreverBloco('docs/reference/configuration.md', 'env-inventario', cabecalho + corpo);
 }
@@ -274,15 +287,9 @@ function gerarEnv() {
 // ------------------------------------------- 3. inventário de tipos de evento
 
 function gerarEventos() {
-  const api = arquivos('apps/api/src/**/*.ts').filter((f) => !f.includes('.spec.'));
-  const engine = arquivos('apps/engine/lib/**/*.ex');
-
   const achados = new Map();
-  for (const [caminhos, padrao] of [
-    [api, /(?:type|eventType):\s*'([a-z_]+\.[a-z_]+)'/g],
-    [engine, /"([a-z_]+\.[a-z_]+)"/g],
-  ]) {
-    for (const [valor, arqs] of grepTodos(padrao, caminhos)) {
+  for (const app of ['api', 'engine']) {
+    for (const [valor, arqs] of eventosEmitidosPor(app)) {
       if (!PREFIXOS_DE_EVENTO.some((p) => valor.startsWith(`${p}.`))) continue;
       if (!achados.has(valor)) achados.set(valor, new Set());
       for (const a of arqs) achados.get(valor).add(a);
@@ -612,6 +619,47 @@ const POR_EXTENSO = [
 ];
 
 /**
+ * A mesma lista, em inglês, capitalizada — `docs/glossary.md` está em inglês e
+ * a frase abre com o número (*"Eleven closed schemas"*), então ele é a primeira
+ * palavra da sentença. Lista PRÓPRIA e não um `.toUpperCase()` sobre a de cima:
+ * são idiomas diferentes, não a mesma palavra com outra caixa.
+ */
+const POR_EXTENSO_EN = [
+  'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
+  'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen',
+  'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty',
+];
+
+/**
+ * Quantos schemas de artefato existem: as chaves do mapa em
+ * `Engine.Harness.ArtifactSchemas`.
+ *
+ * Fonte é o ARTEFATO e nunca outra prosa, como nas demais aferições — aqui o
+ * artefato é o módulo do engine que VALIDA a emissão. Um schema novo entra na
+ * conta sozinho; era exatamente isso que faltava quando `decision_record`
+ * (RN-505), `plano_de_teste`, `prototipo_navegavel` e `threat_model` nasceram e
+ * o glossário seguiu dizendo "Seven".
+ *
+ * Zero REPROVA em vez de passar: se o padrão parar de casar (o mapa mudar de
+ * forma), uma contagem zerada faria a aferição comparar contra nada e ficar
+ * verde para sempre — o mesmo motivo pelo qual "padrão que não casa também
+ * reprova" logo abaixo.
+ */
+function contarSchemasDeArtefato() {
+  const fonte = ler('apps/engine/lib/engine/harness/artifact_schemas.ex');
+  const chaves = new Set(
+    [...fonte.matchAll(/^\s+"([a-z_]+)" =>/gm)].map((m) => m[1]),
+  );
+  if (chaves.size === 0) {
+    throw new Error(
+      'contarSchemasDeArtefato: nenhum schema encontrado em artifact_schemas.ex — ' +
+        'o formato do mapa mudou e o padrão precisa acompanhar.',
+    );
+  }
+  return chaves.size;
+}
+
+/**
  * Quantas RNs existem: uma por cabeçalho `### RN-NNN`.
  *
  * Soma os TRÊS arquivos — `business-rules.md` e os dois que saíram dele por
@@ -660,6 +708,7 @@ function verificarContagensEmProsa() {
   const proximo = String(Math.max(...numeros) + 1).padStart(4, '0');
   const regras = contarRegrasDeNegocio();
   const providers = descobrirProviders().size;
+  const schemas = contarSchemasDeArtefato();
 
   const afericoes = [
     {
@@ -683,6 +732,21 @@ function verificarContagensEmProsa() {
     {
       arquivo: 'README.md',
       padrao: /as (\d+) decisões e o porquê/,
+      esperado: total,
+      oque: 'a contagem de ADRs',
+    },
+    {
+      // O `description` do FRONTMATTER do próprio índice, e ele ficou de fora
+      // até 2026-09-12 dizendo **134** com 156 ADRs escritos — deriva de 22,
+      // no arquivo cuja única função é indexar ADRs. Passou despercebido
+      // porque `verificarIndiceAdr` confere outra coisa (que nenhum ADR está
+      // órfão) e estava verde o tempo todo: duas aferições sobre o mesmo
+      // arquivo, nenhuma sobre este campo. É o modo de falha do "68 ADRs" do
+      // CONTRIBUTING.md, com um agravante — frontmatter não se lê ao revisar
+      // a prosa, então a deriva aqui é mais silenciosa que em qualquer outra
+      // linha desta tabela.
+      arquivo: 'docs/adr/index.md',
+      padrao: /Brabo's (\d+) architectural decision records/,
       esperado: total,
       oque: 'a contagem de ADRs',
     },
@@ -711,6 +775,21 @@ function verificarContagensEmProsa() {
       esperado: POR_EXTENSO[providers] ?? String(providers),
       oque: 'a contagem de providers',
     },
+    {
+      // O glossário dizia "Seven closed schemas" com ONZE escritos, e listava
+      // os sete — `decision_record` (RN-505), `plano_de_teste`,
+      // `prototipo_navegavel` e `threat_model` entraram depois e ninguém
+      // voltou à frase. Mesmo modo de falha do "68 ADRs" logo acima: número no
+      // meio de uma frase que ninguém tem obrigação de lembrar de trocar.
+      //
+      // Por extenso porque a frase está assim desde sempre, como a dos
+      // providers. A aferição é da CONTAGEM, não da lista: conferir os onze
+      // nomes exigiria parsear a prosa, e a contagem já é o que deriva.
+      arquivo: 'docs/glossary.md',
+      padrao: /\*\*Artifact\*\* — an agent's structured, validated output\. (\w+)\n?\s*closed/,
+      esperado: POR_EXTENSO_EN[schemas] ?? String(schemas),
+      oque: 'a contagem de schemas de artefato',
+    },
   ];
 
   let problemas = 0;
@@ -736,7 +815,114 @@ function verificarContagensEmProsa() {
   else
     console.log(
       `  ok        contagens em prosa (${total} ADRs, próximo ${proximo}; ` +
-        `${regras} RNs; ${providers} providers)`,
+        `${regras} RNs; ${providers} providers; ${schemas} schemas)`,
+    );
+}
+
+/**
+ * As FRASES ancoradas num lugar do código — a escada da esteira e o arquivo
+ * que o `db:generate` manda editar.
+ *
+ * Mesmo mecanismo das contagens em prosa, com uma fonte que não é um número:
+ * o valor esperado é DERIVADO do código, e a frase que o anuncia é conferida
+ * contra ele. A diferença com as contagens é só o tipo do valor — a lição do
+ * ADR 0029 (`gerar > verificar > lembrar`) é a mesma.
+ *
+ * As duas entradas nasceram de duas deriva medidas em 2026-09-12, e as duas
+ * sobreviveram anos porque **nada as aferia**:
+ *
+ *   - O `description` do `branching-policy.md` anunciava a escada de QUATRO
+ *     degraus (`dev → qa → rc → main`) enquanto o corpo do MESMO arquivo
+ *     explica, a partir da linha 54, que o `rc` saiu da política (ADR 0030).
+ *     O arquivo se contradizia consigo mesmo, e o `description` é a metade
+ *     que se lê primeiro: é ele que alimenta o card da busca local do site e
+ *     o `<meta>` da página. Mesmo agravante do `description` do
+ *     `docs/adr/index.md`, logo acima: frontmatter não se lê ao revisar
+ *     prosa.
+ *   - `README.md` e `docs/getting-started.md` mandavam rodar `db:generate`
+ *     "depois de mudar `apps/api/src/db/schema.ts`" — que desde o ADR 0121 é
+ *     só o barrel de `export *`. Instrução errada custa mais que número
+ *     errado: o comando RODA, o Drizzle não vê diff nenhum, e quem seguiu a
+ *     instrução conclui que o comando está quebrado, não a frase.
+ *
+ * A fonte de cada uma é o ARTEFATO, nunca outra prosa. A escada vem de
+ * `ESCADA` em `scripts/ci/pr-police.ts`, que é o código que a APLICA — e
+ * deliberadamente NÃO de `PROTECTED_BRANCHES`, que tem `rc` DE PROPÓSITO
+ * (ADR 0030: proteger uma branch que não existe não custa nada, desproteger
+ * uma que existe custa caro). Derivar a escada da lista de protegidas faria
+ * este check exigir de volta a frase errada.
+ *
+ * Padrão que não casa REPROVA, como nas contagens: um check cuja regex parou
+ * de achar a frase fica verde para sempre dizendo que conferiu algo que não
+ * olhou. E a fonte também: se `ESCADA` sumir de `pr-police.ts`, o check
+ * reprova em vez de comparar contra vazio.
+ */
+function verificarFrasesAncoradasNoCodigo() {
+  const escada = /export const ESCADA = \[([^\]]+)\] as const;/.exec(
+    ler('scripts/ci/pr-police.ts'),
+  );
+
+  if (escada === null) {
+    pendencias.push('frases ancoradas no código');
+    console.log(
+      '  CEGO      scripts/ci/pr-police.ts — não achei `export const ESCADA`.\n' +
+        '            Sem ela não há de onde derivar a escada da esteira.',
+    );
+    return;
+  }
+
+  // `apps/api/src/db/schema.ts` é BARREL enquanto não tiver `pgTable(` dentro
+  // (ADR 0121). Derivado, e não constante: desfazer o barrel faz o esperado
+  // voltar a ser o arquivo, e as duas frases reprovam sozinhas.
+  const moradaDoSchema = ler('apps/api/src/db/schema.ts').includes('pgTable(')
+    ? 'apps/api/src/db/schema.ts'
+    : 'apps/api/src/db/schema/';
+
+  const afericoes = [
+    {
+      arquivo: 'docs/explanation/branching-policy.md',
+      padrao: /^description: The (.+?) ladder/m,
+      esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
+      oque: 'a escada da esteira no `description` do frontmatter',
+    },
+    {
+      arquivo: 'docs/getting-started.md',
+      padrao: /db:generate\s+# after changing (apps\/api\/src\/db\/schema(?:\/|\.ts))/,
+      esperado: moradaDoSchema,
+      oque: 'onde o `db:generate` manda mexer',
+    },
+    {
+      arquivo: 'README.md',
+      padrao: /depois de mudar `(apps\/api\/src\/db\/schema(?:\/|\.ts))/,
+      esperado: moradaDoSchema,
+      oque: 'onde o `db:generate` manda mexer',
+    },
+  ];
+
+  let problemas = 0;
+  for (const { arquivo, padrao, esperado, oque } of afericoes) {
+    const achado = padrao.exec(ler(arquivo));
+
+    if (achado === null) {
+      problemas++;
+      console.log(
+        `  CEGO      ${arquivo} — não achei ${oque}. A frase mudou, e o check\n` +
+          `            deixou de conferir. Ajuste o padrão em generate.mjs.`,
+      );
+      continue;
+    }
+
+    if (achado[1] !== esperado) {
+      problemas++;
+      console.log(`  DESATUAL. ${arquivo} — ${oque}: diz ${achado[1]}, é ${esperado}.`);
+    }
+  }
+
+  if (problemas > 0) pendencias.push('frases ancoradas no código');
+  else
+    console.log(
+      `  ok        frases ancoradas no código (escada ` +
+        `${afericoes[0].esperado}; schema em ${moradaDoSchema})`,
     );
 }
 
@@ -831,6 +1017,7 @@ gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensEmProsa();
+verificarFrasesAncoradasNoCodigo();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {

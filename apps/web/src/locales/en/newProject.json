@@ -6,9 +6,7 @@
     "mode": "Create new or adopt existing",
     "provider": "Where to host",
     "credential": "Access credential",
-    "details": "Name and visibility",
-    "workspace": "Where the code will live",
-    "policy": "Branch policy",
+    "details": "Where the code will live",
     "confirm": "Confirm"
   },
   "mode": {
@@ -67,8 +65,7 @@
       "repoPreview": "repo: {{slug}}",
       "visibilityLabel": "Visibility",
       "visibilityPrivate": "Private",
-      "visibilityPublic": "Public",
-      "githubPrivateWarning": "On GitHub's free plan, <strong>private repositories don't support branch protection</strong>. The project works and the branches are created, but the \"Protect branches\" step will fail, and GitHub won't block direct pushes to <code>main</code>, <code>qa</code>, and <code>dev</code> — Brabo's own merge lock still applies, GitHub's doesn't."
+      "visibilityPublic": "Public"
     }
   },
   "workspace": {
@@ -78,7 +75,8 @@
     "preparing": "Preparing…",
     "hintMounted": "absolute path, as it appears INSIDE the container",
     "hintRunner": "absolute path, as it appears on YOUR machine",
-    "mountedWarning": "The folder needs to sit <strong>inside the projects base</strong> the operator configured (<code>BRABO_PROJECTS_BASE</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
+    "mountedUnderBase": "The folder sits <strong>inside this installation's projects base</strong> (<code>{{base}}</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
+    "mountedOutsideBase": "This path is <strong>outside this installation's projects base</strong> (<code>{{base}}</code>), and the api <strong>refuses to create</strong> a mounted project outside it. Pick a folder under <code>{{base}}</code>.",
     "runnerHint": {
       "intro": "After creating the project, run this on your machine:",
       "introExisting": "The project already exists — run this on your machine:",
@@ -86,12 +84,6 @@
       "placeholderId": "<project id>",
       "note": "The runner confirms the path when it connects — no command runs before that."
     }
-  },
-  "policy": {
-    "intro": "On provisioning, the Gitflow bootstrap runs these steps on the repo:",
-    "note": "Promotion cascade: <code>dev ← main</code>, <code>qa ← dev</code>. The permanent branches get protection",
-    "noteSuffixLocal": " — except on Local, which has no branch protection (the step is skipped with a warning).",
-    "noteSuffixDefault": " (main, qa, dev)."
   },
   "confirm": {
     "modeLabel": "Mode",

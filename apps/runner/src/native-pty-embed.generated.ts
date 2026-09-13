@@ -18,4 +18,8 @@
  * contrato que `native-pty-loader.ts` consome — não mude sem revisar os
  * dois lados.
  */
-export const NATIVE_PTY_FILES: ReadonlyArray<{ relPath: string; embeddedPath: string }> = [];
+export const NATIVE_PTY_FILES: ReadonlyArray<{
+  relPath: string;
+  embeddedPath: string;
+  exec: boolean;
+}> = [];

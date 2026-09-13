@@ -229,3 +229,14 @@
     display: none;
   }
 }
+
+/* De QUEM é o disco listado (RN-533) — uma linha por origem, acima do
+   explorador. Fora da `.layout` de propósito: ela fala da LISTA inteira, não
+   de uma das três colunas, e dentro da moldura competiria com o breadcrumb
+   pela mesma leitura. */
+.origemNota {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}

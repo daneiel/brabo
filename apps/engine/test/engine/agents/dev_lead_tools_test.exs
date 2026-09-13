@@ -134,6 +134,18 @@ defmodule Engine.Agents.DevLeadToolsTest do
       }
     end
 
+    defp threat_model_event(story_id) do
+      %{
+        "type" => "artifact.threat_model",
+        "payload" => %{
+          "storyId" => story_id,
+          "threatModel" => "Spoofing: ...",
+          "requisitosDeSeguranca" => ["autenticar o webhook"],
+          "riscos" => []
+        }
+      }
+    end
+
     test "sem plano de teste: dispara a avaliação de QA-estratégia e devolve erro pedindo retentativa",
          %{ctx: ctx} do
       Process.put(:fake_events, [])
@@ -204,6 +216,87 @@ defmodule Engine.Agents.DevLeadToolsTest do
     test "parecer fora do enum é recusado", %{ctx: ctx} do
       args = %{"storyId" => "st-1", "parecer" => "talvez", "justificativa" => "x"}
       assert {:error, _msg} = DevLeadTools.run_assessment(args, ctx)
+    end
+  end
+
+  # RN-539: o gatilho do appsec (`SecOpsAgentServer.run_design/2`), que até
+  # aqui não tinha chamador de produção nenhum. Dispara em PARALELO e nunca
+  # entra no caminho do parecer — os testes abaixo provam as duas metades.
+  describe "assess_implementability dispara o appsec (RN-539)" do
+    test "story SEM threat model: pede o threat model de design", %{ctx: ctx} do
+      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+
+      assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+
+      assert_received {:appsec_dispatch, "proj-1", "st-1"}
+    end
+
+    test "story COM threat model: NÃO pede de novo (idempotência)", %{ctx: ctx} do
+      # O desfecho `:sem_plano` pede ao modelo que chame de novo — sem esta
+      # guarda, cada rechamada custaria outra rodada de LLM do appsec e mais
+      # três handoffs (RN-361) sobre a MESMA story.
+      Process.put(:fake_events, [plano_de_teste_event("st-1"), threat_model_event("st-1")])
+
+      assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+
+      refute_received {:appsec_dispatch, _project_id, _story_id}
+    end
+
+    test "threat model de OUTRA story não conta como guarda", %{ctx: ctx} do
+      Process.put(:fake_events, [plano_de_teste_event("st-1"), threat_model_event("st-outra")])
+
+      assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+
+      assert_received {:appsec_dispatch, "proj-1", "st-1"}
+    end
+
+    test "sem plano de teste: dispara os DOIS, e o desfecho segue sendo o de `:sem_plano`", %{
+      ctx: ctx
+    } do
+      # Não-regressão do requisito (a): o appsec corre em paralelo e o
+      # parecer NÃO passa a depender dele — a mensagem devolvida é byte a
+      # byte a de antes do gatilho existir.
+      Process.put(:fake_events, [])
+
+      assert {:error, msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+      assert msg =~ "ainda não há plano de teste"
+      assert msg =~ "instantes"
+      refute msg =~ "threat model"
+
+      assert_received {:appsec_dispatch, "proj-1", "st-1"}
+      assert_received {:qa_estrategia_dispatch, "proj-1", "sess-1", "st-1"}
+      refute_received {:propose_action, "assess_implementability", _actor, _payload}
+    end
+
+    test "com plano de teste: o parecer é proposto normalmente ao lado do disparo", %{ctx: ctx} do
+      # Não-regressão: o disparo do appsec não desvia nem atrasa a proposta.
+      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+
+      assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+
+      assert_received {:appsec_dispatch, "proj-1", "st-1"}
+      assert_received {:propose_action, "assess_implementability", _actor, payload}
+      assert payload.storyId == "st-1"
+      assert payload.planoDeTeste == "cobrir X"
+    end
+
+    test "args inválidos NÃO disparam o appsec", %{ctx: ctx} do
+      # A cláusula de fallback não sabe qual é a story — disparar dali seria
+      # pedir threat model para um id que o modelo nem mandou.
+      Process.put(:fake_events, [])
+
+      assert {:error, _msg} = DevLeadTools.run_assessment(%{"storyId" => "st-1"}, ctx)
+
+      refute_received {:appsec_dispatch, _project_id, _story_id}
+    end
+
+    test "histórico ilegível: não dispara nada (ausência não é prova de ausência)", %{ctx: ctx} do
+      Process.put(:fake_events_error, :timeout)
+
+      assert {:error, msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
+      assert msg =~ "não consegui ler o histórico"
+
+      refute_received {:appsec_dispatch, _project_id, _story_id}
     end
   end
 end

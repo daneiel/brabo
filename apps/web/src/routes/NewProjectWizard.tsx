@@ -6,10 +6,13 @@ import type { GitProviderName } from '../lib/api-types';
 import {
   ApiError,
   createProject,
+  getProjectsBase,
   listCredentials,
   registerGitCredential,
 } from '../lib/api-client';
 import {
+  caminhoDentroDaBase,
+  caminhoSugeridoNaBase,
   canAdvanceFromCredential,
   canAdvanceFromDetails,
   canAdvanceFromMode,
@@ -27,7 +30,10 @@ import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
-import { FolderBrowserModal } from '../components/FolderBrowserModal';
+import {
+  FolderBrowserModal,
+  type OrigemDoNavegador,
+} from '../components/FolderBrowserModal';
 import { RunnerOnboardingPanel } from '../components/RunnerOnboardingPanel';
 import styles from './NewProjectWizard.module.css';
 
@@ -36,8 +42,6 @@ type StepKey =
   | 'provider'
   | 'credential'
   | 'details'
-  | 'workspace'
-  | 'policy'
   | 'confirm';
 type Visibility = 'private' | 'public';
 
@@ -134,8 +138,6 @@ const STEP_TITLE_KEY: Record<StepKey, string> = {
   provider: 'steps.provider',
   credential: 'steps.credential',
   details: 'steps.details',
-  workspace: 'steps.workspace',
-  policy: 'steps.policy',
   confirm: 'steps.confirm',
 };
 
@@ -151,19 +153,29 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [name, setName] = useState('');
   const [externalId, setExternalId] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
-  // `container` é o pré-selecionado, ao contrário do modo de repositório, que
-  // nasce sem default: aqui existe SIM uma "normal" — é o comportamento que
-  // todo projeto teve até o ADR 0072, e o Local pede preparo do ambiente.
-  const [modoDeWorkspace, setModoDeWorkspace] =
-    useState<ModoDeWorkspace>('container');
+  // O modo que o USUÁRIO escolheu, e só ele — `undefined` é "ainda não
+  // tocou nos cards". O modo VIGENTE é derivado logo abaixo, porque desde o
+  // ADR 0146 (ponto 4) o default depende da instalação: com base consentida,
+  // `mounted` é o pré-selecionado; sem ela, `container` continua sendo (o
+  // default do ADR 0072). Guardar a escolha separada do vigente é o que
+  // impede a pré-seleção de trocar o modo debaixo da mão de quem já clicou
+  // — a base chega por rede, sempre DEPOIS do primeiro render (RN-513).
+  const [modoDeWorkspaceEscolhido, setModoDeWorkspaceEscolhido] =
+    useState<ModoDeWorkspace>();
   const [caminhoLocal, setCaminhoLocal] = useState('');
-  // Navegação de pasta local via o Runner (ADR 0107/ADR 0108). No modo
-  // `mounted` o projeto ainda não existe nesta tela (só nasce na
-  // confirmação) e o modal abre no estado declarado — ver
-  // `FolderBrowserModal` sobre `projectId: null`. No modo `runner`, o
-  // clique em "Procurar pasta..." cria o projeto ANTECIPADAMENTE
-  // (`handleProcurarPasta`) para poder ancorar o ticket do canal a um
-  // `projectId` real — `projetoParaNavegar` guarda o id criado e o
+  // A última sugestão `<base>/<slug>` que ESTA tela escreveu no campo. Sem
+  // ela não há como distinguir "campo com a sugestão de antes" (pode ser
+  // refeito quando o nome muda) de "campo digitado pelo usuário" (nunca se
+  // toca) — as duas são apenas uma string.
+  const [caminhoSugeridoAplicado, setCaminhoSugeridoAplicado] = useState<
+    string | null
+  >(null);
+  // Navegação de pasta (ADR 0107/0108, RN-504, RN-533). No modo `mounted` o
+  // modal fala com a API e não precisa de projeto nenhum: a base é da
+  // INSTALAÇÃO. No modo `runner` ele fala com o agente local pelo canal, e o
+  // ticket desse canal é escopado a um `projectId` real — por isso o clique
+  // em "Procurar pasta..." cria o projeto ANTECIPADAMENTE
+  // (`handleProcurarPasta`), e `projetoParaNavegar` guarda o id criado com o
   // SNAPSHOT de identidade que autorizou a criação, pra saber quando é
   // seguro reusar em vez de criar de novo.
   const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
@@ -187,16 +199,140 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
   const adotando = modo === 'adopt';
 
+  /**
+   * A base dos projetos montados (ADR 0141/0146 ponto 4, RN-500/RN-513).
+   *
+   * A consulta nasce com o WIZARD, não com o passo — o passo de workspace é
+   * o quinto, e um `useQuery` montado só ali faria o card aparecer piscando
+   * depois que a pessoa já estivesse olhando a tela.
+   */
+  const projectsBaseQuery = useQuery({
+    queryKey: ['projects-base', workspaceId],
+    queryFn: () => getProjectsBase(workspaceId),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  /**
+   * `mounted` só é oferecido quando a base é CONHECIDA e existe.
+   *
+   * Enquanto a resposta não chegou, e também quando a consulta FALHA (403,
+   * rede, api fora), o modo não aparece e `container` segue selecionado.
+   * Falha não é permissão para oferecer um modo cuja pré-condição não se
+   * conseguiu confirmar: é a mesma régua da RN-088/RN-468 — o produto não
+   * colapsa "não sei" com "não tem" — e a dos ADRs 0041/0042, onde
+   * capability só é declarada quando PROVADA. Oferecer no escuro terminaria
+   * na recusa da api (400) depois de a pessoa ter escolhido o modo, digitado
+   * o caminho e chegado ao fim do assistente.
+   */
+  const podeOferecerMounted =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.projectsBase !== null;
+  const baseDeProjetos = podeOferecerMounted
+    ? (projectsBaseQuery.data?.projectsBase ?? null)
+    : null;
+
+  // O modo VIGENTE: a escolha humana quando existe, senão o default da
+  // instalação. Uma escolha em `mounted` que deixe de ser oferecível (a
+  // consulta invalidada devolvendo `null`) cai para o default em vez de
+  // ficar apontando para um card que saiu da tela.
+  const modoDeWorkspace: ModoDeWorkspace =
+    modoDeWorkspaceEscolhido !== undefined &&
+    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted)
+      ? modoDeWorkspaceEscolhido
+      : podeOferecerMounted
+        ? 'mounted'
+        : 'container';
+
+  /**
+   * DE ONDE o navegador de pastas lê o disco, decidido pelo MODO (RN-533).
+   *
+   * `undefined` só acontece em `runner` antes de a criação antecipada ter
+   * dado certo — e aí o modal simplesmente não monta, porque
+   * `handleProcurarPasta` nem chega a abri-lo. Representar isso como
+   * `undefined` em vez de cair no transporte de api é deliberado: o silêncio
+   * é honesto, e o fallback mostraria o disco do SERVIDOR a quem escolheu
+   * o modo em que a pasta mora na máquina dele.
+   */
+  const origemDoNavegador: OrigemDoNavegador | undefined =
+    modoDeWorkspace === 'runner'
+      ? projetoParaNavegar
+        ? { tipo: 'runner', projectId: projetoParaNavegar.id }
+        : undefined
+      : { tipo: 'api', workspaceId };
+
+  // Campo VAZIO não é "fora da base": não há caminho para a api recusar
+  // ainda, e alarmar antes de a pessoa digitar seria a tela afirmando sobre
+  // o que não tem.
+  const caminhoForaDaBase =
+    caminhoLocal.trim() !== '' &&
+    !caminhoDentroDaBase(caminhoLocal, baseDeProjetos);
+
+  const modosDeWorkspaceOferecidos = useMemo(
+    () =>
+      MODOS_DE_WORKSPACE.filter(
+        (m) => m.id !== 'mounted' || podeOferecerMounted,
+      ),
+    [podeOferecerMounted],
+  );
+
+  /**
+   * A sugestão `<base>/<slug>` (RN-501, ADR 0142), que NUNCA clobbera o que
+   * foi digitado.
+   *
+   * Ela entra em dois casos, e só neles: o campo está vazio e nada foi
+   * sugerido ainda, ou o campo contém exatamente a sugestão anterior desta
+   * tela (o nome do projeto mudou no passo de detalhes, e a sugestão
+   * acompanha). Campo com qualquer outra coisa — inclusive vazio DEPOIS de
+   * o usuário ter apagado a sugestão — fica como está.
+   *
+   * Slug vazio (a adoção, onde o nome vem do provider) não vira segmento
+   * inventado: `caminhoSugeridoNaBase` devolve vazio e o campo continua
+   * vazio, com `canAdvanceFromWorkspace` segurando o passo até alguém
+   * digitar.
+   */
+  useEffect(() => {
+    if (modoDeWorkspace !== 'mounted') return;
+    const sugestao = caminhoSugeridoNaBase(baseDeProjetos, slug);
+    if (sugestao === '' || sugestao === caminhoLocal) return;
+    const campoLivre =
+      caminhoSugeridoAplicado === null
+        ? caminhoLocal === ''
+        : caminhoLocal === caminhoSugeridoAplicado;
+    if (!campoLivre) return;
+    setCaminhoLocal(sugestao);
+    setCaminhoSugeridoAplicado(sugestao);
+  }, [
+    modoDeWorkspace,
+    baseDeProjetos,
+    slug,
+    caminhoLocal,
+    caminhoSugeridoAplicado,
+  ]);
+
   const stepKeys = useMemo<StepKey[]>(() => {
-    const keys: StepKey[] = ['mode', 'provider'];
-    if (needsCredential) keys.push('credential');
+    // Provider e credencial são do caminho de ADOÇÃO, e só dele (RN-541).
+    //
+    // Criar um projeto deixou de provisionar repositório: o git nasce quando o
+    // Arquiteto passa o handoff ao Dev Lead, e nasce `local`, que é o único
+    // provider que não pede credencial nenhuma. Perguntar "onde hospedar" na
+    // criação seria perguntar por uma decisão que a tela não vai usar — e
+    // cobrar um PAT para um repositório que ninguém vai criar agora.
+    //
+    // Adotar é o oposto por construção: aponta para um repositório que JÁ
+    // existe, e sem provider não há o que apontar.
+    const keys: StepKey[] = ['mode'];
+    if (adotando) {
+      keys.push('provider');
+      if (needsCredential) keys.push('credential');
+    }
+    // Destino e identificação num passo só: `details` agora carrega os dois.
     keys.push('details');
-    keys.push('workspace');
-    // Adotar não passa pela política: o que vai (ou não) acontecer com as
-    // branches é decidido depois, na tela do PLANO, contra o repositório
-    // real — prometer o template aqui seria mentir sobre o que o
-    // bootstrap faria num repo que já tem política própria.
-    if (!adotando) keys.push('policy');
+    // O passo "Política de branches" SAIU, e não por espaço: ele não era
+    // escolha nenhuma — o payload de criação nunca teve campo de política, e
+    // o bootstrap roda igual na api. Uma tela que pergunta o que não usa
+    // ensina que ali há decisão. O que ele mostrava de útil (quantos passos
+    // de Gitflow vêm a seguir) continua no resumo do Confirmar, que é onde
+    // se aprova.
     keys.push('confirm');
     return keys;
   }, [needsCredential, adotando]);
@@ -233,12 +369,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       case 'credential':
         return canAdvanceFromCredential(provider!, selectedCredentialId);
       case 'details':
+        // CONJUNÇÃO dos dois gates que existiam quando isto eram dois passos.
+        // Um `||` aqui deixaria avançar sem nome, ou com caminho inválido.
         return (
           canAdvanceFromDetails(modo!, { name, externalId }) &&
-          (adotando || slug.length > 0)
+          (adotando || slug.length > 0) &&
+          canAdvanceFromWorkspace(modoDeWorkspace, caminhoLocal)
         );
-      case 'workspace':
-        return canAdvanceFromWorkspace(modoDeWorkspace, caminhoLocal);
       default:
         return true;
     }
@@ -266,12 +403,17 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
   /**
    * "Procurar pasta..." (RN-437, ADR 0108). Fora do modo `runner`, só abre o
-   * modal — comportamento de sempre, `projectId: null` (ver
-   * `FolderBrowserModal`). No modo `runner`, o modal precisa de um projeto
-   * real pra ancorar o ticket do canal: se já existe um criado
-   * ANTECIPADAMENTE e a identidade (nome/externalId/adotando) não mudou
-   * desde então, reusa; senão cria agora, com o caminho digitado ou o
+   * modal — ele navega a base pela API, que não depende de projeto nenhum
+   * existir (RN-504). No modo `runner`, o modal precisa de um projeto real
+   * pra ancorar o ticket do canal do agente local (RN-533): se já existe um
+   * criado ANTECIPADAMENTE e a identidade (nome/externalId/adotando) não
+   * mudou desde então, reusa; senão cria agora, com o caminho digitado ou o
    * placeholder provisório.
+   *
+   * Falhar aqui NÃO abre o modal — sem projeto não há transporte de runner a
+   * montar, e abrir "no que der" cairia na base do servidor com o rótulo
+   * errado. O toast diz que a preparação falhou, e o campo de texto continua
+   * sendo o caminho que sempre funcionou.
    */
   async function handleProcurarPasta() {
     if (modoDeWorkspace !== 'runner') {
@@ -311,7 +453,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   }
 
   async function handleConfirm() {
-    if (!provider) return;
+    // A guarda é da ADOÇÃO: lá o provider é obrigatório e vai no `search` da
+    // tela de plano. Ao criar ele é `undefined` no caso normal, e o `return`
+    // incondicional que existia aqui faria o botão não fazer NADA, em silêncio.
+    if (adotando && !provider) return;
     setSubmitting(true);
     setErroDeCriacao(null);
     try {
@@ -349,12 +494,18 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           ? {
               to: '/projects/$projectId/adoption',
               params: { projectId: project.id },
-              search: { provider, externalId: externalId.trim() },
+              search: { provider: provider!, externalId: externalId.trim() },
             }
-          : {
-              to: '/projects/$projectId/provisioning',
+          : // Criar vai direto para o PROJETO (RN-541). Ir para a tela de
+            // provisionamento era o que fazia criar projeto e provisionar git
+            // serem o mesmo gesto: ela é o ÚNICO chamador de
+            // `provisionRepository` no web, e o disparo mora no efeito de
+            // montagem dela. Não passar por lá é, literalmente, o adiamento do
+            // git. A rota continua existindo — o Dashboard leva a ela quando o
+            // provisionamento FALHOU e precisa ser retomado.
+            {
+              to: '/projects/$projectId',
               params: { projectId: project.id },
-              search: { provider },
             },
       );
     } catch (error) {
@@ -458,96 +609,16 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         />
       )}
 
-      {currentStep === 'details' && adotando && (
+      {/* UM passo, com o DESTINO acima da identificação — é o destino que
+          decide se existe campo de caminho, e pedir o nome primeiro era
+          mostrar a consequência depois da escolha fácil. Os dois eram
+          passos separados; o gate deste é a CONJUNÇÃO dos dois que
+          existiam, e um `||` no lugar do `&&` deixaria avançar sem nome. */}
+      {currentStep === 'details' && (
         <div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="repo-external-id">
-              {t('details.adopt.repoLabel')}
-            </label>
-            <Input
-              id="repo-external-id"
-              value={externalId}
-              onChange={(e) => setExternalId(e.target.value)}
-              placeholder={
-                provider === 'local'
-                  ? t('details.adopt.placeholderLocal')
-                  : t('details.adopt.placeholderRemote')
-              }
-              autoFocus
-            />
-            <div className={styles.slugPreview}>
-              {provider === 'local'
-                ? t('details.adopt.hintLocal')
-                : t('details.adopt.hintRemote')}
-            </div>
-          </div>
-          <p className={styles.policyNote}>
-            <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
-          </p>
-        </div>
-      )}
-
-      {currentStep === 'details' && !adotando && (
-        <div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="project-name">
-              {t('details.create.nameLabel')}
-            </label>
-            <Input
-              id="project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('details.create.namePlaceholder')}
-              autoFocus
-            />
-            {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
-                CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
-                fixo no código — e o nome errado ia até a tela de confirmação,
-                onde o usuário aprova. Melhor mostrar só o que se sabe. */}
-            {slug && (
-              <div className={styles.slugPreview}>
-                {t('details.create.repoPreview', { slug })}
-              </div>
-            )}
-          </div>
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
-            <div className={styles.toggleRow}>
-              {(['private', 'public'] as Visibility[]).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
-                  onClick={() => setVisibility(v)}
-                >
-                  {v === 'private'
-                    ? t('details.create.visibilityPrivate')
-                    : t('details.create.visibilityPublic')}
-                </button>
-              ))}
-            </div>
-            {/* O plano gratuito do GitHub só protege branch em repositório
-                PÚBLICO. Sem este aviso, a escolha "Privado" leva a um
-                bootstrap que falha no último passo com a mensagem crua da API
-                — e o usuário descobre a limitação do plano dele já com o
-                repositório criado. */}
-            {provider === 'github' && visibility === 'private' && (
-              <Alert tone="warning">
-                <Trans
-                  i18nKey="details.create.githubPrivateWarning"
-                  ns="newProject"
-                  components={{ strong: <strong />, code: <code /> }}
-                />
-              </Alert>
-            )}
-          </div>
-        </div>
-      )}
-
-      {currentStep === 'workspace' && (
         <div>
           <div className={styles.providerGrid}>
-            {MODOS_DE_WORKSPACE.map((m) => (
+            {modosDeWorkspaceOferecidos.map((m) => (
               <button
                 key={m.id}
                 type="button"
@@ -557,7 +628,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                onClick={() => setModoDeWorkspace(m.id)}
+                onClick={() => setModoDeWorkspaceEscolhido(m.id)}
               >
                 <span className={styles.providerLabel}>{t(m.labelKey)}</span>
                 <span className={styles.providerDesc}>{t(m.descKey)}</span>
@@ -595,17 +666,34 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   : t('workspace.hintRunner')}
               </div>
               {modoDeWorkspace === 'mounted' ? (
-                // O aviso é a decisão do dono do produto declarada na tela: o
-                // caminho é livre, e livre só funciona se estiver montado. Sem
-                // isto, a recusa da api (RN-422) chegaria como surpresa.
-                <Alert tone="warning">
-                  <Trans
-                    i18nKey="workspace.mountedWarning"
-                    ns="newProject"
-                    values={{ caminho: caminhoLocal.trim() || '/sua/pasta' }}
-                    components={{ strong: <strong />, code: <code /> }}
-                  />
-                </Alert>
+                // DOIS estados, e são os dois que o backend realmente tem
+                // (RN-500/RN-501): dentro da base consentida a criação passa,
+                // e a pasta nem precisa existir — `materializarWorkspaceMontado`
+                // a cria quando a Infra sobe o container (ADR 0142); fora
+                // dela a api RECUSA com 400, em `resolverWorkspacePath`.
+                // O aviso anterior era anterior ao ADR 0141 e dizia que o
+                // caminho era livre e que o usuário precisava montá-lo — as
+                // duas coisas deixaram de ser verdade quando a base virou
+                // uma só, montada por identidade.
+                caminhoForaDaBase ? (
+                  <Alert tone="warning">
+                    <Trans
+                      i18nKey="workspace.mountedOutsideBase"
+                      ns="newProject"
+                      values={{ base: baseDeProjetos ?? '' }}
+                      components={{ strong: <strong />, code: <code /> }}
+                    />
+                  </Alert>
+                ) : (
+                  <div className={styles.baseNote}>
+                    <Trans
+                      i18nKey="workspace.mountedUnderBase"
+                      ns="newProject"
+                      values={{ base: baseDeProjetos ?? '' }}
+                      components={{ strong: <strong />, code: <code /> }}
+                    />
+                  </div>
+                )
               ) : (
                 // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
                 // confirmado quando o runner conectar, nunca "recusado na hora"
@@ -624,32 +712,75 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </div>
           )}
         </div>
-      )}
-
-      {currentStep === 'policy' && (
-        <div className={styles.policy}>
-          <p className={styles.policyIntro}>{t('policy.intro')}</p>
-          <ol className={styles.policySteps}>
-            {BOOTSTRAP_STEPS.map((step) => (
-              <li key={step.name}>{t(step.labelKey, { ns: 'provisioning' })}</li>
-            ))}
-          </ol>
-          <div className={styles.branchPills}>
-            {/* Sem `rc`: as permanentes hoje são main, dev e qa — a volta da
-                rc/rcfix está no backlog do ADR 0030. Nomes de branch não são
-                traduzidos: são identificadores, não texto de interface. */}
-            {['main', 'dev', 'qa'].map((b) => (
-              <span key={b} className={styles.pill}>
-                {b}
-              </span>
-            ))}
+          {adotando ? (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="repo-external-id">
+                {t('details.adopt.repoLabel')}
+              </label>
+              <Input
+                id="repo-external-id"
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+                placeholder={
+                  provider === 'local'
+                    ? t('details.adopt.placeholderLocal')
+                    : t('details.adopt.placeholderRemote')
+                }
+                autoFocus
+              />
+              <div className={styles.slugPreview}>
+                {provider === 'local'
+                  ? t('details.adopt.hintLocal')
+                  : t('details.adopt.hintRemote')}
+              </div>
+            </div>
+            <p className={styles.notaDaAdocao}>
+              <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
+            </p>
           </div>
-          <p className={styles.policyNote}>
-            <Trans i18nKey="policy.note" ns="newProject" components={{ code: <code /> }} />
-            {provider === 'local'
-              ? t('policy.noteSuffixLocal')
-              : t('policy.noteSuffixDefault')}
-          </p>
+          ) : (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="project-name">
+                {t('details.create.nameLabel')}
+              </label>
+              <Input
+                id="project-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('details.create.namePlaceholder')}
+                autoFocus
+              />
+              {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
+                  CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
+                  fixo no código — e o nome errado ia até a tela de confirmação,
+                  onde o usuário aprova. Melhor mostrar só o que se sabe. */}
+              {slug && (
+                <div className={styles.slugPreview}>
+                  {t('details.create.repoPreview', { slug })}
+                </div>
+              )}
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
+              <div className={styles.toggleRow}>
+                {(['private', 'public'] as Visibility[]).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
+                    onClick={() => setVisibility(v)}
+                  >
+                    {v === 'private'
+                      ? t('details.create.visibilityPrivate')
+                      : t('details.create.visibilityPublic')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
         </div>
       )}
 
@@ -736,28 +867,32 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         </div>
       </div>
     </Modal>
-    {navegadorDePastaAberto && (
-      // A navegação passa a ser servida pela API, escopada à base de projetos
-      // montados (RN-504) — nos DOIS modos, e não só em `mounted`.
+    {navegadorDePastaAberto && origemDoNavegador && (
+      // O transporte é escolhido pelo MODO, e são duas perguntas diferentes
+      // (RN-533, ADR 0151 ponto 7).
       //
-      // O que isso resolve: antes, `mounted` abria o modal com
-      // `projectId={null}` e ele não navegava nada (o projeto só nasce na
-      // confirmação), e `runner` só navegava porque o assistente CRIAVA o
-      // projeto antecipadamente para ter um id a passar (RN-437, ADR 0108).
-      // A base da instalação não depende de projeto nenhum existir, então o
-      // primeiro caso deixa de ser um estado declarado e vira navegação de
-      // verdade.
+      // `mounted` pergunta à API, escopado à base de projetos montados
+      // (RN-504): a pasta dele mora dentro de `BRABO_PROJECTS_BASE`, no
+      // SERVIDOR, e é o servidor quem a enxerga. Este caminho fica intacto.
       //
-      // O preço, declarado: para `runner` a lista deixa de ser o disco da
-      // máquina do usuário e passa a ser a base — e a pasta de um projeto
-      // `runner` não precisa morar lá. É aceito porque o modo `runner` sai da
-      // criação de projeto no PR seguinte deste plano, junto com toda a
-      // criação antecipada; digitar o caminho continua funcionando enquanto
-      // isso. O transporte via runner (`connectFsBrowserChannel`) fica sem
-      // chamador no web a partir daqui, e continua no repositório por decisão
-      // declarada — o protocolo em `apps/runner/src/channel.ts` não muda.
+      // `runner` volta a perguntar ao AGENTE LOCAL, pelo canal Phoenix
+      // (`fs_list_dir`) que sempre existiu dos dois lados. A RN-504 o tinha
+      // apontado para a api junto com o `mounted`, e declarou o preço:
+      // "para `runner` a lista deixa de ser o disco da máquina do usuário e
+      // passa a ser a base". Aquilo foi aceito porque o modo `runner` sairia
+      // da criação de projeto — o que não aconteceu, e a direção de produto
+      // do ADR 0151 é a oposta. Enquanto isso durou, escolher `runner` e
+      // clicar "Procurar pasta..." navegava um disco que não é o daquele
+      // projeto, e nada na tela dizia isso.
+      //
+      // A âncora do modo `runner` é o projeto criado ANTECIPADAMENTE
+      // (RN-437, ADR 0108) — o ticket do canal é escopado a um `projectId`
+      // real —, e é por isso que `origemDoNavegador` pode ser `undefined`:
+      // sem projeto criado não há transporte a montar, e abrir o modal caindo
+      // na api mostraria a base do servidor sob o rótulo de "sua máquina",
+      // que é exatamente o que esta entrega existe para acabar.
       <FolderBrowserModal
-        origem={{ tipo: 'api', workspaceId }}
+        origem={origemDoNavegador}
         caminhoInicial={caminhoLocal.trim() || undefined}
         onSelecionar={(caminho) => setCaminhoLocal(caminho)}
         onClose={() => setNavegadorDePastaAberto(false)}

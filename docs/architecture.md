@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 144 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 158 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -107,6 +107,19 @@ them on its own — no new table for the outbox path, because the problem
 wasn't a missing outbox, it was missing durable state for what happens
 BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
+
+Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
+behaviour with six callbacks (PR QA and SecOps, QA-strategy, the two
+deterministic infra gates, and design AppSec) whose only job is to start the
+per-project GenServer if needed and cast into it. The indirection exists for
+the callers' tests: `Engine.Agents.DevLeadTools` is exercised by a LIGHT test
+with no Ecto sandbox, and starting a real GenServer there just to prove a gate
+was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
+six, `run_appsec_design/2`, closed the last gate that was actionable with no
+production caller: `assess_implementability` now asks for the story's design
+threat model IN PARALLEL — the verdict never waits for it, and the ask happens
+only once per story ([RN-539](business-rules.md#rn-539),
+[ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ## Code map
 
@@ -236,6 +249,22 @@ Two UI checks are automatic: contrast (`lib/contraste.ts`, a test over
 `design/tokens.css`) and layout (`scripts/dev/validacao-visual.js`, run in
 the browser). Explained in `design/README.md`.
 
+**The installation decides what the project wizard offers.** `getProjectsBase`
+(`lib/api-client.ts`) reads `GET /workspaces/:workspaceId/projects-base` — the
+single mounted-projects base of this installation ([ADR
+0141](adr/0141-base-unica-dos-projetos-montados.md)) — and the New Project
+wizard is its only caller ([RN-513](business-rules.md#rn-513)). `projectsBase:
+null` is a normal state, not a failure: the installation has no
+`BRABO_PROJECTS_BASE`, so the Mounted folder card is not offered at all and
+`container` stays the default. The same holds while the answer is in flight and
+when the query FAILS — unknown never becomes an offer, the same rule as
+[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). With a
+base, the card is PRE-SELECTED and the path field opens on `<base>/<slug>`,
+composed by `caminhoSugeridoNaBase` (`lib/wizard.ts`) — a pure function, next
+to `caminhoDentroDaBase`, which answers "is this path under the base?" by
+SEGMENT and mirrors the api's `dentroDoEscopo`. Neither the pre-selection nor
+the suggestion overwrites a human choice.
+
 **The folder picker is the web's one TWO-TRANSPORT read**, and the interface
 that makes it one lives in `lib/fs-browser.ts`
 ([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /
@@ -263,9 +292,51 @@ excluded. The runner protocol (`FsEntrada` in `apps/runner/src/channel.ts`)
 returns folders and files mixed and counts nothing; filling in zeros there would
 assert "nothing was left out", which is different from not knowing.
 
-After this change the runner transport has ZERO callers in the web. It stays by
-a declared product decision — the runner leaves the creation wizard, the binary
-keeps being refined — and nothing here touches the channel protocol either way.
+RN-504 pointed BOTH modes at the api and declared the price: for `runner`, the
+list stopped being the user's machine and became the base. That was accepted
+because the `runner` mode would leave the creation wizard — it didn't, and
+[RN-533](business-rules.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+point 7) reverses it. The MODE now picks the transport, because they answer
+different questions: `mounted` asks the api (its folder lives under the base, on
+the SERVER), `runner` asks the local agent (its folder lives on a machine the
+server cannot see). The `runner` branch is anchored on the project the wizard
+already created ahead of time ([RN-437](business-rules.md#rn-437)); when that
+creation fails, no modal opens at all, because falling back to the api would
+show the SERVER's base under the label "your machine".
+
+Failure carries a DISCRIMINATED reason (`MotivoDeFalhaDoAgente`): `sem-agente`
+is the server ASSERTING there is no runner, `sem-resposta` is a timeout, a
+dropped socket or a refused ticket — ignorance, stated as ignorance
+([RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)). The
+component used to decide by `includes('Nenhum runner conectado')`, matching a
+pt-BR sentence that lives in the engine's `.ex`; the substring match now lives
+in exactly one place, the module that owns the channel protocol, and a reworded
+engine message degrades to `sem-resposta`, never to "there is an agent". Both
+reasons mount `EsperaDoRunner` — RN-474's wait, REUSED: same three states, same
+ceiling, same signal — which re-runs the failed listing on its own when the
+stamp changes. One wait per screen: `RunnerOnboardingPanel` takes
+`mostrarEspera`, false only where its host already shows one. And the picker
+STATES whose disk it is listing, in both origins — the only hint before that was
+a shortcut's label, which names a place, not a machine.
+
+**The panel also RECOGNISES a machine that is already paired**
+([RN-548](business-rules.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
+`listRunnerDeviceKeys` in `lib/api-client.ts` reads
+`GET /projects/:projectId/runner-device-keys`, which since
+[RN-543](business-rules.md#rn-543) marks each key's SPECIES — and the whole
+derivation lives outside the component, in `lib/agente-de-maquina.ts`, because
+the rule is about the DATA and the component is about the design. Seven states,
+none collapsing into another, and failure is derived from `isError` rather than
+from a status, so a network error says "I don't know" instead of spinning in
+"checking…" forever. A registered key is NOT a running agent — the same
+discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
+ACCOUNT, not to this browser, so the strongest sentence available is "your
+account has a paired machine". Both limits are stated on screen, and they are
+why the [ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md) flow is
+not removed: it moves into a `<details>` whose label names the case it still
+answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
+against the ENDPOINT's `developer`, and a real 403 lands in the same state —
+the workspace role is a proxy, the api is the authority.
 
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
@@ -307,19 +378,47 @@ calls `GET workspaces/:workspaceId/containers`, and `ContainerOverviewItem`
 in `lib/api-types.ts` mirrors `ContainerOverviewItemResponseDto`. The api
 side is a dedicated read model, `ContainersOverviewRepository`/
 `DrizzleContainersOverviewRepository`, same "no N+1 across projects"
-discipline as `ProjectsSummaryRepository` — three constant queries (the
-container rows joined to `projects`, the `artifact.project_image` events in
+discipline as `ProjectsSummaryRepository` — three constant queries (`projects`
+LEFT JOINed to the container rows, the `artifact.project_image` events in
 batch, the pending container `proposed_actions` in batch), never one per
 project. What CAN'T be batched — asking the broker for the observed state —
 gets an explicit per-load budget instead
 (`ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA`, only
 `provisioning`/`running` rows are asked, capped at 20): a row outside the
 budget says `naoVerificado`, never silently reusing another row's answer or
-inheriting the registered state. The three actions (stop/remove/start
-again) are `proposed_action`s like everywhere else — the page never calls
-the broker directly — and each row's pending action (if any) rides along in
-the same batched read, rendered as an inline `ApprovalCard`, the same
-pattern `ProjectPrsTab.tsx` already uses for merge proposals.
+inheriting the registered state. The actions (stop/remove/start) are
+`proposed_action`s like everywhere else — the page never calls the broker
+directly — and each row's pending action (if any) rides along in the same
+batched read, rendered as an inline `ApprovalCard`, the same pattern
+`ProjectPrsTab.tsx` already uses for merge proposals.
+
+Since [RN-521](business-rules.md#rn-521) the join is a LEFT one and the page
+lists EVERY project of the workspace, because it became the human path to start
+the FIRST container: a start that fails before registering leaves no row, and
+the old INNER JOIN hid exactly the project that needed the page.
+`ContainerOverviewItem.registrado` is therefore nullable — a third state named
+in the type, distinct from `stopped` and from "could not be observed" — and rows
+with no container are never eligible for the broker budget, so they cannot crowd
+out a real container. The branch between `container_start` (broker) and
+`container_start_via_runner` (local agent) is a pure function of the CLIENT,
+`routes/containers-subida.ts`: it also decides when NOT to offer the button (no
+image decided, `runner` whose folder no agent ever confirmed, role below
+`maintainer` by `roleAtLeast`) and each refusal has its own text — the screen
+never proposes an action it already knows will fail, and never hides why.
+
+The OTHER proposer — the Infra Lead agent — branches the same way since
+[RN-566](business-rules.md#rn-566). Both of its tools go through one
+`recusa_local_de_subida/2` in `infra_lead_server.ex`, which reads the project
+ONCE (`Project.get/1`, same BEAM process, never HTTP: a network call inside the
+agent loop is the cost this fix could not pay) and returns `nil` or a NAMED
+reason, one clause per tool — `container`/`mounted` propose `container_start`,
+`runner` is refused pointing at `container_start_via_runner`, and the
+`container_start` clause is an ALLOWLIST like the broker's, so a new enum mode
+is born refused. The refusal is tool-RESULT text the model reads (loop input,
+[RN-163](business-rules/autenticacao.md#rn-163)), never an `agent.error`, and the `tool.call`
+is still emitted so a local refusal never disappears from the timeline. What the
+agent does NOT check, and the screen does, is the decided image and the
+confirmed folder.
 
 ### Outside the applications
 
@@ -598,9 +697,25 @@ erDiagram
   projects ||--o{ rag_searches : "every hybrid search leaves a row (RN-479)"
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
+  projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
 ```
 
-53 tables in total. The two most recent are `rag_searches`/`rag_feedback`
+54 tables in total. The most recent is `project_mirror_states`
+([RN-517](business-rules.md#rn-517),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
+project, `project_id` unique, holding what the LAST mirror round did — the last
+successful sync with its three counts and its frozen destination, plus the last
+error. A TABLE and not an event for the same reason as `rag_searches` right
+above: a mirror round has no session, and `session_events.session_id` is
+`NOT NULL`, so the event log would silently drop the whole thing. Three states
+that never collapse ([RN-088](business-rules.md#rn-088)): "never synced" is the
+ABSENT row, "synced and copied nothing" is a present row with `files_copied = 0`,
+and "failed" is `last_error_at` newer than `last_synced_at`. Success and failure
+columns are DISJOINT and neither write touches the other's — which is why the
+screen can say "failing since today, last good copy was yesterday with 412
+files" instead of losing the most useful thing it has.
+
+The two before it are `rag_searches`/`rag_feedback`
 (RN-479/480): the trail of the hybrid search and the vote on what it
 returned, added because `rag-search-limits.ts` declares in its own comment
 that none of the four numbers of the hybrid search comes from calibration
@@ -617,6 +732,32 @@ same discipline as the frozen price in metering
 calibration does not silently change what every earlier measurement meant.
 `session_socket_tickets` is kept off the diagram for the same reason as
 `refresh_tokens`/`account_tokens`: an auth mechanism, not a domain relation.
+
+`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 4) is a column and
+not a table because it is ONE optional value per project: the absolute path,
+on the USER's machine, that the local agent's `espelho` capability copies the
+work to. It is nullable and `NULL` is the NORMAL state — a project without a
+mirror is the majority, and the product never picks a destination on its own.
+It deliberately carries **no** CHECK pairing it with `execution_mode`, unlike
+`workspace_path` right next to it: `container` cannot have a destination (its
+source is a managed volume on the SERVER, and the process that would copy runs
+on the user's machine), but `execution_mode` is CONVERTIBLE
+([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+so a CHECK would make converting to `container` blow up in Postgres instead of
+refusing with a reason. The refusal lives in the use case, and the conversion
+zeroes the column — the same shape as `workspace_verified_at`, and for an
+additional reason: the two directions of the origin↔destination loop were
+validated against the OLD `workspace_path`.
+Since [RN-516](business-rules.md#rn-516) the engine READS this column — it is
+what decides whether the runner's `join` requires the `espelho` capability, and
+it is what travels back in that join's grant (`Engine.Runners.Espelho`,
+`EngineWeb.TerminalChannel`). The engine never writes it. Since
+[RN-517](business-rules.md#rn-517) there IS an internal route in the
+neighbourhood — `POST /internal/projects/:projectId/mirror-sync-result` — but it
+writes `project_mirror_states`, never this column: the destination is
+CONFIGURATION (the user declares it) and the round outcome is TELEMETRY (the
+local agent reports it), and merging them would let a report overwrite a choice.
 **The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,

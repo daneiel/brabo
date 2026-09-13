@@ -92,3 +92,29 @@
   line-height: 1.5;
   text-align: center;
 }
+
+/* O reconhecimento de máquina já pareada (RN-548). Mesma largura e mesmo
+   empilhamento de `.instrucao` — é o mesmo tipo de bloco (um fato, as
+   ressalvas dele e um comando copiável), e dar-lhe uma gramática visual
+   própria faria a tela parecer ter duas seções que competem. */
+.reconhecimento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 480px;
+  width: 100%;
+}
+
+/* A frase que introduz o comando. `--text-secondary` e não `--text-muted`
+   pela mesma aritmética medida em `SinaisDoAmbiente.module.css`: este painel
+   cai sobre `--surface-1` no overlay do terminal, onde `--text-muted` reprova
+   o 4,5:1 do AA no tema escuro. */
+.gesto {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}

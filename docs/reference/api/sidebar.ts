@@ -228,6 +228,12 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/internal-first-account-controller-criar",
+          label: "Creates the FIRST account of an installation, already verified",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-gates-controller-ler",
           label: "Reads the declarative gate registry",
           className: "api-method get",
@@ -243,6 +249,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-graph-controller-get-by-name",
           label: "Looks up a prompt template by name",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-machine-device-keys-controller-registrar-chave",
+          label: "Registers the MACHINE device key of a fresh installation",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -279,6 +291,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-projects-controller-git-remote",
           label: "The project's working remote, to fetch and push",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-projects-controller-mirror-sync-result",
+          label: "The local agent reports the outcome of a mirror round (RN-517)",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -558,6 +576,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/projects-controller-set-mirror-path-route",
+          label: "Declares (or clears) the project's mirror destination",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/projects-controller-mirror-state-route",
+          label: "What the last mirror round did (RN-517)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/projects-controller-get-permissions",
           label: "Reads the project's permissions.json",
           className: "api-method get",
@@ -571,7 +601,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/containers-overview-controller-list",
-          label: "Lists the container of every project in the workspace that already has one",
+          label: "Lists every project in the workspace and its container, if any",
           className: "api-method get",
         },
       ],
@@ -1062,6 +1092,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-list-device-keys",
+          label: "Lista as próprias chaves de dispositivo deste projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/runner-device-keys-controller-register-device-key",
           label: "Registra a chave pública de um dispositivo do runner local",
           className: "api-method post",
@@ -1083,6 +1119,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/runner-tickets-controller-terminal-ticket",
           label: "Emite um ticket de uso único para a aba Terminal da web",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-projects-controller-list-runner-projects",
+          label: "Lista os projetos em modo 'runner' que este agente local atende",
+          className: "api-method get",
         },
       ],
     },

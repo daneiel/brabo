@@ -144,6 +144,12 @@ Engine.Repo.query!(
   "ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_verified_at timestamptz"
 )
 
+# RN-515/RN-516 (ADR 0147 ponto 4): o DESTINO do espelho, gravado pela api e
+# LIDO aqui — é ele que decide se o `join` do canal do runner exige a
+# capacidade `espelho`, e é ele que viaja na concessão daquele join. Nullable
+# como na api: `nil` é o estado normal, não uma pendência.
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS mirror_path text")
+
 # Mesmo motivo dos fixtures acima — project_containers também é gerenciada
 # pela api (Drizzle, schema "public", ADR 0081/0130/0134). O engine lê só
 # `status` (`Engine.Containers.ProjectContainerLifecycle.running?/1`, RN-492)

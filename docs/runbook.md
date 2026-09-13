@@ -21,6 +21,9 @@ Start with triage.
 | I'm about to roll out the engine | [Engine rollout](#rollout-do-engine) |
 | session `active` with no process, or stuck in `closing` | [When a session escapes](#quando-a-sessao-escapa) |
 | I lost data / want to verify the backup | [Restore](#restore) |
+| I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
+| a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
+| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -39,9 +42,17 @@ Start with triage.
 | the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the path must sit inside the base | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
+| `brabo-runner` sits printing `nada a atender AINDA`, or the machine unit is up but no project is being served | [The machine agent](#agente-de-maquina) |
+| I need a device key for the machine and there is no browser (a fresh install, a headless box) | [Device key from the terminal](#chave-de-dispositivo-pelo-terminal) |
+| the installer finished with a **"O que ficou pendente"** block, or a fresh install has no account, no machine key, or no agent service | [When the installer does not close the installation](#instalador-nao-fecha) |
+| the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
+| a dev agent in a `runner` project is blocked preparing its worktree, naming `credencial-nao-atravessa-o-container`, with origin `politica` | [Authenticated clone in Runner mode](#credencial-nao-atravessa-o-container) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
+| I want to wipe the dev database and start over, or `reset-total.sh` stopped in the middle | [Total reset of the dev environment](#reset-total) |
+| the web shows **429 (rate limit)** for no apparent reason, or a project in `runner` mode looks "no local agent" while `brabo-runner` is running | [The runner floods the api with a dead ticket](#runner-com-ticket-morto) |
 
 Two things worth knowing before any procedure:
 
@@ -57,27 +68,54 @@ The broker ([ADR 0130](adr/0130-broker-de-container.md)) is the only process in
 the product that talks to a Docker daemon, and the only service with
 `/var/run/docker.sock` mounted. **Do not mount that socket anywhere else.**
 
-It ships under a compose profile and therefore **does not come up with
-`pnpm dev`**. That is deliberate: having it up by default would hand every
-development machine access to the host's Docker whether or not anyone is
-running containers there. Without it, `container_start` ends as a NAMED
-`failed` (`BrokerIndisponivelError`) — never a crash, and never a silent
-fallback to running outside a container.
+**Locally it comes up with `pnpm dev`; in production it does not.** That
+asymmetry is a decision ([ADR 0146](adr/0146-base-consentida-no-bootstrap.md),
+point 3), not an oversight — do not "uniformize" the two compose files. Whoever
+runs `pnpm dev` **already holds the Docker socket** (they are running
+`docker compose` against their own host's daemon), so the broker receiving it
+grants nothing the operator does not already have. In production the socket is
+a real privilege boundary and the operator is not the developer, so there it
+stays under `profiles: ["container-broker"]`.
 
-To bring it up:
+Until that decision the broker was off by default in both files, on the grounds
+that "nothing calls it yet". That stopped being true: it has four real callers
+([ADR 0133](adr/0133-infra-elege-imagem-do-roteamento.md)/
+[0136](adr/0136-pagina-global-de-containers.md)), and
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) made **Mounted** mode bring its
+container up *through* the broker — so with the profile off, the default local
+mode ended in `BrokerIndisponivelError`. That failure is still what you get when
+the broker is genuinely absent: a NAMED `failed`, never a crash, and never a
+silent fallback to running outside a container.
+
+What you still have to set is the gid — and getting it wrong does **not** break
+the boot, it breaks the use:
 
 ```bash
-# 1. the gid of your host's docker group — the default (999) is the most
-#    common one and is wrong on several distributions
+# the gid of your host's docker group — the compose default (999) is the most
+# common one and is wrong on several distributions
 getent group docker | cut -d: -f3
 
-# 2. in .env
+# in .env
 #    DOCKER_GID=<the number above>
 #    BROKER_URL=http://broker:8090
 #    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
-#    BRABO_PROJECTS_BASE=/home/you/brabo                     # derives HOST_BASE
+#    BRABO_PROJECTS_BASE=/home/you/projetos-brabo            # derives HOST_BASE
 
-docker compose -f docker/docker-compose.yml --env-file .env \
+docker compose -f docker/docker-compose.yml --env-file .env up -d broker
+```
+
+`pnpm dev` **reports** the state of `DOCKER_GID` on every run
+([RN-512](business-rules.md#rn-512)), comparing it against your machine's real
+group, precisely so the mismatch is not discovered much later — when someone
+proposes `container_start` and every operation dies with `permission denied` on
+the socket. The report never blocks, and on a machine with no `docker` group at
+all (Docker Desktop, rootless) it says the question does not apply rather than
+accusing you of a defect.
+
+In production, bring it up explicitly:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
@@ -106,12 +144,42 @@ docker compose -f docker/docker-compose.yml --env-file .env exec -T api \
 broker does not fix a Docker that is down, and a healthcheck that failed for
 that reason would produce a restart loop that resolves nothing.
 
+**The local image installs its dependencies at BUILD time, and that is not an
+optimization.** The broker's only network is `internal: true`, so there is no
+reachable registry at runtime: an image that ran `corepack`/`pnpm install` on
+start died with `getaddrinfo EAI_AGAIN registry.npmjs.org` and exited 1. The
+fix took the registry out of the runtime path (`COREPACK_HOME` prepared in the
+build and owned by the runtime uid, `pnpm install` as a build step) rather than
+opening the network — the network is the first of the five containment layers.
+
+Two consequences you will meet:
+
+- **The three `node_modules` are named volumes mounted over what the image
+  installed**, and Docker only seeds a volume from the image when the volume is
+  EMPTY. `docker/broker/entrypoint.sh` therefore reconciles them against a copy
+  kept outside `/workspace`, stamped with the sha256 of the `pnpm-lock.yaml`
+  the image was built from. First boot after a `--build` logs
+  `sincronizando…` and takes a few seconds; the ones after log nothing.
+- **Changing a broker dependency requires `up -d --build broker`.** The
+  entrypoint compares its stamp with the working tree's lockfile and WARNS when
+  they differ. It warns instead of refusing to boot: the broker has no runtime
+  dependency beyond the workspace link to `@brabo/docker-port`, and trading a
+  warning for an outage would be worse.
+
+The service also has a **healthcheck** (`wget` against `127.0.0.1:8090/health`
+from inside the container — it publishes no port, and `node:24-alpine` has no
+`curl`). Without it `up --wait` reported `Healthy` the moment the container
+started, so `scripts/dev/reset-total.sh` announced "reset complete" with a
+broker that had died five seconds earlier.
+
 **Symptoms and what each one means:**
 
 | what you see | what it is |
 |---|---|
 | `permission denied` on `/var/run/docker.sock` | wrong `DOCKER_GID`. The socket is `root:docker` and the broker runs non-root; redo step 1 above and recreate the container (`up -d --force-recreate broker`) |
 | `não encontrei o executável docker no PATH` | the image was built without `docker-cli`. Rebuild it (`--build`). This error is deliberately SEPARATE from "daemon down": installing and starting are different fixes |
+| `getaddrinfo EAI_AGAIN registry.npmjs.org` and the container exits 1 | a broker image built before the dependencies moved to build time. Rebuild it (`up -d --build broker`). Do NOT give the service egress: the `internal: true` network is the containment, and the registry is what has to leave the runtime path |
+| `AVISO — pnpm-lock.yaml mudou desde o build desta imagem` | the image is older than the working tree's lockfile. It keeps running (the broker has no runtime dependency beyond the workspace link); rebuild when you actually changed a broker dependency |
 | `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
 | the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
 | the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
@@ -166,11 +234,25 @@ there is now **one base**, configured once by the operator, and every
 mounted project lives underneath it. You never edit compose per project
 again.
 
-**What to do — once, for the whole installation:**
+**What to do — once, for the whole installation.** The supported path is the
+consent step ([ADR 0146](adr/0146-base-consentida-no-bootstrap.md)), which
+proposes a folder, refuses one that overlaps the Brabo checkout or
+`PROJECT_WORKSPACES_HOST_DIR`, proves on macOS/Windows that Docker can see it,
+creates it and writes the variable:
+
+```bash
+node scripts/dev/consentir-base.mjs
+```
+
+Run it in **your** terminal. `pnpm bootstrap` → *Docker › Base de projetos*
+runs the same script but can only **report**: every menu item runs with stdin
+from `/dev/null` on purpose, so it cannot ask a question.
+
+Writing the line by hand still works:
 
 ```bash
 # .env — an ABSOLUTE path. `~` is NOT expanded by Compose.
-BRABO_PROJECTS_BASE=/home/voce/brabo
+BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 ```
 
 ```bash
@@ -206,10 +288,12 @@ reachable by the host's Docker daemon, `container_start` for a Mounted project
 goes to the [broker](#broker-de-container), exactly like Container mode — it no
 longer requires a `brabo-runner` connected. Only **Runner** mode still goes to
 the runner, on the user's own machine, because that folder is somewhere this
-server cannot see. Bringing the broker up (`--profile container-broker`) is
-therefore part of the setup if you want Mounted projects to have containers.
-That same step is when the folder above gets created, in that order: the
-daemon can only bind-mount a folder that already exists.
+server cannot see. Locally the broker is already up — it comes with `pnpm dev`
+since [ADR 0146](adr/0146-base-consentida-no-bootstrap.md), precisely because
+this is the default mode's path; in production it still needs
+`--profile container-broker`. That same step is when the folder above gets
+created, in that order: the daemon can only bind-mount a folder that already
+exists.
 
 **Why the wizard hides Mounted mode.** Without `BRABO_PROJECTS_BASE`, the
 api reports `projectsBase: null` and the option is not offered at all. That
@@ -282,6 +366,314 @@ procedure above; Mounted mode never touches that root, and the base is
 never the same folder as that root ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)
 explains why conflating them would let two projects land in one folder).
 
+### The runner's base of projects {#base-do-runner}
+
+**Symptom:** `brabo-runner` exits with code 2 saying
+`base de projetos recusada (…)`, or it starts printing
+`base de projetos: nenhuma configurada` when you expected a base, or it says
+it is `Seguindo SEM base`.
+
+This is a **different base** from the one in
+[Project in Mounted mode](#projeto-no-modo-local). That one
+(`BRABO_PROJECTS_BASE`) belongs to the SERVER and is the only folder the
+containers can see; this one belongs to the **user's machine** and is where
+the local agent creates the folder of each project
+([ADR 0151](adr/0151-base-consentida-no-runner.md),
+[RN-529](business-rules.md#rn-529)). They are never the same variable, never
+the same file, and never validated against each other.
+
+Where the runner reads it from, in order:
+
+1. `--base <absolute path>` on the command line;
+2. `$XDG_CONFIG_HOME/brabo/runner.json` — falling back to
+   `~/.config/brabo/runner.json` — with the shape `{"base": "/abs/path"}`.
+
+```bash
+cat "${XDG_CONFIG_HOME:-$HOME/.config}/brabo/runner.json"
+# {"base":"/home/you/projetos-brabo"}
+```
+
+**No base at all is normal.** A runner without one keeps serving its project
+exactly as it always did; what it can't do is host a project folder created
+later. The startup line says which of the two states you're in, always.
+
+That folder is no longer configuration only: since
+[RN-551](business-rules.md#rn-551) it is also where
+`brabo-runner device-key create` puts the machine's **private** device key
+(`brabo-runner-device-key.jwk.json`, mode 600) — see
+[Device key from the terminal](#chave-de-dispositivo-pelo-terminal). Back it up
+the way you'd back up a secret, or don't back it up at all and re-pair: the key
+is revocable and replaceable, and nothing else in the product can read it.
+
+**Refusals, and why the disposition differs.** The base is refused when it is
+relative, has `..`, is `/`, points at an existing file, sits outside `$HOME`
+on Linux (the same rule `--dir` has had since
+[RN-434](business-rules.md#rn-434)), or is **inside** the current project's
+folder (or equal to it) — that last one would make every new project be born
+inside this one. Coming from `--base`, that ends the process with code 2;
+coming from the file, it is printed on `stderr` and the runner **carries on
+without a base**, because killing an agent that is serving a project over a
+setting it doesn't use yet would be out of proportion. A file that exists and
+declares no `base` is absence, not a refusal.
+
+**A project outside the base is not a problem.** `--dir` is validated exactly
+as it always was and the base plays no part in it: the base is a rule of
+CREATION. Do not "fix" a legacy project by moving it under the base to silence
+something — nothing is complaining.
+
+### The machine agent: one connection per project {#agente-de-maquina}
+
+**Symptom:** `brabo-runner` was started without `--project` and either printed
+the usage block, said `nenhum projeto em modo "runner" para esta conta`, or
+served some projects and refused others.
+
+Since [RN-544](business-rules.md#rn-544)
+([ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)) running without
+`--project` is a real mode: the agent asks `GET /runner/projects` and opens
+**one connection per project**, rooted at `<base>/<workspaceDirName>`. The mode
+with `--project` did not change at all. Reading the output:
+
+- **`Sem --project, este runner só roda como agente de MÁQUINA…`** — there is
+  no consented base. Both conditions are required and for different reasons:
+  the machine credential is what the route accepts, the base is where each
+  project's folder comes from. See [the base above](#base-do-runner).
+- **`a api recusou a descoberta de projetos: esta credencial está presa a um
+  PROJETO`** — a 403. The credential in use (a PAT, or a device key from the
+  browser flow) names one project and has nothing to discover. Run it with
+  `--project <projectId>` instead, or pair a machine key — the key material is
+  made right here (`brabo-runner device-key create`, see
+  [below](#chave-de-dispositivo-pelo-terminal)), and registering the public
+  half is what the installer does. On disk the two species are the same file,
+  so the runner does not guess: the server is the authority and its message is
+  relayed verbatim.
+- **`nenhum projeto em modo "runner" para esta conta — nada a atender AINDA`** —
+  this is the **normal** state of a fresh install, and since
+  [RN-550](business-rules.md#rn-550) the process **stays up and keeps asking**:
+  15s, then 30s, then 60s between calls, repeating forever, until the first
+  project shows up. Nobody has to come back to the terminal — create the
+  project in Runner mode on the web and the agent picks it up. The polling
+  **stops** the moment the first connection is live: from then on the list is
+  read only at start, because a list that comes back *smaller* is ambiguous and
+  dropping a live connection over that ambiguity would trade a known state for
+  a guess. Waiting has no ceiling; **failing does** — ten consecutive failed
+  calls and the process exits 1 naming the count (any answer, empty included,
+  resets the counter). Every 30 empty answers it prints a heartbeat saying how
+  many calls there have been, so "waiting" never looks like "stuck" in
+  `journalctl`. `Restart=on-abnormal` is unchanged in both unit species — it
+  never looked at the exit code to begin with; what changes is that the machine
+  unit is now genuinely `active (running)`, and `brabo-runner service status
+  --machine` answers `rodando` (0) on a fresh install where it used to answer
+  `parado` (3).
+- **`[<projeto>] NÃO será atendido`** — that project's folder was refused (the
+  segment escaped the base, or the target exists and is not a directory). The
+  others keep going. Only if NONE is left does the process exit 1.
+- **`[<projeto>] este projeto deixa de ser atendido — os demais continuam`** —
+  the join was refused (usually a second runner already connected to that
+  project) or the retry ceiling ran out. Both are per PROJECT now, not per
+  process: one project failing no longer kills the agent for all the others.
+  When every project has ended this way the process prints the outcome of each
+  and exits 1.
+
+Every line of the connection loop is prefixed with the project name. If a
+message has no prefix, it came from the single-project mode.
+
+### Device key from the terminal {#chave-de-dispositivo-pelo-terminal}
+
+**Symptom:** a machine needs a device key and there is no browser to run the
+project screen's automatic setup — a fresh install, a headless box, or the
+machine agent above refusing with `esta credencial está presa a um PROJETO`.
+
+Since [RN-551](business-rules.md#rn-551)
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) the pair
+is generated **on the machine**, in two steps:
+
+```bash
+# 1) generate here; the PUBLIC JWK is the only thing on stdout
+PUB=$(brabo-runner device-key create)
+
+# 2) register that public key with the api — whoever holds the credential to
+#    register does this; the CLI never talks to the api
+ID=$(… POST {"name":"…","publicKeyJwk":'"$PUB"'} … | jq -r .id)
+
+# 3) stamp the registration id as the JWK's `kid` and write the real file
+brabo-runner device-key finish --id "$ID"
+```
+
+- **Two steps, because of the `kid`.** It IS the registration id on the server
+  ([RN-475](business-rules.md#rn-475)) and only exists after the public half is
+  registered; a private key written before it is useless and the CLI refuses it
+  forever. So `create` writes `brabo-runner-device-key.jwk.json.parcial`, a
+  name the reader ignores, and `finish` writes the real one. **The file the
+  runner reads never exists without a `kid`** — an interruption between the two
+  leaves a `.parcial` the runner ignores and the next `create` names.
+- **Where:** `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`), next to
+  `runner.json`, at mode 600; `--dir <folder>` writes somewhere else (a project
+  folder, say). That folder is what the machine unit's `--dir` should point at
+  (`brabo-runner service install --machine --dir <folder>`,
+  [RN-545](business-rules.md#rn-545)) — the runner reads the key from the
+  folder it RUNS in, never from a global path it guesses.
+- **stdout is for scripts, stderr is for people.** `create` prints only the
+  public JWK; `finish`, only the path of the finished file.
+- **Refusals:** `finish` without a `create` (nothing to stamp), without `--id`,
+  with an `--id` that still has the whole JSON response in it, a `.parcial`
+  that isn't a private Ed25519 JWK, and — in both commands — a COMPLETE key
+  already in place. That last one has no `--force`: replacing the key of an
+  already-paired machine silently would leave an agent signing with a key the
+  server doesn't know. Revoke the current key
+  ([RN-519](business-rules.md#rn-519)), delete the file, then `create` again.
+- The CLI does **not** claim which species the key is. On disk a machine key
+  and a project key are the same file; the route that registered the public
+  half is what decides.
+
+### When the installer does not close the installation {#instalador-nao-fecha}
+
+**Symptom:** `install.sh` ended with a **"O que ficou pendente"** block, or a
+fresh install has a login nobody can get through, no machine device key, or no
+agent service running.
+
+Since [RN-547](business-rules.md#rn-547)
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) the installer
+**closes** the installation: it creates the first account, registers this
+machine's device key and installs the machine unit. The chain is
+
+1. `POST /internal/first-account` ([RN-546](business-rules.md#rn-546)) — the
+   account is born **already verified**, because `MAIL_TRANSPORT` is `log` and
+   the installer does not turn SMTP on;
+2. `brabo-runner device-key create` ([RN-551](business-rules.md#rn-551)) — the
+   Ed25519 pair is generated **on the machine**; only the public half travels;
+3. `POST /internal/machine-device-keys` ([RN-552](business-rules.md#rn-552)) —
+   the returned `id` is what becomes the private JWK's `kid`
+   ([RN-475](business-rules.md#rn-475));
+4. `brabo-runner device-key finish --id <id>`;
+5. `brabo-runner service install --machine` ([RN-545](business-rules.md#rn-545)).
+
+**Nothing is ever undone, and every failure is named.** The installer always
+exits 0: the compose is up, and the links already completed are useful on their
+own. What failed is printed at the end with the exact command to repeat.
+
+- **`service install --machine` refused.** This is the **common** case on a
+  developer machine, not an edge one: it refuses when a **per-project** unit is
+  already installed, and there is no `--force` — two processes would fight over
+  the same project and the server would deny one of them. The refusal names the
+  `uninstall` of each unit it found. Remove them, then rerun the last step, which
+  the installer printed:
+
+  ```bash
+  brabo-runner service uninstall --project <projectId>   # for each one named
+  brabo-runner service install --machine \
+    --dir "${XDG_CONFIG_HOME:-$HOME/.config}/brabo" \
+    --api-url http://localhost:3000
+  ```
+
+  The folder in `--dir` is where the key was written — never a project folder,
+  which would carry a `brabo-runner.config.json` and make the unit come up in
+  **project** mode, silently serving one project while calling itself the
+  machine agent.
+
+- **Registering the key failed.** A `…jwk.json.parcial` is left behind on
+  purpose. It is inert — the runner does not read that name — and the installer
+  does **not** delete it: a timeout after the api committed is indistinguishable
+  from one before it, so that file may be the only copy of the private half of a
+  key that is already registered. Rerun the installer, or finish it by hand if
+  you know the registration id (`brabo-runner device-key finish --id <id>`). The
+  next `device-key create` names it and replaces it.
+
+- **The account step said the installation already has a user.** That is a
+  `409`, and it is the **expected** outcome, not a failure — a second run, or a
+  migration ([RN-530](business-rules.md#rn-530)) whose restore brought the
+  users back. Log in with the account that exists. The machine-key and service
+  steps are skipped in that case by design: minting a durable credential for
+  someone who did not ask for it in this run is not the installer's call.
+
+- **The password was refused.** The policy is the domain one, the same
+  registration uses, and it is only known after the POST — so the installer asks
+  again, up to three times, and turns an exhausted ceiling into a pending line
+  rather than aborting an installation that is already up. It never writes the
+  password anywhere: not the `.env`, not the marker, not a log. Only the
+  **e-mail** goes into the marker (`ownerEmail`, `schemaVersion: 3`).
+
+- **No TTY.** The installer reports and exits **0** before writing anything.
+  Run it from a terminal — and with `sh -c "$(curl …)"`, never `curl … | sh`,
+  which makes the download itself the process's stdin and kills every prompt.
+
+- **The agent is up but serving nothing.** That is the normal state of a fresh
+  install: it waits and re-queries until the first `runner`-mode project exists
+  ([RN-550](business-rules.md#rn-550)). See
+  [The machine agent](#agente-de-maquina).
+
+### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
+
+**Symptom:** a project folder was expected to show up under the runner's base
+and it didn't. The engine log has a line starting with
+`workspace_create: o projeto <id> não criou pasta —`, and the folder is
+missing.
+
+The message names which of the two pre-conditions failed
+([RN-532](business-rules.md#rn-532),
+[ADR 0151](adr/0151-base-consentida-no-runner.md) points 3 to 6), and they are
+the only two — **no container is required**, deliberately: requiring one would
+be circular, since a `runner` project only reaches a registered `running`
+container after the runner brings it up over the very folder this message
+exists to create.
+
+- **`nenhum brabo-runner está conectado a este projeto agora`** — start the
+  agent for that project; see [the base above](#base-do-runner) for the flags.
+- **`não declarou a capacidade `workspace` no join`** — the connected binary
+  either predates this version, or is running **without a consented base**.
+  Both fixes are in the previous section: run the installer, or start the
+  runner with `--base`. The refusal is named on purpose because the two causes
+  have different fixes; the join itself is NOT refused, so the runner keeps
+  serving its project normally.
+- **`o brabo-runner recusou criar a pasta`** — the message carries the
+  runner's own reason: `segmento` (the segment escaped the base — the guard
+  refused, nothing was created), `nao-e-pasta` (the target already exists as a
+  file; this CLI never overwrites one), `mkdir` (permission or disk) or `git`
+  (the `git init`/clone failed — the folder DOES exist and no plan B was
+  attempted, on purpose).
+- **`não respondeu ... a tempo`** — a large clone can exceed the ceiling.
+  Check the runner's machine; nothing is left half-written on the server side,
+  because the write only happens through `workspace_confirm`.
+
+A folder that already exists as a git repository is a **success**, not an
+error: the operation is idempotent and reports `ja-era-repositorio` in the
+runner's log.
+
+### Authenticated clone in Runner mode is refused while the container is up {#credencial-nao-atravessa-o-container}
+
+**Symptom:** a dev agent in a `runner` project is blocked preparing its
+worktree, and the diagnosis says the credential could not be delivered, naming
+`credencial-nao-atravessa-o-container`. The blocked task's origin is
+`politica`, not `codigo`.
+
+**This is not a bug to chase, and that is exactly what the origin is telling
+you** ([RN-558](business-rules.md#rn-558)). The credential for an authenticated
+remote (`ADR 0056`) can only travel in the `env` field of the `exec` message,
+and that field applies to the **host** path only: the product's Docker port has
+no `env` field, deliberately ([ADR 0130](adr/0130-broker-de-container.md), no
+free `-e`). When the runner has brought the project's container up, it routes
+every command into it — so the credential has nowhere to go.
+
+Before RN-558 the command ran anyway, with the variables empty, and you saw a
+plain authentication failure. Now it is refused before executing, and nothing
+runs. The refusal never prints variable names or values, only the count.
+
+**What to do today:**
+
+1. Stop the project's container (the `/containers` page, "Parar") and let the
+   worktree materialise — on the host path the credential is delivered
+   normally, and the initial `fetch` succeeds.
+2. Bring the container back up and carry on; the clone is idempotent and is not
+   repeated.
+
+A **local** repository (no token) is unaffected, and so are `container` and
+`mounted` projects — they never go through this path. So is
+`workspace_create`, which runs on the host.
+
+**What is still open, declared:** the credential continues not to cross the
+`docker exec`. Closing that means deciding how a credentialed operation talks
+to a `docker exec` with no `env` field, and every known option touches the
+containment boundary — an ADR, not a fix in passing.
+
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
 **Symptom:** something the `api`, `web` or `engine` dev container wrote to a
@@ -341,6 +733,56 @@ so this class of problem shouldn't recur.
    A volume created after the fix already comes up with the right owner. When
    you add a **new** named volume, create the directory in the image:
    forgetting it is not a build error, it is a runtime `permission denied`.
+
+### Total reset of the dev environment {#reset-total}
+
+```bash
+bash scripts/dev/reset-total.sh      # or: pnpm bootstrap → Docker › Reset total
+```
+
+Rebuilds the images, **wipes the database**, migrates and seeds again — the
+provider credentials already in `.env` (`<PROVIDER>_TEST_KEY`) come back
+active on the owner, so you don't retype them in the UI every time. It does
+**not** remove volumes: `node_modules`, `_build` and the local bare repos
+survive.
+
+**The order is the point, and it is not negotiable:**
+
+1. `preflight` and `build` — the slow part, done while your environment is
+   still up.
+2. **`stop api engine`.** These two, and no others: they are the ones holding
+   a live connection to the compose Postgres (the api's Drizzle pool over
+   `public`/`drizzle`, the engine's Ecto/Oban over `engine`). `web` is a Vite
+   server and talks to no database, `neo4j` is a different database this reset
+   doesn't touch, and the `broker` only speaks HTTP to the api.
+3. `up postgres`, `DROP SCHEMA`, `migrate`.
+4. `up --wait` for everything, then `seed`.
+5. Ask `/health` of the api and the engine and `/` of the web, print
+   `docker compose ps`, and only then conclude.
+
+Dropping the schemas **underneath live processes** is what used to break it:
+the engine dies inside the `DROP SCHEMA engine CASCADE`
+(`Engine.Sessions.Rehydrator` queries `engine.session_states`, which just
+vanished — `ERROR 42P01 (undefined_table)`), the migrations recreate
+everything afterwards, and **nothing brings a dead process back**. The seed
+then failed on the step that activates the session (api → engine) with
+`ECONNREFUSED`, and the script still printed "reset completo" — a fixed
+`echo` at the end of a script that never asked anything about what it had
+just done.
+
+**If it stops in the middle**, it says so and names the step
+(`RESET INCOMPLETO — parou em: <passo>`), and the answer is to **run it
+again**: it drops the schemas every time, so the second run starts from the
+same clean slate as the first. Running only `pnpm --filter api seed` to
+recover is also safe now — the seed is idempotent and reuses the demo
+workspace, project and session instead of duplicating them (and does **not**
+re-append the session's 5 events).
+
+| what you see | what it is |
+|---|---|
+| `RESET INCOMPLETO — parou em: migrations (api + engine)` with `permission denied` under `apps/engine/_build` | `pnpm engine:migrate` runs on the HOST, and Docker creates a missing bind-mount point as `root`. Fix it in place: `docker run --rm -v "$PWD/apps/engine:/x" alpine chown -R "$(id -u):$(id -g)" /x/_build` |
+| `RESET INCOMPLETO … banco apagado, migrado e semeado, mas estes serviços não responderam: <lista>` | the database is fine; a process didn't come back. `docker compose -f docker/docker-compose.yml --env-file .env logs <serviço>` says why. Nothing here needs the reset to run again |
+| the `up --wait` times out | `BRABO_RESET_WAIT_TIMEOUT` (seconds, default 600). A first boot with empty `node_modules`/`_build` volumes runs `pnpm install`/`mix deps.get` before the process listens |
 
 ---
 
@@ -685,6 +1127,48 @@ stacked causes, all closed by [RN-433](business-rules.md#rn-433):
    `REFUSED CONNECTION`. Fixed by passing `engineWsUrl` straight to
    `Socket` — `apps/runner/src/channel.ts` (the CLI side of the same
    contract) already did this correctly.
+
+### The runner floods the api with a dead ticket {#runner-com-ticket-morto}
+
+Symptom: the web starts answering **429** to the person's own requests, with
+no unusual activity on their part; and/or a project in `runner` mode shows as
+having no local agent (dev tasks stuck on `dev.blocked_by_container`,
+`RunnerReadiness` refusing) while `brabo-runner` is visibly running on their
+machine.
+
+**How to confirm.** In the engine's log, look for the SAME ticket being
+refused over and over, at a fixed cadence of roughly **5,13 s**:
+
+```bash
+docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+```
+
+Dozens of those in a few hours, all carrying the same ticket string, is the
+signature. ~5,13 s is not arbitrary — it is the ceiling of `phoenix.js`'s
+internal `reconnectAfterMs` backoff.
+
+**Cause.** The socket ticket is **single-use**
+([RN-108](business-rules/autenticacao.md#rn-108)); the library's built-in
+auto-reconnect repeats the SAME `params`, so it retries a ticket that was
+consumed on the first connection and will never be accepted again. A version
+of `apps/runner/src/channel.ts` shipped with that auto-reconnect left ON —
+while the module's own docblock claimed it was neutralized. Stacked on the
+runner's OWN retry policy (which is correct: fresh ticket per round, backoff,
+ceiling on consecutive attempts), the measured result was **530 requests in
+one minute** against the 300 req/min `RATE_LIMIT_USER` ceiling, four minutes
+in a row over the limit. The limit is **per user**, which is why the 429
+surfaced in the account owner's browser rather than anywhere near the runner.
+
+The second consequence is the worse one: while stuck in that loop the runner
+is **not connected**, so `RunnerReadiness` ([RN-507](business-rules.md#rn-507))
+refuses and the project looks like it has no local agent — some of what reads
+as "the container won't come up" is this.
+
+**Fix.** Update the `brabo-runner` binary (or reinstall from the project
+screen). Nothing to change on the server: the rate limiter did its job, and the
+engine was right to refuse every one of those tickets. If the flood is still
+in progress, stopping the runner ends it immediately, and the 429s clear as
+the sliding window drains (one minute).
 
 ### The api refuses to boot over an OAuth secret {#segredo-de-oauth-no-boot}
 
@@ -1152,20 +1636,70 @@ Decisions in [ADR 0027](adr/0027-fase5-backup-hardening-release.md).
 > runs, and it's run against the local cluster. There's no step here that
 > nobody has ever exercised. The record of the last run is at the end.
 
+### What is backed up, and what deliberately is not
+
+Seven named volumes exist; **two** are source of truth and only those are
+copied. The classification is
+[ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), and the point of
+making it is that "back up every volume" costs space while hiding what matters.
+
+| volume | nature | in the backup? |
+|---|---|---|
+| `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
+| `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
+| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — see [Losing the graph](#perda-do-grafo) |
+| `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
+| `ollama_data` | re-obtainable — models download again | no |
+| `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
+
 ### Where the backup lives
 
 | what | where |
 |---|---|
-| schedule | `brabo-backup` CronJob, 03:17 UTC, daily |
-| destination | an S3-compatible bucket — `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` in the `brabo-secrets` Secret |
-| layout | `daily/brabo-<ISO>.dump` and `weekly/brabo-<ISO>.dump` |
-| retention | 7 daily + 4 weekly, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
-| format | `pg_dump --format=custom --compress=9` |
-| history | `backup_runs` table |
+| schedule | Kubernetes: `brabo-backup` CronJob, 03:17 UTC, daily. Compose: there is no scheduler — you run it, or the installer does before a migration |
+| destination | disk (`BACKUP_DIR`) **or** an S3-compatible bucket (`BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET`). `BACKUP_DIR` set wins; empty falls back to S3, which is what the CronJob does |
+| layout | `daily/brabo-<ISO>.dump` + `weekly/…` for Postgres; `git-daily/brabo-git-<ISO>.tar.gz` + `git-weekly/…` for the bare repos |
+| retention | 7 daily + 4 weekly of **each kind**, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
+| format | `pg_dump --format=custom --compress=9`; `tar -czf` for the repos |
+| history | `backup_runs` table — the **dump**, keyed by `object_key`. The repo archive carries the same timestamp in the sibling prefix; the link is the name, not a column |
 
-In the local cluster the destination is a MinIO inside the `brabo`
+In the local cluster the S3 destination is a MinIO inside the `brabo`
 namespace; in staging/prod it's the real bucket. The procedure doesn't
 change — only the endpoint.
+
+> **The default compose destination is a named volume, and that is fine for
+> verifying and wrong for migrating.** `docker compose down -v` deletes
+> `backup_local` along with the data it was meant to save. Point
+> `BRABO_BACKUP_HOST_DIR` at a host directory before any migration.
+
+### What the bare-repo archive guarantees — and what it does not {#garantia-dos-bare-repos}
+
+Nothing is quiesced: the repos are copied while api and engine may be writing
+to them. What that buys, exactly:
+
+- **Guaranteed.** Consistency **per reference**. Git writes objects before it
+  moves a ref, and swaps the ref by atomic rename (or by rewriting
+  `packed-refs` under a lock, also by rename). A `tar` crossing a `git push`
+  captures the ref at its old value or its new one, never half a value — and
+  in the new case the objects it reaches are already on disk.
+- **Guaranteed.** A partial archive **fails the run** instead of passing as
+  good. A concurrent `git gc` can delete a packfile between `tar` listing a
+  directory and reading it; `tar`'s exit status is captured in a file (in POSIX
+  `sh` a pipeline's status is the last command's) and a non-zero turns into a
+  `failed` row in `backup_runs`, which is what alerts on. Run it again.
+- **Guaranteed.** The archive is readable **end to end** before anything is
+  written — `brabo-restore-git` is the `pg_restore --list` of the git side. A
+  truncated tar has plausible size and only reading it tells.
+- **Not guaranteed.** Any global instant. `tar` walks the tree over a period,
+  so two repositories — or two refs of one — can come from different moments.
+  Irrelevant to git, which validates per ref; relevant to anyone reading
+  "the 03:17 backup" as one snapshot.
+- **Not guaranteed.** Object connectivity. Nothing here runs `git fsck`: the
+  backup image has no git, on purpose. What is proved is the integrity of the
+  container, not of the contents.
+- **Not copied.** `*.lock` files, and `objects/tmp_*`. Restoring an orphan lock
+  yields a repository where every `git` refuses to work, with a message that
+  never mentions backup.
 
 ### Before restoring: does the backup exist, and is it any good?
 
@@ -1190,13 +1724,31 @@ Three things in that output matter more than the last row:
 
 ### The automated path (the same one the test runs)
 
+On Kubernetes:
+
 ```bash
 make test-restore
 ```
 
-Triggers a real backup, restores into `brabo_restore_test`, validates,
-and drops the database. Use it when the goal is to **verify** the backup,
-not recover data.
+On a compose install — no cluster, no `kubectl`:
+
+```bash
+make test-restore-compose
+```
+
+Both trigger a **real** backup (same image, same command that runs in
+production — not an ad-hoc `pg_dump`, which would test a path nobody uses),
+restore into `brabo_restore_test`, validate, and drop the database. Use them
+when the goal is to **verify** the backup, not to recover data.
+
+The two wrappers stay separate on purpose: unifying them would make the compose
+path depend on `kubectl`, which is the dependency it exists not to have. What is
+*not* duplicated is the judgement — both run the same `brabo-restore`, with the
+same three validations. The compose one adds a third step the cluster cannot
+ask for: it verifies the bare-repo archive, because on Kubernetes the
+`git_local_repos` volume is not mounted in the backup pod and the step is
+legitimately skipped, while under compose it is mounted and skipping would be a
+false green.
 
 ### Restoring for real, during an incident
 
@@ -1265,12 +1817,71 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
   into this dump. What does **not** survive is reading them if
   `AUTH_TOKEN_PEPPER` is different — same reasoning as the master key
   above.
-- **PVCs** (`/data/git-repos`, agent worktrees) aren't copied. The real
-  repositories live in GitHub/GitLab; what's lost is work-in-progress
-  cache.
+- **`brabo-restore` restores the database, and only it.** The bare repos
+  are the sibling command, `brabo-restore-git` — see
+  [Recovering the bare repos](#restore-dos-bare-repos). They are separate
+  commands rather than two phases of one because they are two artefacts with
+  two judgements: a git failure must not fail the event-log validation, and
+  the reverse would be worse.
+- **Agent worktrees** (`project_workspaces`) aren't copied, and don't need
+  to be: the `WorktreeManager` recreates them from the bare repo. What is
+  lost is uncommitted work in progress.
+- ~~The real repositories live in GitHub/GitLab~~ — **this used to be
+  written here and it was wrong**, which is why the volume went years with
+  no backup. It holds for `github`/`gitlab`-provider projects; for a
+  project on the `local` provider there is no upstream anywhere, and the
+  bare repo in `git_local_repos` **is** the code the agents produced.
 - **It's not PITR.** The granularity is the last dump; anything written
   after it is lost. If that's not acceptable, the path is WAL archiving
   on CloudNativePG, which is out of scope for this phase.
+
+### Recovering the bare repos {#restore-dos-bare-repos}
+
+Verifying costs nothing and writes nothing — it is the weekly gesture:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore-git
+```
+
+Restoring is the once-in-an-incident gesture, and it has to be typed:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml \
+  run --rm --user 0:0 backup brabo-restore-git --restaurar
+```
+
+Two things about that command, both measured rather than assumed:
+
+- **`--user 0:0` is not optional here.** `git_local_repos` is shared by three
+  images running as three different uids (the api as `node`, the engine as
+  `engine`, the backup image as uid 70). The volume takes the owner of whoever
+  mounted it first, mode 0755: uid 70 reads it and cannot write it. Without
+  root the command refuses **before** extracting, naming this fix — it does not
+  discover the problem halfway through `tar`, leaving the volume part-written.
+- **What is extracted is handed back to the owner of the directory**, never
+  left as root. Otherwise the volume would come back intact and useless: api
+  and engine, non-root, could not write into what was just restored, and the
+  symptom would surface long after the restore with nothing pointing at it.
+
+It **refuses to extract over existing repos**. Overlaying two repository states
+produces a mix that no `git` complains about and nobody notices until a `fetch`
+brings back the wrong history. Empty the volume, or pass `RESTORE_GIT_FORCE=1`
+if the overlay is genuinely what you want.
+
+### Losing the graph (Neo4j) {#perda-do-grafo}
+
+`neo4j_data` is **not** in any backup, and that is the decision, not an
+oversight ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), decision
+4). Restoring a possibly-stale projection next to a Postgres restored at another
+instant gives two derived states from different moments with nothing to
+reconcile them. The right answer for derived memory is to reproject from the
+source.
+
+**That reprojection does not exist yet** — it is
+[BRB-018](reference/brb.md), and the phase that named the path deliberately did
+not build it. Until it does, a migrated or restored installation starts with an
+**empty graph**. The named effect: reads that depend on the graph degrade. The
+RAG is **not** affected — it lives in pgvector, which is inside the dump.
 
 ### When the restore fails
 
@@ -1283,6 +1894,10 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 | `out of window` on a critical table | count doesn't match the dump's timestamp: investigate before promoting |
 | `server version mismatch` | the Job's `pg_dump` is 16; a cluster on a different major refuses the connection |
 | Job timeout | database too large for `activeDeadlineSeconds`; raise the value on the Job, not the CronJob |
+| `destination inaccessible … does not accept writes` | with `BACKUP_DIR`, the directory exists and the container's uid can't write it. It is a **write** check, not an existence one, on purpose: a read-only destination would pass `ls` and fail the dump, with the error surfacing after `pg_dump` and pointing at the wrong thing |
+| `tar of the bare repos exited with N` | something changed under the repos mid-read — most likely a concurrent `git gc`. The run is marked `failed` rather than shipping a partial archive. Run it again |
+| `there are N bare repo(s) … and NO archive` | this volume has no coverage: the archive is missing while the repos are not. Absent-and-empty is normal and reported differently |
+| `does not accept writes by this user (uid 70)` on `--restaurar` | the shared-volume ownership case — restore with `--user 0:0`, see [Recovering the bare repos](#restore-dos-bare-repos) |
 
 ### Last verified run
 
@@ -1333,6 +1948,51 @@ representative dump before promising anyone an RTO.
    `postgres:16-alpine` base. Swapped for `alpine` + `postgresql16-client`
    + `aws-cli`, all from apk and therefore patchable: 48 → 0. See
    decision 1b of ADR 0027.
+
+### Last verified run — compose, disk destination
+
+| field | value |
+|---|---|
+| date | 2026-09-09 |
+| environment | Docker compose, PostgreSQL 16 (pgvector image), destination on **disk** — no cluster, no bucket, no `kubectl` |
+| command | `docker/backup/test-restore-compose.sh` (what `make test-restore-compose` runs) |
+| database | 55 tables, 422 events across 13 sessions — a populated database, not an empty one |
+| bare repos | 2 (`exp001.git`, `exp004.git`), 27 003 bytes archived |
+
+Output (the three steps, abridged):
+
+```
+[backup] destination: disk at /backups
+[backup] generating dump for daily/brabo-20260909T025733Z.dump
+[backup] archiving 2 bare repo(s) for git-daily/brabo-git-20260909T025733Z.tar.gz
+[backup] finished: daily/brabo-20260909T025733Z.dump (322894 bytes)
+[restore]   ok    55 tables restored, identical to the source
+[restore]   ok    session_events: 422 rows (window 422–422)
+[restore]   ok    intact event log: 422 events across 13 sessions, dense seq from 1
+[restore] RESTORE VALIDATED — all checks passed
+[restore-git]   ok    2 intact bare repo(s) (27003 bytes)
+[test-restore-compose] backup restored and intact
+```
+
+`backup_runs` got its `status = 'ok'` row for each run, with the **dump** as
+`object_key` — the same column `restore.sh` queries for the snapshot window.
+
+#### What this run found
+
+**The bare-repo restore could not write the volume it restores into**, and only
+running it revealed that. `git_local_repos` is shared by three images with three
+uids; it carries the owner of whoever mounted it first (measured: `1000:1000`,
+mode 0755) and the backup image runs as uid 70. The first `--restaurar` died
+mid-extraction with `tar: can't make dir ./exp001.git: Permission denied`,
+leaving the target part-written. Two changes came from it, both above: the
+command refuses **before** extracting and names `--user 0:0`, and when it does
+run as root it hands the extracted tree back to the directory's owner instead of
+leaving it root-owned — which would have produced a volume that restores
+perfectly and that api and engine cannot write to.
+
+Verified afterwards with real `git` (not the backup image, which has none):
+`git fsck --connectivity-only` clean on both repos, refs and commits intact,
+ownership back at `1000:1000`.
 
 ---
 
@@ -1443,11 +2103,10 @@ after any suspected leak.
 
 ### What's at stake
 
-The `wrapped_dek` stored in the database **doesn't identify which key
-wrapped it**. Direct consequence: changing the variable and restarting the
-api makes every existing credential unreadable, all at once, with no boot
-error — the failure only shows up on first use, as "unable to decrypt",
-and there's no way back short of restoring the old key.
+Changing the variable and restarting the api with a single key makes every
+existing credential unreadable, all at once, with no boot error — the failure
+only shows up on first use, as "unable to decrypt", and there's no way back
+short of restoring the old key.
 
 That's why rotation has three steps, not one. During the middle one, both
 keys coexist:
@@ -1459,6 +2118,27 @@ keys coexist:
 
 Two tables hold envelopes: `user_credentials` and
 `project_git_connections`.
+
+Since [RN-563](business-rules.md#rn-563) each envelope also carries a
+**`key_id`** — the fingerprint of the key that wrapped it. It is what makes
+the progress of step 2 answerable in SQL. Two things about it matter at 3am:
+
+- **It never decides whether a row opens.** Reading still tries the current
+  key and falls back to the previous one; AES-GCM authenticates, and it is the
+  authority. The label is metadata, and a row whose label disagrees with its
+  envelope is still re-wrapped correctly ([ADR 0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)).
+- **`key_id IS NULL` means "written before that column existed", never "on the
+  current key".** On an installation that predates it, everything is `NULL`
+  until the first rotation, and the queries below count that as pending — which
+  is the honest answer.
+
+Get the current fingerprint from the api's own log; it prints one line at boot:
+
+```bash
+kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=200 \
+  | grep 'chave mestra corrente'
+# chave mestra corrente: key_id=4f2b91c0a77e13d5
+```
 
 ### Before: size it up
 
@@ -1489,11 +2169,14 @@ kubectl -n brabo rollout restart deployment/api
 kubectl -n brabo rollout status  deployment/api
 ```
 
-Confirm the api is in rotation mode — it warns in the log, on purpose:
+Confirm the api is in rotation mode — it warns in the log, on purpose, and the
+warning names **both** fingerprints, which is what the queries below compare
+against:
 
 ```bash
 kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=50 \
   | grep CREDENTIALS_MASTER_KEY_PREVIOUS
+# ... rotação em andamento (atual key_id=<NEW>, anterior key_id=<OLD>). ...
 ```
 
 > From here on **nothing breaks**: a new secret is already born on the new
@@ -1531,12 +2214,34 @@ Properties that matter if something interrupts the script:
 - **`failures > 0` blocks step 3.** These are rows that don't open with
   either key — usually coming from a different environment, or from an
   earlier rotation that was interrupted with the key already discarded.
-  The script identifies each one by id. Don't remove PREVIOUS: without
-  it you also lose what still opened.
+  The script identifies each one by id, and names WHY it failed — a row from
+  another environment ("embrulhado pela chave `<kid>`"), a row whose label
+  disagrees with its envelope ("rótulo incoerente ou registro adulterado"),
+  and a row with no label at all are three different diagnoses with three
+  different answers. Don't remove PREVIOUS: without it you also lose what
+  still opened.
+
+**Interrupted, and want to know where it stopped?** Ask the database instead of
+re-running the script for its counter — with `<NEW>` the current fingerprint
+from the log above:
+
+```sql
+select 'user_credentials' as tabela, count(*) as pendentes
+  from user_credentials       where key_id is distinct from '<NEW>'
+union all
+select 'project_git_connections', count(*)
+  from project_git_connections where key_id is distinct from '<NEW>';
+```
+
+`is distinct from`, never `<>`: rows with `key_id IS NULL` must count as
+pending, and `<>` would silently drop them.
 
 ### 3. Discard the old key
 
-Only once `failures=0`:
+Only once `failures=0` **and** the query above answers `0` on both tables. The
+two say different things and you want both: `failures=0` means nothing refused
+to open on this run, and the query means nothing is left behind — including
+rows that a previous, interrupted run never reached.
 
 ```bash
 # remove CREDENTIALS_MASTER_KEY_PREVIOUS from the provider, then
@@ -1549,10 +2254,29 @@ credentials screen, or any agent turn that uses an LLM key).
 
 ### Verifying without waiting for an incident
 
-`rewrap` runs in any environment. In a test one, the full cycle fits in a
-few minutes and validates the procedure — the same logic is covered by
-`test/infrastructure/security/envelope-encryption.service.spec.ts`,
-including the case where neither key works.
+**The whole cycle has a named verification, and it runs in CI**
+([RN-562](business-rules.md#rn-562)):
+
+```bash
+pnpm --filter api test -- test/scripts/rewrap-deks.spec.ts
+```
+
+That spec drives the sequence of this page against a real Postgres and **both**
+tables: encrypt with K1, publish K2, re-wrap, drop K1, and still decrypt. It
+also pins the two properties this procedure leans on — idempotence (a second
+run reports `re-wrapped=0`) and the unreadable row being counted and named
+without aborting the others.
+
+Narrower, in-memory coverage of the same primitives — including the case where
+neither key works, and the case where the `key_id` label lies — lives in
+`test/infrastructure/security/envelope-encryption.service.spec.ts`.
+
+`rewrap` also runs in any environment: on a test one, the full cycle by hand
+fits in a few minutes.
+
+> **TODO(humano):** has this rotation ever actually been executed, in any
+> environment? No source records a run with a date, and that changes whether
+> the spec above is a safety net or the first proof.
 
 ### Interaction with restore
 
@@ -1560,7 +2284,10 @@ including the case where neither key works.
 you back an intact database with useless credentials.** The dump carries
 the wrapped DEKs, not the key. If you restored a production backup into a
 test environment and the credentials don't open, it's not corruption:
-it's the wrong key. See
+it's the wrong key — and since [RN-563](business-rules.md#rn-563) you can
+confirm it in one comparison instead of by elimination, by reading `key_id`
+off any row and putting it next to the `chave mestra corrente` line in the
+api's boot log. See
 [Restore](#restore).
 
 That's why the master key is part of the recovery plan: a database backup
@@ -1573,7 +2300,9 @@ without the matching key doesn't recover the user's secrets.
 | the api boots with no rotation warning, but the script requires PREVIOUS | the variable never reached the pod; ESO only resyncs every `refreshInterval` (1h) |
 | `failures` equal to the total | the published PREVIOUS isn't the key that wrapped the store |
 | `already on current key` equal to the total, without having run before | both variables have the same value — the service ignores PREVIOUS in that case |
-| a credential stops working AFTER step 3 | some row was left behind; republish PREVIOUS immediately and run the script again |
+| a credential stops working AFTER step 3 | some row was left behind; republish PREVIOUS immediately and run the script again. The progress query in step 2 is what prevents this, and it is the check to run first |
+| the pending query answers the full total, on a database nobody rotated yet | expected: `key_id` is written from the next write on, so an installation that predates [RN-563](business-rules.md#rn-563) has it `NULL` everywhere until the first rotation. `NULL` counts as pending on purpose — "I don't know which key" is not "already current" |
+| `rewrap` says a row is on a key that is neither the current nor the previous one | the row came from another environment — most often a dump restored across installations. See [Interaction with restore](#rotacao-da-chave-mestra) below; the `key_id` in the row versus the one in the api's boot log tells you at a glance |
 
 ---
 
@@ -1984,6 +2713,26 @@ exposed in `docker-compose.yml`.
 > on the next boot regardless of the guard. The queue needs to be
 > **purged**, not just have the guard turned off.
 
+> **Turning the Anamnesis or the Psychologist back on: two variables, not
+> one.** They have been paused since 2026-08-10, and the pause is a product
+> decision, not a bug. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
+> product flags (may a NEW round happen at all); `START_ANAMNESE` is the boot
+> key (is the periodic tick even scheduled). The periodic Anamnesis needs both
+> at `true`; the Psychologist has no boot key, because its automatic trigger
+> is session close.
+>
+> Until [RN-540](business-rules.md#rn-540) the two `*_ENABLED` flags were
+> **not mapped** in either compose's `engine` service, and `docker compose`
+> does not forward the host environment — so setting them in `.env` did
+> nothing at all, silently, while three places in the code promised the pause
+> was reversible. They are mapped now, with the code's own default (`false`
+> in both files: the pause itself is unchanged), and
+> `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
+> boolean flag that isn't. On Kubernetes there was nothing to fix — a
+> Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
+> these variables. Both flags are read at boot: change them and
+> `docker compose up -d engine`.
+
 ### A semantic gate on a small model
 
 QA is the role that fits worst in a local 7B: the judgment varies between
@@ -1996,6 +2745,274 @@ The gate machine itself doesn't vary: immutable order, return on the same
 branch, a ceiling on corrections, verdicts as an artifact, and a terminal
 `awaiting_user` are all verified by ExUnit
 ([RN-014](business-rules.md#rn-014), [RN-015](business-rules.md#rn-015)).
+
+---
+
+## Installing {#instalando}
+
+```sh
+sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+```
+
+**Never `curl … | sh`.** The reason is mechanical, not stylistic: with the
+script arriving through the pipe, the process's `stdin` **is** the download,
+so any `read` reads bytes of the script itself or hits EOF. An installer that
+cannot ask would have to pick folder locations on someone else's machine by
+itself ([RN-526](business-rules.md#rn-526)).
+
+The script verifies **its own origin** before doing anything — the signature
+of the Release's `checksums.txt`, and then its own hash inside that verified
+manifest. A failure at either step is a **named refusal**, never a warning.
+
+Detection has a **5s ceiling** on the Docker call it makes (`docker compose ls`
+talks to the daemon, and a slow or stopped daemon behind a live socket would
+hang the whole thing *before the first question*). Hitting the ceiling is not
+an error — it is the same outcome as having no Docker at all, and the rest of
+the signals are still read.
+
+Without a TTY it **reports and exits 0**: it prints what it found and the
+command to run in a terminal. That is deliberate, and it is the same shape
+`consentir-base.mjs` already has.
+
+**What it never deletes:** your project base and your mirror folder. Named
+volumes only go with confirmation, listed one by one first.
+
+It brings the stack up from **its own compose**
+(`docker/docker-compose.install.yml`), which takes the images from variables
+and builds nothing.
+
+> **Known gap, measured in FASE 30 session 8
+> ([RN-549](business-rules.md#rn-549)): that compose file is not something the
+> installer fetches.** The path is relative to the directory the script runs
+> from, the file is **not** a Release asset, it is **not** in the signed
+> `checksums.txt`, and `install.sh` downloads it nowhere — its only downloads
+> are `cosign`, the image manifest, its own hash and the runner binary. The
+> compose additionally bind-mounts `./postgres/init.sql`, so it is **three**
+> files, not one. Running the one-liner above in an empty directory therefore
+> fails with *"no such file or directory"* **after** the script has already
+> verified its signature, asked for the base and written `.env`. Until this is
+> decided (publish the compose as a signed asset, or have the installer clone),
+> run the installer from a **checkout of the repository at the tag you are
+> installing** — that is what puts `docker/` next to it. The installer E2E does
+> the same thing by hand, in a step that says it is a finding.
+
+Two sources:
+
+```sh
+install.sh                  # --source=ghcr (default): by digest, signature verified
+install.sh --source=local   # buildx bake; requires a clean tree on a tag
+```
+
+Secrets are generated once and persisted into `.env` with mode **600** — the
+file is created empty and locked *before* receiving content, because a window
+where the secrets are world-readable is exactly what this file cannot have.
+
+There is **no migrate step**, and there should not be: the compose chains
+`api` → `migrate-api` with `service_completed_successfully`, so `up --wait`
+waits for the migrations. A second place ordering migrations would be a second
+source of the same truth.
+
+After the stack is up it **asks before claiming**: `/health` on the api and on
+the engine, and only then does it say it installed.
+
+It **installs the local agent** — the binary is verified against the signed
+manifest and placed with `install -m 0755`, so there is no manual `chmod`
+([RN-531](business-rules.md#rn-531)) — and it asks ONE base, writing it to
+both sides: `BRABO_PROJECTS_BASE` in `.env` and `base` in the runner's
+`runner.json`. A Release with no binary for this platform does not interrupt
+the installation: it says so and points at `npm install -g @brabo/runner`.
+
+Over an existing installation it **migrates or stops** — an `up` on volumes
+from another version is damage that gives no warning. The order is backup →
+**PROVE** it restores → ask → delete → install → restore, and the proof in the
+middle is what gives the installer the right to delete
+([RN-530](business-rules.md#rn-530)).
+
+And it knows **which** version it is replacing ([RN-542](business-rules.md#rn-542)).
+The images are resolved **before** detection runs, so the question is never
+blind: the marker records the installed `versao`, the manifest carries the one
+about to be installed, and the offer is specific to the relation between them.
+
+| relation | what it offers | default |
+|---|---|---|
+| newer | *"Atualizar 5.0.0 → 5.1.0?"* | **yes** — it is what you came to do, and the proven backup makes it reversible |
+| same | *"Já é a 5.0.0. Reinstalar do zero mesmo assim?"* | no — there is no gain to offer |
+| older | names it a **downgrade**, warning that database migrations do not run backwards | no — it may have no way back |
+| unknown | a marker from schema 1 has no version; it says so, and does not guess | no |
+
+Whichever branch you take, the installation is **deleted and recreated from
+scratch** rather than started on top of the old volumes. Half a migration is
+worse than none.
+
+An `install.sh` invoked from the `pnpm bootstrap` menu (*Docker › Instalar*)
+only **reports** the plan. That is mechanical, not a preference: a menu item
+runs with stdin on `/dev/null` so the menu can keep reading keys from the same
+terminal, and this installer is built to *ask*. The note on the item carries
+the one-line command that installs for real.
+
+> **What it does not do:** bring up the container **broker** — that service is
+> absent from the installation compose because its image is not published, and
+> without it a project in **mounted** mode cannot start a container
+> ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)); the **runner** mode uses
+> the Docker on that machine and does not depend on it. It also does not
+> **pair** the local agent: the binary and the base are ready, and the key
+> material can now be made right there
+> (`brabo-runner device-key create`, [RN-551](business-rules.md#rn-551)), but
+> `install.sh` does not yet chain the three commands — registering the public
+> half and installing the machine unit are a later session of the phase
+> ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4). For a
+> project-bound pairing, the device key and `brabo-runner.config.json` still
+> come from the project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
+
+---
+
+## Verifying a published artifact {#verificar-artefato-publicado}
+
+Every final tag signs what it publishes, with `cosign` **keyless** — the
+signing identity is the workflow itself, and there is no key in custody
+anywhere ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+[RN-524](business-rules.md#rn-524)). This is how **you** check it, outside
+CI.
+
+Both commands need the two `--certificate-*` flags. They are not optional
+decoration: without them `cosign` would accept a valid signature **from
+anyone**, which is the failure this whole mechanism exists to prevent.
+
+### An image, by digest
+
+```bash
+# The digest comes from .release/images.json, which is an asset of the Release
+# — never from a tag, which is a movable pointer.
+DIGEST=$(gh release download vX.Y.Z --pattern images.json --output - \
+  | jq -r '.imagens[] | select(.alvo == "api") | .digest')
+
+cosign verify \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  "ghcr.io/daneiel/brabo-api@${DIGEST}"
+```
+
+### The runner binaries
+
+One signed `checksums.txt` covers all five targets, so verification is two
+steps: the manifest's signature, then the binary against the manifest.
+
+```bash
+gh release download vX.Y.Z --pattern 'checksums.txt*' --pattern 'brabo-runner-*'
+
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/build-runner-binaries\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  checksums.txt
+
+# Only after the manifest is proven authentic does checking the binary mean
+# anything — a checksums.txt nobody verified is a file the attacker also
+# gets to write.
+sha256sum -c checksums.txt --ignore-missing
+```
+
+### When verification fails
+
+**Do not install.** A signature that does not verify has exactly two
+readings — the artifact is not what the pipeline published, or the pipeline
+did not publish it — and neither is a reason to continue. Check whether the
+identity regex matches the workflow that really published that tag (a
+republish by `workflow_dispatch` signs with the same identity), and then
+treat it as an incident rather than as noise.
+
+**What this does NOT cover:** operating-system code-signing of the runner
+binaries — macOS notarization and Windows Authenticode. Those need a paid
+signing identity and are a separate backlog item; the OS will still warn on
+first run.
+
+### The written offer of source, inside the engine image
+
+Signing answers *"is this what the pipeline published?"*. A second question
+travels with the same image and has a different answer: **where is the source
+of the GPL software inside it?**
+
+The engine image embeds `git`, `busybox`, `libgcc`/`libstdc++` and 18 other apk
+packages under GPL, plus the four scanners the engine invokes by `exec`.
+Running them as separate processes does not contaminate Brabo, which stays
+MIT — but *distributing* the image requires that whoever receives it can obtain
+the corresponding source. Since [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)
+that distribution happens on every final tag.
+
+The written offer is `THIRD_PARTY_NOTICES.md`, and it ships **inside** the
+image, because whoever runs `docker pull` does not have the repository:
+
+```bash
+docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:vX.Y.Z \
+  -c 'cat /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md'
+```
+
+It names every component, its exact version and its licence, which is what
+lets anyone reach the upstream release of each one. If that file is missing
+from an image, the image should not be distributed — `scripts/ci/oferta-de-fonte-na-imagem.spec.ts`
+keeps the `COPY` from being removed by accident, but only a real tag proves the
+published artifact.
+
+The file also records what is **not** settled: separating the scanners into
+their own sidecar, leaving the engine image free of copyleft, stays open as an
+*architecture* choice rather than a compliance one.
+
+---
+
+## Bumping a third-party image {#subindo-imagem-de-terceiro}
+
+Every third-party image in `docker/`, `deploy/k8s/` and
+`.github/workflows/` is pinned **by digest**, with the tag it came from in a
+trailing comment ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md)):
+
+```yaml
+image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+```
+
+In a **Dockerfile** the tag goes on the line *above* — Docker's parser only
+takes `#` at the start of a line, and a trailing one makes the build fail with
+*"FROM requires either one or three arguments"*:
+
+```dockerfile
+# 3.20
+FROM alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
+```
+
+That is a **freeze**, and the cost lands here: the image receives no security
+update until a person changes the digest. Dependabot's `docker` ecosystem is
+not enabled, so nothing proposes the bump for you.
+
+To move one — say, `neo4j` from `5.26-community` to `5.27-community`:
+
+```sh
+# 1. Confirm the tag resolves to an INDEX (a manifest list). If it does not,
+#    the pin loses multi-arch and linux/arm64 stops working.
+docker manifest inspect neo4j:5.27-community | head -3
+#    → "mediaType": "application/vnd.oci.image.index.v1+json"
+#      (or …distribution.manifest.list.v2+json)
+
+# 2. Read the index digest.
+docker buildx imagetools inspect neo4j:5.27-community --format '{{.Manifest.Digest}}'
+
+# 3. Write `neo4j@<digest>  # 5.27-community` EVERYWHERE that tag appears.
+grep -rn 'neo4j@sha256' docker/ deploy/k8s/ .github/workflows/
+
+# 4. The lint proves it.
+node scripts/ci/imagens-pinadas.ts
+```
+
+Step 3 is not optional bookkeeping: the check refuses **the same tag carrying
+two different digests**, because the dev compose and the CI service claiming
+the same version while running different bytes is how a green CI stops meaning
+anything.
+
+What the check does **not** cover, and why, is in
+[the CI supply chain](explanation/cadeia-de-suprimentos-do-ci.md#container-images-digest-with-the-tag-alongside):
+the four images the product publishes are already resolved by digest through
+`.release/images.json` and `make imagens-do-release`
+([ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)) — never pin
+those by hand in the overlay, which deliberately holds the marker.
 
 ---
 

@@ -133,8 +133,9 @@ second name for it.
 Explicit because the destination and the reason are recorded in the event
 log, instead of one agent implicitly "taking over" another's context.
 
-**Artifact** — an agent's structured, validated output. Seven closed
-schemas (`note`, `business_rule`, `product_brief`, `task_blocked`,
+**Artifact** — an agent's structured, validated output. Eleven closed
+schemas (`note`, `business_rule`, `product_brief`, `decision_record`,
+`plano_de_teste`, `prototipo_navegavel`, `threat_model`, `task_blocked`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): a missing field
 fails the emission. It's how a gate's verdict becomes data, not text.
 `business_rule` fails for a second reason: a title already registered in
@@ -244,6 +245,16 @@ deliverable separate from the PR verdict): it produces the **test plan**
 (synthesis, executable criteria, automation strategy) for ONE story,
 before the dev agent writes any code. Never suspends — none of its tools
 go through the action pipeline.
+
+**AppSec** — the `secops` in a second MOMENT, the same shape QA-strategy has
+over `qa-lead`: the SAME process (`SecOpsAgentServer.run_design/2`) produces a
+STRIDE-lite **threat model** over a story's DESIGN — no worktree, no
+`task_id`, before any code or PR exists. It never approves or rejects
+anything; it ends by emitting `artifact.threat_model` and handing it off to
+the architect, the Dev Lead and Infra. Triggered by the Dev Lead's
+`assess_implementability`, in parallel, once per story
+([RN-360](business-rules.md#rn-360), [RN-539](business-rules.md#rn-539),
+[ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ---
 

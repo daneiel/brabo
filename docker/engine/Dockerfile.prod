@@ -10,7 +10,8 @@
 # Alpine 3.20.3) — a versão do Alpine tem que casar com a do runtime, porque o
 # ERTS embarcado no release é linkado contra a musl desta imagem.
 # ---------------------------------------------------------------------------
-FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3 AS builder
+# 1.17.3-erlang-27.1.2-alpine-3.20.3
+FROM hexpm/elixir@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255 AS builder
 
 # build-base: compilar as NIFs das deps nativas.
 # hadolint ignore=DL3018
@@ -38,7 +39,8 @@ RUN mix compile --warnings-as-errors && mix release
 # Estágio 2: runtime. Alpine puro — o ERTS vem no release, não precisa de
 # Erlang/Elixir instalados.
 # ---------------------------------------------------------------------------
-FROM alpine:3.20.3 AS runtime
+# 3.20.3
+FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
 
 # Versões PINADAS de todo binário externo. Os valores são os que já rodam no
 # container de dev hoje — não são escolhas novas.
@@ -155,6 +157,25 @@ RUN addgroup -g 1000 engine \
 RUN mkdir -p /data/project-workspaces /data/git-repos \
  && chown -R engine:engine /data
 VOLUME ["/data/project-workspaces", "/data/git-repos"]
+
+# A oferta escrita de fonte viaja DENTRO da imagem, e não só no repositório.
+#
+# Esta imagem embute `git`, `busybox`, `libgcc`/`libstdc++` e outras 18 apk sob
+# GPL, mais os quatro scanners que o engine invoca por `exec`. Executá-los como
+# processo separado não contamina o Brabo (que segue MIT) — mas DISTRIBUIR a
+# imagem exige que quem a recebe possa obter o fonte correspondente, e desde o
+# ADR 0119 ela é publicada no GHCR a cada tag final.
+#
+# `THIRD_PARTY_NOTICES.md` é a oferta: ele nomeia cada componente, a versão
+# exata e a licença, o que permite chegar ao release upstream de cada um. Ele
+# precisa estar ONDE O BINÁRIO ESTÁ — quem faz `docker pull` não tem o
+# repositório, e uma oferta que só existe no GitHub não acompanha a cópia que
+# a pessoa recebeu. `/usr/share/doc` é o lugar convencional em imagem Linux.
+#
+# Copiado ANTES do `USER`, como os diretórios de dados acima: o arquivo é do
+# root e legível por todos (0644), e não deve ser escrevível pelo processo.
+COPY --chown=root:root --chmod=0644 THIRD_PARTY_NOTICES.md \
+     /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md
 
 WORKDIR /app
 

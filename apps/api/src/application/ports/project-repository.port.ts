@@ -33,6 +33,11 @@ export interface ProjectInput {
   // enviado na CRIAÇÃO (nasce implícito NULL, default da coluna); só
   // `ConfirmProjectWorkspaceUseCase` escreve aqui, via `update`.
   workspaceVerifiedAt?: Date | null;
+  // O destino do espelho na máquina do usuário (RN-515, ADR 0147) — nunca
+  // enviado na CRIAÇÃO (nasce implícito NULL, e projeto sem espelho é o
+  // normal). Escrevem aqui, via `update`, `SetProjectMirrorPathUseCase` e a
+  // conversão de modo, que o LIMPA ao entrar em `container`.
+  mirrorPath?: string | null;
 }
 
 export abstract class ProjectRepository {
@@ -51,6 +56,20 @@ export abstract class ProjectRepository {
   ): Promise<Project>;
   abstract findById(id: string): Promise<Project | null>;
   abstract listForWorkspace(workspaceId: string): Promise<Project[]>;
+  /**
+   * Os projetos em `execution_mode: 'runner'` que o usuário ALCANÇA — tem
+   * linha em `project_members`, ou em `workspace_members` do workspace do
+   * projeto (RN-543, ADR 0154 ponto 3).
+   *
+   * É uma consulta de CANDIDATOS, nunca uma decisão de autorização: quem
+   * decide o papel efetivo continua sendo `ResolveEffectiveRoleUseCase`
+   * (`projectRole ?? workspaceRole` — RN-471, a sobreposição vale nos DOIS
+   * sentidos), e é ele que `ListRunnerProjectsUseCase` aplica linha a linha.
+   * Repetir o `??` em SQL seria uma segunda régua para a mesma regra, e é ela
+   * que este método existe para NÃO escrever: alcançar é condição necessária
+   * de ter papel, nunca suficiente.
+   */
+  abstract listRunnerModeReachableBy(userId: string): Promise<Project[]>;
   abstract update(
     id: string,
     input: Partial<ProjectInput>,

@@ -702,6 +702,9 @@ compared api against web — the engine silently diverged. Now
 `apps/web/src/lib/agent-areas.generated.ts` and
 `apps/engine/lib/engine/agents/areas.ex` are produced by
 `pnpm --filter api gerar:areas`, and the test fails what's stale on disk.
+Since AT-046 the same generator also writes `SOLO_CONVERSATIONAL_AGENTS`
+(RN-440) into the web file — and only there, since the engine has no reader
+for it.
 The list is still the CATALOG; `agent_areas` is the per-project STATE
 (RN-094), and the two answer different questions.
 
@@ -2902,12 +2905,13 @@ fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
 (`modelo`/`politica`/`infra`), mesma régua da RN-059 — nunca resposta vazia
 nem silêncio só em broadcast.
 
-**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
-sozinho ainda. O ponto de disparo natural é `assess_implementability` do Dev
-Lead (frente `qa-estrategia`, gate `implementavel`, mesmo ADR 0090) — fora do
-escopo desta entrega, que foi mantida autocontida (nenhum arquivo de outra
-frente tocado: `decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex`
-intocados).
+**O gatilho automático existe desde a [RN-539](#rn-539)**. Esta entrega foi
+mantida autocontida de propósito (nenhum arquivo de outra frente tocado:
+`decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex` intocados), e declarava a
+lacuna: `run_design/2` era ACIONÁVEL e nada acionava sozinho. O ponto de
+disparo que ela nomeava — `assess_implementability` do Dev Lead, frente
+`qa-estrategia`, gate `implementavel`, mesmo ADR 0090 — passou a ser o
+chamador de verdade, em paralelo e uma vez só por story.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex` (`run_design/2`,
   `handle_cast/2`, `run_appsec_design/3`, `emit_threat_model/3`,
@@ -3608,7 +3612,8 @@ Lead/UX Designer/Staff/Infra). `Engine.Dev.DevAgentServer` (via
 `Engine.Dev.AgentIo`) nunca emite `agent.status` — usa vocabulário
 PRÓPRIO no event log da sessão: `dev.started`, `dev.working`,
 `dev.awaiting_gate`, `dev.awaiting_approval`, `dev.idle`,
-`dev.idle_tripped`, `dev.blocked`, `dev.error`. Uma sessão de execução
+`dev.idle_tripped`, `dev.blocked`, `dev.blocked_by_container`,
+`dev.error`. Uma sessão de execução
 com dev agent trabalhando OU travado sempre devolvia `pending: false`
 pelo terceiro sinal, porque nenhum `agent.status` existe para ele.
 
@@ -3631,16 +3636,71 @@ decidida à época. `awaiting_gate` era uma lacuna residual CONHECIDA; a
 [RN-412](#rn-412) a fechou, junto com `awaiting_approval` (por um
 argumento novo, não o original — ver RN-412).
 
+`dev.blocked_by_container` entrou DEPOIS, pelo mesmo argumento e por um
+achado igualmente real. O tipo nasceu com a
+[RN-502](#rn-502)/[ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md) — o dev
+agent não reivindica task antes de o projeto ter container `running`
+registrado — e a lista `DEV_EVENT_TYPES` do caso de uso não acompanhou.
+Como é a lista que o caso de uso CONSULTA, o evento ficou invisível: a
+api não o via nem para ignorá-lo. Na execução real do `exp004` (sessão
+`f782257e`) cinco dev agents emitiram `dev.started` e
+`dev.blocked_by_container` às 22:41:38, o engine fechou por
+`heartbeat_timeout` às 22:42:07 — 30 segundos cravados —, e eventos
+daquela sessão continuaram chegando 13 e 32 minutos depois. O último
+evento VISÍVEL por agente era `dev.started`, que está deliberadamente
+fora da régua. Os cinco esperavam um HUMANO subir o container, que é a
+definição de trabalho pendente que os outros sinais já usam.
+
+A afirmação de que a lista era "o vocabulário completo, confirmado por
+leitura direta do código do engine" era verdadeira quando foi escrita —
+e foi ela que envelheceu calada. O que a mantém verdadeira agora é
+MECANISMO: `scripts/ci/vocabulario-de-eventos-dev.spec.ts` extrai os
+tipos `dev.*` de `apps/engine/lib/**/*.ex` e reprova quando divergirem
+das duas listas do caso de uso, nomeando o tipo que falta. Ele COMPARA
+em vez de GERAR (o precedente de `agent-areas.ts`) porque só metade do
+par é derivável: `DEV_EVENT_TYPES` é mecânica, `DEV_PENDING_TYPES` é
+julgamento — quais estados significam "um humano precisa agir".
+
+A MESMA deriva tinha uma terceira instância, no WEB, e o mecanismo
+passou a cobri-la. `DEV_STATUS_EVENTS`
+(`apps/web/src/lib/agent-status.ts`), que o painel do time consulta para
+dizer o estado de cada dev agent, também não conhecia
+`dev.blocked_by_container` nem `dev.awaiting_approval` — e ali a
+consequência não era invisibilidade, era MENTIRA: os dois caíam no
+`default: return 'trabalhando'` do `switch`, então no `exp004` o painel
+dizia que cinco dev agents parados havia HORAS, esperando um humano
+subir o container, estavam trabalhando. Os dois mapeiam para
+`aguardando`, o mesmo estado que `dev.awaiting_gate` já usava (o agente
+não segue até que algo FORA dele aconteça), sem estado novo em
+`AgentStatus`; `dev.error`, que não estava em lista nenhuma e por isso
+fazia o painel voltar ao `dev.working` anterior, mapeia para `falhou`.
+A lista deixou de ser lista: virou MAPA `tipo -> AgentStatus`, o que
+apaga o `default` e torna impossível acrescentar um tipo sem responder o
+que ele significa. E o teste cruzado ganhou o par engine × web, com uma
+exigência que a api não tem — DECISÃO explícita por tipo, mapeado OU
+declarado em `DEV_STATUS_EVENTS_FORA` (`tipo -> motivo`, vazio hoje) —,
+porque no painel um tipo `dev.*` PODE legitimamente não interessar; o
+que não pode é ficar de fora por esquecimento.
+
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
-  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped` como último
-  evento → `pending: true`; `dev.idle` → `pending: false`; sessão sem
+  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped`/`dev.blocked_by_container`
+  como último evento → `pending: true`, inclusive os cinco agentes do
+  cenário `exp004` e com `dev.blocked_by_container` vencendo um
+  `dev.idle` anterior; `dev.idle` → `pending: false`; sessão sem
   evento `dev.*` preserva o comportamento anterior; só o ÚLTIMO evento de
   cada agente importa; `dev-<modulo>-2` também segura; isolamento entre
-  sessões)
+  sessões), `scripts/ci/vocabulario-de-eventos-dev.spec.ts` (o
+  vocabulário `dev.*` do engine × as duas listas da api E × o mapa do
+  painel, mais os três casos fabricados que provam a válvula
+  `DEV_STATUS_EVENTS_FORA`, que nenhum dado real exercita hoje) e
+  `apps/web/src/lib/agent-status.test.ts` (`dev.blocked_by_container` e
+  `dev.awaiting_approval` → `aguardando`, `dev.error` → `falhou`, nunca
+  `trabalhando`; e o evento mais recente continuando a mandar)
 - **Origem:** achado por uso real — sessão de execução real com cinco dev
   agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
-  ainda desbloqueava tarefas manualmente
+  ainda desbloqueava tarefas manualmente; e, mais tarde, cinco dev agents
+  em `blocked_by_container` no `exp004`, pelo mesmo mecanismo
 
 ---
 
@@ -3898,6 +3958,23 @@ obrigatório pro texto inline em qualquer falha (api fora, template não
 semeado, flag desligada). `:pinned => true` continua igual nos dois
 caminhos.
 
+O TERCEIRO consumidor da mesma flag é o prompt de sumarização do
+`ContextManager` (`context-manager-summarize`, o quarto e último template da
+leva da [RN-413](#rn-413) — era o único ainda sem consumidor, lacuna que a
+[ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+declarou aberta e que fecha aqui). Mesma régua, byte a byte: flag ligada
+tenta o template e substitui `{{turnos}}` pelo MESMO corpo `<role>:
+<content>` que a trilha inline já montava; qualquer desfecho que não seja
+`{"body" => corpo}` com corpo binário não-vazio cai no inline — SEM erro e
+SEM log de erro, porque flag desligada, template ainda não semeado e api do
+grafo fora do ar são o MESMO caminho de degradação. Com a flag desligada (o
+default) a api nem é chamada. O render é função privada PRÓPRIA, não um
+helper compartilhado: o conjunto de placeholders é do template, não do
+mecanismo — cada um dos três consumidores tem o seu. E o fallback
+determinístico de quando o MODELO falha (`"(N turnos anteriores
+omitidos)"`) é outra coisa e NÃO passa por template nenhum: é comportamento
+de código, não texto de prompt, e o próprio `.md` do template declara isso.
+
 **Consumo do restante do grafo (`query_user_context` — hipóteses com
 evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
 entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
@@ -3907,12 +3984,17 @@ relações em si.
 - **Onde:** `apps/engine/lib/engine/psychologist/context_builder.ex`,
   `apps/engine/lib/engine/workers/psychologist_worker.ex`;
   `apps/engine/lib/engine/anamnese/context_builder.ex`,
-  `apps/engine/lib/engine/workers/anamnese_worker.ex`
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`;
+  `apps/engine/lib/engine/harness/context_manager.ex` (`prompt/1`,
+  `render_template/2`, `prompt_inline/1`)
 - **Teste:** `context_builder_test.exs` dos dois agentes (hits presentes;
   falha do RAG degrada sem erro; `degraded: true` visível; clamp de
   `top_k`; query derivada do gatilho); `psychologist_worker_test.exs`/
   `anamnese_worker_test.exs` (template com sucesso e com fallback;
-  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api)
+  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api);
+  `context_manager_test.exs` (template com `{{turnos}}` substituído;
+  `{:error, :not_found}` cai no inline e a compactação termina normal;
+  flag desligada nunca chama `get_prompt_template`)
 - **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
 
 ---
@@ -5023,18 +5105,26 @@ divergir do backend. `addressableAgents()` (`apps/api/src/domain/agents/agent-ar
 
 `SOLO_CONVERSATIONAL_AGENTS` é uma lista PRÓPRIA, não derivada do roster
 `apps/web/src/lib/agents.ts` (que também lista agentes de gate e o
-Psicólogo/Anamnese, nenhum endereçável por handoff) nem do gerador
-`gerar:areas` (Fase 18, que só cobre `AGENT_AREAS`). O mirror manual do
-lado web (`apps/web/src/lib/agents.ts`, mesma constante) não é cruzado por
-teste automático com o do lado api — divergir produz, no pior caso, uma
-opção velha no seletor que o backend ainda recusa com 400, nunca uma
-escrita indevida.
+Psicólogo/Anamnese, nenhum endereçável por handoff). A direção da derivação
+é a da api para o web: desde a AT-046 a cópia do web deixou de ser mirror
+MANUAL e sai do MESMO gerador das áreas (`pnpm --filter api gerar:areas`,
+Fase 18), em `apps/web/src/lib/agent-areas.generated.ts`, que `agents.ts`
+só reexporta. `agent-areas.spec.ts` reprova quando o disco diverge do que o
+gerador produz, e a lista gerada sai `as const satisfies readonly AgentKey[]`
+— um nome que o roster do web não conhece quebra o build do web. O engine
+NÃO recebe a lista (não há consumidor lá). Mesmo com as duas cópias
+travadas, quem decide o que é aceito continua sendo o
+`RequestManualHandoffUseCase`.
 
 - **Onde:** `apps/api/src/domain/agents/agent-areas.ts` (`addressableAgents`,
   `SOLO_CONVERSATIONAL_AGENTS`); `apps/api/src/application/use-cases/agents/request-manual-handoff.use-case.ts`;
-  `apps/web/src/lib/agents.ts` (mirror manual)
+  `apps/api/scripts/gerar-areas.ts` (`renderWeb`, que escreve a lista no
+  web); `apps/web/src/lib/agent-areas.generated.ts` (cópia GERADA,
+  reexportada por `apps/web/src/lib/agents.ts`)
 - **Teste:** `apps/api/test/domain/agents/agent-areas.spec.ts`
-  (`describe('addressableAgents (ADR 0109)')`); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
+  (`describe('addressableAgents (ADR 0109)')` e
+  `describe('a lista solo sai do gerador para o web (AT-046)')`, mais o
+  aferidor de frescor do arquivo do web); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
   (recusa subagente E recusa agente desconhecido); `apps/web/src/lib/agents.test.ts`
 - **ADR:** [0109](adr/0109-handoff-manual-a-agente-a-escolha.md)
 - **Origem:** backlog do modelo de time — item aberto desde a FASE 13c,
@@ -7444,8 +7534,53 @@ de qualquer desenvolvedor com Ollama de pé — nunca o novo workflow, que
 invoca `mix golden_set.rag` explicitamente, do mesmo jeito que sempre foi
 preciso rodar manual.
 
+**Corrigido depois de medir: o workflow acima nunca rodou verde uma vez.**
+Cinco execuções agendadas seguidas (05 a 09/09/2026) falharam, e havia
+**três** defeitos empilhados, cada um escondendo o seguinte:
+
+1. **`mix golden_set.rag` é um alias que chama `test`, e o Mix recusa isso
+   fora do ambiente `:test`** — `** (Mix) "mix test" is running in the "dev"
+   environment` —, antes de rodar coisa alguma. `def cli` em
+   `apps/engine/mix.exs` passa a declarar `preferred_envs` para as DUAS
+   tasks de golden-set: é o que faz o comando curto, o único documentado em
+   toda parte, funcionar sem prefixo de ambiente. Exigir `MIX_ENV=test` de
+   quem chama seria transferir a correção para toda a prosa que ensina o
+   comando — e para quem esquecesse, de novo.
+2. **O job nunca subiu a api**, e o teste PULA quando `API_URL` não responde
+   (pré-condição de ambiente declarada no ADR 0132). Corrigido o item 1, o
+   job ficaria verde sem medir nada. Passa a subir a api de verdade (build,
+   `node dist/main.js`, espera do `/health`) — satisfazer a pré-condição, e
+   nunca afrouxar o teste, que seria mudar o julgamento para caber no CI.
+   Quem faz o trabalho continua sendo `seed-golden-set-rag.ts`, que sobe o
+   próprio contexto Nest; a instância existe para responder ao `/health`.
+3. **O seed morria em 409 no portão da imagem.** Ele criava o projeto como
+   `runner` justamente para ESCAPAR do portão (RN-105), apoiado na isenção
+   que a RN-169/RN-421 davam a `mounted`/`runner` — isenção **revogada pela
+   RN-494** (ADR 0135), com o comentário do script continuando a citá-la.
+   Agora o seed ATRAVESSA o portão pelo caminho real: decide a imagem por
+   `DecidirImagemDoProjetoUseCase`, o mesmo caso de uso do
+   `choose_project_image` do Arquiteto, numa sessão `consultiva` que ele
+   abre (o evento de decisão exige `session_id`, que é `NOT NULL`) — nunca
+   um INSERT de artefato à mão, que faria o golden-set medir contra um
+   estado que a produção não sabe produzir.
+
+**E o job passa a exigir que o golden-set tenha MEDIDO.** A guarda é a linha
+de resultado (`N/N casos acertaram`), que só é impressa depois de os 17
+casos rodarem; sem ela o passo reprova nomeando o motivo. Ela é necessária
+porque o `{:skip, motivo}` que o teste devolve do CORPO **é inerte** — não
+existe skip em runtime no ExUnit, e o que se vê é `Result: 1 passed`. Foi
+exatamente o que aconteceu ao medir: com o seed morrendo em 409, o teste
+passou. `excluded` NÃO serve de sinal aqui, ao contrário do que a guarda
+irmã de `ci.yml` verifica: a saída legítima traz mais de mil excluídos, que
+são todos os outros testes do engine, fora pela tag.
+
+Medido depois das três correções, nesta máquina, pelo caminho que o job
+passa a percorrer: **17/17 no top-5**, igual às duas rodadas manuais que
+gravaram o piso.
+
 - **Onde:** `.github/workflows/golden-set-rag.yml`, `docs/gates.yml`
-  (`rag-acertivo`)
+  (`rag-acertivo`), `apps/engine/mix.exs`,
+  `apps/api/scripts/seed-golden-set-rag.ts`
 - **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 3
 
@@ -7657,6 +7792,250 @@ na RN seguinte.
   `scripts/dev/base-de-projetos.spec.ts`
 - **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md)
 - **Origem:** plano do dono do produto, PR 1
+
+---
+
+## O consentimento da base, no host (RN-511)
+
+### RN-511 — A base é CONSENTIDA uma vez no host, o compartilhamento é provado MONTANDO, e sem terminal o passo relata em vez de consentir {#rn-511}
+
+A [RN-500](#rn-500) construiu a base e disse o que fazer quando ela falta —
+`projectsBase: null`, e o modo "Pasta montada" não é oferecido. O que faltava
+era alguém **pedir** que ela fosse configurada: nada no produto o fazia, e o
+resultado é que um modo pronto ficou inalcançável para quem instala.
+
+O passo de consentimento vive em `pnpm bootstrap` (`Docker › Base de
+projetos`), propõe **`$HOME/projetos-brabo`** e aceita outro caminho digitado.
+O nome não é preferência: `.env.example` já usa `~/brabo-projetos` como exemplo
+de `PROJECT_WORKSPACES_HOST_DIR`, a raiz que o PRODUTO gerencia, e propor o
+mesmo nome para as duas variáveis seria andar para dentro da colisão que o
+ADR 0141 recusou — `<base>/loja` cairia na mesma pasta física de um projeto
+`container` cujo `workspace_dir_name` também fosse `loja`, e o bootstrap daria
+`git init` dentro do projeto do outro.
+
+**O nome é só a esquiva; a proteção é mecanismo.** `validarBase` recusa
+qualquer candidata que se sobreponha — nos DOIS sentidos — ao checkout do Brabo
+(a guarda que a RN-500 já tinha) **ou** a `PROJECT_WORKSPACES_HOST_DIR` (a
+regra nova), além de recusar `~`, caminho relativo e a raiz. A recusa vale para
+o caminho DIGITADO, não só para o default; um default bem escolhido só evita
+que a recusa seja a primeira coisa que o usuário veja.
+
+**O compartilhamento do Docker Desktop é provado MONTANDO, nunca lido de
+`settings.json`.** Aquele arquivo não é documentado, muda entre versões e entre
+macOS e Windows, e descreve o que o usuário CONFIGUROU — não o que o daemon
+fará. É a mesma régua de "capability só é declarada quando provada por
+execução" dos ADRs 0041/0042, aplicada ao host. A prova é uma **sentinela**, e
+não um `ls` seco: pasta vazia e pasta não compartilhada produzem a mesma
+listagem vazia, então o script escreve um arquivo e pergunta se o container o
+enxerga. Só em macOS e Windows (`process.platform`); no Linux não há lista de
+compartilhamento, e a checagem é existência e escrita. É a SEGUNDA guarda de
+plataforma do produto, simétrica à primeira (`validarDirDentroDoHomeNoLinux`,
+no runner): cada uma restringe apenas onde a restrição significa alguma coisa.
+
+A prova tem **três desfechos, e eles não colapsam**: provado; reprovado (a
+variável **não** é gravada, e a recusa nomeia o caminho e onde adicioná-lo); e
+*não consegui provar* — sem imagem Docker local para montar —, que grava a
+variável e **diz em voz alta que a prova não rodou**, com o comando para
+rodá-la depois. "Não consegui olhar" virar "está tudo bem" é exatamente como
+uma base não compartilhada chegaria ao usuário na forma de um container que
+sobe com a pasta vazia, longe da tela onde a escolha foi feita.
+
+**Sem TTY, o passo RELATA e não faz nada.** O item de menu do `bootstrap.sh`
+roda com stdin vindo de `/dev/null` — de propósito, senão qualquer coisa que
+leia stdin rouba as setas do usuário — então de lá o script só pode relatar, e
+a saída diz o comando que pergunta. É o mesmo desenho de
+`perguntarUsoDoOllama`, que sem terminal aplica o default e avisa em vez de
+travar. Um script de consentimento que "consente" sozinho num pipe de CI é a
+negação da palavra. Pelo mesmo motivo `preflight.mjs` **relata** o estado da
+base e nunca pergunta: a resposta é um caminho no disco de alguém, e não existe
+default que se possa aplicar em silêncio.
+
+`mkdir -p` só acontece **depois** do aceite e da validação — criar pasta a
+partir de um caminho que ainda não passou pelas recusas é criar pasta em
+qualquer lugar que o processo alcance. E valor já presente nunca é sobrescrito
+sem confirmação.
+
+- **Onde:** `scripts/dev/consentir-base.mjs` (o I/O: perguntar, provar, criar,
+  gravar); `scripts/dev/base-de-projetos.mjs:143` (`basePadrao`), `:177`
+  (`validarBase`) e `:208` (`exigeProvaDeCompartilhamento`) — a decisão pura;
+  `scripts/dev/env-file.mjs` (`lerEnv`/`escreverEnv`, extraídas de
+  `preflight.mjs`, que roda `await main()` no topo e por isso não pode ser
+  importado); `scripts/dev/bootstrap.sh` (item `1.6`);
+  `scripts/dev/preflight.mjs` (`relatarBaseDeProjetos`)
+- **Teste:** `scripts/dev/base-de-projetos.spec.ts` (`describe('basePadrao')`,
+  `describe('validarBase')` — caminho feliz e as seis recusas — e
+  `describe('exigeProvaDeCompartilhamento')`); `scripts/dev/bootstrap.spec.ts`
+  (a árvore do menu, 25 folhas)
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md)
+- **Origem:** FASE 28, sessão 2
+
+---
+
+## O broker sobe por padrão no compose local (RN-512)
+
+### RN-512 — O broker sai do `profiles` no compose LOCAL e só nele, e o `DOCKER_GID` passa a ser relatado no preflight {#rn-512}
+
+O broker nasceu sob `profiles: ["container-broker"]` com uma justificativa que
+o próprio ADR 0130 escreveu: *"dar acesso ao Docker do host a um processo que
+nada chama ainda seria uma mudança de postura para toda máquina de
+desenvolvimento, em troca de nada"*. As duas metades morreram. **"Nada o
+chama" é falso** desde os ADRs 0133/0134/0136 — o broker tem quatro chamadores
+reais. E **"em troca de nada" deixou de descrever a troca** quando o ADR 0144
+fez `mounted` subir container PELO BROKER e o ADR 0146 tornou `mounted` o
+padrão local: com o profile desligado, o modo padrão termina em
+`BrokerIndisponivelError`.
+
+Então ele sai do `profiles` em `docker/docker-compose.yml` — e **só ali**. Em
+`docker/docker-compose.prod.yml` o profile FICA, e os dois arquivos passam a
+divergir de propósito.
+
+**A assimetria é o que o socket significa de cada lado.** Quem roda `pnpm dev`
+**já tem o socket do Docker** — está rodando `docker compose`, contra o daemon
+do próprio host —, então o broker recebê-lo não concede nada que o operador já
+não possua. A superfície marginal é o HTTP do próprio broker, que não publica
+porta, vive numa rede `internal: true` que só a api alcança, e compara
+`BRABO_SERVICE_TOKEN` em tempo constante. Em produção o cálculo é o oposto: o
+socket é fronteira de privilégio de verdade, o operador não é o desenvolvedor,
+e nada nesta fase muda o modo padrão de uma instalação de produção.
+
+**As cinco camadas de contenção não são tocadas.** Isto muda **quando** o
+broker roda, nunca **o que** ele aceita: ele continua recebendo `projectId` e
+uma das cinco operações, continua indo à api ler a decisão do Arquiteto, e
+continua sem parâmetro nenhum onde se escreva `privileged`, `cap_add`,
+`network: host` ou um `-v` livre. A contenção nunca foi o profile.
+
+**A consequência ambiental, e por que ela ganhou relato.** `DOCKER_GID` deixa
+de importar só para quem ligava o profile de propósito — alguém que estava, por
+definição, prestando atenção nele — e passa a valer para qualquer pessoa que
+rode `pnpm dev`. O socket é `root:docker` no host e o processo do broker roda
+non-root; o `group_add` do compose é o que lhe dá o grupo, e o default `999` é
+o mais comum e está errado em várias distribuições. Errar **não quebra o
+boot** — o broker sobe normalmente —, quebra o USO: toda operação morre com
+`permission denied` no socket, e o sintoma aparece muito depois, quando alguém
+propõe `container_start`. Por isso `preflight.mjs` passa a **relatar** o
+estado a cada `pnpm dev`.
+
+O relato tem **três desfechos, e eles não colapsam**: bate; diverge (com a
+origem do valor efetivo — `configurado` × `default` — porque as duas pedem
+instruções diferentes); e **não se aplica**, quando a máquina não tem grupo
+`docker`. O terceiro não é erro nem "não consegui": em macOS e Windows o
+Docker Desktop não usa grupo unix, e num Docker rootless o socket é do próprio
+usuário. Tratar a ausência como divergência acusaria metade das máquinas de um
+defeito que elas não têm — o mesmo cuidado de `baseSobrepoeOCheckout`, que
+devolve `false` para checkout desconhecido. E ele **relata, nunca bloqueia**:
+`pnpm dev` sobe igual.
+
+**Sair do `profiles` não bastava, e o defeito só apareceu na primeira subida
+por padrão.** A imagem de desenvolvimento preparava o pnpm com `corepack` como
+**root** no build e rodava como uid 1000, que não lê aquele cache; sem cache o
+corepack tenta **baixar** o pnpm no start, e a única rede do broker é
+`internal: true` — a tentativa morria com `getaddrinfo EAI_AGAIN
+registry.npmjs.org` e o container saía com 1, cinco segundos depois de subir. O
+serviço também não tinha healthcheck, então `up --wait` imprimia `Healthy` e o
+reset total anunciava "reset completo" com o processo morto. Enquanto o serviço
+esteve sob profile isso nunca apareceu: quem o ligava de propósito era quem já
+estava olhando. A correção **tira o registry do caminho de runtime** — o
+`pnpm install` migra para um passo de BUILD e `COREPACK_HOME` passa a um
+diretório com o dono do uid de runtime — e **não abre a rede**, que é a
+primeira das cinco camadas acima. Como os três `node_modules` são volumes
+nomeados montados por cima do que a imagem instalou, e o Docker só semeia
+volume **vazio**, `docker/broker/entrypoint.sh` reconcilia os três contra uma
+cópia guardada fora de `/workspace`, carimbada com o sha256 do `pnpm-lock.yaml`
+do build — o mesmo carimbo que, comparado com o lockfile da árvore, avisa que a
+imagem está velha sem recusar subir. O compose de PRODUÇÃO não sofria disto:
+`Dockerfile.prod` já instalava em estágio de build, removia `corepack` da
+imagem final e já tinha `HEALTHCHECK`.
+
+- **Onde:** `docker/docker-compose.yml` (serviço `broker`, sem `profiles`, com
+  `healthcheck`) e `docker/docker-compose.prod.yml` (com `profiles`, e a nota
+  que impede uniformizar os dois); `docker/broker/Dockerfile` (`COREPACK_HOME`,
+  o `pnpm install` de build e a cópia em `/opt/broker-deps`);
+  `docker/broker/entrypoint.sh` (a reconciliação dos três volumes e o aviso de
+  lockfile); `scripts/dev/docker-gid.mjs` (`avaliarDockerGid`,
+  `mensagemDoDockerGid`, `GID_PADRAO_DO_COMPOSE` — a decisão pura);
+  `scripts/dev/preflight.mjs` (`relatarDockerGid`, `gidDoGrupoDocker`)
+- **Teste:** `scripts/dev/docker-gid.spec.ts` — o caminho feliz, as duas
+  divergências (default ausente e valor errado), o "não se aplica" sem grupo
+  docker, e o default que por acaso ACERTA
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md), ponto 3
+- **Origem:** FASE 28, sessão 4
+
+---
+
+## A base decide o que a criação de projeto oferece (RN-513)
+
+### RN-513 — Com base consentida, `mounted` é o pré-selecionado com `<base>/<slug>` sugerido; sem base, ou sem saber, ele não é oferecido {#rn-513}
+
+Duas metades desta regra **já eram regra** e nunca tinham chegado ao cliente.
+"Não oferecer o modo sem base" é a [RN-500](#rn-500); "sugerir `<base>/<slug>`"
+é a [RN-501](#rn-501), e o ADR 0142 adiou a validação de disco justamente para
+que o assistente pudesse propor uma pasta que **ainda não existe**. Até aqui,
+`GET /workspaces/:workspaceId/projects-base` não tinha **chamador nenhum** no
+web, e o card "Pasta montada" era oferecido incondicionalmente — numa
+instalação sem `BRABO_PROJECTS_BASE`, escolher o modo terminava numa recusa
+400 da api depois de a pessoa ter escolhido, digitado o caminho e chegado ao
+fim do assistente.
+
+O que é **novo** é a **pré-seleção**: com base configurada, `mounted` nasce
+selecionado. Ela revisa o default do ADR 0072 (onde `container` é "a normal" e
+o modo local é escape hatch) e o revisa **só para a instalação local**, onde a
+base foi consentida por um humano no host ([RN-511](#rn-511)). O enum
+`project_execution_mode` não muda, nenhum modo novo nasce, e a conversão de
+modo (ADR 0111) não é tocada.
+
+**A consulta nasce com o assistente, não com o passo.** O passo "Onde o código
+vai morar" é o quinto; um `useQuery` montado só ali faria o card aparecer
+piscando depois que a pessoa já estivesse olhando a tela.
+
+**Desconhecido não vira oferta.** Enquanto a resposta não chegou, e também
+quando a consulta **falha** (403, rede, api fora), o card não aparece e
+`container` segue selecionado. Falha não é permissão para oferecer um modo
+cuja pré-condição não se conseguiu confirmar: é a mesma régua da
+[RN-088](#rn-088)/[RN-468](#rn-468) — o produto não colapsa "não sei" com "não
+tem" — e a dos ADRs 0041/0042, onde capability só é declarada quando
+**provada**.
+
+**A pré-seleção nunca sobrescreve escolha humana.** A base chega por rede,
+sempre DEPOIS do primeiro render. A tela guarda a escolha do usuário separada
+do modo vigente (`modoDeWorkspaceEscolhido` × `modoDeWorkspace`), e a
+pré-seleção só vale enquanto ninguém tocou nos cards — trocar o modo debaixo da
+mão de quem já clicou é defeito, não conveniência.
+
+**A sugestão nunca clobbera o que foi digitado.** `<base>/<slug>` entra em dois
+casos e só neles: campo vazio com nada sugerido ainda, ou campo contendo
+exatamente a sugestão anterior desta tela (o nome mudou no passo de detalhes, e
+a sugestão acompanha). Qualquer outra coisa — inclusive o campo vazio **depois**
+de o usuário ter apagado a sugestão — fica como está. Slug vazio (a adoção, onde
+o nome vem do provider) não vira segmento inventado: o campo continua vazio, e
+`canAdvanceFromWorkspace` segura o passo. O campo é **editável** o tempo todo; a
+pré-seleção não relaxou nenhuma régua de avanço.
+
+**E o aviso do modo parou de mentir.** O texto anterior era anterior ao ADR
+0141: dizia que o caminho era livre e que só funcionaria se o usuário o
+montasse. Hoje são **dois estados, e são os dois que o backend tem** — sob a
+base, nota neutra (a criação passa, e a pasta nem precisa existir: a Infra a
+cria ao subir o container, [RN-501](#rn-501)); fora da base, aviso dizendo que
+a api **recusa a criação** (400, em `resolverWorkspacePath`) e **nomeando** a
+base, em vez de mandar procurar a variável. Campo vazio não é "fora da base":
+não há caminho para a api recusar ainda, e alarmar antes de a pessoa digitar
+seria a tela afirmando sobre o que não tem. A comparação é por **segmento**,
+nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espelhando
+`dentroDoEscopo` da api.
+
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:211` (a consulta),
+  `:229` (`podeOferecerMounted`/`baseDeProjetos`), `:240` (o modo vigente),
+  `:251` (`caminhoForaDaBase`), `:278` (a sugestão);
+  `apps/web/src/lib/wizard.ts:130` (`caminhoSugeridoNaBase`) e `:158`
+  (`caminhoDentroDaBase`) — as funções puras;
+  `apps/web/src/lib/api-client.ts:287` (`getProjectsBase`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
+  (`describe('NewProjectWizard — a base de projetos decide o que é
+  oferecido')` — base presente, base `null`, consulta recusada com 403, a
+  escolha humana antes de a base chegar, e os dois estados do aviso);
+  `apps/web/src/lib/wizard.test.ts` (`describe('caminhoSugeridoNaBase')` e
+  `describe('caminhoDentroDaBase')`)
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md), ponto 4
+- **Origem:** FASE 28, sessão 3
 
 ---
 
@@ -8220,6 +8599,27 @@ tem desde a RN-494, declarada e aceita para aquela tool (tocar o prompt/
 instrução do Infra Lead ficaria fora do escopo de API/domínio); a tool NOVA
 nasce sem ela, porque nasce sabendo negar.
 
+**A especificação que a api compõe é a que o runner VALIDA, e isso passou a
+ser provado.** `EspecificacaoDeContainerParaRunner` são os campos de
+`EntradaDeEspecificacao` (`packages/docker-port`) menos `raizDoProjeto`, que
+só o runner conhece — DEZ, não nove. Ela nasceu com nove, sem `projectId`, e
+a consequência foi que este caminho NUNCA subiu container nenhum desde que
+existe: o engine repassa o mapa opacamente, o runner o entrega a
+`especificacaoValidada`, que exige `projectId` como texto não vazio, e a ação
+terminava `failed` com *"especificação de container recusada em `projectId`:
+esperava texto não vazio, recebi undefined"* — e daí o bloqueio CORRETO da
+[RN-507](#rn-507)/[RN-502](#rn-502) fazia o resto, sem nenhum dev agent
+reivindicando tarefa. O dado sempre existiu (`SpecDeContainer.projectId`, o
+mesmo que o BROKER recebe por `GET .../container-spec`, e é por isso que só o
+modo `runner` quebrou); só não era copiado. Três suítes verdes não pegaram
+porque cada uma montava o próprio fixture: o teste do caso de uso afirmava o
+que ele mesmo esperava, o do runner montava um fixture COM `projectId`, e o
+engine não olha o mapa. O que passa a ser garantido é a CORRENTE — o payload
+que `ExecuteContainerStartViaRunnerUseCase` compõe, atravessando o
+`especificacaoValidada` de verdade —, e o teste também trava o conjunto de
+campos: `raizDoProjeto` é o único que a api não manda, então campo novo de um
+lado sem o outro reprova.
+
 - **Onde:** `apps/api/src/domain/actions/decide.ts` (`container_start_via_runner`);
   `apps/api/src/application/use-cases/actions/
   execute-container-start-via-runner.use-case.ts` (novo);
@@ -8227,6 +8627,8 @@ nasce sem ela, porque nasce sabendo negar.
   subir-ciclo-de-vida-do-container.use-case.ts` (novo);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`;
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`;
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`EspecificacaoDeContainerParaRunner`, os dez campos);
   `apps/web/src/lib/aprovacoes.ts`;
   `apps/engine/lib/engine/infra/tools/propose_container_start_via_runner.ex`
   (novo); `apps/engine/lib/engine/infra/infra_lead_server.ex`
@@ -8234,6 +8636,9 @@ nasce sem ela, porque nasce sabendo negar.
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`,
   `apps/api/test/application/use-cases/actions/
   execute-container-start-via-runner.use-case.spec.ts` (novo),
+  `apps/api/test/contract/
+  especificacao-de-container-para-runner.contract.spec.ts` (a CORRENTE —
+  o payload composto pela api contra o `especificacaoValidada` de verdade),
   `apps/web/src/lib/aprovacoes.test.ts`,
   `apps/engine/test/engine/infra/tools/
   propose_container_start_via_runner_test.exs` (novo),
@@ -8241,6 +8646,1626 @@ nasce sem ela, porque nasce sabendo negar.
 - **ADR:** [0145](adr/0145-docker-pre-requisito-do-runner.md)
 - **Origem:** decisão do dono do produto — Docker vira pré-requisito real do
   modo `runner`, sem fallback pro host
+
+---
+
+## O `join` do agente local deixa de ser mudo (RN-514)
+
+### RN-514 — O runner DECLARA o que sabe fazer no `join`, o servidor CONCEDE a interseção em `socket.assigns`, e mensagem sem capacidade é RECUSADA em vez de sumir {#rn-514}
+
+Até aqui o `join` do canal `terminal:<projectId>` era **mudo dos dois lados**:
+o runner mandava `socket.channel(\`terminal:${projectId}\`, {})` e o servidor
+os ignorava literalmente (`def join("terminal:" <> project_id, _params,
+socket)`). Toda a identidade vinha do ticket — o papel (`:runner`/`:web`) sai
+do `kind` —, e o servidor **não tinha como saber** se o binário do outro lado
+era de uma versão que entende uma mensagem nova.
+
+O defeito que isso produz é o pior possível, e é o que esta regra fecha: a
+mensagem chega, o handler não existe do outro lado, e **nada acontece** — sem
+erro, sem log, sem ninguém saber que a função nunca rodou.
+
+**Três capacidades, e só o que o runner sabe fazer é declarado.** O
+vocabulário do servidor é `exec` (comando aprovado, ADR 0104), `pty`
+(terminal interativo, ADR 0103) e `espelho` (copiar o trabalho para uma pasta
+fora da base montada). O runner declara **`exec` e `pty`**, e `espelho` fica
+de fora **de propósito**: declarar o que não se implementa é exatamente o
+defeito que a negociação existe para impedir — o servidor concederia,
+entregaria a mensagem, e ela sumiria do mesmo jeito. `espelho` nasce só como
+**nome do vocabulário**, sem comportamento nenhum; quem o implementa é a
+sessão 6 da FASE 28.
+
+**Ausência de params é o LEGADO, e isso é fato — não benevolência.** Todo
+binário anterior a esta mudança manda params vazios, e todo binário anterior
+a esta mudança sabe fazer `exec` e `pty`: são as duas funções com que o
+runner nasceu. Conceder `{exec, pty}` a quem não declara nada é ler
+corretamente a única coisa que aquele binário poderia ter dito. O contrário
+faria **todo runner instalado parar de conectar**, que é mudança exigindo
+ação do operador antes do deploy — `breaking/` e MAJOR, pela convenção do
+repositório, e não é isto que esta entrega é. Params ausentes, `capacidades`
+ausente, lista **vazia** e valor que não é lista caem todos no legado: são as
+formas que "este binário não sabe declarar nada" assume no caminho de rede.
+
+**Desconhecido é IGNORADO, nunca motivo de recusa.** O conjunto concedido é a
+interseção do declarado com o vocabulário que **este** servidor conhece —
+runner mais NOVO que o engine tem que conseguir conectar. Já declarar
+**apenas** nomes desconhecidos é declaração vazia, não legado: quem sabe
+declarar disse o que sabe fazer.
+
+**O que cada modo EXIGE.** `runner` exige `exec` — é literalmente o que faz o
+modo funcionar, e sem ele o `TerminalExecutor` rotearia comando aprovado para
+um binário que não o executa, com a falha aparecendo como *timeout* em vez de
+recusa. `container` e `mounted` não exigem nada (o runner nem é o caminho de
+execução deles). **Nada exige `espelho` ainda** — o mecanismo de recusa nasce
+implementado e testado, e não dispara na prática hoje. Isso é o desenho, não
+pendência. Modo que não se conseguiu ler (projeto inexistente, id malformado,
+consulta que falhou) exige **nada**: recusar por pré-condição não confirmada
+seria colapsar "não sei" com "não tem" ([RN-088](#rn-088)).
+
+**O conjunto concedido vive em `socket.assigns`, nunca em tabela.**
+Capacidade é propriedade **daquela conexão** — uma tabela poderia afirmar que
+um runner sabe algo que o processo conectado agora não sabe. É o mesmo
+raciocínio que faz a entrada `:global` do `Engine.Runners.Registry` morrer
+junto com o pid. Só o papel `:runner` recebe conjunto: o socket `:web` **não
+ganha `:capacidades`** e nenhuma checagem de capacidade se aplica a ele — a
+aba não executa nada, ela pede.
+
+**Recusa do join nomeia a que falta.** `{:error, %{reason: ...}}` dizendo
+qual capacidade o projeto exige e que o binário precisa ser atualizado. A
+recusa é **fatal do lado do runner**, sem retry (`JoinRecusadoError`,
+comportamento que já existia e não mudou) — por isso ela é a única chance de
+explicar, e "recusado" sem o nome do que falta obrigaria a adivinhar. A
+checagem acontece **antes** de `Registry.register/2`: registrar e recusar em
+seguida deixaria o `Registry` afirmando um runner que não entrou.
+
+**E a metade que entrega valor hoje: mensagem sem a capacidade concedida é
+RECUSADA com resposta nomeada, nunca engolida.** `exec` para um runner sem
+`exec` responde ao chamador no **mesmo formato de `exec_result`** que o
+runner mandaria (`exitCode` 126 — "encontrado, mas não executável" —, a causa
+no `output`), em vez de deixar o `RunnerRouter` bloqueado até o `receive ...
+after` e o usuário ver um *timeout* no lugar da causa. `pty_*` para um runner
+sem `pty` não é relayado, e a `:web` que originou recebe `pty_error` nomeado,
+pelo mesmo broadcast filtrado que o runner usaria para reportar erro de PTY —
+sem isso a aba ficaria em "carregando" para sempre, o defeito que o `whereis`
+de `handle_in("pty_open", ...)` já tinha fechado para o caso "sem runner".
+Como o legado tem as duas capacidades, **nada muda para ninguém hoje**.
+
+**Isto não é fronteira de segurança.** Capacidade é negociação de
+**protocolo**; quem autoriza continua sendo o ticket de uso único
+([RN-108](business-rules/autenticacao.md#rn-108)) e o pipeline de
+`proposed_action`. O que o runner ganha declarando é que mensagens daquele
+tipo lhe sejam **entregues**, nunca permissão para nada.
+
+- **Onde:** `apps/engine/lib/engine/runners/capacidades.ex` (novo — o
+  vocabulário, o legado, o que cada modo exige e as duas mensagens);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:133`
+  (`join/3` passa a receber `params`), `:144` (`autorizar_por_papel/3`),
+  `:176` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:200`
+  (`modo_de_execucao/1`), `:445` (o gate de `exec` em
+  `handle_info({:dispatch_exec, ...})`) e `:517` (o de `pty` em
+  `handle_info({:relay, "pty_" <> _, ...})`);
+  `apps/runner/src/channel.ts` (`CAPACIDADES_DO_RUNNER` e os params do
+  `socket.channel/2`)
+- **Teste:** `apps/engine/test/engine/runners/capacidades_test.exs` (novo — o
+  vocabulário puro: legado, lista vazia, desconhecido ignorado, o que cada
+  modo exige, e que nada exige `espelho`);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "capacidades declaradas no join (ADR 0147 ponto 1, RN-514)"` —
+  concessão em `assigns`, join sem params, desconhecido ignorado, `:web` sem
+  conjunto, a recusa nomeando `exec` num projeto `runner`, e as duas
+  mensagens recusadas com resposta em vez de silêncio);
+  `apps/runner/src/channel.spec.ts` (o CONTEÚDO dos params do join, `espelho`
+  fora da lista, e a recusa virando `JoinRecusadoError` com a mensagem do
+  servidor legível)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 1
+- **Origem:** FASE 28, sessão 5
+
+---
+
+## O destino do espelho é por projeto (RN-515)
+
+### RN-515 — O destino do espelho é declarado POR PROJETO e nunca é global; `null` é o estado normal; e a api valida SÓ o léxico, dizendo que é só o léxico {#rn-515}
+
+A capacidade `espelho` ([RN-514](#rn-514), [ADR 0147](adr/0147-agente-local-com-capacidades.md))
+copia o trabalho dos agentes para uma pasta do usuário **fora** da base
+montada — que é a razão de ela existir, porque bind mount não atravessa rede
+nem alcança caminho fora do que foi montado. Esta regra decide **onde esse
+destino mora e como o usuário o declara**; ela **não** copia arquivo nenhum.
+
+**Por PROJETO, nunca global.** O destino é a coluna `projects.mirror_path` e o
+campo `mirrorPath` do projeto, escrito por
+`PUT /projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo de
+`execution-mode` e de `projects-base`: a rota fala de um caminho do computador
+do operador). Nunca configuração global no runner, nunca variável de ambiente:
+um destino global faria o artefato do projeto B aterrissar na pasta do projeto
+A, e o usuário descobriria isso **pelo conteúdo, não por um erro** (ADR 0147,
+ponto 4).
+
+**`null` é o estado NORMAL, não uma pendência.** A coluna é nullable e nasce
+nula; projeto sem espelho é a maioria, e o produto nunca escolhe um destino
+sozinho. Limpar é `{"mirrorPath": null}` — a chave é **obrigatória**, e
+omiti-la é **400**: um corpo que omite o campo seria indistinguível de "limpe",
+e limpar em silêncio é justamente o defeito. Limpar funciona **sempre**,
+inclusive num projeto `container`, senão uma linha convertida ficaria presa no
+estado que a regra proíbe.
+
+**Só o LÉXICO, e a api DIZ que é só o léxico.** A api **não enxerga** a máquina
+onde o destino vai existir — é a situação do modo `runner`
+([RN-423](#rn-423)), não a do `mounted`, onde a pasta acaba dentro da base que
+a api alcança de verdade. Ela reusa `caminhoDeWorkspaceLocalValido`, o **mesmo**
+predicado da criação e da conversão (absoluto, sem `..`/`.`, nunca a raiz nem
+pasta de sistema, nunca sobreposto ao checkout do Brabo), em vez de uma quarta
+cópia da mesma régua — e **não** exige `BRABO_PROJECTS_BASE`, porque o destino
+do espelho é por definição a pasta que a base não cobre. A mensagem de recusa
+declara que o disco não foi verificado e quem o verifica.
+
+**Os dois sentidos do mesmo laço.** Destino **dentro** do `workspacePath` e
+destino que **contém** o `workspacePath` são a mesma recusa vista de dois lados
+(ADR 0147, ponto 2): escrever o espelho dentro da origem faz o espelho copiar o
+próprio espelho, e uma origem dentro do destino aninha a cópia a cada rodada.
+Recusar um e permitir o outro seria fechar a porta e deixar a janela. A
+comparação é por **SEGMENTO** (`dentroDoEscopo`), nunca `startsWith` cru:
+`/base-outra` **não** está dentro de `/base`, e recusá-lo taxaria uma pasta
+irmã perfeitamente legítima.
+
+**Esta é a metade LÉXICA da guarda, e só ela.** A outra é `realpath`, e é do
+RUNNER (`espelho-guard.ts`, ADR 0147 ponto 2), na máquina onde os dois caminhos
+existem de verdade. Um symlink em qualquer segmento do destino apontando de
+volta para a origem passa por aqui sem ser visto — a api não tem disco onde
+resolvê-lo. **A api não garantiu o laço**; ela impediu o laço ESCRITO.
+
+**`container` é recusado, e a recusa é NOMEADA.** A origem de um projeto
+`container` é um volume gerenciado **no servidor**, e quem copiaria é um
+processo na máquina do **usuário**, que não a enxerga. Aceitar e nunca copiar
+seria pior que recusar, porque pareceria configurado. `mounted` e `runner`
+podem. Pelo mesmo motivo, **converter o modo ZERA o destino**
+([RN-447](#rn-447)..450): em `container` ele não poderia existir, e mesmo entre
+`mounted` e `runner` a conversão MOVE a origem contra a qual os dois sentidos
+do laço foram validados.
+
+**O valor volta em toda leitura de projeto** (`ProjectResponseDto.mirrorPath`),
+para a implementação do espelho e a tela de estado não precisarem de rota nova.
+Não há endpoint de leitura dedicado.
+
+**E ele NÃO é `proposed_action`.** A escrita do espelho é configuração que o
+usuário declarou, não um agente pedindo para agir — o ADR 0147 é explícito
+disso, e sincronizar por comando de terminal cairia no escopo do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras.
+
+- **Onde:** `apps/api/src/db/schema/iam.ts` (coluna `mirror_path`, nullable,
+  sem CHECK — a recusa de `container` mora no caso de uso porque o modo é
+  CONVERSÍVEL); `apps/api/src/db/migrations/0056_lovely_firelord.sql`;
+  `apps/api/src/domain/iam/project.entity.ts` (`mirrorPath`);
+  `apps/api/src/application/services/workspace-location.ts`
+  (`validarDestinoDeEspelho` — o léxico reusado, a recusa de `container` e os
+  dois sentidos do laço);
+  `apps/api/src/application/use-cases/iam/set-project-mirror-path.use-case.ts`;
+  `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts`
+  (a conversão zerando o destino);
+  `apps/api/src/interfaces/http/iam/dto/set-mirror-path.dto.ts` (`@IsDefined`
+  + `@ValidateIf`, nunca `@IsOptional`, que colapsaria `null` e `undefined`);
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`PUT :projectId/mirror-path`, `maintainer`);
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/set-project-mirror-path.use-case.spec.ts`
+  (grava, normaliza, limpa, limpa mesmo em `container`, recusa
+  não-absoluto/`..`/raiz/pasta de sistema/checkout do Brabo, os dois sentidos
+  do laço, `/base-outra` vs `/base` NÃO sendo dentro, `container` recusado,
+  404); `apps/api/test/interfaces/http/iam/projects-execution-mode.controller.spec.ts`
+  (`describe "destino do espelho (RN-515)"` — `maintainer` e o repasse de
+  `null`);
+  `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
+  (a conversão zerando o destino);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada em
+  `docs/security-surface.md`)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 4
+- **Origem:** FASE 28, sessão 6 (metade A — onde o destino mora; a cópia, o
+  `mirror_sync` e a segunda passada de `realpath` são a metade B, no engine e
+  no runner)
+
+---
+
+## O espelho copia o trabalho para a pasta do usuário (RN-516)
+
+### RN-516 — O destino do espelho viaja na CONCESSÃO do join, o espelho copia a lista do git numa direção só e nunca apaga, e o gatilho é um momento nomeado — nunca um watcher {#rn-516}
+
+A metade B da sessão 6 da FASE 28: a capacidade `espelho`
+([RN-514](#rn-514), [ADR 0147](adr/0147-agente-local-com-capacidades.md))
+passa a EXISTIR. A [RN-515](#rn-515) decidiu **onde o destino mora** e não
+copiou arquivo nenhum; esta decide **como ele chega ao agente local, o que é
+copiado e quando**.
+
+**O destino viaja na concessão do `join`, nunca em configuração do runner.**
+A resposta do `join` do canal `terminal:<projectId>` deixou de ser vazia para
+o papel `:runner`: quando o projeto tem destino declarado
+(`projects.mirror_path`) **e** a capacidade `espelho` foi concedida, ela
+carrega `%{espelho: %{destino: "<caminho>"}}`. O runner guarda isso em
+`estado.destinoDoEspelho`, que morre junto com a conexão, e **recusa
+`mirror_sync` para destino que não lhe foi concedido naquela conexão** (ADR
+0147, ponto 4). Nunca variável de ambiente, nunca arquivo local: um destino
+global faria o artefato do projeto B aterrissar na pasta do projeto A, e o
+usuário descobriria isso **pelo conteúdo, não por um erro**.
+
+Consequência declarada, e ela é o preço: **trocar o destino com o runner
+conectado exige reconectá-lo.** A concessão é do join, e um destino novo
+chegando por outra porta seria exatamente a configuração global que a regra
+recusa.
+
+**`mirror_path` não-nulo passa a EXIGIR a capacidade.** Ela não entra no mapa
+por `execution_mode` — quem a exige é um DADO do projeto, não o modo (e
+`mounted` e `runner` podem ter destino enquanto `container` não pode). Este é
+o **primeiro caso REAL** do mecanismo de recusa que a RN-514 deixou
+implementado e sem nenhum disparo: um `brabo-runner` anterior a esta versão
+conectado a um projeto com destino **deixa de conectar**, com recusa nomeada
+(`JoinRecusadoError`, fatal e sem retry). É **opt-in** — só acontece onde
+alguém configurou um destino — e o custo está declarado no próprio ADR 0147.
+
+**As TRÊS recusas da guarda, e a passada de `realpath` não é redundante.**
+`apps/runner/src/espelho-guard.ts` é **irmão de `guard.ts`, não uma extensão
+dele**: reusa `semBarraFinal`/`dentroDoEscopo`/`realpathMaisProximo` e a dupla
+passada léxica-depois-`realpath` de `validarCwdDentroDaRaiz`, e herda por
+escrito a mesma ressalva de **TOCTOU** — é best-effort, não fronteira de
+segurança. Ele recusa (1) symlink que escape do destino, (2) destino que
+**contenha** o workspace e (3) destino **dentro** do workspace; (2) e (3) são
+o mesmo laço em sentidos opostos, e com o bind por identidade do
+[ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) escrever o espelho
+dentro da origem faz o espelho copiar o próprio espelho. A api já recusou a
+metade **léxica** ([RN-515](#rn-515)) e diz, no próprio código, que é só o
+léxico — ela não tem disco onde resolver um symlink do computador do usuário.
+`destino/atalho -> /caminho/do/projeto` passa por lá sem ser visto, e é aqui
+que ele é resolvido.
+
+Uma diferença de mecanismo, achada implementando: `realpathMaisProximo` cai no
+primeiro ancestral que existe, e o destino do espelho quase nunca existe (é o
+`mkdir -p` desta rodada que o cria). Colapsar os dois lados no ancestral faria
+`/base-outra` e `/base` virarem ambos `/`, e a guarda recusaria toda pasta
+irmã. Por isso a segunda passada resolve o ancestral e **recoloca o sufixo** —
+symlink só pode morar num segmento que existe, então o que sobra nunca esconde
+link nenhum. A recusa (1) tem ainda uma segunda metade, **por arquivo**
+(`caminhoNoDestino`): um `destino/sub` que é link para `/etc` faria a cópia de
+`sub/passwd` escrever fora, com o destino em si perfeitamente válido.
+
+**Uma direção, e NUNCA apaga.** Workspace → destino. Nunca `--delete`, nunca
+`unlink`, nunca `rm`. **Arquivo apagado no workspace permanece no destino**, e
+isso é decisão, não descuido: a pasta do usuário não é réplica, é acúmulo — um
+agente que apaga arquivo na pasta pessoal de alguém por causa de um `git clean`
+do outro lado é a surpresa que o produto existe para não produzir.
+Sobrescrever arquivo que mudou é esperado; remover nunca é. O preço, declarado
+no ADR: o destino só cresce, e nenhum mecanismo automático o limpa.
+
+**O que se copia é a LISTA DO GIT, e nada mais.** Os arquivos **rastreados**
+(`git ls-files`) mais os **não-rastreados que não são ignorados**
+(`git ls-files --others --exclude-standard`), com `-z` (o git aspeia e escapa
+caminho com espaço ou acento sem ele). Isso é exatamente "o trabalho": pula
+`node_modules`, `dist`, saída de build e o próprio `.git` **sem manter lista de
+exclusão nenhuma**, que envelheceria a cada stack nova — o `.gitignore` do
+projeto já é a lista, mantida por quem mantém o projeto. O workspace é
+repositório git **por construção** (o produto provisiona Gitflow nele e o
+materializa com `git init`/`fetch`/`checkout`), então a pré-condição é do
+PRODUTO, não uma suposição sobre a máquina. Git que falha ou pasta que não é
+repositório **falham com motivo nomeado** — nunca um `cp -r` de tudo como
+plano B, que é como `node_modules` inteiro acabaria na pasta pessoal de alguém.
+
+Duas propriedades verificadas e declaradas, não escondidas: repositório git
+**aninhado** volta como UMA entrada de diretório e não é descido — o worktree
+de cada dev agent (`<workspace>/.worktrees/<agent_id>`) é um desses, então o
+espelho mostra o **checkout principal**, nunca o trabalho ainda isolado num
+worktree; e **symlink na origem é pulado**, porque seguir o link traria
+conteúdo de fora do projeto para dentro da pasta pessoal. O que fica de fora é
+CONTADO (`pulados`/`recusados`), nunca engolido. E não há heurística de
+"mudou?": copiar sempre custa bytes já iguais, enquanto pular por tamanho+mtime
+faria o espelho, em silêncio, não copiar um arquivo que mudou.
+
+**Predicado PRÓPRIO, e o espelho não exige Docker.**
+`Engine.Runners.RunnerReadiness` fica **byte a byte como está** (ADR 0147,
+ponto 3) — `Engine.Runners.Espelho` não o chama, não o estende e não recebe
+nada dele. O espelho tem DUAS pré-condições, workspace confirmado e runner
+conectado, e não a terceira que a [RN-507](#rn-507) acrescentou (container
+REGISTRADO `running`). Um `RunnerReadiness` com flag "pula container" é
+precisamente o mecanismo pelo qual essa terceira cai por acidente para o `exec`
+numa refatoração futura, e o
+[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md) existe para
+ela não cair. E o espelho legitimamente não precisa dela: a terceira existe
+porque havia duas execuções possíveis e a errada era invisível; cópia de
+arquivo na máquina do usuário não tem container de onde cair. Ele também não
+pergunta o `execution_mode` — quem já decidiu isso foi a api ao gravar o
+destino ([RN-515](#rn-515) recusa `container`), e repetir a decisão seria a
+segunda fonte da mesma regra.
+
+**Gatilho por MOMENTO NOMEADO, nunca watcher.** O engine empurra `mirror_sync`
+de um ponto do código que tem nome — hoje o **commit bem-sucedido**
+(`EngineWeb.ActionCommandController`, `git_commit`). Nunca `fs.watch`: watcher
+é trabalho ilimitado disparado por qualquer coisa — uma instalação de
+dependências, um build, e pior, pelas escritas do próprio espelho, que é laço —
+e rodaria continuamente na máquina do usuário sem ninguém ter pedido, que é o
+oposto do que "agente local" deve significar. O empurrão é **fire-and-forget**:
+sem `from`, sem `pending_execs` e sem `mirror_sync_result`, porque quem
+disparou está no meio de outra coisa e a telemetria da sincronização é o ponto
+7 do ADR, de outra sessão. Falha do espelho vira log local, nunca exceção que
+derruba o runner e nunca silêncio.
+
+**Ele NÃO é `proposed_action`, e não deve virar uma.** A escrita do espelho é
+configuração que o usuário declarou, não um agente pedindo para agir — o ADR
+0147 é explícito disso, e sincronizar por comando de terminal cairia no escopo
+do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
+
+- **Onde:** `apps/runner/src/espelho-guard.ts` (as três recusas, a dupla
+  passada com sufixo preservado, a ressalva de TOCTOU herdada);
+  `apps/runner/src/espelho.ts` (a lista do git, a cópia numa direção, o
+  `mkdir -p` só DEPOIS da guarda); `apps/runner/src/guard.ts` (os três
+  helpers passam a ser exportados — uma fonte só de comparação de caminho);
+  `apps/runner/src/channel.ts` (`CAPACIDADES_DO_RUNNER` ganha `espelho`,
+  `MirrorSyncMessage`, `EspelhoConcedido`, `espelhoConcedidoDaResposta`);
+  `apps/runner/src/index.ts` (`EstadoDoRunner.destinoDoEspelho`,
+  `tratarMirrorSync` — a recusa do destino não concedido);
+  `apps/engine/lib/engine/runners/capacidades.ex` (`exigidas/2`/`conceder/3`
+  e `destino?/1` — o destino, não o modo, é quem exige);
+  `apps/engine/lib/engine/runners/espelho.ex` (o predicado próprio, o
+  `destino/1` do join e o `sincronizar/2` fire-and-forget);
+  `apps/engine/lib/engine/projects/project.ex` (`mirror_path` no schema de
+  leitura); `apps/engine/lib/engine_web/channels/terminal_channel.ex` (a
+  concessão na resposta do join e o `dispatch_mirror_sync`);
+  `apps/engine/lib/engine_web/controllers/action_command_controller.ex` (o
+  gatilho do commit)
+- **Teste:** `apps/runner/src/espelho-guard.spec.ts` (destino dentro,
+  destino contendo, symlink de verdade em `tmp` escapando pelo próprio
+  destino e por um segmento do meio, `/base-outra` vs `/base`, o alvo por
+  arquivo, `lstat` vs `stat`); `apps/runner/src/espelho.spec.ts` (repositório
+  git de verdade: rastreado + não-rastreado-não-ignorado, ignorado de fora,
+  **arquivo apagado na origem permanece no destino**, repositório aninhado
+  pulado, symlink da origem pulado, symlink do destino recusado, guarda antes
+  do `mkdir`, pasta sem git falhando nomeada);
+  `apps/runner/src/channel.spec.ts` (o destino vindo na resposta do join, as
+  três capacidades declaradas, `mirror_sync` chegando ao handler);
+  `apps/runner/src/index-handlers.spec.ts` (`describe "tratarMirrorSync"` — o
+  destino não concedido recusado, a conexão sem concessão, a falha que não
+  lança, e o canal sem push nenhum de volta);
+  `apps/engine/test/engine/runners/capacidades_test.exs` (o destino exigindo
+  a capacidade, o binário legado recusado, `destino?/1`);
+  `apps/engine/test/engine/runners/espelho_test.exs` (as DUAS pré-condições
+  e a AUSÊNCIA da terceira — `:pronto` sem container nenhum registrado);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "o destino do espelho na concessão do join"` — a concessão, as
+  duas recusas e o push de `mirror_sync`);
+  `apps/engine/test/engine_web/controllers/action_command_controller_test.exs`
+  (o gatilho: commit bem-sucedido dispara, commit que falha não dispara)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), pontos 2, 3, 4 e 8
+- **Origem:** FASE 28, sessão 6 (metade B). Ficou declarado e **não** ligado o
+  segundo momento nomeado do ponto 8, "fim de turno de agente": o engine tem
+  duas coisas disjuntas com esse nome e nenhuma é um enganche não-ambíguo —
+  `Engine.Agents.TurnoAssincrono.finalizar/1` fecha o turno dos seis
+  conversacionais, que não têm ferramenta de escrita no workspace, e também
+  dispara em crash e em cancelamento; `Engine.Dev.AgentIo.finish_task/3` não é
+  fronteira de ociosidade (reivindica a próxima task na mesma chamada) e o que
+  o dev agent escreve mora no worktree, que o espelho deliberadamente não
+  desce. Escolher um seria inventar produto onde o ADR nomeou um momento sem
+  nomear uma função
+
+---
+
+## O estado do espelho é visível, e os três estados não colapsam (RN-517)
+
+### RN-517 — O desfecho de cada rodada do espelho volta pelo canal e vira TELEMETRIA numa tabela própria; "nunca sincronizou", "sincronizou e não copiou nada" e "falhou" são TRÊS respostas, e sucesso e erro convivem {#rn-517}
+
+A sessão 8 da FASE 28 e o **ponto 7** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). A
+[RN-516](#rn-516) fez o espelho copiar de verdade e deixou o `mirror_sync`
+**fire-and-forget** — sem `mirror_sync_result` no protocolo, de propósito,
+porque o formato da telemetria era decisão desta entrega. É ela que fecha o
+laço.
+
+**O caminho é o de `workspace_confirm`, e nenhum outro.** O runner empurra
+`mirror_sync_result` no canal `terminal:<projectId>` **depois** de a rodada
+terminar; o engine trata em `handle_in/3` e REPASSA à api pelo HTTP interno
+(`POST /internal/projects/:projectId/mirror-sync-result`), que grava pelo caso
+de uso. O engine **não escreve a tabela** — um segundo caminho de escrita
+seria a segunda fonte da mesma verdade, e a primeira coisa a divergir. É o
+único precedente de o runner contar algo sobre si mesmo, e foi por isso que o
+ADR o nomeou.
+
+**Nunca um "ok" otimista.** O desfecho reportado é o REAL: as três contagens
+que `sincronizarEspelho` devolveu (copiados, pulados, recusados — nunca
+recontadas) ou o erro nomeado. As TRÊS saídas de `tratarMirrorSync` reportam,
+e com mensagens diferentes: a recusa por destino não concedido, a falha da
+cópia e o sucesso. `ok` NUNCA é deduzido de haver contagem ou mensagem — nem
+no runner, nem na tradução do engine, nem no caso de uso da api: deduzir
+tornaria uma rodada que copiou **0** arquivos (perfeitamente normal)
+indistinguível de uma que nem chegou a rodar.
+
+**TABELA, e não event log.** `project_mirror_states`, uma linha por projeto
+(`project_id` único, mesmo desenho de `project_containers`). O motivo é o
+mesmo que fez `rag_searches` virar tabela ([RN-479](#rn-479)):
+`session_events.session_id` é `NOT NULL` e uma rodada de espelho **não tem
+sessão** — o event log perderia a coisa inteira, não uma parte dela. E não é
+`proposed_action` em hipótese nenhuma: a escrita do espelho é configuração que
+o usuário declarou, não um agente pedindo para agir.
+
+**Os TRÊS estados da [RN-088](#rn-088), e eles não colapsam.** "Nunca
+sincronizou" é a linha **ausente**. "Sincronizou e não copiou nada" é linha
+presente com `files_copied = 0` — um desfecho, não um vazio. "Falhou" é
+`last_error_at` mais recente que `last_synced_at`. São três respostas
+diferentes, a pessoa age diferente em cada uma, e um traço servindo às três
+seria a tela recusando nomear o que sabe ([RN-470](business-rules/custo.md#rn-470)).
+
+**Sucesso e erro CONVIVEM na mesma linha.** As duas escritas mencionam colunas
+**disjuntas**: a de sucesso não toca `last_error`/`last_error_at`, a de falha
+não toca nenhuma coluna de sucesso, e nenhuma das duas apaga a outra. Quem
+decide qual está VIGENTE é a comparação dos dois carimbos
+(`deriveMirrorSyncStatus`, função pura do domínio), e é isso que permite a tela
+dizer *"a última rodada falhou — última cópia boa em ontem, com 412 arquivos"*.
+Uma escrita destrutiva de um lado sobre o outro jogaria fora justamente a
+informação mais útil que a tela tem enquanto o espelho está quebrado. Duas
+escolhas menores na mesma direção: falha SEM destino não apaga o destino da
+última cópia que funcionou, e empate exato de carimbo resolve para `failed` —
+entre afirmar que está tudo bem e afirmar que algo falhou, a afirmação segura
+é a que faz a pessoa olhar.
+
+**`destination` é CONGELADO**, como `image_version` em `project_containers` e
+os pesos em `rag_searches` ([RN-479](#rn-479)): é o destino REAL daquela
+rodada, resolvido por `realpath` na máquina do usuário depois do `mkdir -p`.
+Ler `projects.mirror_path` na hora de mostrar diria o destino de AGORA sobre
+uma cópia de ontem — e os dois divergem de verdade, porque a concessão viaja no
+join e só muda quando o runner reconecta ([RN-516](#rn-516)). Quando divergem,
+a tela DIZ isso.
+
+**Gravar telemetria jamais derruba o que ela mede.** A cópia já terminou
+quando o reporte sai; o `handle_in` do engine só LOGA a recusa da api e devolve
+`{:noreply, socket}` nos dois ramos, e o canal do runner segue vivo. Sem canal
+(a conexão caiu entre o pedido e o fim da cópia) o runner não reporta e não
+lança — a rodada que aconteceu não é desfeita por isso. E um projeto cujo
+destino foi LIMPO no meio ainda registra: a rodada aconteceu, e o erro dela é
+o que costuma explicar o que houve.
+
+**Na tela**, a linha entra em `AmbienteDoProjeto` (a coluna lateral da Visão
+geral, ao lado das de modo de execução e runner) e **só existe em projeto que
+tem `mirrorPath`** — num projeto sem espelho, "nunca sincronizou" seria uma
+ausência inventada, o mesmo argumento que já valia para a linha do runner. Data
+ABSOLUTA com ressalva e nunca bolinha verde de "está de pé", pelo mesmo
+precedente de `workspaceVerifiedAt`: o carimbo diz que uma rodada aconteceu,
+não que a pasta esteja em dia com o que mudou depois (o gatilho é um momento
+nomeado, o commit — nunca um watcher). O `status` chega RESOLVIDO da api: a
+regra que decide qual carimbo vale tem uma fonte só, e é ela que decide qual
+das três frases a pessoa lê.
+
+**Papel `viewer` para LER, `maintainer` para escrever o destino** — a régua da
+[RN-102](business-rules/custo.md#rn-102) aplicada: o mínimo é do ENDPOINT, e este só lê. O destino já
+viaja em toda leitura de projeto (`GET /projects/:projectId`, `viewer`), então
+exigir `maintainer` aqui trancaria informação para quem já a vê no mesmo
+projeto, que é o pior dos dois defeitos porque é invisível para quem perdeu a
+capacidade.
+
+- **Onde:** `apps/api/src/db/schema/iam.ts` (`project_mirror_states`, no
+  agregado `iam` porque é lá que o destino mora — não há `domain/runners`);
+  `apps/api/src/db/migrations/0057_brave_silver_centurion.sql`;
+  `apps/api/src/domain/iam/mirror-state.ts` (`deriveMirrorSyncStatus`, a regra
+  dos três estados, pura); `apps/api/src/application/ports/mirror-state-repository.port.ts`
+  (DOIS métodos de escrita, não um upsert com tudo opcional — é o que torna a
+  disjunção um invariante do tipo, não uma convenção do chamador);
+  `apps/api/src/infrastructure/persistence/drizzle/mirror-state.repository.ts`;
+  `apps/api/src/application/use-cases/iam/record-mirror-sync.use-case.ts` e
+  `.../get-project-mirror-state.use-case.ts`;
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST .../mirror-sync-result`);
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`GET .../mirror-state`, `viewer`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`report_mirror_sync/2`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+  (`handle_in("mirror_sync_result", …)` e a tradução do vocabulário);
+  `apps/runner/src/channel.ts` (`MirrorSyncResultMessage`,
+  `enviarMirrorSyncResult`); `apps/runner/src/index.ts` (`tratarMirrorSync`
+  reporta as três saídas); `apps/web/src/components/AmbienteDoProjeto.tsx`
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/mirror-sync-telemetry.use-case.spec.ts`
+  (os três estados na função pura e na leitura; erro que não apaga o sucesso;
+  destino trocado; contagem 0; mensagem sem texto e mensagem longa; projeto
+  sem destino que ainda registra);
+  `apps/api/test/infrastructure/persistence/drizzle/mirror-state.repository.spec.ts`
+  (o invariante das colunas disjuntas contra o banco de verdade — um fake
+  provaria o fake);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "mirror_sync_result"` — o repasse com tradução, o `filesCopied: 0`
+  que não some, campo ausente que NÃO vira `nil`, `sucesso` faltando que vira
+  `ok: false`, `:web` ignorado, e a api que recusa sem derrubar o canal);
+  `apps/runner/src/index-handlers.spec.ts`
+  (`describe "o desfecho é reportado em mirror_sync_result"` — contagem real,
+  repositório vazio como sucesso, falha nomeada, recusa sem destino, e a
+  conexão caída que não reporta nem lança);
+  `apps/web/src/components/AmbienteDoProjeto.test.tsx`
+  (`describe "linha do espelho"` — sem `mirrorPath` a linha some e nem consulta;
+  os três estados com três frases; nenhum vocabulário de liveness; destino
+  trocado dito)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 7
+- **Origem:** FASE 28, sessão 8. Fica declarado e NÃO feito: nenhum alarme,
+  nenhuma notificação e nenhuma retentativa automática de rodada que falhou —
+  a próxima rodada acontece no próximo momento nomeado, como sempre, e a tela
+  é o único lugar onde a falha aparece hoje
+
+---
+
+## O agente local vira serviço de USUÁRIO, e `status` não colapsa estado (RN-518)
+
+### RN-518 — `brabo-runner service install|uninstall|status` instala nível de USUÁRIO e nunca root; `uninstall` limpa a pasta que a UNIT registra; `status` responde quatro estados sem colapsar nenhum; Windows é recusa nomeada {#rn-518}
+
+A sessão 7 da FASE 28 e o **ponto 5** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). Até aqui o agente local
+era **só primeiro plano**: um processo encerrado por SIGINT/SIGTERM, que morre
+com o terminal e não volta com a sessão do usuário. Não havia precedente
+nenhum — nenhuma menção a `systemd`, `launchd` ou `LaunchAgent` em
+`apps/runner/`.
+
+**Nível de usuário, SEMPRE — e root é RECUSA, não aviso.** `systemd --user`
+no Linux, `LaunchAgent` no macOS. Isso não é preferência de empacotamento: o
+docblock de `apps/runner/src/guard.ts:9-31` declara *"o runner roda NA máquina
+do usuário, com os privilégios DELE"* como a premissa em que as três fronteiras
+reais do produto se apoiam (autenticação, pipeline de aprovação,
+consentimento) — e a guarda de `cwd` é best-effort **por escrito**, justamente
+porque não é ela que segura nada. Um serviço de sistema rodando como root
+quebraria o invariante e deixaria a guarda best-effort como única coisa entre
+um comando aprovado e o disco da máquina. Por isso `install` com `uid` 0
+**recusa nomeando o motivo**, sem escrever arquivo nenhum e sem rodar comando
+nenhum: instalar-e-avisar deixaria a instalação errada de pé, e o aviso seria
+lido uma vez só.
+
+**Windows fica FORA DE ESCOPO, e a recusa é nomeada.** A matriz de build já
+produz o binário de Windows ([ADR 0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)),
+mas serviço de usuário ali é um **terceiro mecanismo** (Serviços do SO com
+conta de usuário, ou Agendador de Tarefas no logon) — não uma variação dos
+dois. Os três subcomandos respondem nomeando a plataforma, dizendo que a
+decisão é declarada, e apontando o caminho que continua funcionando (rodar em
+primeiro plano). Nunca falha muda, nunca um "instalado" que não instalou nada.
+Qualquer outra plataforma cai na mesma recusa.
+
+**Uma unit POR PROJETO, nomeada pelo `projectId`** — `brabo-runner-<id>.service`
+/ `dev.brabo.runner.<id>` — porque o servidor **já impõe um runner por
+projeto**: um segundo `join` no mesmo `terminal:<projectId>` é recusado pelo
+`Engine.Runners.Registry`. Nomear pela PASTA permitiria instalar duas units que
+nunca podem estar de pé ao mesmo tempo, e a segunda apareceria como falha de
+conexão em vez de erro de instalação. Instalar de novo, de outra pasta,
+**sobrescreve**. `uninstall` e `status` alcançam exatamente a mesma unit porque
+derivam o nome do MESMO `projectId`, resolvido pelas MESMAS duas fontes na
+mesma ordem do CLI de sempre (`--project`, senão `brabo-runner.config.json`), e
+a pasta sai de `resolverDir` de `guard.ts` — nunca uma segunda régua. No Linux
+o arquivo vai para onde o systemd **procura**, com a precedência dele:
+`$XDG_CONFIG_HOME/systemd/user` quando a variável está posta, `~/.config/systemd/user`
+quando não — escolher só o segundo faria a unit nascer onde o gerenciador nunca
+olha, e a falha apareceria como *"unit file does not exist"* no `enable`,
+visível mas pelo motivo errado.
+
+**O `projectId` vira NOME DE ARQUIVO, então ele é validado aqui.** Ele chega de
+duas fontes que não são o servidor (uma flag digitada e um arquivo da pasta), e
+um `--project ../../etc/systemd` escreveria fora do diretório de units. Só
+letras, dígitos, `.`, `-` e `_`, até 64 caracteres — UUID, o formato real de
+todo projeto do produto, passa inteiro. Caminho do runner e pasta com aspa
+dupla ou quebra de linha também são recusa nomeada: quebra de linha num arquivo
+de unit é injeção de diretiva, não caso de borda.
+
+**Um serviço autentica por CHAVE DE DISPOSITIVO, nunca por token.** `install`
+exige `brabo-runner-device-key.jwk.json` válido na pasta e recusa sem ele,
+ignorando `--token`/`BRABO_ACCOUNT_TOKEN` de propósito: gravar um token de
+conta dentro de um arquivo de unit o deixaria em disco, legível por qualquer
+processo do usuário e sobrevivendo ao shell que o exportou — e este CLI **nunca
+gravou credencial em disco** (o docblock de `auth.ts` tem uma trava de teste
+contra exatamente isso). A [RN-434](#rn-434) roda igual, pela MESMA função:
+serviço apontando para fora do `$HOME` no Linux é recusado, porque fazer por
+unit o que a CLI recusa fazer por flag seria contornar a regra pela porta dos
+fundos.
+
+**`Restart=on-abnormal`, e nunca `on-failure`** (no plist, `KeepAlive` com
+`Crashed`, e nunca `SuccessfulExit`). O runner sai com 1 quando o join foi
+**RECUSADO** — ticket inválido, outro runner no projeto, capacidade que falta
+([RN-514](#rn-514)) — ou quando esgotou o próprio teto de tentativas, e as duas
+coisas são "pare e chame um humano". `on-failure` reiniciaria uma recusa fatal
+em laço, que é exatamente o que o CLI recusa fazer sozinho. Sinal, OOM e
+watchdog — o que `on-abnormal` cobre — são a única falha que reiniciar
+conserta. O `PATH` vai **congelado** na unit, com o custo declarado no próprio
+arquivo: os dois gerenciadores dão ao serviço um PATH mínimo, e o runner chama
+`git` (o espelho, [RN-516](#rn-516)) e `docker` ([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md));
+sem isso o serviço subiria perfeitamente e as duas funções falhariam com "não
+encontrado". É um retrato, e muda só reinstalando.
+
+**Ativação que falha NÃO apaga o arquivo, e não diz "instalado".** Escrever a
+unit e ativá-la são dois passos, e o gerenciador pode não estar lá
+(`systemctl` fora do PATH, `launchd` recusando). O arquivo **fica** — é o que a
+pessoa precisa para terminar à mão — e a resposta é um terceiro desfecho, que
+nomeia o comando pendente e o motivo. Apagar o arquivo transformaria "não
+consegui ativar" em "não aconteceu nada", que é falso.
+
+**`uninstall` remove os TRÊS, e a pasta sai da UNIT — nunca do `cwd`.** O ADR é
+explícito: o arquivo de unit, o `brabo-runner.config.json` e o
+`brabo-runner-device-key.jwk.json`. Os dois últimos moram na pasta do runner, e
+a pasta que interessa é a que foi **INSTALADA**, não a de onde a pessoa por
+acaso digitou o comando — por isso o `WorkingDirectory` é lido de volta do
+próprio arquivo da unit, que é o registro do que foi instalado. **Sem unit não
+há registro**: os dois arquivos só são removidos com `--dir` explícito, e a
+mensagem diz por quê. Adivinhar pelo `cwd` apagaria a chave de um projeto que
+ninguém pediu para remover. Desativar que falha vira **aviso** e o arquivo é
+removido assim mesmo — uma unit que o gerenciador não reconhece mais não é
+motivo para deixar o arquivo para trás.
+
+**E `uninstall` DIZ o que ele não fez: a chave saiu do disco, não do
+servidor.** A pública correspondente continua em `runner_device_keys`, e
+revogá-la é outra coisa (`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`,
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) ponto 6). Um "removido"
+que deixasse a pessoa achar que revogou seria pior que não remover nada. O log
+do LaunchAgent também **não** é apagado: ele é o registro do usuário sobre o
+que aconteceu, e apagá-lo não foi pedido.
+
+**`status` responde QUATRO estados, e eles não colapsam** ([RN-088](#rn-088)):
+*não instalado*, *instalado e rodando*, *instalado e parado*, e *instalado e
+não consegui perguntar*. A primeira resposta vem do **DISCO** — há arquivo de
+unit? —, e é por isso que ela continua certa numa máquina onde o gerenciador
+não existe; só depois se pergunta ao gerenciador. `spawn` que falhou (binário
+ausente do PATH) **nunca** vira "o gerenciador disse não": são respostas
+diferentes, separadas na fonte, e uma palavra que este CLI não sabe interpretar
+também cai em "não consegui perguntar" em vez de virar "parado" por chute.
+Cada estado tem **frase própria** e **código de saída próprio** (0 / 3 / 4 / 5,
+com 1 e 2 fora porque já significam falha genérica e erro de uso neste CLI):
+um `exit(1)` único para os três "não está rodando" colapsaria pelo código
+exatamente o que a frase separa.
+
+**Nada aqui é `proposed_action`.** É o usuário rodando um comando na própria
+máquina, sobre o próprio serviço — não um agente pedindo para agir. `service`
+é despachado **antes** de `lerArgumentos`, porque nenhum dos três subcomandos
+conecta a nada e o que mais importa (`status`) precisa funcionar numa pasta
+cuja configuração está quebrada, que é justamente quando alguém pergunta.
+
+- **Onde:** `apps/runner/src/servico.ts` (novo — o vocabulário, as duas
+  plataformas como respostas às MESMAS cinco perguntas, as recusas, os quatro
+  estados e `CODIGO_POR_ESTADO`); `apps/runner/src/servico-sistema.ts` (novo —
+  o adaptador real de disco e de `systemctl`/`launchctl`, separado para que a
+  garantia "`servico.ts` não toca `node:fs`/`node:child_process`" continue
+  verificável); `apps/runner/src/index.ts` (`comandoDoRunnerParaServico`,
+  `rodarSubcomandoDeServico`, o despacho de `service` em `main()` antes de
+  `lerArgumentos`, e a linha nova em `uso()`)
+- **Teste:** `apps/runner/src/servico.spec.ts` (novo — caminho feliz nas duas
+  plataformas com o conteúdo real da unit/plist; root recusado sem escrever
+  nada; Windows nomeado; sem chave de dispositivo; `projectId` que viraria
+  caminho; `systemctl` ausente deixando o arquivo e dizendo que não ativou; a
+  RN-434 repassada; `uninstall` lendo a pasta da unit e não do `cwd`, sem unit
+  e sem `--dir` não tocando em arquivo nenhum, e o `disable` que falha virando
+  aviso; os QUATRO estados de `status` mais a palavra desconhecida e os três
+  desfechos do `launchctl`; e os quatro códigos de saída distintos);
+  `apps/runner/src/index.spec.ts`
+  (`describe "brabo-runner service é despachado antes de exigir credencial"` —
+  processo de VERDADE numa pasta sem credencial nenhuma: `status` responde 4 em
+  vez do bloco de uso, e subcomando desconhecido cai no uso de `service`)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 5
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **BRB-031** (o
+  `chmod +x` manual do fluxo do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+  **não** morre aqui — quem roda `brabo-runner service install` já precisou
+  tornar o binário executável para chegar até o comando, e o ADR 0147 amarra
+  esse efeito colateral à instalação vir do bootstrap versionado do
+  [ADR 0146](adr/0146-base-consentida-no-bootstrap.md), que esta entrega não
+  toca. Também fora: qualquer subcomando de `start`/`stop`/`restart` (quem
+  gerencia o ciclo de vida é o gerenciador de serviços do SO, e duplicá-lo no
+  CLI criaria uma segunda fonte de verdade sobre o estado) e Windows, acima
+
+---
+
+## A revogação de chave de dispositivo deixa de ser cega, e alcança a conexão viva (RN-519..520)
+
+### RN-519 — Ninguém revoga o que não consegue ver: a chave de dispositivo ganha listagem do PRÓPRIO dono, e a visão de `maintainer` fica fora por DECISÃO {#rn-519}
+
+A sessão 7 da FASE 28 e o **ponto 6** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). A revogação existia desde
+o [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, `developer`,
+204, idempotente) — **e não havia como enxergar o que se revoga.**
+
+**O corte real era maior do que o docblock dizia.** Ele declarava a ausência
+como *"sem a visão de `maintainer` (listar/revogar de qualquer usuário) que o
+PAT tem"*. Mas o `PersonalAccessTokensController` tem **cinco** rotas — `@Post()`,
+`@Get()` e `@Delete(':tokenId')` para o próprio usuário, mais `@Get('all')` e
+`@Delete(':tokenId/admin')` para `maintainer` ([RN-427](#rn-427)) — e o de chave
+de dispositivo tinha **duas**. Não faltava só a visão de `maintainer`: faltava a
+listagem do PRÓPRIO dono. Uma chave órfã (aba fechada no meio do fluxo da
+[RN-473](#rn-473)) era inerte, invisível e permanente, sem tela nenhuma onde
+revogá-la — a lacuna que o `CLAUDE.md` já declarava.
+
+**Entra `@Get()`, `developer`, no mesmo formato que o PAT já tem** e escopado ao
+próprio usuário no WHERE do repositório, nunca num filtro do caso de uso.
+
+**A revogada CONTINUA na lista.** Mesma escolha de `listarDoUsuarioNoProjeto`
+do PAT: quem revogou precisa ver que revogou, e sumir com a linha faria a tela
+afirmar que a chave nunca existiu. `revokedAt` é o que separa as duas, e
+`lastUsedAt` nulo é o sinal da ÓRFÃ — registrada e nunca usada por runner
+nenhum.
+
+**Nunca a JWK pública.** Ela não é segredo, mas não serve a nada aqui: a lista
+existe para revogar, e para isso bastam `id`, nome e as três datas. A metade
+privada a api nunca viu.
+
+**A visão de `maintainer` continua FORA — agora por decisão, não por omissão.**
+As duas rotas de admin do PAT nasceram de resposta a incidente ([RN-427](#rn-427)):
+dev desligado com um segredo COMPARTILHADO circulando. Chave de dispositivo não
+é esse bicho — a privada nunca sai do navegador que a gerou, então não há
+segredo na mão de outro a conter. O que a `DELETE` daqui ganhou em troca foi
+ALCANCE ([RN-520](#rn-520)), não amplitude.
+
+- **Onde:** `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts:99`
+  (`@Get()`, `listDeviceKeys`, `developer`);
+  `apps/api/src/application/use-cases/auth/list-runner-device-keys.use-case.ts:24`;
+  `apps/api/src/application/ports/runner-device-key-repository.port.ts:53`
+  (`listarDoUsuarioNoProjeto`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:69`;
+  `apps/api/src/interfaces/http/runner/dto/runner-device-key-list.response.dto.ts:19`
+  (as DUAS travas de tipo, `Wire`/`MesmasChaves`, ao contrário do DTO do
+  registro)
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/list-runner-device-keys.use-case.spec.ts`
+  (delegação com `userId`/`projectId` na ordem certa; a revogada que fica na
+  lista; a órfã com `lastUsedAt` nulo; repositório que rejeita e propaga);
+  `apps/api/test/interfaces/http/runner/runner-device-keys.controller.spec.ts`
+  (as TRÊS rotas em `developer`; a delegação; a rota que não devolve lista
+  vazia por engano)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 6
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **tela nenhuma**.
+  Esta entrega é a metade server-side; a lacuna do `CLAUDE.md` fecha pela
+  metade — a api passa a poder listar e revogar, e `apps/web` ainda não tem
+  onde fazê-lo
+- **A outra metade FECHOU na [RN-561](#rn-561):** a aba Configurações ganhou a
+  seção que lista e revoga, marcando a ESPÉCIE de cada chave. O que segue
+  aberto daqui é a visão de `maintainer` (acima, por decisão) e o alvo
+  `{projeto, usuário}` da desconexão ([RN-520](#rn-520))
+
+---
+
+### RN-520 — Revogar deixa de só impedir ticket NOVO e passa a derrubar a conexão VIVA; o alvo é `{projeto, usuário}` e nunca `{chave}`, e derrubar nunca derruba a revogação {#rn-520}
+
+A outra metade do **ponto 6** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). Revogar uma chave de
+dispositivo impedia o ticket SEGUINTE e nada mais: um `brabo-runner` já
+conectado mantinha o canal `terminal:<projectId>` de pé — executando comando
+aprovado, atendendo PTY, subindo container — com a chave revogada, até cair
+sozinho.
+
+**Quem manda o comando é a api; quem alcança o pid é o engine.** A api chama
+`POST /internal/projects/:projectId/runner/disconnect` (o mesmo HTTP interno com
+service token de sempre, nunca um segundo mecanismo), e o engine acha o canal
+por `Engine.Runners.Registry.whereis/1` — o pid que ele já entregava. O engine
+**não consulta a tabela de chaves** e a api **não fala com o canal**; nenhum dos
+dois faz o trabalho do outro, a mesma divisão de `EngineWeb.ContainerCommandController`
+([RN-497](#rn-497)).
+
+**A precisão que existe é `{projeto, usuário}`, e a que não existe é
+`{chave}` — por construção, não por gosto.** `Engine.Runners.SocketTicket`
+guarda `project_id`, `user_id` e `kind`, e só; a api pede o ticket com
+`{userId, kind}`. A identidade da CREDENCIAL que originou o ticket (o PAT, ou o
+`kid` da chave de dispositivo — [RN-475](#rn-475)) morre no `PatAuthGuard` e
+nunca chega ao socket. Levá-la até lá exigiria coluna nova em
+`runner_socket_tickets`, campo novo no pedido interno e um assign novo no
+`connect/3`: mudança de contrato de auth, fora desta entrega.
+
+**Custo DECLARADO, e nomeado no código, não só aqui:** um runner do MESMO
+usuário conectado com PAT, ou com outra chave do mesmo projeto, também cai. Ele
+reconecta sozinho — a rodada seguinte pede um ticket novo, e a credencial que
+ainda vale ganha um. Quem foi revogado não ganha, e é aí que a revogação morde.
+Runner de OUTRO usuário no mesmo projeto **não cai**: a comparação é
+`socket.assigns.user_id`, dentro do processo do canal, que é o único que pode
+lê-lo — e o desfecho `de_outro_dono` volta ao pedinte em vez de um `:ok` que não
+descreve o que aconteceu.
+
+**Derruba o TRANSPORTE, não só o processo do canal.** Parar apenas o canal
+deixaria o socket vivo e o cliente Phoenix reentrando no tópico para sempre com
+um ticket já consumido — degradação silenciosa, exatamente o defeito que o ADR
+0147 existe para não repetir. `EngineWeb.RunnerSocket.id/1` deixa de ser `nil` e
+passa a nomear a conexão (`runner_socket:<kind>:<projectId>:<userId>`), e o
+canal usa o mecanismo documentado do Phoenix, `Endpoint.broadcast(id,
+"disconnect", %{})`. É por ele que o runner PERCEBE a queda: `onDisconnected`
+resolve a rodada, o laço pede ticket novo e a api recusa.
+
+**Efeito colateral NUNCA derruba o efeito principal.** O `DELETE` continua 204 e
+idempotente: engine fora do ar, nenhum runner conectado ou timeout não podem
+fazer a revogação falhar nem virar 5xx. A chamada ao engine mora num
+`try/catch` que só LOGA, dentro do caso de uso — a MESMA régua de
+`rag_searches` ([RN-479](#rn-479)) e do `mirror_sync_result`
+([RN-517](#rn-517)). E os quatro desfechos são informação, não erro: `sem_runner`
+é o caso normal de quem revoga uma chave órfã ([RN-519](#rn-519)), e desfecho
+DESCONHECIDO vindo do engine vira `timeout` e nunca `derrubado` — entre afirmar
+que a conexão caiu e afirmar que talvez não, a afirmação segura é a que não
+promete o que não se sabe.
+
+**Revoga PRIMEIRO, derruba depois**, e o projeto sai da LINHA revogada, nunca da
+URL: o `projectId` da rota já era ignorado no `DELETE`, e lê-lo aqui faria um
+`projectId` divergente derrubar o runner de um projeto que não tem nada com esta
+chave.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
+  (a ordem, o projeto da linha e o `try/catch` que só loga);
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:283`
+  (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
+  `apps/engine/lib/engine/runners/revogacao.ex:75` (`derrubar/3`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:697`
+  (`handle_info({:derrubar_por_revogacao, …})`);
+  `apps/engine/lib/engine_web/channels/runner_socket.ex:66` (`id/1`, que deixou
+  de ser `nil`);
+  `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:27`;
+  `apps/engine/lib/engine_web/router.ex:82`
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (`describe "a revogação alcança a conexão viva"` — o projeto da linha; a
+  ordem revoga→derruba; engine fora do ar que não derruba a revogação; 404 que
+  não derruba ninguém);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (a rota e o corpo; desfecho desconhecido virando `timeout`; 500 que LANÇA,
+  para o caso de uso tratar);
+  `apps/engine/test/engine/runners/revogacao_test.exs` (sem runner; o dono; o
+  outro dono; o teto; argumento fora de forma que não levanta);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "revogação alcança a conexão viva"` — o canal REAL que para e
+  libera a presença no `Registry`, o de outro dono que fica de pé, o `:web` que
+  nunca é alvo);
+  `apps/engine/test/engine_web/controllers/runner_connection_command_controller_test.exs`
+  (os 200 com desfecho, e o 400 de pedido malformado)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 6
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: a revogação não
+  alcança um runner conectado em OUTRO projeto com a mesma chave — não existe
+  esse caso, porque `runner_device_keys.project_id` amarra a chave a um projeto
+  só; e nenhuma tela dispara isto ainda (a metade web da [RN-519](#rn-519))
+
+### RN-521 — A página `/containers` lista TODO projeto do workspace e vira o caminho HUMANO de subir o container, ramificado por `execution_mode` {#rn-521}
+
+Subir o container de um projeto tinha **um** caminho: o Infra Lead, dentro de
+uma sessão, chamando a ferramenta dele. Numa execução real do `exp004` (modo
+`runner`) a `container_start_via_runner` falhou pelo defeito que a
+[RN-508](#rn-508) fechou — e não havia como TENTAR DE NOVO. Cinco dev agents
+ficaram horas emitindo `dev.blocked_by_container`
+([RN-502](#rn-502)), e a única saída era abrir sessão nova e conversar com um
+agente para reexecutar uma operação de máquina.
+
+A página global de containers ([ADR 0136](adr/0136-pagina-global-de-containers.md),
+[RN-495](#rn-495)) já era o lugar onde um HUMANO decide ciclo de vida de
+container — mas ela nem mostrava o projeto: a régua era "uma linha por projeto
+que já tem `project_containers`", e uma subida que falha ANTES de registrar não
+deixa linha nenhuma. A tela escondia exatamente o projeto para o qual ela
+precisava existir.
+
+**O TERCEIRO estado tem nome próprio, e não é `stopped`.** O read model passa a
+LEFT JOIN (era INNER) e `registrado` vira `null` para quem nunca provisionou —
+não é um valor novo de `ContainerLifecycleStatus` (`stopped` é um container que
+EXISTIU e parou), e não é "não observado" (que é sobre o daemon ter sido
+perguntado). A tela imprime **"nunca provisionado"** e a coluna Observado diz
+`sem_container_registrado`, o terceiro motivo de `naoVerificado` — os três não
+colapsam ([RN-088](#rn-088)/[RN-486](#rn-486)).
+
+**A lista alargou; o ORÇAMENTO não.** Perguntar o observado ao broker é chamada
+de rede por projeto, com teto de 20 por carregamento
+(`TETO_DE_VERIFICACOES_POR_CARGA`). Projeto sem `project_containers` não tem o
+que observar, então nunca é elegível e **nunca ocupa uma vaga**: num workspace
+com centenas de projetos vazios, quem tem container de verdade continua
+verificado exatamente como antes. E continuam sendo TRÊS consultas em lote,
+quantos projetos forem — nenhuma dentro de laço.
+
+**A ação ramifica por `execution_mode`, com a mesma régua do backend
+([RN-497](#rn-497)/[RN-503](#rn-503)):** `container` e `mounted` propõem
+`container_start` (broker, no servidor) e `runner` propõe
+`container_start_via_runner` (agente local, na máquina do usuário). Os DOIS
+payloads são diferentes de propósito e não se copiam: `container_start` carrega
+a ELEIÇÃO de imagem (imagem, rede, recursos), lida da decisão vigente do projeto
+no clique; `container_start_via_runner` tem schema **só com `rationale`**
+([RN-508](#rn-508)), porque ela sobe a imagem JÁ decidida e não elege nada.
+
+**A tela NÃO propõe o que já se sabe que vai falhar — e diz o motivo no lugar
+do botão.** Três recusas, cada uma com texto próprio, na ordem "estado do MUNDO
+antes da capacidade de quem olha" (assim um `viewer` ainda lê "falta decidir a
+imagem", e não só "você não pode"):
+
+1. **sem imagem decidida** — o portão da [RN-105](business-rules/autenticacao.md#rn-105), que vale nos TRÊS
+   modos desde a [RN-494](#rn-494); sem `artifact.project_image` não há o que
+   subir;
+2. **`runner` que nunca teve pasta confirmada** (`workspaceVerifiedAt` nulo,
+   [RN-423](#rn-423)) — nenhum agente local jamais conectou, então a ação
+   falharia com certeza. Mesma honestidade que a ferramenta do Infra Lead já
+   pratica ao recusar LOCALMENTE antes de propor ([RN-508](#rn-508));
+3. **papel abaixo de `maintainer`** — o mínimo é o do ENDPOINT
+   ([RN-102](business-rules/custo.md#rn-102)): os dois tipos pedem `maintainer` em `decide.ts`, e a
+   comparação sai de `roleAtLeast`, nunca de uma lista de papéis à mão. O que se
+   tira é o CONTROLE, nunca a INFORMAÇÃO ([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)):
+   quem não pode continua vendo estado, imagem e recursos, e o motivo é dito UMA
+   vez em TEXTO — `title` em elemento `disabled` não abre no Chromium.
+
+**E o que a tela NÃO sabe, ela declara em vez de prometer.**
+`workspaceVerifiedAt` é registro de UMA confirmação e nunca batimento
+([RN-468](#rn-468)): não-nulo não prova agente local conectado AGORA, e a api
+não tem sinal de presença (quem sabe do agora é o canal Phoenix, no engine).
+Então a linha do `runner` oferece o botão **com ressalva escrita** — "se ele não
+estiver rodando agora, a ação falha ao ser aprovada" — em vez de uma bolinha
+verde que mentiria.
+
+**Nada de teto se mexeu.** Toda proposta desta tela é `proposed_action`,
+sempre com um HUMANO clicando, nunca um agente; `container_remove` continua no
+teto absoluto ([RN-418](#rn-418)) e `decide.ts` fica byte a byte. O papel lido
+é o do WORKSPACE, e a lacuna é declarada: o efetivo é
+`projectRole ?? workspaceRole` ([RN-471](#rn-471)), e buscar `project_members`
+por linha seria o N+1 de rede pelo qual esta página existe para não pagar —
+quem foi REBAIXADO num projeto ainda vê o botão e recebe 403, que é o defeito
+reparável (termina em toast), não o invisível.
+
+- **Onde:**
+  `apps/api/src/infrastructure/persistence/drizzle/containers-overview.repository.ts:96`
+  (o LEFT JOIN, o `ORDER BY` e `temImagemDecidida`);
+  `apps/api/src/application/ports/containers-overview-repository.port.ts:20`
+  (`executionMode`/`lifecycle` nulo/`temImagemDecidida`/`workspaceVerifiedAt`);
+  `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:29`
+  (`sem_container_registrado`) e `:86` (`elegivelParaVerificacao`, que é o que
+  mantém o orçamento intacto);
+  `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
+  `apps/web/src/routes/containers-subida.ts:88` (`decidirSubida`, a regra
+  inteira, pura);
+  `apps/web/src/routes/ContainersPage.tsx:115` (os dois payloads)
+- **Teste:**
+  `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts`
+  (o terceiro estado com motivo próprio; 25 projetos vazios que NÃO empurram
+  para fora da verificação os 20 com container real);
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`
+  (projeto sem `project_containers` na lista; `temImagemDecidida`;
+  `container_start_via_runner` pendente; as TRÊS consultas que não crescem);
+  `apps/api/test/interfaces/http/containers/containers-overview.controller.spec.ts`
+  (o `registrado` aninhado e o `null` que sobrevive à conversão);
+  `apps/web/src/routes/containers-subida.test.ts` (a ramificação por modo, as
+  três recusas, a ressalva, a hierarquia de papel);
+  `apps/web/src/routes/ContainersPage.test.tsx` (o cenário REAL do `exp004`:
+  projeto `runner`, sem linha, imagem decidida, pasta confirmada → a ação
+  proposta é `container_start_via_runner` com payload só de `rationale`, e
+  `GET .../container` nem é chamado)
+- **ADR:** [0136](adr/0136-pagina-global-de-containers.md) (a página),
+  [0145](adr/0145-docker-pre-requisito-do-runner.md) (o tipo de ação),
+  [0133](adr/0133-infra-elege-imagem-do-roteamento.md) (o outro)
+- **Origem:** execução real do `exp004`, decisão do dono do produto. Fica
+  declarado e NÃO feito: a tela não sabe se há agente local conectado AGORA (não
+  existe sinal de presença na api), e o papel lido é o do workspace, não o
+  efetivo do projeto
+
+### RN-539 — `assess_implementability` dispara o threat model de DESIGN em PARALELO, e uma vez só por story {#rn-539}
+
+O appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`, [RN-360](#rn-360))
+nasceu implementado, testado e **sem chamador de produção nenhum**: a única
+menção fora de teste era um comentário em `artifact_schemas.ex`. A própria
+[RN-360](#rn-360) declarava a lacuna, e `docs/fluxo.yml` (papel `appsec`,
+campo `acionamento`) já NOMEAVA o gatilho que faltava — `assess_implementability`
+do Dev Lead, gate `implementavel`, o mesmo [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md).
+Era ele. `run_assessment/2` passa a chamá-lo por
+`Engine.Gates.Dispatcher.run_appsec_design/2` — sexto callback do behaviour,
+CÓPIA estrutural de `run_qa_estrategia/3` e trocável em teste pelo mesmo
+motivo dos cinco vizinhos (o chamador é exercitado por um teste leve, sem
+sandbox Ecto, e não deveria subir um GenServer real só para provar que
+PEDIU).
+
+**Em paralelo, e o parecer não espera.** O disparo acontece nas DUAS saídas
+de `run_assessment/2` — com plano de teste e sem — e o desfecho de cada uma
+fica byte a byte como era. Fazer o parecer depender do threat model faria o
+gate `implementavel` depender de DUAS produções assíncronas em vez de uma, e
+queimaria dois turnos do Dev Lead onde hoje se queima um: o ramo `:sem_plano`
+já devolve `{:error, ...}` pedindo ao modelo que chame de novo
+([RN-163](business-rules/autenticacao.md#rn-163)), e uma segunda espera empilhada nele multiplicaria a
+janela. O threat model chega a quem precisa pelo caminho que a
+[RN-361](#rn-361) já definiu — handoff para `arquiteto`, `dev-lead` e
+`infra` —, nunca por este retorno; a mensagem do `:sem_plano` sequer menciona
+o appsec, porque prometer ao modelo algo que ele não vai receber ali é o
+defeito que a [RN-163](business-rules/autenticacao.md#rn-163) fecha.
+
+**E uma vez só por story.** O modelo é INSTRUÍDO a chamar
+`assess_implementability` de novo enquanto o plano de teste não existe: sem
+guarda, cada rechamada custaria outra rodada de LLM do appsec e mais três
+handoffs sobre a MESMA story. `disparar_appsec_se_preciso/3` só dispara
+quando não há `artifact.threat_model` daquela `storyId` no histórico. A
+pergunta aqui é EXISTE, não QUAL — o oposto do plano de teste, onde o mais
+recente vence porque uma story pode ser reavaliada.
+
+A leitura do event log é **uma** por chamada: as duas perguntas ("já há plano
+de teste?", "já há threat model?") são respondidas sobre a mesma lista. Dois
+`list_events/2` na mesma invocação seriam o amplificador de tráfego que o
+[ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md) recusa, e este caminho é
+quente justamente por causa da retentativa. Histórico ILEGÍVEL não dispara
+nada: ausência de resposta não é prova de ausência de artefato, e disparar ali
+reabriria a rechamada por outra porta. A cláusula de args inválidos também não
+dispara — ela não sabe qual é a story.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:254`
+  (`run_assessment/2`, a leitura única do histórico) e `:333`
+  (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
+  `apps/engine/lib/engine/gates/dispatcher.ex:43` (o callback) e `:110`
+  (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
+  `apps/engine/test/support/fake_gate_dispatcher.ex:29`
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  describe "assess_implementability dispara o appsec (RN-539)" — story sem
+  threat model dispara, story com threat model NÃO dispara (a idempotência),
+  threat model de outra story não conta, o desfecho de `:sem_plano` não muda,
+  o parecer é proposto normalmente ao lado do disparo, args inválidos e
+  histórico ilegível não disparam
+- **ADR:** [0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+  (que declarava o gatilho automático como fora de escopo)
+- **Origem:** `docs/fluxo.yml`, papel `appsec`. Fica declarado e NÃO feito:
+  `artifact.threat_model` é emitido na sessão da STORY
+  (`emit_threat_model/3` lê `story["sessionId"]`), enquanto a guarda lê o
+  histórico da sessão do DEV LEAD. No caminho comum são a mesma sessão — o
+  Dev Lead avalia stories que a própria sessão de execução criou. Não sendo,
+  a guarda não enxerga o threat model e o appsec roda outra vez: custo de uma
+  rodada de LLM repetida, nunca dado errado (o artefato é append-only e quem
+  o consome é o handoff). Fechar isso exigiria a api aceitar busca de
+  artefato por story ATRAVÉS de sessões, que hoje não existe
+## A flag que liga um agente tem de CHEGAR ao processo (RN-540)
+
+### RN-540 — Flag booleana lida pelo `runtime.exs` é mapeada no `environment:` do serviço `engine` dos dois composes, com o default do código {#rn-540}
+
+Uma pausa só é reversível se existir o caminho de ligar. A da Anamnese e a do
+Psicólogo ([RN-115](business-rules/autenticacao.md#rn-115),
+[RN-117](business-rules/autenticacao.md#rn-117)) foram declaradas reversíveis
+em TRÊS lugares — o docblock de `AnamneseSchedulerWorker.enabled?/0` ("Ligar de
+volta é `ANAMNESE_ENABLED=true` e reiniciar o engine"), o de
+`PsychologistWorker.enabled?/0` e a tabela de
+[configuração](reference/configuration.md) — e o caminho **não existia em
+ambiente nenhum**.
+
+**Medido, não hipótese.** Com o compose de dev de pé:
+
+```
+$ docker compose … exec -T engine sh -lc \
+    'echo "[$START_ANAMNESE] [$ANAMNESE_ENABLED] [$PSYCHOLOGIST_ENABLED]"'
+[true] [] []
+```
+
+A causa é a camada que só o Compose tem: **ele não repassa o ambiente do host
+ao container**. Uma variável chega ao processo se, e só se, estiver escrita no
+`environment:` (ou num `env_file`) daquele serviço. O `engine` mapeava TREZE
+variáveis de Anamnese/Psicólogo — todas TETOS de custo
+(`ANAMNESE_INTERVAL_SECONDS`, `ANAMNESE_BUDGET_MICROS`,
+`PSYCHOLOGIST_TRIAGE_THRESHOLD`, …) — e nenhuma das duas que decidem se os
+agentes rodam. `ANAMNESE_ENABLED=true` no `.env` era inerte:
+`apps/engine/config/runtime.exs` caía no default `"false"` e os dois seguiam
+desligados **em silêncio, sem erro**.
+
+Origem provável do defeito: quando o default do código virou `false`
+(2026-08-10), ninguém precisou da variável para DESLIGAR. Só quem tenta LIGAR
+descobre que o fio não existe — e essa pessoa, por construção, aparece meses
+depois.
+
+**A regra.** Toda flag BOOLEANA que o `runtime.exs` lê — a forma
+`System.get_env("X", "true"|"false") == "true"` — tem de estar mapeada no
+`environment:` do serviço `engine` dos dois composes. O recorte é o das
+booleanas e não o das 58 variáveis do arquivo porque uma flag existe
+exatamente para ser virada, e a virada acontece pelo ambiente: flag sem linha
+no compose é interruptor sem fio. Teto numérico com default bom
+(`READ_FILE_MAX_BYTES`) e variável de release (`SECRET_KEY_BASE`, `POOL_SIZE`)
+ficam legitimamente de fora, e é por isso que a lista é DERIVADA do
+`runtime.exs` em vez de mantida à mão.
+
+O default difere por arquivo, e a diferença é a decisão:
+
+- em `docker/docker-compose.yml` (dev) a linha repete o default do CÓDIGO. Dev
+  é onde a promessa dos docblocks é exercida, e um default divergente ali faria
+  o compose decidir produto por baixo do `runtime.exs`.
+- em `docker/docker-compose.prod.yml` basta estar mapeada. Aquele arquivo
+  desliga os agentes de fundo de propósito (`START_ANAMNESE:-false` contra o
+  `true` do código), com o motivo escrito ao lado — cobrar igualdade
+  reprovaria uma decisão consciente.
+
+**Isto NÃO muda decisão de produto nenhuma.** As duas flags continuam
+`false` por default nos dois composes: a pausa de 2026-08-10 segue valendo,
+byte a byte. O que passou a existir é o interruptor.
+
+**E `ANAMNESE_ENABLED=true` sozinho não basta.** `START_ANAMNESE` (chave de
+BOOT, `apps/engine/lib/engine/application.ex:82,106-108`) decide se o `kickoff/0` que
+AGENDA o tick periódico é chamado; `ANAMNESE_ENABLED` (flag de PRODUTO) decide
+se uma rodada NOVA pode acontecer. São perguntas diferentes, e a Anamnese
+periódica exige as duas em `true`. O Psicólogo tem só a segunda — o gatilho
+automático dele é o fechamento de sessão, não um tick.
+
+**`deploy/k8s/` fica de fora, e por decisão.** Lá não existe a camada que
+quebra: um Deployment/ConfigMap não intercepta nada, e a variável é escrita
+onde toda variável é escrita. O `brabo-config` tem QUATRO literais (endereços
+de serviço e nível de log do web), sem nenhum dos 13 tetos nem
+`START_ANAMNESE` — o engine roda com os defaults do código, coerentemente.
+Não há interruptor sem fio a consertar ali.
+
+- **Onde:** `docker/docker-compose.yml:406-425` (as quatro chaves de boot e as
+  quatro flags de produto, no bloco de cada agente);
+  `docker/docker-compose.prod.yml:308-315`;
+  `apps/engine/config/runtime.exs:157,158,162,168,185,229,238,264` (as oito
+  flags); `.env.example` (as duas perguntas, lado a lado)
+- **Teste:** `scripts/ci/flags-do-engine-no-compose.spec.ts` — deriva as flags
+  do `runtime.exs` e reprova nomeando a que faltar em qualquer dos dois
+  composes, e a que divergir do default do código no de dev. `warn` nenhum:
+  reprova mesmo, no job `test-packages`
+- **Origem:** achado por medição direta no container do engine, 2026-09-08.
+  Fica declarado: a lista de exceções `FLAGS_FORA_DO_COMPOSE` nasce VAZIA — ela
+  existe para que "fora por decisão" tenha onde ser dito, e não vire
+  indistinguível de "fora por esquecimento"
+
+---
+
+### RN-529 — O `brabo-runner` nasce com uma BASE local, cada projeto é uma subpasta dela, e a base NUNCA invalida `--dir` {#rn-529}
+
+O agente local não tinha noção de base. A única raiz era `--dir`, resolvida por
+`resolverDir` contra `INIT_CWD ?? process.cwd()`; sem a flag, a raiz era o
+próprio `cwd`. `estado.dir` é **um** caminho, singular — o do projeto daquela
+conexão —, e não existia constante, variável nem campo que dissesse onde os
+projetos moram naquela máquina. A palavra "base" só aparecia em comentário.
+
+**A base é LOCAL, e nunca chega pela rede.** É o desenho do broker
+([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)) aplicado ao agente local:
+quem tem a raiz é quem executa, e o que atravessa a rede é o **segmento
+relativo**. Não existe campo de base vindo do servidor, e
+`resolverPastaDoProjetoNaBase` recusa um segmento ABSOLUTO por léxico — nunca o
+"aceita e reinterpreta".
+
+**Duas fontes, e a flag vence.** `--base <caminho>` na linha de comando, e
+`$XDG_CONFIG_HOME/brabo/runner.json` (senão `~/.config/brabo/runner.json`), que
+é onde o instalador ([ADR 0150](adr/0150-instalador-de-uma-linha.md)) a grava. O
+arquivo é de USUÁRIO e não de projeto de propósito: a base é **uma** para N
+projetos, e guardá-la no `brabo-runner.config.json` — que é por projeto, vive
+DENTRO da pasta do projeto e é escrito pelo NAVEGADOR — daria N cópias do mesmo
+valor com N chances de divergir. Variável de ambiente foi recusada por duas
+razões: `BRABO_PROJECTS_BASE` já existe e é a base dos projetos `mounted` do
+lado SERVIDOR ([RN-500](#rn-500)), a colisão de namespace que o
+[ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) recusou por escrito; e
+sob `systemd --user`/LaunchAgent ([RN-518](#rn-518)) o ambiente é o da unit, não
+o do shell de quem instalou. Só a flag também não bastaria: a base entraria no
+`ExecStart` de cada unit, e trocá-la exigiria reescrever todas.
+
+**`--dir` continua significando exatamente o que sempre significou, e a base
+NÃO entra na validação dele.** Isto é a proibição da api transposta:
+`project-workspaces-root.ts` proíbe por escrito que a regra da base desça para
+`caminhoDeWorkspaceLocalValido`, porque aquele predicado roda em toda LEITURA e
+um projeto legado fora da base explodiria ao ser lido — *"a base é regra de
+CRIAÇÃO e CONVERSÃO; o léxico é para sempre"* ([RN-501](#rn-501)). Deste lado
+vale igual: `--dir` segue validado por `validarDirDentroDoHomeNoLinux` +
+`garantirDiretorio` ([RN-434](#rn-434)/[RN-435](#rn-435)), e estar FORA da base
+não o invalida. Sem isso a base seria `breaking/` sem ganho, contra o binário
+legado da [RN-514](#rn-514). A base decide **só** onde uma pasta de projeto NOVA
+nasce.
+
+**A guarda reusa a régua; não nasce uma quarta cópia.** `base-guard.ts` é o
+TERCEIRO irmão de `guard.ts`, ao lado de `espelho-guard.ts`: importa
+`semBarraFinal`, `dentroDoEscopo` e `realpathMaisProximo` — os três helpers que
+deixaram de ser privados justamente para isso ([RN-516](#rn-516)) —, repete a
+**dupla passada** léxica-depois-`realpath` de `validarCwdDentroDaRaiz`, e reusa
+`validarDirDentroDoHomeNoLinux` INTEIRA para exigir a base dentro do `$HOME` no
+Linux (base dentro do `$HOME` implica toda subpasta dentro dele, então as duas
+checagens continuam concordando). Da recusa de laço de `espelho-guard.ts` reusa
+o que é régua — `dentroDoEscopo`, comparação por SEGMENTO e nunca `startsWith`
+cru, para `/base-outra` não contar como dentro de `/base` — e **não** a função
+`recusarLaco`, que lança `DestinoDeEspelhoInvalidoError` e reportaria uma base
+malformada como problema de espelho. Mesma lição da [RN-515](#rn-515): reusa-se
+a régua, não a mensagem.
+
+**O laço aqui é ASSIMÉTRICO, e esse é o achado.** No espelho os dois sentidos
+são defeito. Aqui a pasta do projeto DENTRO da base é o arranjo NORMAL — é
+literalmente o que "cada projeto é uma subpasta dela" quer dizer. O sentido
+contrário é que é laço: base dentro da raiz deste projeto (ou igual a ela) faria
+todo projeto novo nascer dentro deste, com o git e o espelho deste passando a
+varrer os outros. Só esse é recusado.
+
+**Recusa tem disposição diferente por FONTE, e nenhuma é silenciosa.** Base
+ausente é o estado NORMAL (`null`, o legado intacto). Base pela FLAG que não
+passa na guarda sai com código 2 — é um pedido explícito digitado agora e
+impossível de honrar, a mesma disposição de `--dir` recusado. Base pelo ARQUIVO
+que não passa é dita em `stderr`, nomeia o que se perde ("não terá onde criar a
+pasta de um projeto novo") e o runner **segue sem base**: derrubar um agente
+local que atende um projeto por causa de uma configuração que ele ainda nem usa
+seria desproporcional. Um arquivo que existe e não declara `base` é ausência, não
+recusa — é configuração SEM base consentida, não configuração quebrada. E a
+linha de startup diz a base nos DOIS estados, porque omitir "nenhuma" deixaria
+alguém procurando por que a pasta não apareceu.
+
+**Isto é BEST-EFFORT, e a ressalva de TOCTOU é herdada por escrito** de
+`guard.ts` e `espelho-guard.ts`: symlink criado DEPOIS da checagem e ANTES do
+`mkdir` não é coberto, nem link cujo alvo ainda não existe. A fronteira de
+segurança continua sendo autenticação + pipeline de aprovação + o consentimento
+de quem rodou o CLI.
+
+Nada aqui CRIA pasta: a validação da base não exige que ela exista (quem a cria
+é o instalador, e é o mesmo raciocínio do
+[ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md) — validar disco onde
+só o léxico é conhecível impediria consentir uma base antes de ela existir). A
+única pergunta de disco é a que nunca é ambígua: um caminho que JÁ existe e não
+é pasta nunca virará uma.
+
+- **Onde:** `apps/runner/src/base.ts:69` (`caminhoDoArquivoDeBase`, a
+  precedência XDG de `servico.ts`), `:90` (`lerBaseConsentida`, os quatro
+  desfechos) e `:165` (`resolverBaseConsentida`, a ordem das fontes e a origem
+  da recusa); `apps/runner/src/base-guard.ts:119`
+  (`validarBaseDeProjetos`), `:200` (`recusarLacoComARaiz`, o laço assimétrico)
+  e `:278` (`resolverPastaDoProjetoNaBase`, a subpasta e a dupla passada);
+  `apps/runner/src/index.ts:321` (a resolução no `lerArgumentos`, DEPOIS de
+  `garantirDiretorio` e sem tocar na validação de `--dir`) e `:452`
+  (`EstadoDoRunner.base`)
+- **Teste:** `apps/runner/src/base-guard.spec.ts` (caminho feliz com base que
+  ainda não existe; a irmã com prefixo comum que NÃO é confundida; `..`, `/`,
+  arquivo, `$HOME` no Linux; o laço nos dois sentidos, incluindo o construído
+  por symlink REAL; o segmento absoluto, com `..`, o que aponta para a própria
+  base e o que escapa por link no meio);
+  `apps/runner/src/base.spec.ts` (a precedência XDG, os quatro desfechos da
+  leitura, a flag vencendo o arquivo, e a recusa carregando a ORIGEM)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) pontos 1 e 2
+- **Origem:** FASE 29. O par `workspace_create`/`workspace_create_result` e a
+  capacidade `workspace` (pontos 3 a 6 do ADR), declarados aqui como não
+  feitos, FECHARAM na [RN-532](#rn-532) — a base passou a ter consumidor.
+  Segue declarado e NÃO feito: o `install.sh`, que é quem vai gravar o arquivo
+---
+
+## A base do agente local ganha um consumidor: a pasta do projeto nasce pelo canal (RN-532)
+
+### RN-532 — `workspace_create` cria a pasta sob a base LOCAL, e quem GRAVA continua sendo o `workspace_confirm` que já existia {#rn-532}
+
+A [RN-529](#rn-529) deu ao `brabo-runner` uma BASE e a validou, e declarou por
+escrito que **nada a consumia**. Este é o consumidor: o par
+`workspace_create`/`workspace_create_result`, a capacidade `workspace` e um
+predicado próprio no engine.
+
+**O par é de PEDIDO COM RESPOSTA, e não podia ser modelado no
+`workspace_confirm`.** Aquele é UNIDIRECIONAL: `handle_in("workspace_confirm",
+…)` responde `{:noreply, socket}` e não empurra nada de volta. Quem pede a
+criação de uma pasta precisa saber se ela apareceu, e com que caminho — então o
+molde é o de `exec`/`exec_result` (`despachar_pedido` + `pending_execs` +
+`responder_pedido_pendente/3`), o mesmo dos três pares de container. Registro de
+precisão, porque o nome circulou: **`workspace.verified` não existe** neste
+repositório — o que existe é o evento `project.workspace_verified` e a coluna
+`workspace_verified_at`.
+
+**Só o SEGMENTO atravessa a rede.** A base é local e nunca vem do servidor
+(RN-529); o engine manda `projectId` e o segmento RELATIVO, e é
+`resolverPastaDoProjetoNaBase` — do lado do runner, que tem a raiz — quem os
+junta. É o invariante do [ADR 0130](adr/0130-broker-de-container.md)/
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) aplicado ao agente local: quem
+tem a raiz é quem executa. Um segmento ABSOLUTO é recusado por LÉXICO, nunca
+aceito e reinterpretado.
+
+**A confirmação REUSA o `workspace_confirm`, e é o que economiza uma frente
+inteira.** Tendo criado a pasta, o runner empurra o `workspace_confirm` que
+existe desde a [RN-423](#rn-423) — e é ele que grava, pelo caminho já
+construído: canal → engine → HTTP interno → `ConfirmProjectWorkspaceUseCase`,
+que revalida o léxico, é idempotente e carimba `workspace_verified_at`.
+**Nenhuma rota nova de gravação nasce**, o engine continua não escrevendo a
+tabela, e o único caminho que carimba continua sendo um só. A ORDEM é o
+mecanismo, não estética: os dois pushes chegam ao MESMO processo de canal, em
+ordem, e o handler do `workspace_confirm` é síncrono — mandá-lo ANTES do
+resultado é o que garante que o carimbo já existe quando o pedinte destrava do
+`receive`.
+
+**A capacidade `workspace` entra no vocabulário na sessão em que o código
+entra**, dos dois lados ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+ponto 4). A [RN-514](#rn-514) tinha feito a aposta oposta com `espelho` — nome
+no servidor sem código do outro lado — e ela só se pagou porque alguém a
+cobrou; repetir seria repetir o defeito silencioso que a negociação existe para
+impedir.
+
+**Ela é a única das quatro cuja declaração depende do ESTADO daquela execução,
+e não da versão do binário.** O runner só a declara quando tem base consentida
+(`capacidadesDoRunner`), e é por essa linha — e por mais nenhuma — que o
+servidor SABE que existe base: o engine não lê o disco do usuário e não tem
+tabela de bases. Ninguém a EXIGE no join, e isso é decisão: exigi-la em
+`runner` faria todo binário sem base deixar de conectar, o que é `breaking/` e
+MAJOR, por uma função que aquele projeto talvez nunca use. Ela é opt-in pela
+outra ponta — quem tem base declara, e só quem declarou recebe a mensagem.
+
+**Predicado PRÓPRIO, e `RunnerReadiness` fica byte a byte.**
+`Engine.Runners.PastaDoProjeto` tem DUAS pré-condições — runner conectado, base
+consentida — e o ADR adota literalmente a recusa que `Engine.Runners.Espelho` já
+tinha escrito: uma função compartilhada com flag "pula container" é precisamente
+o caminho pelo qual a terceira pré-condição cai POR ACIDENTE para o `exec` numa
+refatoração futura ([RN-507](#rn-507)/[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)
+existe para ela não cair). E aqui a terceira seria pior que desnecessária: é
+**circular** — um projeto `runner` só chega a ter container `running`
+REGISTRADO depois de o próprio runner o subir, e o container sobe sobre a pasta
+que esta mensagem existe para criar.
+
+Ele também NÃO pergunta `workspace_verified_at` (ao contrário do espelho: aqui
+ele é o RESULTADO, e exigi-lo tornaria a mensagem inalcançável exatamente no
+caso para o qual foi feita) nem o `execution_mode` (a segunda fonte da mesma
+regra — quem tem base consentida é o agente local, e só existe agente local
+onde ele existe).
+
+**Onde cada pré-condição é respondida, e por que não são as duas no mesmo
+lugar.** "Runner conectado" é do `Registry`, e o módulo a responde sozinho.
+"Base consentida" é propriedade daquela CONEXÃO: ela vive em `socket.assigns` e
+**nunca em tabela** (a régua do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md)), então quem a responde é o
+despacho — o canal recusa ANTES de empurrar e devolve `motivo: "sem-base"` pelo
+MESMO `ref`, no formato que o módulo já espera, exatamente como `dispatch_exec`
+faz com o 126. Nunca um timeout, que é como o defeito silencioso apareceria. Os
+dois motivos, as duas mensagens e a ordem em que se aplicam moram no módulo, e
+em nenhum outro lugar.
+
+**Erro NOMEADO, e cinco motivos que não colapsam.** `sem-base`, `segmento`,
+`nao-e-pasta`, `mkdir` e `git` viajam como `motivo` ao lado do texto de `erro` —
+separados de propósito: o texto é para um humano ler, o motivo é para o outro
+lado DECIDIR, e colapsá-los obrigaria o engine a casar substring de pt-BR. Só
+`sem-base` vira átomo próprio no engine (`:sem_base`), porque só ele tem
+conserto próprio; os outros quatro são `:recusado` com a mensagem do runner. O
+`init`/clone que falha é erro nomeado e **nunca um plano B**: uma pasta sem
+`.git` quebraria o worktree do dev agent, o espelho e o próprio versionamento do
+usuário num lugar longe da causa.
+
+**Idempotente, e os três desfechos não colapsam.** `mkdir -p` já é idempotente;
+o que precisou de decisão foi o repositório — uma pasta que JÁ é repositório
+volta como SUCESSO, com o modo `ja-era-repositorio`, nunca um `init` por cima
+(que mentiria sobre o que aconteceu) nem um clone (que falharia por pasta
+não-vazia e transformaria "já estava pronto" em erro). É a mesma disposição de
+`ConfirmProjectWorkspaceUseCase`, e pelo mesmo motivo: a mensagem pode chegar
+duas vezes.
+
+**`estado.dir` NÃO muda.** A pasta criada é a do projeto do ponto de vista do
+SERVIDOR — e é o `workspace_confirm` que a grava lá. A raiz que `guard.ts` usa
+para conter comando aprovado continua sendo a desta execução: trocá-la em
+runtime moveria uma fronteira de contenção por causa de uma mensagem de rede, e
+este CLI nunca faz isso.
+
+**Isto NÃO é `proposed_action`, e nenhum teto ganha exceção.** Criar a pasta do
+projeto que o usuário acabou de pedir é configuração CONSENTIDA, não um agente
+pedindo para agir — a mesma linha que o espelho já estabeleceu
+([RN-516](#rn-516)). Fazê-la por comando de terminal cairia no escopo do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
+
+- **Onde:** `apps/runner/src/pasta-do-projeto.ts:132` (`criarPastaDoProjeto` —
+  a ordem guarda→disco→versionamento e os cinco motivos);
+  `apps/runner/src/channel.ts:142` (`WorkspaceCreateMessage`), `:163`
+  (`WorkspaceCreateResultMessage`), `:425` (`CAPACIDADE_DE_WORKSPACE` e
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:763`
+  (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
+  `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
+  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:128`
+  (`create_workspace/3`); `apps/engine/lib/engine/runners/capacidades.ex:95`
+  (`workspace` no vocabulário, e fora do legado);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:666`
+  (`handle_info({:dispatch_workspace_create, …})`, a recusa nomeada) e `:380`
+  (`handle_in("workspace_create_result", …)`)
+- **Teste:** `apps/runner/src/pasta-do-projeto.spec.ts` (caminho feliz com
+  `init` e com clone; a idempotência provada com o binário de versionamento de
+  VERDADE; os cinco motivos, com textos distintos, e a pasta que NÃO nasce fora
+  da base); `apps/runner/src/index-handlers.spec.ts` (a ORDEM
+  `workspace_confirm` → `workspace_create_result`; sem base, nenhum confirm;
+  conexão caída não empurra nada); `apps/runner/src/channel.spec.ts`
+  (`workspace` só declarada com base; payload sem `segmento`/`projectId`
+  descartado; `env` malformado virando `undefined`);
+  `apps/engine/test/engine/runners/pasta_do_projeto_test.exs` (as duas
+  pré-condições SEM banco — a asserção é o `ExUnit.Case` puro —, o payload
+  exato, os quatro motivos e o sucesso sem caminho que não vira sucesso);
+  `apps/engine/test/engine/runners/runner_router_test.exs` (o roundtrip e o
+  timeout); `apps/engine/test/engine/runners/capacidades_test.exs`
+  (`workspace` declarável, nunca no legado, nunca exigida);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs` (a recusa
+  nomeada pelo mesmo `ref`, e nada empurrado ao runner)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) pontos 3 a 6
+- **Origem:** FASE 29, sessão 8. Fica declarado e NÃO feito: quem CHAMA
+  `PastaDoProjeto.criar/3` — o caminho web→api→engine é da sessão 9 —, e o
+  `install.sh` que grava o arquivo da base, que é de outra frente
+
+---
+
+## O picker do modo Runner volta a ler o disco de QUEM ESCOLHE (RN-533)
+
+### RN-533 — Em modo `runner` o navegador de pastas pergunta ao agente local, e a tela diz de quem é o disco {#rn-533}
+
+O assistente de criação tinha **um** navegador de pastas para **dois** modos que
+leem discos **diferentes**. A [RN-504](#rn-504) apontou os dois para a api —
+certo para `mounted`, cuja pasta mora sob `BRABO_PROJECTS_BASE`, no SERVIDOR — e
+declarou o preço por escrito: *"para `runner` a lista deixa de ser o disco da
+máquina do usuário e passa a ser a base"*. Aquilo foi aceito porque *"o modo
+`runner` sai da criação de projeto no PR seguinte"*, o que **não aconteceu**: o
+modo continua sendo oferecido, e a direção do
+[ADR 0151](adr/0151-base-consentida-no-runner.md) (ponto 7) é a oposta. Enquanto
+durou, escolher `runner` e clicar "Procurar pasta…" navegava um disco que não é
+o daquele projeto — e **nada na tela dizia isso**, então o erro só apareceria
+pelo CONTEÚDO da lista.
+
+**O MODO decide o transporte, e são duas perguntas diferentes.** `mounted`
+segue byte a byte pela api (`GET workspaces/:workspaceId/project-folders`,
+escopado duro à base — RN-504 intacta); `runner` volta a `fs_list_dir`, que
+sempre existiu dos dois lados e cujo transporte no web nunca saiu do
+repositório. Não é um transporte sobrando que ganhou uso: é a pergunta "o que há
+na SUA máquina?", que a api não tem como responder, voltando a ser feita a quem
+tem como.
+
+**A âncora do modo `runner` é a criação ANTECIPADA da [RN-437](#rn-437).** O
+ticket do canal é escopado a um `projectId` real, então o clique cria o projeto
+antes de abrir o modal — o propósito original daquela regra, que a RN-504 tinha
+deixado sem consumidor. E falhar essa criação **não abre o modal em transporte
+nenhum**: cair na api mostraria a base do SERVIDOR sob o rótulo de "sua
+máquina", exatamente o defeito que esta regra fecha.
+
+**Sem agente local conectado, o modo continua oferecido — e quem declara é o
+PICKER, não o passo de modo.** A [RN-513](#rn-513) esconde `mounted` quando a
+base é desconhecida ou ausente, e está certa: ali a api TEM sinal
+(`GET .../projects-base`), e sem base a criação termina em 400 no fim do
+assistente, sem conserto na tela. Aqui nenhuma das duas coisas vale. Não existe
+sinal de presença de runner na api — a [RN-521](#rn-521) já declara isso por
+escrito —, então esconder o modo ou apagar o botão seria decidir "não tem" a
+partir de "não sei", o colapso que a [RN-088](#rn-088)/[RN-468](#rn-468)
+proíbem; e o modo **não está quebrado** sem runner, porque o caminho é
+confirmado depois, pelo CLI ([RN-423](#rn-423)) — o que falta é só a
+NAVEGAÇÃO. Então a declaração vai para o único lugar que de fato pergunta: o
+picker, no instante em que pergunta.
+
+**O motivo é DISCRIMINADO, e os dois desfechos não colapsam.**
+`MotivoDeFalhaDoAgente` é `sem-agente` (o engine AFIRMA que não há runner
+conectado — um fato do servidor) ou `sem-resposta` (teto da requisição, socket
+caído, ticket recusado — ignorância, e dita como ignorância na tela). Antes
+desta regra quem decidia era `erro?.includes('Nenhum runner conectado')` no
+COMPONENTE — uma tela casando substring de uma frase em pt-BR que mora num
+`.ex` do engine, exatamente o que a [RN-532](#rn-532) recusa por escrito do
+outro lado (*"o texto é para um humano ler, o motivo é para o outro lado
+DECIDIR"*). O casamento sobrou em **um** lugar, o módulo que é dono do
+protocolo do canal, e a degradação é nomeada: frase reescrita no engine cai em
+`sem-resposta` — o estado "não sei" —, nunca em "há agente". O transporte de
+api **nunca** preenche `motivo`, e isso é decisão: recusa da api é recusa da
+api, tem mensagem própria que ENSINA e não há agente local a instalar para
+consertá-la.
+
+**A espera é a da [RN-474](#rn-474), REUSADA e não reescrita.** Os dois motivos
+levam à `EsperaDoRunner` — mesmos três estados (`esperando`/`confirmado`/
+`semResposta`, que nunca colapsam), mesmo TETO de 3 minutos, mesma redação,
+mesmo sinal (`workspaceVerifiedAt` MUDANDO, nunca "existindo"). Ela ganhou uma
+callback opcional porque aqui a confirmação tem CONSEQUÊNCIA: a listagem que
+falhou é refeita sozinha, em vez de a pessoa ter de descobrir que precisa
+clicar em algo. A callback dispara UMA vez por instância — sem o `ref`, cada
+rodada da sonda a redispararia e o chamador entraria em laço — e ela **não
+afirma "está de pé agora"** (`workspaceVerifiedAt` nunca disse isso, RN-468):
+por isso quem a recebe REPETE o pedido, e se o agente já caiu de novo a tela
+volta ao mesmo estado, honesta das duas vezes. Espera é UMA por tela:
+`RunnerOnboardingPanel` ganhou `mostrarEspera`, `false` só onde quem o monta já
+mostra a sua — duas seriam duas sondas, dois tetos e, no pior caso, duas frases
+discordando sobre o mesmo carimbo.
+
+**E o picker diz de QUEM é o disco, nas DUAS origens.** O único sinal antes
+disso era o rótulo de um atalho ("Base de projetos" × "Pasta pessoal"), que
+nomeia um lugar e não uma máquina. A frase da api não é decoração de simetria:
+sem ela a do runner leria como aviso excepcional, quando é informação que as
+duas devem.
+
+- **Onde:** `apps/web/src/lib/fs-browser.ts:60`
+  (`MotivoDeFalhaDoAgente`, e por que só o transporte do runner o preenche);
+  `apps/web/src/lib/fs-browser-channel.ts:66`
+  (`FRASE_DO_ENGINE_SEM_RUNNER`, o único casamento por substring que sobrou) e
+  `:68` (`motivoDaMensagem`); `apps/web/src/components/FolderBrowserModal.tsx:227`
+  (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
+  origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
+  `:119` (o `ref` que a dispara uma vez);
+  `apps/web/src/components/RunnerOnboardingPanel.tsx:113` (`mostrarEspera`);
+  `apps/web/src/routes/NewProjectWizard.tsx:260` (`origemDoNavegador`, o
+  transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
+- **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` (a lista
+  declarando o disco da máquina do usuário; `sem-agente` caindo no painel de
+  onboarding; a decisão pelo MOTIVO e não pelo texto, com uma redação que
+  ninguém prometeu manter; `sem-resposta` com a ressalva de que isso não prova
+  ausência, UMA espera só e o teto anunciado; a listagem refeita sozinha quando
+  o carimbo muda); `apps/web/src/routes/NewProjectWizard.test.tsx` (o modo
+  decidindo o transporte nos dois sentidos; a criação antecipada ancorando o
+  canal; a criação que FALHA não abrindo navegador nenhum)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) ponto 7
+- **Origem:** FASE 29, sessão 9. Fica declarado e NÃO feito: o picker **não**
+  dispara `workspace_create` — escolher uma pasta é escolher, e criar é outra
+  coisa. `Engine.Runners.PastaDoProjeto.criar/3` (RN-532) segue sem chamador, e
+  ligá-lo exigiria uma rota HTTP nova na api, fora do escopo desta sessão. O
+  conserto definitivo do casamento por substring — o engine mandar um código ao
+  lado do texto, como o runner já faz com os cinco `motivo` da RN-532 — também
+  é do lado do engine, e fica declarado no código
+
+---
+
+## O backup cobre os DOIS volumes que são fonte de verdade, e roda sem cluster (RN-528)
+
+### RN-528 — `git_local_repos` entra no backup, o destino pode ser disco, e o restore de compose reusa as MESMAS três validações {#rn-528}
+
+O backup cobria **um** banco e rodava **num** lugar. Três consequências, e a
+terceira é a que custa código: `make test-restore` exige `kubectl`, um cluster e
+o CronJob `brabo-backup` no namespace, e `docker-compose.prod.yml` não tinha
+serviço `backup` nenhum — a imagem era construída pelo bake e usada só no k8s.
+Migrar uma instalação por compose não tinha caminho **provado**.
+
+**Classificar antes de copiar.** O movimento fácil seria "fazer backup de todos
+os volumes", e ele é errado: dos sete, `neo4j_data` e `project_workspaces` são
+DERIVADOS, `ollama_data` é re-obtenível e `brabo_projects_base` é do usuário.
+Copiá-los dá impressão de cobertura sem acrescentar recuperação. Fonte de
+verdade são DOIS: `pgdata` — que já vinha, como dump lógico e nunca como cópia
+do diretório de dados de um Postgres em execução — e **`git_local_repos`**, que
+**nenhum backup cobria**. Um projeto com provider `local` guarda o repositório
+*bare* ali dentro, e ele NÃO é reconstruível do Postgres: o event log guarda a
+narrativa, não os objetos do git. A prosa do runbook dizia o contrário ("the
+real repositories live in GitHub/GitLab") e é essa frase que explica como o
+volume passou anos sem cobertura — ela vale para `github`/`gitlab`, e para
+`local` não há upstream nenhum.
+
+**A garantia do arquivo dos repos é declarada, e é menor do que "snapshot".**
+Nada é quiesced. O que se garante é consistência POR REFERÊNCIA — o git escreve
+os objetos antes de mover a ref, e troca a ref por rename atômico, então um
+`tar` que cruza um `git push` pega o valor velho ou o novo, nunca metade de um.
+O que NÃO se garante é instante global (o `tar` percorre a árvore ao longo de um
+período) nem conectividade dos objetos (a imagem não tem git, de propósito). E
+um `gc` concorrente apagando packfile vira FALHA e não arquivo parcial: o status
+do `tar` é capturado num arquivo, porque em POSIX `sh` o status de um cano é o
+do último comando — sem isso o arquivo incompleto se anunciaria como bom, e
+backup que mente é pior do que backup que falha, porque só o segundo vira
+alerta. `*.lock` fica de fora: restaurar um lock órfão produz repositório em que
+todo `git` recusa operar.
+
+**Destino em disco, S3 opcional.** As cinco variáveis de S3 deixam de ser
+obrigatórias e passam a ser o que já eram na prática — a configuração de UM dos
+destinos. `BACKUP_DIR` definida escolhe disco; ausente, S3, que é como o CronJob
+do k8s continua rodando sem uma linha de mudança. A inferência (em vez de uma
+variável de destino obrigatória) é o que mantém aquele caminho intacto: um
+destino explícito quebraria o CronJob no dia do deploy, não no do commit. Quatro
+prefixos e não dois (`daily/`, `weekly/`, `git-daily/`, `git-weekly/`) porque a
+retenção é por CONTAGEM: dois tipos de arquivo sob um prefixo fariam "manter 7"
+significar três backups e meio.
+
+**O restore de compose muda o invólucro, nunca o julgamento.**
+`test-restore-compose.sh` dispara um backup REAL pela mesma imagem e o mesmo
+comando de produção, e chama o MESMO `brabo-restore`, com as MESMAS três
+validações (lista de tabelas contra a origem, contagem das críticas na janela do
+backup, continuidade densa da `seq` de `session_events`).
+`deploy/k8s/test-restore.sh` fica **intacto** — unificá-los faria o caminho de
+compose depender de `kubectl`, que é a dependência que ele existe para não ter.
+E `restore.sh` continua sem tocar a database de ORIGEM, propriedade que não se
+negocia por conveniência de migração. O passo que só o compose pode cobrar é o
+terceiro: verificar o arquivo dos repos, porque no k8s aquele volume nem é
+montado no pod (pular é correto) e sob compose ele é (pular seria falso verde).
+
+**Restaurar os repos é comando IRMÃO, não fase do outro** — são dois artefatos
+com dois julgamentos, e juntá-los faria falha de git reprovar a validação do
+event log. Ele verifica por default e só escreve com `--restaurar`; recusa
+extrair por cima de repos existentes (a mistura de dois estados não levanta erro
+nenhum e só aparece num `fetch` com história errada); e — achado da execução
+real — recusa ANTES do `tar` quando o volume não aceita escrita, nomeando
+`--user 0:0`. `git_local_repos` é compartilhado por três imagens com uids
+diferentes e carrega o dono de quem o montou primeiro (medido: `1000:1000`,
+modo 0755) enquanto esta imagem roda como uid 70. Quando a extração roda como
+root, o que sai é devolvido ao dono do DIRETÓRIO e nunca deixado como root:
+senão o volume voltaria íntegro e inútil, com api e engine sem conseguir
+escrever no que acabou de ser restaurado.
+
+**Neo4j recebe reprojeção, não backup.** Restaurar uma projeção possivelmente
+velha ao lado de um Postgres restaurado noutro instante dá dois estados
+derivados de momentos diferentes, sem nada que os concilie. A reprojeção **não
+foi construída aqui** (é o BRB-018): até existir, instalação migrada nasce com
+o grafo VAZIO — degradação conhecida e nomeada, não perda de dado, porque o RAG
+vive no pgvector e vem no dump.
+
+- **Onde:** `docker/backup/lib.sh:28` (`destino_tipo`, a inferência que mantém o
+  CronJob intacto), `:65` (`destino_esperar` perguntando por ESCRITA e não por
+  existência), `:105` (`destino_enviar`, escrita em `.parcial` e rename),
+  `:181` (a garantia dos bare repos, escrita junto do código que a produz),
+  `:221` (`git_arquivar`, o status do `tar` num arquivo), `:259`
+  (`git_restaurar`, a devolução do dono) e `:273` (`git_raiz_gravavel`);
+  `docker/backup/backup.sh:31` (`destino_preparar` — as cinco variáveis de S3
+  deixando de ser obrigatórias), `:149` (os três desfechos do volume de repos,
+  sem colapsar "não montado" com "vazio"), `:170` (a conferência do status do
+  `tar`) e `:220` (a poda dos quatro prefixos);
+  `docker/backup/restore.sh:28` (o mesmo destino do backup) e `:120`, `:184`,
+  `:215` (as três validações e o veredito, sem uma linha de mudança);
+  `docker/backup/restore-git.sh:43` (verificar como default), `:109` (a recusa
+  de extrair por cima) e `:123` (a recusa por escrita, com o conserto nomeado);
+  `docker/backup/test-restore-compose.sh:60` (o `--profile` no `config` e não
+  no `run`);
+  `docker/docker-compose.prod.yml:392` (o serviço `backup`, sob `profiles` e
+  `restart: "no"`) e `:550` (o volume que NÃO entra na classificação dos sete);
+  `docker/backup/Dockerfile.prod:80` (o `/backups` criado e `chown`-ado ANTES
+  do `USER`);
+  `Makefile:54` (`test-restore-compose`)
+- **Teste:** `scripts/ci/backup-lib.spec.ts` — as funções num `sh` de verdade,
+  contra um diretório de verdade: as cinco operações do destino em disco; o
+  objeto ausente medindo 0; a escrita atômica e o `.parcial` que a listagem
+  ignora; os prefixos irmãos que não se misturam; o destino que existe e NÃO
+  aceita escrita (caso de falha); "não montado" × "montado e vazio"; o arquivo
+  dos repos com status 0 e conteúdo relido; `*.lock` e `objects/tmp_*` fora; o
+  ciclo arquivar→restaurar devolvendo byte a byte; a recusa de restaurar onde
+  não se pode escrever; e o tar truncado que reprova ao ser LIDO, nunca pelo
+  tamanho
+- **ADR:** [0152](adr/0152-backup-de-volumes-contra-compose.md)
+- **Origem:** FASE 29, sessão 5. Exercitado de verdade contra o compose de
+  desenvolvimento com dados reais (55 tabelas, 422 eventos, os bare repos de
+  `exp001` e `exp004`), incluindo a restauração num volume novo conferida com
+  `git fsck` — o registro está no `docs/runbook.md`, seção "Last verified run —
+  compose, disk destination". Fica declarado e NÃO feito: o caminho **S3** do
+  adaptador não tem cobertura automatizada (exigiria um endpoint), e continua
+  sendo o mesmo comando `aws` de antes; a reprojeção do Neo4j é o BRB-018; e
+  nada aqui agenda o backup num compose — quem o dispara é um humano ou o
+  instalador (sessão 6)
 
 ---
 
@@ -8302,7 +10327,3015 @@ nasce sem ela, porque nasce sabendo negar.
 | Job periódico de limpeza de worktree encontra um projeto `runner` sem runner conectado ou sem container `running` | PULA o projeto nesta rodada, em silêncio — nunca um erro, nunca deixa de podar os demais projetos (RN-507) |
 | `container_start_via_runner` proposto para projeto `container`/`mounted`, ou `runner` sem runner conectado | o Infra Lead RECUSA localmente, nomeando o motivo, sem chamar `propose_action` nenhuma vez (RN-508) |
 | `container_start_via_runner` aprovado sem imagem decidida (RN-105) | ação vira `failed` nomeando a ausência de decisão — nunca chama o engine (RN-508) |
+| Runner conectado a um projeto cujo `execution_mode` exige uma capacidade que ele não declarou no `join` | join **recusado** nomeando a capacidade e mandando atualizar o binário — recusa fatal, sem retry, nunca degradação silenciosa (RN-514) |
+| Runner que declara uma capacidade que ESTE servidor não conhece | o nome é **ignorado** e o join passa — runner mais novo que o engine conecta (RN-514) |
+| `exec` despachado a um runner que não declarou a capacidade `exec` | responde ao chamador no mesmo formato de `exec_result`, com `exitCode` 126 e a causa no `output` — nunca deixa o `RunnerRouter` esperar até o timeout (RN-514) |
+| `pty_*` relayado a um runner que não declarou a capacidade `pty` | a mensagem NÃO é entregue e a `:web` recebe `pty_error` nomeado — nunca "carregando" para sempre (RN-514) |
+| Destino de espelho dentro do `workspacePath` do projeto, ou contendo ele | **400** nomeando o sentido do laço — os dois são a mesma recusa, e a comparação é por SEGMENTO, então `/base-outra` NÃO conta como dentro de `/base` (RN-515) |
+| Destino de espelho declarado num projeto `execution_mode: container` | **400** NOMEANDO o motivo (a origem é um volume do servidor, o agente local não a enxerga) — nunca aceitar e nunca copiar (RN-515) |
+| `PUT .../mirror-path` sem a chave `mirrorPath` no corpo | **400** — omitir seria indistinguível de pedir para LIMPAR, e limpar em silêncio é o defeito; limpar é `null` explícito (RN-515) |
+| `brabo-runner service install` rodado como root | **recusa nomeada**, sem escrever arquivo nem rodar comando — o serviço é de usuário por desenho, e um root quebraria a premissa das três fronteiras do produto (RN-518) |
+| `brabo-runner service <qualquer>` no Windows (ou em qualquer plataforma fora de Linux/macOS) | **recusa nomeando a plataforma**, dizendo que a decisão é declarada e apontando o primeiro plano — nunca falha muda, nunca um "instalado" que não instalou (RN-518) |
+| `service install` numa pasta sem chave de dispositivo válida | **recusa nomeando o arquivo** — um serviço autentica por chave, nunca por token, que ficaria em disco dentro da unit (RN-518) |
+| `systemctl`/`launchctl` indisponível durante o `service install` | o arquivo de unit **FICA**, e a resposta diz que não ativou, nomeando o comando pendente — apagá-lo viraria "não aconteceu nada", que é falso (RN-518) |
+| `service uninstall` sem unit instalada e sem `--dir` | responde NÃO INSTALADO e **não toca em arquivo nenhum**: sem o registro da unit, adivinhar pelo `cwd` apagaria a chave de outro projeto (RN-518) |
+| `service status` numa máquina sem o gerenciador de serviços no PATH | responde "instalado, e NÃO consegui perguntar" com código próprio — "não sei" nunca vira "parado" (RN-518) |
+| Projeto do workspace que NUNCA provisionou container, na página `/containers` | aparece na lista com `registrado: null` e o texto **"nunca provisionado"** — nunca `stopped`, nunca "não observado", e nunca gasta uma das 20 verificações do broker (RN-521) |
+| "Subir" clicado num projeto sem `artifact.project_image` decidido | o botão nem fica ativo: a tela DIZ que falta decidir a imagem, em texto, em vez de propor uma ação que já se sabe que termina em falha (RN-521/RN-105) |
+| "Subir" num projeto `runner` cujo `workspaceVerifiedAt` é nulo | botão inerte com motivo PRÓPRIO ("nenhum agente local jamais confirmou a pasta") — nunca colapsado com "sem imagem decidida" (RN-521) |
+| "Subir" num projeto `runner` com pasta confirmada mas runner possivelmente desligado | a tela OFERECE e escreve a ressalva: confirmação de pasta não é presença de agente (RN-468), e a ação falha ao ser aprovada se ele não estiver de pé (RN-521) |
+| Papel abaixo de `maintainer` na página `/containers` | controles inertes com o motivo dito UMA vez em texto; estado, imagem e recursos continuam VISÍVEIS (RN-521/RN-102, ADR 0064) |
+| `brabo-runner --base <caminho>` com caminho relativo, com `..`, igual a `/`, apontando para um arquivo, ou (no Linux) fora do `$HOME` | **recusa nomeando o motivo** e sai com código 2 — pedido explícito digitado agora que não dá para honrar, a mesma disposição de `--dir` recusado (RN-529) |
+| `--base` DENTRO da pasta deste projeto, ou igual a ela | recusa `base-dentro-da-raiz`: todo projeto novo nasceria dentro deste. O sentido CONTRÁRIO (a pasta do projeto dentro da base) é o arranjo normal e passa (RN-529) |
+| `$XDG_CONFIG_HOME/brabo/runner.json` corrompido, ou com uma base que a guarda recusa | a recusa é DITA em `stderr`, nomeia o que se perde, e o runner **segue sem base** — derrubar um agente que atende um projeto por uma configuração que ele ainda não usa seria desproporcional (RN-529) |
+| Arquivo de base que existe e não declara `base` | é **ausência**, não recusa: configuração sem base consentida, não configuração quebrada — o runner roda como sempre (RN-529) |
+| Projeto cuja pasta (`--dir`) está FORA da base configurada | segue **válido**, sem aviso: a base é regra de criação, e o léxico de `--dir` é para sempre — a mesma proibição escrita em `project-workspaces-root.ts` (RN-529/RN-501) |
+| Segmento de projeto ABSOLUTO, com `..`, apontando para a própria base, ou escapando dela por symlink | recusa nomeada por motivo próprio, na dupla passada (léxica e por `realpath`) — nunca aceito e reinterpretado, porque o que atravessa a rede é o SEGMENTO (RN-529, ADR 0130) |
+
+## FASE 29 — a instalação de uma linha: assinar o que se publica
+
+A [FASE 28](explanation/fase-28-pasta-do-usuario.md) recusou por escrito o
+instalador de uma linha enquanto os artefatos não fossem assinados (BRB-005), e
+é por isso que a [FASE 29](explanation/fase-29-instalacao-de-uma-linha.md)
+assina **antes** de instalar. Sessão 2, [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md).
+
+### RN-524 — Artefato publicado é assinado por identidade de workflow, verificado no mesmo run, e a verificação recusa em vez de avisar {#rn-524}
+
+Toda tag final assina o que publica, e **verifica o que assinou antes de
+publicar a Release**:
+
+- as **quatro imagens** são assinadas **por DIGEST**, lido de
+  `.release/images.json` — nunca por tag. Tag é ponteiro móvel: assinar
+  `:5.0.0` atestaria o que aquela tag apontava no instante da assinatura, e não
+  o que ela aponta quando alguém baixa. O digest é o que o manifesto já registra
+  e o que o overlay de produção já aplica (ADR 0119);
+- os **cinco binários** do runner são cobertos por **UM** `checksums.txt`
+  assinado, e não por cinco assinaturas — quem verifica quatro e esquece o
+  quinto não tem como saber que esqueceu;
+- a assinatura é **keyless** (OIDC do GitHub Actions): a identidade que assina é
+  o próprio workflow, e não existe chave privada em custódia. Um par de chaves
+  próprio significaria mais um segredo de CI, e este repositório já viu um PAT
+  expirar em silêncio e reprovar duas runs do `tag-release`
+  ([ADR 0139](adr/0139-o-alarme-de-esteira-ganha-destinatario.md));
+- **falha de verificação é recusa nomeada, nunca aviso.** Um aviso que se aceita
+  clicando é uma verificação que não existe.
+
+O manifesto **declara o que cobre**. A matriz é `fail-fast: false` de propósito,
+então um alvo que não construiu não impede os outros quatro de terem manifesto —
+mas o job nomeia no log os alvos que ficaram de fora, porque um `checksums.txt`
+que lista quatro e cala sobre o quinto é pior que nenhum: quem verifica os
+quatro conclui que verificou a release. Esta metade era **intenção escrita e
+mecanismo que não a cumpria**: com `needs: build`, um alvo que não constrói não
+impedia, ele ATRASAVA um dia — ver [RN-565](#rn-565), que a torna verdadeira e
+mede o número.
+
+**Onde:** `.github/workflows/release.yml` (passos "Instalar o cosign" e "Assinar
+as imagens publicadas", com `id-token: write` no bloco de `permissions`);
+`.github/workflows/build-runner-binaries.yml` (job `checksums`, **sem** `needs:`
+desde a [RN-565](#rn-565) — a espera é pelos assets, com teto).
+
+**Teste:** `scripts/ci/actions-pinadas.spec.ts` cobre o pin por SHA do
+`sigstore/cosign-installer` (com o comentário de versão ao lado, que é o que
+diz a um humano e ao Dependabot qual versão é aquele hash). A assinatura em si
+só se prova numa tag real — declarado, como o resto da esteira de release.
+
+**Origem:** FASE 29, sessão 2. Fecha **BRB-005** para imagens e binários. NÃO
+cobre o *code-signing* de sistema operacional dos binários (notarização do
+macOS, Authenticode do Windows), que exige identidade paga e segue no backlog.
+
+### RN-526 — O instalador verifica a própria origem, NOMEIA o que achou antes de perguntar, e nunca apaga pasta de usuário {#rn-526}
+
+`install.sh` (raiz do repositório, versionado e publicado como asset da Release)
+é a porta única de instalação. Quatro garantias, e cada uma existe contra um
+defeito concreto:
+
+**A invocação preserva o stdin.** A forma documentada é
+`sh -c "$(curl -fsSL …)"`, e **nunca** `curl … | sh`: com o script chegando
+pelo pipe, o `stdin` do processo É o download, e qualquer `read` lê bytes do
+próprio script ou encontra EOF. Um instalador que não consegue perguntar
+escolheria sozinho onde criar pastas no computador de alguém — o oposto da
+régua que a RN-511 já aplica ao consentimento da base.
+
+**Ele verifica a própria origem antes de agir**, e a cadeia tem dois elos: a
+assinatura do `checksums.txt` da Release (RN-524), e o hash **deste arquivo**
+dentro do manifesto verificado. O `cosign` que faz a verificação é ele mesmo
+pinado por versão e conferido por `sha256sum` contra o hash escrito no script —
+quem confia no `install.sh` o bastante para executá-lo confia no hash que ele
+carrega, e a cadeia não fica mais frágil que o elo que a inicia. Falha em
+qualquer elo é **recusa nomeada, nunca aviso**.
+
+**A detecção nomeia o que achou.** Pelo marcador
+(`$XDG_STATE_HOME/brabo/install-state.json`) quando ele existe; por sinais
+(projeto de compose `brabo*`, units `brabo-runner-*`, binário no PATH) quando
+não — e a lista é impressa **antes** de qualquer pergunta. Não existe o caminho
+"achei algo e decido sozinho". Sem TTY o script **relata e sai 0**, como
+`consentir-base.mjs` já faz.
+
+**Ele nunca apaga pasta de usuário.** A base de projetos e a pasta de espelho
+estão fora do alcance de qualquer confirmação — a mesma régua do espelho
+(RN-516): pasta de usuário é acúmulo, não estado do produto. Volume nomeado só
+sai com confirmação, e listado um a um antes de perguntar.
+
+O marcador mora no `$XDG_STATE_HOME` e **não** em `~/.brabo/`, que é onde o
+runner guarda coisa por PROJETO: estado de instalação e configuração de projeto
+são vidas diferentes, e juntá-los faria a remoção de um apagar o outro.
+
+**Onde:** `install.sh` (raiz).
+**Teste:** `scripts/dev/install.spec.ts` — os modos `--print-state` e
+`--print-plan` provam a DECISÃO sem TTY, sem rede e sem efeito, no molde de
+`bootstrap.spec.ts`.
+**Origem:** FASE 29, sessão 3 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
+Nesta sessão o script **não instala nada** — subir o compose, gerar segredos e
+instalar o runner são as sessões 4 e 7, e ele **diz isso** na saída em vez de
+terminar em silêncio.
+
+### RN-527 — A instalação sobe de um compose PRÓPRIO, por imagem escolhida, e confere a saúde antes de dizer que instalou {#rn-527}
+
+`docker/docker-compose.install.yml` é o que roda na máquina de quem instalou, e
+ele **não é** o `docker-compose.prod.yml`. Três diferenças, cada uma com um
+motivo:
+
+- as quatro imagens vêm de **variável obrigatória** (`${BRABO_API_IMAGE:?…}`),
+  sem default. Com default, uma variável ausente subiria metade da stack com
+  uma imagem que ninguém escolheu, e o erro apareceria como comportamento
+  estranho em vez de recusa;
+- **não há bloco `build:`** em lugar nenhum: este arquivo não constrói, e é o
+  ponto dele;
+- o serviço **`broker` não existe** aqui, porque a imagem dele não é publicada
+  (`docker-bake.hcl` tem quatro alvos). Consequência declarada: com
+  `--source=ghcr`, projeto `mounted` não sobe container (ADR 0150, decisão 7).
+
+O `docker-compose.prod.yml` fica **intacto** — ele se declara compose de
+**validação**, é o que `docker/smoke.sh` usa construindo local de propósito, e
+promovê-lo quebraria esse uso. O custo dos dois arquivos é declarado, e o teto
+contra a divergência é **mecânico**:
+`scripts/dev/composes-em-conformidade.spec.ts` reprova se o de instalação
+ganhar serviço, volume ou porta que o de validação não tenha, se algum `build:`
+sobreviver, ou se uma imagem de terceiro afrouxar para uma tag diferente.
+
+**A fonte da imagem é escolha, e "oficial" é resultado de verificação.**
+`--source=ghcr` (default) resolve por **digest** a partir do `images.json` da
+Release; `--source=local` roda `docker buildx bake` e **exige árvore limpa e em
+tag** — imagem construída de árvore suja não é a versão que ela diz ser, e o
+marcador registraria uma mentira.
+
+**Os segredos nascem uma vez e persistem.** Os cinco de
+[RN-114](business-rules/custo.md#rn-114) mais o `NEO4J_PASSWORD`, gerados com
+`openssl rand` no mesmo molde de `docker/smoke.sh:31-57` — inclusive o detalhe
+de o `NEO4J_PASSWORD` ser `-hex` e não `-base64`, porque uma `/` quebra o parse
+de `NEO4J_AUTH`. O `.env` é criado **vazio e com modo 600 ANTES** de receber
+conteúdo: criar com o umask do usuário e apertar depois deixaria os segredos
+legíveis por uma janela, e é justamente o arquivo que não pode ter essa janela.
+
+**Não há passo de migrate, e não deve haver:** o compose encadeia `api` →
+`migrate-api` com `service_completed_successfully`, e `up --wait` espera. Um
+segundo lugar mandando migrar seria a segunda fonte da mesma verdade.
+
+**E o instalador pergunta antes de afirmar.** Depois do `up --wait` — que já
+espera o healthcheck — ele bate no `/health` da api e do engine, e só então diz
+que instalou. É a régua que o `reset-total.sh` custou a aprender: ele anunciava
+"reset completo" com a api em `Exited (1)`.
+
+**Onde:** `install.sh` (raiz), `docker/docker-compose.install.yml`.
+**Teste:** `scripts/dev/install.spec.ts` (o plano, sem TTY nem efeito) e
+`scripts/dev/composes-em-conformidade.spec.ts` (a divergência entre os dois
+composes).
+**Origem:** FASE 29, sessão 4 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
+Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)
+seguem fora, e o `--print-plan` os declara `nao-nesta-versao`.
+### RN-525 — O proxy do binário confere o hash contra o manifesto da mesma release, recusa quando não pode conferir, e DIZ que isso é integridade e não procedência {#rn-525}
+
+`GET /runner-releases/binary` é `@Public()`, sem autenticação, e é o passo 4 do
+fluxo de configuração pelo navegador ([RN-473](#rn-473),
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)). Até a
+sessão 3 da FASE 29 ele validava a ENTRADA (`platform` contra uma allowlist
+fechada) e transmitia os bytes do GitHub direto para o cliente, **sem verificar
+nada** — é o consumidor que o [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md)
+nomeia e a [RN-524](#rn-524) deixou pendente.
+
+Agora ele **confere o sha256 dos bytes contra o `checksums.txt` da MESMA
+release** antes de responder qualquer coisa, e o header `Content-Digest`
+(RFC 9530) repete o hash conferido, para quem receber poder refazer a conta.
+
+**O que esta verificação NÃO faz, e está escrito onde ela é feita.** Ela **não
+verifica a assinatura** do manifesto (`checksums.txt.bundle`). Isto é
+**integridade contra o manifesto, não procedência**: quem consiga reescrever a
+Release reescreve os dois arquivos e passa. As duas formas de fechar isso foram
+MEDIDAS nesta sessão, e as duas foram recusadas:
+
+| caminho | medido | por que não |
+|---|---|---|
+| `cosign` na imagem da api | **155 MB** (`cosign-linux-amd64` v2.6.1) | quase dobra a imagem de runtime (Alpine + Node), publicada por digest no GHCR ([ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)), para verificar um download opcional |
+| `@sigstore/verify` + `@sigstore/tuf` | **2,5 MB, 12 pacotes** | o tamanho não é o custo. `getTrustedRoot()` refresca metadados TUF contra `tuf-repo-cdn.sigstore.dev` (o `seeds.json` do pacote só semeia o `root.json`), então uma rota pública que hoje depende de UM host de terceiro passaria a depender de dois. E, pela régua dos ADRs [0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) — capability só é declarada quando **provada** —, não há como provar o caminho hoje: **nenhuma Release tem `checksums.txt.bundle`**, porque o job `checksums` nasceu na sessão 2 e só roda numa tag final, lacuna que a própria [RN-524](#rn-524) já declara do lado de quem assina |
+
+Quem verifica a ASSINATURA é o `install.sh` (sessão 4/7), que tem `cosign` de
+verdade e o baixa pinado com `sha256sum -c` (decisão 4 do ADR 0149). **BRB-005
+segue aberto para a metade de procedência desta rota**, e
+[o registro](reference/brb.md) diz isso — não é rodapé, é o limite do que a rota
+prova.
+
+**Release sem `checksums.txt` é RECUSA, nunca "sirvo avisando".** Um aviso que
+se aceita clicando é uma verificação que não existe (ADR 0149, decisão 3) — e
+seria o downgrade mais barato possível: apagar 400 bytes da Release desligaria a
+conferência de todo mundo. O custo está medido e é pequeno: na v5.0.0 há dois
+binários (`linux-x64`, `linux-arm64`) e nenhum manifesto, e o passo do binário é
+**best-effort** no fluxo do navegador ([RN-473](#rn-473), passo 4) — ele cai em
+`npm install -g @brabo/runner`, que não depende de release nenhuma. Toda release
+anterior à primeira tag depois do ADR 0149 cai nesse caminho, por construção.
+
+**Os seis desfechos de 502 não colapsam.** O status sozinho não os separa e
+eles pedem ações diferentes de quem chamou, então a recusa carrega um `motivo`
+no corpo — `plataforma_nao_publicada`, `release_sem_manifesto`,
+`manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou`,
+`hash_divergente`. É a régua da [RN-470](business-rules/custo.md#rn-470) numa resposta de api: "essa
+plataforma não saiu ainda" manda esperar a próxima release, "release sem
+manifesto" manda usar o npm, e "hash divergente" é incidente. Em especial,
+"manifesto não listado na release" e "manifesto listado que falhou ao baixar"
+são desfechos DIFERENTES — confundi-los mandaria a pessoa instalar pelo npm por
+causa de uma falha de rede momentânea.
+
+**Conferir hash exige ler todos os bytes, e isso passa pelo disco.** Bufferizar
+os ~79 MB do binário em memória seria exaustão trivial numa rota pública (o pod
+da api tem `limits.memory: 512Mi`), e cachear os bytes seria pior — cinco
+plataformas × 79 MB. Os bytes descem em **stream** para um arquivo temporário em
+`/tmp` (um `emptyDir` montado justamente porque o rootfs da api é read-only), com
+o hash calculado no caminho, e o arquivo é relido em stream para o cliente **só
+depois** de o hash bater: memória constante, e nenhum byte não conferido chega
+ao cliente. Um teto de 256 MiB aborta resposta absurda antes de encher o `/tmp`.
+O cache existente (URLs, 5 min) **fica**, e passa a guardar também o manifesto
+já parseado — centenas de bytes de TEXTO, nunca bytes de binário —, na MESMA
+entrada e nunca num cache próprio: em janelas diferentes, uma release publicada
+no meio faria o hash novo ser conferido contra o binário velho, e o desfecho
+seria um `hash_divergente` que pareceria adulteração.
+
+- **Onde:** `apps/api/src/interfaces/http/runner/runner-releases.controller.ts`
+  (a verificação, o teto de bytes, o arquivo temporário e o `Content-Digest`),
+  `apps/api/src/interfaces/http/runner/checksums.ts` (a leitura pura do
+  manifesto e a união de `MotivoDaRecusa`),
+  `apps/web/src/lib/runner-bootstrap.ts` (`baixarBinario` passa a ler `message`
+  e `motivo` do corpo, e a frase chega em `falhaDoBinario`)
+- **Teste:** `apps/api/test/interfaces/runner-releases.controller.spec.ts`
+  (caminho feliz com `Content-Digest`; hash divergente sem NENHUM byte nem
+  header no corpo; release sem manifesto recusando antes de baixar o binário;
+  manifesto que não cobre a plataforma; manifesto ilegível; download falhado; e
+  o cache guardando release e manifesto juntos) e o `describe('parsearChecksums')`
+  do mesmo arquivo; `apps/web/src/lib/runner-bootstrap.test.ts` (a frase da api
+  e o `motivo` chegando ao chamador, e corpo não-JSON não virando segunda
+  exceção)
+- **Origem:** FASE 29, sessão 3. [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+  o terceiro consumidor da tabela da decisão 3 — pela METADE que a api pode
+  provar hoje, com a outra metade nomeada em vez de fingida
+| `BACKUP_DIR` aponta para um diretório que existe e NÃO aceita escrita | o backup recusa ANTES do `pg_dump`, dizendo que é ESCRITA — um destino read-only passaria num teste de existência e falharia depois, com o diagnóstico apontando para o lugar errado (RN-528) |
+| `git gc` concorrente apaga um packfile no meio do `tar` dos bare repos | a execução vira **`failed`** em `backup_runs`, com o status do `tar` nomeado — nunca um arquivo parcial que se anuncia como bom, porque só a falha vira alerta (RN-528) |
+| Volume `git_local_repos` não montado no container de backup (o CronJob do k8s) | o passo é **PULADO e dito no log** — e "não montado" nunca é colapsado com "montado e vazio", que é estado normal de instalação sem projeto `local` (RN-528) |
+| Há bare repos no volume e NENHUM arquivo no prefixo `git-daily/` | `brabo-restore-git` **reprova** dizendo que este volume está sem cobertura — ausente-e-vazio é outro desfecho, e sai com sucesso (RN-528) |
+| Arquivo dos bare repos truncado | reprova ao ser **LIDO** (`tar -tzf`), nunca pelo tamanho: um tar cortado tem bytes de sobra. É o `pg_restore --list` do lado do git (RN-528) |
+| `brabo-restore-git --restaurar` num volume que já tem bare repos | recusado: sobrepor dois estados de repositório não levanta erro nenhum e só aparece num `fetch` com história errada. `RESTORE_GIT_FORCE=1` para quem quer mesmo (RN-528) |
+| `brabo-restore-git --restaurar` sem poder escrever no volume (uid 70 × dono da api) | recusa **ANTES** do `tar`, nomeando `--user 0:0` — descobrir no meio da extração deixaria o volume pela metade. E o que é extraído como root volta para o dono do DIRETÓRIO (RN-528) |
+
+### RN-530 — Migrar exige backup PROVADO: o instalador só ganha o direito de apagar depois de restaurar {#rn-530}
+
+Instalar por cima de uma instalação existente **não é oferecido**: ou se migra,
+ou se para. Um `up` sobre volumes de outra versão é o tipo de estrago que não
+avisa.
+
+A migração tem uma ordem, e o passo do meio é o que dá sentido a ela:
+**backup → PROVAR que restaura → perguntar → apagar → instalar → restaurar.**
+
+A prova não é zelo. Um backup que ninguém tentou restaurar é um arquivo, e a
+hora de descobrir isso não é depois do `down -v` — por isso o instalador roda
+`docker/backup/test-restore-compose.sh` (as MESMAS três validações de
+`restore.sh`, ADR 0152) antes de qualquer deleção. Backup que falha, ou prova
+que falha, **interrompem a migração sem apagar nada**, e a mensagem diz onde o
+backup ficou.
+
+**O destino do backup é uma pasta do HOST**, e isso é o detalhe que faz a
+diferença entre migrar e perder: o default do compose é o volume nomeado
+`backup_local`, que o `down -v` apagaria **junto** com o que se quer preservar.
+
+**O que a migração apaga**: os volumes nomeados da instalação (`pgdata`
+inclusive), os containers e a rede. **O que ela nunca apaga**: a base de
+projetos — quando `BRABO_PROJECTS_BASE` aponta para uma pasta do host, a linha
+do compose é **bind-mount**, e `down -v` não toca bind —, a pasta de espelho
+(RN-516) e o backup recém-provado.
+
+O dump do Postgres **não** é restaurado automaticamente sobre o banco novo:
+`brabo-restore` valida contra uma database de teste e nunca sobrescreve a
+origem (ADR 0152), e restaurar sobre um banco já populado é operação
+destrutiva que o instalador não toma sozinho. Os repositórios git locais, sim —
+eles são fonte de verdade que nasceria vazia.
+
+**Onde:** `install.sh`, `migrar_instalacao_anterior` e `restaurar_apos_migrar`.
+**Teste:** `scripts/dev/install.spec.ts` — o plano declara
+`apagar-sem-backup-provado: nunca`, e um teste afere que a chamada da prova
+vem **antes** da chamada de deleção no código.
+**Origem:** FASE 29, sessão 6 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
+[ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)).
+
+### RN-531 — O instalador consente UMA base para os dois lados e instala o agente local já executável {#rn-531}
+
+**Uma base, consentida uma vez.** O `install.sh` pergunta onde os projetos vão
+morar e grava o mesmo caminho nos DOIS lugares: `BRABO_PROJECTS_BASE` no `.env`
+(o servidor, [ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)) e o
+campo `base` do `runner.json` (o agente local,
+[RN-529](#rn-529)). O que difere entre `mounted` e `runner` é **quem executa**,
+não onde o código mora — duas bases diferentes para a mesma pasta seriam a
+colisão de namespace que o ADR 0141 recusou por escrito.
+
+A base é recusada quando não é absoluta, quando fica **dentro** do checkout do
+Brabo e quando **contém** o checkout — os dois sentidos, como o `preflight.mjs`
+já faz do lado do servidor. O `~` não é expandido de propósito: o valor vai
+para um arquivo de configuração, e um `~` gravado ali é lido literalmente.
+
+**O agente local é instalado já executável.** O binário é baixado, conferido
+contra o **mesmo** `checksums.txt` assinado que o script já verificou para
+conferir a si mesmo (RN-524) — baixá-lo duas vezes seriam duas chances de pegar
+manifestos diferentes, e a segunda não seria verificada — e instalado com
+`install -m 0755`, que põe o bit de execução no mesmo ato em que copia.
+
+**Isso fecha o BRB-031.** O `chmod +x` manual sobreviveu à FASE 28 porque a
+instalação como serviço não vinha de um artefato versionado: quem chegava a
+rodar `brabo-runner service install` já precisara tornar o binário executável
+para chegar ao comando. Vindo do instalador, o passo desaparece — a File System
+Access API do navegador não preserva o bit, um script preserva.
+
+Release sem o binário da plataforma **não interrompe a instalação**: o resto já
+está de pé, e a mensagem aponta `npm install -g @brabo/runner`. É a mesma
+disposição do passo do binário na configuração pelo navegador (RN-473), e a
+razão é a mesma — o agente local é a última etapa, não um pré-requisito.
+
+**Onde:** `install.sh`, `consentir_base` e `instalar_o_runner`.
+**Teste:** `scripts/dev/install.spec.ts` — `install -m 0755` presente, a
+instrução de `chmod` dirigida ao usuário ausente, e a conferência contra o
+manifesto assinada nomeada.
+**Origem:** FASE 29, sessão 7 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
+[ADR 0151](adr/0151-base-consentida-no-runner.md)).
+
+### RN-534 — O instalador entra no manifesto assinado, e é exercitado numa máquina limpa {#rn-534}
+
+Duas metades da mesma garantia.
+
+**O `install.sh` entra no `checksums.txt` e na Release.** Sem isso a verificação
+que ele faz de si mesmo (RN-526) seria letra morta: ele confere o próprio hash
+contra o manifesto assinado, e o manifesto não o cobria. O arquivo vem do
+**checkout da tag**, não de download — é o mesmo commit que produziu tudo o mais
+que está sendo assinado no mesmo job.
+
+**E ele é exercitado numa máquina limpa**, que é o que o runner efêmero do
+Actions é: host recém-criado, sem Brabo, sem `.env`, sem marcador. O E2E prova,
+nessa ordem: o **plano** não deixou de prometer o que nunca apaga; o **estado**
+numa máquina limpa não inventa marcador nem sinais; **sem TTY** o instalador
+relata, sai 0 e **não grava**; e, com TTY simulado por `script -qec` (um
+terminal de verdade, não um pipe — o pipe é justamente o que mataria o
+consentimento), a instalação completa verifica assinatura, confere o próprio
+hash, grava o marcador e deixa o `.env` em modo **600**.
+
+**Ele não roda em `pull_request`**, e o motivo é o mesmo da assinatura: o
+manifesto assinado só existe depois de uma tag final. Fazer o script rodar em PR
+exigiria dar-lhe uma porta para PULAR a verificação — a porta que o ADR 0150
+recusa, e que uma vez aberta valeria para qualquer um, não só para o CI. É a
+decisão que o golden-set do RAG já tinha tomado pelo mesmo raciocínio
+([ADR 0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)): o que não é
+exercitável em PR roda em cadência própria, e o workflow **diz por quê** em vez
+de fingir cobertura.
+
+**Onde:** `.github/workflows/install-e2e.yml`;
+`.github/workflows/build-runner-binaries.yml`, job `checksums`.
+**Teste:** o próprio workflow — e `scripts/dev/install.spec.ts` continua
+cobrindo a decisão sem rede.
+**Origem:** FASE 29, sessão 10 ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+[ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.
+
+---
+
+## Criar projeto não provisiona repositório (RN-541)
+
+### RN-541 — Criar um projeto NÃO cria repositório git; o bootstrap é adiado até o handoff do Arquiteto {#rn-541}
+
+Criar um projeto e provisionar o git eram, na prática, o mesmo gesto — e o que
+os unia era uma TELA. `ProvisioningPage` dispara `provisionRepository` no efeito
+de montagem e é o **único** chamador dele no web; o assistente navegava para lá
+ao confirmar, então todo projeto nascia com repositório e Gitflow completos, sem
+que ninguém tivesse pedido.
+
+O dono do produto quer o contrário: o que se gera por ora segue **sem git**, e o
+repositório só nasce quando o desenvolvimento começa de verdade — o momento em
+que o **Arquiteto passa o handoff ao Dev Lead**.
+
+**O mecanismo do adiamento é não navegar para aquela tela.** Ao criar, o
+assistente vai direto para a página do PROJETO. Nada mais precisou ser desligado:
+como o disparo mora no `useEffect` de uma rota que deixou de ser visitada, deixar
+de visitá-la É o adiamento. A rota continua existindo e continua alcançável — o
+Dashboard leva a ela quando o provisionamento **falhou** e precisa ser retomado.
+
+**Provider e credencial saem da criação, e ficam na adoção.** Sem repositório
+para criar agora, perguntar "onde hospedar" seria colher uma decisão que a tela
+não usa, e o passo de credencial cobraria um PAT para um repositório que ninguém
+vai criar. Adotar é o oposto por construção — aponta para um repositório que já
+existe, e sem provider não há o que apontar. O assistente passa a ter **três**
+passos ao criar e quatro ou cinco ao adotar.
+
+**A tela de Confirmar deixa de prometer o Gitflow.** Ela anunciava "N passos de
+Gitflow" ao criar, contando `BOOTSTRAP_STEPS`; isso passaria a ser mentira no
+instante em que o bootstrap deixou de rodar ali. Passa a dizer QUANDO o
+repositório nasce, em vez de afirmar que já está nascendo.
+
+**Consequência declarada:** entre a criação e o handoff, o projeto existe sem
+repositório. Nada quebra — `GET .../repository` responde `null` e não 404, a
+página do projeto já tem o estado "repositório não provisionado" e a seção de
+Repositório em Configurações simplesmente não aparece —, mas todo caminho que
+precise de working tree falha NOMEADO até lá (`remoto_de_trabalho` devolve
+`:not_found`, e `open_adr_pr` recusa com "Projeto sem repositório provisionado").
+Isso deixa de ser borda e passa a ser o estado normal do começo de um projeto.
+
+**O gatilho é a próxima entrega**, e sem ele um projeto criado hoje ficaria sem
+repositório para sempre: o aceite do handoff Arquiteto → Dev Lead passa a
+provisionar `local`, o único provider que não pede credencial.
+
+O aviso "no plano gratuito do GitHub, repositório privado não aceita proteção de
+branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
+ficado **inalcançável**: a condição era `provider === 'github'`, e ao criar não
+há mais provider escolhido.
+
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:170` (`stepKeys`, agora
+  dependente de `adotando`), `:285` (a guarda de `provider` restrita à adoção) e
+  `:323` (a navegação para `/projects/$projectId`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`, `describe('NewProjectWizard — o git é adiado')`
+  — "criar não passa mais pela página de provisionamento — vai direto ao
+  projeto", "criar tem TRÊS passos: provider e credencial saíram", "adotar
+  mantém provider e credencial" e "a tela de Confirmar não promete mais o
+  Gitflow agora"
+- **Origem:** pedido do dono do produto — *"o que for gerado por hora segue sem
+  git; git mesmo só será iniciado após iniciar desenvolvimento em projetos
+  novos, neste momento que deve rodar o bootstrap"*
+
+---
+
+## O repositório nasce no handoff para o Dev Lead (RN-522)
+
+### RN-522 — O repositório é provisionado ao ACEITAR o handoff Arquiteto → Dev Lead, sempre `local`, e a falha nunca derruba o aceite {#rn-522}
+
+A [RN-541](#rn-541) tirou o provisionamento da criação e declarou que o gatilho
+viria em seguida. Este é o gatilho — e sem ele um projeto criado ficaria sem
+repositório **para sempre**, porque `ProvisioningPage` era o único chamador de
+`provisionRepository` no web e a criação deixou de navegar para lá.
+
+O momento é o **aceite do handoff do Arquiteto para o Dev Lead**, e não a
+ativação da execução. São instantes DISTINTOS, nesta ordem: aceitar o handoff
+ativa o Dev Lead; ativar a execução é quando os dev agents começam a reivindicar
+task. É no primeiro que "o desenvolvimento começou" passa a ser verdade, e é o
+que o dono do produto pediu — *"quando o arquiteto passar o handoff para o
+desenvolvedor iniciar o desenvolvimento"*.
+
+O ramo mora em `AcceptHandoffUseCase`, ao lado do ramo `'infra'` que já existia
+e pela mesma razão de ordem: o efeito acontece **antes** de `activateAgent`, de
+modo que o agente acorde num projeto que já tem onde trabalhar.
+
+**Sempre `local`.** É o único provider que não pede credencial nenhuma — o
+`if (providerName !== 'local')` de `ProvisionRepositoryUseCase` nunca chega a
+resolver segredo, e o `LocalGitProvider.createRepo` sequer lê o `accessToken`
+que a assinatura aceita. É isso que torna um provisionamento **automático**
+possível: ninguém escolheu hospedagem no meio do aceite, então não há credencial
+a buscar nem pergunta a fazer. Publicar num provider remoto continua sendo
+caminho separado (adoção, ou conversão em Configurações) — declarado, não
+esquecido. Efeito colateral aceito: `protectBranch: false` no provider local faz
+o último passo do bootstrap **degradar** (`step_degraded`), nunca falhar.
+
+**A falha vira EVENTO, nunca exceção.** Este caso de uso não tem transação:
+quando o provisionamento roda, `updateStatus('accepted')` e o evento
+`handoff.accepted` já estão COMMITADOS. Um throw devolveria 500 ao usuário sobre
+um handoff que, no banco, foi aceito — e ainda impediria o `activateAgent` logo
+abaixo, deixando o Dev Lead sem acordar por causa de uma falha de git. Então o
+desfecho vai para o event log como `repository.provision_failed`, com `origem` e
+a mensagem real, e o aceite segue. É a régua de sempre: falha registra a origem
+e nunca vira resposta vazia.
+
+**O que NÃO é falha:** projeto que ADOTOU um repositório. `ProvisionRepository`
+recusa esse caso com `ConflictException` de propósito — bootstrap de repositório
+de terceiro só roda por aprovação de plano (RN-045) —, mas o projeto TEM
+repositório, então não há o que provisionar e registrar isso como falha mentiria
+sobre o estado dele. O ramo consulta `findByProjectId` e sai antes. Repositório
+`created` que já existe **não** é pulado: cai no caso de uso normal, que é
+idempotente por desenho ("rodar de novo não falha"), e é assim que um bootstrap
+interrompido se completa.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts` — o
+  ramo `dev-lead` no `execute` e o método privado `provisionarRepositorio`, com
+  o `try/catch` e a saída antecipada do repositório adotado;
+  `apps/api/src/application/use-cases/agents/agents-use-cases.module.ts` (o
+  import de `GitUseCasesModule` — a seta é `agents → git`, e `git` não importa
+  `agents`, então não há ciclo)
+- **Teste:**
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts`
+  — caminho feliz ("aceitar para o Dev Lead provisiona `local` com o slug do
+  projeto"), os dois casos de falha ("provisionamento que falha NÃO derruba o
+  aceite nem a ativação" e "a falha vira evento nomeado, com origem e a mensagem
+  real"), e os limites ("aceitar para OUTRO agente não provisiona nada",
+  "projeto que ADOTOU repositório não provisiona, e isso não é falha",
+  "repositório já CRIADO cai no caso de uso, que é idempotente por desenho")
+- **Origem:** pedido do dono do produto — *"o gatilho deve vir quando o arquiteto
+  passar o handoff para o desenvolvedor iniciar o desenvolvimento"*
+## Os artefatos dos agentes viram arquivo, em `docs/` (RN-523)
+
+### RN-523 — A pasta `docs/` é PROJEÇÃO do event log: derivada, por agente, e nunca fonte de verdade {#rn-523}
+
+Todo artefato que os agentes produzem vive **exclusivamente no event log** —
+`apps/engine/lib/engine/harness/tools/emit_artifact.ex:3-5` diz literalmente
+que *"não há tabela de artefatos"*. Isso continua certo para a FONTE, e esta RN
+não mexe nisso. O que ela fecha é outro buraco: essa memória não chegava a
+lugar nenhum que uma pessoa abrisse. Quem abre a pasta do projeto no editor não
+encontrava nada do raciocínio que produziu o código. (O **provisionamento
+adiado** — criar projeto deixar de criar repositório, e o git nascer no aceite
+do handoff ao Dev Lead — abre um intervalo inteiro em que o projeto não tem nem
+repositório, e torna esta pasta ainda mais necessária; ele vem em PR próprio, e
+esta RN não depende dele.)
+
+Cada evento `artifact.*` de um tipo permitido vira um Markdown em
+`docs/<agente>/` dentro do workspace do projeto. É **projeção derivada**, no
+mesmo sentido estrito que o ADR 0101 deu ao grafo Neo4j: a fonte é o evento, a
+pasta pode ser apagada inteira e reconstruída, e **nada no produto lê dela**
+para decidir coisa alguma.
+
+**O mecanismo é o do `GraphProjector`, copiado peça por peça** — poller
+próprio, `drainOnce()` público, flag contra ciclos sobrepostos, lote de 50, e
+`markProcessed` só após sucesso. A linha de outbox é uma TERCEIRA, gravada na
+mesma transação do evento, sob um `aggregate_type` PRÓPRIO
+(`artifact_projection`): `Engine.Outbox.Drain` só drena `session`, `task` e
+`container`, e disputar a linha `'session'` seria perder a corrida contra ele
+quase sempre. Uma diferença deliberada em relação ao grafo: o `aggregateId` é o
+**projeto**, não a sessão — a pasta é do projeto, e gravá-lo ali poupa o
+projetor de uma consulta por artefato.
+
+**A lista é de PERMITIDOS.** Tipo de artefato novo nasce fora da projeção e
+entra quando alguém decidir que ele é documento, em vez de aparecer sozinho
+numa pasta que o usuário lê. Ficam de fora `qa_verdict`, `secops_verdict`,
+`task_blocked` e `infra_delegation_files`: são desfechos OPERACIONAIS, e um
+veredito de gate por task encheria `docs/qa-lead/` de arquivos que ninguém
+abre, custando à pasta a propriedade que a torna útil — caber numa olhada.
+
+**Versionado sobrescreve; append-only leva o `seq`.** Os quatro tipos lidos por
+redução ao maior `version` (`module_map`, `module_routing`, `project_image`,
+`c4_diagram`) escrevem sempre o mesmo arquivo, e a pasta mostra o vigente — o
+histórico continua inteiro no event log. Os demais viram arquivo próprio com o
+`seq` do evento no nome, e **sem ele** dois artefatos do mesmo tipo com o mesmo
+título gerariam o mesmo arquivo, com o segundo apagando o primeiro: a única
+forma de esta projeção perder informação que a fonte tem.
+
+**Duas barreiras contra o filesystem, e a segunda não é redundante.** O nome
+sai do título que o MODELO escreveu. `slugDeArquivo` **deriva** um nome de um
+alfabeto fechado (nenhum caminho de retorno deixa separador sobreviver;
+devolve `null` quando não sobra nada), e `FsArtifactFileStore` confere de novo
+com `relative()` antes de abrir. As duas respondem perguntas diferentes — "que
+nome eu derivo disto" e "o que eu vou de fato abrir" —, e confiar só na
+primeira faria a segurança da escrita depender de nenhuma mudança futura de
+slug jamais deixar passar um separador, que é a contenção que o ADR 0130 recusa
+por princípio.
+
+**A projeção nunca derruba a fonte.** Nenhum throw escapa do ciclo: cada item
+falha isolado, fica logado e permanece `processed_at IS NULL` para o ciclo
+seguinte. Diferente do grafo, **não há aqui um erro que pare o lote inteiro** —
+falha de escrita costuma ser do ITEM, e parar o lote bloquearia todos atrás
+dele. Evento que sumiu do event log é marcado processado, não retentado para
+sempre.
+
+**Em modo `runner` a pasta desvia para a raiz gerenciada**, pelo mesmo motivo
+físico do `permissions.json` ([RN-478](#rn-478)): quem escreve é a api, de
+dentro do container dela, e o canal do runner só transporta comando, sem
+primitiva de escrever conteúdo. Custo declarado: ali `docs/` não fica ao lado
+do código.
+
+**A escrita NÃO passa por `proposed_action`**, e não é omissão: aquele pipeline
+é a origem de todo efeito externo de um AGENTE PEDINDO PARA AGIR, e aqui o
+artefato já foi emitido e já está no event log. Passar a projeção pela fila
+encheria as aprovações de decisões rotineiras — uma por artefato — e corroeria
+o teto que dá sentido ao clique nas ações que são efeito externo de verdade.
+
+- **Onde:** `apps/api/src/domain/artifacts/artifact-projection-events.ts` (o
+  vocabulário e as regras de nome, puros);
+  `apps/api/src/application/artifact-projection/artifact-projector.ts` (o
+  poller); `apps/api/src/application/ports/artifact-file-store.port.ts` e
+  `apps/api/src/infrastructure/filesystem/fs-artifact-file-store.ts` (a
+  escrita, com a segunda barreira);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`pastaDeArtefatosDoProjeto`, irmã de `permissionsFilePath`);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts`
+  (a terceira linha de outbox)
+- **Teste:** `apps/api/test/domain/artifacts/artifact-projection-events.spec.ts`
+  (as regras de nome, o traversal e a colisão por `seq`) e
+  `apps/api/test/application/artifact-projection/artifact-projector.spec.ts`
+  (caminho feliz, versionado sobrescrevendo, e a degradação: falha deixa a
+  linha não processada, o ciclo seguinte retenta, uma falha não bloqueia o
+  lote, evento sumido não é retentado para sempre, reprocessar é idempotente)
+- **ADR:** [0148](adr/0148-artefatos-projetados-em-arquivo.md)
+- **Origem:** pedido do dono do produto — *"criar apenas uma pasta por ora
+  chamada docs, onde os artefatos estarão de cada um dos agentes"*
+
+### RN-542 — O instalador compara a versão instalada com a que vai instalar, e a oferta é específica por relação {#rn-542}
+
+O `install.sh` detectava instalação anterior desde a [RN-530](#rn-530) e
+oferecia migrar com backup provado. O que ele **não** sabia era **qual** versão
+estava lá: o marcador (`$XDG_STATE_HOME/brabo/install-state.json`) gravava
+`schemaVersion`, `instaladoEm`, plataforma, fonte, digests e caminhos — e nada
+que dissesse 5.0.0. A pergunta *"migrar esta instalação?"* era cega nos dois
+lados, e quem respondia não tinha como saber se aquilo subia, descia ou repetia.
+
+A informação sempre esteve à mão e era ignorada: `images.json` da Release traz
+`"versao"` ao lado de `commit` e `publicadoEm`, e `resolver_imagens_do_ghcr` lia
+só `repositorio` e `digest`. Pela outra ponta, `--source=local` já exige árvore
+**limpa e em tag** — então `git describe` é uma versão confiável ali, pelas duas
+recusas que já aconteceram antes.
+
+**A ordem é a decisão.** As imagens passam a ser resolvidas **antes** da
+detecção: saber o que entra é pré-requisito de perguntar se o que existe sai.
+O marcador sobe para `schemaVersion: 2` e grava `versao` e `commit` — os dois
+juntos, porque um marcador novo sem o campo passaria por antigo.
+
+Com as duas versões em mãos, a oferta deixa de ser uma pergunta e vira quatro,
+uma por relação:
+
+| relação | oferta | default |
+|---|---|---|
+| maior | `Atualizar 5.0.0 → 5.1.0?` | **sim** — é o que a pessoa veio fazer, e o backup provado torna reversível |
+| igual | `Já é a 5.0.0. Reinstalar do zero mesmo assim?` | não — não há ganho a oferecer |
+| menor | nomeia **rebaixamento**, avisando que migração de banco não anda para trás | não — pode não ter volta |
+| desconhecida | marcador de schema 1 não tem versão: diz isso, e **não adivinha** | não |
+
+O ramo `maior` é o **único** com default sim, e é o único que pode tê-lo: o
+passo é reversível pelo backup que acabou de ser provado. Os outros três exigem
+um `s` digitado.
+
+**Em qualquer ramo a instalação é apagada e recriada do zero**, nunca subida por
+cima — decisão do dono do produto, e a mesma razão da RN-530: um `up` sobre
+volumes de outra versão é estrago que não avisa, e meia migração é pior que
+nenhuma. A cadeia backup → **PROVAR** → perguntar → apagar → instalar →
+restaurar não muda em nenhum deles.
+
+`comparar_versoes` é implementada à mão e **não** com `sort -V`: o BSD `sort` do
+macOS ganhou `-V` tarde, e este script roda na máquina dos outros — a mesma
+disciplina que já fez `sha_do_cosign` recusar array associativo por causa do
+bash 3.2. Ela ecoa o veredito em vez de devolver código de saída, porque sob
+`set -e` um `return 1` legítimo mataria o script.
+
+No menu do `pnpm bootstrap`, *Docker › Instalar (install.sh)* **relata** o plano
+e não instala — mecânica, não preferência: item de menu roda com stdin em
+`/dev/null` para o menu seguir lendo teclas do mesmo terminal, e este instalador
+existe para PERGUNTAR (é o motivo de o [ADR 0150](adr/0150-instalador-de-uma-linha.md)
+recusar `curl | sh`). É o mesmo desenho do item *Base de projetos*
+([RN-511](#rn-511)), e a nota do item carrega o comando que instala de verdade.
+
+- **Código:** `install.sh` (`comparar_versoes`, `campo_do_marcador`,
+  `resolver_imagens_do_ghcr`, `resolver_imagens_locais`, `main`);
+  `scripts/dev/bootstrap.sh` (item `1.7`)
+- **Teste:** `scripts/dev/install.spec.ts` — *"a comparação de versões"* e
+  *"o marcador registra a versão"*; a função é extraída do script e rodada por
+  `bash`, nunca reimplementada em TS (uma cópia continua passando depois que o
+  shell quebra)
+- **Achado rodando, não lendo:** `cut -d.` sobre uma string **sem ponto**
+  devolve a linha inteira, não vazio — então `5.0.0` vs `5` respondia `menor`.
+  Normalizado com `.0.0` no fim, com teste de regressão.
+- **ADR:** [0150](adr/0150-instalador-de-uma-linha.md)
+- **Origem:** pedido do dono do produto — *"o sh deve ser inteligente de
+  entender que já há uma versão e verificar se será uma nova versão a ser
+  executada ou não... caso seja uma nova ou escolhido isso pelo usuário deverá
+  deletar a anterior e instalar do zero para evitar possíveis erros"*
+
+## A chave de dispositivo passa a poder ser da MÁQUINA (RN-543, FASE 30)
+
+### RN-543 — `runner_device_keys.project_id` nulo é a chave de MÁQUINA: vale para os projetos do DONO, resolvida contra o projeto pedido {#rn-543}
+
+A identidade do agente local era por PROJETO. Uma máquina com três projetos em
+modo `runner` tinha três chaves, três pastas com
+`brabo-runner-device-key.jwk.json` e três units de serviço — e a pessoa passava
+três vezes pelo mesmo fluxo de navegador ([RN-464](#rn-464)..[466](#rn-466),
+[RN-475](#rn-475)) para descrever **uma** máquina. É o item 4 dos cinco
+acoplamentos que o [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+mediu; os itens 1, 2 e 3 (tópico, socket id, ticket) descrevem uma **conexão**
+e N conexões os satisfazem byte a byte, então **nada no engine muda aqui**.
+
+**Uma tabela, duas espécies.** `project_id` preenchido = a chave de PROJETO de
+sempre. `project_id` NULL = a chave de MÁQUINA. Tabela irmã foi considerada e
+recusada no ADR: `PatAuthGuard` acha a pública pelo `kid` e não precisa saber a
+espécie, e duas tabelas fariam duas buscas — a segunda esquecida exatamente uma
+vez. NULL e não sentinela: a FK é real, e `project_id = '00000000-…'` exigiria
+uma linha falsa em `projects`. `user_id` continua `NOT NULL` — o ADR recusa
+chave que atravesse usuários, porque a credencial descreve **quem** age.
+
+**O ponto que decide tudo é um só.** `PatAuthGuard.autorizarPapel` recusava
+quando o projeto da credencial diferia do projeto da rota. Essa comparação
+**não** foi apagada: ela é o que impede a chave do projeto A servir o projeto
+B, e ela some **só** para `project_id` nulo, porque aí não há o que comparar. O
+papel passa a se resolver contra o projeto **PEDIDO**, que é o ADR 0154 ponto 2
+ao pé da letra — *"a autorização continua sendo a de sempre, resolvida contra o
+projeto pedido"*. **Nenhum teto novo e nenhum afrouxado**: a chave de máquina
+não dá ao runner nada que o DONO dela já não tivesse, e papel insuficiente no
+projeto pedido continua 403. O ramo do PAT não muda —
+`personal_access_tokens.project_id` continua `NOT NULL`.
+
+**O agente PERGUNTA quais projetos atende.** `GET runner/projects` devolve os
+projetos em `execution_mode: 'runner'` nos quais o dono da credencial alcança
+pelo menos `developer` — o MESMO mínimo de `runner-ticket`, porque listar
+projeto cujo ticket seria recusado é prometer o que a rota seguinte nega. Ele
+pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter
+pasta que não é projeto nenhum, e adivinhar por nome de pasta é a classe de
+erro que o [ADR 0141](adr/0141-a-base-unica-dos-projetos-montados.md) recusou.
+O que viaja é o SEGMENTO (`workspaceDirName`, [RN-109](business-rules/autenticacao.md#rn-109)) e nunca um
+caminho absoluto — o mesmo invariante do broker.
+
+É a **primeira rota `@RequirePatAuth()` sem `:projectId` no caminho**, e as
+duas consequências são travadas por teste: só credencial de MÁQUINA entra
+(uma de projeto descreve um projeto só e não tem o que descobrir — 403 com
+mensagem PRÓPRIA, nunca a de "projeto errado", que mentiria sobre o motivo), e
+não há `@RequireRole`, porque não há projeto contra o que resolvê-lo. O mínimo
+é aplicado por **LINHA**, com a régua ÚNICA do produto
+(`ResolveEffectiveRoleUseCase.forProject`, `projectRole ?? workspaceRole` —
+[RN-471](#rn-471)); a consulta de candidatos em SQL é `alcança`, nunca `tem
+papel`, e reescrever o `??` ali seria uma segunda régua. Por isso
+`route-surface.spec.ts` a classifica como `jwt` — o classificador lê
+`@RequireRole` e não enxerga mecanismo — e `docs/security-surface.md` corrige a
+leitura em prosa, exatamente como já faz para `runner-ticket`.
+
+**A listagem da [RN-519](#rn-519) passa a dizer a ESPÉCIE.** Uma chave de
+máquina serve todo projeto do dono, então ela entra na listagem de todos —
+marcada (`especie: 'maquina'`, `projectId: null`). As duas metades são
+obrigatórias: sem entrar na lista ela seria invisível e permanente em toda
+tela, que é o defeito que a RN-519 fechou renascido na espécie nova; sem a
+marca, a mesma linha apareceria em N projetos parecendo N chaves diferentes. A
+espécie é DERIVADA de `project_id` num lugar só — não há coluna para ela, e não
+deve haver.
+
+**E a revogação passa a ter alvo PLURAL.** [RN-520](#rn-520) derruba a conexão
+viva de `{projeto, usuário}`, e uma chave de máquina não nomeia projeto nenhum.
+Não derrubar reabriria exatamente o que a RN-520 fechou — a chave morre para
+ticket NOVO e as conexões vivas seguem executando comando aprovado —, agora em
+N conexões em vez de uma. Então revogar uma chave de máquina pede um
+`disconnectRunnerOfUser` **por projeto** em modo `runner` que o dono alcança. É
+a consequência que o ADR declarou por antecipação (*"revogar passará a derrubar
+todos os projetos daquela máquina"*), e ela cabe **sem tocar o engine**: a
+assinatura `{projeto, usuário}` fica byte a byte, só é chamada N vezes. A lista
+vem dos CANDIDATOS, sem filtro de papel, e isso é deliberado — desconectar não
+é decisão de autorização, e faltar um projeto deixaria de pé o que a revogação
+existe para matar.
+
+- **Código:** `apps/api/src/db/schema/auth.ts` (`runnerDeviceKeys.projectId`,
+  sem `.notNull()`); `apps/api/src/db/migrations/0058_public_war_machine.sql`;
+  `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`autorizarPapel`);
+  `apps/api/src/interfaces/http/runner/runner-projects.controller.ts`;
+  `apps/api/src/application/use-cases/runner/list-runner-projects.use-case.ts`;
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts`
+  (`listRunnerModeReachableBy`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts`;
+  `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts`
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts` — *"chave de
+  MÁQUINA"*, com os DOIS sentidos travados (a de máquina vale em qualquer
+  projeto; a de PROJETO continua recusada em projeto diferente) e a rota sem
+  `:projectId`; `apps/api/test/application/use-cases/runner/list-runner-projects.use-case.spec.ts`
+  (papel abaixo de `developer` fica de fora);
+  `apps/api/test/infrastructure/persistence/drizzle/runner-device-key.repository.spec.ts`
+  e `.../project-runner-mode.repository.spec.ts` (contra o Postgres — o que
+  mudou é um `NOT NULL` e um `WHERE`, e fake nenhum prova qualquer um dos
+  dois); `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (*"o alvo da desconexão vira PLURAL"*);
+  `apps/api/test/interfaces/http/runner/runner-projects.controller.spec.ts`
+- **Lacuna DECLARADA, e FECHADA pela [RN-552](#rn-552):** quando esta RN
+  fechou, nenhuma rota da api **criava** chave de máquina — a rota nasceria no
+  PR que tivesse o primeiro chamador real, o `install.sh`
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4), nunca
+  antes. Foi o que aconteceu: `POST /internal/machine-device-keys`. O tipo da porta já é o da COLUNA
+  (`projectId: string | null`), para o consumidor futuro não ter o que mudar
+  ali. E o web continua sem tela onde listar ou revogar chave de dispositivo
+  (a metade aberta da RN-519): a espécie nova torna a lacuna maior, e ela fica
+  declarada, não fechada aqui. **FECHADA depois pela [RN-561](#rn-561)**, que é
+  a tela — e a marca de espécie criada aqui é o que ela usa para não mentir
+  sobre o alcance de revogar.
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 2 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+## O agente local abre N conexões, uma por projeto (RN-544, FASE 30)
+
+### RN-544 — O agente local abre N conexões, uma por projeto descoberto pela rota — e o teto de tentativas e a recusa de join deixam de ser do PROCESSO {#rn-544}
+
+A [RN-543](#rn-543) abriu `GET runner/projects` e ficou sem chamador. O
+`brabo-runner` continuava exigindo `--project`: `index.ts` tinha
+`if (!projectId) uso()`, e não existia execução sem projeto. Esta RN é o
+consumidor — e é a metade do [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+que prova a descoberta dele: *"um único processo que abra N conexões — uma por
+projeto que ele atende — satisfaz os itens 1, 2 e 3 byte a byte"*. **Nada no
+engine muda**: o tópico `terminal:<projectId>`, o socket id e o ticket
+descrevem uma CONEXÃO, e N conexões continuam sendo N conexões. A recusa de
+segundo runner no mesmo projeto fica intacta, e é garantia real, não acidente.
+
+**Dois modos, e o antigo fica byte a byte.** `--project`/`--dir` com
+credencial de projeto — inclusive o fluxo do navegador
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md),
+[RN-464](#rn-464)) — é o caminho de sempre: UMA conexão, e o desfecho dela
+continua sendo o do processo. O modo novo exige as DUAS coisas, e por motivos
+diferentes: credencial de MÁQUINA, porque é ela que a rota aceita; e **base
+consentida** ([RN-529](#rn-529)), porque sem ela não há de onde derivar a pasta
+de cada projeto, e inventar uma seria escrever no disco do usuário um caminho
+que ele não consentiu. Sem base, rodar sem `--project` segue caindo em `uso()`,
+dizendo qual das duas faltou.
+
+**O runner não sabe de que espécie é a própria chave, e isso é decisão.** Em
+disco, chave de máquina e chave de projeto são o MESMO arquivo: uma JWK privada
+com um `kid` ([RN-475](#rn-475)). Quem sabe é o SERVIDOR, que acha a pública
+por esse `kid`. Então o CLI pergunta, e o 403 nomeado do `PatAuthGuard` vira
+`CredencialNaoEDeMaquinaError`, com as palavras da api e o conserto
+(`--project`) — nunca um "falha na conexão" genérico. Um palpite local seria
+uma segunda fonte de verdade sobre a mesma coisa, e a local seria a errada. O
+JWT dessa chamada vai **sem** o claim `projectId`, porque o guard compara
+`payload.projectId !== request.params.projectId` e numa rota sem projeto os
+dois precisam ser `undefined`.
+
+**N conexões exigem N estados.** Quatro campos de `EstadoDoRunner` são POR
+PROJETO — `dir`, `canalAtual`, `containerAtivo`, `destinoDoEspelho` — mais o
+`gerenciadorPty`, que nasce de `dir`. Um estado compartilhado faria o
+`docker exec` de um projeto rodar no container de OUTRO, e o PTY de um abrir na
+pasta de outro. `docker` e `base` são da MÁQUINA e entram como o MESMO valor em
+todos, nunca cópias que possam divergir. O tipo não mudou, e os handlers
+(`tratarExec`, `tratarMirrorSync`, `tratarWorkspaceCreate`…) não mudaram uma
+linha: o espelho ([RN-516](#rn-516)) e o `workspace_create`
+([RN-532](#rn-532)) já eram por projeto e já viajavam na concessão do `join`
+daquela conexão, que é exatamente o que os torna corretos com N.
+
+**O teto e a recusa viram do PROJETO.** Eram do processo: recusa de join dava
+`process.exit(1)`, e `TETO_DE_TENTATIVAS_SEGUIDAS` esgotado também. Com N
+conexões, matar tudo por causa de uma derrubaria o agente de todos os projetos
+que estão funcionando. Então cada projeto tem seu laço e seu contador; um
+projeto que recusa ou esgota **encerra sozinho, NOMEADO**, e os demais seguem —
+e só quando NENHUM sobra o processo sai com 1, com um resumo dizendo o desfecho
+de cada um. Todo log do laço é prefixado pelo nome do projeto: com N laços
+intercalados, "falha na conexão" sem dono é a forma que o silêncio toma quando
+há N de algo. No modo `projeto` a disposição antiga fica idêntica, e pelo mesmo
+raciocínio invertido: com UMA conexão, não sobra nada a atender.
+
+**A lista é consultada UMA vez, no start.** Repesquisar periodicamente foi
+considerado e recusado: custa chamada recorrente por um evento raro, e o preço
+real não é tráfego — é que uma lista que volta MENOR é ambígua (projeto
+apagado, convertido de modo, papel revogado, ou um 500 transitório se
+disfarçando dos três), e derrubar conexão VIVA por causa dessa ambiguidade
+trocaria um estado certo por um palpite. O processo **DIZ** isso ao subir, e o
+gesto para pegar projeto novo é reconectar o agente — um comando só, com o
+serviço de usuário da [RN-518](#rn-518).
+
+**Lista VAZIA é estado NORMAL, e a saída é 0.** É o estado de toda máquina
+recém-instalada: o instalador sobe o agente antes de existir projeto nenhum
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)). Não é erro, então
+não é código de erro — e `Restart=on-abnormal` ([RN-518](#rn-518)) não o
+reergue, que é o certo: não há o que reerguer. Ficar de pé com zero conexões
+seria um serviço "ativo" que não faz nada, e o `status` da unit passaria a
+mentir.
+
+**A pasta de cada projeto é `<base>/<workspaceDirName>`, pelas guardas que já
+existem.** `resolverPastaDoProjetoNaBase` (a MESMA que `workspace_create` usa,
+e pelo mesmo motivo: o nome veio pela rede), mais
+`validarDirDentroDoHomeNoLinux` ([RN-434](#rn-434)) e `garantirDiretorio`
+([RN-435](#rn-435)) — nenhuma quarta cópia de régua nasce. Criar a pasta é a
+RN-435 aplicada a um caminho DERIVADO em vez de digitado; o que NÃO acontece
+aqui é `git init`/clone, que continua sendo `workspace_create`
+([RN-532](#rn-532)). Um projeto cuja pasta é recusada sai do plano nomeado e
+não derruba os outros. `OpcoesDaBase.raizDoProjeto` aceita `null` no modo de
+máquina: sem `--project` não há `--dir`, a recusa de laço fica **sem sujeito**
+(toda raiz é derivada da base, então "a base dentro da raiz de um projeto" não
+tem como ser construída), e passar a própria base ali seria pior —
+`dentroDoEscopo(base, base)` é verdadeiro e toda base seria recusada.
+
+- **Código:** `apps/runner/src/index.ts` (o portão em `lerArgumentos`,
+  `lerArgumentosDeMaquina`, `manterConexaoDoProjeto`, `criarEstado`,
+  `rodarComoAgenteDeMaquina`); `apps/runner/src/projetos.ts`
+  (`listarProjetosDoRunner`, `planejarConexoes`,
+  `CredencialNaoEDeMaquinaError`); `apps/runner/src/auth.ts`
+  (`assinarDescobertaComChaveDeDispositivo` — o JWT sem o claim `projectId`);
+  `apps/runner/src/base-guard.ts` (`OpcoesDaBase.raizDoProjeto` nulo)
+- **Teste:** `apps/runner/src/projetos.spec.ts` — caminho feliz da rota e do
+  plano, o 403 virando erro PRÓPRIO, resposta fora do contrato, e o segmento
+  que escapa da base sendo recusado SEM derrubar o vizinho (inclusive por
+  symlink, na segunda passada); `apps/runner/src/index.spec.ts` — o PORTÃO no
+  processo de verdade (sem base, `uso()` com o motivo; com base, a recusa passa
+  a ser da credencial); `apps/runner/src/base-guard.spec.ts` — `raizDoProjeto`
+  nulo não afrouxa nenhuma outra recusa
+- **Lacuna DECLARADA, FECHADA depois pela [RN-552](#rn-552):** quando esta RN
+  fechou, ninguém CRIAVA chave de máquina (era o `install.sh`, ADR 0155 ponto
+  4), então o modo novo só era exercitável com uma chave registrada à mão — a
+  metade que a RN-543 já declarava. A `apiUrl` no modo de
+  máquina vem de `--api-url`/`BRABO_API_URL`/default, e **não** do
+  `brabo-runner.config.json`, que é por PROJETO: uma instalação em porta ou
+  host diferentes precisa da flag no `ExecStart`, e quem a escreve é a unit por
+  máquina, que é a sessão 4 desta fase. E a unit continua sendo POR PROJETO —
+  este PR muda o PROCESSO, não o serviço
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 3 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+## O teto de auto-rebaixamento também na REMOÇÃO (RN-556)
+
+### RN-556 — Remover a própria linha de `project_members` é recusado com 403 quando o efeito líquido é rebaixamento {#rn-556}
+
+> **Sobre o número.** O salto de [RN-542](#rn-542) para 556 é deliberado: a
+> faixa 543–555 está reservada para a FASE 30, que já a alocou em branches em
+> voo. Alocar aqui produziria a colisão que este repositório já observou três
+> vezes no mesmo instante (ADR 0148 ×2, RN-522 ×2, RN-523 ×2), resolvida depois
+> pela DATA. Nada foi pulado por engano.
+
+O [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md) pôs os dois
+tetos da [RN-472](#rn-472) só no caminho de ESCRITA e declarou o terceiro
+movimento aberto, por escrito e com o custo estimado: *"`RemoveProjectMemberUseCase`
+NÃO ganhou teto… A premissa de que 'a remoção é sempre benigna' é falsa, e fica
+escrita aqui para não ser redescoberta"*. Esta RN fecha essa porta — é o
+`BRB-001`, P1 de segurança.
+
+**Remover não apaga um papel, TROCA o papel efetivo.** `ResolveEffectiveRoleUseCase.forProject`
+é `projectRole ?? workspaceRole` ([RN-471](#rn-471)), e a sobreposição vale nos
+DOIS sentidos. Some a linha de projeto, o efetivo passa a resolver pelo segundo
+termo — que pode ser MENOR. Um `maintainer` cuja autoridade vinha da linha de
+projeto, `viewer` no workspace, removia a própria linha e caía para `viewer`
+sem volta pela tela: repor é `POST :projectId/members`, que pede o `maintainer`
+recém-abandonado. Sem papel de workspace nenhum, a queda é para acesso NENHUM.
+
+**É o teto 2, não um teto novo.** `ehAutoRebaixamento` compara o papel efetivo
+de HOJE com o de DEPOIS, e nunca precisou saber por qual rota o segundo chegou:
+no `add` o papel-depois vem do corpo, na remoção vem do workspace.
+`remocaoEhAutoRebaixamento` é essa aplicação, e DELEGA — não reimplementa
+comparação nenhuma. Ela existe como função própria por UM caso que a assinatura
+da outra não sabe enunciar: ator sem papel de workspace, onde o papel-depois é
+"nenhum", que não é um `Role`. Esse caso é o rebaixamento máximo e recusa.
+
+| movimento | desfecho |
+|---|---|
+| remover a própria linha, workspace com o MESMO papel | passa — é como alguém sai da lista |
+| remover a própria linha, workspace com papel MENOR | **403** |
+| remover a própria linha, SEM papel de workspace | **403** — a queda é para acesso nenhum |
+| remover a linha de OUTRA pessoa, mesmo que ela caia | passa — capacidade legítima de sempre |
+| remover a linha que restringia o `owner` do WORKSPACE | passa — só pode ELEVAR |
+
+**O teto 1 não ganha par, e a ausência é decisão.** `owner` é o topo do
+`ROLE_ORDER`: remover a linha de projeto de quem é `owner` no workspace só pode
+elevar o efetivo dele, ou mantê-lo. Mais que inofensivo, é a ÚNICA forma de
+desfazer uma restrição que o teto 1 impede de criar. Um teto ali recusaria só
+movimentos benignos e tornaria permanente o estado que o ADR 0127 nasceu para
+eliminar. Está escrito ao lado da função e fixado em teste.
+
+**Sem limiar, como o teto 2 — e o preço vem junto.** A recusa é "a si mesmo",
+não "abaixo de `maintainer`", pelo mesmo motivo da RN-472: um limiar copiaria um
+número do `@RequireRole` do controller para dentro do domínio e envelheceria
+calado se a rota mudasse de mínimo. O preço declarado é a auto-remoção de quem
+tem `owner` no projeto e `maintainer` no workspace: reversível, e recusada
+também. Era o único movimento benigno que passava antes e passa a recusar; segue
+alcançável por outro `maintainer`.
+
+**A mensagem é PRÓPRIA.** Quem clicou "remover" não pediu para mudar papel
+nenhum, então `MENSAGEM_TETO_AUTO_REBAIXAMENTO_POR_REMOCAO` diz o MECANISMO —
+sem a linha de projeto o papel cai para o do workspace, e voltar exige o papel
+abandonado — em vez de reusar a frase do `add`, que falaria de um movimento que
+a pessoa não fez.
+
+**A tela não muda, e a recusa aparece.** `MembersSection.handleRemove` já
+mostra `mensagemDaApi(erro, …)` num toast ([RN-471](#rn-471)), então a frase da
+api chega sem uma linha de web. Diferente do teto 1, este gate É calculável no
+cliente — mas calcular só ele produziria o meio-gate que o ADR 0127 recusou.
+
+- **Código:** `apps/api/src/domain/iam/tetos-de-rebaixamento.ts`
+  (`remocaoEhAutoRebaixamento` e `MENSAGEM_TETO_AUTO_REBAIXAMENTO_POR_REMOCAO`,
+  mais o comentário que diz por que o teto 1 não tem par),
+  `apps/api/src/application/use-cases/iam/remove-project-member.use-case.ts`
+  (a assinatura com `atorId` e as duas leituras de papel),
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`@CurrentUser()` no `@Delete(':projectId/members/:userId')`, a descrição
+  corrigida e o `@ApiForbiddenResponse`),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts`
+  (INTOCADO — `projectRole ?? workspaceRole` segue como está)
+- **Teste:** `apps/api/test/application/use-cases/iam/tetos-de-rebaixamento.use-case.spec.ts`,
+  bloco *"Teto 2 pela outra porta — a remoção da própria linha"* (as três
+  recusas; a auto-remoção benigna; remover outra pessoa; e a remoção que
+  devolve o projeto ao `owner` do workspace). O primeiro deles é o teste de
+  lacuna do ADR 0127 INVERTIDO, com o nome guardando a origem
+- **ADR:** [0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md), que
+  referencia o [0127](adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  fecha a lacuna que ele declarou
+- **Origem:** `BRB-001`, P1 de Segurança do registro do mantenedor — a lacuna
+  que o ADR 0127 escreveu com a frase *"quem for fechá-lo vê o teste falhar"*
+
+---
+
+## O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção que fecha (RN-557)
+
+### RN-557 — Mudar o PRÓPRIO papel é recusado com 403 nas duas rotas de associação, nos dois sentidos {#rn-557}
+
+Terceira e última porta da linha aberta pela [RN-472](#rn-472) e continuada pela
+[RN-556](#rn-556). O [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md)
+declarou esta por escrito — *"`POST workspaces/:workspaceId/members` continua um
+upsert sem teto nenhum — mesma classe de defeito, escopo acima"* — e o
+[ADR 0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md) a reafirmou como
+"escopo diferente, decisão separada". É o `BRB-002`, P1 de segurança.
+
+**O defeito, medido.** `AddWorkspaceMemberUseCase.execute` recebia
+`(workspaceId, userId, role)` e chamava `workspaces.addMember` — **não recebia o
+ator** —, e o controller (`@Post(':workspaceId/members')`,
+`@RequireRole('owner')`) chamava com o corpo puro, sem `@CurrentUser()`. Não
+havia com o que aplicar teto nenhum.
+
+**Por que é mais grave um escopo acima.** Duas coisas que existem no projeto não
+existem aqui: (a) **não há nível acima para segurar a queda** — no projeto,
+rebaixar-se derruba o efetivo para o papel de workspace, que muitas vezes o
+segura; no workspace o papel é o papel, e um `owner` que se grava `viewer` perde
+o workspace inteiro, com todos os projetos e a própria capacidade de convidar
+quem o reponha; (b) **não existe rota de remoção de membro** —
+`WorkspacesController` não tem `@Delete` de membro (medido, e o ADR 0156 já
+tinha usado esse fato). Desfazer é esta mesma rota, que pede o `owner` recém
+abandonado.
+
+**A auto-PROMOÇÃO era brecha, e fecha.** O ADR 0127 registrou nas Consequences
+que ela ficava: *"Um `maintainer` pode se gravar como `owner` do projeto (…) os
+tetos são sobre descer"*. Esta RN **revisa** essa frase. As duas metades são o
+mesmo movimento — uma pessoa decidindo sozinha qual autoridade tem — e a de cima
+é a única que **escala privilégio**: o ADR 0127 pôde dizer que os tetos dele não
+eram sobre escalação ("ninguém ganha papel que não tinha"), e sobre a promoção
+isso é falso.
+
+| movimento | desfecho |
+|---|---|
+| mudar o próprio papel no PROJETO, para baixo | **403** — [RN-472](#rn-472), inalterada |
+| mudar o próprio papel no PROJETO, para cima | **403** — era permitido, e é o que muda |
+| mudar o próprio papel no WORKSPACE, em qualquer sentido | **403** — a porta nova |
+| reescrever o próprio papel com o MESMO valor | passa — upsert idempotente não é movimento |
+| um `owner` rebaixando OUTRO `owner` no workspace | passa — é a única forma de revogar propriedade |
+| associar/rebaixar OUTRA pessoa, em qualquer escopo | passa — capacidade legítima de sempre |
+| auto-promoção pela REMOÇÃO da linha de projeto | passa — protegida pelo ADR 0156, ponto 3 |
+
+**O teto NÃO conta owners.** Recusar só quando o chamador for o último dono foi
+considerado e recusado pelo critério literal do ADR 0127: *"se enuncia numa
+cláusula, não tem número para envelhecer"*. Uma contagem acrescenta uma leitura
+que pode sair de fase com a escrita, tem de julgar se um segundo dono inativo
+conta, e faz a mesma chamada com o mesmo corpo passar hoje e recusar amanhã sem
+que nada do que o chamador controla tenha mudado. E a cláusula **já produz o
+invariante que a contagem existiria para garantir**: um workspace nunca fica sem
+`owner`, porque tirar o último exigiria que ele mesmo o fizesse.
+
+**O teto 1 não tem par neste escopo, e foi considerado, não espelhado.**
+Diferente da remoção ([RN-556](#rn-556)), aqui o movimento EXISTE — um `owner`
+pode rebaixar outro. A recusa vem de o teto 1 ser regra sobre **inversão de
+hierarquia**: no projeto a linha sobrepõe a de workspace ([RN-471](#rn-471)) e
+um `maintainer` alcança quem está ACIMA dele; no workspace o
+`@RequireRole('owner')` já garante que ninguém alcança alguém maior que si — a
+precondição está ausente. Pôr o par, somado à ausência de rota de remoção, faria
+de `owner` um **estado absorvente**: ninguém sairia dele por HTTP, e offboarding,
+rotação de propriedade e correção de convite errado passariam a exigir escrita
+direta no banco — a classe de estado que o ADR 0127 nasceu para eliminar, com o
+sinal trocado.
+
+**A régua não é copiada: a comparação vira UM classificador.**
+`autoMovimentoDoProprioPapel` devolve o SENTIDO
+(`'rebaixamento' | 'promocao' | null`) em vez de um booleano, porque quem chama
+precisa dele para escolher a mensagem. `ehAutoRebaixamento` continua existindo
+como uma LEITURA do classificador, e por motivo de comportamento e não de
+compatibilidade: `remocaoEhAutoRebaixamento` delega a ela, e alargá-la faria a
+REMOÇÃO recusar também a auto-promoção — tirar a própria linha que restringia
+alguém é justamente como se desfaz a restrição que o teto 1 impede de criar,
+movimento que o ADR 0156 protegeu por escrito.
+
+**Quatro mensagens, uma por SENTIDO e por ESCOPO.** Quem tentou se promover não
+recebe a frase de rebaixamento (não foi o que fez), e quem esbarra no teto do
+workspace não é mandado falar com um `maintainer` — lá o papel que desfaz é
+`owner`. Mesma disciplina do ponto 5 da [RN-556](#rn-556) e da
+[RN-470](business-rules/custo.md#rn-470).
+
+**O papel do ator vem do repositório, não do `ResolveEffectiveRoleUseCase`** —
+o inverso da escolha da RN-556, pela mesma razão que ela deu: nos casos de uso
+de projeto o outro entra para o papel do ator não virar uma segunda composição
+de `projectRole ?? workspaceRole` escrita à mão; no workspace não há composição
+a proteger (`forWorkspace` É `workspaces.findMemberRole`), e este caso de uso já
+tem o repositório na mão.
+
+**A metade de PROMOÇÃO no workspace é inalcançável por HTTP, e é aplicada mesmo
+assim.** Com `@RequireRole('owner')` o ator já está no topo e não há para onde
+subir. Ela entra e é testada pelo motivo que o teto 2 sempre teve para não ter
+limiar: o caso de uso não presume o guard, e é ele que fica certo no dia em que
+a rota mudar de mínimo. Mesmo desenho da recusa por capacidade da
+[RN-514](#rn-514), implementada antes de ter disparo.
+
+**Nenhuma linha de web muda, e não é omissão:** `POST /workspaces/:workspaceId/members`
+não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerado em
+`api-types.generated.ts`. Não há toast para ajustar nem `Select` para fechar.
+
+- **Código:** `apps/api/src/domain/iam/tetos-de-rebaixamento.ts`
+  (`autoMovimentoDoProprioPapel`, o tipo `SentidoDoAutoMovimento`, as três
+  mensagens novas e o `ehAutoRebaixamento` que passou a ser leitura do
+  classificador),
+  `apps/api/src/application/use-cases/iam/add-workspace-member.use-case.ts`
+  (a assinatura com `atorId`, a leitura do papel do ator e os dois 403),
+  `apps/api/src/application/use-cases/iam/add-project-member.use-case.ts`
+  (a troca de `ehAutoRebaixamento` pelo classificador, que é o que fecha a
+  auto-promoção lá),
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`@CurrentUser()`, o `@ApiForbiddenResponse` e a descrição),
+  `apps/api/src/interfaces/http/iam/dto/add-member.dto.ts` e
+  `apps/api/src/interfaces/http/iam/projects.controller.ts` (as descrições que
+  prometiam "sem teto nenhum" e "downgrading yourself"),
+  `apps/api/src/db/seed.ts` (o `owner.id` como ator),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts`
+  (INTOCADO, terceiro ADR seguido)
+- **Teste:** `apps/api/test/application/use-cases/iam/tetos-de-rebaixamento.use-case.spec.ts`,
+  bloco *"Teto de auto-movimento no WORKSPACE — a quarta porta"* (a recusa com
+  outro dono presente, a recusa do dono único, a promoção inalcançável, a
+  mensagem por escopo, o upsert idempotente, o `owner` rebaixando outro `owner`
+  e a associação de terceiros), mais os três casos no bloco do teto 2 — o teste
+  da auto-promoção INVERTIDO, com o nome guardando a origem, a asserção de que
+  cada sentido tem sua frase, e o upsert idempotente no projeto
+- **ADR:** [0157](adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md),
+  que referencia o [0127](adr/0127-tetos-de-rebaixamento-em-project-members.md)
+  e o [0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md), e revisa a frase
+  do primeiro sobre a auto-promoção
+- **Origem:** `BRB-002`, P1 de Segurança do registro do mantenedor — o último
+  movimento que os dois ADRs anteriores deixaram declarado
+
+---
+
+## A credencial que não atravessa o container do agente local (RN-558)
+
+### RN-558 — Credencial no `exec` com container ativo é RECUSADA pelo runner, com desfecho nomeado e origem `politica` {#rn-558}
+
+Lacuna declarada por escrito ao fechar a [RN-507](#rn-507)/[RN-508](#rn-508)
+([ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)) e medida de novo aqui,
+elo por elo, antes de qualquer linha ser escrita.
+
+**A cadeia, medida.** `Engine.Runners.RunnerReadiness.verificar/1`
+(`runner_readiness.ex:52`) exige container `running` REGISTRADO antes de
+QUALQUER operação de `Engine.Actions.Workspace.RunnerGit` — inclusive o
+`git fetch` autenticado inicial, que sai de `fetch!/3`
+(`runner_git.ex:226`, via `exec/4` em `:288`). A ÚNICA forma de esse registro
+existir num projeto `runner` é o MESMO runner ter subido o próprio container
+([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)), e é esse mesmo
+sucesso que marca `estado.containerAtivo` nele
+(`apps/runner/src/index.ts:822`, em `tratarContainerStart`). Com
+`containerAtivo` setado, `tratarExec` rota o comando para dentro do container
+(`index.ts:728`–`730`, e a recusa nova em `:693`), e a operação `exec` de
+`packages/docker-port` **não tem campo de `env`** — de propósito ([ADR 0130](adr/0130-broker-de-container.md):
+sem `-e` livre nenhum). O campo `env` que a RN-507 acrescentou ao par
+`exec`/`exec_result` (`RunnerRouter.exec/5`, `runner_router.ex:50`;
+`ExecMessage.env`, `apps/runner/src/channel.ts:62`) só é aplicado no caminho
+HOST, onde `apps/runner/src/exec.ts:94` o MESCLA sobre `process.env`.
+
+Resultado: no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
+container quase sempre já está de pé no MESMO runner — e era aí que a
+credencial ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md),
+`GitAuth.env_de_auth/1`) era descartada, **em silêncio, sem erro**. O `git`
+rodava com o helper efêmero instalado por `-c` e as duas variáveis VAZIAS, e
+saía com falha de autenticação — indistinguível de token inválido, permissão
+errada ou rede fora. A pessoa caçava a coisa errada, e o produto não dizia
+nada.
+
+**A correção é o desfecho NOMEADO, não a entrega da credencial.** O `docker
+exec` continua sem campo de `env` — mexer nisso é mudar a porta de contenção,
+e é decisão de ADR, não recorte (ver a lacuna declarada abaixo). O que muda é
+que o par (`env` presente, container ativo) deixa de ser executado e passa a
+ser **recusado**, com marca, mensagem e origem.
+
+**Quem recusa é o RUNNER, e só ele pode.** É o único processo que sabe as duas
+metades ao mesmo tempo: que o comando carrega credencial e que ele vai para
+dentro do container. O engine não sabe a segunda, e isso foi MEDIDO:
+`estado.containerAtivo` nasce `null` a cada execução do runner
+(`index.ts:1449`) e só é setado por `tratarContainerStart`, então um container
+`running` REGISTRADO no banco **não implica** container ativo naquele processo
+— um runner reiniciado com o container de pé roteia pro HOST, e ali a
+credencial chega normalmente. Subir a checagem para `RunnerReadiness` ou para
+`RunnerGit` recusaria um caminho que funciona. E `RunnerReadiness` fica BYTE A
+BYTE como está: ela não ganha flag nem quarta pré-condição — é a mesma regra
+que a [RN-516](#rn-516) já enunciou sobre não lhe pendurar uma flag "pula
+container".
+
+**A MARCA é constante de PROTOCOLO, não detalhe de mensagem.**
+`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` (`index.ts`) e `@marca`
+(`credencial_de_git.ex`) carregam o MESMO token, e é por ele — não pela frase —
+que o engine reconhece a recusa depois de ela ter atravessado um `rescue` e
+virado string solta. Mudar um lado só não quebra compilação de nada: a recusa
+continua acontecendo e só a CLASSIFICAÇÃO volta a errar, que é a forma exata do
+defeito que esta RN fecha. Nenhuma das duas suítes alcança a outra linguagem
+(ExUnit não lê TypeScript, o vitest do runner não lê Elixir), então a guarda
+mora em `scripts/ci/`, com os outros testes que leem o repositório inteiro como
+texto.
+
+**A origem é `politica`, e a escolha aponta AÇÃO.** As quatro do
+[ADR 0020](adr/0020-destravar-gates-qa-secops.md) não distribuem culpa, dizem o que
+fazer. Isto não é cláusula que ninguém escreveu (`codigo`) nem rede que caiu
+(`infra`): é a contenção do ADR 0130 funcionando como desenhada, contra um caso
+que ela não previu. Quem lê `politica` sabe que não há bug para caçar — há uma
+decisão de produto pendente. `Engine.Runners.CredencialDeGit.desfecho/1`
+acrescenta UM caso e não reclassifica nenhum outro: qualquer outra falha de
+worktree mantém byte a byte `{"falha ao preparar o worktree", "codigo"}`, nos
+DOIS dev agents (o real e o Noop, que existe para exercitar ESTE caminho e não
+uma cópia dele).
+
+**A recusa de CONTENÇÃO vence, e a ordem é decisão.** Ela entra DEPOIS de
+`validarCwdDentroDaRaiz` (`guard.ts`): um comando apontado para fora da raiz
+precisa ouvir **isso**, porque ali há uma fronteira de contenção sendo
+recusada, enquanto aqui há uma capacidade que falta. Colapsar as duas faria um
+comando fora do escopo parecer problema de credencial — o mesmo defeito de
+diagnóstico, com outro sinal.
+
+**O `env` nunca aparece na recusa — só a CONTAGEM.** A invariante da RN-507 é
+que `msg.env` não vai para log nenhum, e esta saída vai para o event log do
+produto: a recusa diz "2 variável(is) de ambiente", jamais um nome ou um valor.
+O número já diz o que se precisa saber ali.
+
+**O que NÃO é afetado, confirmado por leitura:** repositório `local` (provider
+sem token) — `GitAuth.env_de_auth/1` devolve `[]`, `fetch!/3` converte para
+`nil`, o campo nem entra no payload, e a recusa não dispara; os modos
+`container` e `mounted` — nunca passam por `RunnerGit` (`Workspace.ensure!/4`
+bifurca por `execution_mode` e só `runner` vai para lá), e o container deles
+sobe pelo broker, do outro lado da rede; e comando de terminal comum, que nunca
+carregou `env`. `workspace_create` também carrega `env`, e também não é afetado:
+ele roda no HOST (`criarPastaDoProjeto`), não no container.
+
+- **Código:** `apps/runner/src/index.ts` (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` e
+  a recusa em `tratarExec`, depois da
+  validação de `cwd`), `apps/runner/src/channel.ts`
+  (o docblock de `ExecMessage.env`, que prometia "roda só sem a credencial"),
+  `apps/engine/lib/engine/runners/credencial_de_git.ex` (novo — a marca,
+  `recusada?/1`, `mensagem/2` e `desfecho/1`),
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex` (a cláusula nova em
+  `fetch!/3`, antes da genérica, e o moduledoc),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex` e
+  `apps/engine/lib/engine/dev/noop_dev_agent_server.ex` (o desfecho de
+  `{:error, reason}` na criação do worktree)
+- **Teste:** `apps/runner/src/index-handlers.spec.ts`, bloco *"a credencial não
+  atravessa o docker exec (RN-558)"* — o caminho feliz (sem container, o `env`
+  chega ao host e nada é recusado), o caso de falha (com container, recusa
+  nomeada e `docker.exec` NÃO chamado), a prova negativa de que nome e valor
+  das variáveis não vazam na saída, `env` vazio não virando recusa, e a recusa
+  de contenção de `guard.ts` vencendo esta quando o `cwd` está fora da raiz;
+  `apps/engine/test/engine/actions/workspace_runner_test.exs` (os dois testes
+  `RN-558`: a recusa que vira mensagem nomeada com origem `politica`, e a falha
+  REAL do fetch que mantém a mensagem de sempre com origem `codigo` — o par
+  negativo que prova que a cláusula nova não sequestrou a antiga);
+  `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
+  lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
+  o teste do engine com a mensagem antiga à vista
+- **Lacuna DECLARADA, que é a METADE que continua aberta:** a credencial
+  continua **não atravessando** o `docker exec`. Clone/fetch de repositório
+  remoto AUTENTICADO em modo `runner` segue impossível com o container de pé —
+  o que mudou é que agora ele falha DIZENDO isso, em vez de parecer erro de
+  token. Fechar exige decidir COMO uma operação credenciada fala com um `docker
+  exec` sem campo de `env`, e as opções conhecidas mexem todas na porta de
+  contenção do ADR 0130 (dar `env` à operação; um arquivo de credencial montado
+  e apagado; rodar o `fetch` no host mesmo com container ativo, o que quebraria
+  o invariante de que o trabalho acontece dentro do container). É ADR, nunca
+  correção de passagem. Fica declarada também uma ADJACÊNCIA medida e não
+  corrigida: a recusa acontece DEPOIS de `init_from_bare!/5` já ter feito
+  `mkdir`/`git init`/`remote add`, e o `git_dir?/2` de `ensure!/5` marca o
+  workspace como pronto numa tentativa seguinte por encontrar o `.git` — então
+  a segunda tentativa não repete a recusa, ela falha adiante no `worktree add`.
+  É comportamento PRÉ-EXISTENTE da idempotência de `ensure!/5` (vale para
+  qualquer `fetch` que falhe, não só para este) e corrigi-lo é entrega própria
+- **ADR:** nenhum novo — a entrega não move fronteira nenhuma. Ela CONSOME o
+  [0130](adr/0130-broker-de-container.md) (a porta sem `env`), o
+  [0137](adr/0137-o-runner-sobe-o-container-do-projeto.md) (o container na
+  máquina do usuário), o [0145](adr/0145-docker-pre-requisito-do-runner.md) (a
+  pré-condição e o campo `env`) e o [0020](adr/0020-destravar-gates-qa-secops.md) (as
+  quatro origens)
+- **Origem:** `AT-053` — a lacuna que o ADR 0145 deixou declarada por escrito
+
+---
+
+## A primeira conta de uma instalação nasce no terminal (RN-546)
+
+### RN-546 — Rota interna cria a PRIMEIRA conta, já verificada, e recusa quando existe qualquer usuário {#rn-546}
+
+Sessão 5 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md). É a metade de api
+do passo que fecha a instalação de uma linha; o `install.sh` que consome esta
+rota é a sessão 6, e ele chegou na [RN-547](#rn-547).
+
+**O buraco, medido.** Numa instalação nova ninguém consegue entrar. O `.env`
+que o instalador gera não tem **nenhuma** variável de e-mail, `MAIL_TRANSPORT`
+cai no default `log` (`docker/docker-compose.install.yml`), e o registro normal
+exige verificar e-mail — que por um canal desligado não fecha. A instalação
+termina dizendo "Pronto" e a única saída é pescar o link em
+`docker compose logs api`.
+
+**A rota.** `POST /internal/first-account`, `engine-service` — autenticada pelo
+`BRABO_SERVICE_TOKEN`, no mesmo cabeçalho e com a mesma comparação em tempo
+constante das outras rotas internas. Corpo `{ email, senha, nome? }`, resposta
+`{ userId, email, workspaceId }`, `201`.
+
+**Por que interna, e nunca pública.** Uma rota pública de "criar o primeiro
+owner" é uma corrida entre quem instalou e quem escaneou a porta, e quem perde
+a corrida perde a instalação: `owner` do primeiro workspace não é papel que se
+recupere por HTTP. O service token fecha a corrida no lugar certo — ele é
+gerado pelo próprio `install.sh` e escrito no `.env` com modo `600`, então
+apresentá-lo prova controle da **máquina**, que é a credencial que este passo
+realmente quer.
+
+**A conta nasce VERIFICADA, e é a única coisa que esta rota afrouxa.** O que a
+verificação de e-mail prova é *"esta pessoa controla esta caixa"*; quem roda o
+instalador já provou algo mais forte — a máquina, o `.env` com os cinco
+segredos e o daemon do Docker. Exigir dela a prova mais fraca, por um canal que
+a instalação sabe estar desligado, é teatro. O **registro normal fica byte a
+byte**: o ADR cria um caminho para um caso nomeado, não mexe no outro.
+
+**A recusa é sobre a INSTALAÇÃO, não sobre o e-mail.**
+`UserRepository.existeAlgumUsuario()` (`SELECT 1 … LIMIT 1`, nunca `count(*)`),
+e `409` havendo qualquer usuário. A pergunta é sobre `users` e não sobre
+`auth_credentials`, porque conta provisionada por login social
+([RN-278](#rn-278)) nasce sem credencial e perguntar pela credencial diria "não
+há ninguém" numa instalação povoada. Herdar a idempotência por e-mail de
+`provisionarUsuario` transformaria a rota num criador de contas com nome
+enganoso — bastaria variar o endereço. Numa migração
+([RN-530](#rn-530)) os usuários vêm no restore e o passo se cala pelo mesmo
+critério.
+
+**Workspace pessoal na MESMA transação** ([RN-410](#rn-410)). Este é o TERCEIRO
+ponto de criação de conta, e ele não ganha regra de nome/slug própria: chama a
+mesma `nomeESlugDoWorkspacePessoal` dos outros dois. Sem isso a instalação
+fecharia com um login que atravessa e um dashboard onde "Novo projeto" não tem
+onde criar — a metade do buraco que esta fase veio tapar, não a outra.
+
+**A extração, e por que não `BRABO_FORCE_SEED`.** `provisionarUsuario` recusa
+rodar com `NODE_ENV=production`, e o instalador roda exatamente em produção. O
+que a recusa protege está escrito no docblock dela: senha **conhecida** criada
+**sem interação humana**. A rota é outra categoria — a senha é escolhida por um
+humano no TTY, lida sem eco e confirmada, atrás do service token, e só quando
+não há usuário nenhum. Então o núcleo (o trio de escritas que faz a conta
+nascer verificada) virou `ProvisionarUsuarioUseCase`, e **a recusa ficou no
+script**, que é quem ela protege. Mandar o instalador se declarar "seed
+forçado" o faria atravessar uma regra que nunca falou dele, e afrouxaria a
+recusa justamente onde ela vale.
+
+**Uma régua de senha, não duas.** `exigirSenhaValida` do domínio, chamada pelo
+MESMO código que o registro chama — e por isso o DTO desta rota **não** repete
+um `@MinLength`: a chamada cobre as CINCO recusas da política, não só o
+comprimento. O `@MaxLength` fica, porque não é política: é proteção de
+argon2id, que copia a entrada antes de derivar. `PoliticaDeSenhaError` é
+`Error` de domínio e não tem filtro global, então o caso de uso **traduz** para
+`400` — sem isso o instalador leria "erro do servidor" onde a resposta certa é
+"escolha outra senha". Traduzir ali não toca o registro normal.
+
+**Kind próprio na trilha de auth.** `first_account_created`, e não
+`register_created`: a conta nasce verificada sem e-mail nenhum ter sido
+enviado, e quem audita depois precisa ver isso escrito, não deduzir pela
+ausência de um `email_verified` ao lado. União fechada no TypeScript, coluna
+`text` no banco — kind novo não custa migração.
+
+**Sem `GET`.** "Existe algum usuário?" é pergunta que ninguém precisa fazer de
+fora: o `POST` responde `201` ou `409`, e o `409` já é a resposta. Uma rota de
+leitura publicaria o mesmo fato com uma superfície a mais, e a resposta dela
+seria o sinal exato que um scanner quer.
+
+**A superfície nova está declarada, não escondida.** Passa a existir um segundo
+caminho de criação de usuário que funciona em PRODUÇÃO. Ele é estreito em três
+contagens independentes (primeira conta, rota interna, service token) e some
+assim que a instalação tem gente. Está no
+[`security-surface.md`](security-surface.md), nas Consequences do ADR e aqui.
+
+**Uma janela declarada, não fechada.** A checagem de "existe algum usuário" roda
+DENTRO da transação, mas `READ COMMITTED` não impede duas chamadas concorrentes
+com e-mails diferentes de passarem juntas. Fechá-la exigiria lock consultivo
+sobre a ausência de linhas, e não é onde a contenção mora: quem alcança a rota
+já tem o service token, ou seja, já controla a instalação inteira. O que a
+condição impede é a rota VIRAR superfície permanente de criação de conta, e
+isso ela impede.
+
+**O que NÃO entrou, por decisão do ADR:** rota pública de primeiro owner; senha
+gerada pelo código ou default (a senha nunca é gravada — nem no `.env`, nem no
+marcador, nem em log); SMTP ligado sozinho (`MAIL_TRANSPORT=log` continua o
+default declarado); credencial de LLM (é de quem vai gastar,
+[RN-058](business-rules/custo.md#rn-058)); e qualquer mudança no registro normal.
+
+- **Código:** `apps/api/src/application/use-cases/auth/criar-primeira-conta.use-case.ts`
+  (a recusa por instalação povoada, a régua de senha, o workspace pessoal e o
+  evento), `apps/api/src/application/use-cases/auth/provisionar-usuario.use-case.ts`
+  (o núcleo extraído, sem a recusa de produção),
+  `apps/api/src/scripts/provisionar-usuario.ts` (só a recusa, mais a
+  delegação), `apps/api/src/interfaces/http/internal/internal-first-account.controller.ts`,
+  `apps/api/src/interfaces/http/internal/dto/first-account-internal.dto.ts` e
+  `…/first-account-internal.response.dto.ts`,
+  `apps/api/src/application/ports/user-repository.port.ts` e
+  `apps/api/src/infrastructure/persistence/drizzle/user.repository.ts`
+  (`existeAlgumUsuario`), `apps/api/src/domain/auth/auth-event.ts`
+  (`first_account_created`),
+  `apps/api/src/domain/auth/password-policy.ts` (INTOCADO — é a régua reusada)
+- **Teste:** `apps/api/test/application/use-cases/auth/criar-primeira-conta.use-case.spec.ts`
+  (caminho feliz com conta verificada e workspace pessoal, o kind próprio, o
+  `409` com instalação povoada, o `400` por comprimento e o `400` por motivo
+  que NÃO é comprimento, e o fallback de nome);
+  `apps/api/test/interfaces/http/internal/internal-first-account.controller.spec.ts`
+  (o repasse ao caso de uso, o `nome` ausente virando `null`, e as três
+  recusas do guard: cabeçalho ausente, token errado, token certo);
+  `apps/api/test/scripts/provisionar-usuario.spec.ts` (a recusa de produção
+  FICOU no script, e a delegação);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada)
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md), que depende
+  do [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+
+## A chave de MÁQUINA que o instalador registra (RN-552)
+
+### RN-552 — Rota interna registra a chave de dispositivo de MÁQUINA, para o usuário ÚNICO da instalação, e registrar SUBSTITUI {#rn-552}
+
+Sessão 7 da [FASE 30](explanation/fase-30-runner-por-maquina.md), fechando o
+ponto 4 do [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) sobre a
+espécie de chave que o [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+criou. É a lacuna que a [RN-543](#rn-543) declarou por escrito e deixou aberta
+de propósito, pela régua do `DEPLOY_ENABLED`: *"nenhuma rota da api cria chave
+de máquina ainda; isso é o `install.sh`, e nasce com o primeiro chamador"*. O
+chamador chegou — é o instalador da sessão 6 —, então a rota nasce.
+
+**A rota.** `POST /internal/machine-device-keys`, `engine-service`. Corpo
+`{ name, publicKeyJwk }`, resposta `201` com
+`{ id, userId, name, createdAt, replacedKeyIds }`. Sem `GET` e sem `DELETE`.
+
+**A credencial é o SERVICE TOKEN, e a alternativa foi recusada por motivo
+escrito.** É o mesmo instalador, no mesmo minuto, no passo seguinte ao da
+[RN-546](#rn-546): o `BRABO_SERVICE_TOKEN` foi gerado pelo próprio `install.sh`
+e escrito no `.env` com modo `600`, então apresentá-lo prova controle da
+**máquina** — que é exatamente o que este passo quer provar. A candidata real
+do outro lado era a credencial do usuário recém-criado, e ela contraria o
+próprio ADR 0155: a senha é lida no TTY, *"usada e descartada"*, e o ponto 5
+declara que *"o instalador não faz login por ninguém"*, razão pela qual a
+resposta da primeira conta não devolve token de sessão. Exigi-la aqui obrigaria
+o instalador a criar, na máquina, a sessão viva que aquele ADR recusou criar.
+
+**O que essa escolha custa, declarado e não escondido.** Um
+`BRABO_SERVICE_TOKEN` vazado passa a poder **fabricar** uma credencial de
+acesso duradoura de um usuário — não só falar com as rotas internas. Está dito
+aqui, no [`security-surface.md`](security-surface.md) e no docblock do
+controller, ao lado da declaração irmã da primeira conta. O que a chave concede
+não aumentou: ela dá ao agente local exatamente os projetos que o dono dela já
+alcança em `developer`, resolvidos contra o projeto pedido ([RN-543](#rn-543)).
+
+**A rota não sabe escolher de quem é a chave.** **Não há `userId` no corpo.** O
+dono é o usuário ÚNICO da instalação, resolvido por
+`UserRepository.usuarioUnicoDaInstalacao()` (`LIMIT 2`, nunca `LIMIT 1`: com
+uma linha seria impossível distinguir "há exatamente um" de "há muitos"); com
+zero ou mais de um, `409` e **nada é escrito**. É o análogo exato da condição
+da [RN-546](#rn-546) — sobre a INSTALAÇÃO, nunca sobre o argumento pedido —, e
+é o que impede que quem tenha o token escolha a vítima. Consequência declarada:
+numa instalação com duas pessoas a rota não funciona mais, para ninguém. Ela se
+cala como a da primeira conta se cala, e pelo mesmo motivo — pertence ao
+MOMENTO da instalação, não à vida do produto.
+
+**Registrar SUBSTITUI, nunca acumula.** Toda chave de MÁQUINA ativa do dono é
+revogada na MESMA transação, e os ids voltam em `replacedKeyIds`. Uma máquina
+reinstalada é caso legítimo e continua passando; mil chaves de máquina viram
+impossíveis — e não por um número que envelhece, mas porque o conjunto de
+chaves de máquina vivas de um usuário nunca passa de uma. A revogação vem
+ANTES do registro: revogar depois deixaria uma janela com as duas vivas, e
+falhar no meio deixaria a instalação com duas credenciais de máquina e nenhuma
+forma de saber qual é a nova. Só as de MÁQUINA caem (`project_id IS NULL`): as
+de PROJETO vieram do navegador ([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md)),
+num fluxo que esta rota não conhece, e derrubá-las apagaria o pareamento de
+quem já usa o produto — o erro que a [RN-545](#rn-545) nomeou ao recusar
+converter instalação alheia em silêncio.
+
+**A resposta devolve o `id` porque ele vira o `kid`.** É a lição da
+[RN-475](#rn-475), a mais cara desta área: o id do registro vai gravado DENTRO
+da JWK privada, no `kid`, e a cadeia inteira só o REPASSA — o agente local lê
+`jwk.kid`, o JWT de ticket o leva no header, o `PatAuthGuard` acha a pública
+por ele. Ninguém deriva esse id de outra coisa, e foi por ele faltar que o modo
+automático do navegador nunca autenticou. O `userId` também volta, RESOLVIDO
+pela api: quem chama não o manda, e devolvê-lo deixa o instalador **conferir**
+contra a conta que acabou de criar em vez de supor.
+
+**A privada nunca viaja, e uma que chegue é RECUSADA.** O par é gerado na
+máquina e só a metade pública sobe — mesmo desenho do navegador, pelo mesmo
+motivo, mantendo verdadeira a frase que a [RN-519](#rn-519) usa. A validação de
+forma virou régua ÚNICA no domínio (`exigirJwkPublicaEd25519`), chamada pelos
+DOIS registradores: duas cópias divergiriam no primeiro dia em que uma delas
+mudasse, como a política de senha da [RN-546](#rn-546) já resolve. E ela ganhou
+um caso que nenhuma das duas tinha: JWK com **`d`** responde `400` dizendo o
+que chegou. `d` é a metade privada de uma JWK OKP (RFC 8037 §2) e só chega por
+engano de quem serializou o par inteiro — antes, ela passava na checagem (tem
+`kty`, `crv` e `x` como qualquer pública) e era **gravada**. Recusar é a
+resposta; a mensagem nomeia o que veio, porque um "JWK inválida" genérico faria
+a pessoa tentar de novo com o mesmo arquivo.
+
+**Kind próprio na trilha de auth.** `machine_device_key_registered`: esta é a
+única credencial duradoura de um usuário que nasce sem esse usuário autenticar
+nada — quem prova é o controle da máquina. Numa suspeita de vazamento do
+service token, é essa linha que diz quando e para quem ela foi criada, e o
+`metadata` carrega os ids que ela substituiu, nunca a JWK nem o nome.
+
+**Sem `GET` e sem `DELETE`, e o que isso custa.** Listar por aqui publicaria,
+para quem só tem o token da máquina, o inventário de credenciais de uma pessoa;
+revogar já existe onde tem dono humano
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, que casa por
+`{id, usuário}` e nunca por projeto). A assimetria tem preço, e ele está
+declarado: numa instalação que ainda não tem projeto, **tela nenhuma alcança
+uma chave de máquina** — e é justamente por isso que registrar SUBSTITUI em vez
+de deixar órfãs para trás, que seriam vivas e inalcançáveis.
+
+**O que NÃO entrou:** rota pública (mesma corrida da [RN-546](#rn-546));
+`userId` no corpo; chave de máquina para instalação com time (declarado acima
+como lacuna, não como acaso); tabela nova (uma chave de máquina continua sendo
+uma linha de `runner_device_keys` com `project_id NULL`, [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+ponto 1) — e **nenhuma migration**, porque a coluna já é nullable desde a
+[RN-543](#rn-543).
+
+- **Código:** `apps/api/src/interfaces/http/internal/internal-machine-device-keys.controller.ts:87`
+  (o `@Post()` da rota, e o docblock com a escolha de credencial),
+  `apps/api/src/application/use-cases/auth/registrar-chave-de-maquina.use-case.ts:122`
+  (o dono resolvido), `:124` (o `409`), `:136` (a substituição antes do
+  registro) e `:146` (`projectId: null`, o que faz dela uma chave de máquina),
+  `apps/api/src/domain/auth/jwk-de-dispositivo.ts:33` (a régua única) e `:59`
+  (a recusa da privada),
+  `apps/api/src/infrastructure/persistence/drizzle/user.repository.ts:31`
+  (`usuarioUnicoDaInstalacao`, `LIMIT 2`),
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:129`
+  (`revogarChavesDeMaquina`, os dois `IS NULL`),
+  `apps/api/src/domain/auth/auth-event.ts` (`machine_device_key_registered`),
+  `apps/api/src/interfaces/http/internal/dto/machine-device-key-internal.dto.ts`
+  e `…/machine-device-key-internal.response.dto.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/registrar-chave-de-maquina.use-case.spec.ts`
+  (caminho feliz com `projectId` nulo e dono resolvido; o `409` sem usuário
+  único, sem escrever nada; a substituição ANTES do registro; a privada
+  recusada antes de abrir transação; a trilha sem a JWK);
+  `apps/api/test/domain/auth/jwk-de-dispositivo.spec.ts` (a régua única, com o
+  `d` e a precedência da curva);
+  `apps/api/test/interfaces/http/internal/internal-machine-device-keys.controller.spec.ts`
+  (o contrato da resposta, o corpo SEM dono, e as três do guard);
+  `apps/api/test/infrastructure/persistence/drizzle/user.repository.spec.ts`
+  (um usuário devolve; dois devolvem `null`, nunca "o primeiro");
+  `apps/api/test/infrastructure/persistence/drizzle/runner-device-key.repository.spec.ts`
+  (a substituição contra o Postgres de verdade, e o que ela NÃO derruba);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada)
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4, sobre
+  a espécie criada pelo [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+
+## A unit de MÁQUINA, convivendo com as por projeto (RN-545)
+
+### RN-545 — `service install --machine` instala UMA unit para a máquina, e as duas espécies não se sobrepõem {#rn-545}
+
+A [RN-544](#rn-544) fez o agente de máquina existir como PROCESSO — N conexões,
+uma por projeto descoberto pela rota — e declarou por escrito o que faltava:
+*"a unit continua sendo POR PROJETO; este PR muda o PROCESSO, não o serviço"*.
+Esta RN é a outra metade, e é o quinto e último dos cinco acoplamentos que o
+[ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md) mediu
+(`apps/runner/src/servico.ts:264,391`). Os outros quatro já estão fechados ou
+declarados intocáveis: os itens 1, 2 e 3 descrevem uma CONEXÃO e N conexões os
+satisfazem byte a byte, e o item 4 fechou na [RN-543](#rn-543).
+
+**O nome da unit de máquina não pode colidir com `projectId` nenhum, e não
+colide por construção.** `brabo-runner.service` / `dev.brabo.runner`, sem
+sufixo, contra `brabo-runner-<projectId>.service` /
+`dev.brabo.runner.<projectId>`. `PROJECT_ID_VALIDO` exige **ao menos um
+caractere**, então o nome de projeto sempre tem um `-` (ou um `.` de separação,
+no launchd) onde o de máquina termina — os dois nunca produzem a mesma string.
+É travado por teste, e não por leitura da regex.
+
+**A camada de plataforma passa a ser chaveada por ESPÉCIE, não por
+`projectId`.** Seis dos oito membros de `PlataformaDeServico` recebiam
+`projectId: string`; eles passam a receber `AlvoDaUnidade`, um tipo discriminado
+(`{especie:'projeto', projectId}` | `{especie:'maquina'}`) — e nunca
+`projectId: string | null`, porque com o nulo cada membro decidiria sozinho o
+que fazer com ele e o compilador não cobraria nenhum. `PlanoDeInstalacao` vira
+união pelo mesmo motivo: os três campos do plano de projeto perdem sentido na
+máquina, onde não há projeto, não há `--dir` (cada raiz sai da base) e a api não
+pode vir de um arquivo que é por projeto. `caminhoDaUnidade` DESCEU de membro
+para função, porque as duas plataformas respondiam a mesma coisa — pasta mais
+nome — e manter duas implementações idênticas era a chance de elas divergirem
+quando a segunda espécie chegasse.
+
+**O discriminador é a flag `--machine`, e NUNCA a ausência de `--project`.** O
+ADR 0154 ponto 5 escreveu *"`service install` sem `--project` instala a unit de
+máquina"*, e isso foi medido nesta sessão e **não** pôde ser implementado ao pé
+da letra: `resolverProjeto` tem DUAS fontes, e o caminho normal de hoje é rodar
+`install` sem flag nenhuma de dentro da pasta que o navegador configurou — é o
+`brabo-runner.config.json` que responde. Tratar "sem `--project`" como "máquina"
+converteria em silêncio a instalação de quem já usa o produto, que é exatamente
+o que o ponto 5 do mesmo ADR promete não fazer. Então a espécie nova é **opt-in
+explícito**, as duas fontes de projeto ficam byte a byte, e `--machine` junto de
+`--project` é recusa nomeada em vez de precedência inventada.
+
+**`install --machine` recusa mais que a metade de projeto, e as duas recusas
+próprias são medidas.** A primeira: a pasta não pode ter
+`brabo-runner.config.json`. `lerArgumentos` resolve o `projectId` por esse
+arquivo quando `--project` falta, e o modo de máquina é justamente "sem
+`projectId`" — uma unit de máquina cujo `WorkingDirectory` tenha esse arquivo
+subiria o processo em modo de PROJETO, em silêncio, atendendo UM projeto e
+chamando-se agente da máquina. A segunda: sem **base consentida**
+([RN-529](#rn-529)) o agente de máquina sai em `uso()` no primeiro boot
+([RN-544](#rn-544)), e gravar um serviço que nunca sobe é a "instalação errada
+de pé" que este módulo recusa em toda parte — a base entra INJETADA
+(`DependenciasDeInstalacao.resolverBase`), como as outras quatro dependências,
+para que `servico.ts` continue sem ler disco nem ambiente por conta própria.
+
+**A unit congela `XDG_CONFIG_HOME`, e nunca o VALOR da base.** É a mesma decisão
+do `PATH` da [RN-518](#rn-518), com uma consequência maior: é essa variável que
+decide ONDE o arquivo da base mora (`base.ts`), e `systemd --user` não repassa o
+ambiente do shell de quem instalou — sem ela, um usuário com a variável apontada
+para fora de `~/.config` teria o serviço lendo a base errada, ou nenhuma. O
+valor da base fica fora de propósito: trocá-la continua sendo editar o arquivo e
+reiniciar, nunca reinstalar, que é o que o docblock de `base.ts` já defendia ao
+rejeitar "só a flag `--base`".
+
+**A `apiUrl` da unit de máquina lê `BRABO_API_URL`, e a de projeto não.** A
+precedência do plano de PROJETO fica byte a byte (`--api-url` › config daquela
+pasta › default), porque lá existe um arquivo respondendo. No de máquina esse
+arquivo é por projeto e não serve, então sem a variável a única alternativa a
+`--api-url` seria o default `localhost` — instalar de um shell com
+`BRABO_API_URL` posta geraria em silêncio uma unit apontando para o lugar
+errado. Ela entra no `ContextoDoServico` (`apiUrlDoAmbiente`), nunca lida
+diretamente do `process.env`.
+
+**`install` RECUSA quando a outra espécie já está instalada, e nada é
+removido.** O agente de máquina atende TODO projeto em modo `runner` do dono da
+chave; somar a ele uma unit por projeto (ou o contrário) põe dois processos
+disputando o mesmo `terminal:<projectId>`, e o servidor nega um dos dois —
+provavelmente o que a pessoa acabou de instalar, que é a pior ordem possível
+para descobrir o problema. É recusa pelo MESMO critério da recusa de root que já
+mora nesse arquivo: *"instalar e avisar deixaria a instalação errada de pé, e a
+mensagem seria lida uma vez só"*. A unit que já existe fica intacta, a mensagem
+nomeia o `uninstall` de cada uma, e **não há `--force`** — uma flag que derruba
+uma guarda cujo sintoma é silencioso devolve o sintoma silencioso. Isto NÃO
+contradiz o ponto 5 do ADR: o que ele garante é que unit por projeto já
+instalada continua funcionando, e ela continua, byte a byte; o que se recusa é
+criar a sobreposição AGORA.
+
+**`status` responde sobre a espécie perguntada, e os quatro estados não viram
+oito.** O código de saída continua sendo o da unit PERGUNTADA
+([RN-088](#rn-088)) — somar as duas apagaria qual delas está pedindo atenção, do
+mesmo jeito que somar as cinco filas de decisão apagaria qual fila é qual. A
+coexistência aparece em TEXTO, e é resposta do **DISCO**: as units da outra
+espécie são listadas pelo nome, sem perguntar o estado de cada uma ao
+gerenciador, e a saída DIZ que não perguntou. É o ponto 5 do ADR 0154 cumprido —
+*"deixar seis processos disputando três projetos em silêncio"* é o defeito que
+esse bloco existe para impedir. Sem `--machine` e sem projeto resolvível, o
+principal é a unit de **máquina** (a única cujo nome não precisa de argumento) e
+a saída nomeia `--project` para quem queria a outra; antes desta RN a mesma
+entrada respondia "precisa saber QUAL projeto", que é uma pergunta e não uma
+resposta para quem tem exatamente a instalação que o instalador produz.
+
+**`uninstall` NÃO herda esse default, e a assimetria é deliberada.** Ler a
+espécie errada custa uma linha errada; remover a espécie errada custa um serviço
+e uma chave de dispositivo. Sem `--machine` e sem projeto resolvível ele RECUSA,
+listando o que existe no disco com o comando exato de cada um — e nunca remove
+as duas, que seria remover mais do que foi pedido.
+
+**`Restart=on-abnormal` fica byte a byte, nas duas espécies.** Exit 1 é recusa
+fatal de join ou teto de tentativas esgotado, e reiniciar seria o laço que o CLI
+recusa fazer sozinho ([RN-514](#rn-514)). Mais: a RN-544 fez **lista vazia sair
+com 0** justamente para que `on-abnormal` não reerga o serviço numa instalação
+nova, onde não há o que atender — trocar por `on-failure` desfaria as duas
+decisões de uma vez.
+
+- **Código:** `apps/runner/src/servico.ts` (`AlvoDaUnidade`, `ALVO_DE_MAQUINA`,
+  `alvoDeProjeto`, `resolverEspecie`, `PlanoDeInstalacao` como união,
+  `caminhoDaUnidade`/`projetosInstalados`/`maquinaInstalada`,
+  `prepararPlanoDeProjeto`/`prepararPlanoDeMaquina`, `recusaDeSobreposicao`,
+  `linhasDoQueExiste`/`linhasDeCoexistencia`,
+  `ContextoDoServico.apiUrlDoAmbiente`,
+  `DependenciasDeInstalacao.resolverBase`, `SistemaDeServico.listarPasta`);
+  `apps/runner/src/servico-sistema.ts` (`listarPasta` sobre `readdirSync`);
+  `apps/runner/src/index.ts` (o adaptador de `resolverBase` sobre
+  `resolverBaseConsentida`, `apiUrlDoAmbiente`, o texto de uso)
+- **Teste:** `apps/runner/src/servico.spec.ts` — `service install --machine` (a
+  unit sem `--project`/`--dir`, a ausência de colisão de nome, o congelamento de
+  `XDG_CONFIG_HOME` sem o valor da base, o Label e o log do launchd, o
+  `BRABO_API_URL`) e as cinco recusas próprias (config de projeto na pasta, sem
+  base, base inválida, sem chave, `--machine` com `--project`); e as duas
+  espécies não se sobrepondo (recusa nos DOIS sentidos sem remover nada, o
+  `status` de cada lado dizendo da outra sem somar código nem perguntar ao
+  gerenciador, o `status` sem argumento caindo na máquina, o
+  `uninstall --machine` deixando a de projeto intacta, e o `uninstall` sem
+  espécie recusando e listando as duas)
+- **Lacuna DECLARADA:** o `install --machine` **não sabe** se a chave daquela
+  pasta é mesmo de máquina — em disco as duas espécies são o mesmo arquivo, uma
+  JWK com `kid` ([RN-475](#rn-475)), e quem sabe é o SERVIDOR
+  ([RN-544](#rn-544)). Uma pasta com chave de PROJETO instala a unit sem erro, e
+  a recusa aparece só no primeiro boot, como `CredencialNaoEDeMaquinaError`.
+  Verificar no `install` exigiria uma chamada de rede num subcomando que hoje
+  não faz nenhuma, e inventar um palpite local produziria a segunda fonte de
+  verdade que a RN-544 recusou. E, à época desta RN, ninguém CRIAVA chave de
+  máquina: quem registra é o `install.sh`
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4), na
+  sessão 6 — esta sessão entrega o subcomando que ele vai chamar, e a rota que
+  ele chama chegou na [RN-552](#rn-552)
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 4 —
+
+---
+
+## A tela reconhece um agente local de MÁQUINA já pareado (RN-548, FASE 30)
+
+### RN-548 — Com chave de MÁQUINA ativa, o painel do runner para de mandar parear e passa a dizer o que falta — sem nunca afirmar que o agente está de pé {#rn-548}
+
+Sessão 7 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md). É a metade de WEB da
+identidade de máquina: a [RN-543](#rn-543) fez a listagem de chaves marcar a
+ESPÉCIE (`projeto` | `maquina`) *"para que uma chave de máquina não ficasse
+invisível em toda tela"*, e ficou sem consumidor. Esta RN é o consumidor.
+
+**O defeito, medido.** `RunnerOnboardingPanel` é o painel que os TRÊS pontos de
+onboarding montam (`TerminalPanel`, `FolderBrowserModal` e o passo `workspace`
+do `NewProjectWizard`), e ele tinha uma pergunta só: *"configure a pasta"*.
+Com a chave de máquina do ADR 0154, essa pergunta passa a estar errada no caso
+mais comum — a máquina já foi pareada, o que falta é o agente estar rodando.
+Mandar a pessoa repetir o pareamento que a máquina já tem é o painel
+respondendo à pergunta errada, com um fluxo que termina no terminal dela.
+
+**Sete estados, e nenhum vira o outro
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)).** `semPapel`
+(não perguntamos),
+`verificando` (perguntamos e não voltou), `naoSei` (a pergunta falhou),
+`semChaveDeMaquina` (voltou e não há), `revogada` (houve e foi revogada),
+`pareadaNuncaUsada` (há chave ativa que agente nenhum usou — a ÓRFÃ da
+[RN-519](#rn-519) renascida na espécie nova) e `pareada`. **"Não sei" nunca
+vira "não tem"**, e os dois vazios têm textos diferentes porque o gesto é
+diferente: um pede parear, o outro explica por que o agente parou de conectar.
+A falha é derivada de `isError` e não de haver `status` — erro de rede não tem
+status, e derivá-la do status deixaria um `fetch` recusado girando em
+"verificando…" para sempre, que é mentira por omissão depois de dez segundos.
+`semChaveDeMaquina` é o único que renderiza NADA, e de propósito: o painel
+inteiro já É a resposta para "nenhuma máquina pareada".
+
+**Reconhecer NÃO é dizer que o agente está de pé, e a régua é a de sempre.**
+`workspaceVerifiedAt` é registro de uma confirmação e não batimento
+([RN-468](#rn-468)); chave registrada é a mesma coisa um passo antes — ela
+prova que a máquina foi pareada um dia, nunca que há processo vivo agora. Uma
+tela que confundisse as duas seria PIOR que a de hoje, porque a de hoje ao
+menos não mente. Por isso o tom do alerta é `accent` e nunca `success` (verde
+leria como "está de pé" — a mesma aritmética que `AmbienteDoProjeto` faz na
+linha do runner), a ressalva é dita em texto ao lado, e quem responde pelo
+AGORA continua sendo a `EsperaDoRunner` ([RN-474](#rn-474)), REUSADA e não
+reescrita: reconhecida a máquina, o que falta é o agente CONECTAR, que é
+exatamente a pergunta dela.
+
+**E há um segundo limite, que o dado impõe e nenhuma redação apaga: a lista é
+da CONTA, não deste navegador.** `runner_device_keys` não sabe de que máquina o
+navegador está falando, então o mais forte que a tela pode afirmar é *"sua
+conta tem uma máquina pareada"* — nunca *"esta máquina está pareada"*. É por
+isso que o fluxo do navegador
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)) **não é
+removido**: ele muda de LUGAR, para um `<details>` cujo rótulo nomeia o único
+caso em que ainda é a resposta ("estou em outra máquina"). Aposentá-lo é o
+`BRB-031`, decisão do mantenedor, e não consequência desta entrega.
+
+**A ESPÉCIE aparece, e o que aparece é o CUSTO dela.** O painel não lista
+chaves nem oferece revogação — isso é a tela que o web nunca ganhou, a metade
+aberta da RN-519, e é frente própria. O que
+ele diz é o que a espécie significa para quem lê: uma chave de máquina atende
+TODOS os projetos do dono em modo `runner`, e revogá-la derruba o agente local
+em todos eles ([RN-520](#rn-520), cujo alcance `{projeto, usuário}` não muda
+aqui). Sem essa frase, a marca da RN-543 seria decoração.
+
+**O papel é o do ENDPOINT, e a api é a autoridade.** O mínimo sai de
+`roleAtLeast` ([RN-102](business-rules/custo.md#rn-102)) contra `developer`, o
+que `RunnerDeviceKeysController` exige nas três rotas — a tela deixa de
+perguntar o que a api negaria, e diz por quê UMA vez em TEXTO (`title` em
+elemento `disabled` não abre no Chromium). Isso **não é fronteira de
+segurança**: quem recusa é o `RolesGuard`. O 403 de verdade cai no MESMO
+estado, e não é redundância — o papel lido é o de WORKSPACE e quem autoriza é
+o EFETIVO do projeto ([RN-471](#rn-471)), uma SOBREPOSIÇÃO nos dois sentidos:
+o proxy evita a pergunta obviamente perdida, a api corrige o proxy.
+
+**Onde aparece, e por que não é igual nos três montadores.** O reconhecimento é
+por PROJETO, porque a rota é `GET /projects/:projectId/runner-device-keys` —
+existe em `TerminalPanel` e `FolderBrowserModal`, que sempre têm projeto, e no
+`NewProjectWizard` só DEPOIS da criação antecipada ([RN-437](#rn-437)). Sem
+`projectId` não há a quem perguntar e o painel fica byte a byte como era. A
+diferença não é escolha de desenho: é a forma do endpoint.
+
+- **Código:** `apps/web/src/lib/agente-de-maquina.ts` (a derivação inteira —
+  `reconhecerAgenteDeMaquina`, `podeLerChavesDeDispositivo`,
+  `maquinaJaPareada`), `apps/web/src/components/RunnerOnboardingPanel.tsx:173`
+  (as duas consultas e o `ReconhecimentoDeMaquina`),
+  `apps/web/src/components/RunnerOnboardingPanel.module.css`
+  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:421`
+  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:644`
+  (`RunnerDeviceKeyListItem`, `RunnerDeviceKeyEspecie`),
+  `apps/web/src/locales/{en,pt-BR}/terminal.json` (`agenteDeMaquina.*`)
+- **Teste:** `apps/web/src/lib/agente-de-maquina.test.ts` — o caminho feliz
+  (ativa e usada, com o uso MAIS RECENTE entre N) e os sete estados sem
+  colapso, inclusive a falha SEM status e a chave de PROJETO que NÃO conta;
+  `apps/web/src/components/RunnerOnboardingPanel.test.tsx` — o painel
+  anunciando o pareamento com o gesto do serviço e o fluxo do ADR 0118
+  recolhido e ainda alcançável, as duas ressalvas ("não é agente rodando",
+  "é da sua CONTA") mais a do alcance, a chave REVOGADA voltando a mandar
+  parear, a consulta falhada dizendo que não sabe, o papel abaixo de
+  `developer` sem chamar a rota, e o wizard sem `projectId` sem a quem
+  perguntar
+- **Lacuna DECLARADA, FECHADA depois pela [RN-552](#rn-552):** quando esta RN
+  fechou, ninguém CRIAVA chave de máquina (era o `install.sh`, ADR 0155 ponto
+  4, sessão 6), então esta tela só era exercitável com uma chave registrada à
+  mão — a mesma metade que as RN-543 e RN-544 já declaravam. O comando que o painel oferece é
+  `brabo-runner service status --project <id>`, a forma que existe HOJE; a
+  forma por máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa
+  NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
+  à parte. E o web continua sem TELA onde listar ou revogar chave de
+  dispositivo (a metade aberta da [RN-519](#rn-519)) — esta entrega consome a
+  listagem e não a constrói. **FECHADA depois pela [RN-561](#rn-561)**, que a
+  constrói: a seção de Configurações reusa `podeLerChavesDeDispositivo` daqui
+  e a MESMA `queryKey`, e por isso revogar por lá invalida o reconhecimento
+  deste painel
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 7 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+---
+
+## O agente de máquina espera o primeiro projeto, e a chave nasce no terminal (RN-550/551, FASE 30)
+
+### RN-550 — Com ZERO conexões o agente local NÃO sai: ele espera e reconsulta a lista; com conexão viva a consulta continua sendo só no start {#rn-550}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md). A
+[RN-544](#rn-544) fez lista vazia ser estado NORMAL e o processo sair com **0**,
+dizendo *"crie um projeto em modo Runner e suba o agente de novo — a lista é
+consultada só no start"*. Isso contradizia, por escrito, o
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 5 — *"ele
+**espera**… quando a pessoa criar o primeiro projeto na web, o agente já está
+lá"* — e quebrava exatamente o caso que a fase persegue: a instalação nova, que
+é a instalação com ZERO projetos. O instalador subia o agente, o agente
+descobria que não havia nada e ia embora, e a pessoa que criasse o primeiro
+projeto minutos depois voltaria ao terminal sem nunca ter sido avisada disso.
+
+**A regra é ASSIMÉTRICA, e a assimetria é o desenho:**
+
+```
+conexões > 0  →  a lista é consultada SÓ no start   (a RN-544 fica byte a byte)
+conexões = 0  →  reconsulta, com cadência declarada
+```
+
+**E ela NÃO desfaz a decisão da RN-544.** O argumento daquela sessão continua
+inteiro: uma lista que volta **MENOR** é ambígua — projeto apagado, convertido
+de modo, papel revogado, ou um 500 transitório se disfarçando dos três —, e
+derrubar uma conexão **VIVA** por causa dessa ambiguidade trocaria um estado
+certo por um palpite. Com **zero** conexões não há nada a derrubar e não há
+ambiguidade nenhuma: qualquer projeto que apareça é ganho puro, e nenhuma
+decisão é tomada sobre o que sumiu. A reconsulta **PARA** no instante em que a
+primeira lista não-vazia chega, e daí em diante o comportamento é byte a byte o
+de hoje — o módulo da espera não é chamado de novo enquanto o processo viver.
+
+**O argumento do `exit 0` caiu porque a premissa dele caiu.** A RN-544 escreveu
+que *"ficar de pé com zero conexões seria um serviço 'ativo' que não faz nada, e
+o `status` da unit passaria a mentir"* — e isso dependia de o processo não fazer
+nada. É essa premissa que esta RN remove: ele reconsulta, com cadência
+declarada, e DIZ que está fazendo isso. `active (running)` passa a ser
+verdadeiro, e quem mentia era a saída com 0, que deixava a instalação nova sem
+agente justamente no minuto em que a pessoa ia criar o primeiro projeto.
+
+**A cadência escalona e ESTABILIZA: 15s, 30s, 60s, e o último se repete para
+sempre.** Os dois degraus curtos existem porque o caso a atender é o de alguém
+criando o primeiro projeto AGORA; um teto de minutos faria o agente aparecer
+depois de a pessoa desistir de olhar. O platô de 60s é o preço em regime — UMA
+requisição por minuto, de uma instalação, contra uma rota que devolve a lista do
+próprio dono da credencial. Crescer além disso economizaria tráfego que ninguém
+está pagando e pioraria a única coisa que a espera entrega.
+
+**Há teto, e ele é de FALHAS, nunca de espera.** Esperar não tem limite —
+esperar é o estado normal de uma instalação nova, e pode durar dias. O que tem
+teto são as falhas **SEGUIDAS** da consulta: dez, e então o processo sai com 1
+NOMEANDO o número, como o laço de conexão já faz com
+`TETO_DE_TENTATIVAS_SEGUIDAS` e pelo mesmo motivo (não martelar a api para
+sempre quando o problema não é transitório). Uma consulta que RESPONDE zera o
+contador — inclusive quando responde VAZIO, que é sucesso, porque a lista vazia
+é a resposta certa. A constante é SEPARADA de propósito, com o mesmo valor: uma
+conta falhas de CONECTAR e a outra, falhas de LISTAR, e amarrá-las faria uma
+mudança de cadência de conexão mexer, sem ninguém pedir, no tempo que uma
+instalação nova espera antes de desistir. `CredencialNaoEDeMaquinaError` (o 403
+por espécie de chave, [RN-544](#rn-544)) **não** entra no teto: ela é fatal na
+hora, porque uma chave de projeto não vira chave de máquina por esperar mais um
+minuto.
+
+**Ficar de pé em silêncio seria pior que sair.** "Esperando" e "travado" são a
+mesma imagem para quem lê `journalctl`, então o processo diz a cadência ao
+entrar na espera, diz quando o primeiro projeto aparece, e bate um BATIMENTO a
+cada 30 consultas (meia hora, no platô) informando **quantas** consultas já
+houve. Nem toda consulta vira linha, também de propósito: um log por minuto,
+para sempre, é o ruído que enterra as linhas que importam.
+
+**`Restart=on-abnormal` fica byte a byte, nas DUAS espécies de unit
+([RN-545](#rn-545)), e nada nelas muda.** Medido: `on-abnormal` reergue por
+SINAL, watchdog ou timeout — nunca por código de saída, nem 0 nem 1. A saída
+com 0 nunca foi o que impedia o serviço de ser reerguido; o que impedia é que
+`on-abnormal` não olha código nenhum. O efeito real da mudança é o oposto do
+temido: a unit de MÁQUINA, que é a que roda este modo, passa a ficar
+`active (running)` de verdade em vez de terminar em `inactive (dead)` segundos
+depois de subir — e `service status --machine` passa a responder `rodando` (0)
+onde antes respondia `parado` (3) numa instalação nova. A unit por PROJETO não
+é afetada em linha nenhuma: ela roda o modo `projeto`, que nunca chega aqui.
+
+**Uma exceção, declarada: lista NÃO-vazia cujos projetos são todos recusados
+continua saindo com 1.** Também são zero conexões, e mesmo assim não espera —
+porque ali cada recusa nomeia um defeito local concreto (segmento que escapa da
+base, pasta que é um arquivo) com conserto próprio, e reconsultar repetiria as
+mesmas recusas indefinidamente, enterrando no log a linha que diz o que
+consertar. A espera é para *"ainda não existe projeto"*, nunca para *"existe e
+eu não consigo atendê-lo"*.
+
+- **Código:** `apps/runner/src/espera-de-projetos.ts:127`
+  (`esperarPrimeiroProjeto`), `:60` (`CADENCIA_DA_ESPERA_MS`), `:75`
+  (`TETO_DE_FALHAS_DE_CONSULTA`), `:88` (`CONSULTAS_POR_BATIMENTO`);
+  `apps/runner/src/index.ts:1465` (a espera dentro de
+  `rodarComoAgenteDeMaquina`, e a exceção dos recusados logo abaixo)
+- **Teste:** `apps/runner/src/espera-de-projetos.spec.ts` — o caminho feliz
+  (espera, reconsulta, devolve a primeira lista não-vazia e PARA ali), a
+  cadência que estabiliza, o batimento a cada N consultas, o teto de falhas
+  seguidas com o número na mensagem, a resposta no meio ZERANDO o contador, o
+  403 de espécie subindo intacto e o SIGTERM devolvendo `parado`;
+  `apps/runner/src/index.spec.ts` — a JUNÇÃO no PROCESSO de verdade, contra uma
+  api de mentira que devolve `[]`: o processo DIZ que fica de pé e **não
+  termina**, que era o defeito
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 5
+- **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+### RN-551 — `brabo-runner device-key create`/`finish`: o par Ed25519 nasce NA MÁQUINA, a privada nunca viaja, e o arquivo que o runner lê nunca existe sem `kid` {#rn-551}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md), a outra
+metade. Até aqui, **só o navegador** gerava par de chaves de dispositivo
+(`apps/web/src/lib/runner-bootstrap.ts`, [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md),
+[RN-464](#rn-464)); o CLI só sabia **ler** o que alguém tinha posto na pasta
+(`device-key.ts`). O [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 4 pede o outro lado: *"o par é gerado **na máquina**; a privada nunca
+viaja… mantém verdadeira a frase que a RN-519 usa para recusar a visão de
+`maintainer`: 'a privada de uma chave de dispositivo nunca sai do navegador' —
+passa a ser 'nunca sai da máquina'"*. Sem isso, a [RN-543](#rn-543), a
+[RN-544](#rn-544) e a [RN-545](#rn-545) continuavam todas com a mesma lacuna
+declarada: **ninguém cria chave de máquina**.
+
+**São DOIS passos, e o motivo é o `kid`.** O `kid` gravado dentro da JWK privada
+É o id do registro no servidor ([RN-475](#rn-475)) — a cadeia inteira só o
+REPASSA (o runner lê `jwk.kid`, o JWT o leva no header, o `PatAuthGuard` acha a
+pública por ele), e ninguém o deriva de outra coisa. Ele só existe **depois** de
+a pública ser registrada, e uma privada gravada antes disso nasce inútil, que é
+literalmente o defeito que a RN-475 custou uma caçada para achar. O navegador
+resolve mantendo o par em MEMÓRIA entre o registro e a gravação; o CLI resolve
+com um arquivo **PARCIAL**:
+
+```sh
+PUB=$(brabo-runner device-key create)          # gera aqui, imprime a PÚBLICA
+ID=$(… registra PUB na api …  | jq -r .id)     # quem registra é o instalador
+brabo-runner device-key finish --id "$ID"      # carimba o kid e grava
+```
+
+**Em nenhum instante existe um `brabo-runner-device-key.jwk.json` sem `kid`.** O
+`create` grava em `…jwk.json.parcial`, um nome que `lerChaveDeDispositivo` não
+procura; o `finish` carimba e grava o nome de verdade. O arquivo que o runner LÊ
+ou está completo ou não existe, e uma interrupção entre os dois passos deixa um
+`.parcial` que o runner IGNORA e que o próximo `create` NOMEIA — dizendo que o
+registro daquela tentativa pode ter ficado ÓRFÃO, que é inerte e aparece na
+listagem da [RN-519](#rn-519).
+
+**O CLI NÃO fala com a api, e a razão é de SEGREDO, não técnica.** Quem registra
+a chave de máquina é o instalador, autenticado pelo `BRABO_SERVICE_TOKEN` que
+ele acabou de gerar ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 1). Fazer o `brabo-runner` chamar a rota exigiria pôr esse token na mão
+dele — um segredo de INSTALAÇÃO, que abre rotas internas, entregue a um processo
+que hoje só vê credencial de dispositivo e que fica de pé para sempre na máquina
+do usuário. O corte é o oposto: **cada lado guarda exatamente um segredo, e
+nenhum vê o do outro**. O que atravessa a fronteira entre eles é a JWK PÚBLICA e
+o id — nada que precise ser protegido.
+
+**O destino padrão é a pasta de configuração da máquina, e a precedência é
+REUSADA.** `$XDG_CONFIG_HOME/brabo/` (senão `~/.config/brabo/`), ao lado do
+`runner.json` da [RN-529](#rn-529) e pelo mesmo motivo — é configuração da
+MÁQUINA, e uma chave de máquina não tem pasta de projeto onde morar.
+`pastaDeConfiguracaoDoBrabo` foi EXTRAÍDA de `caminhoDoArquivoDeBase` quando
+ganhou o segundo consumidor, nunca copiada. Isso **não** reabre a porta que a
+Onda 2 do [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+fechou (credencial em caminho global e IMPLÍCITO): `device-key.ts` continua lendo só do `cwd` que o chamador
+passar, e quem aponta para esta pasta é o `--dir` da unit de máquina
+([RN-545](#rn-545)), explicitamente, escrito no serviço. `--dir` existe e serve
+também a uma pasta de projeto — em disco as duas espécies são o mesmo arquivo, e
+quem sabe a diferença é o SERVIDOR ([RN-544](#rn-544)): este comando não afirma
+espécie nenhuma.
+
+**A privada é gravada com modo 600, explícito, e nunca deixado ao `umask`.** A
+pasta nasce 700 quando é ESTE comando que a cria; uma pasta que já existia é do
+usuário (pode ser a que o navegador configurou) e não é reapertada. O `--dir`
+passa pela MESMA `validarDirDentroDoHomeNoLinux` da [RN-434](#rn-434), reusada
+inteira: o que se grava é um segredo do usuário, e uma pasta fora do `$HOME`
+dele não é onde o `systemd --user` dele vai procurar.
+
+**O stdout carrega UM valor, numa linha, e todo o resto é stderr.** É esse o
+contrato de que o `install.sh` depende (`PUB=$(…)`): misturar as duas coisas
+obrigaria o script a filtrar saída de humano, que é como um contrato se quebra
+sem ninguém perceber. No `create` o stdout é a JWK pública; no `finish`, o
+CAMINHO do arquivo — o valor que o passo seguinte (`service install --machine
+--dir <pasta>`) precisa.
+
+**Sobrescrever chave completa é RECUSADO, e não há `--force`.** Trocar a chave
+de uma máquina já pareada trocaria a identidade de um agente que pode estar de
+pé AGORA, em silêncio: a pública continuaria registrada e o processo passaria a
+assinar com uma chave que ninguém conhece. A recusa nomeia o gesto (revogar,
+apagar, recriar), e uma flag que derruba uma guarda cujo sintoma é silencioso
+devolveria o sintoma silencioso.
+
+- **Código:** `apps/runner/src/criar-chave-de-dispositivo.ts:202`
+  (`criarChaveDeDispositivo`), `:275` (`finalizarChaveDeDispositivo`), `:82`
+  (`SUFIXO_PARCIAL`), `:177` (`resolverDestino`); `apps/runner/src/base.ts:85`
+  (`pastaDeConfiguracaoDoBrabo`, extraída);
+  `apps/runner/src/index.ts:1280` (o despacho antes de `lerArgumentos`, e a
+  separação stdout/stderr)
+- **Teste:** `apps/runner/src/criar-chave-de-dispositivo.spec.ts` — o caminho
+  feliz ponta a ponta (a pública no stdout, o parcial em 600, o `finish`
+  carimbando, e a chave resultante lida por `lerChaveDeDispositivo` e ASSINANDO
+  um JWT de ticket de verdade), o `--dir`, e as recusas: `finish` sem `create`,
+  sem `--id`, com `--id` colado do JSON inteiro, chave completa já no lugar
+  (nos dois comandos), parcial que não é a JWK, subcomando desconhecido e o
+  aviso de órfão; `apps/runner/src/index.spec.ts` — a JUNÇÃO no processo de
+  verdade: `device-key create` roda numa pasta SEM credencial nenhuma, e o
+  stdout contém só a JWK pública
+- **Lacuna DECLARADA, e FECHADA nas duas metades:** quem REGISTRA a pública
+  não existia neste repositório quando esta RN fechou — a rota chegou na
+  [RN-552](#rn-552) e o `install.sh` que encadeia os dois comandos, na
+  [RN-547](#rn-547). O contrato que este comando assume é o que a rota de
+  chave de PROJETO já tem (`{ name, publicKeyJwk }`, com `publicKeyJwk` sendo o
+  JSON da JWK pública Ed25519 — `kty` "OKP", `crv` "Ed25519", `x` — e resposta
+  com `id`), e é isso que o stdout do `create` produz: uma linha nesse formato.
+  O comando também **não** escolhe o `name` do dispositivo, de propósito — ele é
+  campo do registro, e quem nomeia é quem registra
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4
+- **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+---
+
+## O `install.sh` fecha a instalação (RN-547, FASE 30)
+
+### RN-547 — O instalador cria a primeira conta, registra a chave desta máquina e sobe o agente como serviço — e o que falha no meio é RELATADO, nunca desfeito nem engolido {#rn-547}
+
+Sessão 6 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md). A sessão tocaria
+três workspaces de uma vez e foi **dividida em três**: as duas peças do agente
+e da api já fecharam ([RN-546](#rn-546), [RN-551](#rn-551), [RN-552](#rn-552),
+sobre a unit da [RN-545](#rn-545)), e o que sobrou aqui é o `install.sh` como
+**orquestrador e nada mais** — nenhuma linha de `apps/` foi tocada, e nenhuma
+rota nasceu.
+
+**O buraco que fecha.** Uma instalação nova terminava dizendo "Pronto" com um
+login que NINGUÉM atravessava: o `.env` gerado não tem variável de e-mail
+nenhuma, `MAIL_TRANSPORT` cai no default `log`, e o registro normal exige
+verificar e-mail. A única saída era pescar o link em
+`docker compose logs api`. E o agente local ficava instalado sem credencial,
+esperando que alguém voltasse ao navegador para parear uma pasta.
+
+**A cadeia, e cada elo já existia.** `POST /internal/first-account`
+([RN-546](#rn-546)) → `brabo-runner device-key create` ([RN-551](#rn-551)) →
+`POST /internal/machine-device-keys` ([RN-552](#rn-552)) → `device-key finish
+--id <id>` → `brabo-runner service install --machine`
+([RN-545](#rn-545)). O `id` que a api devolve no registro é o que vira o `kid`
+da privada, e a cadeia inteira só o REPASSA — ninguém o deriva de outra coisa
+([RN-475](#rn-475)). O `--dir` do serviço sai do CAMINHO que o `finish`
+imprimiu, não de uma segunda conta do script sobre onde a pasta de configuração
+fica.
+
+**O que acontece quando um elo do meio falha: nada é desfeito, tudo é
+RELATADO, e o script sempre sai 0.** É a decisão desta entrega, e o argumento é
+que os elos já cumpridos são úteis por si — com a conta criada a pessoa entra,
+com a chave registrada a máquina está pareada, e o serviço é o único passo que
+ela repete à mão com um comando que o script imprime. Desfazer exigiria apagar
+conta e revogar chave, e não há rota para isso nem deveria haver uma que o
+instalador chame sozinho. O preço é que uma instalação pode terminar pela
+metade; o que ela nunca faz é terminar pela metade em SILÊNCIO — cada falha
+vira uma linha nomeada num bloco **"O que ficou pendente"**, no fim, onde quem
+instalou ainda está olhando. Derrubar a instalação inteira por causa do último
+passo trocaria meia instalação por nenhuma.
+
+**Idempotência é o CÓDIGO HTTP, e `409` não é falha.** As duas rotas respondem
+`409` quando a instalação já tem gente — uma segunda execução, ou uma migração
+([RN-530](#rn-530)) cujo restore trouxe os usuários. Esse é o desfecho
+ESPERADO: o passo se cala dizendo por quê, e **não** entra nas pendências.
+Qualquer outro código é falha, e aparece com o código e a resposta da api ao
+lado. `000` — o curl que não chegou a falar com a api — tem tratamento próprio
+pelo mesmo motivo: colapsá-lo com um código de resposta faria "a api não subiu"
+ser lida como "a api recusou". E o passo do agente só roda quando ESTA execução
+criou a conta: com usuário preexistente, registrar uma chave de máquina
+cunharia credencial duradoura para alguém que não pediu nada nesta rodada.
+
+**A senha não toca disco nem `argv`.** Lida no TTY sem eco (`stty -echo`, com o
+modo do terminal restaurado no fim), confirmada, e enviada à api pelo **STDIN**
+do `curl` — nunca por `--data` em linha de comando, que `/proc/<pid>/cmdline`
+publica para qualquer usuário da máquina, e nunca por arquivo. O cabeçalho com
+o `BRABO_SERVICE_TOKEN` vai num `--config` de modo 600, apagado em seguida: ele
+é segredo também, e esse segredo já mora em disco, no `.env`, com o mesmo modo.
+Sem `stty` na máquina o passo é **recusado**, nunca degradado para perguntar
+com eco — prometer sem eco e entregar com eco é pior que não perguntar. A senha
+não vai para o `.env`, não vai para o marcador e não vai para log nenhum; o
+marcador ganha o **e-mail**, que identifica e não é segredo, e o
+`MARCADOR_SCHEMA` sobe para **3** junto com o campo, pela mesma régua que o fez
+subir para 2 ao ganhar a `versao`.
+
+**A recusa de senha é repetível, e o teto é 3.** A política é a do domínio
+([RN-546](#rn-546)), a mesma do registro normal, e só é conhecida DEPOIS do
+POST. Abortar a instalação ali deixaria alguém com o compose de pé e a segunda
+execução caindo no caminho de migração — então o laço é do par
+pergunta+resposta, e esgotar o teto vira pendência nomeada em vez de recusa.
+Senha digitada diferente da confirmação não chega a sair da máquina.
+Tabulação no que foi digitado é **recusada** e nunca removida em silêncio: um
+instalador que reescreve a senha produz uma conta cuja senha não é a que a
+pessoa digitou.
+
+**A recusa do `service install --machine` é o caso COMUM numa máquina de
+desenvolvedor, e ela chega com as palavras dela.** `install --machine` recusa
+quando há unit por PROJETO instalada, sem `--force` ([RN-545](#rn-545):
+*"instalar e avisar deixaria a instalação errada de pé"*). O instalador
+repassa a saída do CLI INTEIRA em vez de resumi-la — é ela que nomeia o
+`uninstall` de cada unit encontrada, que é o gesto — e a pendência carrega o
+comando exato para repetir depois.
+
+**O `name` da chave é o `hostname`, e a escolha é deste script.** A
+[RN-551](#rn-551) declara por escrito que o CLI **não** nomeia: o `name` é
+campo do registro, e quem nomeia é quem registra. Quem abrir a lista de chaves
+de dispositivo precisa saber a QUAL máquina ir, e o hostname é o nome que a
+pessoa já usa para falar das máquinas dela — é o que o prompt do shell mostra.
+Não é segredo, não é único, e a api não deriva nada dele. Aspa e barra saem
+(sairiam do lugar dentro do JSON), o corte é em 80 (o `@MaxLength(80)` do DTO,
+aplicado aqui para a recusa não vir da api) e a ausência total de `hostname` e
+`uname` devolve um nome fixo — vazio viraria `400` pelo `@MinLength(1)`, depois
+de a conta já existir.
+
+**O `.parcial` que sobra quando o registro não fecha FICA onde está, e é
+nomeado.** O `create` grava a privada num arquivo com sufixo `.parcial` que o
+runner ignora por construção ([RN-551](#rn-551)), e se o registro falhar ele
+sobra. Apagá-lo seria o instalador decidir que sabe algo que não sabe: um
+timeout depois de a api gravar é indistinguível de um timeout antes, e o
+arquivo pode ser a única cópia da metade privada de uma chave já registrada. Ele
+é inerte, o próximo `device-key create` o nomeia e o substitui, e a mensagem
+diz as duas coisas.
+
+**O que este script NÃO faz, e agora diz certo.** A última linha da saída
+anunciava, meses depois de as funções existirem, que ele *"não pareia o agente
+local"* e que a chave *"continua vindo da tela do projeto"*. O texto foi
+reescrito: SMTP continua desligado por decisão (`MAIL_TRANSPORT=log`, aqui como
+em produção — e a conta criada nasce verificada justamente por isso), credencial
+de LLM continua sendo de quem vai gastar
+([RN-058](business-rules/custo.md#rn-058)), e o pareamento pela tela do projeto
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+continua existindo para quem quiser — o que mudou é que ele deixou de ser
+obrigatório. O `--help` sofria do mesmo defeito num lugar que nenhum teste
+alcançava (ele imprime o CABEÇALHO, que é comentário, e a regra que proíbe falar
+de "sessões de fase" só lia linhas de código): ele dizia *"ESTA VERSÃO NÃO
+INSTALA NADA"*. Corrigido, e o intervalo fixo de linhas que o cortava em
+silêncio virou "até a primeira linha que não é comentário".
+
+**O que NÃO entrou:** rota nova de qualquer espécie (a sessão é orquestração —
+se faltasse algo do outro lado, o gesto era parar e relatar); SMTP; credencial
+de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
+TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
+existia, antes de qualquer escrita.
+
+- **Código:** `install.sh:966` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:769` (`perguntar_e_criar_a_conta`, o consentimento, o laço e o
+  teto), `:866` (`parear_esta_maquina`, o `id` virando `--id`), `:942`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:682`
+  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600), `:704`
+  e `:727` (os vereditos das duas rotas), `:747` (`ler_sem_eco`), `:661`
+  (`nome_da_maquina`), `:929` (`avisar_chave_parcial`), `:640`/`:647`
+  (`escapar_json`/`sem_controle`), `:79` (`MARCADOR_SCHEMA=3`), `:1280` (a
+  chamada, depois do runner e antes do marcador), `:1291` (o `ownerEmail`)
+- **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
+  rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
+  de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o
+  caminho feliz da conta (corpo, service token e senha chegando), `409`/`400`/
+  `500`/sem-resposta com vereditos DIFERENTES, o laço de senha e o teto de 3, a
+  ordem `create → registrar → finish → service install` com o `--id` sendo o
+  `id` da api, a recusa do `service install` repassada com as palavras dela, o
+  `.parcial` que fica quando o registro falha, o `create` que recusa sem nada
+  ser registrado, e o fechamento sem binário do agente; `scripts/dev/install.spec.ts`
+  (o plano imprimível, e o `--help` que deixou de mentir)
+- **Lacuna DECLARADA:** a instalação de ponta a ponta numa máquina limpa —
+  compose de verdade, api de verdade, binário do runner de verdade, unit escrita
+  e agente esperando o primeiro projeto — é o **E2E** da sessão 8 da fase, e só
+  ele pode provar. Aqui o `brabo-runner` é um dublê de shell e a api é um
+  servidor de teste; o que se prova é o ENCADEAMENTO, nunca a integração. E o
+  fluxo principal do `install.sh` (verificar a própria origem contra o
+  `checksums.txt` assinado) continua sem cobertura, pelo motivo que
+  `install.spec.ts` já registrava: nenhuma Release tem esse asset até a próxima
+  tag final
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+- **Origem:** FASE 30, sessão 6 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+### RN-549 — O E2E em máquina limpa prova a instalação INTEIRA: os cinco elos, o agente de pé esperando, e o primeiro projeto pego sem ninguém voltar ao terminal {#rn-549}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md), a última — e a
+única que podia responder a pergunta que a fase inteira persegue: *numa máquina
+limpa, o `install.sh` termina com o agente local de pé e pareado, e a pessoa cria
+o primeiro projeto em modo Runner sem voltar ao terminal?* Até aqui a resposta era
+uma intenção escrita: a [RN-547](#rn-547) encadeou os cinco comandos e declarou,
+por escrito, que nos testes dela o `brabo-runner` é um dublê de shell e a api é um
+`node:http` — *"o que se prova é o ENCADEAMENTO, nunca a integração"*.
+
+**O harness não nasceu aqui: ele foi ESTENDIDO.** `.github/workflows/install-e2e.yml`
+existe desde a FASE 29 ([RN-534](#rn-534)) e já roda o instalador publicado num
+runner efêmero do Actions — que é literalmente uma máquina limpa, sem Brabo, sem
+`.env`, sem marcador. O que ele provava parava no `.env`: plano, estado, as três
+promessas de nunca apagar, o caminho sem TTY, e a subida com TTY simulado. Um
+segundo workflow duplicaria o lado caro (esperar a Release, baixar, verificar
+assinatura) para medir o lado barato.
+
+**Ele NÃO roda em `pull_request`, e a consequência é declarada em vez de
+escondida.** O instalador verifica a própria origem contra o `checksums.txt`
+**assinado** de uma Release ([RN-526](#rn-526)), que só existe depois de uma tag
+final; a única forma de fazê-lo rodar em PR seria dar-lhe uma porta para PULAR a
+verificação — a porta que o [ADR 0150](adr/0150-instalador-de-uma-linha.md)
+recusa, e que uma vez aberta valeria para qualquer um, não só para o CI. Logo: **o
+PR que escreveu este E2E não o executou**, e os checks dele passaram sem exercitar
+uma linha do que ele acrescentou. É a mesma decisão do golden-set do RAG
+([ADR 0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)), pelo mesmo motivo.
+
+**Daí a metade que RODA em PR, e é a razão de ela existir.** Workflow que só roda
+em tag é workflow cujo erro aparece na tag, quando o release já está saindo e
+ninguém olha mais o PR que o quebrou. `scripts/dev/install-e2e.spec.ts` mede as
+duas maneiras conhecidas de este E2E apodrecer calado: alguém **afrouxar** o gate
+(pôr `pull_request` no gatilho, ou passar uma flag de pular verificação), e alguém
+**reescrever uma frase** do `install.sh` — com o que todo `grep` do workflow passa
+a não casar nada, e as asserções não falham, elas SOMEM. O canário de prompts é
+derivado, não decorado: as respostas do TTY vão por arquivo, **em ordem**, e um
+`read -r` novo no instalador desalinha todas as seguintes — a base viraria a
+senha —, então o teste conta os prompts e manda olhar o arquivo de respostas.
+
+**O que o E2E passou a provar, e cada asserção tem um dono.** Os cinco elos da
+[RN-547](#rn-547), um a um, contra api e binário de VERDADE — a conta
+([RN-546](#rn-546)), o par gerado na máquina e o `kid` carimbado
+([RN-551](#rn-551)), o registro da pública ([RN-552](#rn-552)) e a unit por
+máquina ([RN-545](#rn-545)). Mais o invariante da [RN-475](#rn-475) medido no
+DISCO e não na saída (o arquivo que o runner lê tem `kid`, tem `d`, e o
+`.parcial` sumiu quando o `finish` fechou), a senha ausente do `.env`, do
+marcador e do log, e o `ownerEmail` presente no marcador.
+
+**A prova NEGATIVA é a que mais vale, e é a ausência do bloco de pendências.** A
+[RN-547](#rn-547) manda relatar cada elo que falha num bloco final nomeado — e
+sair **0** do mesmo jeito. Um E2E que olhasse o código de saída daria verde com
+quatro dos cinco elos quebrados. *"Nenhuma pendência"* é a única forma de afirmar
+que os cinco fecharam, inclusive os que o workflow não sabe nomear.
+
+**O sinal de que o agente está DE PÉ esperando é a LINHA, nunca o estado do
+gerenciador — e essa escolha é a decisão central deste E2E.**
+`perguntarEstado` mapeia `activating` para `rodando` ([RN-088](#rn-088), com
+razão: "subindo" não é "parado"), então tanto `systemctl is-active` quanto
+`brabo-runner service status --machine` respondem *de pé* para um processo que vai
+morrer dois segundos depois. É exatamente a corrida que um `sleep` fixo esconde, e
+medir o artefato errado aqui — um binário no disco, uma unit escrita — é o jeito
+mais fácil de um E2E dar verde sem provar nada. O sinal escolhido é a linha que o
+processo escreve ao ENTRAR na espera ([RN-550](#rn-550)): ela só existe depois de
+o agente ter lido a chave de máquina do disco, tirado ticket, falado com a api de
+verdade e recebido uma lista VAZIA — prova pareamento e espera de uma vez. E não é
+amostragem de estado: é um fato já gravado no journal, que não se desfaz. Por isso
+esperar por ela com teto não é corrida — ou ela aparece, ou o teto estoura e o
+passo reprova mostrando o journal inteiro. `service status --machine` entra
+**depois** dela, como confirmação de que o código de saída responde o que o
+operador vai ver, nunca no lugar dela.
+
+**O desfecho da fase é medido pela API, e não pelo NAVEGADOR.** O sujeito da
+afirmação é o AGENTE, não a página: o que ele observa é `GET /runner/projects`
+([RN-543](#rn-543)), um fato da api. Um navegador criaria o projeto pela MESMA
+rota com uma camada a mais que falha por motivos alheios à promessa — e não
+tornaria a asserção mais forte, porque ela continua sendo a linha do journal do
+agente. A camada de navegador existe (`e2e/`,
+[ADR 0120](adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)), responde
+outra pergunta (três origens, cookie `httpOnly`, CSRF), tem lockfile próprio e
+assume o compose de produção de pé: arrastá-la para cá faria o E2E do instalador
+depender de um segundo harness instalado numa máquina que deveria estar limpa.
+Provar o wizard é trabalho da suíte do web, e ele já é coberto lá. O que o passo
+mede é a cadeia inteira: a conta nascida no terminal **atravessa o login** sem
+link de verificação nenhum, o workspace pessoal da [RN-410](#rn-410) existe, o
+projeto nasce `runner`, e o agente o pega sozinho dentro da cadência de
+15s/30s/60s da [RN-550](#rn-550).
+
+**A idempotência é medida pela metade que o E2E alcança sem reinstalar.** A api
+responde `409` de verdade a uma segunda `first-account` — com senha GERADA, nunca
+constante, porque `exigirSenhaValida` roda ANTES do conflito e uma senha fraca
+daria `400`, medindo a coisa errada. O que o instalador FAZ com esse `409`
+(calar-se, e não virar pendência) é classificação de código HTTP, coberta em
+`install-fechamento.spec.ts` contra um servidor de teste: repeti-la aqui exigiria
+uma segunda instalação inteira, que passa pelo caminho de MIGRAÇÃO
+([RN-530](#rn-530)) — backup provado, apagar, recriar — e é entrega própria.
+
+**A única divergência entre este runner e uma máquina limpa é do AMBIENTE, e está
+nomeada.** Numa máquina de verdade quem instala tem sessão de login e o
+`systemd --user` já está de pé; o job do Actions roda não-interativo, sem sessão, e
+sem ela `systemctl --user` não tem barramento a que falar — o `service install
+--machine` viraria pendência por um motivo que não é do produto, e o E2E
+"provaria" uma falha de laboratório. `loginctl enable-linger` põe o gerenciador de
+usuário de pé; ele não é flag do instalador, não pula verificação nenhuma e não
+muda o que a unit faz.
+
+**Dois defeitos apareceram ao escrever isto, e os dois eram invisíveis porque o
+workflow nunca rodou.** O primeiro estava no próprio harness: o arquivo de
+respostas começava por `nao-migrar`, que numa máquina limpa cai na pergunta do
+MARCADOR — ela não casa `s|S|sim|SIM`, o script dizia *"Nada foi gravado"* e saía
+0, e a asserção do marcador logo abaixo teria reprovado. A pergunta de migração
+está sob `if [ -n "$marcador" ] || [ -n "$sinais" ]`, e numa máquina limpa os dois
+são vazios: ela não acontece. Corrigido para as SETE respostas reais.
+
+**O segundo é ACHADO e não foi corrigido aqui, de propósito.** O `install.sh`
+publicado **não consegue subir nada sozinho numa máquina limpa**: ele sobe a pilha
+com `docker compose -f docker/docker-compose.install.yml`, um caminho RELATIVO ao
+diretório de onde roda — e esse arquivo **não é asset da Release, não entra no
+`checksums.txt` assinado ([RN-524](#rn-524)), e o script não o baixa em lugar
+nenhum** (as únicas descargas dele são o `cosign`, o manifesto, o próprio hash e o
+binário do runner). O compose ainda bind-monta `./postgres/init.sql`, então são
+TRÊS arquivos e não um. Quem segue o `sh -c "$(curl … install.sh)"` do runbook
+morre em *"no such file or directory"* **depois** de já ter verificado assinatura,
+escolhido a base e gravado o `.env`. Consertar é decidir se o compose vira asset
+assinado ou se o instalador passa a clonar — entrega própria, não algo a fazer de
+passagem dentro do E2E que descobriu o buraco. O workflow traz os três à mão, pela
+tag, num passo que DIZ que é achado; o teste em PR cobra as duas metades (o passo
+existe, e o instalador continua usando o compose sem baixá-lo), e o dia em que o
+instalador os buscar sozinho o teste reprova — e o certo então é apagar o passo,
+não relaxar o teste.
+
+**O que NÃO entrou:** porta nenhuma para pular a verificação de origem; `apps/`
+intocado (o achado virou relato, não correção de passagem); nenhum segundo
+workflow de E2E de instalador; e nenhum gate afrouxado — em particular, o E2E
+continua fora de `pull_request`.
+
+- **Código:** `.github/workflows/install-e2e.yml:16` (o gatilho que segue sem
+  `pull_request`), `:111` (o passo do achado — os três arquivos que o instalador
+  não baixa), `:172` (a sessão de usuário do systemd, a divergência declarada),
+  `:204` (a instalação completa com as SETE respostas), `:241`–`:245` (os cinco
+  elos da RN-547, um por linha), `:253` (a prova negativa — nenhuma pendência),
+  `:267`–`:274` (o `kid`, o `d` e o `.parcial`, medidos no DISCO e não na
+  saída), `:278` (a senha que não vazou), `:307` (o
+  agente de pé, pela linha do journal e não pelo gerenciador), `:354` (o primeiro
+  projeto pela api, e o agente pegando-o), `:415` (o `409` da segunda conta)
+- **Teste:** `scripts/dev/install-e2e.spec.ts` — a metade que roda em PR: o
+  gatilho lido do DOCUMENTO (não do texto, que casaria com o comentário que
+  explica por que `pull_request` não está lá), a ausência de flag de pular
+  verificação nos dois arquivos, o contrato de frases entre workflow e
+  `install.sh` (os cinco elos mais as quatro de sempre), as duas linhas do
+  `apps/runner` de que as asserções dependem, o canário de prompts interativos, a
+  ORDEM entre a linha do journal e o `service status --machine`, e as duas metades
+  do achado do compose. Verificado por mutação: reescrever uma frase do
+  instalador e pôr `pull_request` no gatilho reprovam
+- **Lacuna DECLARADA:** este E2E **não roda no PR que o escreveu**, e nenhum
+  check dele prova uma linha do que foi acrescentado — a primeira execução real é
+  a próxima tag final. Fica também fora, e não por esquecimento: a segunda
+  execução do instalador pelo caminho de MIGRAÇÃO ([RN-530](#rn-530)) — backup,
+  prova de restauração, apagar e recriar —, o macOS (o passo completo é Linux:
+  `launchd`, e o Docker que o runner hospedado não tem), e o navegador
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+- **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+## A conversão de modo deixa de ser um salto no escuro (RN-559, RN-560)
+
+### RN-559 — A conversão para `mounted` abre o MESMO navegador de pastas do wizard; o ramo `runner` continua digitado, e a tela diz por quê {#rn-559}
+
+`ExecutionModeSection` era o **único dos cinco lugares** do produto em que se
+escolhe uma pasta e se digitava o caminho **no escuro** — os outros quatro já
+abriam o `FolderBrowserModal` desde a [RN-473](#rn-473)/[RN-504](#rn-504). A
+lacuna estava declarada no `CLAUDE.md` e o motivo declarado era do **outro
+ramo**: onboardar um runner ANTES de a conversão salvar registra chave num
+projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa com
+400. Nada disso vale para `mounted`, e é isso que esta regra fecha.
+
+**Mesmo componente, mesmo transporte, nenhuma régua nova.** O ramo `mounted`
+monta o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }` — a
+mesma união discriminada que `NewProjectWizard` usa para esse modo
+([RN-533](#rn-533)), porque a pasta mora dentro da base do SERVIDOR
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)) e é o servidor quem a
+enxerga. Não nasce navegador novo nem endpoint novo, e o navegador **não
+garante** caminho válido: quem valida continua sendo
+`validarExecutionModeEWorkspacePath` e o CHECK do banco.
+
+**O ramo `runner` NÃO ganha navegador, e isso é decisão, não esquecimento.** O
+transporte dele (`{ tipo: 'runner', projectId }`) exige um runner conectado a
+ESTE projeto, e um projeto que ainda não é `runner` não tem nenhum — a espera
+terminaria num erro com cara de bug. A ordem *"converte, depois onboarda"* segue
+sendo decisão de produto à parte. O que muda é a tela passar a **dizer** isso em
+texto em vez de só não oferecer botão nenhum, que é a régua do
+[ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md): tira-se o
+controle, nunca a informação.
+
+**A base é um estado de QUATRO valores, e eles não colapsam.** A rota
+`GET workspaces/:workspaceId/projects-base` ([RN-500](#rn-500)) pode estar em
+voo, ter falhado, ter respondido `null` ou ter respondido um caminho — e cada
+um desses tem texto PRÓPRIO, pela régua da [RN-088](#rn-088)/[RN-468](#rn-468):
+*"não sei"* nunca vira *"não tem"*. O botão fica na tela apagado nos três
+primeiros, com o motivo dito em TEXTO logo abaixo, e não por `title` (que em
+elemento `disabled` não abre no Chromium).
+
+| estado da base | o botão | o que a tela diz |
+|---|---|---|
+| em voo | apagado | "consultando a base de projetos desta instalação" |
+| a consulta falhou | apagado | não deu para SABER se ela existe; recarregue |
+| respondeu `null` | apagado | esta instalação não declarou base |
+| respondeu um caminho | vivo | a base, NOMEADA, e que é nela que o navegador abre |
+
+O modo `mounted` **não sai do seletor** quando a base falta, e essa é a
+diferença deliberada em relação ao wizard ([RN-513](#rn-513)): um projeto que
+JÁ é `mounted` não pode ver o próprio modo sumir do controle por causa de uma
+consulta em voo. O que some é o NAVEGADOR, não a conversão.
+
+**O mínimo é o do ENDPOINT.** `PUT projects/:projectId/execution-mode` e
+`GET workspaces/:workspaceId/projects-base` pedem os dois `maintainer`, lido por
+`roleAtLeast` sobre a `ROLE_ORDER` e nunca por uma lista de papéis à mão
+([RN-102](business-rules/custo.md#rn-102)) — a seção fazia
+`role === 'owner' || role === 'maintainer'`, que acerta por acidente enquanto o
+mínimo é alto. Quem não alcança o mínimo não dispara a consulta da base: ela
+terminaria num 403 certo, e o *"não sei"* que ela produziria seria sobre a
+autorização, não sobre a base.
+
+O valor escolhido no navegador é tratado como valor DIGITADO: ele preenche o
+campo e só vai à api quando alguém confirma no botão da seção. Esta seção **não
+vira autosave** ([RN-469](#rn-469)).
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:65` (os
+  quatro estados da base, como união), `:134` (o mínimo por `roleAtLeast`),
+  `:143` (a consulta que não sai para quem não alcança `maintainer`), `:169` (a
+  derivação dos quatro), `:180` (o que o navegador exige para existir), `:284`
+  (o botão, apagado e não escondido), `:290` (o texto do ramo `runner`), `:315`
+  (o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }`);
+  `apps/web/src/locales/pt-BR/settings.json:231` e
+  `apps/web/src/locales/en/settings.json:231` (`executionMode.path.*`, os cinco
+  textos nos dois idiomas)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (abrir o navegador, escolher `loja`, o campo preencher e a
+  conversão enviar o que foi ESCOLHIDO, só depois do botão), a consulta da base
+  FALHANDO (botão inerte, texto próprio, o modal não montando nem à força, e o
+  campo continuando editável), a base AUSENTE com texto DIFERENTE do de falha e
+  do de carregamento, o ramo `runner` sem botão e com o motivo em texto, e o
+  papel abaixo de `maintainer` (controles apagados, valor vigente ainda
+  visível, consulta da base não disparada)
+- **Lacuna DECLARADA:** o ramo `runner` desta seção **continua digitado no
+  escuro** — a lacuna do `CLAUDE.md` encolheu para ele e não fechou. Fechá-la
+  exige decidir a ordem "converte, depois onboarda", que é decisão de produto à
+  parte e segue sem dono
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md),
+  [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** AT-049 (EP-021/HS-033)
+
+### RN-560 — O aviso da conversão diz o que ela recusa, o que ela leva e o que ela NÃO leva — nomeando o caminho antigo {#rn-560}
+
+O aviso fixo da seção afirmava *"isto migra a pasta de trabalho do agente"*, nos
+dois idiomas. `ConvertProjectExecutionModeUseCase` **não tem uma linha que copie
+ou mova conteúdo de pasta**: ele move o `permissions.json` (a POLÍTICA, com
+allow/deny/ask intactos — [RN-448](#rn-448)), zera `workspaceVerifiedAt`
+([RN-450](#rn-450)) e `mirrorPath` ([RN-515](#rn-515)), desprovisiona o
+container ao SAIR de `container` ([RN-449](#rn-449)) e grava o novo
+`workspacePath`. `materializarWorkspaceMontado` apenas CRIA a pasta nova
+([RN-501](#rn-501)). O que estiver na pasta antiga — **trabalho não commitado
+incluído** — fica lá, órfão.
+
+O órfão já era lacuna declarada no `CLAUDE.md` desde a
+[RN-447](#rn-447)..[450](#rn-450). O que esta regra fecha não é o órfão: é a
+tela afirmando o CONTRÁRIO do que o servidor faz. Isto é correção de afirmação,
+não feature — migrar conteúdo entre modos segue fora, sem dono.
+
+**Três fatos, e não um parágrafo**, porque respondem perguntas diferentes:
+
+1. **o que a conversão RECUSA** — dev agent trabalhando ou travado agora vira
+   409, e a frase da api é a que aparece no toast (o texto que já existia e
+   continua valendo);
+2. **o que ela LEVA** — a política do projeto muda de escopo com o conteúdo
+   intacto;
+3. **o que ela NÃO leva** — o conteúdo da pasta, trabalho não commitado
+   incluído, **nomeando o caminho antigo**.
+
+**O aviso NOMEIA o caminho** porque *"fica no disco antigo"* sem dizer QUAL
+disco manda a pessoa procurar. O valor está a uma linha de distância
+(`project.workspacePath`) e **some da tela** no instante em que a conversão
+salva. Quando não há caminho a nomear — o projeto é `container`, e a pasta
+antiga é um volume do SERVIDOR — a frase é OUTRA, apontando a pasta gerenciada:
+uma variante com `{{caminho}}` vazio diria *"o que estiver em "*, que é a tela
+recusando nomear o que sabe. É o caso em que a pessoa tem MENOS como adivinhar.
+
+**Ele não promete detecção.** Perguntar ao disco *"há trabalho não commitado?"*
+é I/O por modo e impossível de responder para `runner` do lado da api: a pasta
+mora numa máquina que o servidor não enxerga. Não se mede, não se afirma
+(ADRs [0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+E ele não bloqueia nada: a conversão continua sendo a mesma chamada, com as
+mesmas recusas.
+
+O tom do `Alert` passou de `accent` para `warning`, porque o terceiro fato é uma
+PERDA de alcance e não uma informação neutra. Segue sem `role="alert"`: é texto
+que já estava na tela quando ela abriu, e uma live region assertiva ali viraria
+interrupção sem causa.
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:225` (os
+  três fatos, um por linha), `:229` (a variante que nomeia o caminho antigo × a
+  da pasta gerenciada);
+  `apps/web/src/locales/pt-BR/settings.json:220` e
+  `apps/web/src/locales/en/settings.json:220` (`executionMode.warning.*`, os
+  quatro textos nos dois idiomas — `en` é o idioma default do app
+  ([RN-425](#rn-425)), e um aviso honesto só em português é a mesma mentira com
+  sotaque)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (o aviso contendo o caminho antigo E as palavras "trabalho não
+  commitado"), a variante sem caminho antigo (projeto `container` apontando a
+  pasta gerenciada, e a variante com caminho NÃO renderizada), e a prova
+  negativa nos DOIS bundles de idioma: a promessa de migração não sobrevive em
+  nenhum deles, e as quatro chaves existem em ambos
+- **Lacuna DECLARADA:** o aviso lista o que ENGANAVA, não **todas** as
+  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e o container
+  removido continuam ditos só no caso de uso e nas RNs, nunca na tela.
+  > **TODO(humano):** o aviso deve listar TODAS as consequências (espelho
+  > zerado, container removido, confirmação de pasta perdida) ou só a que
+  > contradizia o texto anterior? Listar tudo é mais honesto e mais longo — e um
+  > aviso que ninguém lê é o mesmo que aviso nenhum.
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+- **Origem:** AT-050 (EP-021/HS-034)
+
+---
+
+## A rotação da chave mestra deixa de ser tentativa e erro (RN-562, RN-563)
+
+### RN-562 — A rotação da chave mestra é provada ponta a ponta, nas duas tabelas {#rn-562}
+
+O procedimento com o pior desfecho do [Runbook](runbook.md#rotacao-da-chave-mestra)
+passa a ter verificação NOMEADA: um teste percorre a rotação inteira —
+**cifra com K1, publica K2, reenvelopa, descarta K1 e ainda decifra** — contra
+`user_credentials` **e** `project_git_connections`, com Postgres de verdade.
+
+**Por que de integração, e não mais um caso unitário.** O que já existia
+(`envelope-encryption.service.spec.ts`, o describe `rotação da chave mestra`)
+exercita `encrypt`/`decrypt`/`rewrap` em memória, e isso não prova a única coisa
+que o passo 3 do runbook depende: que o script percorre **as duas** tabelas.
+Convertendo metade do acervo e reportando sucesso, descartar a chave velha
+tornaria a outra metade ilegível para sempre. A prova disso é a asserção sobre
+as duas linhas — e ela reprova quando a lista de tabelas do script encolhe.
+
+**A idempotência entra no mesmo teste**, porque é a propriedade que o runbook
+promete a quem interrompe o script: a segunda rodada reporta
+`re-embrulhados=0` e `já na chave atual=1` nas duas tabelas.
+
+**Uma linha ilegível não aborta as outras.** Registro embrulhado por uma
+TERCEIRA chave — o caso que o runbook chama de "veio de outro ambiente" — é
+contado, identificado por tabela e id, e deixa as demais seguirem; o envelope
+dele fica intocado.
+
+**O que o teste exigiu do código:** `rewrap-deks.ts` era um `main()` disparado
+na CARGA do módulo, então importá-lo de um spec rodaria a rotação. O núcleo
+virou `reenvelopar(db, cofre, reportarFalha)`, exportado, e `main()` — que lê
+ambiente, abre o pool, imprime e escolhe o código de saída — passou a rodar só
+sob `require.main === module`. O nome do script e a invocação do runbook
+(`node scripts/rewrap-deks.js`) NÃO mudaram.
+
+**Nenhuma chave e nenhum segredo é literal no teste**: os dois nascem de
+`randomBytes` a cada rodada. Passphrase constante em fixture é string com cara
+de segredo indo para o histórico, e o gitleaks varre branches.
+
+- **Código:** `apps/api/src/scripts/rewrap-deks.ts:93` (`reenvelopar`, a função
+  exportada), `:100` (a lista das duas tabelas, que é o que o teste fixa),
+  `:209` (o `require.main === module` que impede a importação de rotacionar)
+- **Teste:** `apps/api/test/scripts/rewrap-deks.spec.ts` — o caminho feliz
+  (a sequência K1 → K1+K2 → reenvelopa → só K2), a idempotência, e o caso de
+  falha da linha de outro ambiente, que também assere que o relato NÃO carrega
+  segredo nenhum
+- **Origem:** AT-033 (EP-015/HS-022), finding `BRB-010`
+
+### RN-563 — O envelope diz qual chave o embrulhou, e esse rótulo nunca decide se ele abre {#rn-563}
+
+`user_credentials` e `project_git_connections` ganham `key_id text` **anulável**
+— a impressão digital da chave mestra que embrulhou aquele DEK. Com ela, a
+pergunta que decide o passo 3 da rotação (*"ainda há credencial na chave
+velha?"*) vira uma consulta:
+
+```sql
+select count(*) from user_credentials      where key_id is distinct from '<atual>'
+union all
+select count(*) from project_git_connections where key_id is distinct from '<atual>';
+```
+
+`IS DISTINCT FROM`, e nunca `<>`: com `<>`, a linha de `key_id` NULO — o acervo
+anterior a esta coluna — sumiria da contagem, e *"não sei qual chave"* viraria
+*"já está na atual"*, que é a leitura que faz alguém descartar a chave velha
+cedo demais.
+
+**O valor é `HMAC-SHA256(chave derivada, 'brabo-master-key-id')` truncado a 8
+bytes**, e não um contador no `.env` nem um hash da passphrase. Não há oráculo
+novo, e isso foi MEDIDO, não suposto: quem lê o banco já tem um oráculo de
+verificação perfeito — o próprio envelope é AES-256-GCM, que autentica, então
+testar uma passphrase candidata já custava um `scrypt` e um decipher. Testá-la
+contra a impressão custa o MESMO `scrypt`. E não há variável nova para o
+operador errar: o valor é função pura da chave que ele já publicou.
+
+**O rótulo é OBSERVABILIDADE, nunca AUTORIDADE.** `decrypt` fica byte a byte
+como estava — tenta a atual, cai para a anterior, o GCM decide — e `rewrap`
+continua decidindo "já está na chave atual" pela TENTATIVA. Confiar no rótulo
+faria uma linha que MENTE (rótulo "atual", envelope na chave velha) ser pulada
+em silêncio, ficar fora da contagem de re-embrulhados, e o passo 3 a tornaria
+ilegível para sempre. Metadado incoerente vira perda de segredo; é por isso que
+o teste que fixa esta regra é o de uma linha mentirosa sendo re-embrulhada
+assim mesmo.
+
+**O que o rótulo compra na falha:** quando NENHUMA das duas chaves abre, a
+mensagem deixa de ser genérica e nomeia o caso — "veio de outro ambiente"
+(rótulo desconhecido), "rótulo incoerente ou registro adulterado" (rótulo diz
+atual e não abre) e "não tem key_id" (linha anterior a esta coluna) são
+diagnósticos diferentes com ações diferentes. Nenhuma dessas mensagens carrega
+passphrase, chave derivada ou conteúdo do segredo — só impressões digitais.
+
+**Sem migração do acervo.** O `key_id` nasce na próxima escrita (`encrypt` e
+`rewrap` o gravam). As linhas de hoje ficam `NULL`, e numa instalação existente
+a consulta só passa a valer depois da primeira rotação. Forçar re-embrulho de
+tudo só para preencher a coluna transformaria observabilidade em operação de
+risco sobre todas as credenciais.
+
+**O operador precisa da impressão corrente**, senão a coluna não se compara
+contra nada: a api a registra no boot em uma linha, e a advertência de rotação
+que já existia passa a nomear as DUAS.
+
+- **Código:** `apps/api/src/infrastructure/security/envelope-encryption.service.ts:130`
+  (`impressaoDigital`), `:107` (a linha de boot), `:113` (a advertência com as
+  duas), `:226` (o diagnóstico de `rewrap`), `:251` (`diagnosticoDaChave`);
+  `apps/api/src/db/schema/llm.ts:259` e `apps/api/src/db/schema/git.ts:76`
+  (a coluna nas duas tabelas); migration
+  `apps/api/src/db/migrations/0059_key_id_no_envelope.sql`
+- **Teste:** o describe `key_id da chave mestra` em
+  `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts`
+  — o caminho feliz (impressão estável e determinística, gravada por `encrypt`
+  e por `rewrap`), **a prova de que o rótulo não decide** (linha mentirosa é
+  re-embrulhada), a linha legada sem rótulo, e os dois casos de falha
+  (mensagem que nomeia a chave sem vazar segredo; "sem rótulo" dito como tal).
+  A consulta em SQL de verdade está em
+  `apps/api/test/scripts/rewrap-deks.spec.ts`, incluindo o caso da linha `NULL`
+  contando como pendente
+- **ADR:** [0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)
+- **Origem:** AT-034 (EP-015/HS-022), finding `BRB-016`
+
+---
+
+## A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (RN-561)
+
+### RN-561 — A aba Configurações lista e revoga chave de dispositivo, marcando a ESPÉCIE — porque revogar a de MÁQUINA derruba o agente local em TODOS os projetos do dono {#rn-561}
+
+A metade que faltava da [RN-519](#rn-519), declarada por escrito desde então no
+`CLAUDE.md`: *"o que segue aberto é só a TELA: `apps/web` não tem onde listar
+nem revogar, então quem quiser revogar chama a rota"*. As duas rotas existem —
+o `DELETE` desde o
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) e o
+`GET` desde a RN-519 —, e **tela nenhuma as usava**. Esta RN é a tela, e ela
+**não abre rota nova**: o que a listagem já devolve basta para desenhar tudo o
+que segue.
+
+**Onde ela mora, e por que de PROJETO.** Ela leva a aba Configurações de 17 para
+**18** seções e é a **13ª na ordem de render** (`device-keys`, grupo `pessoas`,
+logo depois de `access-tokens` — a vizinha que faz o mesmo com PAT); a ordem do
+registro é a MESMA do barrel, porque é ela que o scroll-spy usa. De projeto
+porque o endpoint é
+`/projects/:projectId/runner-device-keys`: uma tela de CONTA exigiria rota nova,
+e o recorte é sobre a que existe.
+
+**A ESPÉCIE aparece, e não é enfeite — é o alcance da única ação irreversível
+da tela.** Desde a [RN-543](#rn-543) a listagem marca `projeto` | `maquina`, e
+uma chave de MÁQUINA (`project_id` nulo) **serve todos os projetos do dono** e
+por isso aparece na lista de TODOS eles. Mostrá-la sem a marca faria a tela
+afirmar que é "a chave deste projeto", e quem clicasse em revogar acharia que
+derruba o agente local aqui quando derruba **em todos** — a tela mentiria
+justamente sobre o que menos pode errar. A marca é `warning` para a de máquina
+e `muted` para a de projeto, e **nunca `success`**: verde leria como "está de
+pé", que é a aritmética que a [RN-548](#rn-548) já recusou.
+
+**A confirmação DEPENDE da espécie, e diz também o custo colateral.** Revogar
+abre um diálogo com TRÊS frases, e a do meio é a que muda: a de máquina nomeia
+*todos os seus projetos em modo runner* (o laço de
+`RevokeRunnerDeviceKeyUseCase` sobre `listRunnerModeReachableBy`), a de projeto
+nomeia *o projeto dela*. Um texto só para as duas mentiria numa das metades. A
+terceira frase é o custo que a [RN-520](#rn-520) declarou e que esta entrega
+**não muda**: o alvo da desconexão é `{projeto, usuário}` e nunca `{chave}`, então
+outro runner do mesmo usuário no mesmo projeto também cai — mesmo autenticado
+por PAT ou por outra chave — e reconecta sozinho se a credencial dele ainda
+valer.
+
+**Uso registrado NÃO é agente de pé, e o vocabulário é o MESMO da RN-548.**
+`lastUsedAt` é a classe de dado do `workspaceVerifiedAt` ([RN-468](#rn-468)):
+registro de uma confirmação, nunca batimento. A ressalva é dita em TEXTO na
+legenda, e a coluna de status fala de REVOGAÇÃO ("ativa"/"revogada", um fato
+sobre a linha), nunca de conexão — quem sabe do AGORA continua sendo o canal do
+terminal. Inventar um segundo vocabulário para a mesma distinção seria a tela
+dizendo a mesma coisa de dois jeitos, e um dos dois envelheceria.
+
+**Cinco estados, e nenhum vira o outro
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)).** Nenhuma chave
+("Nenhuma chave de dispositivo sua serve este projeto"), chave REVOGADA (que
+**continua na lista** por decisão da RN-519 — sumir com a linha faria a tela
+afirmar que nunca existiu, e ela não ganha botão porque revogar de novo, ainda
+que idempotente na api, sugeriria efeito que não sobrou), `lastUsedAt` NULO (a
+chave ÓRFÃ da [RN-473](#rn-473): registrada por uma aba que fechou no meio do
+fluxo e nunca usada por runner nenhum — texto próprio, e uma explicação abaixo
+da tabela que só aparece quando existe uma, porque explicar o que não ocorre é
+ruído), "ainda não carregou" e "não consegui ler". **"Não sei" nunca vira "não
+tem".**
+
+**O papel é o do ENDPOINT, e é o EFETIVO do projeto.** O mínimo é `developer`
+— o que `RunnerDeviceKeysController` exige nas TRÊS rotas
+([RN-102](business-rules/custo.md#rn-102)) — e a comparação sai da MESMA função
+que a RN-548 criou (`podeLerChavesDeDispositivo`, sobre `roleAtLeast`), nunca
+uma segunda régua e nunca `role === 'x' || role === 'y'` à mão. O que muda em
+relação à RN-548 é o INSUMO: lá o painel lia o papel de WORKSPACE e **declarava**
+a lacuna, porque monta em lugares que não buscam `project_members`; aqui os
+dados estão à mão — a seção mora na mesma aba que `MembersSection`, com a MESMA
+`queryKey`, e o react-query deduplica —, então o papel é composto como no caso
+de uso (`projectRole ?? workspaceRole`, uma SOBREPOSIÇÃO nos dois sentidos,
+[RN-471](#rn-471)) e a lacuna **fecha** em vez de se repetir. Papel AUSENTE não
+é papel INSUFICIENTE: enquanto a lista de membros está em voo a tela diz que
+está verificando, e não acusa quem lê de não alcançar `developer`. Quem não
+alcança **continua vendo** a seção inteira, o que uma chave de dispositivo é e o
+que revogar a de máquina custa — some o CONTROLE, nunca a INFORMAÇÃO
+([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)) —, e o motivo é dito UMA vez
+em TEXTO (`title` em elemento `disabled` não abre no Chromium). Como as três
+rotas pedem o MESMO papel, quem não alcança também não vê a LISTA: a tela deixa
+de perguntar o que a api negaria, em vez de transformar um 403 previsível em
+"não consegui ler". Isto **não é fronteira de segurança** — quem recusa é o
+`RolesGuard`.
+
+**Uma por vez, e por isso não há desfecho de lote.** A tela não oferece
+"revogar todas", então a régua da [RN-469](#rn-469) — ação de UI que vira N
+chamadas não é transação, e a tela diz isso — não se aplica: oferecer o lote
+criaria um desfecho parcial a narrar para uma ação que ninguém pediu. Falha na
+revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
+
+- **Código:** `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:76`
+  (a seção inteira; o papel efetivo em `:107`, a consulta em `:130`, a
+  confirmação por espécie em `:326`);
+  `apps/web/src/routes/settings/sumario.ts:62` (a entrada nova, 13ª na ordem de
+  render, das 18);
+  `apps/web/src/routes/ProjectSettingsTab.tsx:86` (a composição, na MESMA
+  ordem); `apps/web/src/locales/{en,pt-BR}/settings.json`
+  (`runnerDeviceKeys.*`). Consome `listRunnerDeviceKeys`/
+  `revokeRunnerDeviceKey` (`apps/web/src/lib/api-client.ts:431`) e
+  `podeLerChavesDeDispositivo` (`apps/web/src/lib/agente-de-maquina.ts:68`) sem
+  alterar nenhum dos dois
+- **Teste:** `apps/web/src/routes/settings/chaves-de-dispositivo.test.tsx` — as
+  duas espécies marcadas na mesma lista; a revogada que fica, marcada e sem
+  botão; a órfã com texto próprio e a explicação que NÃO aparece sem ela; vazio
+  e falha com textos diferentes; a ressalva de que uso registrado não é agente
+  de pé; o aviso de alcance nas DUAS espécies, com a chamada saindo só depois
+  de confirmar; cancelar sem revogar; a falha trazendo a frase da api com a
+  chave ainda na lista; `viewer` sem chamar a rota e com o motivo em texto; a
+  sobreposição do papel de projeto nos DOIS sentidos; e o papel ausente que
+  diz "verificando" em vez de acusar
+- **Fica declarado e NÃO fecha:** (1) o **alvo da revogação** continua sendo
+  `{projeto, usuário}` e nunca `{chave}` — a tela DIZ isso e não muda, porque
+  mudar exige coluna nova em `runner_socket_tickets` e contrato novo de auth
+  (RN-520), frente própria com ADR; (2) numa instalação **sem PROJETO**, a
+  chave de máquina recém-criada pela [RN-552](#rn-552) segue **inalcançável**:
+  as duas rotas são de projeto, e sem projeto não há a quem perguntar; (3) a
+  visão de `maintainer` (listar/revogar de qualquer usuário) continua FORA por
+  decisão da RN-519, não por omissão desta tela; (4) sem E2E de navegador — o
+  que se prova aqui é o que a tela AFIRMA, e isso a suíte de componente prova
+- **Origem:** AT-012 (EP-003/HS-007)
+
+---
+
+### RN-566 — O Infra Lead recusa `container_start` por MODO antes de propor: a lacuna da RN-494 fecha na tool que a declarava {#rn-566}
+
+`propose_container_start` propunha às cegas. `dispatch_container_start/2`
+montava o payload e chamava `EngineApiClient.propose_action(...)` direto — sem
+uma leitura de projeto entre uma coisa e outra, e com **zero** ocorrências de
+`execution_mode` na tool inteira. Num projeto `runner` a proposta só podia
+terminar em falha: desde a [RN-507](#rn-507)/[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)
+`container_start` **não atende** esse modo, porque o payload dela ELEGE uma
+candidata do roteamento do Arquiteto ([ADR 0131](adr/0131-roteamento-de-modulos-para-infra.md))
+e em `runner` não há roteamento contra o qual eleger — o tipo daquele modo é
+[`container_start_via_runner`](#rn-508).
+
+**A régua não é nova, e não nasceu uma segunda.** A tool irmã já recusava
+localmente ([RN-508](#rn-508)) e a página `/containers` já ramificava por
+DESTINO ([RN-521](#rn-521), `acaoDeSubidaDoModo`): `container` e `mounted`
+sobem pelo BROKER, `runner` sobe pelo agente local ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)/[RN-503](#rn-503)).
+O que esta regra faz é dar à tool que faltava a MESMA régua — uma leitura de
+projeto (`recusa_local_de_subida/2`, que devolve `nil` ou motivo) e uma
+CLÁUSULA por tool (`recusa_por_modo/3`). Duas réguas paralelas divergiriam no
+primeiro modo novo do enum.
+
+**A recusa de `container_start` é lista de PERMITIDOS**, como a do próprio
+broker: `container`/`mounted` passam, `runner` é recusado NOMEANDO a tool
+irmã, e modo novo no enum nasce recusado com mensagem em vez de proposto por
+omissão. Projeto inexistente também recusa — mesma cláusula das duas tools.
+
+**A recusa é ENTRADA do laço** ([RN-163](business-rules/autenticacao.md#rn-163)): texto de RESULTADO de
+ferramenta, que o modelo lê e usa para chamar a tool certa. Nunca
+`agent.error`, nunca fim de turno, nunca `proposed_action` — a api não é
+chamada. E **não é silêncio**: o `emit` do `tool.call` passou a acontecer
+ANTES da recusa nas DUAS tools (na irmã ele estava dentro do ramo que propõe),
+como no `dispatch_tool/2` genérico do mesmo módulo — recusa sem rastro no
+event log é a chamada sumindo do timeline do humano.
+
+**As leituras são LOCAIS, e isso é a decisão.** `Project.get/1` e
+`Engine.Runners.Registry.connected?/1` rodam no MESMO processo BEAM do Infra
+Lead; um HTTP à api aqui poria uma chamada de rede dentro do laço do agente.
+O custo declarado no `CLAUDE.md` — *"corrigir exigiria tocar o
+prompt/instrução do Infra Lead"* — **não se confirmou**: nenhuma linha de
+prompt mudou, e o texto da recusa é o que o modelo lê como resultado.
+
+**O que esta regra NÃO fecha, e é metade da lacuna:** a proposta cega por
+AUSÊNCIA DE IMAGEM continua possível em `container`/`mounted`. A recusa aqui é
+sobre MODO, e exigir imagem decidida inverteria a ordem — eleger a imagem é
+justamente o que essa proposta FAZ ([RN-491](#rn-491)). A `/containers` checa
+as TRÊS coisas (imagem decidida, modo, pasta confirmada) porque tem um humano
+clicando; o agente passa a checar UMA. `GetInfraContextUseCase` segue sem
+`executionMode` — enriquecer o contexto do Infra Lead é frente à parte.
+`container_stop`/`container_remove` não entram: são propostas pela tela, nunca
+por agente ([RN-495](#rn-495)).
+
+Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
+`maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
+teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:299` (o
+  dispatch de `container_start` consultando antes de propor), `:401`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:417` (a
+  cláusula de `container_start`: lista de permitidos), `:420` (a recusa
+  nomeando `container_start_via_runner`), `:435` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:342` (o `emit` do `tool.call`
+  movido para antes da recusa);
+  `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
+  (moduledoc — a tool deixou de propor às cegas)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:397`
+  (caminho feliz em `mounted` — o broker atende os dois), `:423` (caso de
+  falha: `runner` recusa NOMEADO, `propose_action` nunca chamada, o `tool.call`
+  narrado mesmo assim), `:464` (projeto inexistente), `:355` (o caminho feliz
+  de `container`, que passou a exigir a linha no banco)
+- **ADR:** [0144](adr/0144-a-segunda-raiz-do-broker.md),
+  [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** AT-048 (EP-020/HS-032) — a lacuna declarada no `CLAUDE.md` desde
+  a [RN-494](#rn-494)
+
+### RN-565 — O manifesto assinado sai com o que a Release TEM, e não espera a plataforma que nunca constrói {#rn-565}
+
+O `checksums.txt` assinado ([RN-524](#rn-524)) é a pré-condição de duas outras
+regras: sem ele, `GET /runner-releases/binary` recusa com
+`release_sem_manifesto` ([RN-525](#rn-525)) e o `install.sh` recusa a si mesmo
+([RN-526](#rn-526)) — **em todas as plataformas, inclusive as que anexaram
+binário direito**. Um manifesto que atrasa não é um manifesto atrasado: para
+quem instala nesse intervalo, é um manifesto ausente.
+
+**A medição, contra as três tags que existem.** Em `v4.0.0`, `v4.0.1` e
+`v5.0.0`, o alvo `darwin-x64` (`macos-13`) ficou **24h00m01s** na fila e foi
+cancelado pelo teto do Actions — o MESMO número nas três, o que diz que ele
+nunca chega a ser agendado. Os outros quatro jobs terminam em no máximo
+**4m18s** (`linux-x64` na `v4.0.1`, 17:38:28Z → 17:42:44Z). O job `checksums`
+tinha `needs: build`: o `always()` garantia que ele RODASSE (dependência
+cancelada está coberta), nunca QUANDO.
+
+**A regra:** o job do manifesto **não depende da matriz**. Ele espera os
+**ASSETS** da Release, não os **JOBS** — com teto —, e publica o que existir,
+nomeando no log o que não cobre. A ausência de um alvo é desfecho previsto
+(`::notice::`), nunca erro; a ausência da **Release** continua sendo erro
+nomeado, porque este workflow só ANEXA e nunca cria; e **nenhum** binário
+anexado continua sendo erro, porque um `checksums.txt` vazio afirmaria que a
+release não tem binários quando o que houve foi a matriz inteira falhar.
+
+**O teto dos binários é 1200s, e o número não é arbitrário:** é o
+`timeout-minutes: 20` do próprio job `build` — o máximo que um alvo **com
+runner** pode demorar depois de começar. O que ele deliberadamente não cobre é
+o tempo de **fila**, e não cobrir tempo de fila é o ponto inteiro. O laço sai
+cedo quando os cinco chegam, que é o caminho feliz.
+
+**Nada do que o job FAZ muda.** Ele continua montando o manifesto a partir dos
+assets (e não de `dist-bin/`, vazio ali), assinando com `cosign` keyless e
+verificando antes de anexar — [RN-524](#rn-524) intacta, um manifesto e não
+cinco assinaturas. E um alvo que anexe DEPOIS do teto não fica órfão: o
+`--clobber` já existia para isso, e refazer o manifesto é um
+`workflow_dispatch` com a mesma tag.
+
+**O que esta regra NÃO faz:** `darwin-x64` continua não construindo. Trocar o
+label, tirar a plataforma ou pagar runner é decisão de dono, e o manifesto não
+pode depender dela — é justamente por depender dela que ele não saía.
+
+- **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
+  sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
+  `:309` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:369` (o passo que espera), `:373`/`:374` (os dois tetos), `:382` (a Release
+  ausente, que é erro), `:405` (o teto dos binários, que é `notice`), `:455` (o
+  manifesto nomeando o que não cobre)
+- **Teste:** `scripts/ci/checksums-nao-espera-a-matriz.spec.ts` — que o job não
+  tem `needs:`, que os dois tetos existem, que o teto dos binários é derivado
+  do `timeout-minutes` do `build` (e não copiado), que ele cabe no
+  `timeout-minutes` do próprio job, que ausência de alvo é `notice` e ausência
+  de Release é `error`, que `ALVOS_ESPERADOS` bate com a matriz, e as quatro
+  garantias do ADR 0149 que esta mudança não toca (uma assinatura, verificar
+  antes de anexar, `id-token: write`, o `install.sh` no manifesto). É ESTÁTICO,
+  e o limite é declarado no topo do arquivo: o job só se prova numa tag final,
+  e nunca rodou em nenhuma
+- **Lacuna DECLARADA:** a matriz continua sendo cinco alvos e a Release continua
+  recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na `dev` nunca
+  exercitada, e `darwin-x64` não tem. O manifesto vai nascer cobrindo dois e vai
+  **dizer** isso, que é a diferença entre parcial e silencioso. E, com a matriz
+  falhando inteira, o job gasta as duas esperas antes de recusar
+- **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)
+- **Origem:** AT-051 (EP-009/HS-035)
+
+### RN-567 — `proposed_action.created` diz QUAL regra decidiu: o `reason` de `decide()` passa a sobreviver quando a ação passa {#rn-567}
+
+`decide()` sempre devolveu um par — `policy` e `reason` —, e a razão é
+escrita em todos os pontos de retorno: o IAM insuficiente, o piso do
+container ([RN-492](#rn-492)), `agent_autonomy`, as linhas do
+`permissions.json`, o comando composto, e cada teto absoluto. Mas
+`ProposeActionUseCase` só a guardava num lugar: `rejectionReason`, que
+`initialStatusFor` preenche **só** quando a política nega. Numa
+auto-aprovação — o desfecho que mais precisa de auditoria — o event log
+dizia *"a política decidiu"* ([RN-049](business-rules/custo.md#rn-049)) e
+nunca *qual* regra. `status` tornou a auto-aprovação distinguível de um
+clique; o motivo é o degrau seguinte.
+
+**A regra:** o payload do evento de SESSÃO `proposed_action.created` ganha
+`reason`, com a string de `decide()` **como está**, nos TRÊS desfechos —
+`auto_approved`, `pending` e `denied`. Não nasce segunda régua
+"estruturada": a string já é a fonte, e um enum paralelo divergiria dela no
+primeiro teto novo. No `denied` o valor é o MESMO que vira
+`rejectionReason`.
+
+**O outbox NÃO ganha o campo, e isso é decisão.** A linha de outbox
+`proposed_action.created` é contrato api↔engine, e nenhum consumidor do
+engine lê o motivo; alargar contrato sem consumidor é o corte que o
+[ADR 0153](adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md) nomeia. A
+linha `session_event.appended` que `AppendSessionEventUseCase` grava para o
+mesmo evento carrega só `eventId`/`seq`/`type`, então o motivo também não
+vaza por ela.
+
+**Ausente não é "sem motivo".** Evento gravado antes desta regra não tem o
+campo, e não há reprocessamento nem coluna nova: quem lê trata `reason`
+ausente como "não registrado". Todo evento novo tem o campo, porque
+`Decision.reason` é `string` obrigatória no tipo.
+
+Nada em `decide()` muda — nenhum teto, nenhum veredito, nenhuma string. A
+tela também não muda nesta regra: o motivo passa a EXISTIR no log, e
+mostrá-lo é outra entrega.
+
+**O que o motivo NÃO diz, declarado:** ele nomeia a regra, não a RAIZ do
+escopo — o ponto 7 do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
+pedia *qual raiz* autorizou, e `escopo: cd dentro da pasta do projeto` não
+carrega o caminho. No comando composto, a razão diz que todos os segmentos
+bateram em `allow`, sem dizer qual padrão casou qual segmento. E as linhas
+do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
+`matchAgainstFile`) — o mesmo comando que já mora em
+`proposed_actions.payload` e no card de aprovação.
+
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:188`
+  (`reason` no payload do evento de sessão), `:151` (o comentário do outbox
+  sem o campo), `:159` (o payload do outbox, intacto), `:259` (o
+  `rejectionReason`, que continua só no `deny`);
+  `apps/api/src/domain/actions/decide.ts:237` (`Decision`, a fonte da string)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:617`
+  (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
+  `:640` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:668` (`deny` com o mesmo texto do `rejectionReason`), `:686` (o outbox
+  sem `reason`)
+- **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
+  [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
+  parcialmente)
+- **Origem:** AT-066
+
+### RN-568 — A presença de QA, SecOps e dos membros de área no painel do time é decidida pela sessão INTEIRA, não pela janela de 200 eventos {#rn-568}
+
+A Visão geral e a aba Executores montam a roster com `deriveAgentRoster` sobre
+os ÚLTIMOS 200 eventos da sessão (`useSessionEvents`, `latest: true`). Dois dos
+fatos de presença saíam dessa janela: `gatesEverOpened` (qa e secops entram
+quando algum `pr.gate_changed`/`infra.gate_changed` já aconteceu) e
+`delegatedSubagents` (membro de área entra com delegação registrada). Os dois
+eventos são dos primeiros de uma execução — numa sessão longa eles saem da
+janela, e QA, SecOps e `qa-automacao` **sumiam do painel** de uma execução que
+continuava rodando. É a mesma classe de defeito que já tinha sido fechada para
+`executionActivated`, e o resumo do workspace ([RN-090](#rn-090)) já agregava
+os dois fatos sobre a sessão inteira (`bool_or` e `selectDistinct` em
+`projects-summary.repository.ts`) — as duas telas o carregavam e ignoravam
+esses dois campos.
+
+**A regra:** `deriveAgentRoster`/`rosterFactsFromEvents` aceitam um
+`agregado` OPCIONAL (`AgregadoDaSessao`), e as duas telas o preenchem com o
+resumo. Quatro decisões, cada uma com motivo:
+
+1. **Ausente é "não li", nunca "não houve".** Sem resumo carregado (primeiro
+   paint, erro), o fato sai só da janela, exatamente como antes. Leitura
+   ausente nunca vira "QA não está aqui".
+2. **O agregado SOMA à janela, não a substitui** (OU lógico no gate, união nas
+   delegações). Os dois fatos são MONÓTONOS dentro de uma sessão — gate que
+   abriu não desabre, delegação registrada não some —, então a janela só
+   produz falso NEGATIVO, nunca falso positivo. Um `false` agregado que
+   discorde de um gate VISTO na janela é resumo atrasado (as duas leituras
+   têm cadências próprias de poll), e não pode esconder QA.
+3. **Só vale quando o resumo é da MESMA sessão que a tela lê**
+   (`latestSessionId === sessionId`). O resumo agrega a sessão mais RECENTE
+   do projeto; a Visão geral lê essa mesma sessão, mas a aba Executores lê a
+   sessão de EXECUÇÃO vigente ([RN-139](business-rules/autenticacao.md#rn-139)). Uma ideação aberta depois
+   faz as duas divergirem, e aí o agregado seria de OUTRA sessão — a tela
+   volta a decidir só pela janela.
+4. **Só a PRESENÇA muda.** `rosterFromFacts` (a regra única, compartilhada com
+   o card do dashboard) fica intacto, e o STATUS de cada agente (`gateStatus`,
+   `subagentStatus`) continua lido da janela. Nenhuma requisição nova e o teto
+   de 200 não muda.
+
+`delegatedSubagents` entrou pelo MESMO molde porque cabe sem mudar regra: a
+tabela `delegations` que o resumo lê e os eventos `delegation.*` que a janela
+lê nascem juntos em `RecordDelegationUseCase` (uma linha, um evento, os três
+desfechos), então os dois conjuntos descrevem a mesma coisa.
+
+**O que esta regra NÃO fecha:** `executionActivated`, na aba Executores,
+continua lido do resumo SEM a guarda de sessão do item 3 — com uma sessão mais
+nova que a de execução, o resumo diz `false` e os dev agents somem da aba.
+Declarado no comentário da tela, não corrigido aqui.
+
+- **Código:** `apps/web/src/lib/agent-status.ts:285` (`AgregadoDaSessao`),
+  `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
+  delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
+  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:96` e
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:108` (o agregado com a guarda
+  de sessão)
+- **Teste:** `apps/web/src/lib/agent-status.test.ts:628` (o bloco inteiro:
+  `:633` gate fora da janela traz QA/SecOps com status da janela, `:658` sem
+  agregado a janela decide sozinha, `:676` `false` agregado não esconde gate
+  visto na janela); `apps/web/src/routes/ProjectExecutorsTab.test.tsx:385`
+  (QA e membro de área voltam pelo resumo), `:397` (resumo de outra sessão não
+  decide); `apps/web/src/routes/ProjectOverviewTab.test.tsx:301` (SecOps volta
+  pelo resumo)
+- **Origem:** AT-047 — a lacuna declarada no `CLAUDE.md` e nos comentários das
+  duas telas

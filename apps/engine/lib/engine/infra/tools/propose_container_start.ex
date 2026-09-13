@@ -12,6 +12,15 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   ...)`), sem HALT — o turno continua e o modelo pode chamar `propose_infra_pr`
   antes, depois, ou nunca chamar esta.
 
+  Desde a RN-566, `InfraLeadServer.dispatch_container_start/2` CONSULTA
+  LOCALMENTE (`Project.get/1`, sem HTTP) o `execution_mode` do projeto ANTES
+  de chamar `propose_action`: projeto `runner` é RECUSADO com motivo nomeado,
+  apontando `container_start_via_runner` — o broker nunca alcança a pasta
+  dele, e não há roteamento contra o qual eleger candidata. A recusa é texto
+  de RESULTADO de ferramenta (entrada do laço, RN-163), nunca erro de turno.
+  `container`/`mounted` seguem propondo, INCLUSIVE sem imagem decidida:
+  a recusa é sobre MODO, e eleger a imagem é o que esta proposta faz.
+
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado
   de verdade, porque o servidor intercepta antes.

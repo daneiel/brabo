@@ -17,7 +17,25 @@ export type AuthEventKind =
   | 'register_created'
   /** Tentativa de registro num e-mail que já existe — nada foi criado. */
   | 'register_duplicate'
+  /**
+   * A PRIMEIRA conta da instalação, criada pelo instalador pela rota interna
+   * (RN-546, ADR 0155). Kind próprio e não `register_created`: a conta nasce
+   * verificada sem e-mail nenhum ter sido enviado, e quem audita a trilha
+   * depois precisa ver isso na trilha, não descobrir pela ausência de um
+   * `email_verified` ao lado.
+   */
+  | 'first_account_created'
   | 'email_verified'
+  /**
+   * Uma chave de dispositivo de MÁQUINA registrada pela rota interna do
+   * instalador (RN-552, ADR 0155 ponto 4). Kind próprio porque é a ÚNICA
+   * credencial duradoura de um usuário que nasce sem esse usuário autenticar
+   * nada: quem prova é o `BRABO_SERVICE_TOKEN`, ou seja, o controle da
+   * máquina. Numa suspeita de vazamento desse segredo, é esta linha que diz
+   * quando e para quem ela foi criada — e `metadata` carrega os ids que ela
+   * SUBSTITUIU, nunca a JWK.
+   */
+  | 'machine_device_key_registered'
   // --- senha ---
   | 'password_reset_requested'
   | 'password_reset_completed'

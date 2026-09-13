@@ -52,7 +52,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -101,31 +101,72 @@ function listarJsRecursivo(dir, raizRelativaA) {
  * pacote) já decide isso — este script só REPETE a mesma checagem pra
  * saber o que embutir.
  */
-function localizarArquivosNativos(raizDoNodePty) {
+export function localizarArquivosNativos(raizDoNodePty) {
   const buildRelease = join(raizDoNodePty, 'build', 'Release');
   const prebuildDir = join(raizDoNodePty, 'prebuilds', NOME_DA_PLATAFORMA);
 
+  // A escolha é por CONTEÚDO, nunca por existência. `build/Release` EXISTE no
+  // Windows mesmo sem `.node` dentro: o `post-install.js` do node-pty limpa a
+  // pasta e move o `conpty/` para lá, enquanto os binários vêm do
+  // `prebuilds/win32-x64`. Escolher pelo primeiro que existe fazia o build da
+  // matriz reprovar com "build/Release existe mas não tem nenhum .node
+  // dentro" — o defeito que travava `win32-x64` em toda tag.
+  const temNode = (dir) =>
+    existsSync(dir) &&
+    statSync(dir).isDirectory() &&
+    listarArquivosRecursivo(dir).some((f) => f.endsWith('.node'));
+
   let dirEscolhido;
   let relEscolhido;
-  if (existsSync(buildRelease) && statSync(buildRelease).isDirectory()) {
+  if (temNode(buildRelease)) {
     dirEscolhido = buildRelease;
     relEscolhido = join('build', 'Release');
-  } else if (existsSync(prebuildDir) && statSync(prebuildDir).isDirectory()) {
+  } else if (temNode(prebuildDir)) {
     dirEscolhido = prebuildDir;
     relEscolhido = join('prebuilds', NOME_DA_PLATAFORMA);
   } else {
     throw new Error(
       `nenhum .node nativo encontrado pra ${NOME_DA_PLATAFORMA} — nem ${buildRelease} ` +
-        `nem ${prebuildDir} existem. Rode \`pnpm install\` primeiro (o postinstall do ` +
+        `nem ${prebuildDir} têm um. Rode \`pnpm install\` primeiro (o postinstall do ` +
         'node-pty compila/baixa o binário) antes de `build:bin`.',
     );
   }
 
-  const arquivos = readdirSync(dirEscolhido).filter((f) => f.endsWith('.node'));
+  // Tudo o que estiver lá, e não só os `.node`. O node-pty precisa de
+  // arquivos AUXILIARES ao lado do binding, e eles não têm extensão `.node`:
+  //
+  //   - `spawn-helper` (macOS) — `lib/unixTerminal.js:29` monta
+  //     `native.dir + '/spawn-helper'` e o C++ o executa. Sem ele, o PTY não
+  //     abre e o erro é `posix_spawnp failed`: exatamente o que reprovava
+  //     `darwin-arm64` no `--self-test-pty`, em toda tag.
+  //   - `winpty.dll` / `winpty-agent.exe` / `conpty/` (Windows), pela mesma
+  //     razão — são o back-end do PTY naquele sistema.
+  //
+  // `.pdb` fica de fora: é símbolo de depuração do Windows, não é lido em
+  // runtime e só engordaria o binário.
+  const arquivos = listarArquivosRecursivo(dirEscolhido).filter((f) => !f.endsWith('.pdb'));
   if (arquivos.length === 0) {
-    throw new Error(`${dirEscolhido} existe mas não tem nenhum .node dentro.`);
+    throw new Error(`${dirEscolhido} existe mas está vazio.`);
   }
-  return arquivos.map((f) => ({ abs: join(dirEscolhido, f), rel: join(relEscolhido, f) }));
+  return arquivos.map((abs) => ({
+    abs,
+    rel: join(relEscolhido, relative(dirEscolhido, abs)),
+    // Executável quando não tem extensão (`spawn-helper`) ou é `.exe`. O bit
+    // de execução NÃO sobrevive a `writeFileSync` na extração, e um
+    // `spawn-helper` sem ele falha do mesmo jeito que um ausente.
+    exec: !basename(abs).includes('.') || abs.endsWith('.exe'),
+  }));
+}
+
+/** Todo arquivo de `dir`, recursivo — inclusive dentro de `conpty/`. */
+export function listarArquivosRecursivo(dir) {
+  const saida = [];
+  for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+    const caminho = join(dir, entrada.name);
+    if (entrada.isDirectory()) saida.push(...listarArquivosRecursivo(caminho));
+    else saida.push(caminho);
+  }
+  return saida;
 }
 
 function gerarManifesto(raizDoNodePty) {
@@ -148,11 +189,13 @@ function gerarManifesto(raizDoNodePty) {
     const especificador = `../${relative(raizDoPacote, arquivo.abs).split('\\').join('/')}`;
     const nomeVar = `f${indice}`;
     linhas.push(`import ${nomeVar} from '${especificador}' with { type: 'file' };`);
-    entradas.push(`  { relPath: ${JSON.stringify(arquivo.rel.split('\\').join('/'))}, embeddedPath: ${nomeVar} },`);
+    entradas.push(
+      `  { relPath: ${JSON.stringify(arquivo.rel.split('\\').join('/'))}, embeddedPath: ${nomeVar}, exec: ${arquivo.exec === true} },`,
+    );
   });
   linhas.push('');
   linhas.push(
-    'export const NATIVE_PTY_FILES: ReadonlyArray<{ relPath: string; embeddedPath: string }> = [',
+    'export const NATIVE_PTY_FILES: ReadonlyArray<{ relPath: string; embeddedPath: string; exec: boolean }> = [',
   );
   linhas.push(...entradas);
   linhas.push('];');
@@ -198,11 +241,18 @@ function main() {
   console.log(`ok: ${SAIDA}`);
 }
 
+// Guardado: `localizarArquivosNativos` é a decisão que já reprovou DOIS alvos
+// da matriz (o `.node` do Windows e o `spawn-helper` do macOS), e agora ela
+// tem teste próprio — importar este arquivo não pode disparar `bun build`
+// nem reescrever o placeholder. Mesmo desenho de `pr-police.ts`.
+const chamadoDireto =
+  typeof process.argv[1] === 'string' && process.argv[1].endsWith('build-bin.mjs');
+
 try {
-  main();
+  if (chamadoDireto) main();
 } finally {
   // SEMPRE restaura o placeholder — sucesso ou falha. `native-pty-embed.
   // generated.ts` nunca fica commitável com conteúdo gerado (ver o
   // docblock do próprio placeholder).
-  writeFileSync(arquivoGerado, conteudoPlaceholder, 'utf8');
+  if (chamadoDireto) writeFileSync(arquivoGerado, conteudoPlaceholder, 'utf8');
 }

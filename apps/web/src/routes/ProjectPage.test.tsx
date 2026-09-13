@@ -65,6 +65,7 @@ const PROJETO: Project = {
   executionMode: 'container',
   workspacePath: null,
   workspaceVerifiedAt: null,
+  mirrorPath: null,
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };

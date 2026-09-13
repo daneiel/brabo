@@ -63,38 +63,66 @@ function conversationalStatus(events: SessionEvent[], actorId: string): AgentSta
 // nunca bateria mesmo estando na lista. O `dev.idle`/`dev.working` que
 // `try_claim` dispara em seguida (round-trip assíncrono pelo engine) é
 // quem efetivamente atualiza o status, poucos instantes depois.
-const DEV_STATUS_EVENTS = [
-  'dev.started',
-  'dev.working',
-  'dev.idle',
-  'dev.blocked',
-  'dev.awaiting_gate',
-  'dev.idle_tripped',
-  'agent.response',
-  'backlog.task_blocked',
-];
+//
+// POR QUE É UM MAPA, e não uma lista mais um `switch` com `default`.
+// A lista e o `switch` eram DUAS pontas que podiam divergir, e divergiram:
+// quem acrescentava um tipo à lista sem lembrar do `switch` caía no
+// `default: return 'trabalhando'`. Foi o que aconteceu com
+// `dev.blocked_by_container` (RN-502/ADR 0143) — no `exp004`, cinco dev
+// agents ficaram HORAS esperando um humano subir o container e o painel
+// dizia que estavam trabalhando, sobre exatamente quem precisava de atenção.
+// Terceira instância da mesma deriva (a lista do heartbeat na api e o
+// inventário de `docs/reference/events.md` já tinham sido as duas
+// anteriores). Como MAPA, não existe "estar na lista sem ter decisão": a
+// chave É a decisão. Esquecer um tipo agora o torna INVISÍVEL — cai no
+// evento conhecido anterior, e no limite em `ocioso` —, nunca em
+// `trabalhando`; e o que pega o esquecimento é
+// `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara estas chaves
+// com o vocabulário `dev.*` REAL do engine.
+//
+// `dev.blocked_by_container` e `dev.awaiting_approval` são `aguardando` pelo
+// mesmo motivo que `dev.awaiting_gate` já era: o agente não segue até que
+// algo FORA dele aconteça (um gate terminar, uma aprovação sair, um
+// container subir). Sem estado novo em `AgentStatus`.
+const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
+  'dev.started': 'trabalhando',
+  'dev.working': 'trabalhando',
+  'dev.idle': 'ocioso',
+  'dev.blocked': 'falhou',
+  // `AgentIo.claim_e_rodar/2` erra o claim, emite `dev.error` e cai em
+  // `:idle` SEM emitir `dev.idle` — sem esta linha o painel voltava ao
+  // `dev.working` anterior e dizia `trabalhando`. Os outros emissores
+  // (`dev_agent_server.ex`) são seguidos de `backlog.task_blocked`, que já
+  // é `falhou`: mapear aqui concorda com eles em vez de contradizê-los.
+  'dev.error': 'falhou',
+  'dev.blocked_by_container': 'aguardando',
+  'dev.awaiting_approval': 'aguardando',
+  'dev.awaiting_gate': 'aguardando',
+  'dev.idle_tripped': 'travado',
+  // Os dois abaixo não são `dev.*` — não entram na comparação com o engine.
+  'agent.response': 'trabalhando',
+  'backlog.task_blocked': 'falhou',
+};
+
+/**
+ * Tipo `dev.*` que o engine emite e que o painel decidiu NÃO considerar, com
+ * o motivo — a válvula que impede o teste cruzado de forçar um mapeamento
+ * inventado. Vazio hoje, e essa é a resposta certa: os nove tipos que o
+ * engine emite têm todos um estado honesto no painel.
+ *
+ * Declarar aqui é uma DECISÃO registrada, não um esquecimento: o tipo fica
+ * invisível para `devStatus` (o painel mostra o evento conhecido anterior), e
+ * quem ler saberá que foi de propósito.
+ */
+export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {};
 
 function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
   const last = lastEventFor(
     events,
-    (e) => e.actor.id === agentId && DEV_STATUS_EVENTS.includes(e.type),
+    (e) => e.actor.id === agentId && e.type in DEV_STATUS_EVENTS,
   );
 
-  if (!last) return 'ocioso';
-
-  switch (last.type) {
-    case 'backlog.task_blocked':
-    case 'dev.blocked':
-      return 'falhou';
-    case 'dev.idle':
-      return 'ocioso';
-    case 'dev.awaiting_gate':
-      return 'aguardando';
-    case 'dev.idle_tripped':
-      return 'travado';
-    default:
-      return 'trabalhando';
-  }
+  return last ? DEV_STATUS_EVENTS[last.type] : 'ocioso';
 }
 
 // Subagentes de área (Fase 8b/8c/8d) não broadcastam `agent.status` próprio
@@ -236,28 +264,55 @@ export interface RosterFacts {
   staffActive: boolean;
 }
 
+/**
+ * RN-568 — o que o resumo do projeto (RN-090) já sabe da sessão INTEIRA e a
+ * janela de eventos não consegue saber: os dois fatos de presença que nascem
+ * de eventos que podem ter saído dos últimos 200.
+ *
+ * Cada campo é OPCIONAL, e ausente quer dizer "não li", nunca "não houve":
+ * sem ele, o fato sai só da janela, exatamente como antes. Presente, ele se
+ * SOMA à janela (OU lógico / união) em vez de substituí-la, e isso não é
+ * afrouxamento — os dois fatos são MONÓTONOS dentro de uma sessão (gate que
+ * abriu não desabre, delegação registrada não some), então a janela nunca dá
+ * falso positivo, só falso negativo. Um `false` agregado que discorde de um
+ * gate VISTO na janela é resumo atrasado (as duas leituras têm cadências
+ * próprias de poll), não prova de ausência, e não pode esconder QA.
+ *
+ * Quem chama responde por ser a MESMA sessão: o resumo agrega a sessão mais
+ * RECENTE do projeto, e a aba Executores lê a sessão de EXECUÇÃO vigente —
+ * as duas só coincidem enquanto nenhuma sessão nova nasceu depois.
+ */
+export interface AgregadoDaSessao {
+  gatesEverOpened?: boolean;
+  delegatedSubagents?: readonly string[];
+}
+
 /** Extrai os fatos de presença do event log (caminho do painel do time). */
 export function rosterFactsFromEvents(
   events: SessionEvent[],
   moduleMap: ModuleMap | null | undefined,
   executionActivated: boolean,
   handoffs: Handoff[],
+  agregado: AgregadoDaSessao = {},
 ): RosterFacts {
   const delegatedSubagents = [
-    ...new Set(
-      events
+    ...new Set([
+      ...events
         .filter((e) => e.type.startsWith('delegation.'))
         .map((e) => (e.payload as DelegationEventPayload).subagent)
         .filter((s): s is string => !!s),
-    ),
+      ...(agregado.delegatedSubagents ?? []),
+    ]),
   ];
 
   return {
     executionActivated,
     moduleNames: (moduleMap?.modules ?? []).map((m) => m.name),
-    gatesEverOpened: events.some(
-      (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
-    ),
+    gatesEverOpened:
+      agregado.gatesEverOpened === true ||
+      events.some(
+        (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
+      ),
     delegatedSubagents,
     infraActive: handoffs.some(
       (h) => h.toAgent === 'infra' && h.status === 'accepted',
@@ -341,6 +396,10 @@ export function rosterFromFacts(
  * (`pushAreaMembers`). Quem AGRUPA visualmente (lead + membros recolhíveis)
  * é o componente que renderiza, via `areaFor` — este módulo só decide QUEM
  * está na roster e o status de cada um.
+ *
+ * `agregado` (RN-568) leva à presença de qa/secops e dos membros de área o
+ * que o resumo do projeto sabe da sessão inteira — ver `AgregadoDaSessao`.
+ * Só a PRESENÇA muda: o STATUS de cada um continua lido da janela.
  */
 export function deriveAgentRoster(
   events: SessionEvent[],
@@ -348,6 +407,7 @@ export function deriveAgentRoster(
   executionActivated: boolean,
   handoffs: Handoff[],
   pendingActionAgentIds: ReadonlySet<string> = new Set(),
+  agregado: AgregadoDaSessao = {},
 ): RosterEntry[] {
   const pendentes = new Set(pendingActionAgentIds);
   const facts = rosterFactsFromEvents(
@@ -355,6 +415,7 @@ export function deriveAgentRoster(
     moduleMap,
     executionActivated && !!moduleMap,
     handoffs,
+    agregado,
   );
 
   // Cada família de agente narra o próprio estado de um jeito, e é isto que o

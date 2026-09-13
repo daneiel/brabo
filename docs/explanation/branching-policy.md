@@ -3,7 +3,7 @@ id: branching-policy
 title: Branch and versioning policy
 sidebar_label: Branching policy
 sidebar_position: 2
-description: The dev → qa → rc → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon.
+description: The dev → qa → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon.
 keywords: [branches, gitflow, promotion, hotfix, versioning, release]
 ---
 
@@ -232,6 +232,60 @@ A pedagogical message doesn't teach a bot. The exemption is by
 **author**, not by prefix, so no one uses it as a loophole by naming a
 branch `dependabot/`.
 
+## Dependabot enters through dev
+
+The exemption above is about the branch **name**. The **destination** is not
+exempt: a dependency update enters through `dev`, like everything else, and
+reaches `main` through the `dev → qa → main` promotion. A dependency merged
+straight into `main` skips the ladder and makes `main` diverge from the branch
+where the work happens.
+
+Two mechanisms, because GitHub treats the two kinds of update differently:
+
+- **Version updates** obey `target-branch: dev` in `.github/dependabot.yml`.
+- **Security updates** are switched on in the repository interface and GitHub
+  always opens them against the **default** branch (`main`), ignoring
+  `target-branch`. `.github/workflows/dependabot-para-dev.yml` takes each open
+  Dependabot PR against `main` and does one of two things, decided by a tested
+  pure function
+  ([`scripts/ci/dependabot-para-dev.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-para-dev.ts)):
+  - **close** it with the justification, when `dev`'s lockfile already
+    resolves every dependency of the PR only at versions `>=` the threshold;
+  - **retarget** it to `dev` in every other case — a version below the
+    threshold, a package missing from the lockfile, a version that doesn't
+    compare, a body it can't read.
+
+The **threshold** is the first *patched* version of the open alerts for that
+package in that lockfile, and only without an alert is it the PR's target
+version. The difference was measured on PR #553: it bumped `@vitest/mocker`
+to `5.0.0` while `dev` resolved `4.1.11`, which is exactly the alert's first
+patched version — Dependabot proposes the **newest** version, not the smallest
+one that fixes. If the alerts can't be read, the comparison falls back to the
+target version, which is stricter: it can only retarget more, never close
+more. **In doubt, the PR is retargeted, never closed.**
+
+The workflow runs on **push to `dev`**, and that trigger is the one that
+matters. `pull_request_target` and `schedule` only see workflows on the
+default branch, and `pull_request` runs the workflow from the merge of a head
+Dependabot created from `main` with `main` — none of them sees a file that
+exists only on `dev`, and `main` only advances through the ladder (the same
+trap measured in `pr-police.yml`). A push to `dev` runs `dev`'s copy, so every
+merge there sweeps the open Dependabot PRs against `main`. `workflow_dispatch`
+avoids waiting for the next merge; `pull_request_target` becomes effective,
+and immediate, once the file reaches `main`.
+
+**Measured on the first run (2026-09-13):** the alert read **failed** with the
+workflow's `GITHUB_TOKEN`, so today every decision falls back to the PR's
+target version. The consequence is the safe one — a security PR that `dev`
+already fixes, like #553, is **retargeted** instead of closed, and closing it
+stays a manual step. The warning in the run log now carries the API's message;
+reading the alerts with a different credential is a separate decision.
+
+**Declared:** after a retarget, `dev`'s required checks do **not** run on
+their own — events created by `GITHUB_TOKEN` don't trigger workflows, and
+Dependabot doesn't accept commands from that bot. Someone with write access
+comments `@dependabot rebase`; the workflow's comment says so on the PR.
+
 ## Who approves
 
 The approval requirement has **two modes**, chosen by the repository
@@ -443,6 +497,25 @@ deliberately modest:
 | the four production images | built to prove the tag is **buildable** |
 | the version baked into two of them | baked in as an `ARG` in the api
 and web — see below |
+| **signatures for the four images** | `cosign` keyless, **by digest**,
+signed and then verified in the same run
+([ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)) |
+
+The last row is what a final tag gained in FASE 29, and it is worth being
+precise about **why by digest**: signing `:5.0.0` would attest whatever
+that tag pointed at in the instant of signing, and a tag is a movable
+pointer. The digest is what `.release/images.json` already records and
+what the production overlay already applies.
+
+The signature is **verified in the same run, before the Release exists**.
+A signature nobody tries to verify is one more file in the registry, and
+the failure would otherwise surface on the machine of whoever installs —
+the worst possible place to discover it.
+
+The runner binaries follow in `build-runner-binaries.yml`, with **one**
+signed `checksums.txt` covering the five targets rather than five
+separate signatures: verifying four and forgetting the fifth is a failure
+mode nobody notices, and a single manifest removes it.
 
 #### The version lives in the tag, and the release is what carries it to the artifact
 
@@ -536,6 +609,15 @@ first page. Whoever rewrites both is `scripts/ci/readme-version.ts`, and
 it reads and swaps all of them before writing any one of them: a phrase
 missing in either fails the whole release rather than leaving it half
 written.
+
+**The cut CONSUMES the `## Unreleased` section**, it does not prepend past
+it. That distinction is not cosmetic: prose written in each PR's
+`Unreleased` block is the *explanation* of what changed, and for five
+releases it never reached the published version — `changelog.mjs`
+prepended the generated section and left the hand-written one buried
+underneath, forever. The merge is per subsection title, with the
+**written** entries first (they explain) and the commit inventory after
+(it proves what went in).
 
 The three things move together on purpose. The version is **generatable**
 (the release knows what it is), and `docs:check` confirms it matches the

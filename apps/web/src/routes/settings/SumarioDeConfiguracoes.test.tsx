@@ -13,8 +13,8 @@ import i18n from '../../lib/i18n';
  * O sumário ancorado da aba Configurações (#4 do canvas de melhorias).
  *
  * A pergunta que este arquivo responde é a única que nenhum teste de seção
- * responde: as 17 seções, o registro (`sumario.ts`) e a URL concordam? É por
- * isso que ele monta a aba INTEIRA, com dado suficiente para as 17 aparecerem
+ * responde: as 18 seções, o registro (`sumario.ts`) e a URL concordam? É por
+ * isso que ele monta a aba INTEIRA, com dado suficiente para as 18 aparecerem
  * — inclusive as sete que somem quando falta repositório, projeto, catálogo ou
  * papel de `owner`.
  */
@@ -33,7 +33,7 @@ vi.mock('../../lib/hooks', () => ({
 /**
  * O cliente da api inteiro, derivado do módulo REAL.
  *
- * Enumerar à mão as ~30 funções que as 17 seções chamam faria este arquivo
+ * Enumerar à mão as ~30 funções que as 18 seções chamam faria este arquivo
  * quebrar toda vez que uma seção passasse a ler mais um dado — e o que ele
  * testa não é dado nenhum, é navegação. Então toda função exportada vira uma
  * que resolve `null`, e só as poucas que precisam de forma específica para a

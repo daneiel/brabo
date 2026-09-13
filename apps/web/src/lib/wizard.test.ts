@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  caminhoDentroDaBase,
   caminhoLocalParecePlausivel,
+  caminhoSugeridoNaBase,
   canAdvanceFromCredential,
   canAdvanceFromDetails,
   canAdvanceFromMode,
@@ -114,5 +116,84 @@ describe('canAdvanceFromDetails', () => {
     expect(
       canAdvanceFromDetails('adopt', { name: 'checkout', externalId: '  ' }),
     ).toBe(false);
+  });
+});
+
+/**
+ * A sugestão `<base>/<slug>` (RN-501/RN-513, ADR 0142/0146 ponto 4).
+ *
+ * Ela existe porque a validação de disco foi ADIADA: o assistente pode
+ * propor uma pasta que ainda não existe, e a Infra a cria quando sobe o
+ * container.
+ */
+describe('caminhoSugeridoNaBase', () => {
+  it('compõe <base>/<slug>', () => {
+    expect(caminhoSugeridoNaBase('/home/voce/projetos-brabo', 'loja')).toBe(
+      '/home/voce/projetos-brabo/loja',
+    );
+  });
+
+  it('barra final na base não vira barra dupla', () => {
+    expect(caminhoSugeridoNaBase('/home/voce/projetos-brabo/', 'loja')).toBe(
+      '/home/voce/projetos-brabo/loja',
+    );
+    expect(caminhoSugeridoNaBase('/home/voce/projetos-brabo///', 'loja')).toBe(
+      '/home/voce/projetos-brabo/loja',
+    );
+  });
+
+  it('sem base não há o que sugerir — vazio, nunca um caminho inventado', () => {
+    expect(caminhoSugeridoNaBase(null, 'loja')).toBe('');
+    expect(caminhoSugeridoNaBase('', 'loja')).toBe('');
+    expect(caminhoSugeridoNaBase('   ', 'loja')).toBe('');
+    // Base degenerada: `/` sem barra final é string vazia, e `//loja` não é
+    // caminho que alguém tenha querido.
+    expect(caminhoSugeridoNaBase('/', 'loja')).toBe('');
+  });
+
+  it('slug vazio deixa o campo vazio — a tela não nomeia a pasta do usuário', () => {
+    expect(caminhoSugeridoNaBase('/home/voce/projetos-brabo', '')).toBe('');
+    expect(caminhoSugeridoNaBase('/home/voce/projetos-brabo', '  ')).toBe('');
+  });
+});
+
+/**
+ * "Está dentro da base?" por SEGMENTO, nunca por prefixo de string — a mesma
+ * armadilha que `dentroDoEscopo` (ADR 0055) resolve na api.
+ */
+describe('caminhoDentroDaBase', () => {
+  const base = '/base';
+
+  it('a base e tudo abaixo dela estão dentro', () => {
+    expect(caminhoDentroDaBase('/base', base)).toBe(true);
+    expect(caminhoDentroDaBase('/base/loja', base)).toBe(true);
+    expect(caminhoDentroDaBase('/base/loja/', base)).toBe(true);
+    expect(caminhoDentroDaBase('/base/a/b/c', base)).toBe(true);
+  });
+
+  it('/base-outra NÃO está dentro de /base, embora a string comece igual', () => {
+    expect(caminhoDentroDaBase('/base-outra', base)).toBe(false);
+    expect(caminhoDentroDaBase('/base-outra/loja', base)).toBe(false);
+    expect(caminhoDentroDaBase('/basex', base)).toBe(false);
+  });
+
+  it('fora da base é fora', () => {
+    expect(caminhoDentroDaBase('/tmp/loja', base)).toBe(false);
+    expect(caminhoDentroDaBase('/', base)).toBe(false);
+  });
+
+  it('barra final na base não muda o veredito', () => {
+    expect(caminhoDentroDaBase('/base/loja', '/base/')).toBe(true);
+    expect(caminhoDentroDaBase('/base-outra', '/base/')).toBe(false);
+  });
+
+  it('sem base nada está dentro — não existe pasta dentro de base que não existe', () => {
+    expect(caminhoDentroDaBase('/base/loja', null)).toBe(false);
+    expect(caminhoDentroDaBase('/base/loja', '')).toBe(false);
+  });
+
+  it('caminho vazio não está dentro de base nenhuma', () => {
+    expect(caminhoDentroDaBase('', base)).toBe(false);
+    expect(caminhoDentroDaBase('   ', base)).toBe(false);
   });
 });

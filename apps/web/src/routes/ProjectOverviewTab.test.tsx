@@ -294,6 +294,32 @@ describe('ProjectOverviewTab — dev/QA saíram para Executores (FASE 27)', () =
   });
 });
 
+describe('ProjectOverviewTab — presença de SecOps vem do resumo, não da janela de 200 eventos (RN-568)', () => {
+  // A cauda de uma sessão longa: o `pr.gate_changed` já saiu dos últimos 200.
+  const CAUDA = [EVENTOS[0], EVENTOS[1], EVENTOS[2]];
+
+  it('gate fora da janela: o resumo agregado ainda traz SecOps para o time', async () => {
+    listSessionEvents.mockResolvedValue({ items: CAUDA, nextCursor: null });
+    getProjectsSummary.mockResolvedValue([resumo({ gatesEverOpened: true })]);
+
+    montar();
+
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(await grid.findByText('SecOps')).toBeInTheDocument();
+  });
+
+  it('resumo sem gate e janela sem gate: SecOps continua fora do time', async () => {
+    listSessionEvents.mockResolvedValue({ items: CAUDA, nextCursor: null });
+    getProjectsSummary.mockResolvedValue([resumo({ gatesEverOpened: false })]);
+
+    montar();
+
+    await screen.findAllByText('Infra');
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(grid.queryByText('SecOps')).not.toBeInTheDocument();
+  });
+});
+
 describe('ProjectOverviewTab — executionActivated vem do resumo, não da janela de 200 eventos', () => {
   it('sessão com mais de 200 eventos: a seção Execução não volta a oferecer "Ativar execução" para uma execução já em andamento', async () => {
     // A janela (`useSessionEvents`) perdeu o `execution.activated` original —

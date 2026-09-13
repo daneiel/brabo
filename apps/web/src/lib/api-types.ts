@@ -65,6 +65,12 @@ export interface Project {
   // Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` =
   // não verificado — só ganha sentido em `executionMode: 'runner'`.
   workspaceVerifiedAt: string | null;
+  // O DESTINO do espelho na máquina do usuário — a pasta FORA da base montada
+  // para onde o agente local copia o trabalho (RN-515, ADR 0147 ponto 4).
+  // `null` é o estado NORMAL, não uma pendência: projeto sem espelho é a
+  // maioria, e é por este campo que a tela decide não mostrar a linha de
+  // espelho em vez de inventar uma ausência.
+  mirrorPath: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +204,19 @@ export interface ProjectUnreadEvents {
 }
 
 /**
+ * A base dos projetos montados desta instalação (ADR 0141, RN-500).
+ *
+ * `null` é estado NORMAL, nunca erro nem falha de leitura: a instalação não
+ * tem `BRABO_PROJECTS_BASE`, e por isso não oferece o modo Pasta montada. É
+ * daqui que o assistente de criação aprende a não oferecer um modo que a
+ * instalação não honra, em vez de oferecer e ver a api recusar depois
+ * (RN-513).
+ */
+export interface ProjectsBase {
+  projectsBase: string | null;
+}
+
+/**
  * Uma listagem do navegador de pastas de projeto (RN-504).
  *
  * `entries` traz SÓ nome de subdiretório — arquivo, symlink e entrada
@@ -216,6 +235,32 @@ export interface ProjectFolders {
   truncado: boolean;
   arquivos: number;
   simbolicos: number;
+}
+
+/**
+ * O estado da última rodada do espelho de um projeto (RN-517, ADR 0147
+ * ponto 7).
+ *
+ * `status` vem RESOLVIDO da api, e a tela não o recalcula: são os TRÊS
+ * estados da RN-088 e a regra que decide qual vale (comparar os dois
+ * carimbos) tem uma fonte só. `never` é a linha ausente — "nunca
+ * sincronizou" —, e ele NÃO é o mesmo que `synced` com `filesCopied: 0`,
+ * que é "olhei e não havia nada a copiar".
+ *
+ * `lastDestination` é CONGELADO: onde a última rodada de fato escreveu. Ele
+ * diverge de `mirrorPath` depois que alguém troca o destino, porque a
+ * concessão viaja no join e só muda quando o runner reconecta (RN-516).
+ */
+export interface MirrorState {
+  mirrorPath: string | null;
+  status: 'never' | 'synced' | 'failed';
+  lastSyncedAt: string | null;
+  filesCopied: number | null;
+  filesSkipped: number | null;
+  filesRefused: number | null;
+  lastDestination: string | null;
+  lastError: string | null;
+  lastErrorAt: string | null;
 }
 
 export interface ProjectMemberWithUser {
@@ -600,6 +645,36 @@ export interface RunnerDeviceKeySummary {
   id: string;
   name: string;
   createdAt: string;
+}
+
+/**
+ * A ESPÉCIE de uma chave de dispositivo (ADR 0154, RN-543).
+ *
+ * `projeto` é a do ADR 0118 — presa ao projeto em que o navegador a gerou.
+ * `maquina` é a que descreve a MÁQUINA (`project_id` nulo no banco): ela
+ * aparece na listagem de TODO projeto que atende, e revogá-la derruba o
+ * agente local em todos eles.
+ */
+export type RunnerDeviceKeyEspecie = 'projeto' | 'maquina';
+
+/**
+ * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519) — mais
+ * campos que `RunnerDeviceKeySummary`, que é só o eco do registro.
+ *
+ * Inclui as REVOGADAS de propósito: sumir com a linha faria a tela afirmar
+ * que a chave nunca existiu. `lastUsedAt` nulo é o sinal da chave ÓRFÃ —
+ * registrada e nunca usada por runner nenhum. `projectId` nulo é a marca de
+ * banco da chave de máquina; `especie` é a mesma informação já resolvida, e é
+ * por ela que a tela decide (ver `lib/agente-de-maquina.ts`).
+ */
+export interface RunnerDeviceKeyListItem {
+  id: string;
+  name: string;
+  projectId: string | null;
+  especie: RunnerDeviceKeyEspecie;
+  createdAt: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
 }
 
 export type BudgetPolicy = 'block' | 'allow';
@@ -1268,19 +1343,20 @@ export type MotivoDeNaoObservacao =
  */
 export type MotivoDeNaoVerificacao =
   | 'fora_do_escopo_da_verificacao'
-  | 'teto_de_verificacoes_atingido';
+  | 'teto_de_verificacoes_atingido'
+  /**
+   * O projeto NUNCA provisionou container (RN-521) — não há o que observar, e
+   * por isso ele não gasta nenhuma das 20 chamadas do orçamento. Distinto de
+   * `fora_do_escopo_da_verificacao`, que fala de um container que EXISTE e
+   * está parado.
+   */
+  | 'sem_container_registrado';
 
 /**
- * Uma linha da página global `/containers` (ADR 0136, RN-495) — espelha
- * `ContainerOverviewItemResponseDto`. `registrado` e `observado` nunca se
- * fundem (RN-468/486): o segundo é `null` tanto quando não há container
- * quanto quando não deu para perguntar — `naoObservado`/`naoVerificado`
- * distinguem os dois motivos de ausência.
+ * O REGISTRADO de uma linha da página global de containers — a linha de
+ * `project_containers` do projeto. Espelha `RegistroDeContainerResponseDto`.
  */
-export interface ContainerOverviewItem {
-  projectId: string;
-  projectName: string;
-  projectSlug: string;
+export interface RegistroDeContainer {
   status: ContainerLifecycleStatus;
   imageVersion: number;
   /** A imagem CONGELADA em `imageVersion` — `null` quando não foi possível resolver. */
@@ -1289,11 +1365,40 @@ export interface ContainerOverviewItem {
   failureReason: string | null;
   createdAt: string;
   statusChangedAt: string;
+}
+
+/**
+ * Uma linha da página global `/containers` (ADR 0136, RN-495/RN-521) —
+ * espelha `ContainerOverviewItemResponseDto`. `registrado` e `observado`
+ * nunca se fundem (RN-468/486): o segundo é `null` tanto quando não há
+ * container quanto quando não deu para perguntar —
+ * `naoObservado`/`naoVerificado` distinguem os dois motivos de ausência.
+ */
+export interface ContainerOverviewItem {
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  /** Ramifica a ação de subida entre `container_start` e `container_start_via_runner` (RN-521). */
+  executionMode: ExecutionMode;
+  /**
+   * `null` = o projeto NUNCA provisionou um container. TERCEIRO estado, e não
+   * um `ContainerLifecycleStatus` a mais: não é `stopped` (um container que
+   * existiu e parou) nem "não observado" (que é sobre o daemon).
+   */
+  registrado: RegistroDeContainer | null;
+  /** O portão da RN-105 nos TRÊS modos: sem imagem decidida não há o que subir. */
+  temImagemDecidida: boolean;
+  /**
+   * Quando um runner CONFIRMOU a pasta (RN-423). Registro de UMA confirmação,
+   * nunca batimento (RN-468) — não-nulo NÃO prova agente local conectado
+   * agora; `null` em projeto `runner` prova que nenhum jamais conectou.
+   */
+  workspaceVerifiedAt: string | null;
   observado: ObservacaoDeContainer | null;
   naoObservado: MotivoDeNaoObservacao | null;
   detalheDaObservacao: string | null;
   naoVerificado: MotivoDeNaoVerificacao | null;
-  /** A `proposed_action` pendente de `container_start`/`container_stop`/`container_remove` deste projeto, se houver. */
+  /** A `proposed_action` pendente de container deste projeto, se houver. */
   acaoPendente: ProposedAction | null;
 }
 

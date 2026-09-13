@@ -261,6 +261,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/first-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates the FIRST account of an installation, already verified
+         * @description For the one-line installer, which runs where no mail transport is configured: the generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and normal registration waits on an e-mail that never arrives. The account is born verified because whoever runs the installer already proved something STRONGER than controlling a mailbox — they control the machine, the `.env` and the Docker daemon. Normal registration is untouched. Refuses with 409 when the installation has ANY user: the condition is about the installation, not about this e-mail, so a migration restore silences the step by the same test. The password is never generated here and never stored anywhere but as an argon2id hash; the personal workspace (RN-410) is born in the same transaction.
+         */
+        post: operations["InternalFirstAccountController_criar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/gates": {
         parameters: {
             query?: never;
@@ -315,6 +335,26 @@ export interface paths {
         get: operations["InternalGraphController_getByName"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/machine-device-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registers the MACHINE device key of a fresh installation
+         * @description For the one-line installer, right after it creates the first account: the local agent needs a credential, and the only one that existed was bound to a PROJECT — in an installation that has none yet. The pair is generated ON THE MACHINE and only the public half arrives here; write the returned `id` into the private JWK as `kid` (RN-475), which is the only link between the file on disk and the public half on the server. There is no `userId` in the body ON PURPOSE: the owner is the installation's SOLE user, resolved by the api, so holding the service token never means choosing whose credential to mint. Registering REPLACES: the owner's active machine keys are revoked in the same transaction, so a reinstalled machine works and a thousand machine keys cannot exist. Project keys (ADR 0118) are never touched.
+         */
+        post: operations["InternalMachineDeviceKeysController_registrarChave"];
         delete?: never;
         options?: never;
         head?: never;
@@ -435,6 +475,26 @@ export interface paths {
         get: operations["InternalProjectsController_gitRemote"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/projects/{projectId}/mirror-sync-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The local agent reports the outcome of a mirror round (RN-517)
+         * @description Called only by the engine, after the runner pushes `mirror_sync_result` over the channel — the SAME path as `workspace_confirm` (runner → channel → engine → api), never a second mechanism: the engine reports, it does not write the table. This is TELEMETRY, not a domain event: never `session_events` (a mirror round has no session and `session_id` is `NOT NULL`, the same reasoning that made `rag_searches` a table) and never a `proposed_action` (the mirror write is configuration the user declared, not an agent asking to act). `ok` is what decides the outcome — never the presence of a count or of a message: a round that copied 0 files is normal and must not be indistinguishable from one that never ran. Recording never breaks what it measures: the copy is already done when this is called, and the engine only logs a refusal here. A project whose destination was cleared meanwhile STILL records — the round happened, and its error is usually what explains what went wrong.
+         */
+        post: operations["InternalProjectsController_mirrorSyncResult"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2074,7 +2134,7 @@ export interface paths {
         put?: never;
         /**
          * Associates a user with the project
-         * @description This role OVERRIDES whatever the person has in the workspace, in both directions: associating someone as `viewer` here really does restrict a workspace `developer` on this project. Two movements are refused with 403 and cannot be enabled anywhere: downgrading a workspace `owner`, and downgrading yourself.
+         * @description This role OVERRIDES whatever the person has in the workspace, in both directions: associating someone as `viewer` here really does restrict a workspace `developer` on this project. Two movements are refused with 403 and cannot be enabled anywhere: downgrading a workspace `owner`, and changing your OWN role — down or up, since self-promotion is the half that escalates privilege.
          */
         post: operations["ProjectsController_addMember"];
         delete?: never;
@@ -2095,9 +2155,49 @@ export interface paths {
         post?: never;
         /**
          * Disassociates a user from the project
-         * @description Removes only the PROJECT association. Whoever has a role in the workspace keeps seeing the project through inheritance.
+         * @description Removes only the PROJECT association. Whoever has a role in the workspace keeps seeing the project through inheritance — and because the project role OVERRIDES the workspace one in both directions, that inheritance can be LOWER than what the row granted. Removing your own row is therefore refused with 403 whenever the net effect is a downgrade (including when there is no workspace role at all); removing it when the workspace holds the same role, and removing anyone else, still work.
          */
         delete: operations["ProjectsController_removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/mirror-path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Declares (or clears) the project's mirror destination
+         * @description The absolute path, ON THE USER MACHINE, where the local agent copies the work to (RN-515, ADR 0147) — a folder OUTSIDE the mounted base, which is the whole reason the mirror exists. Per project and never global: one global destination would land project B artifacts in project A's folder, and the user would find out from the contents, not from an error. `mirrorPath: null` CLEARS it and turns the mirror off — the key is required, omitting it is a 400, because a body that omits the field would be indistinguishable from asking to clear. `null` is the NORMAL state of a project. `maintainer`, the same minimum as `execution-mode` and `projects-base`: this route talks about a path on the operator's own filesystem. It validates ONLY the LEXICAL shape and refuses, with 400, a destination inside `workspacePath` or containing it (both directions of the same loop), and any destination at all on a `container` project. It never touches disk: the API cannot see the machine where the destination will live. Writing the mirror is NOT a proposed_action — it is configuration the user declared, not an agent asking to act.
+         */
+        put: operations["ProjectsController_setMirrorPathRoute"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/mirror-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the last mirror round did (RN-517)
+         * @description Telemetry the local agent pushed over the channel after copying the work to the user folder (ADR 0147, point 7) — never the event log, because a mirror round has no session and `session_events.session_id` is `NOT NULL` (the same reasoning that made `rag_searches` a table). THREE answers that never collapse into one (RN-088): `never` (no round ever reported), `synced` (the last round copied — `filesCopied` may be `0`, which means "looked and there was nothing to copy") and `failed`. A failure never erases the last successful sync, and a success never erases the last error: which one is CURRENT comes from comparing the two timestamps, so the screen can say "failing since today, last good copy was yesterday with 412 files". `lastDestination` is FROZEN — it diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516). `viewer`, the same minimum as reading the project, which already carries `mirrorPath`.
+         */
+        get: operations["ProjectsController_mirrorStateRoute"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2459,7 +2559,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lista as próprias chaves de dispositivo deste projeto
+         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: "maquina"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.
+         */
+        get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
         /**
          * Registra a chave pública de um dispositivo do runner local
@@ -2484,7 +2588,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -3162,9 +3266,29 @@ export interface paths {
         };
         /**
          * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo.
+         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runner/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista os projetos em modo "runner" que este agente local atende
+         * @description Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: "runner"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.
+         */
+        get: operations["RunnerProjectsController_listRunnerProjects"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3332,8 +3456,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists the container of every project in the workspace that already has one
-         * @description One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
+         * Lists every project in the workspace and its container, if any
+         * @description One row per project of the workspace — since RN-521 a project that never provisioned a container is PRESENT with `registrado: null` instead of absent, because this page is the human path to start the first one. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
          */
         get: operations["ContainersOverviewController_list"];
         put?: never;
@@ -3452,7 +3576,7 @@ export interface paths {
         put?: never;
         /**
          * Associates a user with the workspace
-         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects.
+         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall and no route that removes a member, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.
          */
         post: operations["WorkspacesController_addMember"];
         delete?: never;
@@ -3856,7 +3980,7 @@ export interface components {
              */
             userId: string;
             /**
-             * @description Role in this association. On a PROJECT it OVERRIDES the workspace role in both directions — the effective role is this one whenever the association exists, higher OR lower — and two downgrades are refused with 403: a workspace `owner`, and yourself. On a WORKSPACE it is simply the role, with no cap.
+             * @description Role in this association. On a PROJECT it OVERRIDES the workspace role in both directions — the effective role is this one whenever the association exists, higher OR lower — and two movements are refused with 403: downgrading a workspace `owner`, and changing your own role (either way). On a WORKSPACE it is simply the role, with only the second of those caps: you cannot change your own.
              * @example developer
              * @enum {string}
              */
@@ -4817,25 +4941,23 @@ export interface components {
             /** @example exp002 */
             projectSlug: string;
             /**
-             * @description What was RECORDED (project_containers.status).
-             * @example running
+             * @description Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.
+             * @example runner
              * @enum {string}
              */
-            status: "provisioning" | "running" | "stopped" | "failed" | "removed";
-            /** @example 1 */
-            imageVersion: number;
+            executionMode: "container" | "mounted" | "runner";
+            /** @description `null` means this project NEVER provisioned a container — a THIRD state, not a `status` value: it is neither `stopped` (a container that existed and stopped) nor "could not be observed" (which is about the daemon). Read `naoVerificado: "sem_container_registrado"` alongside it. */
+            registrado: components["schemas"]["RegistroDeContainerResponseDto"] | null;
             /**
-             * @description The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.
-             * @example node:22-bookworm-slim
+             * @description Whether ANY `artifact.project_image` exists for this project — the RN-105 gate, which since RN-494/ADR 0135 applies to all THREE modes. `false` means starting a container is impossible right now, and the page says so instead of proposing an action that is known to fail.
+             * @example true
              */
-            imagem: Record<string, never> | null;
-            resources: components["schemas"]["RecursosDoContainerResponseDto"];
-            /** @example null */
-            failureReason: Record<string, never> | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            statusChangedAt: string;
+            temImagemDecidida: boolean;
+            /**
+             * Format: date-time
+             * @description When a runner CONFIRMED the folder (RN-423) — only meaningful for `executionMode: "runner"`. It records ONE confirmation and is never a heartbeat (RN-468): non-null does NOT prove a local agent is connected now. What it does prove is the negative — `null` on a `runner` project means no runner ever connected.
+             */
+            workspaceVerifiedAt: Record<string, never> | null;
             /** @description What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`). */
             observado: components["schemas"]["ObservacaoDeContainerResponseDto"] | null;
             /** @enum {string|null} */
@@ -4843,12 +4965,12 @@ export interface components {
             /** @example null */
             detalheDaObservacao: Record<string, never> | null;
             /**
-             * @description Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows.
+             * @description Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows. `sem_container_registrado`: the project never provisioned one, so there is nothing to observe — and it never spends a call from the budget either.
              * @example null
              * @enum {string|null}
              */
-            naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | null;
-            /** @description The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
+            naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | "sem_container_registrado" | null;
+            /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
         };
         ContainerSpecInternalResponseDto: {
@@ -5449,6 +5571,42 @@ export interface components {
              *     ]
              */
             modules: string[];
+        };
+        FirstAccountInternalDto: {
+            /**
+             * @description The owner e-mail, typed at the TTY. Normalized before anything is written; it is what the installer records in its marker, since an e-mail identifies and is not a secret.
+             * @example voce@exemplo.dev
+             */
+            email: string;
+            /**
+             * @description Read without echo and confirmed by the installer. Used and discarded — never written to the `.env`, to the marker or to a log, and never generated by any code: there is no path where an account is born with a password the script chose. The minimum is the DOMAIN policy, the same code registration uses; the max length here is argon2id protection, not policy.
+             * @example uma frase longa e minha
+             */
+            senha: string;
+            /**
+             * @description Display name. Omitted: the personal workspace's name falls back to the e-mail local-part (RN-410) — nothing is invented.
+             * @example Fulana de Tal
+             */
+            nome?: string;
+        };
+        FirstAccountInternalResponseDto: {
+            /**
+             * Format: uuid
+             * @description The user that was created.
+             * @example 01JC4Z0000USUARIO0000000001
+             */
+            userId: string;
+            /**
+             * @description The NORMALIZED e-mail — what was actually written, which can differ from what was typed. This is what the installer records in its marker.
+             * @example voce@exemplo.dev
+             */
+            email: string;
+            /**
+             * Format: uuid
+             * @description The personal workspace born in the SAME transaction (RN-410), with the account as its `owner`. Without it the install would close with a login that works and a dashboard where "New project" has nowhere to create.
+             * @example 01JC4Z0000WORKSPACE00000001
+             */
+            workspaceId: string;
         };
         GateAbertoResponseDto: {
             /**
@@ -6056,6 +6214,44 @@ export interface components {
             /** @example correct horse battery staple */
             senha: string;
         };
+        MachineDeviceKeyInternalDto: {
+            /**
+             * @description A name for a human to recognize this MACHINE later, in the device key list of every project it serves. Not unique. The installer suggests the hostname; nothing here is derived from it by the api.
+             * @example servidor-de-casa
+             */
+            name: string;
+            /**
+             * @description The PUBLIC Ed25519 JWK (RFC 8037), serialized as JSON. The pair is generated on the machine and the private half never travels — a JWK carrying `d` is refused with 400 saying so, never stored.
+             * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
+             */
+            publicKeyJwk: string;
+        };
+        MachineDeviceKeyInternalResponseDto: {
+            /**
+             * Format: uuid
+             * @description The registration id. Write it into the PRIVATE JWK as `kid` before saving the file (RN-475): it is the only link between the key on disk and the public half on the server, and every step downstream only passes it along.
+             * @example 01JC4Z0000CHAVE000000000001
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The owner the api RESOLVED — the installation's sole user. The caller does not choose it and does not send it; this field is here so the installer can check it against the account it just created rather than assume.
+             * @example 01JC4Z0000USUARIO0000000001
+             */
+            userId: string;
+            /** @example servidor-de-casa */
+            name: string;
+            /**
+             * Format: date-time
+             * @example 2026-09-12T12:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Ids of the MACHINE keys this one REPLACED — revoked in the same transaction. Empty is the normal case (a fresh installation). Non-empty means a local agent still holding one of them stops getting tickets, and the installer should say so instead of letting it be discovered. Project keys (ADR 0118) are never touched.
+             * @example []
+             */
+            replacedKeyIds: string[];
+        };
         MarkTaskInternalDto: {
             /**
              * Format: uuid
@@ -6072,6 +6268,48 @@ export interface components {
              * @enum {string}
              */
             status: "todo" | "in_progress" | "in_review" | "done";
+        };
+        MirrorSyncResultInternalDto: {
+            /**
+             * @description The REAL outcome of the copy, reported by the local agent after it finished — never an optimistic "ok" before the round ends.
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description The destination the round actually resolved (success) or tried to use (failure), on the USER machine. FROZEN in the row: showing the project's current destination next to yesterday's copy would be the screen asserting about a folder that round never touched. Omitted when the failure is about the destination itself.
+             * @example /home/you/mirrors/store
+             */
+            destination?: string;
+            /**
+             * @description Regular files copied in this round. `0` is a number, not an absence — "synced and copied nothing" is a state of its own (RN-088).
+             * @example 412
+             */
+            filesCopied?: number;
+            /**
+             * @description Entries git listed that are not regular files — a nested repository (a dev agent's worktree is one), a symlink, or a file that vanished between the listing and the copy.
+             * @example 3
+             */
+            filesSkipped?: number;
+            /**
+             * @description Targets the per-file guard refused (a symlink escaping the destination). Counted, never swallowed.
+             * @example 0
+             */
+            filesRefused?: number;
+            /**
+             * @description The NAMED failure message. Stored truncated when very long, saying it was truncated. It never erases the last successful sync — which row is CURRENT is decided by comparing the two timestamps.
+             * @example o espelho não conseguiu listar o trabalho com o git: not a git repository
+             */
+            error?: string;
+        };
+        MirrorSyncResultResponseDto: {
+            /** @example true */
+            recorded: boolean;
+            /**
+             * @description Which of the three states is CURRENT after this write. `never` is unreachable here (every write stamps one of the two timestamps) and is listed because the vocabulary is the same one the screen reads.
+             * @example synced
+             * @enum {string}
+             */
+            status: "never" | "synced" | "failed";
         };
         ModelBindingResponseDto: {
             /** @example 01JC4Z0000BINDING00000000001 */
@@ -6909,6 +7147,39 @@ export interface components {
              */
             createdAt: string;
         };
+        ProjectMirrorStateResponseDto: {
+            /**
+             * @description The destination declared TODAY (`projects.mirror_path`, RN-515). `null` means the project has no mirror — the NORMAL state, and what makes the screen hide this line entirely instead of inventing an absence.
+             * @example /home/you/mirrors/store
+             */
+            mirrorPath: Record<string, never> | null;
+            /**
+             * @description `never` — no runner has reported a round yet (there is no row). `synced` — the last round copied; `filesCopied` may be `0`, which is "looked and there was nothing to copy" and has a sentence of its own. `failed` — the last round failed, and the error is newer than the last success. The API derives this from the two timestamps so the rule has one source; the screen still gets the raw fields to write the sentence.
+             * @example synced
+             * @enum {string}
+             */
+            status: "never" | "synced" | "failed";
+            /**
+             * @description The last SUCCESSFUL sync. A later failure never erases it — it is the most useful thing this screen has while the mirror is broken.
+             * @example 2026-09-07T12:04:00.000Z
+             */
+            lastSyncedAt: Record<string, never> | null;
+            /** @example 412 */
+            filesCopied: Record<string, never> | null;
+            /** @example 3 */
+            filesSkipped: Record<string, never> | null;
+            /** @example 0 */
+            filesRefused: Record<string, never> | null;
+            /**
+             * @description Where the last round actually wrote — FROZEN. It diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516).
+             * @example /home/you/mirrors/store
+             */
+            lastDestination: Record<string, never> | null;
+            /** @example null */
+            lastError: Record<string, never> | null;
+            /** @example null */
+            lastErrorAt: Record<string, never> | null;
+        };
         ProjectResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
             id: string;
@@ -6942,6 +7213,11 @@ export interface components {
              * @example null
              */
             workspaceVerifiedAt: Record<string, never> | null;
+            /**
+             * @description The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API.
+             * @example null
+             */
+            mirrorPath: Record<string, never> | null;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
             /**
@@ -7684,6 +7960,28 @@ export interface components {
              */
             publicKeyJwk: string;
         };
+        RegistroDeContainerResponseDto: {
+            /**
+             * @description What was RECORDED (project_containers.status).
+             * @example running
+             * @enum {string}
+             */
+            status: "provisioning" | "running" | "stopped" | "failed" | "removed";
+            /** @example 1 */
+            imageVersion: number;
+            /**
+             * @description The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.
+             * @example node:22-bookworm-slim
+             */
+            imagem: Record<string, never> | null;
+            resources: components["schemas"]["RecursosDoContainerResponseDto"];
+            /** @example null */
+            failureReason: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            statusChangedAt: string;
+        };
         ReindexProjectResponseDto: {
             docs: components["schemas"]["IndexDocsReportResponseDto"];
             sessions: components["schemas"]["ReindexSessionsResponseDto"];
@@ -7966,6 +8264,38 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        RunnerDeviceKeyListResponseDto: {
+            /** @example 01JC4Z0000CHAVE000000000001 */
+            id: string;
+            /** @example laptop */
+            name: string;
+            /**
+             * @description Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.
+             * @example 01JC4Z0000PROJETO000000001
+             */
+            projectId: Record<string, never> | null;
+            /**
+             * @description `projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.
+             * @example projeto
+             * @enum {string}
+             */
+            especie: "projeto" | "maquina";
+            /**
+             * Format: date-time
+             * @example 2026-08-27T12:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Nulo = ativa. Revogada continua aparecendo na lista.
+             * @example null
+             */
+            revokedAt: Record<string, never> | null;
+            /**
+             * @description Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).
+             * @example null
+             */
+            lastUsedAt: Record<string, never> | null;
+        };
         RunnerDeviceKeyResponseDto: {
             /** @example 01JC4Z0000CHAVE000000000001 */
             id: string;
@@ -7976,6 +8306,22 @@ export interface components {
              * @example 2026-08-27T12:00:00.000Z
              */
             createdAt: string;
+        };
+        RunnerProjectResponseDto: {
+            /** @example 01JC4Z0000PROJETO000000001 */
+            projectId: string;
+            /** @example Brabo */
+            name: string;
+            /**
+             * @description O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.
+             * @example brabo-01jc4z
+             */
+            workspaceDirName: string;
+            /**
+             * @description Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.
+             * @example null
+             */
+            workspaceVerifiedAt: Record<string, never> | null;
         };
         RunnerTicketResponseDto: {
             /** @description Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira. */
@@ -8161,6 +8507,13 @@ export interface components {
              * @example 4
              */
             maxParallel: number;
+        };
+        SetMirrorPathDto: {
+            /**
+             * @description The absolute path, ON THE USER'S MACHINE, where the local agent copies the project work to (RN-515, ADR 0147). Send `null` — the key is REQUIRED, omitting it is a 400 — to clear the destination and turn the mirror off; `null` is the normal state of a project, not an error. Only `mounted`/`runner` projects can have one: in `container` the source is a server-side managed volume the local agent cannot see, and the request is refused with 400 naming that reason. The API validates ONLY the LEXICAL shape (absolute, no `..`/`.`, never the root, a system folder, or overlapping Brabo's own checkout) plus the two directions of the origin↔destination loop (the destination cannot be inside `workspacePath`, nor contain it) — it never touches the disk, because it cannot see the machine where the destination will live, exactly as in `runner` mode (RN-423). Resolving symlinks is the local agent’s half of the guard, not this one.
+             * @example /home/you/mirrors/store
+             */
+            mirrorPath: string | null;
         };
         SetModelBindingDto: {
             /**
@@ -9199,6 +9552,50 @@ export interface operations {
             };
         };
     };
+    InternalFirstAccountController_criar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirstAccountInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FirstAccountInternalResponseDto"];
+                };
+            };
+            /** @description Malformed e-mail, or a password the DOMAIN policy refuses — the same code registration calls, never a second rule. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The installation already has a user. Nothing was created. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalGatesController_ler: {
         parameters: {
             query?: never;
@@ -9306,6 +9703,50 @@ export interface operations {
             };
             /** @description Neo4j not configured or unreachable — no fallback possible for reading/writing a template. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalMachineDeviceKeysController_registrarChave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineDeviceKeyInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineDeviceKeyInternalResponseDto"];
+                };
+            };
+            /** @description The JWK is not a PUBLIC Ed25519 key — malformed JSON, wrong `kty`/`crv`, missing `x`, or carrying `d` (that is the private half, and it is refused by name rather than stored). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The installation has no user, or more than one. Nothing was written. This route belongs to the moment of installation and goes quiet for good once the installation has a team. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9496,6 +9937,52 @@ export interface operations {
                 content?: never;
             };
             /** @description Project with no provisioned repository, or the workspace owner has no registered credential for the repository provider. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalProjectsController_mirrorSyncResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MirrorSyncResultInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MirrorSyncResultResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14110,7 +14597,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Insufficient role on the project, OR one of the two downgrade caps (the target is a workspace `owner`; the target is the caller and the role is lower than the caller's current one). */
+            /** @description Insufficient role on the project, OR one of the two caps (the target is a workspace `owner`; the target is the caller and the requested role differs from their current effective one). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14151,6 +14638,115 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project, OR the caller is removing their own row and would end up with a lower role than they have today. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_setMirrorPathRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMirrorPathDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_mirrorStateRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMirrorStateResponseDto"];
+                };
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
@@ -15204,6 +15800,55 @@ export interface operations {
                 content?: never;
             };
             /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerDeviceKeysController_listDeviceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Papel insuficiente no projeto. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projeto não encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17551,7 +18196,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description O binário do runner, em stream. Não é JSON: `Content-Type: application/octet-stream`. */
+            /** @description O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -17559,6 +18204,53 @@ export interface operations {
                 content: {
                     "application/octet-stream": string;
                 };
+            };
+            /** @description Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerProjectsController_listRunnerProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerProjectResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -18449,7 +19141,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Insufficient role in the workspace. */
+            /** @description Not `owner` of the workspace, OR the target is the caller and the requested role differs from their current one (self-movement cap). */
             403: {
                 headers: {
                     [name: string]: unknown;
