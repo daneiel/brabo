@@ -1,0 +1,183 @@
+name: Golden-set do QA (agendado)
+
+# Golden-set de regressão do julgamento SEMÂNTICO do QA de Automação (ADR
+# 0123) em CI — no molde de `golden-set-rag.yml` (ADR 0138), e pelo MESMO
+# motivo AGENDADO, nunca por PR: é medição de tendência, não portão de
+# mudança, e não liga a gate nenhum (`qa-verificada` não muda).
+#
+# O que ele pede A MAIS que o do RAG, e por quê:
+#   - um modelo de CHAT de 7B (`qwen2.5-coder:latest`, ~4,7 GB) em vez de um
+#     de embedding, atravessando seis laços de agente em CPU;
+#   - o ENGINE de pé como SERVIDOR, além da api: quem executa o `npm test`
+#     que o QA pede é o engine, via `POST /internal/actions/execute`, chamado
+#     pela api quando a `proposed_action` `terminal` é auto-aprovada. O
+#     `mix golden_set.qa` roda noutro processo (MIX_ENV=test, banco
+#     `engine_test`) e não serve HTTP.
+on:
+  push:
+    branches: [test/golden-set-qa-em-ci]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Mesmas versões do ci.yml — arquivo separado, sem `env:` compartilhado
+  # entre workflows.
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+  ELIXIR_VERSION: '1.17.3'
+  OTP_VERSION: '27.1.2'
+
+jobs:
+  golden-set-qa:
+    name: Golden-set do QA (ExUnit, contra Ollama real)
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    services:
+      postgres:
+        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+        env:
+          POSTGRES_USER: brabo
+          POSTGRES_PASSWORD: brabo
+          POSTGRES_DB: brabo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brabo -d brabo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      ollama:
+        image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+        ports:
+          - 11434:11434
+        env:
+          # Os MESMOS dois valores do serviço `ollama` de docker/docker-compose.yml,
+          # pelo mesmo motivo escrito lá: sem KEEP_ALIVE o modelo descarrega
+          # entre um caso e outro e o turno seguinte paga o carregamento de
+          # novo; sem CONTEXT_LENGTH o Ollama trunca em 4096 em silêncio e o
+          # agente perde as próprias instruções (ADR 0020).
+          OLLAMA_KEEP_ALIVE: 1h
+          OLLAMA_CONTEXT_LENGTH: '16384'
+        options: >-
+          --health-cmd "ollama list || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 15s
+    env:
+      DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
+      OLLAMA_HOST: http://localhost:11434
+      GOLDEN_SET_QA_MODEL: 'qwen2.5-coder:latest'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Puxar qwen2.5-coder:latest no Ollama do job
+        run: |
+          set -euo pipefail
+          inicio=$(date +%s)
+          curl -fsS --max-time 1200 -X POST http://localhost:11434/api/pull \
+            -d '{"name":"qwen2.5-coder:latest","stream":false}'
+          echo
+          curl -fsS http://localhost:11434/api/tags | grep -q 'qwen2.5-coder:latest' \
+            || { echo "::error::qwen2.5-coder:latest não apareceu em /api/tags depois do pull"; exit 1; }
+          echo "pull levou $(( $(date +%s) - inicio ))s"
+
+      - name: Migrations da api
+        run: pnpm --filter api db:migrate
+
+      - name: Build da api
+        run: pnpm --filter api build
+
+      - name: Subir a api e esperar o /health
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          node dist/main.js > /tmp/api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+              echo "api de pé"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::a api não respondeu em /health depois de 120s"
+          tail -50 /tmp/api.log
+          exit 1
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      - name: Compilar com --warnings-as-errors
+        working-directory: apps/engine
+        run: mix compile --warnings-as-errors
+
+      - name: Subir o engine (servidor) e esperar o /health
+        working-directory: apps/engine
+        run: |
+          set -euo pipefail
+          mix ecto.migrate
+          mix phx.server > /tmp/engine.log 2>&1 &
+          for _ in $(seq 1 90); do
+            if curl -fsS http://localhost:4000/health >/dev/null 2>&1; then
+              echo "engine de pé"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::o engine não respondeu em /health depois de 180s"
+          tail -50 /tmp/engine.log
+          exit 1
+
+      - name: mix golden_set.qa
+        working-directory: apps/engine
+        run: |
+          set -o pipefail
+          inicio=$(date +%s)
+          mix golden_set.qa 2>&1 | tee /tmp/golden-qa.log
+          status=$?
+          echo "mix golden_set.qa levou $(( $(date +%s) - inicio ))s"
+          exit $status
+
+      - name: O golden-set precisa ter RODADO, não pulado
+        if: always()
+        run: |
+          set -euo pipefail
+          if ! grep -qE '[0-9]+/[0-9]+ casos bateram o veredito esperado' /tmp/golden-qa.log; then
+            echo "::error::o golden-set NÃO mediu — ExUnit reportou sem avaliar caso nenhum:"
+            grep -E 'inalcançável|seed do golden-set|skipped|Seed do golden-set' /tmp/golden-qa.log || true
+            exit 1
+          fi
+          grep -E '✓|✗|casos bateram' /tmp/golden-qa.log
+
+      - name: Logs da api e do engine
+        if: always()
+        run: |
+          echo "--- api ---"; tail -200 /tmp/api.log || true
+          echo "--- engine ---"; grep -iE 'error|recus|container|terminal|actions/execute' /tmp/engine.log | tail -200 || true
