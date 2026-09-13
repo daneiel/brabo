@@ -178,7 +178,7 @@ jobs:
       # Por isso `cache/restore`: mesma key e mesmos paths do escritor, zero
       # gravação. Cache frio aqui degrada para o que já era o caminho frio —
       # `mix deps.get` pela rede.
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
             apps/engine/deps
@@ -581,7 +581,7 @@ jobs:
       # Só restaura, pelo mesmo motivo detalhado no job `lint`: o escritor do
       # cache do Elixir é o `test-engine`, e gravar daqui poria um `_build`
       # vazio sob a key dele.
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
             apps/engine/deps
