@@ -1,5 +1,5 @@
 import type { ComponentType, CSSProperties } from 'react';
-import { AREAS } from './agent-areas.generated';
+import { AREAS, SOLO_CONVERSATIONAL_AGENTS } from './agent-areas.generated';
 import {
   BulbIcon,
   ClockIcon,
@@ -268,23 +268,19 @@ export function areaFor(agentKey: string): AreaDef | undefined {
 }
 
 /**
- * Agentes conversacionais SOLO — sem área, sem subagentes. Mirror MANUAL de
- * `SOLO_CONVERSATIONAL_AGENTS` em
- * `apps/api/src/domain/agents/agent-areas.ts` (ADR 0109/RN-440) — não vem do
- * gerador (que só cobre `AREAS`), então mudar um lado sem o outro NÃO
- * reprova em teste automático hoje; a validação de VERDADE (quem o backend
- * de fato aceita) mora no `RequestManualHandoffUseCase`, e um alvo
- * desatualizado aqui só produz um 400 tratável na UI, nunca escrita
- * indevida. Lacuna aceita — cruzar as duas listas por teste exigiria o
- * mesmo mecanismo de `gerar:areas` (Fase 18), fora do escopo desta feature.
+ * Agentes conversacionais SOLO — sem área, sem subagentes (ADR 0109/RN-440),
+ * DERIVADOS da api como `AREAS`. A fonte é `SOLO_CONVERSATIONAL_AGENTS` em
+ * `apps/api/src/domain/agents/agent-areas.ts`; `pnpm --filter api gerar:areas`
+ * escreve a cópia em `agent-areas.generated.ts` e `agent-areas.spec.ts` (api)
+ * reprova quando o disco diverge do gerador. Até a AT-046 isto era um mirror
+ * MANUAL que nenhum teste cruzava.
+ *
+ * O tipo é checado lá, não aqui: a lista gerada sai
+ * `as const satisfies readonly AgentKey[]`, então um nome que este roster não
+ * conhece quebra o build do web. A validação de VERDADE (quem o backend aceita)
+ * continua sendo o `RequestManualHandoffUseCase`.
  */
-export const SOLO_CONVERSATIONAL_AGENTS: AgentKey[] = [
-  'criativo',
-  'po',
-  'arquiteto',
-  'ux-designer',
-  'staff',
-];
+export { SOLO_CONVERSATIONAL_AGENTS };
 
 /**
  * Handoff manual a agente à escolha (ADR 0109/RN-440): todo agente que a
