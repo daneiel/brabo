@@ -1180,6 +1180,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
+  sumir** do painel do time numa sessão de execução longa
+  ([RN-568](docs/business-rules.md#rn-568)).
+
+  A Visão geral e a aba Executores decidiam a presença deles pelos últimos 200
+  eventos da sessão — e o `pr.gate_changed` e as delegações que os trazem são
+  dos primeiros de uma execução. O resumo do workspace já agregava os dois
+  fatos sobre a sessão inteira, e as duas telas passam a usá-lo, como já faziam
+  com `executionActivated`. O agregado SOMA à janela e nunca a substitui: sem
+  resumo carregado, ou com o resumo apontando outra sessão, a tela decide pela
+  janela como antes. Só a presença muda; o status de cada agente continua lido
+  dos eventos, e nenhuma requisição nova foi acrescentada.
 - **engine**: o Infra Lead deixa de propor `container_start` para um projeto
   `runner` — recusa **local e nomeada**, antes de chamar a api
   ([RN-566](docs/business-rules.md#rn-566)).

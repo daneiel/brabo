@@ -70,6 +70,20 @@ rules:
     severity: block
     note: "A confirmação em duas etapas do pull é regra de negócio (RN-462) fora de domain/; RN alterada exige arquivo:linha atualizado e o teste que a cobre."
 
+  # A regra de PRESENÇA da roster (quem aparece no painel do time e no card do
+  # dashboard) mora no WEB, não em `domain/`: `rosterFromFacts` é a regra
+  # única das duas fontes (RN-090/RN-287), e `rosterFactsFromEvents` decide de
+  # onde vêm os fatos (RN-411, RN-568). Nenhuma regra observava esse arquivo, e
+  # as RNs dele citam arquivo:linha que anda a cada mudança. `warn`, não
+  # `block`: boa parte das mudanças aqui é de STATUS e de apresentação, e cobrar
+  # RN de toda uma ensinaria a usar o escape hatch por reflexo.
+  - id: roster-de-agentes
+    watch:
+      - "apps/web/src/lib/agent-status.ts"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Presença e status da roster são regra de negócio fora de domain/ (RN-090, RN-287, RN-411, RN-568); mudança aqui costuma mover o arquivo:linha dessas RNs."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que

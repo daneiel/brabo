@@ -13274,3 +13274,68 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
   parcialmente)
 - **Origem:** AT-066
+
+### RN-568 — A presença de QA, SecOps e dos membros de área no painel do time é decidida pela sessão INTEIRA, não pela janela de 200 eventos {#rn-568}
+
+A Visão geral e a aba Executores montam a roster com `deriveAgentRoster` sobre
+os ÚLTIMOS 200 eventos da sessão (`useSessionEvents`, `latest: true`). Dois dos
+fatos de presença saíam dessa janela: `gatesEverOpened` (qa e secops entram
+quando algum `pr.gate_changed`/`infra.gate_changed` já aconteceu) e
+`delegatedSubagents` (membro de área entra com delegação registrada). Os dois
+eventos são dos primeiros de uma execução — numa sessão longa eles saem da
+janela, e QA, SecOps e `qa-automacao` **sumiam do painel** de uma execução que
+continuava rodando. É a mesma classe de defeito que já tinha sido fechada para
+`executionActivated`, e o resumo do workspace ([RN-090](#rn-090)) já agregava
+os dois fatos sobre a sessão inteira (`bool_or` e `selectDistinct` em
+`projects-summary.repository.ts`) — as duas telas o carregavam e ignoravam
+esses dois campos.
+
+**A regra:** `deriveAgentRoster`/`rosterFactsFromEvents` aceitam um
+`agregado` OPCIONAL (`AgregadoDaSessao`), e as duas telas o preenchem com o
+resumo. Quatro decisões, cada uma com motivo:
+
+1. **Ausente é "não li", nunca "não houve".** Sem resumo carregado (primeiro
+   paint, erro), o fato sai só da janela, exatamente como antes. Leitura
+   ausente nunca vira "QA não está aqui".
+2. **O agregado SOMA à janela, não a substitui** (OU lógico no gate, união nas
+   delegações). Os dois fatos são MONÓTONOS dentro de uma sessão — gate que
+   abriu não desabre, delegação registrada não some —, então a janela só
+   produz falso NEGATIVO, nunca falso positivo. Um `false` agregado que
+   discorde de um gate VISTO na janela é resumo atrasado (as duas leituras
+   têm cadências próprias de poll), e não pode esconder QA.
+3. **Só vale quando o resumo é da MESMA sessão que a tela lê**
+   (`latestSessionId === sessionId`). O resumo agrega a sessão mais RECENTE
+   do projeto; a Visão geral lê essa mesma sessão, mas a aba Executores lê a
+   sessão de EXECUÇÃO vigente ([RN-139](business-rules/autenticacao.md#rn-139)). Uma ideação aberta depois
+   faz as duas divergirem, e aí o agregado seria de OUTRA sessão — a tela
+   volta a decidir só pela janela.
+4. **Só a PRESENÇA muda.** `rosterFromFacts` (a regra única, compartilhada com
+   o card do dashboard) fica intacto, e o STATUS de cada agente (`gateStatus`,
+   `subagentStatus`) continua lido da janela. Nenhuma requisição nova e o teto
+   de 200 não muda.
+
+`delegatedSubagents` entrou pelo MESMO molde porque cabe sem mudar regra: a
+tabela `delegations` que o resumo lê e os eventos `delegation.*` que a janela
+lê nascem juntos em `RecordDelegationUseCase` (uma linha, um evento, os três
+desfechos), então os dois conjuntos descrevem a mesma coisa.
+
+**O que esta regra NÃO fecha:** `executionActivated`, na aba Executores,
+continua lido do resumo SEM a guarda de sessão do item 3 — com uma sessão mais
+nova que a de execução, o resumo diz `false` e os dev agents somem da aba.
+Declarado no comentário da tela, não corrigido aqui.
+
+- **Código:** `apps/web/src/lib/agent-status.ts:285` (`AgregadoDaSessao`),
+  `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
+  delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
+  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:96` e
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:108` (o agregado com a guarda
+  de sessão)
+- **Teste:** `apps/web/src/lib/agent-status.test.ts:628` (o bloco inteiro:
+  `:633` gate fora da janela traz QA/SecOps com status da janela, `:658` sem
+  agregado a janela decide sozinha, `:676` `false` agregado não esconde gate
+  visto na janela); `apps/web/src/routes/ProjectExecutorsTab.test.tsx:385`
+  (QA e membro de área voltam pelo resumo), `:397` (resumo de outra sessão não
+  decide); `apps/web/src/routes/ProjectOverviewTab.test.tsx:301` (SecOps volta
+  pelo resumo)
+- **Origem:** AT-047 — a lacuna declarada no `CLAUDE.md` e nos comentários das
+  duas telas
