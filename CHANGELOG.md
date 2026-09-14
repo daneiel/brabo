@@ -2,7 +2,7 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## Unreleased
+## v6.1.0 — 2026-09-13
 
 ### Novidades
 
@@ -25,6 +25,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   graph*; prova em `make test-reprojecao`, que exige Neo4j de pé. O BRB-018
   **segue aberto**: falta a prova no cluster local e a medição de tempo num
   event log grande.
+
+- **install**: o compose do instalador viaja com ele, como asset assinado (62bc5cf06)
+- **api**: o grafo é reconstruído do event log pelo mesmo tradutor do projetor vivo (bb84f1869)
 
 ### Correções
 
@@ -72,6 +75,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   produção criar a extensão continua sendo ação do operador, como a migração
   já dizia. Detalhe em [Scheduled property proofs](docs/runbook.md#provas-de-propriedade-agendadas).
 
+- **k8s**: o restore sobrevive à extensão de outro dono, e as provas esperam o desfecho (2d1d10a45)
+- **k8s**: o template1 do cluster local traz o pgvector para o restore (f503aa109)
+- **k8s**: o smoke e o rollout-test do cluster mandam o kind da sessão (7e1149b4a)
+- **k8s**: o Neo4j sobe no cluster e o pgvector nasce pelo superusuário (d7fcd0263)
+- **k8s**: NEO4J_URI e NEO4J_USER chegam à api no cluster (d449521af)
+- **k8s**: o bootstrap cria o NEO4J_PASSWORD que o ExternalSecret lê (0fc4f0f7e)
+- **k8s**: o imageName do CNPG leva a tag junto do digest (d55178245)
+
 ### Testes
 
 - **ci**: as três provas de propriedade do deploy em Kubernetes —
@@ -87,6 +98,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   comentário na issue aberta, não issue nova. O `BRB-009` continua **aberto**:
   o critério pede também que uma quebra proposital do restore seja pega sem
   humano e que a última execução boa fique numa métrica.
+
+- **ci**: agenda as três provas de propriedade num k3d do Actions (0bd8310fc)
+- **ci**: diagnóstico temporário das ações propostas no golden-set do QA (e7d7d1b16)
+- **ci**: medição do golden-set do QA em ubuntu-latest (gatilho de push temporário) (a610c653e)
+
+### Documentação
+
+- **changelog**: o que entrou na dev depois do corte volta ao Unreleased (e5925984e)
+- **k8s**: as provas de propriedade medidas, e a órfã do rollout declarada (c17de30ad)
+- **docmap**: assets-do-instalador sai da regra de política de branches (cf612eca1)
+- **qa**: o golden-set do QA medido em CI — o relógio cabe, o instrumento não mede (81f298cb6)
+- **ci**: darwin-x64 medido — macos-13 não tem runner e macos-15-intel reprova no self-test sob o Bun (044f0778a)
+- **changelog**: v6.0.0 (0690fd5e9)
+- **architecture**: a dívida do SessionPage volta a ser declarada, com o número de hoje (3a808ba8d)
+
+### Manutenção
+
+- **ci**: a branch do Dependabot é permitida sem critério de caracteres (f5641cef9)
 
 ## v6.0.0 — 2026-09-13
 

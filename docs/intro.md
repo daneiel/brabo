@@ -85,7 +85,7 @@ sequenceDiagram
 
 ## Status
 
-**Phases 1 through 26 complete**, version **v6.0.0**. What exists:
+**Phases 1 through 26 complete**, version **v6.1.0**. What exists:
 
 - IAM/RBAC, sessions with an immutable event log, LLM router, metering and
   budget, an approval pipeline with `permissions.json`
