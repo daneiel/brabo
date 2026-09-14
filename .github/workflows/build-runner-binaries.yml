@@ -157,7 +157,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "tag a construir: $tag"
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # Checkout NA TAG, nunca no ref do evento — mesmo motivo de
           # `publish-runner.yml`.
@@ -352,7 +352,7 @@ jobs:
       # manifesto. Sem ele, o script não teria contra o que conferir a si
       # mesmo, e a verificação de origem da RN-526 seria letra morta.
       - name: Checkout na tag
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ steps.alvo.outputs.ref }}
 

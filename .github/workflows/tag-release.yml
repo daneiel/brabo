@@ -48,7 +48,7 @@ jobs:
       # é o que torna a presença do PAT testável dentro do job.
       TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # O cálculo lê TODAS as tags e o histórico desde a última final.
           fetch-depth: 0
@@ -121,7 +121,7 @@ jobs:
           echo "Crie o segredo (PAT com \`repo\` + \`workflow\`) e rode este job de novo." >&2
           exit 1
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           # Escrever em `main` e abrir PR que NASÇA COM CHECKS exige o PAT: PR
@@ -181,7 +181,7 @@ jobs:
           echo "::error title=destravar-gate::sem BRABO_BOT_TOKEN o gate não pode ser atualizado em main."
           exit 1
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.BRABO_BOT_TOKEN }}
@@ -252,7 +252,7 @@ jobs:
       # `BRABO_BOT_TOKEN` inválido (o `checkout` morre com "could not read
       # Username"). Um alarme que depende do que pode estar quebrado é um
       # alarme que cala justamente na hora em que precisa tocar.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           token: ${{ github.token }}
 
