@@ -355,6 +355,22 @@ rules:
     severity: warn
     note: "O agente local roda na máquina do usuário: o que ele DECLARA no join e o que ele instala são contrato, não detalhe."
 
+  # AT-032 (BRB-018, RN-569): o grafo não tem backup PORQUE é reprojetável
+  # (ADR 0152, decisão 4). Tipo novo traduzido para o grafo, ou mudança no que a
+  # reprojeção varre, muda o que o runbook promete ao operador que perdeu o
+  # grafo — e a tradução mora fora de `domain/`, então `dominio-e-regras` não a
+  # via. `warn`: o teste de cobertura dos tipos já reprova a divergência que
+  # importa (tipo projetável sem tradução).
+  - id: grafo-reprojecao
+    watch:
+      - "apps/api/src/application/graph-projection/**"
+      - "apps/api/src/scripts/reprojetar-grafo.ts"
+    docs:
+      - "docs/runbook.md"
+      - "docs/business-rules.md"
+    severity: warn
+    note: "O que a reprojeção reconstrói (e o que NÃO) é o que o runbook diz a quem perdeu o grafo."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"
@@ -450,11 +466,19 @@ rules:
       # ARTEFATO que uma tag já cortada publica. A doc dele é a própria RN-524
       # em `docs/business-rules.md`.
       #
-      # O extglob EXCLUI os nove pelo nome e continua casando com todo o resto
+      # `assets-do-instalador.ts` é o DÉCIMO (ADR 0160, RN-570): ele diz quais
+      # arquivos do checkout de uma tag viram asset da Release e com que nome,
+      # para o `install.sh` baixá-los e conferi-los contra o manifesto
+      # assinado. Como o nono, é sobre o ARTEFATO que uma tag já cortada
+      # publica, e não sobre degrau, destino ou a versão que a função da branch
+      # decide. A doc dele é a própria RN-570 em `docs/business-rules.md`, o
+      # ADR 0160 e `cadeia-de-suprimentos-do-ci.md`.
+      #
+      # O extglob EXCLUI os dez pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.

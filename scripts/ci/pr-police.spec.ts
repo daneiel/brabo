@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   avaliarPr,
   ehAutorBot,
+  ehBranchDoDependabot,
+  PREFIXO_DO_DEPENDABOT,
   ESCADA,
   FUNCOES_DE_TRABALHO,
   verificarContaminacao,
@@ -338,6 +340,12 @@ describe('isenção de bot', () => {
     expect(v.isento).toBe(false);
   });
 
+  it('diz em FUNCAO-DESCONHECIDA que o prefixo dependabot/ é reservado', () => {
+    const v = avaliarPr({ head: 'dependabot/npm_and_yarn/x', base: 'dev', autor: 'daneiel' });
+    expect(v.violacoes[0]?.codigo).toBe('FUNCAO-DESCONHECIDA');
+    expect(JSON.stringify(v.violacoes[0])).toContain('reservado');
+  });
+
   it('reconhece bot por sufixo e por tipo', () => {
     expect(ehAutorBot('renovate[bot]')).toBe(true);
     expect(ehAutorBot('daneiel')).toBe(false);
@@ -420,5 +428,47 @@ describe('toda violação ensina', () => {
       expect(violacao.porque.length).toBeGreaterThan(10);
       expect(violacao.conserto.length).toBeGreaterThan(5);
     }
+  });
+});
+
+// ------------------------------------------------ 6b. branch do Dependabot
+
+describe('branch do Dependabot — permitida sem critério de caracteres', () => {
+  // Nomes reais, dos PRs #553 e #561–#565.
+  const nomesReais = [
+    'dependabot/npm_and_yarn/npm_and_yarn-582a9020a7',
+    'dependabot/github_actions/dev/actions/checkout-7.0.1',
+    'dependabot/github_actions/dev/anthropics/claude-code-action-1.0.221',
+  ];
+
+  it.each(nomesReais)('aceita %s, que estoura o formato funcao/descritivo', (head) => {
+    const v = avaliarPr({ head, base: 'dev', autor: 'dependabot[bot]', tipoDoAutor: 'Bot' });
+    expect(v.ok).toBe(true);
+    expect(v.avisos.join(' ')).toContain('sem critério de caracteres');
+  });
+
+  it('a regra existe porque o nome real reprovaria no formato', () => {
+    // Prova de que a regra NOMEADA é necessária: o mesmo nome, avaliado como
+    // branch de trabalho, não passa.
+    const v = avaliarPr({ head: nomesReais[2]!, base: 'dev', autor: 'daneiel' });
+    expect(v.ok).toBe(false);
+  });
+
+  it('aceita pelo login do gh (app/dependabot) e pelo login sem sufixo com type=Bot', () => {
+    expect(ehBranchDoDependabot(nomesReais[0]!, 'app/dependabot')).toBe(true);
+    expect(ehBranchDoDependabot(nomesReais[0]!, 'dependabot', 'Bot')).toBe(true);
+  });
+
+  it('o prefixo sozinho NÃO basta: login dependabot sem type=Bot não é o app', () => {
+    expect(ehBranchDoDependabot(nomesReais[0]!, 'dependabot')).toBe(false);
+  });
+
+  it('outro bot com branch dependabot/ não usa esta regra (cai na isenção genérica)', () => {
+    expect(ehBranchDoDependabot(nomesReais[0]!, 'renovate[bot]', 'Bot')).toBe(false);
+  });
+
+  it('o Dependabot fora do prefixo não usa esta regra', () => {
+    expect(ehBranchDoDependabot('feature/x', 'dependabot[bot]', 'Bot')).toBe(false);
+    expect(PREFIXO_DO_DEPENDABOT).toBe('dependabot/');
   });
 });

@@ -148,6 +148,9 @@ estado lido do repositório e não da conversa.
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
 | A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (AT-012) | RN-561 |
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
+| O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
+| A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
+| As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 
 ## Estado atual e aberto
 
@@ -314,6 +317,14 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   contexto do Infra Lead com modo e presença de runner é frente à parte, mais
   cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
   `mounted` pode dar certo de verdade, pelo broker
+- **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
+  `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
+  engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,
+  então a leitura provável é corrida intermitente na adoção/drenagem, não
+  atraso. Declarado e NÃO corrigido: o workflow agendado existe para pegar
+  isto, e a próxima ocorrência sai com o teto esperado, a réplica de cada
+  sessão e as linhas do engine que citam a órfã. A correção é do engine, não
+  da prova — não afrouxe o teto para o verde voltar
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
@@ -454,19 +465,20 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   PRÉ-EXISTENTE da idempotência, vale para qualquer `fetch` que falhe).
   Repositório `local` (sem credencial), os modos `container`/`mounted` e o
   `workspace_create` (roda no HOST) não são afetados
-- **O `install.sh` publicado NÃO sobe nada sozinho numa máquina limpa** — medido
-  na RN-549. Ele usa `docker compose -f docker/docker-compose.install.yml`, um
-  caminho RELATIVO ao diretório de onde roda, e esse arquivo NÃO é asset da
-  Release, NÃO entra no `checksums.txt` assinado e **ele não o baixa em lugar
-  nenhum** (as únicas descargas são o `cosign`, o manifesto, o próprio hash e o
-  binário do runner). Com o `./postgres/init.sql` que o compose bind-monta, são
-  TRÊS arquivos. Quem segue o `sh -c "$(curl … install.sh)"` do runbook morre em
-  "no such file or directory" DEPOIS de já ter verificado assinatura, escolhido a
-  base e gravado o `.env` — a saída de hoje é rodar o instalador de dentro de um
-  checkout na tag. Corrigir é decidir entre publicar o compose como asset
-  ASSINADO (RN-524) e fazer o instalador clonar: entrega própria, com ADR, nunca
-  de passagem. O `install-e2e.yml` traz os três à mão num passo que DIZ que é
-  achado, e `scripts/dev/install-e2e.spec.ts` cobra as duas metades
+- **O instalador sobe de uma pasta vazia desde a RN-570 (ADR 0160), mas só a
+  partir da PRÓXIMA tag final.** O compose de instalação e os três arquivos que
+  a instalação usa por caminho relativo viajam como assets `brabo-install-*` no
+  MESMO `checksums.txt` assinado, e o `install.sh` os confere antes de perguntar
+  ou gravar. Releases já publicadas NÃO ganham os assets (seguem exigindo
+  checkout na tag), e a prova ponta a ponta só roda depois de uma tag (o
+  `install-e2e.yml` não roda em PR). A tabela tem DOIS lados —
+  `scripts/ci/assets-do-instalador.ts` e o `case` do `install.sh` (bash 3.2, sem
+  Node) — e o spec reprova a divergência e todo bind-mount relativo do compose
+  fora dela: bind-mount novo no compose de instalação ENTRA NA TABELA, senão não
+  viaja. Adjacência medida e NÃO corrigida: `test-restore-compose.sh` chama o
+  Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
+  prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
+  é apagado), mas a migração por compose não fecha
 - `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
   disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
   SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
@@ -520,10 +532,21 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   exercitadas — o que falta aí é uma TAG, não uma sessão. `darwin-x64`
   (`macos-13`) é o único que nunca chegou a construir: ele fica **24h00m01s**
   na fila e é cancelado, o MESMO número nas três tags, que é o teto do
-  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A hipótese "fila
-  congestionada" está descartada pela ordem de grandeza; a que sobra é label
-  sem runner, e decidir entre trocar o label, tirar a plataforma (a promessa
-  vira quatro alvos, em ADR novo) ou pagar runner é decisão de dono. O que
+  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A causa está MEDIDA
+  (AT-065, 2026-09-13): `macos-13` é label SEM RUNNER, a imagem foi aposentada
+  pelo GitHub em dez/2025 (e ficou 30min na fila de novo, num ensaio por
+  `workflow_dispatch`). O label Intel que o GitHub oferece no lugar,
+  `macos-15-intel`, agenda em segundos e CONSTRÓI, mas reprova no
+  `--self-test-pty`: sob o Bun o `onData` do `node-pty` nunca entrega a saída
+  do filho — bug ABERTO do runtime (oven-sh/bun#25822, nenhuma release
+  corrigida), com a MESMA prova passando sob Node no mesmo runner. Ou seja, o
+  bloqueio deixou de ser runner (pagar runner não resolve) e passou a ser o
+  Bun, e a matriz segue com `macos-13` de propósito: trocar o label não faz o
+  alvo publicar. Decidir entre esperar o Bun (e aí trocar o label) ou tirar a
+  plataforma (a promessa vira quatro alvos, em ADR novo) é decisão de dono.
+  Não medido, mas o issue do Bun foi aberto em darwin ARM64: é provável que o
+  `darwin-arm64` esbarre no mesmo defeito depois do conserto do
+  `spawn-helper`, e aí "falta uma TAG" não bastaria para ele. O que
   DEIXOU de depender dessa decisão é o manifesto assinado: desde a RN-565 o
   job `checksums` não tem `needs: build`, então o `darwin-x64` na fila não
   segura mais o `checksums.txt` por um dia
@@ -531,10 +554,25 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
 - Golden-set de regressão do julgamento semântico do QA de Automação (ADR
-  0123) existe e roda manualmente (`mix golden_set.qa`, dentro de
-  `apps/engine`) contra Ollama local — nunca em CI. Ligar em CI exige
-  segredo de LLM de API OU infra nova (runner com GPU, passo de pull do
-  Ollama): decisão de um humano, não algo que se constrói escolhendo
+  0123) — a frase "ligar em CI exige segredo de LLM de API OU infra nova"
+  foi MEDIDA (AT-067, 2026-09-13) e a metade de INFRA caiu: num
+  `ubuntu-latest` sem GPU, no molde do `golden-set-rag.yml` (mais o ENGINE de
+  pé como servidor, porque é ele quem roda o `npm test`), o pull de
+  `qwen2.5-coder:latest` leva 13–15s, um turno de LLM ~20s de mediana, e
+  `mix golden_set.qa` roda de ponta a ponta em 19m15s e 22m53s (job inteiro
+  22–26min, runs 34769447405 e 34770869429). O RELÓGIO cabe; o INSTRUMENTO
+  não mede: desde a RN-502 (ADR 0143, 2026-09-04) o `npm test` é
+  auto-aprovado e RECUSADO pelo engine (projeto `container` sem container
+  `running` — o seed, de 2026-08-30, nunca registra um), nenhum caso vê
+  `exit 0`, `approved` fica impossível, e o modelo, lendo a recusa, pede
+  `container_start`/`docker-compose up` (ficam `pending`) ou repete
+  `npm test` até o teto de 60 — 0/6 nas duas rodadas, abaixo do piso 1/6.
+  Vale igual na máquina local. Por isso NÃO nasceu `golden-set-qa.yml`
+  (vermelho toda noite por motivo alheio ao que mede); o desenho medido fica
+  no histórico (`e7d7d1b16`) e a narrativa em `docs/explanation/gates.md`.
+  O que segue com dono humano é decidir COMO o golden-set executa a suíte
+  sob a RN-502 (container de verdade pelo broker no seed, ou outra coisa) —
+  afrouxar a recusa para o harness passar NÃO é opção
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
@@ -560,7 +598,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
   `MAIL_TRANSPORT` — `log` continua o default, inclusive em produção;
   `neo4j-driver` para o grafo de conhecimento (ADR 0099) — memória
-  DERIVADA do event log, nunca fonte de verdade; pgvector CONTINUA sendo
+  DERIVADA do event log, nunca fonte de verdade, e por isso SEM backup (ADR
+  0152): o caminho de volta é `pnpm --filter api grafo:reprojetar` (RN-569),
+  que chama o MESMO `GraphEventTranslator` do projetor vivo — tipo novo
+  projetado ganha tradução ALI, nunca num segundo tradutor — e não toca a
+  outbox dele; `PromptTemplate` não vem do event log e volta por
+  `scripts/dev/seed-prompts.ts`; pgvector CONTINUA sendo
   o índice vetorial dos chunks, o grafo não guarda embedding
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
@@ -994,7 +1037,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
-  regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
+  PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
+  de barras), mas só quando o AUTOR é o próprio Dependabot
+  (`ehBranchDoDependabot` em `scripts/ci/pr-police.ts`) — humano com esse
+  prefixo reprova em `FUNCAO-DESCONHECIDA`, senão o prefixo vira a porta para
+  escapar do formato. Commits em conventional commits, pt-BR.
   A FUNÇÃO da branch decide a VERSÃO (scripts/ci/version.ts): breaking/
   sobe MAJOR, feature/ sobe MINOR, todo o resto é PATCH. Mudança que
   exige ação do operador antes do deploy nasce em breaking/ mesmo quando

@@ -10224,7 +10224,8 @@ velha ao lado de um Postgres restaurado noutro instante dá dois estados
 derivados de momentos diferentes, sem nada que os concilie. A reprojeção **não
 foi construída aqui** (é o BRB-018): até existir, instalação migrada nasce com
 o grafo VAZIO — degradação conhecida e nomeada, não perda de dado, porque o RAG
-vive no pgvector e vem no dump.
+vive no pgvector e vem no dump. Desde a [RN-569](#rn-569) ela existe
+(`grafo:reprojetar`), e o grafo vazio passa a durar até alguém rodá-la.
 
 - **Onde:** `docker/backup/lib.sh:28` (`destino_tipo`, a inferência que mantém o
   CronJob intacto), `:65` (`destino_esperar` perguntando por ESCRITA e não por
@@ -13191,6 +13192,15 @@ cinco assinaturas. E um alvo que anexe DEPOIS do teto não fica órfão: o
 label, tirar a plataforma ou pagar runner é decisão de dono, e o manifesto não
 pode depender dela — é justamente por depender dela que ele não saía.
 
+> Medido depois, na AT-065 (2026-09-13, por `workflow_dispatch` em ensaio):
+> `macos-13` é label sem runner (imagem aposentada pelo GitHub em dez/2025;
+> 30min na fila, cancelado, run `34769280227`). `macos-15-intel` agenda em
+> 3–22s e constrói, mas reprova no `--self-test-pty` porque, sob o Bun, o
+> `onData` do `node-pty` não entrega a saída do filho (oven-sh/bun#25822,
+> aberto); a mesma prova passa sob Node no mesmo runner (run `34770476634`).
+> A decisão pendente deixou de ser de runner e passou a ser esperar o Bun ou
+> tirar a plataforma. A regra acima não muda com isso.
+
 - **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
   sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
   `:309` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
@@ -13339,3 +13349,149 @@ Declarado no comentário da tela, não corrigido aqui.
   pelo resumo)
 - **Origem:** AT-047 — a lacuna declarada no `CLAUDE.md` e nos comentários das
   duas telas
+
+### RN-569 — O grafo é reconstruído do event log pelo MESMO tradutor do projetor vivo, sem tocar a outbox, e nunca sai como sucesso calado {#rn-569}
+
+O [ADR 0152](adr/0152-backup-de-volumes-contra-compose.md) (decisão 4) recusou
+backup de `neo4j_data` apoiado numa premissa — *o grafo pode ser descartado
+porque pode ser reconstruído* — cujo mecanismo não existia: `grep` por
+`reprojet`/`reproject` em `apps/` e `scripts/` voltava vazio, e
+`application/graph-projection/` só tinha o projetor PARA FRENTE. Enquanto não
+existisse, o grafo não era descartável: era perdido.
+
+**A regra:** `apps/api/src/scripts/reprojetar-grafo.ts`
+(`pnpm --filter api grafo:reprojetar`; `node scripts/reprojetar-grafo.js` na
+imagem) reconstrói o grafo varrendo a fonte. Cinco decisões, cada uma com
+motivo:
+
+1. **Um tradutor só.** A tradução evento → nó/aresta SAIU do `GraphProjector`
+   para `GraphEventTranslator`, e os dois caminhos a chamam — o projetor chega à
+   fonte por uma linha de outbox, a reprojeção por cursor. Dois tradutores
+   divergiriam, e o divergente seria o que roda uma vez por ano. A superfície de
+   injeção do projetor NÃO mudou (ele monta o tradutor com as dependências que
+   já recebia). Um teste reprova tipo novo em `GRAPH_PROJECTABLE_EVENT_TYPES`
+   sem tradução.
+2. **As fontes são duas, e são as de verdade.** `handoff.offered`,
+   `psychologist.hypothesis_proposed` e `anamnese.profile_updated` saem de
+   `session_events`; a `Interacao` sai de `sessions` em
+   `closed`/`closed_abnormally`, porque fechar sessão é transição pura e não
+   deixa evento no log. `PromptTemplate`/`PromptVersion` NÃO saem do event log e
+   NÃO são reprojetados — voltam por `scripts/dev/seed-prompts.ts`.
+3. **Idempotente, em lotes, e nunca apaga.** Toda escrita é `MERGE` em chave
+   natural; rodar de novo é o jeito de retomar. `session_events` é varrida em
+   ordem de `id` (ULID, a chave primária), 200 por lote, e `--after-event`
+   retoma depois do cursor impresso. Com `--project`, só as sessões daquele
+   projeto.
+4. **Não toca a outbox.** O projetor vivo guarda o progresso em
+   `outbox_events.processed_at`; a reprojeção nem lê nem escreve essa tabela, e
+   por isso roda com a api de pé sem roubar, reabrir ou marcar linha.
+5. **Nunca sucesso calado.** Grafo desligado é recusado ANTES de ler o log (um
+   escopo vazio "passaria" com zero projetados); Neo4j que cai no meio para com
+   o último evento concluído; projeto inexistente é recusado sem gravar nada; e
+   item com payload incoerente é contado, nomeado, e o processo sai com 1.
+
+**O que esta regra NÃO fecha:** `PerfilAnamnese` é snapshot por usuário +
+dimensão, SEM projeto — o último a escrever vence —, então uma rodada com
+`--project` pode deixá-lo no valor daquele projeto quando outro escreveu depois;
+a rodada total restaura o último global. Não há medição de tempo em event log
+grande (a única rodada real foi o compose de dev, 98 eventos, 2,5 s), e a prova
+no cluster local que o BRB-018 pede não foi feita — ele segue aberto.
+
+- **Código:** `apps/api/src/application/graph-projection/graph-event-translator.ts:15`
+  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:26` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
+  tradutor), `:69` (`projetarEvento`), `:90` (`projetarFechamentoDeSessao`);
+  `apps/api/src/application/graph-projection/graph-projector.ts:77` (o projetor
+  monta o MESMO tradutor), `:141` (chega à fonte pela outbox e delega);
+  `apps/api/src/scripts/reprojetar-grafo.ts:124` (`montarTradutor`), `:145`
+  (`reprojetarGrafo`), `:154` (a recusa antes de ler), `:163` e `:169` (projeto
+  inexistente), `:187` (a fase dos eventos, por cursor), `:213` (a interrupção
+  nomeada), `:218` (a falha contada sem abortar o resto), `:230` (a fase das
+  sessões fechadas), `:301` (`lerArgumentos`), `:370` (só a invocação direta
+  reprojeta); `apps/api/package.json:44` (`grafo:reprojetar`); `Makefile:61`
+  (`test-reprojecao`)
+- **Teste:** `apps/api/test/scripts/reprojetar-grafo.spec.ts:349` (projetor para
+  frente → apaga o subgrafo → reprojeta o log inteiro → mesma contagem de nós e
+  arestas e mesma lista de chaves; a segunda rodada idêntica; a outbox intacta),
+  `:394` (por projeto), `:417` (projeto inexistente, nada gravado — caso de
+  falha), `:432` (grafo indisponível é erro nomeado — caso de falha), `:441`
+  (argumento desconhecido recusado), `:452` (o tradutor cobre exatamente os tipos
+  projetáveis); `apps/api/test/application/graph-projection/graph-projector.spec.ts`
+  (o projetor para frente, inalterado, sobre o tradutor extraído). Os quatro
+  primeiros exigem Neo4j de pé e PULAM sem ele — a CI do api não sobe Neo4j.
+- **Origem:** AT-032 (BRB-018) — a premissa do ADR 0152 sem mecanismo
+
+### RN-570 — O instalador sobe a instalação só com arquivos que a Release assinou, conferidos antes de perguntar ou gravar qualquer coisa {#rn-570}
+
+A [RN-549](#rn-549) mediu, na primeira vez que o instalador rodou numa máquina
+limpa, que o `install.sh` publicado **não subia nada sozinho**: ele chamava
+`docker compose -f docker/docker-compose.install.yml`, um caminho RELATIVO ao
+diretório de onde rodava, e esse arquivo não era asset da Release, não entrava
+no `checksums.txt` assinado e não era baixado em lugar nenhum. Quem seguia o
+one-liner do runbook morria em *"no such file or directory"* DEPOIS de o script
+ter gravado o `.env` com os segredos. O mantenedor decidiu a saída em
+2026-09-13 — asset assinado, e não clone ([ADR 0160](adr/0160-o-compose-do-instalador-viaja-assinado.md)).
+
+**A regra:**
+
+1. **Quatro arquivos viajam com o instalador, no MESMO manifesto.** O compose de
+   instalação e os três que a instalação usa por caminho relativo — o
+   `postgres/init.sql` e o `ollama/pull-models.sh` que o compose bind-monta, e o
+   `backup/test-restore-compose.sh` que a migração ([RN-530](#rn-530)) executa —
+   são publicados como assets `brabo-install-*` pelo job `checksums` e entram no
+   `sha256sum` que gera o `checksums.txt` assinado. O quarto não estava no
+   contorno do E2E e foi achado ao implementar: numa pasta sem checkout a
+   migração morreria ali. O job confere cada linha do manifesto contra o arquivo
+   (`sha256sum -c --strict`) antes de anexar.
+2. **A tabela tem dois lados e um guarda.** Quem publica lê
+   `scripts/ci/assets-do-instalador.ts`; quem baixa lê o `case` de
+   `destino_do_asset_do_instalador` no `install.sh` (bash 3.2, sem Node). O spec
+   reprova a divergência entre os dois E deriva do compose todo bind-mount `./…`
+   que não estiver na tabela — que é exatamente como o defeito nasceu.
+3. **Verificar vem logo depois da própria origem, e antes de tudo.** O
+   instalador baixa os quatro e compara cada sha256 contra o `checksums.txt` que
+   `verificar_a_si_mesmo` já verificou (nunca um segundo download), por
+   igualdade EXATA de nome. As três recusas são distintas — asset não publicado,
+   manifesto que não o cobre, hash que não bate — e todas acontecem com a
+   máquina intocada.
+4. **Nunca cai no relativo.** `COMPOSE_DE_INSTALACAO` nasce VAZIO e só ganha um
+   caminho absoluto quando as cópias verificadas são postas sob a pasta da
+   instalação, no primeiro instante em que são precisas (a migração ou a
+   subida). O que já estiver lá é SUBSTITUÍDO, nunca lido — com `rm` antes do
+   `cp`, para um symlink não levar a escrita para fora.
+
+**O que esta regra NÃO fecha:** a prova ponta a ponta só acontece na primeira
+tag final depois do merge — o `install-e2e.yml` não roda em PR (ADR 0150) —, e
+nenhuma Release já publicada ganha os assets: elas seguem com o instalador
+antigo e o contorno de rodá-lo de dentro de um checkout na tag. E fica medida e
+NÃO corrigida a adjacência que o ADR 0160 declara: `test-restore-compose.sh`
+chama o Compose sem `--env-file`, o Compose procura o `.env` na pasta do
+compose e não na de onde se roda, e por isso a prova de restauração da
+migração tende a reprovar — desfecho seguro pela RN-530 (nada é apagado), mas a
+migração por compose não fecha.
+
+- **Código:** `install.sh:95` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
+  `:435` (`ASSETS_DO_INSTALADOR`), `:437` (`destino_do_asset_do_instalador`, a
+  tabela do lado que baixa), `:462` (`baixar_e_verificar_os_arquivos_da_instalacao`),
+  `:469`/`:477`/`:480` (as três recusas), `:497`
+  (`materializar_os_arquivos_da_instalacao`), `:1146` (a migração materializa
+  antes do backup), `:1241` (a verificação logo depois da própria origem),
+  `:1407` (a subida materializa antes do `up`);
+  `scripts/ci/assets-do-instalador.ts:55` (a tabela do lado que publica), `:93`
+  (`problemasDoMapeamento`), `:135` (`prepararAssets`);
+  `.github/workflows/build-runner-binaries.yml:468` (os assets preparados do
+  checkout da tag), `:494` (no mesmo `sha256sum`), `:520` (a conferência
+  `--strict`), `:527` (anexados junto do manifesto)
+- **Teste:** `scripts/dev/install-arquivos-da-instalacao.spec.ts:144` (caminho
+  feliz contra uma Release de mentira), `:162` (asset ausente, `.env` nunca
+  gravado — caso de falha), `:179` (hash que não bate — caso de falha), `:191`
+  (manifesto que não cobre), `:202` (nome parecido não cobre), `:217`
+  (materializar sem verificar é recusa), `:225` (o que já estava é substituído,
+  e o symlink não leva a escrita para fora), `:258`/`:273`/`:280` (a ordem em
+  `main` e na migração); `scripts/ci/assets-do-instalador.spec.ts:89` (todo
+  bind-mount relativo é asset), `:114` (o `case` do shell é a tabela do
+  TypeScript), `:148`/`:152`/`:161` (a esteira assina, confere e anexa);
+  `scripts/dev/install-e2e.spec.ts:247` (o contorno manual não volta, e o E2E
+  afirma que o instalador os baixou), `:295` (o token que baixa o manifesto não
+  está no ambiente do instalador)
+- **Origem:** AT-026 — o achado da AT-008 (RN-549), decidido pelo mantenedor em
+  2026-09-13

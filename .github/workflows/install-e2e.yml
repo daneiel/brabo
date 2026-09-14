@@ -89,43 +89,24 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'install.sh' --dir .
           chmod +x install.sh
 
-      # ACHADO, medido ao escrever a sessão 8 da FASE 30, e a razão de este
-      # passo existir: o `install.sh` PUBLICADO não consegue subir nada sozinho
-      # numa máquina limpa. Ele sobe a pilha com
-      # `docker compose -f docker/docker-compose.install.yml`, um caminho
-      # RELATIVO ao diretório de onde roda — e esse arquivo NÃO é asset da
-      # Release, NÃO entra no `checksums.txt` assinado, e o script não o baixa
-      # em lugar nenhum (as únicas descargas dele são o `cosign`, o manifesto, o
-      # próprio hash e o binário do runner). O compose ainda bind-monta
-      # `./postgres/init.sql`, então são TRÊS arquivos e não um. Quem segue o
-      # `sh -c "$(curl … install.sh)"` do runbook morre em "no such file or
-      # directory" DEPOIS de já ter verificado assinatura, escolhido a base e
-      # gravado o `.env`.
+      # Não há mais passo que traga arquivos à mão, e a AUSÊNCIA é a asserção.
       #
-      # Este passo NÃO conserta isso, de propósito: consertar é decidir se o
-      # compose vira asset assinado (RN-524) ou se o instalador passa a clonar,
-      # e isso é entrega própria — não algo a fazer de passagem dentro do E2E
-      # que descobriu o buraco. Ele traz os arquivos à mão, PELA TAG, e fica
-      # aqui como a marca dele: no dia em que o instalador os buscar sozinho,
-      # este passo sai e nada mais muda.
-      - name: Os arquivos que o instalador NÃO baixa (achado declarado)
-        if: runner.os == 'Linux'
-        env:
-          TAG: ${{ steps.alvo.outputs.tag }}
+      # Até o ADR 0160 existia aqui um passo "achado declarado" que baixava
+      # `docker/docker-compose.install.yml`, `docker/postgres/init.sql` e
+      # `docker/ollama/pull-models.sh` da tag por `raw.githubusercontent.com`,
+      # porque o instalador PUBLICADO não os trazia e morria depois de gravar o
+      # `.env` (RN-549). Desde a RN-570 eles são assets da Release, entram no
+      # `checksums.txt` assinado, e o `install.sh` os baixa e confere antes de
+      # perguntar qualquer coisa. Este job não tem checkout: a pasta de trabalho
+      # só tem o `install.sh` baixado, e é por isso que este passo pode afirmar
+      # que não há `docker/` nenhum — tudo o que aparecer ali depois veio do
+      # instalador. `scripts/dev/install-e2e.spec.ts` reprova quem repuser o
+      # contorno.
+      - name: Nenhum arquivo da instalação trazido à mão
         run: |
           set -euo pipefail
-          mkdir -p docker/postgres docker/ollama
-          for arquivo in \
-            docker/docker-compose.install.yml \
-            docker/postgres/init.sql \
-            docker/ollama/pull-models.sh
-          do
-            curl -fsSL -o "$arquivo" \
-              "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${TAG}/${arquivo}" \
-              || { echo "::error::não consegui trazer ${arquivo} da tag ${TAG}"; exit 1; }
-          done
-          echo 'trazidos à mão porque o instalador não os traz:'
-          ls -l docker/docker-compose.install.yml docker/postgres/init.sql
+          test ! -e docker \
+            || { echo "::error::há um docker/ na pasta antes do instalador rodar — o E2E deixaria de provar que ele os baixa"; ls -laR docker; exit 1; }
 
       # PRIMEIRO os modos que não tocam nada. Se o plano já mentir, o resto do
       # job é ruído.
@@ -158,6 +139,15 @@ jobs:
             || { echo "::error::sem TTY, o instalador não disse que não decidiu nada"; cat saida.txt; exit 1; }
           test ! -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
             || { echo "::error::sem TTY o instalador GRAVOU o marcador"; exit 1; }
+
+          # A metade da RN-570 que este passo alcança, e nas DUAS plataformas:
+          # os arquivos da instalação são baixados e conferidos contra o
+          # manifesto assinado ANTES de o script saber que não pode perguntar —
+          # e, sem TTY, nada é gravado na pasta.
+          grep -q 'arquivos da instalação verificados contra o manifesto assinado' saida.txt \
+            || { echo "::error::o instalador não verificou os arquivos da instalação contra o manifesto"; cat saida.txt; exit 1; }
+          test ! -e docker \
+            || { echo "::error::sem TTY o instalador GRAVOU arquivos da instalação na pasta"; exit 1; }
 
       # A ÚNICA divergência declarada entre este runner e a máquina limpa de uma
       # pessoa, e ela é do AMBIENTE, nunca do instalador. Numa máquina de
@@ -234,6 +224,12 @@ jobs:
           exigir 'a verificação de assinatura não passou' 'assinatura do manifesto confere'
           exigir 'o instalador não conferiu o próprio hash' 'este arquivo é o que a Release publicou'
 
+          # RN-570: os arquivos que sobem a instalação vieram da Release,
+          # conferidos no manifesto, e foram gravados pelo PRÓPRIO instalador
+          # numa pasta que não tinha `docker/` nenhum.
+          exigir 'os arquivos da instalação não foram verificados' 'arquivos da instalação verificados contra o manifesto assinado'
+          exigir 'os arquivos da instalação não foram gravados' 'arquivos da instalação gravados em '
+
           # Os CINCO elos da RN-547, um a um, contra api e binário de verdade.
           # Nos testes da sessão 6 o `brabo-runner` é dublê de shell e a api é
           # um `node:http`: o que se provava lá é o ENCADEAMENTO, e é só aqui
@@ -283,6 +279,32 @@ jobs:
           done
           grep -qF -- "$email" "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
             || { echo "::error::o marcador não guardou o ownerEmail"; exit 1; }
+
+      # RN-570, medida no DISCO e contra o manifesto da Release — não contra a
+      # frase: os arquivos que subiram a pilha são byte a byte os assets que a
+      # esteira assinou. Passo PRÓPRIO, depois da instalação, para que o token
+      # que baixa o manifesto nunca esteja no ambiente do instalador.
+      - name: Os arquivos que subiram a pilha são os que a Release assinou
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # `sha256sum -c` lê as linhas pelos NOMES de asset; os arquivos que o
+          # instalador gravou são ligados sob esses nomes numa pasta à parte.
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern checksums.txt --dir "${RUNNER_TEMP}/manifesto"
+          conferir="${RUNNER_TEMP}/conferir"
+          mkdir -p "$conferir"
+          ln -s "$PWD/docker/docker-compose.install.yml" "$conferir/brabo-install-compose.yml"
+          ln -s "$PWD/docker/postgres/init.sql" "$conferir/brabo-install-postgres-init.sql"
+          ln -s "$PWD/docker/ollama/pull-models.sh" "$conferir/brabo-install-ollama-pull-models.sh"
+          ln -s "$PWD/docker/backup/test-restore-compose.sh" "$conferir/brabo-install-backup-test-restore.sh"
+          grep ' brabo-install-' "${RUNNER_TEMP}/manifesto/checksums.txt" > "$conferir/esperado.txt" || true
+          test "$(wc -l < "$conferir/esperado.txt")" -eq 4 \
+            || { echo "::error::o manifesto da Release não cobre os quatro arquivos da instalação"; cat "$conferir/esperado.txt"; exit 1; }
+          ( cd "$conferir" && sha256sum -c --strict esperado.txt ) \
+            || { echo "::error::os arquivos que o instalador gravou não são os que a Release assinou"; exit 1; }
 
       # A asserção que prova a promessa da fase, e o SINAL é a decisão deste
       # passo.
