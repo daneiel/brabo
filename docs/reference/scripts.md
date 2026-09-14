@@ -86,6 +86,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api gerar:areas` | `ts-node scripts/gerar-areas.ts` |
 | `pnpm --filter api lint:migracao` | `ts-node scripts/lint-migracao.ts` |
 | `pnpm --filter api relatorio:backup` | `ts-node scripts/relatorio-backup.ts` |
+| `pnpm --filter api grafo:reprojetar` | `ts-node src/scripts/reprojetar-grafo.ts` |
 | `pnpm --filter api db:generate` | `drizzle-kit generate` |
 | `pnpm --filter api db:migrate` | `drizzle-kit migrate` |
 
@@ -137,10 +138,11 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
 | `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
 | `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster) |
+| `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-98 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+100 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

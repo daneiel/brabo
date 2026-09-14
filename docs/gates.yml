@@ -338,9 +338,10 @@ gates:
     entregavel: taxa-de-acerto-acima-do-piso
     verificacao: script
     # warn continua warn depois da Etapa 3 (ADR 0138) — mas o motivo MUDOU.
-    # Não é mais "não há CI com LLM" (o golden-set do QA, ADR 0123, segue
-    # assim, mas este é só embedding, CPU, determinístico, e RODA em CI
-    # desde a Etapa 3). É cadência: `.github/workflows/golden-set-rag.yml`
+    # Não é mais "não há CI com LLM" (este é só embedding, CPU,
+    # determinístico, e RODA em CI desde a Etapa 3; o do QA, ADR 0123, foi
+    # medido em CI na AT-067 e cabe no relógio, mas não mede sob a RN-502 —
+    # ver docs/explanation/gates.md). É cadência: `.github/workflows/golden-set-rag.yml`
     # é AGENDADO (noturno + workflow_dispatch), nunca por PR — `block`
     # continuaria prometendo um travamento que não existe, agora por
     # decisão de custo/cadência, não por impossibilidade técnica. Uma
