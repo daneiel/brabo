@@ -112,7 +112,7 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -256,7 +256,7 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -296,7 +296,7 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -337,7 +337,7 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -422,7 +422,7 @@ jobs:
       # tem dependência nenhuma (só `node:fs`/`node:url`), então não precisa
       # de `pnpm install` aqui, ao contrário dos jobs `test-api`/`test-web`/
       # `test-packages`.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -542,7 +542,7 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -997,7 +997,7 @@ jobs:
 
       # Sem `cache: pnpm`: o lockfile do `e2e/` não é o da raiz, e apontar a
       # chave de cache para o arquivo errado guarda a árvore errada.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
