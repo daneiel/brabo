@@ -23,7 +23,7 @@ Start with triage.
 | I lost data / want to verify the backup | [Restore](#restore) |
 | I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
 | a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
-| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) |
+| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) — `grafo:reprojetar` |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -1647,7 +1647,7 @@ making it is that "back up every volume" costs space while hiding what matters.
 |---|---|---|
 | `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
 | `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
-| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — see [Losing the graph](#perda-do-grafo) |
+| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — `grafo:reprojetar`, see [Losing the graph](#perda-do-grafo) |
 | `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
 | `ollama_data` | re-obtainable — models download again | no |
 | `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
@@ -1875,13 +1875,92 @@ oversight ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), decision
 4). Restoring a possibly-stale projection next to a Postgres restored at another
 instant gives two derived states from different moments with nothing to
 reconcile them. The right answer for derived memory is to reproject from the
-source.
+source — and that command exists ([RN-569](business-rules.md#rn-569)):
 
-**That reprojection does not exist yet** — it is
-[BRB-018](reference/brb.md), and the phase that named the path deliberately did
-not build it. Until it does, a migrated or restored installation starts with an
-**empty graph**. The named effect: reads that depend on the graph degrade. The
-RAG is **not** affected — it lives in pgvector, which is inside the dump.
+```bash
+# Kubernetes (the script ships inside the api image)
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-grafo.js
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-grafo.js --project <project-uuid>
+
+# installation compose (same image as Kubernetes)
+docker compose -f docker/docker-compose.install.yml exec api node scripts/reprojetar-grafo.js
+
+# a dev checkout (DATABASE_URL and NEO4J_* pointing at the database and graph)
+pnpm --filter api grafo:reprojetar
+pnpm --filter api grafo:reprojetar -- --project <project-uuid>
+```
+
+Expected output:
+
+```
+[reprojetar] escopo: event log inteiro
+[reprojetar] eventos: 4 projetados, cursor 01M2DTREY0TBKHCHG9NWXYF0A4
+[reprojetar] sessões fechadas: 2 projetadas
+
+[reprojetar] resultado
+
+  eventos projetados=4  sessões fechadas projetadas=2  falhas=0
+  grafo agora (inteiro): nós=80  arestas=80
+```
+
+What it does, and what it guarantees:
+
+- **The same translation as the live projector.** Event → node/edge lives in
+  one class (`GraphEventTranslator`), called by both the forward projector and
+  this command. It reads `handoff.offered`, `psychologist.hypothesis_proposed`
+  and `anamnese.profile_updated` from `session_events`, and the `Interacao` of
+  every session in `closed`/`closed_abnormally` from `sessions` (closing a
+  session leaves no event in the log).
+- **Idempotent, and it never deletes.** Every write is a `MERGE` on a natural
+  key: running it twice gives the same graph, and **running it again is how you
+  retry** after a failure halfway. It only adds or converges; a node already in
+  the graph stays.
+- **In batches, by cursor.** `session_events` is walked in `id` order (ULID,
+  the primary key), 200 rows at a time — never the whole table in memory. The
+  progress line prints the cursor; `--after-event <id>` resumes the event phase
+  after it. Starting over is equally safe, just slower.
+- **It does not touch the outbox, so the api can stay up.** The live projector
+  keeps its progress in `outbox_events.processed_at`
+  (`aggregate_type = 'graph_projection'`); this command neither reads nor
+  writes that table, so it cannot steal, reopen or mark a row. Both write with
+  `MERGE` on the same keys.
+- **It fails named, never as silent success.** Neo4j unconfigured or
+  unreachable is refused *before* reading the log (an empty scope would
+  otherwise "succeed" with zero projected); Neo4j dropping mid-run stops with
+  the last event completed; an unknown `--project` is refused with nothing
+  written; an item with an incoherent payload is counted, named, and the run
+  exits `1` at the end.
+
+What it does **not** rebuild, and the one ordering caveat:
+
+- **`PromptTemplate`/`PromptVersion`** do not come from the event log. Their
+  source is the `prompts/` directory: re-send them with
+  `node scripts/dev/seed-prompts.ts` (idempotent by hash).
+- **`PerfilAnamnese` is a snapshot keyed by user + dimension, with no project.**
+  Last writer wins. A `--project` run replays only that project's profile
+  events, so it can leave a snapshot at that project's latest value when another
+  project wrote a newer one. The full run (no `--project`) walks the whole log in
+  order and restores the global latest — use it after losing the graph; keep
+  `--project` for a targeted repair.
+- **No time measurement on a large event log.** The only real run so far is the
+  development compose (98 events in `session_events`, 2.5 s end to end). How
+  long a full reprojection takes on a production-size log is unmeasured; the
+  command is safe to interrupt and run again.
+
+> **TODO(humano):** is there an acceptable ceiling for a full reprojection, or
+> may it run for hours in a maintenance window? Nothing read answers it, and it
+> decides whether batches by cursor are enough or the run needs scheduling.
+
+The proof is `make test-reprojecao`
+(`apps/api/test/scripts/reprojetar-grafo.spec.ts`): it builds a scenario with
+the forward projector, **wipes** that subgraph, reprojects, compares node and
+edge counts plus the list of keys, and reprojects again. It needs Neo4j up and
+skips without it — the api CI job has no Neo4j, so there it skips. It does not
+depend on a backup having happened, on purpose.
+
+The graph being empty until you run this has a named effect: reads that depend
+on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
+is inside the dump.
 
 ### When the restore fails
 
@@ -1899,7 +1978,126 @@ RAG is **not** affected — it lives in pgvector, which is inside the dump.
 | `there are N bare repo(s) … and NO archive` | this volume has no coverage: the archive is missing while the repos are not. Absent-and-empty is normal and reported differently |
 | `does not accept writes by this user (uid 70)` on `--restaurar` | the shared-volume ownership case — restore with `--user 0:0`, see [Recovering the bare repos](#restore-dos-bare-repos) |
 
+### Scheduled property proofs {#provas-de-propriedade-agendadas}
+
+`make test-restore`, `make rollout-test` and `make hpa-test` prove
+**properties**, not configuration — a backup that runs every night and does not
+restore passes all five alerts in `brabo-alerts.yaml`. Until BRB-009 they ran
+only when someone typed them. `.github/workflows/propriedades.yml` now runs
+them on a schedule, in a k3d cluster on a GitHub-hosted runner:
+
+1. installs `k3d`, `helm` and `kubectl` by pinned checksum;
+2. runs `deploy/k8s/bootstrap.sh` — the same bootstrap `make deploy-local`
+   runs, building the four production images from the checked-out tree (no
+   registry, no secret);
+3. runs `make smoke-k8s`, then `make hpa-test`, `make rollout-test` and
+   `make test-restore`, in the `Makefile`'s order, each one even when an earlier
+   one failed (a broken HPA must not hide a broken restore);
+4. writes each step's duration into the run summary.
+
+| trigger | when |
+|---|---|
+| `schedule` | weekly, Sunday 04:00 UTC |
+| `workflow_dispatch` | on demand, from the Actions tab (`gh workflow run propriedades.yml`) |
+
+**A failure opens an issue** titled `Prova de propriedade falhou: <target>`,
+one per target, and a repeat failure of the same target **comments on the open
+issue** instead of opening another. The bootstrap has a title of its own: with
+the cluster down, the three targets are `skipped`, and a skipped scheduled run
+is the silence this exists to break. Close the issue when the proof passes
+again. It is **not** a gate and not a required check — nothing waits on it.
+
+Measured on the runs that built the workflow (4 vCPUs, 15 GiB RAM, 87 GB of
+free disk on `ubuntu-latest`):
+
+| step | duration |
+|---|---|
+| bootstrap (image build + cluster + operators + app) | 705 s |
+| `make smoke-k8s` | 1 s |
+| `make hpa-test` | 19 s |
+| `make rollout-test` | 24 s |
+| `make test-restore` | 21 s |
+| whole job | 12 min 56 s |
+
+(First fully green run, `34784563928`, on 2026-09-13.)
+
+The cadence follows that cost. Almost all of it is the bootstrap, which a
+nightly run would pay seven times a week to re-prove properties whose code
+changes far less often than that; weekly keeps the alarm inside one sprint,
+and `workflow_dispatch` covers "I just touched the backup". The job timeout is
+90 minutes and the restore step alone is capped at 20 — see the comment on
+that step for why the cap belongs to the step and not to the script.
+
+**What the first runs found**, each one invisible to `kubeconform` and to
+every PR check, and each one fixed in the same change that created the
+workflow — `make deploy-local` had been broken on `dev` for weeks without
+anyone running it:
+
+1. The CNPG cluster's `imageName` pinned by digest alone
+   ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md)) is refused by the
+   operator's webhook — *"Can't use just the image sha as we can't detect
+   upgrades"*. It now carries `:16.10@sha256:…`.
+2. The bootstrap's source Secret had no `NEO4J_PASSWORD`, which the base
+   `ExternalSecret` reads since the graph ([ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)):
+   `brabo-secrets` never materialized and every pod sat in
+   `CreateContainerConfigError`.
+3. The api got neither `NEO4J_URI` nor `NEO4J_USER` in the cluster, and in
+   production mode it refuses to boot without all three.
+4. The Neo4j StatefulSet exported `NEO4J_USER`/`NEO4J_PASSWORD`, which the
+   image's entrypoint turns into config keys and rejects (*"Unrecognized
+   setting"*) — the very defect a comment two lines below warned about. Those
+   manifests had never run in a cluster.
+5. `migrate-api` could not `CREATE EXTENSION vector` (the app role is not a
+   superuser), so the api came up with no tables. The local CNPG cluster now
+   creates it as superuser, in the app database and in `template1`.
+6. `deploy/k8s/smoke.sh` and `rollout-test.sh` never sent the session `kind`
+   that became mandatory in FASE 20 (`docker/smoke.sh` got it then), so both
+   failed with a 400 before proving anything.
+7. `make test-restore` died in `pg_restore` with *"permission denied to create
+   extension vector"* — the case the table above already names — because
+   nothing in the local cluster provided the extension to the database the
+   restore creates.
+8. With the extension provided, `pg_restore` still died — now with *"must be
+   owner of extension vector"*, on the dump's `COMMENT ON EXTENSION`: only the
+   extension's owner may comment on it, and wherever the app role is not a
+   superuser (CNPG, any managed Postgres) the extension belongs to another role.
+   **This one is not local to the cluster**: the same `brabo-restore` is the
+   incident procedure, so a real restore on such a Postgres would have failed
+   the same way. `restore.sh` now restores from the dump's table of contents
+   minus the extension comment — a description string the extension installs,
+   which no data and no validation depends on. Reproduced against a plain
+   `pgvector` container with a non-superuser role before and after the change.
+9. `deploy/k8s/test-restore.sh` waited with `kubectl wait
+   --for=condition=complete`, which never sees a Job that **failed**, so the
+   broken restore above spent the step's whole 20-minute cap to report what the
+   Job's log said in seconds (the script's own cap was 30). It now polls both
+   conditions and fails as soon as the Job is `Failed`.
+10. `rollout-test.sh` checked for orphans after a fixed `sleep 15`, which
+    cannot tell *still settling* from *orphaned for good*. It now polls up to a
+    ceiling (`ROLLOUT_CONVERGENCE_SECONDS`, default 120) and records, before the
+    rollout, which replica each session lived on — the old pods take their logs
+    with them.
+
+**Measured and NOT fixed: the rollout proof has failed once out of four
+runs that reached it.** With the same script and the same fixed wait, run
+`34773908653` passed and run `34775712706` reported an orphan — a session
+`active` in the api with no owner in any of the three engine replicas, 15 s
+after `rollout status` returned. The two runs with the bounded wait passed, and
+both converged in **3 s**, all five sessions adopted. A normal convergence
+of 3 s makes "the orphan just needed more than 15 s" the less likely reading;
+the more likely one is an intermittent race in adoption or drain that the fixed
+wait happened to catch. It is left as it is on purpose: the workflow exists to
+catch exactly this, and the next occurrence will now fail with the ceiling it
+waited, where each session lived before the rollout, and the engine lines that
+name the orphan. The fix belongs to the engine, not to this proof.
+
 ### Last verified run
+
+> **The scheduled workflow is now the source for this.** The latest run of
+> [`propriedades.yml`](#provas-de-propriedade-agendadas) — its summary table
+> and the absence of an open `Prova de propriedade falhou` issue — says when
+> the restore last passed on Kubernetes. The record below is kept as it was
+> written: it is the history of the first verification and of what it found.
 
 <!-- Update this section whenever you run the test on a new environment. -->
 
@@ -2779,22 +2977,41 @@ volumes only go with confirmation, listed one by one first.
 
 It brings the stack up from **its own compose**
 (`docker/docker-compose.install.yml`), which takes the images from variables
-and builds nothing.
+and builds nothing — and it **downloads that compose from the Release**
+([RN-570](business-rules.md#rn-570),
+[ADR 0160](adr/0160-o-compose-do-instalador-viaja-assinado.md)). Four files
+travel with the installer as `brabo-install-*` assets, in the **same** signed
+`checksums.txt` that covers the runner binary: the compose, the
+`postgres/init.sql` and `ollama/pull-models.sh` it bind-mounts, and the
+`backup/test-restore-compose.sh` the migration runs. Right after verifying
+itself — before any question, before writing anything — the script downloads
+the four and checks each hash against that manifest. Three named refusals, all
+on an untouched machine:
 
-> **Known gap, measured in FASE 30 session 8
-> ([RN-549](business-rules.md#rn-549)): that compose file is not something the
-> installer fetches.** The path is relative to the directory the script runs
-> from, the file is **not** a Release asset, it is **not** in the signed
-> `checksums.txt`, and `install.sh` downloads it nowhere — its only downloads
-> are `cosign`, the image manifest, its own hash and the runner binary. The
-> compose additionally bind-mounts `./postgres/init.sql`, so it is **three**
-> files, not one. Running the one-liner above in an empty directory therefore
-> fails with *"no such file or directory"* **after** the script has already
-> verified its signature, asked for the base and written `.env`. Until this is
-> decided (publish the compose as a signed asset, or have the installer clone),
-> run the installer from a **checkout of the repository at the tag you are
-> installing** — that is what puts `docker/` next to it. The installer E2E does
-> the same thing by hand, in a step that says it is a finding.
+| message starts with | means | do |
+|---|---|---|
+| *"a Release não publica …"* | the Release predates ADR 0160, or its publishing step failed half-way | install from a checkout of the repository at that tag, or wait for the next release |
+| *"o manifesto assinado não cobre …"* | the manifest exists but has no line for that asset | same as above — the Release is incomplete |
+| *"… NÃO bate com o manifesto assinado"* | the downloaded file is not what the signed manifest describes | **stop and treat it as an incident**; do not retry around it |
+
+The verified copies are written under `docker/` in the folder you ran the
+script from — the same folder as `.env` — only when they are first needed.
+Whatever was already there (the previous version's compose, on an upgrade) is
+**replaced, never read**, and the script names what it replaced; from inside a
+git checkout at another commit that leaves `git status` dirty.
+
+> **Releases published before ADR 0160 do not carry these assets.** Their
+> installer still uses the relative path, and the one-liner above fails in an
+> empty directory with *"no such file or directory"* after writing `.env` (the
+> gap [RN-549](business-rules.md#rn-549) measured). For those tags, run the
+> installer from a checkout of the repository at the tag you are installing.
+
+> **Measured and not fixed:** on the *migration* path, the restore proof
+> (`test-restore-compose.sh`) calls Compose without `--env-file`, and Compose
+> looks for `.env` next to the compose file, not in the directory you run from.
+> With the compose under `docker/` and `.env` one level up, the proof tends to
+> fail — which is the safe outcome ([RN-530](business-rules.md#rn-530): nothing
+> is deleted), but a compose-to-compose migration does not complete.
 
 Two sources:
 

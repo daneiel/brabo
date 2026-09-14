@@ -64,7 +64,9 @@ describe('install.sh — o plano', () => {
       .split('\n')
       .filter((l) => !l.trimStart().startsWith('#'))
       .join('\n');
-    const prova = codigo.indexOf('test-restore-compose.sh');
+    // A prova roda a cópia VERIFICADA do script (RN-570), por variável: o nome
+    // do arquivo aparece antes, na tabela de assets, e casá-lo mediria a tabela.
+    const prova = codigo.indexOf('bash "$PROVA_DE_RESTAURACAO"');
     const delecao = codigo.indexOf('down -v');
     expect(prova).toBeGreaterThan(-1);
     expect(delecao).toBeGreaterThan(prova);
@@ -97,6 +99,13 @@ describe('install.sh — o plano', () => {
 
   it('verifica a própria origem antes de qualquer coisa', () => {
     expect(por('verificar-origem')?.valor).toBe('faz');
+  });
+
+  // RN-570: o compose e o que ele monta vêm da Release, conferidos no mesmo
+  // manifesto — e um `docker/` que já esteja na pasta nunca é usado no lugar.
+  it('verifica os arquivos da instalação, e nunca usa um que não verificou', () => {
+    expect(por('verificar-arquivos-da-instalacao')?.valor).toBe('faz');
+    expect(por('usar-arquivo-nao-verificado')?.valor).toBe('nunca');
   });
 
   // BRB-031: o `chmod +x` manual do fluxo do navegador (a File System Access

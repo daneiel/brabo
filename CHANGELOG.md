@@ -31,6 +31,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o grafo de conhecimento (Neo4j) passa a ser **reconstruível a partir
+  do event log** — `pnpm --filter api grafo:reprojetar`, ou
+  `node scripts/reprojetar-grafo.js` dentro da imagem, com `--project <uuid>`
+  opcional ([RN-569](docs/business-rules.md#rn-569)). É o mecanismo que o
+  [ADR 0152](docs/adr/0152-backup-de-volumes-contra-compose.md) já dava como
+  premissa ao recusar backup de `neo4j_data`: até aqui, instalação migrada ou
+  restaurada ficava com o grafo vazio sem caminho de volta.
+
+  A tradução evento → grafo saiu do projetor para frente para
+  `GraphEventTranslator`, e os dois caminhos a chamam — nunca um segundo
+  tradutor. O comando é idempotente (`MERGE`, nunca apaga), varre em lotes por
+  cursor, **não toca a outbox** do projetor vivo (pode rodar com a api de pé) e
+  falha nomeado: Neo4j desligado é recusado antes de ler o log, e projeto
+  inexistente é recusado sem gravar nada. Não reconstrói
+  `PromptTemplate`/`PromptVersion`, que não vêm do event log
+  (`scripts/dev/seed-prompts.ts`). Procedimento no runbook, seção *Losing the
+  graph*; prova em `make test-reprojecao`, que exige Neo4j de pé. O BRB-018
+  **segue aberto**: falta a prova no cluster local e a medição de tempo num
+  event log grande.
+
 - **api**: o evento de sessão `proposed_action.created` passa a carregar
   `reason` — **qual regra** da política decidiu, com a string que `decide()`
   já devolvia ([RN-567](docs/business-rules.md#rn-567)). Vale nos três
@@ -1222,6 +1242,50 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **instalador**: o `sh -c "$(curl … install.sh)"` do runbook **passa a subir a
+  instalação numa pasta vazia**
+  ([RN-570](docs/business-rules.md#rn-570), [ADR 0160](docs/adr/0160-o-compose-do-instalador-viaja-assinado.md)).
+
+  Até aqui o instalador publicado subia a pilha com um compose que não trazia —
+  caminho relativo, fora da Release e do manifesto — e morria em *"no such file
+  or directory"* depois de já ter gravado o `.env`. O compose de instalação e os
+  três arquivos que a instalação usa por caminho relativo passam a ser assets da
+  Release (`brabo-install-*`), no MESMO `checksums.txt` assinado que cobre o
+  binário do runner, e o instalador os baixa e confere logo depois de verificar
+  a si mesmo, **antes** de perguntar ou gravar qualquer coisa; asset ausente,
+  não coberto pelo manifesto ou com hash divergente é recusa nomeada com a
+  máquina intocada. Um `docker/` que já esteja na pasta é substituído pela cópia
+  verificada, nunca lido no lugar dela. Vale a partir da próxima tag final: as
+  Releases já publicadas não ganham os assets e continuam exigindo rodar o
+  instalador de dentro de um checkout na tag.
+
+- **k8s**: `make deploy-local` volta a subir o Brabo inteiro num cluster, e
+  `make smoke-k8s`, `make rollout-test` e `make test-restore` voltam a passar
+  nele. Estava quebrado em **sete** pontos empilhados, nenhum visível ao
+  `kubeconform` nem a check de PR nenhum, e todos achados pelas primeiras
+  rodadas do workflow agendado abaixo: o `imageName` do CNPG só com digest
+  (o webhook do operador o recusa — agora `:16.10@sha256:…`); o Secret-fonte
+  do bootstrap sem `NEO4J_PASSWORD`; a api sem `NEO4J_URI`/`NEO4J_USER` na
+  base (em produção ela não sobe sem as três); o StatefulSet do Neo4j
+  exportando `NEO4J_USER`/`NEO4J_PASSWORD`, que o entrypoint da imagem recusa
+  como config; o `migrate-api` sem privilégio para `CREATE EXTENSION vector`;
+  o `kind` da sessão (obrigatório desde a FASE 20) faltando no smoke e no
+  rollout-test do cluster; e o restore sem o pgvector na database que ele
+  cria.
+
+  Um deles **não era só do cluster local**: o `brabo-restore`, que é o
+  procedimento de incidente, morria em `COMMENT ON EXTENSION vector` sempre que
+  o papel da aplicação não é superusuário (CNPG, Postgres gerenciado) — só o
+  dono da extensão pode comentá-la. O restore passa a pular esse comentário,
+  que não carrega dado nenhum. E `make test-restore` deixa de esperar 30
+  minutos por um Job que já falhou. O `rollout-test` troca o `sleep 15`
+  por convergência com teto — e fica **declarado**, não corrigido, que ele já
+  acusou sessão órfã uma vez em quatro rodadas.
+
+  **Staging/prod** herdam da base só as duas variáveis do grafo e o nome das envs do Neo4j; o pgvector no `template1` é do cluster LOCAL — em
+  produção criar a extensão continua sendo ação do operador, como a migração
+  já dizia. Detalhe em [Scheduled property proofs](docs/runbook.md#provas-de-propriedade-agendadas).
+
 - **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
   sumir** do painel do time numa sessão de execução longa
   ([RN-568](docs/business-rules.md#rn-568)).
@@ -1903,6 +1967,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docker**: o broker sobe de verdade no compose local, sem abrir a rede (4e7e97147)
 
 ### Testes
+
+- **ci**: as três provas de propriedade do deploy em Kubernetes —
+  `make hpa-test`, `make rollout-test` e `make test-restore` — passam a rodar
+  **sem alguém lembrar** (BRB-009). Workflow novo,
+  `.github/workflows/propriedades.yml`, separado de `ci.yml` pelo mesmo motivo
+  do `golden-set-rag.yml`: semanal (`schedule`) mais `workflow_dispatch`, nunca
+  por PR e nunca check exigido. É o primeiro workflow do repositório que sobe
+  cluster: instala `k3d`/`helm`/`kubectl` por checksum pinado, roda o mesmo
+  `deploy/k8s/bootstrap.sh` de `make deploy-local` num runner hospedado, e
+  depois `make smoke-k8s` e os três alvos, cada um cronometrado no resumo do
+  run. Falha vira **issue por alvo**, e a segunda falha do mesmo alvo vira
+  comentário na issue aberta, não issue nova. O `BRB-009` continua **aberto**:
+  o critério pede também que uma quebra proposital do restore seja pega sem
+  humano e que a última execução boa fique numa métrica.
 
 - **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
   vocabulário `dev.*` **realmente emitido** por `apps/engine/lib/**/*.ex` com
