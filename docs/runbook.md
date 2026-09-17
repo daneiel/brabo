@@ -44,6 +44,7 @@ Start with triage.
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
 | `brabo-runner` sits printing `nada a atender AINDA`, or the machine unit is up but no project is being served | [The machine agent](#agente-de-maquina) |
+| `systemctl --user status` says `Loaded: bad-setting` / `WorkingDirectory= path is not absolute`, and the agent service never starts | [The unit is `bad-setting`](#unit-do-agente-nao-inicia) |
 | I need a device key for the machine and there is no browser (a fresh install, a headless box) | [Device key from the terminal](#chave-de-dispositivo-pelo-terminal) |
 | the installer finished with a **"O que ficou pendente"** block, or a fresh install has no account, no machine key, or no agent service | [When the installer does not close the installation](#instalador-nao-fecha) |
 | the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
@@ -476,6 +477,52 @@ with `--project` did not change at all. Reading the output:
 
 Every line of the connection loop is prefixed with the project name. If a
 message has no prefix, it came from the single-project mode.
+
+### The unit is `bad-setting` and never starts {#unit-do-agente-nao-inicia}
+
+**Symptom:** `service install` reported success, the unit file is on disk, and
+yet nothing runs:
+
+```
+$ systemctl --user status brabo-runner.service
+   Loaded: bad-setting (Reason: Unit brabo-runner.service has a bad unit file setting.)
+   Active: inactive (dead)
+brabo-runner.service:16: WorkingDirectory= path is not absolute: "/home/<you>/.config/brabo"
+```
+
+**Cause.** Units written **before** this fix quoted the working directory
+(`WorkingDirectory="/home/…"`). The two halves of a unit file do not share one
+syntax: `ExecStart=` is parsed with unquoting and word splitting, so each
+argument is quoted; `WorkingDirectory=` is **not** — systemd takes the rest of
+the line as the path. With the quotes the value no longer begins with `/`, the
+unit is refused at load time, and it **never starts** — in either species
+(per project and per machine alike, [RN-518](business-rules.md#rn-518) and
+[RN-545](business-rules.md#rn-545)).
+
+**Fix: reinstall.** `service install` overwrites the whole file, so there is no
+repair step and nothing to edit by hand:
+
+```bash
+brabo-runner service install --machine \
+  --dir "${XDG_CONFIG_HOME:-$HOME/.config}/brabo" \
+  --api-url http://localhost:3000
+# or, for a per-project unit, from inside that project's folder:
+brabo-runner service install
+```
+
+`status` and `uninstall` keep working on a unit that is in the broken state —
+the folder is read back from either form — so nothing is stranded if you would
+rather remove it first.
+
+**Related, and different:** a unit that loads but comes up in the wrong folder.
+`WorkingDirectory=` goes through **specifier expansion**, so a literal `%` in
+the path has to be written `%%`; the CLI escapes it now, but a hand-edited unit
+with `/home/you/50%off` will silently start in `/home/you/50<os-id>ff` —
+absolute, accepted, and wrong. Check the resolved value, never the file:
+
+```bash
+systemctl --user show -p WorkingDirectory brabo-runner.service
+```
 
 ### Device key from the terminal {#chave-de-dispositivo-pelo-terminal}
 

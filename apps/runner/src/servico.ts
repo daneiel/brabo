@@ -350,9 +350,10 @@ export function projectIdValidoParaServico(projectId: string): boolean {
 }
 
 /**
- * O caminho entra numa linha `WorkingDirectory="…"` (systemd) e num
- * `<string>` de plist. Aspa dupla e quebra de linha quebrariam o formato dos
- * dois — e um caminho com quebra de linha num arquivo de unit é injeção de
+ * O caminho entra numa linha `WorkingDirectory=` (systemd) e num `<string>` de
+ * plist. Aspa dupla e quebra de linha quebrariam o formato dos dois — a aspa
+ * porque o `ExecStart=` do systemd É unquoted e carrega o mesmo caminho em
+ * `--dir`, a quebra de linha porque num arquivo de unit ela é injeção de
  * diretiva, não caso de borda. Recusa NOMEADA, nunca escape criativo.
  */
 function caminhoSeguroParaUnidade(caminho: string): boolean {
@@ -360,6 +361,32 @@ function caminhoSeguroParaUnidade(caminho: string): boolean {
 }
 
 // ------------------------------------------------------------------ systemd
+
+/**
+ * As duas metades de um arquivo de unit NÃO têm a mesma sintaxe, e tratá-las
+ * como se tivessem foi o defeito: `ExecStart=` é parseado com *unquoting* e
+ * separação em palavras, então cada argumento vai entre aspas; `WorkingDirectory=`
+ * NÃO é — o systemd toma o resto da linha inteiro como caminho. Com aspas o
+ * valor deixa de começar com `/` e a unit é RECUSADA na carga
+ * (`WorkingDirectory= path is not absolute`, `bad-setting`), ou seja, ela nunca
+ * inicia. Medido com `systemd-analyze --user verify`, que é o que
+ * `servico-systemd.spec.ts` passou a perguntar — asserção de string provava
+ * apenas que o gerador escrevia o que o teste esperava.
+ *
+ * O que SOBRA para escapar é UM caractere, e não é o espaço: como a linha vai
+ * inteira, `/home/eu/pasta com espaço` funciona literal (medido). O `%` é que
+ * abre SPECIFIER — `WorkingDirectory=` passa por expansão, então
+ * `/home/dan/50%off` vira `/home/dan/50popff` (`%o` = ID do os-release) sem
+ * erro nenhum: o resultado continua absoluto, `verify` aprova, e o serviço sobe
+ * na pasta errada. `%%` é a forma de dizer `%` literal.
+ */
+function escaparCaminhoDeUnidadeSystemd(caminho: string): string {
+  return caminho.replaceAll('%', '%%');
+}
+
+function desescaparCaminhoDeUnidadeSystemd(valor: string): string {
+  return valor.replaceAll('%%', '%');
+}
 
 const SYSTEMD: PlataformaDeServico = {
   nome: 'systemd --user',
@@ -443,7 +470,9 @@ const SYSTEMD: PlataformaDeServico = {
       '',
       '[Service]',
       'Type=simple',
-      `WorkingDirectory="${plano.dir}"`,
+      // SEM aspas, de propósito — ver `escaparCaminhoDeUnidadeSystemd`. Esta
+      // linha já esteve entre aspas, e com elas NENHUMA unit jamais iniciou.
+      `WorkingDirectory=${escaparCaminhoDeUnidadeSystemd(plano.dir)}`,
       `ExecStart=${exec}`,
       '',
       '# `on-abnormal` e NUNCA `on-failure`: o runner sai com 1 quando o join foi',
@@ -470,8 +499,20 @@ const SYSTEMD: PlataformaDeServico = {
   },
 
   pastaGravada(conteudo) {
-    const casou = /^WorkingDirectory="(.*)"$/m.exec(conteudo);
-    return casou?.[1] ?? null;
+    const casou = /^WorkingDirectory=(.*)$/m.exec(conteudo);
+    const bruto = casou?.[1];
+    if (bruto === undefined) return null;
+
+    // DUAS formas são aceitas aqui, e a segunda é dívida com quem já tem uma
+    // unit quebrada no disco: até esta correção o valor saía INTEIRO entre
+    // aspas, e essa unit nunca subiu — mas `status` e `uninstall` precisam
+    // continuar alcançando a pasta dela, senão quem está no estado ruim perde
+    // também a saída dele. Não há ambiguidade entre as duas: o caminho passou
+    // por `caminhoSeguroParaUnidade`, que RECUSA aspa dupla, então um valor
+    // cercado por aspas só pode ser a forma antiga.
+    const antiga = /^"(.*)"$/.exec(bruto)?.[1];
+    // A forma antiga nunca escapou nada, então ela volta CRUA.
+    return antiga ?? desescaparCaminhoDeUnidadeSystemd(bruto);
   },
 
   ativar(ctx, alvo) {
