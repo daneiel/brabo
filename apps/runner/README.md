@@ -402,6 +402,19 @@ O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 `docker`): mudou o seu PATH, rode `service install` de novo.
 
+> **Unit instalada por uma versão anterior não inicia — reinstale.** Até esta
+> correção o `WorkingDirectory=` saía **entre aspas**, e o systemd não faz
+> unquoting nessa diretiva (ao contrário do `ExecStart=`, onde as aspas são o
+> certo): o valor deixava de começar com `/`, a unit era recusada na carga
+> (`Loaded: bad-setting`, `WorkingDirectory= path is not absolute`) e **nunca
+> iniciava**, nas duas espécies. Não há conserto parcial nem arquivo para
+> editar — `service install` sobrescreve o arquivo inteiro, então basta rodá-lo
+> de novo. `status` e `uninstall` continuam lendo a pasta de uma unit no estado
+> antigo, de propósito: quem está nele não pode perder também a saída dele.
+> O `%` é o único caractere que a pasta escapa (`%%`), porque essa diretiva
+> passa por expansão de especificador — espaço vai literal, já que a linha
+> inteira é o caminho.
+
 ## Reconexão
 
 Quando a conexão cai, o runner **pede um ticket NOVO** e tenta de novo, com

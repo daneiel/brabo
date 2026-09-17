@@ -9266,6 +9266,26 @@ arquivo: os dois gerenciadores dão ao serviço um PATH mínimo, e o runner cham
 sem isso o serviço subiria perfeitamente e as duas funções falhariam com "não
 encontrado". É um retrato, e muda só reinstalando.
 
+**As DUAS metades do arquivo de unit NÃO têm a mesma sintaxe, e o
+`WorkingDirectory=` vai SEM aspas.** `ExecStart=` é parseado com *unquoting* e
+separação em palavras — por isso cada argumento vai entre aspas —, e
+`WorkingDirectory=` **não é**: o systemd toma o resto da linha inteiro como
+caminho. Tratar as duas como se fossem iguais custou uma release inteira: com
+aspas o valor deixa de começar com `/`, a unit é recusada na carga
+(`Loaded: bad-setting`, `WorkingDirectory= path is not absolute`) e **nunca
+inicia** — nas duas espécies, em instalação nenhuma. A suíte estava verde o
+tempo todo, porque cada asserção pedia de volta exatamente a forma errada: por
+isso a prova agora é feita contra `systemd-analyze --user verify`, o validador
+de verdade, e não contra texto. O que SOBRA para escapar é **um** caractere, e
+não é o espaço (a linha vai inteira, então `/home/eu/pasta com espaço` funciona
+literal): é o `%`, porque essa diretiva passa por **expansão de
+especificador** — `/home/dan/50%off` vira `/home/dan/50<id-do-os-release>ff`
+sem erro nenhum, e o serviço sobe na pasta errada. `%%` é a forma de dizer `%`
+literal. A leitura de volta aceita as **duas** formas, e isso é dívida
+deliberada com quem já tem uma unit quebrada no disco: `status` e `uninstall`
+precisam continuar alcançando a pasta dela. Quem está nesse estado conserta
+**reinstalando** — `install` sobrescreve o arquivo inteiro.
+
 **Ativação que falha NÃO apaga o arquivo, e não diz "instalado".** Escrever a
 unit e ativá-la são dois passos, e o gerenciador pode não estar lá
 (`systemctl` fora do PATH, `launchd` recusando). O arquivo **fica** — é o que a
@@ -9331,7 +9351,12 @@ cuja configuração está quebrada, que é justamente quando alguém pergunta.
   `apps/runner/src/index.spec.ts`
   (`describe "brabo-runner service é despachado antes de exigir credencial"` —
   processo de VERDADE numa pasta sem credencial nenhuma: `status` responde 4 em
-  vez do bloco de uso, e subcomando desconhecido cai no uso de `service`)
+  vez do bloco de uso, e subcomando desconhecido cai no uso de `service`);
+  `apps/runner/src/servico-systemd.spec.ts` (a unit GERADA perguntada ao
+  `systemd-analyze --user verify` de verdade, nas duas espécies, com pasta que
+  tem espaço e pasta que tem `%` — mais a forma ANTIGA, entre aspas, sendo
+  REPROVADA pelo mesmo validador; sem systemd na máquina o arquivo PULA
+  nomeando o motivo, nunca passa em silêncio nem reprova por ambiente)
 - **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 5
 - **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **BRB-031** (o
   `chmod +x` manual do fluxo do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))

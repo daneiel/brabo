@@ -6,6 +6,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner**: o serviço do agente local **passa a iniciar**. A unit gerada por
+  `brabo-runner service install` escrevia `WorkingDirectory="/home/…"`, e o
+  systemd **não** faz unquoting nessa diretiva (ao contrário do `ExecStart=`,
+  onde as aspas são o certo): o valor deixava de começar com `/`, a unit era
+  recusada na carga (`Loaded: bad-setting`,
+  `WorkingDirectory= path is not absolute`) e **nunca iniciava** — em
+  instalação nenhuma, nas duas espécies de unit (por projeto,
+  [RN-518](docs/business-rules.md#rn-518); por máquina,
+  [RN-545](docs/business-rules.md#rn-545)). O LaunchAgent do macOS não era
+  afetado: lá o valor vai num `<string>` de XML.
+
+  **Quem já tem a unit quebrada conserta REINSTALANDO** —
+  `brabo-runner service install` (com `--machine`, se for a de máquina)
+  sobrescreve o arquivo inteiro, e não há conserto parcial nem nada a editar à
+  mão. `status` e `uninstall` continuam lendo a pasta de uma unit no estado
+  antigo, de propósito: quem está nele não pode perder também a saída dele.
+  Procedimento no runbook, seção *The unit is `bad-setting` and never starts*.
+
+  A suíte estava **verde** com o defeito de pé, porque cada asserção pedia de
+  volta exatamente a forma errada — asserção de string prova que o gerador
+  escreve o que o teste espera, nunca que o systemd aceita. A prova agora é
+  feita contra o validador de verdade (`systemd-analyze --user verify`, em
+  `apps/runner/src/servico-systemd.spec.ts`), que **pula nomeando o motivo**
+  onde não há systemd. Junto veio o caractere que a mesma diretiva exige
+  escapar e ninguém tinha visto: `%` passa por expansão de especificador, então
+  `/home/eu/50%off` subiria silenciosamente noutra pasta — agora sai `%%`.
+  Espaço continua indo literal, porque a linha inteira é o caminho.
+
 - **instalador**: o `install.sh` **volta a instalar em macOS**, e a falta de uma
   ferramenta deixa de ser anunciada como adulteração (AT-091).
 

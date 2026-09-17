@@ -1484,6 +1484,23 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é asserida por teste sobre a OPÇÃO passada ao construtor: teste que só
   verifica "conecta" passa com o defeito de pé, e passou. Comentário não é
   mecanismo.
+- Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
+  contra uma asserção de string — é a mesma lição do `#` no `FROM` do
+  Dockerfile ("linter concordar não é build concordar"), medida uma segunda
+  vez e mais cara. A unit de `systemd --user` do `brabo-runner` saía com
+  `WorkingDirectory="…"` e NUNCA iniciou, em instalação nenhuma e nas duas
+  espécies (`bad-setting`, `path is not absolute`), com a suíte VERDE: cada
+  asserção pedia de volta exatamente a forma errada. As DUAS metades do arquivo
+  não têm a mesma sintaxe — `ExecStart=` é unquoted e separado em palavras (as
+  aspas ali são o certo), `WorkingDirectory=` toma a linha INTEIRA (aspa
+  nenhuma, espaço literal, e `%` escapado como `%%` porque a diretiva expande
+  especificador). Quem prova é `systemd-analyze --user verify` sobre a unit
+  GERADA (`apps/runner/src/servico-systemd.spec.ts`), com a forma antiga fixada
+  como REPROVADA; sem systemd na máquina o teste PULA nomeando o motivo — nunca
+  passa em silêncio nem reprova por ambiente, a mesma régua do golden-set. O
+  plist do macOS não tinha o defeito (o valor vai num `<string>` de XML), e a
+  leitura de volta aceita as DUAS formas, para não tirar `status`/`uninstall`
+  de quem tem a unit quebrada em disco — o conserto é REINSTALAR.
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).
