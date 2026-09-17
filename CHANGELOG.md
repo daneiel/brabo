@@ -34,6 +34,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `/home/eu/50%off` subiria silenciosamente noutra pasta — agora sai `%%`.
   Espaço continua indo literal, porque a linha inteira é o caminho.
 
+- **instalador**: o `install.sh` **volta a instalar em macOS**, e a falta de uma
+  ferramenta deixa de ser anunciada como adulteração (AT-091).
+
+  Medido no E2E da v6.1.0 (run `34794555890`, job `install.sh (macos-14)`): o
+  script chamava `sha256sum` nos cinco pontos de verificação e não tinha
+  alternativa nenhuma. O macOS traz `shasum -a 256`, então o
+  `sha256sum: command not found` fazia a comparação falhar e quem instalava lia
+  *"o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um
+  aviso: pare e investigue."* — mandado caçar um incidente de segurança que não
+  houve, numa plataforma que o próprio script diz suportar (há hash de `cosign`
+  `darwin-amd64`/`darwin-arm64` pinado nele).
+
+  Agora há UMA função de hash (`sha256sum` **ou** `shasum -a 256`), resolvida
+  **antes do primeiro download** — nunca no meio de uma verificação: a máquina
+  sem com que conferir não chega a ter o que conferir. Faltando as duas, a
+  recusa é PRÓPRIA e nomeia a ferramenta, diz onde cada uma mora e afirma que
+  nada foi baixado; hash que não bate continua com o texto de incidente de cada
+  chamador. As duas recusas nunca se disfarçam uma da outra, que é o ponto:
+  acusar adulteração por falta de `shasum` ensina a ignorar a frase no dia em
+  que ela for verdade. `--print-plan` continua imprimível sem nenhuma das duas,
+  e declara qual aceita (`conferir-hash`).
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades

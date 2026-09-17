@@ -43,12 +43,12 @@ set -euo pipefail
 REPO='daneiel/brabo'
 
 # O `cosign` que verifica a assinatura precisa ele mesmo de procedência, senão
-# a cadeia só sobe um degrau. Versão PINADA e conferida por `sha256sum` contra
-# os valores abaixo — que são os do `cosign_checksums.txt` oficial da release
-# v3.1.3, copiados aqui de propósito: quem confia neste script o bastante para
-# executá-lo confia no hash que ele carrega, e a cadeia não fica mais frágil do
-# que o elo que a inicia. É o mesmo padrão que o `ci.yml` já aplica a todo
-# binário de terceiro.
+# a cadeia só sobe um degrau. Versão PINADA e conferida por `conferir_hash`
+# contra os valores abaixo — que são os do `cosign_checksums.txt` oficial da
+# release v3.1.3, copiados aqui de propósito: quem confia neste script o
+# bastante para executá-lo confia no hash que ele carrega, e a cadeia não fica
+# mais frágil do que o elo que a inicia. É o mesmo padrão que o `ci.yml` já
+# aplica a todo binário de terceiro.
 COSIGN_VERSAO='v3.1.3'
 
 # `case` e não quatro variáveis lidas por indireção (`${!var}`), por dois
@@ -129,6 +129,67 @@ ok()      { printf '%s✓%s %s\n' "$C_OK" "$C_RESET" "$*"; }
 recusar() {
   printf '%s✗ %s%s\n' "$C_ERRO" "$*" "$C_RESET" >&2
   exit 1
+}
+
+# --------------------------------------------------------------------------
+# Hash — UMA ferramenta, resolvida ANTES de baixar qualquer coisa
+# --------------------------------------------------------------------------
+
+# O defeito que isto fecha, medido no E2E da v6.1.0 (job `install.sh
+# (macos-14)`): o script chamava `sha256sum` nos cinco pontos de verificação e
+# não tinha alternativa nenhuma. O macOS não traz `sha256sum` — traz
+# `shasum -a 256` —, então `command not found` fazia a comparação falhar e a
+# pessoa lia *"o cosign baixado NÃO bate com o hash pinado neste script. Isso
+# não é um aviso: pare e investigue."* Dois defeitos num: a instalação era
+# impossível na plataforma que este mesmo script promete suportar (há hash de
+# cosign `darwin-*` logo acima), e a mensagem mandava caçar uma adulteração que
+# não houve — o que ensina a ignorar a frase no dia em que ela for verdade.
+#
+# Preenchida por `exigir_ferramenta_de_hash`, e VAZIA até lá. Um uso antes da
+# hora cai na cláusula `*` de `hash_sha256`, que recusa nomeando o defeito como
+# sendo DESTE script — nunca da máquina de quem instala.
+FERRAMENTA_DE_HASH=''
+
+# Roda ANTES do primeiro download, nunca no meio de uma verificação: a máquina
+# que não tem com que conferir não deve chegar a ter o que conferir.
+exigir_ferramenta_de_hash() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    FERRAMENTA_DE_HASH='sha256sum'
+  elif command -v shasum >/dev/null 2>&1; then
+    FERRAMENTA_DE_HASH='shasum'
+  else
+    recusar 'não achei sha256sum nem shasum nesta máquina, e sem um dos dois este instalador não tem como conferir o que baixa. Isto é FERRAMENTA faltando, não sinal de adulteração — nada foi baixado. No macOS o shasum vem com o sistema (verifique o PATH); no Linux, sha256sum vem no coreutils.'
+  fi
+}
+
+# Ecoa só o hash, em uma linha. As duas ferramentas imprimem
+# `<hash>  <arquivo>`, então o corte é o mesmo — e é feito com expansão de
+# parâmetro, não com `cut`, para não somar uma terceira dependência ao caminho
+# que existe justamente porque uma faltou.
+hash_sha256() {
+  local saida
+  case "$FERRAMENTA_DE_HASH" in
+    sha256sum) saida="$(sha256sum "$1")" ;;
+    shasum)    saida="$(shasum -a 256 "$1")" ;;
+    *) recusar 'hash pedido antes de a ferramenta ter sido resolvida — isto é defeito deste script, não da sua máquina.' ;;
+  esac
+  printf '%s\n' "${saida%% *}"
+}
+
+# As DUAS recusas são diferentes, e a diferença É o ponto: ferramenta que falta
+# é dependência do sistema operacional e se resolve instalando; hash que não
+# bate é incidente e se resolve PARANDO. Cada chamador passa o próprio motivo
+# porque cada um nomeia um arquivo diferente — o texto nunca é genérico.
+#
+# Comparação de STRING, e não `sha256sum -c`, para os dois lados: `shasum`
+# aceita `-c`, mas provar o caminho do manifesto em duas ferramentas custaria
+# mais que provar uma igualdade. A normalização para minúsculas fica aqui, num
+# lugar só, porque um manifesto válido pode trazer o hash em maiúsculas.
+conferir_hash() {
+  local arquivo="$1" esperado="$2" motivo="$3" obtido
+  obtido="$(hash_sha256 "$arquivo" | tr '[:upper:]' '[:lower:]')"
+  esperado="$(printf '%s' "$esperado" | tr '[:upper:]' '[:lower:]')"
+  [ "$esperado" = "$obtido" ] || recusar "$motivo"
 }
 
 # --------------------------------------------------------------------------
@@ -318,6 +379,7 @@ imprimir_estado() {
 # são o ponto — pasta de usuário é acúmulo, não estado do produto (RN-516: o
 # espelho nunca apaga; o instalador tampouco).
 imprimir_plano() {
+  printf 'conferir-hash\tfaz\tsha256sum ou shasum -a 256, resolvido ANTES de baixar; faltando os dois, recusa NOMEANDO a ferramenta e nunca acusa adulteração\n'
   printf 'verificar-origem\tfaz\to checksums.txt assinado da Release, e o hash deste próprio arquivo nele\n'
   printf 'verificar-arquivos-da-instalacao\tfaz\to compose e o que ele monta, baixados da Release e conferidos no mesmo manifesto ANTES de qualquer pergunta\n'
   printf 'usar-arquivo-nao-verificado\tnunca\tum docker/ que já esteja na pasta é substituído pela cópia verificada, nunca lido no lugar dela\n'
@@ -363,8 +425,8 @@ baixar_cosign() {
     "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSAO}/cosign-${plataforma}" \
     || recusar "não consegui baixar o cosign ${COSIGN_VERSAO}."
 
-  printf '%s  %s\n' "$esperado" "$destino" | sha256sum -c --status \
-    || recusar "o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um aviso: pare e investigue."
+  conferir_hash "$destino" "$esperado" \
+    "o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um aviso: pare e investigue."
   chmod +x "$destino"
 }
 
@@ -404,7 +466,7 @@ verificar_a_si_mesmo() {
     || recusar "a assinatura do checksums.txt NÃO confere. O manifesto não foi publicado por esta esteira."
   ok 'assinatura do manifesto confere'
 
-  meu_hash="$(sha256sum "$0" | cut -d' ' -f1)"
+  meu_hash="$(hash_sha256 "$0")"
   if ! grep -qi "^${meu_hash}  install.sh$" "${tmp}/checksums.txt"; then
     recusar "o hash deste arquivo não está no manifesto assinado. Ou ele foi alterado, ou não é o instalador desta Release."
   fi
@@ -460,7 +522,7 @@ ARQUIVOS_VERIFICADOS=''
 # delas cai num arquivo do diretório atual: não há caminho de volta para o
 # relativo, e é isso que o spec do E2E cobra.
 baixar_e_verificar_os_arquivos_da_instalacao() {
-  local url="$1" tmp="$2" pasta asset esperado obtido
+  local url="$1" tmp="$2" pasta asset esperado
   pasta="${tmp}/arquivos-da-instalacao"
   mkdir -p "$pasta"
 
@@ -475,9 +537,8 @@ baixar_e_verificar_os_arquivos_da_instalacao() {
     esperado="$(awk -v nome="$asset" '$2 == nome || $2 == "*" nome { print tolower($1); exit }' "${tmp}/checksums.txt")"
     [ -n "$esperado" ] \
       || recusar "o manifesto assinado não cobre ${asset} — recusa, não aviso. Nada foi gravado."
-    obtido="$(sha256sum "${pasta}/${asset}" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')"
-    [ "$esperado" = "$obtido" ] \
-      || recusar "${asset} NÃO bate com o manifesto assinado. Nada foi gravado. Isso não é um aviso: pare e investigue."
+    conferir_hash "${pasta}/${asset}" "$esperado" \
+      "${asset} NÃO bate com o manifesto assinado. Nada foi gravado. Isso não é um aviso: pare e investigue."
   done
 
   ARQUIVOS_VERIFICADOS="$pasta"
@@ -506,7 +567,7 @@ materializar_os_arquivos_da_instalacao() {
     destino="${raiz}/${relativo}"
     mkdir -p "$(dirname "$destino")" || recusar "não consegui criar $(dirname "$destino")."
     if [ -f "$destino" ] && [ ! -L "$destino" ] \
-      && [ "$(sha256sum "$destino" | cut -d' ' -f1)" != "$(sha256sum "${ARQUIVOS_VERIFICADOS}/${asset}" | cut -d' ' -f1)" ]; then
+      && [ "$(hash_sha256 "$destino")" != "$(hash_sha256 "${ARQUIVOS_VERIFICADOS}/${asset}")" ]; then
       detalhe "  ${relativo}: o que estava aqui é substituído pela cópia verificada"
     fi
     rm -f "$destino"
@@ -655,7 +716,7 @@ consentir_base() {
 # contra o `checksums.txt` assinado, que este script já baixou e verificou para
 # conferir a si mesmo.
 instalar_o_runner() {
-  local plataforma="$1" tmp="$2" alvo destino esperado obtido
+  local plataforma="$1" tmp="$2" alvo destino esperado
   case "$plataforma" in
     linux-amd64)  alvo='linux-x64' ;;
     linux-arm64)  alvo='linux-arm64' ;;
@@ -682,8 +743,8 @@ instalar_o_runner() {
   # `verificar_a_si_mesmo`; aqui só se confere a linha deste binário.
   esperado="$(grep -i "  ${nome}\$" "${tmp}/checksums.txt" | cut -d' ' -f1 || true)"
   [ -n "$esperado" ] || recusar "o manifesto assinado não cobre ${nome} — recusa, não aviso."
-  obtido="$(sha256sum "${tmp}/${nome}" | cut -d' ' -f1)"
-  [ "$esperado" = "$obtido" ] || recusar "o binário do runner NÃO bate com o manifesto assinado."
+  conferir_hash "${tmp}/${nome}" "$esperado" \
+    "o binário do runner NÃO bate com o manifesto assinado."
   ok 'binário do runner verificado'
 
   destino="${HOME}/.local/bin"
@@ -1232,6 +1293,11 @@ main() {
       recusar "plataforma não suportada: ${plataforma#nao-suportado:}. Suportados: linux e macOS, em amd64 e arm64."
       ;;
   esac
+
+  # ANTES do primeiro download, e não no meio da primeira verificação: a
+  # máquina sem com que conferir não deve chegar a ter o que conferir, e o
+  # `command not found` ali chegava como acusação de adulteração (AT-091).
+  exigir_ferramenta_de_hash
 
   verificar_a_si_mesmo "$plataforma"
 

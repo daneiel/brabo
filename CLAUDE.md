@@ -151,6 +151,7 @@ estado lido do repositório e não da conversa.
 | O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
+| O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -997,7 +998,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma rota `@Public()` depender de um SEGUNDO host de terceiro
   (`tuf-repo-cdn.sigstore.dev`) para verificar algo que nenhuma Release
   carrega ainda, o que a régua dos ADRs 0041/0042 proíbe declarar sem prova.
-  Quem verifica assinatura é o `install.sh`, com `cosign` pinado. Fica FORA,
+  Quem verifica assinatura é o `install.sh`, com `cosign` pinado — e ele roda
+  na máquina DOS OUTROS, então não assume ferramenta que o SO possa não ter:
+  hash é UMA função com DUAS ferramentas aceitas (`sha256sum` **ou**
+  `shasum -a 256`), resolvidas ANTES do primeiro download e nunca no meio de
+  uma verificação, pela mesma disciplina que já fez o `case` de
+  `sha_do_cosign` recusar array associativo (bash 3.2 do macOS) e
+  `comparar_versoes` recusar `sort -V`. Faltar as DUAS é recusa PRÓPRIA, que
+  nomeia a ferramenta — NUNCA a de hash divergente, que é a de INCIDENTE
+  (*"pare e investigue"*): o script chamava `sha256sum` direto nos cinco
+  pontos de verificação, o macOS não o traz, e o `command not found` chegava
+  como acusação de adulteração, bloqueando toda instalação na plataforma que
+  ele mesmo suporta e ensinando a ignorar a frase no dia em que ela for
+  verdade (AT-091, RN-526). Ferramenta ausente e hash divergente são recusas
+  DIFERENTES, com textos diferentes — não as colapse. Fica FORA,
   declarado: code-signing de SO dos binários (notarização, Authenticode) e a
   metade de PROCEDÊNCIA do proxy — BRB-005 segue aberto só nela. E desde a
   RN-565 o manifesto NÃO é mais refém da matriz: o job `checksums` perdeu o

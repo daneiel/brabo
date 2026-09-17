@@ -10445,10 +10445,23 @@ régua que a RN-511 já aplica ao consentimento da base.
 **Ele verifica a própria origem antes de agir**, e a cadeia tem dois elos: a
 assinatura do `checksums.txt` da Release (RN-524), e o hash **deste arquivo**
 dentro do manifesto verificado. O `cosign` que faz a verificação é ele mesmo
-pinado por versão e conferido por `sha256sum` contra o hash escrito no script —
-quem confia no `install.sh` o bastante para executá-lo confia no hash que ele
+pinado por versão e conferido por hash contra o valor escrito no script — quem
+confia no `install.sh` o bastante para executá-lo confia no hash que ele
 carrega, e a cadeia não fica mais frágil que o elo que a inicia. Falha em
 qualquer elo é **recusa nomeada, nunca aviso**.
+
+**Calcular hash tem UMA função e DUAS ferramentas aceitas** — `sha256sum` ou
+`shasum -a 256` —, resolvidas **antes do primeiro download** e nunca no meio de
+uma verificação: a máquina que não tem com que conferir não deve chegar a ter o
+que conferir. Faltar as duas é **recusa PRÓPRIA**, que nomeia as duas
+ferramentas, diz onde cada uma mora e afirma que nada foi baixado — nunca a
+recusa de hash divergente, que é a de **incidente** (*"pare e investigue"*). A
+distinção não é estilo: o script chamava `sha256sum` direto nos cinco pontos de
+verificação, o macOS não o traz, e o `command not found` chegava a quem
+instalava como acusação de adulteração — bloqueando toda instalação na
+plataforma que o próprio script suporta (há `cosign` `darwin-*` pinado nele) e
+ensinando a ignorar a frase no dia em que ela for verdade. `--print-plan` roda
+sem nenhuma das duas e declara qual o script aceita (`conferir-hash`).
 
 **A detecção nomeia o que achou.** Pelo marcador
 (`$XDG_STATE_HOME/brabo/install-state.json`) quando ele existe; por sinais
@@ -10469,7 +10482,10 @@ são vidas diferentes, e juntá-los faria a remoção de um apagar o outro.
 **Onde:** `install.sh` (raiz).
 **Teste:** `scripts/dev/install.spec.ts` — os modos `--print-state` e
 `--print-plan` provam a DECISÃO sem TTY, sem rede e sem efeito, no molde de
-`bootstrap.spec.ts`.
+`bootstrap.spec.ts`; e o bloco *"o hash num PATH sem sha256sum"* roda as
+funções de hash no shell de verdade, com o `PATH` montado ferramenta por
+ferramenta, conferindo as DUAS recusas (ferramenta ausente × hash divergente)
+e que a primeira nunca usa o vocabulário da segunda.
 **Origem:** FASE 29, sessão 3 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 Nesta sessão o script **não instala nada** — subir o compose, gerar segredos e
 instalar o runner são as sessões 4 e 7, e ele **diz isso** na saída em vez de
@@ -13495,12 +13511,12 @@ migração tende a reprovar — desfecho seguro pela RN-530 (nada é apagado), m
 migração por compose não fecha.
 
 - **Código:** `install.sh:95` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
-  `:435` (`ASSETS_DO_INSTALADOR`), `:437` (`destino_do_asset_do_instalador`, a
-  tabela do lado que baixa), `:462` (`baixar_e_verificar_os_arquivos_da_instalacao`),
-  `:469`/`:477`/`:480` (as três recusas), `:497`
-  (`materializar_os_arquivos_da_instalacao`), `:1146` (a migração materializa
-  antes do backup), `:1241` (a verificação logo depois da própria origem),
-  `:1407` (a subida materializa antes do `up`);
+  `:497` (`ASSETS_DO_INSTALADOR`), `:499` (`destino_do_asset_do_instalador`, a
+  tabela do lado que baixa), `:524` (`baixar_e_verificar_os_arquivos_da_instalacao`),
+  `:531`/`:539`/`:541` (as três recusas), `:558`
+  (`materializar_os_arquivos_da_instalacao`), `:1207` (a migração materializa
+  antes do backup), `:1307` (a verificação logo depois da própria origem),
+  `:1473` (a subida materializa antes do `up`);
   `scripts/ci/assets-do-instalador.ts:55` (a tabela do lado que publica), `:93`
   (`problemasDoMapeamento`), `:135` (`prepararAssets`);
   `.github/workflows/build-runner-binaries.yml:468` (os assets preparados do
