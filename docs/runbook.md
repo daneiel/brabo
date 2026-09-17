@@ -2962,6 +2962,20 @@ The script verifies **its own origin** before doing anything — the signature
 of the Release's `checksums.txt`, and then its own hash inside that verified
 manifest. A failure at either step is a **named refusal**, never a warning.
 
+It needs **one** of `sha256sum` (coreutils, Linux) or `shasum -a 256` (ships
+with macOS) to do any of that, and it resolves which one **before the first
+download** — not in the middle of a check. Missing both is its **own** refusal,
+naming the two tools and saying nothing was downloaded; it is a missing
+dependency of the operating system, and it is deliberately *not* worded like
+the hash refusals below. Those two are different outcomes asking for different
+things — one is fixed by installing, the other by **stopping** — and the AT-091
+measurement is what put the line between them: `sha256sum: command not found`
+on macOS used to surface as *"o cosign baixado NÃO bate com o hash pinado neste
+script. Isso não é um aviso: pare e investigue."*, which both blocked every
+macOS install and taught the reader to ignore that sentence. `--print-plan`
+needs neither tool and declares which ones the script accepts
+(`conferir-hash`).
+
 Detection has a **5s ceiling** on the Docker call it makes (`docker compose ls`
 talks to the daemon, and a slow or stopped daemon behind a live socket would
 hang the whole thing *before the first question*). Hitting the ceiling is not

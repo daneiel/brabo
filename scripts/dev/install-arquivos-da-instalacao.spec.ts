@@ -129,11 +129,18 @@ function cenario(checksums: string): { tmp: string; instalacao: string } {
 }
 
 /**
- * O que `main` faz, na ordem que importa: verificar, e SÓ DEPOIS gravar o
- * `.env` e materializar. Uma recusa na verificação sai 1 ali mesmo — e é por
- * isso que o `.env` não existir depois é a asserção de "antes de gravar".
+ * O que `main` faz, na ordem que importa: resolver a ferramenta de hash,
+ * verificar, e SÓ DEPOIS gravar o `.env` e materializar. Uma recusa na
+ * verificação sai 1 ali mesmo — e é por isso que o `.env` não existir depois é
+ * a asserção de "antes de gravar".
+ *
+ * `exigir_ferramenta_de_hash` está aqui porque está no `main`, antes do
+ * primeiro download (AT-091): sem ela, `FERRAMENTA_DE_HASH` fica vazia e
+ * `hash_sha256` recusa nomeando o defeito como sendo do script. Esta sequência
+ * imita o `main`, então imita a ordem dele inteira.
  */
 const sequenciaDoMain = (tmp: string, instalacao: string) => `
+exigir_ferramenta_de_hash
 baixar_e_verificar_os_arquivos_da_instalacao "${url}" "${tmp}"
 : > "${instalacao}/.env"
 materializar_os_arquivos_da_instalacao "${instalacao}"
