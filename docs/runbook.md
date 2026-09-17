@@ -2917,6 +2917,31 @@ kubectl -n brabo exec deploy/api -- cat /app/docs/gates.yml | head -5
 Empty or missing means the image was built without it — likely a tweaked
 `.dockerignore`, or a build from a context that has no `docs/`.
 
+**The registry travels; what it points at does not.** A `teste`/`ci` gate
+names files under `apps/api/test/`, `scripts/ci/` and `.github/`, and none
+of them are in the image. Until this was separated, the loader required
+those files at runtime and the route answered `500` in every installation
+— measured on v6.1.0 as twelve 5xx in about 55 minutes, with
+`RegistroDeGatesInvalido` listing all eleven targets as "does not exist".
+Reproduce the old failure with:
+
+```bash
+docker exec <api> node -e "require('/app/infrastructure/gates/gate-registry.loader').carregarRegistro()"
+```
+
+On a fixed image that prints nothing. If it throws
+`RegistroDeGatesInvalido` naming a `.spec.ts` or a workflow, the image is
+from before the fix ([RN-070](business-rules/custo.md#rn-070)); if it
+throws naming a gate's *content* (a `block` gate without `script`, an
+`active` gate without evidence), the registry itself is wrong and the
+repository is where to fix it.
+
+The screen does not show this failure: `PrGateTimeline` falls back to the
+full pipeline when `GET /gates` fails ([RN-084](business-rules/custo.md#rn-084)),
+so the only signal was the api's log. `docker/smoke.sh` now calls
+`GET /gates` against the production image, which is what keeps it from
+coming back silently.
+
 To see the registry the way the api sees it, already validated:
 
 ```bash

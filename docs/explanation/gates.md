@@ -72,6 +72,41 @@ The two cases that forced the field to exist:
 Without `evidencia`, the rule "a `block` gate without proof fails"
 would turn the product's two hardest locks permanently red.
 
+## Two validations, and only one of them runs in production
+
+The registry is validated in two layers, and the split is not cosmetic:
+
+| layer | what it asserts | who runs it |
+|---|---|---|
+| `validarRegistro` | claims about the **content** — `block` needs `script`, the four human gates stay human, `active` needs evidence, no duplicate id, no orphan `entrada` | anyone who reads the registry, including the api at runtime |
+| `validarLocalizadores` | the `teste`/`ci` **target file exists** | the test against the real file, and phase 2 of `validacao-gates.ts` — never the api |
+
+The first is true wherever the registry is read. The second is a claim
+about the **repository**, and it only makes sense inside a checkout.
+
+The two used to be one function, and the api's loader called it. The
+consequence was measured on the installed v6.1.0: `GET /gates` answered
+`500` with `RegistroDeGatesInvalido` listing all eleven targets as "does
+not exist" — twelve 5xx responses in about 55 minutes. Nothing was wrong
+with the registry. The production image carries `/app/docs/gates.yml`
+and nothing else from `docs/`; `apps/api/test/`, `scripts/ci/` and
+`.github/` never enter it, so a repository claim evaluated against that
+tree fails for every gate, in every installation.
+
+Nothing was loosened. The rule still exists, still covers the same
+targets, and a target that disappears still fails — it just runs where
+the question means something. Two guards keep it that way: the test that
+climbs to the repository root and checks every locator, and a loader test
+that rebuilds the image's tree on disk (a root with `docs/gates.yml` and
+nothing else) and asserts the registry loads. Putting the check back in
+the loader turns that second one red with the exact message the
+installation produced.
+
+And the api serving the registry is now exercised against the production
+image: `docker/smoke.sh` calls `GET /gates` and requires the registry
+back. No unit suite could have caught this — vitest and ExUnit run from a
+checkout, where the targets exist.
+
 ## The shared-type trap
 
 `qa-verificada` and `secops-segura` **are not two event types**: both
@@ -104,6 +139,12 @@ Three phases, in this order: **registry** (loads and validates),
 **locators** (does the `teste`/`ci` target exist?) and **event log**
 (latest passage, with event id). The first two never touch the
 database — that's what makes the script useful in CI without Postgres.
+
+Phase 2 reports **every** locator in the registry, not just the ones on
+`active`+`block` gates. It used to have its own narrower loop while the
+api's loader had a wider one, and `rag-acertivo` — `active`, `warn`,
+citing both a workflow and a test — never showed up in the table. One
+rule now, `validarLocalizadores`, shared with the test.
 
 | exit code | when |
 |---|---|
