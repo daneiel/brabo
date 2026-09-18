@@ -1,4 +1,5 @@
 import type { SessionEvent } from './api-types';
+import { statusDoEventoDev } from './agent-status';
 
 /**
  * A linha do tempo de cada agente, em ÁRVORE.
@@ -26,6 +27,7 @@ export type MarcoTipo =
   | 'handoff'
   | 'delegacao'
   | 'trabalho'
+  | 'espera'
   | 'gate';
 
 export interface Marco {
@@ -93,6 +95,18 @@ const texto = (v: unknown): string | undefined =>
  * De tipo de evento para marco. O que não está aqui NÃO vira nó: a árvore
  * mostra marcos, não o log inteiro — para isso já existe o log, que continua
  * a um clique.
+ *
+ * Para o vocabulário `dev.*` isso NÃO vale como omissão: todo tipo que o
+ * engine emite tem de estar aqui ou em `TRADUCAO_FORA`, com o motivo, e
+ * `scripts/ci/vocabulario-de-eventos-dev.spec.ts` reprova o que faltar. Foi
+ * por omissão que `dev.blocked_by_container` sumia da árvore (AT-087): numa
+ * instalação real o ramo parava em `dev.started`, e a frase do presente
+ * afirmava trabalho sobre um agente parado esperando o container subir.
+ *
+ * `dev.rearmed` saiu desta tabela de propósito: quem o grava é a API, com
+ * ator `user` (o clique do humano), e o filtro de `montarArvore` só pendura
+ * marco de ator `agent` — a linha nunca produziu nó. O `dev.idle`/
+ * `dev.working` que o rearm dispara no engine é o que aparece no ramo.
  */
 const TRADUCAO: Record<string, Traducao> = {
   'agent.activated': { tipo: 'ativado', rotulo: 'assumiu o trabalho' },
@@ -134,8 +148,16 @@ const TRADUCAO: Record<string, Traducao> = {
     detalhe: (p) => texto(p.failureOrigin) && `origem ${texto(p.failureOrigin)}`,
   },
   'delegation.dispensed': { tipo: 'delegacao', rotulo: 'dispensou a delegação' },
-  'dev.started': { tipo: 'trabalho', rotulo: 'começou a task' },
-  'dev.working': { tipo: 'trabalho', rotulo: 'trabalhando' },
+  // `dev.started` é emitido ao RECEBER a ordem de trabalhar, ANTES de
+  // reivindicar task nenhuma (`DevAgentServer.handle_cast(:work)`, e só
+  // depois `try_claim`) — "começou a task" afirmava o que ainda não tinha
+  // acontecido. Quem diz que há task é `dev.working`, que carrega o título.
+  'dev.started': { tipo: 'trabalho', rotulo: 'procurando task' },
+  'dev.working': {
+    tipo: 'trabalho',
+    rotulo: 'trabalhando',
+    detalhe: (p) => texto(p.taskTitle),
+  },
   'dev.idle': { tipo: 'trabalho', rotulo: 'ocioso' },
   'dev.awaiting_approval': { tipo: 'trabalho', rotulo: 'esperando sua aprovação' },
   'dev.awaiting_gate': { tipo: 'gate', rotulo: 'esperando o gate' },
@@ -144,14 +166,34 @@ const TRADUCAO: Record<string, Traducao> = {
     rotulo: 'bloqueado',
     detalhe: (p) => texto(p.reason),
   },
+  // RN-502: sem container `running` REGISTRADO o dev agent não reivindica
+  // task e fica `:idle`, re-tentando quando o container subir. O `reason`
+  // vem do engine por extenso e diz o que fazer — é ele o detalhe.
+  'dev.blocked_by_container': {
+    tipo: 'espera',
+    rotulo: 'parado: o projeto não tem container de pé',
+    detalhe: (p) => texto(p.reason),
+  },
+  'dev.error': {
+    tipo: 'falha',
+    rotulo: 'erro',
+    detalhe: (p) => texto(p.reason),
+  },
   'dev.idle_tripped': { tipo: 'trabalho', rotulo: 'circuit breaker abriu' },
-  'dev.rearmed': { tipo: 'trabalho', rotulo: 'rearmado por você' },
   'pr.gate_changed': {
     tipo: 'gate',
     rotulo: 'gate mudou',
     detalhe: (p) => texto(p.gate) ?? texto(p.status),
   },
 };
+
+/**
+ * Tipo `dev.*` que o engine emite e que a árvore decidiu NÃO mostrar, com o
+ * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Vazio hoje:
+ * os tipos que o engine emite têm todos um marco honesto. Declarar aqui é
+ * decisão registrada, nunca esquecimento.
+ */
+export const TRADUCAO_FORA: Record<string, string> = {};
 
 /** Marcos que ENCERRAM um turno — depois deles o agente não está "fazendo". */
 const DESFECHOS = new Set<MarcoTipo>(['resposta', 'falha', 'handoff']);
@@ -172,6 +214,13 @@ export function marcoExpansivel(m: Marco): boolean {
  * A frase de "agora". Fala do ÚLTIMO marco, porque é ele que descreve o
  * presente — e diz explicitamente quando o agente está parado, em vez de
  * deixar o ramo mudo (que foi o defeito que originou tudo isto).
+ *
+ * Para marco `dev.*`, SE é trabalho em curso não se decide aqui: é o estado
+ * que o PAINEL do time dá ao mesmo evento (`statusDoEventoDev`), e só
+ * `trabalhando` deixa o ramo ativo. Duas tabelas para o mesmo evento
+ * divergiram uma vez (AT-087) — a árvore dizia trabalho onde o painel dizia
+ * `aguardando`. Tipo `dev.*` que o painel não decidiu NÃO vira ativo: na
+ * dúvida a tela não afirma trabalho.
  */
 function frasePresente(ultimo: Marco | undefined): { agora: string; ativo: boolean } {
   if (!ultimo) return { agora: 'ainda não entrou em ação', ativo: false };
@@ -187,7 +236,10 @@ function frasePresente(ultimo: Marco | undefined): { agora: string; ativo: boole
   }
 
   const detalhe = ultimo.detalhe ? ` — ${ultimo.detalhe}` : '';
-  return { agora: `${ultimo.rotulo}${detalhe}`, ativo: true };
+  const ativo = ultimo.eventType.startsWith('dev.')
+    ? statusDoEventoDev(ultimo.eventType) === 'trabalhando'
+    : true;
+  return { agora: `${ultimo.rotulo}${detalhe}`, ativo };
 }
 
 export function montarArvore(events: SessionEvent[]): {

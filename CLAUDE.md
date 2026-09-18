@@ -152,6 +152,7 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 
 ## Estado atual e aberto
 

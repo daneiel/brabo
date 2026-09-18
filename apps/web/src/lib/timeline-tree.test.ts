@@ -102,6 +102,59 @@ describe('montarArvore', () => {
     expect(tronco.length).toBeGreaterThan(0);
   });
 
+  /**
+   * AT-087, a sequência medida numa instalação real: `dev.started` seguido de
+   * `dev.blocked_by_container`. O bloqueio sumia (sem tradução) e o ramo
+   * parava em "começou a task", ATIVO — trabalho afirmado sobre um agente
+   * parado esperando o container subir.
+   */
+  it('dev bloqueado por container: o bloqueio vira marco com o motivo, e o ramo NÃO fica ativo', () => {
+    const reason = 'o projeto não tem container REGISTRADO como `running` (RN-502)';
+    const { ramos } = montarArvore([
+      evento('dev.started', agente('dev-backend'), { agentId: 'dev-backend', module: 'backend' }),
+      evento('dev.blocked_by_container', agente('dev-backend'), {
+        agentId: 'dev-backend',
+        module: 'backend',
+        reason,
+      }),
+    ]);
+
+    const ramo = ramos[0];
+    expect(ramo.marcos.map((m) => m.eventType)).toEqual(['dev.started', 'dev.blocked_by_container']);
+    expect(ramo.marcos[1]).toMatchObject({ tipo: 'espera', detalhe: reason });
+    expect(ramo.ativo).toBe(false);
+    expect(ramo.agora).toContain(reason);
+    expect(ramo.agora).not.toMatch(/começou|trabalhando/);
+  });
+
+  it('`dev.started` não afirma task: ele sai ANTES do claim', () => {
+    const { ramos } = montarArvore([evento('dev.started', agente('dev-backend'), {})]);
+
+    expect(ramos[0]).toMatchObject({ agora: 'procurando task', ativo: true });
+  });
+
+  /** O ativo da árvore é o `trabalhando` do painel — uma decisão, não duas. */
+  it('estado `dev.*` que o painel não chama de trabalho deixa o ramo parado', () => {
+    const parados = ['dev.idle', 'dev.blocked', 'dev.awaiting_gate', 'dev.awaiting_approval', 'dev.idle_tripped'];
+    for (const tipo of parados) {
+      const { ramos } = montarArvore([evento(tipo, agente('dev-x'), { reason: 'r' })]);
+      expect({ tipo, ativo: ramos[0].ativo }).toEqual({ tipo, ativo: false });
+    }
+    const { ramos } = montarArvore([
+      evento('dev.working', agente('dev-x'), { taskTitle: 'Cadastro de cliente' }),
+    ]);
+    expect(ramos[0]).toMatchObject({ ativo: true, agora: 'trabalhando — Cadastro de cliente' });
+  });
+
+  it('`dev.error` é falha com o motivo, e encerra', () => {
+    const { ramos } = montarArvore([
+      evento('dev.error', agente('infra-lead'), { reason: 'claim recusado' }),
+    ]);
+
+    expect(ramos[0]).toMatchObject({ ativo: false });
+    expect(ramos[0].agora).toContain('claim recusado');
+  });
+
   it('evento sem tradução não vira nó — a árvore mostra marcos, não o log', () => {
     const { ramos } = montarArvore([
       evento('agent.activated', agente('a')),

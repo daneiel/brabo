@@ -77,12 +77,19 @@ rules:
   # as RNs dele citam arquivo:linha que anda a cada mudança. `warn`, não
   # `block`: boa parte das mudanças aqui é de STATUS e de apresentação, e cobrar
   # RN de toda uma ensinaria a usar o escape hatch por reflexo.
+  #
+  # `timeline-tree.ts` entrou pela RN-572: a árvore do time decide se um dev
+  # agent está em trabalho lendo o MESMO estado que o painel dá ao evento
+  # (`statusDoEventoDev`), e a tabela dela é comparada com o vocabulário do
+  # engine como a do painel. As duas telas passaram a ser uma regra só, e a
+  # regra que vigia uma vigia a outra.
   - id: roster-de-agentes
     watch:
       - "apps/web/src/lib/agent-status.ts"
+      - "apps/web/src/lib/timeline-tree.ts"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "Presença e status da roster são regra de negócio fora de domain/ (RN-090, RN-287, RN-411, RN-568); mudança aqui costuma mover o arquivo:linha dessas RNs."
+    note: "Presença e status da roster, e o que a árvore do time afirma sobre cada agente, são regra de negócio fora de domain/ (RN-090, RN-118, RN-287, RN-411, RN-568, RN-572); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
   # ------------------------------------------------------------------ dados
 
@@ -418,11 +425,13 @@ rules:
       #
       # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
       # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
-      # api consulta (RN-411) e com o mapa que o painel do time consulta
-      # (`apps/web/src/lib/agent-status.ts`), e mora aqui só porque lê TRÊS
-      # apps como texto — `scripts/ci/` é onde vivem os testes que leem o
-      # repositório inteiro. Degrau, destino e versão de branch não aparecem
-      # nele; a doc dele é a própria RN-411 em `docs/business-rules.md`.
+      # api consulta (RN-411), com o mapa que o painel do time consulta
+      # (`apps/web/src/lib/agent-status.ts`) e, desde a RN-572, com a tabela
+      # da árvore do time (`apps/web/src/lib/timeline-tree.ts`), e mora aqui
+      # só porque lê TRÊS apps como texto — `scripts/ci/` é onde vivem os
+      # testes que leem o repositório inteiro. Degrau, destino e versão de
+      # branch não aparecem nele; a doc dele são as RN-411 e RN-572 em
+      # `docs/business-rules.md`.
       #
       # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
       # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o

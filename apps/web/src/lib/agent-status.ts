@@ -116,6 +116,20 @@ const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
  */
 export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {};
 
+/**
+ * O estado que o painel dá a um tipo `dev.*`, para quem precisa da MESMA
+ * resposta fora do painel — hoje a árvore do time (`timeline-tree.ts`), que
+ * decide por aqui se o último marco de um dev agent é trabalho em curso.
+ * Foram duas tabelas para o mesmo evento, e divergiram: a árvore dizia
+ * trabalho sobre um dev bloqueado por container que o painel já mostrava
+ * `aguardando` (AT-087). `undefined` para tipo que o painel não decidiu.
+ */
+export function statusDoEventoDev(type: string): AgentStatus | undefined {
+  return Object.prototype.hasOwnProperty.call(DEV_STATUS_EVENTS, type)
+    ? DEV_STATUS_EVENTS[type]
+    : undefined;
+}
+
 function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
   const last = lastEventFor(
     events,
