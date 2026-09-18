@@ -388,6 +388,51 @@ function desescaparCaminhoDeUnidadeSystemd(valor: string): string {
   return valor.replaceAll('%%', '%');
 }
 
+/**
+ * A TERCEIRA sintaxe do mesmo arquivo, e a régua NÃO é a de
+ * `escaparCaminhoDeUnidadeSystemd` (AT-095). `Environment=` é uma LISTA de
+ * atribuições separadas por espaço — com *unquoting* e escapes estilo C — e
+ * passa por expansão de especificador. Escrita crua,
+ * `Environment=XDG_CONFIG_HOME=/home/dan/50%off com espaco` virou, no valor
+ * EFETIVO (`systemctl --user show -p Environment`), `/home/dan/50popff`: o `%o`
+ * expandiu e a separação em palavras descartou `com` e `espaco` (palavras sem
+ * `=`, ignoradas). A unit carrega, `verify` aprova, o serviço sobe — e procura
+ * a base numa pasta que não existe, calado.
+ *
+ * Por isso a atribuição INTEIRA vai entre aspas (`Environment="VAR=valor"`),
+ * com `\` e `"` escapados por barra (o *unquoting* da diretiva os consome) e `%`
+ * como `%%`. A ordem importa: a barra primeiro, senão a barra que escapa a aspa
+ * seria escapada de novo. `$` NÃO se escapa aqui — `Environment=` não expande
+ * variável (medido: `$HOME` chega literal). Quebra de linha é recusada antes,
+ * em `instalar`: num arquivo de unit ela é injeção de diretiva.
+ */
+function atribuicaoDeAmbienteSystemd(nome: string, valor: string): string {
+  const escapado = valor.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('%', '%%');
+  return `Environment="${nome}=${escapado}"`;
+}
+
+/**
+ * E a régua do `ExecStart=`, que é outra ainda: cada argumento vai entre aspas
+ * (separação em palavras), a barra é escape estilo C, `%` é especificador
+ * (expandido na CARGA — medido: `"/home/dan/50%off x"` virou
+ * `"/home/dan/50popff x"` no `--dir` da unit de projeto) e `$` é substituição de
+ * variável no momento do exec, com `$$` como literal. Aspa dupla não chega aqui:
+ * `caminhoSeguroParaUnidade` a recusa em todo argumento.
+ */
+function argumentoDeExecStartSystemd(parte: string): string {
+  const escapado = parte.replaceAll('\\', '\\\\').replaceAll('%', '%%').replaceAll('$', '$$$$');
+  return `"${escapado}"`;
+}
+
+/**
+ * Quebra de linha num valor que vai para `Environment=` é injeção de diretiva
+ * no arquivo da unit (e no plist quebraria o XML). O resto — espaço, aspas,
+ * barra, `%` — tem escape, e escapar é o que `atribuicaoDeAmbienteSystemd` faz.
+ */
+function valorDeAmbienteSeguroParaUnidade(valor: string): boolean {
+  return !valor.includes('\n') && !valor.includes('\r');
+}
+
 const SYSTEMD: PlataformaDeServico = {
   nome: 'systemd --user',
 
@@ -434,7 +479,7 @@ const SYSTEMD: PlataformaDeServico = {
           // da base. `--base` também fica de fora, de propósito — ver o bloco
           // de `Environment=` abaixo.
           ['--api-url', plano.apiUrl];
-    const exec = [...ctx.comandoDoRunner, ...flags].map((parte) => `"${parte}"`).join(' ');
+    const exec = [...ctx.comandoDoRunner, ...flags].map(argumentoDeExecStartSystemd).join(' ');
 
     const descricao =
       plano.especie === 'projeto'
@@ -451,7 +496,7 @@ const SYSTEMD: PlataformaDeServico = {
     // reinstalar.
     const ambiente =
       plano.especie === 'maquina' && ctx.xdgConfigHome && ctx.xdgConfigHome.length > 0
-        ? [`Environment=XDG_CONFIG_HOME=${ctx.xdgConfigHome}`]
+        ? [atribuicaoDeAmbienteSystemd('XDG_CONFIG_HOME', ctx.xdgConfigHome)]
         : [];
 
     return [
@@ -487,7 +532,9 @@ const SYSTEMD: PlataformaDeServico = {
       '# PATH CONGELADO no momento da instalação: `systemd --user` dá ao serviço um',
       '# PATH mínimo, e o runner chama `git` (o espelho, RN-516) e `docker`',
       '# (ADR 0137). Custo declarado: isto é um retrato, e muda só reinstalando.',
-      `Environment=PATH=${ctx.path}`,
+      // Entre aspas e escapado — ver `atribuicaoDeAmbienteSystemd`. Cru, um
+      // PATH com espaço perdia tudo depois do primeiro espaço, calado.
+      atribuicaoDeAmbienteSystemd('PATH', ctx.path),
       ...ambiente,
       '',
       '[Install]',
@@ -977,6 +1024,25 @@ export function instalar(
         `O caminho do próprio runner (${JSON.stringify(parte)}) contém aspa dupla ou quebra ` +
           'de linha e não pode ir para um arquivo de unit.',
         'Instale o binário num caminho sem esses caracteres.',
+      ]);
+    }
+  }
+
+  // Os dois valores de ambiente que a unit congela (AT-095). Espaço, aspa,
+  // barra e `%` têm escape; quebra de linha não tem saída segura — é diretiva
+  // nova no arquivo. `XDG_CONFIG_HOME` só entra na unit de MÁQUINA, então só é
+  // checada ali: recusar a de projeto por um valor que ela não grava seria
+  // recusar por nada.
+  const ambienteCongelado: [string, string | null][] = [
+    ['PATH', ctx.path],
+    ['XDG_CONFIG_HOME', querMaquina ? ctx.xdgConfigHome : null],
+  ];
+  for (const [nome, valor] of ambienteCongelado) {
+    if (valor !== null && !valorDeAmbienteSeguroParaUnidade(valor)) {
+      return recusa([
+        `A variável ${nome} (${JSON.stringify(valor)}) contém quebra de linha e não pode ir ` +
+          'para um arquivo de unit: ali ela seria uma diretiva nova, não um valor.',
+        `Corrija ${nome} no seu shell e rode o install de novo.`,
       ]);
     }
   }

@@ -6,6 +6,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner**: o agente local de MÁQUINA **passa a receber o `XDG_CONFIG_HOME`
+  que foi instalado**, e o `PATH` congelado chega inteiro (AT-095). A unit
+  escrevia `Environment=XDG_CONFIG_HOME=<pasta>` e `Environment=PATH=<path>`
+  crus, e `Environment=` separa por espaço e expande especificador: medido com
+  `XDG_CONFIG_HOME=/home/dan/50%off com espaco`, o valor efetivo
+  (`systemctl --user show -p Environment`) era `/home/dan/50popff`. A unit
+  carregava, `systemd-analyze verify` aprovava, o serviço subia — e procurava a
+  base e a chave numa pasta que não existe, calado
+  ([RN-545](docs/business-rules.md#rn-545), [RN-518](docs/business-rules.md#rn-518)).
+  Agora a atribuição inteira vai entre aspas (`Environment="VAR=valor"`), com
+  `\` e `"` escapados e `%` como `%%`. O `--dir` do `ExecStart=` da unit de
+  PROJETO tinha a mesma classe (`%` expandido na carga, `\` lido como escape,
+  `$` como variável) e foi junto. Quebra de linha em `PATH`/`XDG_CONFIG_HOME`
+  passa a ser recusada no `install`, nomeando a variável — era injeção de
+  diretiva. **Quem tem um desses caracteres no caminho reinstala**
+  (`brabo-runner service install`, com `--machine` se for a de máquina). A
+  prova deixou de ser o `verify`, que aprova a forma quebrada: o teste pergunta
+  ao próprio `systemd --test --user` o valor RESOLVIDO e o compara com o
+  gravado, e pula nomeando o motivo onde não há systemd.
+
 - **runner**: o serviço do agente local **passa a iniciar**. A unit gerada por
   `brabo-runner service install` escrevia `WorkingDirectory="/home/…"`, e o
   systemd **não** faz unquoting nessa diretiva (ao contrário do `ExecStart=`,
