@@ -1643,6 +1643,28 @@ kubectl -n brabo exec deploy/api -- cat /app/docs/gates.yml | head -5
 Vazio ou ausente quer dizer que a imagem foi construída sem ele — provável
 `.dockerignore` mexido, ou build a partir de um contexto que não tem `docs/`.
 
+**O registro viaja; o que ele aponta, não.** Gate de `teste`/`ci` nomeia
+arquivos em `apps/api/test/`, `scripts/ci/` e `.github/`, e nenhum deles está
+na imagem. Até isto ser separado, o loader exigia esses arquivos em runtime e
+a rota respondia `500` em toda instalação — medido na v6.1.0 como doze 5xx em
+cerca de 55 minutos, com `RegistroDeGatesInvalido` listando os onze alvos como
+"não existe". Reproduza a falha antiga com:
+
+```bash
+docker exec <api> node -e "require('/app/infrastructure/gates/gate-registry.loader').carregarRegistro()"
+```
+
+Numa imagem corrigida isso não imprime nada. Se lançar
+`RegistroDeGatesInvalido` nomeando um `.spec.ts` ou um workflow, a imagem é
+anterior à correção ([RN-070](business-rules/custo.md#rn-070)); se lançar
+nomeando o *conteúdo* de um gate (um `block` sem `script`, um `active` sem
+evidência), o registro é que está errado e o conserto é no repositório.
+
+A tela não mostra essa falha: o `PrGateTimeline` cai na esteira completa
+quando `GET /gates` falha ([RN-084](business-rules/custo.md#rn-084)), então o
+único sinal era o log da api. O `docker/smoke.sh` passou a chamar `GET /gates`
+contra a imagem de produção, e é isso que impede a volta silenciosa.
+
 Para ver o registro como a api o enxerga, já validado:
 
 ```bash
