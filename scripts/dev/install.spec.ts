@@ -1,9 +1,10 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 // O `install.sh` roda na máquina de quem instala, e a parte que erra na prática
 // não é o download: é a DECISÃO — o que ele achou, e o que ele apagaria. Os
@@ -312,6 +313,162 @@ describe('install.sh — o marcador registra a versão', () => {
     // que entra no lugar é a pergunta cega que esta entrega remove.
     const f = fonte();
     expect(f.indexOf('versão a instalar:')).toBeLessThan(f.indexOf('O que já existe nesta máquina'));
+  });
+});
+
+// AT-091, medido no E2E da v6.1.0 (run 34794555890, job `install.sh
+// (macos-14)`): o script chamava `sha256sum` nos cinco pontos de verificação e
+// não tinha alternativa nenhuma. O macOS traz `shasum -a 256`, e o
+// `command not found` fazia a comparação falhar — a pessoa lia *"o cosign
+// baixado NÃO bate com o hash pinado neste script. Isso não é um aviso: pare e
+// investigue."* Eram DOIS defeitos: a instalação era impossível na plataforma
+// que o próprio script diz suportar, e a mensagem mandava caçar uma adulteração
+// que não houve, o que ensina a ignorar a frase no dia em que ela for verdade.
+//
+// Estes casos rodam o shell DE VERDADE, com as funções extraídas do script (a
+// mesma técnica de `comparar_versoes`, e pelo mesmo motivo: uma cópia em
+// TypeScript continua passando depois que o shell quebra). O PATH é montado à
+// mão, ferramenta por ferramenta — é a única forma de reproduzir o macOS numa
+// máquina Linux, porque o defeito só existe quando `sha256sum` NÃO está lá.
+describe('install.sh — o hash num PATH sem sha256sum', () => {
+  const tmpRaiz = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-hash-'));
+  afterAll(() => fs.rmSync(tmpRaiz, { recursive: true, force: true }));
+
+  function caminhoDe(cmd: string): string | null {
+    const r = spawnSync('sh', ['-c', `command -v ${cmd}`], { encoding: 'utf8' });
+    const achado = r.stdout.trim();
+    return r.status === 0 && achado !== '' ? achado : null;
+  }
+
+  function extrair(nome: string): string {
+    const fn = fonte().match(new RegExp(`^${nome}\\(\\) \\{[\\s\\S]*?^\\}`, 'm'))?.[0];
+    if (!fn) throw new Error(`${nome} não encontrada em install.sh`);
+    return fn;
+  }
+
+  // `recusar` entra junto porque é ELA que imprime a mensagem e sai com 1 — a
+  // recusa nomeada é o que se está medindo, não o código de saída sozinho.
+  const PRELUDIO = [
+    'C_ERRO=""; C_RESET=""',
+    extrair('recusar'),
+    extrair('exigir_ferramenta_de_hash'),
+    extrair('hash_sha256'),
+    extrair('conferir_hash'),
+  ].join('\n');
+
+  // `bash` sempre entra: sem ele não há shell para rodar nada, e a máquina que
+  // falta `sha256sum` não é a máquina que falta shell.
+  function comPath(ferramentas: string[]) {
+    const dir = fs.mkdtempSync(path.join(tmpRaiz, 'path-'));
+    for (const f of ['bash', ...ferramentas]) {
+      const alvo = caminhoDe(f);
+      if (alvo) fs.symlinkSync(alvo, path.join(dir, f));
+    }
+    return dir;
+  }
+
+  function rodar(corpo: string, ferramentas: string[]) {
+    const bin = comPath(ferramentas);
+    return spawnSync(path.join(bin, 'bash'), ['-c', `${PRELUDIO}\n${corpo}`], {
+      encoding: 'utf8',
+      // PATH é o que se está controlando; `HOME` vai junto porque o script
+      // deriva o caminho do marcador dele e morre sob `set -u` sem ele.
+      env: { PATH: bin, HOME: os.homedir(), NO_COLOR: '1' },
+    });
+  }
+
+  const arquivo = path.join(tmpRaiz, 'arquivo.bin');
+  fs.writeFileSync(arquivo, 'conteúdo qualquer, o que importa é o hash\n');
+  const hashReal = crypto.createHash('sha256').update(fs.readFileSync(arquivo)).digest('hex');
+
+  const TEM_SHASUM = caminhoDe('shasum') !== null;
+
+  // A recusa nº 1: FERRAMENTA. Ela nomeia as duas e diz onde cada uma mora —
+  // é uma dependência do sistema operacional, e se resolve instalando.
+  it('sem sha256sum E sem shasum, recusa NOMEANDO a ferramenta', () => {
+    const r = rodar('exigir_ferramenta_de_hash; echo "resolveu:$FERRAMENTA_DE_HASH"', []);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('sha256sum');
+    expect(r.stderr).toContain('shasum');
+    expect(r.stdout).not.toContain('resolveu:');
+  });
+
+  // O ponto da atividade: a recusa de ferramenta NÃO pode se disfarçar de
+  // incidente. "pare e investigue" e "não bate" são o vocabulário da recusa
+  // nº 2, e nenhum dos dois pode aparecer aqui.
+  it('a recusa de ferramenta NUNCA acusa adulteração', () => {
+    const r = rodar('exigir_ferramenta_de_hash', []);
+    expect(r.stderr).not.toMatch(/pare e investigue/i);
+    expect(r.stderr).not.toMatch(/NÃO bate/i);
+    expect(r.stderr).toMatch(/não sinal de adulteração/i);
+  });
+
+  // A checagem acontece ANTES de baixar qualquer coisa: no `main`, entre a
+  // recusa de plataforma e `verificar_a_si_mesmo`, que é quem faz o primeiro
+  // `curl`. Ordem sobre o TEXTO do script, porque exercitá-la exigiria rede.
+  it('a ferramenta é resolvida antes do primeiro download', () => {
+    const f = fonte();
+    const checagem = f.indexOf('\n  exigir_ferramenta_de_hash');
+    const primeiraVerificacao = f.indexOf('\n  verificar_a_si_mesmo "$plataforma"');
+    expect(checagem).toBeGreaterThan(-1);
+    expect(primeiraVerificacao).toBeGreaterThan(checagem);
+  });
+
+  // O caminho do macOS funcionando: com `shasum` e SEM `sha256sum`, o hash sai
+  // certo e a comparação passa. Este é o caso que o E2E da v6.1.0 reprovou.
+  it.skipIf(!TEM_SHASUM)('com apenas shasum, calcula o hash certo e NÃO recusa', () => {
+    const r = rodar(
+      `exigir_ferramenta_de_hash; echo "resolveu:$FERRAMENTA_DE_HASH"; hash_sha256 '${arquivo}'`,
+      ['shasum'],
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('resolveu:shasum');
+    expect(r.stdout).toContain(hashReal);
+  });
+
+  // A recusa nº 2: HASH. Mesmo PATH sem `sha256sum`, mas agora o arquivo é
+  // outro — e aí sim a mensagem é a de incidente, com o texto do chamador.
+  it.skipIf(!TEM_SHASUM)('com apenas shasum, hash divergente recusa com o texto do incidente', () => {
+    const r = rodar(
+      `exigir_ferramenta_de_hash; conferir_hash '${arquivo}' 'deadbeef' 'o binário do runner NÃO bate com o manifesto assinado.'`,
+      ['shasum', 'tr'],
+    );
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('o binário do runner NÃO bate com o manifesto assinado.');
+    // E não a outra: quem tem ferramenta não pode ser mandado instalar uma.
+    expect(r.stderr).not.toMatch(/não achei sha256sum/i);
+  });
+
+  // Estrutural, e por isso sem `skipIf`: numa máquina sem `shasum` os dois
+  // casos acima somem, e o que os protege de sumirem de vez é isto.
+  it('o ramo do shasum existe, e nenhum chamador chama sha256sum direto', () => {
+    const f = fonte();
+    expect(f).toContain("shasum)    saida=\"$(shasum -a 256 \"$1\")\"");
+    // Fora das duas funções que a resolvem, `sha256sum` não pode ser CHAMADA
+    // — foi o acoplamento direto dos cinco chamadores que produziu o defeito.
+    // A proibição é sobre as duas FORMAS que existiam (`| sha256sum -c` e
+    // `$(sha256sum …)`), e não sobre a palavra: ela segue aparecendo em
+    // comentário e na linha do plano, que é onde o script DIZ o que aceita.
+    const codigo = f
+      .split('\n')
+      .filter((l) => !l.trimStart().startsWith('#'))
+      .join('\n');
+    const foraDasFuncoes = codigo
+      .replace(/^exigir_ferramenta_de_hash\(\) \{[\s\S]*?^\}/m, '')
+      .replace(/^hash_sha256\(\) \{[\s\S]*?^\}/m, '');
+    expect(foraDasFuncoes).not.toMatch(/\$\(\s*sha256sum\b/);
+    expect(foraDasFuncoes).not.toMatch(/\|\s*sha256sum\b/);
+    expect(foraDasFuncoes).not.toMatch(/^\s*sha256sum\s/m);
+  });
+
+  // O plano imprimível é a superfície que se lê sem TTY e sem rede — e ele
+  // roda ANTES da checagem, de propósito: `--print-plan` não baixa nada, e
+  // exigir a ferramenta ali negaria a leitura a quem só quer entender.
+  it('o plano declara a ferramenta, e é imprimível sem ela', () => {
+    const r = rodar(`'${SCRIPT}' --print-plan`, []);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('conferir-hash\tfaz\t');
+    expect(r.stdout).toMatch(/shasum -a 256/);
   });
 });
 
