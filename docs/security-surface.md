@@ -330,7 +330,8 @@ reason in the URL.
   [RN-574](business-rules.md#rn-574)), a deliberate widening: that page must
   say BEFORE the click that `container`/`mounted` cannot start here, and
   anyone who can see the page could already infer the absence from
-  `naoObservado: broker-nao-configurado` on any running row. It says the
+  `naoObservado: broker-nao-configurado` whenever a row is
+  `provisioning`/`running`. It says the
   variable exists, never that the broker answers.
 - **`GET /workspaces/:workspaceId/project-folders` serves directory
   listings from a client-supplied path, and its whole safety is ONE
