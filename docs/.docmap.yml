@@ -210,6 +210,20 @@ rules:
     severity: warn
     note: "Config do site ou mecanismo de publicação mudou — o documento que explica o mecanismo precisa acompanhar."
 
+  # O MECANISMO que confere a documentação era o outro ponto cego do mapa: os
+  # scripts de `scripts/docs/` só apareciam na regra `scripts` (que cobra o
+  # inventário gerado de comandos, não a explicação). Aferição nova ou
+  # escape hatch novo — as refs com símbolo da AT-096, o `PR_BODY_FILE` do
+  # drift da AT-094 — mudam o que `documentation-workflow.md` promete.
+  # `warn`: um ajuste interno de gerador não muda o mecanismo.
+  - id: mecanismo-de-documentacao
+    watch:
+      - "scripts/docs/*.mjs"
+    docs:
+      - "docs/explanation/documentation-workflow.md"
+    severity: warn
+    note: "Aferição, gerador ou escape hatch mudou? O documento que explica o mecanismo precisa acompanhar."
+
   - id: contrato-web
     watch:
       - "apps/web/src/lib/api-client.ts"
