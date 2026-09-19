@@ -33,7 +33,8 @@
 # O QUE ELE NUNCA FAZ: gravar a senha que você digitar (ela é lida sem eco,
 # usada e descartada), apagar sua base de projetos ou sua pasta de espelho,
 # apagar qualquer coisa sem um backup que ele mesmo provou restaurar, ligar
-# SMTP por conta própria ou pedir credencial de LLM.
+# SMTP por conta própria, pedir credencial de LLM, ou ligar o broker de
+# container sem perguntar (ele recebe o socket do Docker desta máquina).
 #
 # MODOS DE IMPRESSÃO (não executam nada, não perguntam nada):
 #
@@ -132,7 +133,7 @@ PROVA_DE_RESTAURACAO=''
 # por ele, que este script prova controle da MÁQUINA às duas rotas que usa.
 CABECALHO_SERVICE_TOKEN='x-brabo-service-token'
 
-# Fonte das imagens. `ghcr` é o default: as quatro publicadas, por DIGEST,
+# Fonte das imagens. `ghcr` é o default: as cinco publicadas, por DIGEST,
 # com a assinatura verificada (ADR 0149). `local` constrói do checkout, e
 # exige árvore limpa em tag — imagem construída de árvore suja não é a versão
 # que ela diz ser.
@@ -143,6 +144,19 @@ FONTE='ghcr'
 # fechamento da instalação as lê para decidir se há binário com que trabalhar.
 RUNNER_BIN=''
 PASTA_DE_CONFIG=''
+
+# O broker de container (ADR 0162), preenchidas por `consentir_broker`.
+# `BROKER_LIGADO` é `sim` só com um "s" digitado E o gid medido — nunca por
+# default, nunca sem terminal. As outras duas são o que ele mediu, e vazias
+# enquanto ele não mediu: é por elas que `escrever_env` sabe o que gravar.
+BROKER_LIGADO='nao'
+DOCKER_GID_MEDIDO=''
+RAIZ_GERENCIADA_NO_HOST=''
+
+# O volume da pasta GERENCIADA (modo `container`), com o prefixo do projeto
+# compose (`name: brabo` no compose de instalação). É o único nome que este
+# script precisa saber do layout do Docker: dele sai a raiz que o broker monta.
+VOLUME_DA_PASTA_GERENCIADA='brabo_project_workspaces'
 
 # --------------------------------------------------------------------------
 # Saída
@@ -438,6 +452,8 @@ imprimir_plano() {
   printf 'subir-compose\tfaz\tdocker/docker-compose.install.yml (a cópia verificada, sob a pasta de onde o script roda), com --wait; as migrações vêm no encadeamento\n'
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
+  printf 'ligar-broker\tpergunta\tdefault NÃO; sim mede o gid do socket DE DENTRO de um container e grava COMPOSE_PROFILES, BROKER_URL e DOCKER_GID no .env; sem TTY fica desligado\n'
+  printf 'ligar-broker-sem-perguntar\tnunca\to broker recebe o socket do Docker desta máquina (ADR 0162)\n'
   printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
   printf 'criar-primeira-conta\tpergunta\te-mail e senha no TTY, sem eco; a conta nasce verificada e o passo se cala se já houver gente\n'
   printf 'gravar-senha\tnunca\tnem no .env, nem no marcador, nem em log — lida, usada e descartada\n'
@@ -694,6 +710,7 @@ BRABO_API_IMAGE=${BRABO_API_IMAGE}
 BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
 BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
 BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
+BRABO_BROKER_IMAGE=${BRABO_BROKER_IMAGE}
 BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
 GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
 AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
@@ -701,6 +718,34 @@ BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
 CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
 SECRET_KEY_BASE=${SECRET_KEY_BASE}
 NEO4J_PASSWORD=${NEO4J_PASSWORD}
+ENV
+  escrever_env_do_broker "$env_arquivo"
+}
+
+# O bloco do broker, SEMPRE junto — as linhas não existem uma sem a outra:
+# `COMPOSE_PROFILES` sem `BROKER_URL` sobe um broker que ninguém chama, e
+# `BROKER_URL` sem o profile aponta a api para um serviço que não sobe. E sem o
+# gid MEDIDO não há bloco nenhum: o default 999 do compose é palpite, e este
+# script não grava palpite (ADR 0162). A recusa aqui é defeito DESTE script —
+# `consentir_broker` só liga depois de medir.
+escrever_env_do_broker() {
+  local env_arquivo="$1"
+  if [ "$BROKER_LIGADO" != 'sim' ]; then
+    cat >> "$env_arquivo" <<'ENV'
+# Broker de container: DESLIGADO (a pergunta do instalador). Para ligar depois,
+# ver docs/runbook.md, "Broker de container na instalação".
+ENV
+    return 0
+  fi
+  case "$DOCKER_GID_MEDIDO" in
+    ''|*[!0-9]*) recusar 'o broker foi ligado sem o gid do socket medido — isto é defeito deste script, não da sua máquina.' ;;
+  esac
+  cat >> "$env_arquivo" <<ENV
+# Broker de container: LIGADO com consentimento no instalador (ADR 0162).
+COMPOSE_PROFILES=container-broker
+BROKER_URL=http://broker:8090
+DOCKER_GID=${DOCKER_GID_MEDIDO}
+PROJECT_WORKSPACES_HOST_ROOT=${RAIZ_GERENCIADA_NO_HOST}
 ENV
 }
 
@@ -736,7 +781,7 @@ resolver_imagens_do_ghcr() {
   [ -n "$VERSAO_A_INSTALAR" ] || recusar 'o manifesto não traz a versão — sem ela não há como comparar com o que já está instalado.'
 
   local alvo var repo digest entrada
-  for alvo in api engine web backup; do
+  for alvo in api engine web backup broker; do
     entrada="$(printf '%s' "$compacto" | grep -o "{[^{}]*\"alvo\": *\"${alvo}\"[^{}]*}" || true)"
     repo="$(printf '%s' "$entrada" | grep -o '"repositorio": *"[^"]*"' | cut -d'"' -f4)"
     digest="$(printf '%s' "$entrada" | grep -o '"digest": *"[^"]*"' | cut -d'"' -f4)"
@@ -765,13 +810,14 @@ resolver_imagens_locais() {
   VERSAO_A_INSTALAR="$(git describe --exact-match --tags | sed 's/^v//')"
   COMMIT_A_INSTALAR="$(git rev-parse --short=12 HEAD)"
 
-  dizer 'Construindo as quatro imagens (docker buildx bake)…'
+  dizer 'Construindo as cinco imagens (docker buildx bake)…'
   docker buildx bake -f docker-bake.hcl || recusar 'o build local falhou.'
 
   BRABO_API_IMAGE='brabo-api:prod'
   BRABO_ENGINE_IMAGE='brabo-engine:prod'
   BRABO_WEB_IMAGE='brabo-web:prod'
   BRABO_BACKUP_IMAGE='brabo-backup:prod'
+  BRABO_BROKER_IMAGE='brabo-broker:prod'
 }
 
 # --------------------------------------------------------------------------
@@ -811,6 +857,152 @@ consentir_base() {
   mkdir -p "$escolhida" || recusar "não consegui criar ${escolhida}."
   BASE_DE_PROJETOS="$escolhida"
   ok "base: ${BASE_DE_PROJETOS}"
+}
+
+# --------------------------------------------------------------------------
+# O broker de container — perguntado, nunca ligado por conta própria (ADR 0162)
+# --------------------------------------------------------------------------
+
+# O gid do socket VISTO DE DENTRO de um container, que é o que o `group_add` do
+# compose precisa. Medido com a PRÓPRIA imagem do broker (a mesma que vai subir;
+# nenhuma imagem de terceiro entra nisto), sem rede e com rootfs read-only.
+#
+# Duas escolhas que parecem detalhe e não são:
+#   - `--mount type=bind` e não `-v`: com `-v`, uma origem que não existe é
+#     CRIADA como pasta vazia no host, pelo root do daemon — e o `stat` diria
+#     "directory" sobre uma pasta que este script acabou de pôr ali. `--mount`
+#     recusa, e a recusa é a resposta certa (Docker rootless ou remoto: o
+#     socket não está onde o compose o monta).
+#   - de DENTRO, e não `stat` no host: no Docker Desktop o socket do host é do
+#     usuário e o que o container vê é outro arquivo, dentro da VM. O número do
+#     host seria plausível e errado.
+#
+# O resultado vai para globais (`DOCKER_GID_MEDIDO`, `MOTIVO_DA_MEDICAO`) pelo
+# motivo de `RESPOSTA_VEREDITO`: `$( )` perderia uma das duas.
+MOTIVO_DA_MEDICAO=''
+medir_gid_do_socket() {
+  local saida tipo gid
+  DOCKER_GID_MEDIDO=''
+  MOTIVO_DA_MEDICAO=''
+  if ! saida="$(docker run --rm --network none --read-only --entrypoint stat \
+      --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+      "$BRABO_BROKER_IMAGE" -c '%F %g' /var/run/docker.sock 2>&1)"; then
+    MOTIVO_DA_MEDICAO="$saida"
+    return 1
+  fi
+  # A última linha: um `docker run` que precisou puxar a imagem escreve o
+  # progresso do pull antes, na mesma saída.
+  saida="$(printf '%s\n' "$saida" | tail -n1)"
+  tipo="${saida% *}"
+  gid="${saida##* }"
+  if [ "$tipo" != 'socket' ]; then
+    MOTIVO_DA_MEDICAO="/var/run/docker.sock, visto de dentro de um container, não é um socket (é: ${tipo:-nada})"
+    return 1
+  fi
+  case "$gid" in
+    ''|*[!0-9]*)
+      MOTIVO_DA_MEDICAO="o gid lido não é um número: '${gid}'"
+      return 1
+      ;;
+  esac
+  DOCKER_GID_MEDIDO="$gid"
+  return 0
+}
+
+# A raiz da pasta GERENCIADA no HOST. No compose de instalação ela é o volume
+# nomeado, e o layout do driver `local` põe o conteúdo em
+# `<DockerRootDir>/volumes/<nome>/_data` — é um CÁLCULO, e por isso
+# `conferir_o_broker` o compara com o `Mountpoint` que o daemon devolve depois
+# da subida. Não conseguir calcular não recusa nada: só o modo `container` fica
+# sem raiz, e o broker recusa `start` dele nomeando a variável.
+calcular_raiz_gerenciada() {
+  local raiz_do_docker
+  raiz_do_docker="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+  case "$raiz_do_docker" in
+    /*) RAIZ_GERENCIADA_NO_HOST="${raiz_do_docker%/}/volumes/${VOLUME_DA_PASTA_GERENCIADA}/_data" ;;
+    *)  RAIZ_GERENCIADA_NO_HOST='' ;;
+  esac
+}
+
+# A pergunta. Default NÃO, e só `s`/`sim` liga: o que está em jogo é um serviço
+# desta instalação falar com o Docker desta máquina, e isso não se liga por um
+# Enter distraído. Sem terminal não há pergunta, e o script DIZ que ficou
+# desligado em vez de decidir em silêncio (a régua do `consentir-base.mjs`).
+consentir_broker() {
+  dizer ''
+  dizer "${C_BOLD}O broker de container${C_RESET}"
+  dizer 'Projeto em modo Container ou Pasta montada executa dentro de um container,'
+  dizer 'e quem sobe esse container é o broker — um serviço desta instalação que'
+  dizer 'recebe o socket do Docker DESTA máquina. Quem comanda o broker comanda o'
+  dizer 'seu Docker, e o Docker desta máquina é equivalente a root nela.'
+  dizer 'O que o contém: não publica porta, só a api o alcança (numa rede sem'
+  dizer 'internet), exige o token de serviço, e só sabe cinco operações sobre o'
+  dizer 'container de UM projeto, compostas a partir do que o Arquiteto decidiu —'
+  dizer 'não existe pedido que ligue privileged, rede do host ou uma pasta livre.'
+  dizer 'Sem ele, projeto Container e Pasta montada não executam; o modo Runner usa'
+  dizer 'o Docker desta máquina pelo agente local e não depende dele.'
+  dizer ''
+
+  if [ ! -t 0 ]; then
+    dizer 'Não há terminal para perguntar: o broker fica DESLIGADO.'
+    BROKER_LIGADO='nao'
+    return 0
+  fi
+
+  printf 'Ligar o broker de container? [s/N] '
+  local resposta; read -r resposta || resposta=''
+  case "$resposta" in
+    s|S|sim|SIM) ;;
+    *)
+      BROKER_LIGADO='nao'
+      ok 'broker de container: desligado (dá para ligar depois — docs/runbook.md)'
+      return 0
+      ;;
+  esac
+
+  dizer 'Medindo o grupo do socket do Docker, de dentro de um container…'
+  if ! medir_gid_do_socket; then
+    recusar "não consegui medir o grupo do socket do Docker, e sem ele o broker não abre o socket — este script não grava um palpite no lugar. O que o Docker disse: ${MOTIVO_DA_MEDICAO}
+  Nada foi gravado. Rode o instalador de novo e responda NÃO para instalar sem o broker, ou resolva o que está acima."
+  fi
+  ok "grupo do socket, visto de dentro de um container: ${DOCKER_GID_MEDIDO}"
+
+  calcular_raiz_gerenciada
+  if [ -n "$RAIZ_GERENCIADA_NO_HOST" ]; then
+    ok "raiz da pasta gerenciada no host: ${RAIZ_GERENCIADA_NO_HOST} (conferida depois da subida)"
+  else
+    pendencia 'a raiz da pasta gerenciada: `docker info` não disse onde o Docker guarda os volumes. O broker está ligado para Pasta montada; para o modo Container, preencha PROJECT_WORKSPACES_HOST_ROOT no .env (ver docs/runbook.md).'
+  fi
+
+  BROKER_LIGADO='sim'
+  ok 'broker de container: ligado'
+}
+
+# Depois da subida, com a pilha de pé: o broker respondeu ao healthcheck (o
+# `up --wait` esperou por ele), mas quem anuncia que ele serve tem de perguntar
+# as duas coisas que o healthcheck não pergunta — se a API o alcança pela rede
+# interna, e se a raiz calculada é mesmo onde o daemon guardou o volume. Nenhuma
+# das duas recusa: a pilha está de pé, e o que não confere vira pendência
+# NOMEADA, com o valor certo quando ele é conhecido.
+conferir_o_broker() {
+  local env_arquivo="$1" montado
+  [ "$BROKER_LIGADO" = 'sim' ] || return 0
+
+  if docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$env_arquivo" exec -T api \
+      node -e "fetch('http://broker:8090/health').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))" \
+      >/dev/null 2>&1; then
+    ok 'a api alcança o broker pela rede interna'
+  else
+    pendencia "o broker de container: a api NÃO o alcançou em http://broker:8090. \`docker compose -f ${COMPOSE_DE_INSTALACAO} logs broker\` diz o quê."
+  fi
+
+  [ -n "$RAIZ_GERENCIADA_NO_HOST" ] || return 0
+  montado="$(docker volume inspect --format '{{.Mountpoint}}' "$VOLUME_DA_PASTA_GERENCIADA" 2>/dev/null || true)"
+  if [ "$montado" = "$RAIZ_GERENCIADA_NO_HOST" ]; then
+    ok 'a raiz da pasta gerenciada confere com o volume'
+  else
+    pendencia "a raiz da pasta gerenciada: calculei ${RAIZ_GERENCIADA_NO_HOST}, e o daemon diz que o volume ${VOLUME_DA_PASTA_GERENCIADA} está em '${montado:-lugar nenhum}'. Corrija PROJECT_WORKSPACES_HOST_ROOT no .env e rode \`docker compose -f ${COMPOSE_DE_INSTALACAO} --env-file ${env_arquivo} up -d --wait broker\` — até lá, projeto em modo Container não sobe."
+  fi
 }
 
 # Instala o binário do agente local — e é isto que mata o `chmod +x` manual do
@@ -1544,6 +1736,9 @@ main() {
   esac
 
   consentir_base
+  # Depois da base (a segunda raiz do broker DERIVA dela) e antes do `.env`
+  # (é ele que carrega a decisão): uma recusa aqui não deixa nada gravado.
+  consentir_broker
   gerar_segredos
 
   local env_arquivo="${PWD}/.env"
@@ -1571,6 +1766,8 @@ main() {
     || recusar "o engine subiu mas não respondeu em /health (porta ${engine_port})."
   ok 'api e engine respondendo'
 
+  conferir_o_broker "$env_arquivo"
+
   if [ -n "$MIGRAR_DE" ]; then
     restaurar_apos_migrar "$MIGRAR_DE"
   fi
@@ -1597,7 +1794,8 @@ main() {
     "api": "${BRABO_API_IMAGE}",
     "engine": "${BRABO_ENGINE_IMAGE}",
     "web": "${BRABO_WEB_IMAGE}",
-    "backup": "${BRABO_BACKUP_IMAGE}"
+    "backup": "${BRABO_BACKUP_IMAGE}",
+    "broker": "${BRABO_BROKER_IMAGE}"
   },
   "caminhos": {
     "env": "${env_arquivo}",
@@ -1615,6 +1813,12 @@ JSON
   if [ -n "$CONTA_EMAIL" ]; then
     dizer "  Entre com ${CONTA_EMAIL} e a senha que você acabou de digitar."
   fi
+  if [ "$BROKER_LIGADO" = 'sim' ]; then
+    dizer '  Broker de container: LIGADO — projetos Container e Pasta montada executam.'
+  else
+    dizer '  Broker de container: DESLIGADO — projetos Container e Pasta montada não'
+    dizer '  executam; o modo Runner não depende dele (docs/runbook.md explica como ligar).'
+  fi
 
   # O que ficou pela metade sai NOMEADO, e no fim — onde quem instalou ainda
   # está olhando. Um passo que falha no meio de trinta linhas de saída some.
@@ -1629,10 +1833,10 @@ JSON
 
   dizer ''
   dizer "${C_BOLD}O que este instalador NÃO faz${C_RESET}"
-  dizer 'Não sobe o broker de container: o serviço não existe no compose de'
-  dizer 'instalação, porque a imagem dele não é publicada. Sem broker, projeto'
-  dizer 'em modo Pasta montada não sobe container (ADR 0144); o modo Runner usa'
-  dizer 'o Docker desta máquina e não depende dele.'
+  dizer 'Não liga o broker de container sem perguntar: ele recebe o socket do'
+  dizer 'Docker desta máquina. Sem broker, projeto em modo Container ou Pasta'
+  dizer 'montada não sobe container (ADR 0144, ADR 0162); o modo Runner usa o'
+  dizer 'Docker desta máquina pelo agente local e não depende dele.'
   dizer 'Não liga SMTP e não pergunta servidor de e-mail: MAIL_TRANSPORT segue'
   dizer '`log`, aqui como em produção. A conta criada acima nasceu verificada'
   dizer 'justamente por isso; o registro de quem vier depois continua exigindo'

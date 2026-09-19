@@ -152,11 +152,13 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
 | O repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (AT-092) | ADR 0165, RN-582 |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 | A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
+| O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
 
 ## Estado atual e aberto
 
@@ -195,18 +197,22 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
   o profile ligado, `container_start` continua terminando `failed` com
   `BrokerIndisponivelError`. Na INSTALAÇÃO por Release
-  (`docker-compose.install.yml`) o serviço `broker` NEM EXISTE — não é profile
-  desligado: a imagem não é publicada (ADR 0150, decisão 7) —, e desde o ADR
-  0161 (RN-573/574) a TELA sabe disso: `brokerConfigurado`
+  (`docker-compose.install.yml`) o serviço `broker` EXISTE desde o ADR 0162
+  (RN-575), desligado sob o MESMO profile, e quem o liga é o `install.sh`,
+  PERGUNTANDO — só um "s" digitado liga, o `DOCKER_GID` é MEDIDO de dentro de
+  um container com a própria imagem do broker (recusa nomeada, nunca o 999 de
+  palpite), e `COMPOSE_PROFILES`/`BROKER_URL`/`DOCKER_GID`/
+  `PROJECT_WORKSPACES_HOST_ROOT` vão juntos para o `.env` ou nenhum vai. É o
+  argumento da RN-512 (quem instala na PRÓPRIA máquina já tem o socket), com
+  consentimento no lugar do "sobe por padrão" do dev porque quem instala nunca
+  leu este repositório. `BRABO_BROKER_IMAGE` é obrigatória ligado ou não — o
+  Compose interpola o arquivo inteiro antes de filtrar por profile (medido). E
+  desde o ADR 0161 (RN-573/574) a TELA sabe se há broker: `brokerConfigurado`
   (`ContainerBrokerPort.configurado()`, a mesma fonte do estado observado) vem
   em `GET .../projects-base` e em cada linha de `GET .../containers`, o
   assistente para de pré-selecionar `mounted` sem broker confirmado e a
-  `/containers` recusa antes do clique a subida de `container`/`mounted`. A
-  outra metade da decisão do mantenedor — o `install.sh` PERGUNTAR se liga o
-  broker — foi MEDIDA e PAROU: a imagem não é obtível por uma instalação de
-  Release (`ghcr.io/daneiel/brabo-broker` responde `denied`, o bake tem quatro
-  alvos, e o one-liner roda sem código para construir). Publicar o broker como
-  quinta imagem vem ANTES da pergunta; não escreva a pergunta sem ela. O
+  `/containers` recusa antes do clique a subida de `container`/`mounted`. As
+  duas metades são a MESMA decisão do mantenedor ("os dois"). O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
   `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
   `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
@@ -334,7 +340,17 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
   contexto do Infra Lead com modo e presença de runner é frente à parte, mais
   cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
-  `mounted` pode dar certo de verdade, pelo broker
+  `mounted` pode dar certo de verdade, pelo broker. Desde a RN-577 o mesmo
+  molde vale para a PR: `propose_infra_pr` (e o `propose_adr` do Arquiteto)
+  recusam LOCALMENTE, antes de propor, projeto SEM repositório — o predicado é
+  o MESMO de `ExecuteAdrPrUseCase`/`ExecuteInfraPrUseCase` (linha em
+  `project_repositories`, lida direto do Postgres por
+  `ProjectRepository.recusa_de_pr_sem_repositorio/2`), e no Infra Lead a
+  pergunta vem ANTES do HALT, para não gastar o laço do Workflows numa PR
+  impossível. A recusa deixa `tool.call` e `tool.result` (`ok: false`, com o
+  motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
+  AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
+  ao Dev Lead (RN-522)
 - **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
   `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
   engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,
@@ -497,6 +513,16 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
   prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
   é apagado), mas a migração por compose não fecha
+- O broker da instalação (ADR 0162, RN-575) só existe a partir da PRÓXIMA tag
+  final: o `install.sh` exige `broker` no `images.json`, que Releases
+  anteriores não têm, e a prova ponta a ponta (o E2E responde SIM à pergunta e
+  confere o broker healthy, a api o alcançando e a raiz conferida) só roda em
+  tag. Não medidos: o `DOCKER_GID` e a raiz da pasta gerenciada no Docker
+  Desktop do macOS (a metade interativa do E2E é só Linux); Docker rootless ou
+  remoto cai na recusa da medição, porque o compose monta
+  `/var/run/docker.sock` fixo. Desligar depois exige `rm -sf broker` com o
+  profile — `up --remove-orphans` NÃO o remove (medido: serviço sob profile
+  desligado continua DEFINIDO, não é órfão)
 - `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
   disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
   SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
@@ -888,9 +914,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Desde a RN-512 (ADR 0146) sobe POR PADRÃO no compose local e
-  permanece sob `profiles: ["container-broker"]` no de produção — a divergência
-  entre os dois arquivos é a decisão, não descuido; a imagem dele NÃO é
-  publicada no GHCR (as quatro do ADR 0119 seguem sendo quatro). A imagem de
+  permanece sob `profiles: ["container-broker"]` no de produção e no de
+  INSTALAÇÃO — a divergência entre o de dev e os outros dois é a decisão, não
+  descuido; no de instalação quem liga o profile é o `install.sh`, perguntando
+  (ADR 0162, RN-575). A imagem de PRODUÇÃO (`docker/broker/Dockerfile.prod`) é
+  a QUINTA publicada no GHCR desde o ADR 0162, com os mesmos gates das outras
+  quatro (Trivy, non-root, healthy read-only sem rede no `ci.yml`; digest,
+  assinatura e verificação no `release.yml`) — e o Kubernetes NÃO a conhece, de
+  propósito: não há Deployment de broker, e `argumentosDeSetImage` emite só as
+  quatro que a base do kustomize declara. A imagem de
   DEV instala as dependências no BUILD e NUNCA em runtime, e isso é
   consequência direta da rede: sem egress não há registry alcançável, e a
   resposta a "o corepack/pnpm não baixa" é SEMPRE tirar o registry do caminho
@@ -949,10 +981,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
   preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
-- Deploy: Kubernetes (k3d/kind em validação local). As quatro imagens de
+- Deploy: Kubernetes (k3d/kind em validação local). As cinco imagens de
   produção são PUBLICADAS no GHCR a cada tag final, públicas e por digest
-  (ADR 0119) — `.release/images.json` registra o que cada tag publicou, e
-  `make imagens-do-release` aplica no overlay. O overlay do repositório
+  (ADR 0119; a quinta, o broker, desde o ADR 0162) — `.release/images.json`
+  registra o que cada tag publicou, e `make imagens-do-release` aplica no
+  overlay as QUATRO que o kustomize conhece (o broker fica fora do k8s). O overlay do repositório
   guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
@@ -1001,7 +1034,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
   0149) a esteira também ASSINA o que publica: `cosign` keyless (OIDC do
-  Actions) nas quatro imagens por DIGEST — nunca por tag, que é ponteiro
+  Actions) nas imagens publicadas (cinco desde o ADR 0162) por DIGEST — nunca por tag, que é ponteiro
   móvel — e UM `checksums.txt` assinado cobrindo os cinco binários do
   runner, não cinco assinaturas. Os dois workflows VERIFICAM o que
   assinaram no mesmo run, porque assinatura que ninguém tenta verificar é
@@ -1159,6 +1192,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o destino do PR e o redundante é REDIRECIONADO, não fechado. Depois de
   redirecionar, os checks da `dev` só rodam com `@dependabot rebase` de quem
   tem escrita (evento do `GITHUB_TOKEN` não dispara workflow).
+  PR do Dependabot que SÓ troca pin de action (SHA do `uses:` + comentário de
+  versão, mesma action, mesma indentação) ganha `docs-not-needed:` escrito
+  pelo BOT, num passo do job `Drift, gerados e build` antes do drift
+  (`scripts/ci/dependabot-justifica-pin.ts`, AT-094) — autor E diff, as duas;
+  qualquer outra linha e nada é escrito. NÃO mova isso para workflow irmão: o
+  `GITHUB_TOKEN` não dispara `edited`, re-executar o job reusa o corpo ANTIGO
+  do payload (medido, run 34898913072) e `pull_request_target` só roda o
+  workflow da `main`. É por isso que o drift lê `PR_BODY_FILE` antes de
+  `PR_BODY`. A linha do bot é marcada e sai sozinha se o diff deixar de ser
+  pin; a de humano nunca é tocada.
 - Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
   (`.github/workflows/archive-merged-branch.yml`) — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico
@@ -1594,7 +1637,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
   tela de Sessão narra em tempo real o que o agente está fazendo numa
   faixa acima do composer — o fio só recebe a bolha de resposta depois
-  que o turno termina (RN-460).
+  que o turno termina (RN-460). Os seis reconstroem o histórico por UM
+  caminho, `Engine.Agents.Reidratacao` (RN-580) — não reintroduza
+  `rehydrate/2` por servidor: lê a CAUDA (`latest`, teto 200 do ADR 0060),
+  traz pergunta estruturada e as PRÓPRIAS ferramentas como texto (nunca
+  `role: "tool"`: o evento não tem id de chamada), pula
+  `chat.structured_question_answered` (a resposta já vem no `chat.message`) e,
+  quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
+  `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
+  memória sobre a leitura geral.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora
@@ -1862,6 +1913,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+  Irmã em `warn` (AT-096): `verificarRefsComSimbolo` confere, nos três arquivos
+  de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
+  que herda o caminho do MESMO item — contra o código, ±3 linhas. Só esse
+  padrão: ref sem símbolo, par por `/` e símbolo que não é identificador ficam
+  de FORA, de propósito (aferição barulhenta é desligada no primeiro mês).
+  Relata e não reprova, exceto ZERO refs extraídas (`CEGO`). Ao escrever RN
+  nova, cite `caminho:N` (`símbolo`) — é o que a torna conferível — e releia
+  pelo símbolo, nunca por um número antigo. NÃO alargue a janela para o aviso
+  sumir; o critério para `block` está em `documentation-workflow.md`.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de

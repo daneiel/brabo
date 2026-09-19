@@ -169,12 +169,12 @@ is **revoked**, and the measurement is why: the 37 third-party references
 in the repository were on tags, and three of the places they run are
 worse than a `docker compose pull` going stale.
 
-- The `FROM` lines are the base of the four images we **publish** to
-  GHCR. A moved tag becomes bytes inside an image we sign and hand to
+- The `FROM` lines are the base of the images we **publish** to
+  GHCR — five since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md). A moved tag becomes bytes inside an image we sign and hand to
   other people.
 - `docker/docker-compose.install.yml` runs on the machine of whoever
-  installed the product, beside their Postgres. In that same file the
-  four **own** images already arrive by digest, through a variable the
+  installed the product, beside their Postgres. In that same file our
+  **own** images already arrive by digest, through a variable the
   installer fills — the third-party ones arrived by tag, next to them.
 - `ci.yml` and `golden-set-rag.yml` run third-party images as job
   `services:`. That is literally the runner the action rule exists to
@@ -202,8 +202,8 @@ and one function answering both questions would answer both badly.
 What the check deliberately does **not** cover:
 
 - **The images we build ourselves** (`brabo-api`, `brabo-engine`,
-  `brabo-web`, `brabo-backup`, and `brabo-broker`, which is not
-  published). There is no third party who could move anything, and
+  `brabo-web`, `brabo-backup` and `brabo-broker` — the last one
+  published since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). There is no third party who could move anything, and
   `brabo-api:prod` is a *local* tag whose digest does not exist before
   the build. Where they do cross a registry they are **already** by
   digest, through the mechanism that owns them: `.release/images.json`
@@ -260,7 +260,7 @@ Declared, not fixed:
   (`npm audit signatures` or equivalent) in any job.
 - ~~**No signing or attestation of our own artifacts.**~~ **Closed by
   [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
-  (BRB-005). `release.yml` signs the four images **by digest** with
+  (BRB-005). `release.yml` signs the images it publishes **by digest** with
   `cosign` keyless — the OIDC identity of the workflow, no key in
   custody anywhere — and `build-runner-binaries.yml` gained a
   consolidating job that publishes **one signed `checksums.txt`**
@@ -282,6 +282,23 @@ Declared, not fixed:
   downloaded. The list lives in `scripts/ci/assets-do-instalador.ts`, and its
   spec fails when the installer's own copy of it diverges or when the compose
   gains a relative bind-mount that is not on it.
+
+  **The broker image is the fifth, and it is the one that matters most**
+  ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
+  It was built by nobody until then: the `Dockerfile.prod` existed and passed
+  `hadolint`, but no bake target built it, so it was never scanned and never
+  published, and the installation had no way to offer the service. It now
+  goes through every gate the other four do — the `ci.yml` builds it on every
+  PR, refuses it running as root, runs Trivy on it and brings it up healthy
+  with a read-only rootfs and no network; `release.yml` publishes, records,
+  signs and verifies it by digest with no extra line, because both loops read
+  `.release/images.json`. The reason it needs them more than any other: in an
+  installation that consents, it is the one service that receives the host's
+  Docker socket, so a vulnerability in it is a path to the whole machine.
+  Publishing it makes it a studiable public target; that price is declared
+  in the ADR, not hidden. The Kubernetes overlay does not know it
+  (`argumentosDeSetImage` emits only the four images the kustomize base
+  declares) — there is no broker Deployment, by decision.
 
   What this does **not** cover, and is a different item: **code-signing
   the runner binaries** for the OS (macOS notarization, Windows

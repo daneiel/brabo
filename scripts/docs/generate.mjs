@@ -21,6 +21,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
+import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
 import {
   arquivos,
   eventosEmitidosPor,
@@ -927,6 +928,51 @@ function verificarFrasesAncoradasNoCodigo() {
 }
 
 /**
+ * As refs `caminho:linha` das RNs que nomeiam o SÍMBOLO daquela linha (AT-096).
+ * O padrão, a janela e o que fica de fora estão em `refs-com-simbolo.mjs`.
+ *
+ * Em `warn`: RELATA e não reprova. A primeira medição (18/09) achou 187 refs
+ * que casam o padrão e 71 que não batiam — deriva acumulada de meses, que não
+ * se corrige num PR só e que, em `block`, travaria todo PR que toca um arquivo
+ * de RN por dívida alheia. O critério para promover a `block` está em
+ * docs/explanation/documentation-workflow.md ("Line references with a symbol").
+ *
+ * UMA exceção reprova já, pela régua da casa: extrair ZERO refs é o padrão
+ * cego (a sintaxe das RNs mudou, ou o extrator quebrou), e um check cego fica
+ * verde para sempre dizendo que conferiu o que não olhou.
+ */
+function verificarRefsComSimbolo() {
+  const versionados = execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+  const { total, batem, naoBatem, naoResolvidas } = aferirRefsComSimbolo(RAIZ, versionados);
+
+  if (total === 0) {
+    pendencias.push('refs com símbolo');
+    console.log(
+      '  CEGO      refs com símbolo — nenhuma ref `caminho:N` (`símbolo`) nas RNs.\n' +
+        '            O padrão parou de casar; ajuste scripts/docs/refs-com-simbolo.mjs.',
+    );
+    return;
+  }
+
+  const resumo = `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})`;
+  if (naoBatem.length === 0 && naoResolvidas.length === 0) {
+    console.log(`  ok        refs com símbolo (${resumo})`);
+    return;
+  }
+
+  console.log(`  aviso     refs com símbolo — ${resumo}. Não reprova (warn):`);
+  for (const r of naoBatem) {
+    const onde = r.achadoEm === null ? 'não aparece no arquivo' : `mais perto em :${r.achadoEm}`;
+    console.log(`            ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}:${r.linha} (\`${r.simbolo}\`) — ${onde}`);
+  }
+  for (const r of naoResolvidas) {
+    console.log(`            ${r.doc}:${r.linhaNoDoc} → \`${r.caminho}\` não resolve a um arquivo só`);
+  }
+}
+
+/**
  * A versão anunciada em prosa contra a ÚLTIMA release do CHANGELOG.
  *
  * O README ficou preso em `v0.1.0` da Fase 5 até a v2.1.0 — sete releases
@@ -1018,6 +1064,7 @@ gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
+verificarRefsComSimbolo();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {

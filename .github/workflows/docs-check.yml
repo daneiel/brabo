@@ -131,9 +131,63 @@ jobs:
       # sha, e PR de promoção travado para sempre. Os outros passos continuam
       # rodando: docmap, gerados e build do site dependem só do HEAD, e valem em
       # qualquer degrau.
+      # AT-094: o BOT escreve `docs-not-needed:` no corpo de PR do Dependabot
+      # cujo diff é SÓ troca de pin de action (SHA + comentário de versão).
+      # A decisão mora em `scripts/ci/dependabot-justifica-pin.ts` (testado):
+      # autor que não é o Dependabot, ou qualquer linha que não seja pin, e
+      # nada é escrito — o drift abaixo julga como sempre.
+      #
+      # Mora AQUI, e não num workflow irmão do `dependabot-para-dev.yml`, por
+      # três medições:
+      #   - editar o corpo com o `GITHUB_TOKEN` não dispara `edited`, então um
+      #     workflow separado escreveria a linha e ESTE check ficaria vermelho;
+      #   - re-executar este job não resolve: a re-execução reusa o PAYLOAD
+      #     original, com o corpo antigo (run 34898913072, tentativa 2, 17/09);
+      #   - `pull_request_target`, onde o token escreve sem pedir, só roda o
+      #     workflow da branch DEFAULT (`main`) — a mesma armadilha do
+      #     `pr-police.yml` —, então a regra nova só valeria depois da promoção.
+      # No mesmo job, o passo seguinte lê o corpo novo por `PR_BODY_FILE`, na
+      # ordem, sem corrida e sem redisparo.
+      #
+      # Não roda em `edited`: se um humano apagou a linha do bot, a vontade dele
+      # manda. O token de PR do Dependabot escreve porque este workflow declara
+      # `pull-requests: write` (evento do Dependabot respeita `permissions:`);
+      # se a escrita falhar, nenhum arquivo é gravado e o drift usa o corpo do
+      # evento — falha FECHADO, o PR fica bloqueado como antes.
+      - name: Justificativa do bot para troca de pin (Dependabot)
+        if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.action != 'edited'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMERO: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          PR_TIPO_DO_AUTOR: ${{ github.event.pull_request.user.type }}
+          BASE_REF: ${{ github.base_ref }}
+          CORPO_NOVO: ${{ runner.temp }}/corpo-do-pr.md
+        run: |
+          set -euo pipefail
+          TMP="$(mktemp -d)"
+          # O MESMO range que o drift avalia logo abaixo.
+          git diff --no-color --no-ext-diff "origin/$BASE_REF...HEAD" > "$TMP/diff"
+          printf '%s' "$PR_BODY" > "$TMP/corpo.md"
+
+          RESULTADO="$(node scripts/ci/dependabot-justifica-pin.ts "$TMP/diff" "$TMP/corpo.md" "$TMP/novo.md")"
+          ACAO="$(jq -r .acao <<<"$RESULTADO")"
+          echo "dependabot-justifica-pin → $ACAO: $(jq -r .motivo <<<"$RESULTADO")"
+
+          if [ "$ACAO" = "manter" ]; then exit 0; fi
+          if gh pr edit "$PR_NUMERO" --repo "$REPO" --body-file "$TMP/novo.md"; then
+            cp "$TMP/novo.md" "$CORPO_NOVO"
+          else
+            echo "::warning::não consegui editar o corpo do PR — o drift julga pelo corpo do evento"
+          fi
+
       - name: Drift check
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BODY_FILE: ${{ runner.temp }}/corpo-do-pr.md
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.base_ref }}

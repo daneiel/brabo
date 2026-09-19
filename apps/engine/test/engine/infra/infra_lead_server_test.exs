@@ -40,8 +40,33 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
+    # Desde a RN-577 `propose_infra_pr` só chega ao HALT com repositório: o
+    # projeto do setup TEM um, porque é o que todo teste que propõe PR supõe.
+    # O teste da recusa o apaga explicitamente.
+    insert_repo!(project_id)
     {:ok, state} = InfraLeadServer.init({session_id, project_id})
     %{state: state, session_id: session_id}
+  end
+
+  defp insert_repo!(project_id) do
+    Repo.query!(
+      """
+      INSERT INTO public.project_repositories
+        (id, project_id, provider, external_id, url, default_branch, visibility, provisioned_by)
+      VALUES ($1, $2, 'local', '/tmp/repo.git', 'file:///tmp/repo.git', 'main', 'private', $3)
+      """,
+      [
+        Ecto.UUID.dump!(Ecto.UUID.generate()),
+        Ecto.UUID.dump!(project_id),
+        Ecto.UUID.dump!(Ecto.UUID.generate())
+      ]
+    )
+  end
+
+  defp delete_repo!(project_id) do
+    Repo.query!("DELETE FROM public.project_repositories WHERE project_id = $1", [
+      Ecto.UUID.dump!(project_id)
+    ])
   end
 
   defp tool_turn(name, args) do
@@ -459,6 +484,55 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # modelo fez continua narrada, mesmo tendo sido recusada localmente.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "tool.call", payload: %{tool: "propose_container_start"}}}
+  end
+
+  # --- `propose_infra_pr` sem repositório (RN-577, AT-088) ---
+
+  test "propose_infra_pr SEM repositório: recusa NOMEADA antes do HALT, NUNCA propõe nem roda o Workflows (RN-577)",
+       %{state: state} do
+    delete_repo!(state.project_id)
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-nunca", "status" => "executed"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()}),
+      FakeEngineApiClient.final_response("depois-de-recusar-pr")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    # A api NUNCA foi chamada, e o Workflows (um laço de LLM pago) nunca rodou:
+    # nenhuma delegação registrada para uma PR que não pode existir.
+    refute_received {:propose_action, "open_infra_pr", _, _}
+    refute_received {:delegation_recorded, _}
+
+    # A recusa é ENTRADA do laço (RN-163): resultado de ferramenta dizendo o
+    # que falta e quando passa a existir. O laço continuou e o turno concluiu.
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_infra_pr"))
+    assert recusa["role"] == "tool"
+    assert recusa["content"] =~ "sem repositório provisionado"
+    assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "depois-de-recusar-pr"}}}
+
+    # Rastro durável: a chamada (com os caminhos, nunca o conteúdo) e o motivo.
+    assert_received {:event_appended, _pid, _sid,
+                     %{
+                       type: "tool.call",
+                       payload: %{tool: "propose_infra_pr", args: %{paths: ["Dockerfile"]}}
+                     }}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "propose_infra_pr", ok: false} = r}}
+
+    assert r.erro =~ "sem repositório provisionado"
   end
 
   test "propose_container_start com projeto inexistente: recusa, NUNCA propõe", %{state: state} do
