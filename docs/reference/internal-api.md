@@ -185,6 +185,21 @@ is the same story in reverse: it exposes via external HTTP a read
 effect — it's a `SELECT`, and the criterion (an `active` session with `execution.activated`
 recorded) doesn't change anything about what the engine already did.
 
+Since [RN-579](../business-rules.md#rn-579) (AT-093) the `EngineApiClient`
+facade has one side effect on top of these routes, and it is on the engine's
+OWN channel, not on the api: when the api **confirms** a write to a session —
+`POST /events` (both `append_event` and `append_event_returning`),
+`POST /actions` (`proposed_action.created`), `POST /handoffs`
+(`handoff.offered`) and the PO's `create_epic`/`create_story`/`create_task`
+(`backlog.*_created`) — the facade broadcasts `event.appended` on
+`session:<id>` with only `type` and `actorId`. A refused write broadcasts
+nothing. No route and no request body changed; before this, only
+`ArtifactEmitter` and the Infra Lead broadcast, by hand, and even for writes
+the api had refused. It is what lets the browser drop its 3s poll while the
+channel is alive. Writes the api makes on its own (a human deciding an action,
+a session transition) still have no broadcast — the browser's 15s fallback
+poll covers them.
+
 ### LLM
 
 | method | path |

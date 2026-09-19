@@ -6,6 +6,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web/engine/api**: a tela de Sessão **deixa de pollar a cada 3s enquanto o
+  canal da sessão está vivo** ([RN-579](docs/business-rules.md#rn-579),
+  AT-093). Medido na v6.1.0: um navegador fazia mediana de 118 e pico de 263
+  req/min contra os 300/min do rate limit, e duas abas no pico recebiam 429.
+  Agora o engine avisa no canal `session:<id>` toda escrita que a api
+  confirmou, a tela invalida só o que o tipo do evento afeta (com janela
+  mínima por alvo, para uma rajada virar uma busca) e o poll fica como
+  fallback de 15s (30s para o orçamento). Uma aba vai de **123 para 46**
+  req/min; canal caído volta ao poll de sempre na hora. O teto do rate limit
+  não mudou.
+- **api**: resposta de corpo vazio (`null`) passa a ter `ETag` e a voltar
+  **304**. `GET .../sessions/:id/budget` nunca voltava 304 (0% de 483) e
+  `GET .../execution/session` quase nunca (22%) porque sem corpo o Express não
+  gera validador — era o estado normal das duas rotas ("sessão sem orçamento",
+  "nenhuma execução ativa"). O corpo continua vazio.
+
 - **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
   registro validava, EM RUNTIME, que todo arquivo de prova citado em
   `docs/gates.yml` existia no disco — e a imagem de produção carrega

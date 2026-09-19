@@ -247,9 +247,17 @@ reloads the page doesn't get them back — they get the event log back instead.
 | `agent.status` | visible agent state change |
 | `agent.done` | turn ended |
 | `agent.error` | turn failed |
-| `event.appended` | a new event entered the log — the panel's refresh trigger |
+| `event.appended` | a new event entered the log — the panel's refresh trigger; carries only `type` and `actorId` |
 
 A domain event almost always produces an `event.appended`; the reverse doesn't hold.
+Since [RN-579](../business-rules.md#rn-579) the engine emits it for **every**
+write the api confirmed through the `EngineApiClient` facade (appends, proposed
+actions, handoffs, the PO's backlog), and never for a refused one. Writes the
+api makes on its own — a human deciding an action, a session transition — have
+no broadcast. The browser uses it only as a trigger: it invalidates what the
+`type` affects (events and budget always; actions, handoffs or backlog by
+prefix), with a minimum window per target, and while the channel is alive the
+session screen's polls fall back to 15s (30s for the budget).
 
 ### Who can listen (RN-108)
 

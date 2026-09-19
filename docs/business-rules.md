@@ -13806,3 +13806,90 @@ instalação sem broker continua possível pelo agente.
   em texto, nunca propõe), `:547` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
+
+### RN-579 — Com o canal da sessão vivo, a tela de Sessão troca o poll curto por invalidação e um fallback longo; resposta de corpo vazio tem `ETag` {#rn-579}
+
+A instalação medida na AT-093 (v6.1.0, 14/09) mostrou UM navegador fazendo
+7.088 requisições em 56 minutos — mediana de 118/min, pico de 263/min —
+contra os 300/min do `RATE_LIMIT_USER`. Duas abas visíveis no pico passam do
+teto, e o 429 cai no navegador do dono da conta. Quase tudo era poll de 3–5s
+da tela de Sessão sobre dados que mudam raro (ações, handoffs e backlog
+voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
+`session:<id>` com o engine. O teto NÃO muda: o que cai é o pedido.
+
+**A regra:**
+
+1. **O engine avisa toda escrita confirmada.** A fachada
+   `Engine.Sessions.EngineApiClient` emite `event.appended` (só `type` e
+   `actorId`, nunca o `payload`) depois que a api CONFIRMA `append_event`,
+   `append_event_returning`, `propose_action` (`proposed_action.created`),
+   `create_handoff` (`handoff.offered`) e `create_epic/story/task`
+   (`backlog.*_created`). Escrita recusada não avisa. Antes, só
+   `ArtifactEmitter` e o Infra Lead avisavam, à mão — e avisavam mesmo quando a
+   api recusava o append.
+2. **"Canal vivo" é join CONFIRMADO.** `connectSessionHeartbeat` marca a sessão
+   viva no `ok` do join e a desmarca em erro/fechamento do canal ou do socket e
+   no cleanup. O estado é por sessão e por aba, fora do React, porque o
+   intervalo é de cada OBSERVADOR e três observadores (Shell, `SessionPage`,
+   `ContextAside`) leem a mesma chave de eventos.
+3. **Com o canal vivo, o poll vira fallback.** Eventos, ações, handoffs,
+   backlog e a própria sessão passam de 3–5s para 15s; o orçamento, de 5s para
+   30s. `intervaloDaSessao` é `Math.max`: quem já pollava mais devagar não
+   acelera. Canal caído devolve o intervalo curto NA HORA — a tela nunca fica
+   pior do que era.
+4. **O TIPO do aviso decide o que invalidar, com janela.** Todo aviso
+   invalida os eventos e o orçamento; `proposed_action.*`/`action.*` também as
+   ações, `handoff.*` os handoffs, `backlog.*` o backlog. Cada alvo tem janela
+   mínima entre duas buscas (eventos 3s, ações/handoffs/backlog 2s, orçamento
+   10s): a primeira sai na hora, as seguintes dentro da janela viram UMA no fim
+   dela. Sem isso, uma rajada de `tool.result` viraria uma busca por evento. A
+   regra do achado C segue, e só para os EVENTOS: durante um turno em
+   streaming eles não são antecipados; as ações são.
+5. **Aba oculta não polla.** `refetchIntervalInBackground: false` (o default do
+   TanStack v5, agora escrito em `OPCOES_PADRAO_DAS_QUERIES`) — medido por
+   teste, não suposto.
+6. **Corpo vazio tem validador.** Handler que devolve `null` saía com corpo
+   vazio e SEM `ETag` (o `res.send` do Express só gera `ETag` com corpo), então
+   o 304 era impossível: `sessions/:id/budget` voltou 304 em 0% das 483
+   chamadas medidas e `execution/session` em 22% (o tempo com execução ativa).
+   A api grava o `ETag` do corpo vazio quando `send` sai sem corpo — decidido
+   sobre o que vai ao fio, não sobre o valor do handler, para que um handler
+   com `@Res()` que escreve depois nunca herde o validador do vazio. 304 NÃO
+   reduz a contagem do rate limit (o guard conta antes do handler); reduz banda.
+
+**Números** (teste de orçamento, uma aba na tela de Sessão, por minuto):
+**123** com o canal caído (o comportamento de antes, intacto como fallback) e
+**46** com ele vivo — dos quais 24 são do Shell (resumo dos projetos e sessão
+de execução, que não são da sessão e seguem em 5s). Duas abas: 246 → 92.
+
+**O que esta regra NÃO fecha:** escritas que não passam pelo engine — a
+decisão de um humano noutra aba, uma transição de sessão feita pela api — não
+têm aviso no canal e chegam pelo fallback, em até 15s (eram 3s). O status
+`working` do roster continua dependendo do `event.appended` do `agent.status`,
+que sai depois de a api gravá-lo. `projects-summary` e `execution/session`
+(Shell) seguem em 5s. Não é mudança de modelo de consistência (sem ADR): a
+fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
+desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
+
+- **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:554`,
+  `:580`, `:600`, `:776` (`avisar_canal`);
+  `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
+  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
+  (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
+  (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:159`,
+  `:163`, `:129`, `:228`; `apps/web/src/lib/session-turno.ts:292`;
+  `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
+  `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
+  `apps/api/src/interfaces/http/shared/etag-do-corpo-vazio.ts:40`;
+  `apps/api/src/main.ts:80`
+- **Teste:** `apps/web/src/lib/canal-vivo.orcamento.test.tsx:138` (antes, 123),
+  `:155` (depois, 46), `:176` (canal cai — caso de falha), `:186` (rajada),
+  `:214` (aba oculta); `apps/web/src/lib/session-channel.test.ts:237`, `:253`
+  (queda — caso de falha), `:267`;
+  `apps/engine/test/engine/sessions/engine_api_client_aviso_no_canal_test.exs:29`,
+  `:57` (append recusado não avisa — caso de falha), `:71`;
+  `apps/api/test/interfaces/http/shared/etag-do-corpo-vazio.spec.ts:56` (a
+  causa), `:69`, `:98` (`@Res()` tardio — caso de falha);
+  `apps/api/test/interfaces/rate-limit.guard.spec.ts:183` (2 × 263 estoura,
+  2 × 118 não)
+- **Origem:** AT-093 — logs da api instalada (v6.1.0), 2026-09-14
