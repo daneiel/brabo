@@ -1226,6 +1226,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
+  Estado TERMINAL recusa CONVERSA com 409 nomeado (`sessao_encerrada`,
+  RN-581), e "conversa" é TIPO de conversa OU ATOR conversacional — nunca uma
+  lista de permitidos por tipo: o Psicólogo e a Anamnese escrevem numa sessão
+  fechada com o MESMO vocabulário do Criativo, e a decisão humana sobre ação
+  pendente continua entrando. O heartbeat não fecha sessão com conversacional
+  esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
+  turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
+  continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
   evento `execution.activated` é o ESTADO de execução, e continua sendo
