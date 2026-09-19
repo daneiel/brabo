@@ -334,6 +334,12 @@ is already running) never spawn a second task:
 `TurnoAssincrono.iniciar/3` replies `{:error, :turno_em_andamento}`
 (turn in progress) right away.
 
+> **Revised by [RN-578](#rn-578) (ADR 0163):** the reply to the original
+> `GenServer.call` is no longer deferred until the task finishes — it goes out
+> on ACCEPTANCE, as soon as the task is up, and cancelling answers nobody (the
+> caller already has `:ok`). `{:error, :turno_em_andamento}` stopped being
+> discarded by the controller: it is a named 409 and a durable `agent.error`.
+
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
   (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:170`
@@ -2449,6 +2455,12 @@ achado A2) — o fluxo já declarava a saída `plano-de-paralelismo` do `dev-lea
 como `via: proposed_action`, e o código nunca foi ajustado para bater.
 
 ### RN-284 — O turno do agente conversacional pode SUSPENDER esperando aprovação humana {#rn-284}
+
+> **Revisada pela [RN-578](#rn-578) (ADR 0163):** o turno de TODO
+> conversacional deixou de segurar o `GenServer.call` — o `from` é respondido
+> no aceite, e a suspensão aqui descrita mudou só o FECHO do turno
+> (`awaiting_approval` em vez de `agent.done`), não mais o momento da resposta.
+> A `user_message` recusada durante a suspensão passa a ser 409 no clique.
 
 Primeira vez que um agente conversacional (Criativo, PO, Arquiteto, Dev Lead —
 todos rodam turno síncrono via `GenServer.call` de até 180s, mediado por
@@ -14073,6 +14085,80 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
 - **Origem:** AT-073, levantada em 2026-09-13
 
+### RN-578 — O clique que dispara turno de agente responde ao ACEITAR, e a recusa deixa de ser calada {#rn-578}
+
+Numa instalação real da v6.1.0 (2026-09-14), responder o formulário de
+perguntas do Criativo levou **97,3 s**, confirmar a prontidão **97,3 s** e
+confirmar a arquitetura pronta **51,8 s** — cada clique segurado pelo turno
+INTEIRO do agente, porque o `handle_call` do conversacional só respondia ao
+`GenServer.call` do controller do engine quando a Task do turno terminava. Turno
+acima do teto (120 s no Criativo, 180 s nos outros) virava 500 num comando que
+tinha funcionado. E a recusa de uma segunda mensagem com turno em curso
+(`{:error, :turno_em_andamento}`) era descartada pelo controller, que respondia
+202: um *"Continue"* digitado durante o kickoff do Arquiteto foi aceito e nunca
+lido, sem rastro nenhum.
+
+**A regra ([ADR 0163](adr/0163-o-clique-responde-ao-aceitar.md), que generaliza
+o [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)):**
+
+1. **O aceite sai na hora.** `TurnoAssincrono.iniciar/3` responde `:ok` ao
+   `from` assim que a Task sobe — depois de persistir `agent.status: working`,
+   nunca antes. Vale para os seis conversacionais e para as quatro rotas de
+   usuário que disparam turno (`…/agents/:agent/message` e, por ela,
+   `…/structured-question/:id/answer`; `…/readiness`;
+   `…/agents/arquiteto/handoff-infra`) e para a devolução de história
+   (`ReturnStoryUseCase`). O status e o corpo da api NÃO mudam
+   (`201 { ok: true }`): sempre significaram "aceito"; o que mudou foi quando
+   chegam.
+2. **A recusa ANTES de o turno subir é síncrona e nomeada.** O engine responde
+   409 (`turno_em_andamento`, `aguardando_aprovacao`) ou 422
+   (`sem_regra_de_negocio`) com `{error, motivo}`, e a api repassa o MESMO
+   status com a MESMA frase. `turno_em_andamento` ganha `agent.error` durável
+   (origem `politica`); os outros dois já tinham.
+3. **O desfecho do turno segue pelo canal e pelo log, nunca pelo HTTP.** Falha
+   continua `agent.error` durável, com a mesma origem de antes.
+4. **A tela deixa de tratar "a chamada resolveu" como fim de turno.** Depois do
+   aceite, ela acompanha o fim pelo canal (`agent.done`) e, como rede de
+   segurança, pela cauda do log a cada 4 s: fecha quando o `agent.status`
+   persistido mais recente daquele agente não é `working`. Sem nenhum
+   `agent.status` do agente na janela, não fecha — não saber não é "acabou".
+5. **O handoff ao Dev Lead continua nascendo DEPOIS do de Infra.** O
+   `:offer_dev_handoff` que chega com o turno de fechamento do Arquiteto em
+   curso fica pendente e roda quando o turno fecha — sucesso, falha, crash ou
+   cancelamento.
+
+**O que esta regra NÃO fecha:** o `chat.message` que a api grava antes de
+perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
+`agent.error`, antes órfão e mudo); engine reiniciado no meio do turno não grava
+`idle`, e a faixa fica até o "Parar" ou um recarregamento; e mensagem ao
+`infra` pelo compositor segue caindo no Criativo pela cláusula final de
+`AgentCommandController.message/2` — pré-existente, medido, não corrigido.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
+  aceite), `:130` e `:283` (a recusa durável);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
+  (202), `:243`/`:253`/`:263` (409/409/422);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:211`;
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
+  (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
+  `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
+  `:292` (`acompanharTurnoPeloLog`), `:316`;
+  `apps/web/src/routes/SessionPage.tsx:1496`, `:1521`, `:1770`, `:1830`;
+  `apps/web/src/lib/recusa-do-agente.ts:17`
+- **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:66`
+  (aceite com a task viva), `:84` (`working` gravado antes do aceite), `:178`
+  (recusa durável — caso de falha);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:35`,
+  `:66` (409), `:107` (422);
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:209` (ordem dos
+  handoffs), `:237` (cancelamento);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:520`,
+  `:538`, `:580` (500 continua genérico);
+  `apps/web/src/routes/SessionPage.turno-preso.test.tsx:181`, `:252` (409);
+  `apps/web/src/routes/SessionPage.readiness-turno-preso.test.tsx:172`, `:210`
+  (422); `apps/web/src/lib/fim-do-turno-pelo-log.test.ts:29`, `:76`
+- **Origem:** AT-089 — instalação real da v6.1.0 em 2026-09-14
+
 ### RN-581 — A conversa em curso segura a sessão por até 8h, e a sessão encerrada recusa conversa {#rn-581}
 
 No `exp001` o heartbeat fechou a sessão 30 segundos depois de a aba parar, com
@@ -14147,8 +14233,12 @@ o engine — olhava o estado da sessão antes de gravar.
    por `:erpc` — o registro é local e o job cai em qualquer réplica). O turno em
    curso é ABANDONADO no `terminate/2` dos seis servidores
    (`TurnoAssincrono.abandonar/1`): a task morre sem gravar nem transmitir nada,
-   porque gravar seria pedir à api o que ela recusa. O Infra Lead, que roda o
-   turno dentro do `handle_call`, é morto se não sair em 5s.
+   porque gravar seria pedir à api o que ela recusa. Não há resposta a dar:
+   desde a [RN-578](#rn-578) (ADR 0163) quem disparou o turno já recebeu `:ok`
+   no aceite. Pelo mesmo motivo o `offer_dev_handoff` que o Arquiteto guardou
+   para o fecho do turno NÃO roda quando o fecho é o da sessão — o handoff
+   seria recusado. O Infra Lead, que roda o turno dentro do `handle_call`, é
+   morto se não sair em 5s.
 10. **A recusa nunca é calada no engine.** Quase todo chamador de
     `append_event/3` descarta o retorno; o cliente registra o 409
     `sessao_encerrada` como aviso no log, e o retorno segue o mesmo.
@@ -14186,7 +14276,7 @@ nova.
   (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:48` (`parar_da_sessao`),
   `:64` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:238` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -14205,8 +14295,8 @@ nova.
   teto); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
   (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
   (para só os da sessão), `:84` (`session.closed` para o Criativo vivo);
-  `apps/engine/test/engine/agents/turno_assincrono_test.exs:114` (abandonar não
-  grava nem transmite), `:145` (o `terminate/2` abandona);
+  `apps/engine/test/engine/agents/turno_assincrono_test.exs:161` (abandonar não
+  grava nem transmite, e não responde de novo), `:194` (o `terminate/2` abandona);
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
 - **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
   8h e causa própria; sessão encerrada recusa conversa, nomeado)

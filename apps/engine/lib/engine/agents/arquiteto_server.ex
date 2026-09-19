@@ -106,7 +106,11 @@ defmodule Engine.Agents.ArquitetoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
-       turno_assincrono: nil
+       turno_assincrono: nil,
+       # `:offer_dev_handoff` que chegou com o turno de fechamento ainda em
+       # curso (ADR 0163): fica guardado e roda quando o turno fechar, para o
+       # handoff ao Dev Lead continuar nascendo DEPOIS do de Infra.
+       handoff_dev_pendente: false
      }}
   end
 
@@ -121,7 +125,7 @@ defmodule Engine.Agents.ArquitetoServer do
 
   @impl true
   def handle_cast(:cancel, state) do
-    {:noreply, TurnoAssincrono.cancelar(state)}
+    {:noreply, state |> TurnoAssincrono.cancelar() |> drenar_handoff_dev_pendente()}
   end
 
   # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
@@ -151,28 +155,66 @@ defmodule Engine.Agents.ArquitetoServer do
   # da MESMA confirmação. Continua síncrono — é só uma chamada HTTP rápida
   # de criação de handoff, não uma chamada ao LLM, então não precisa da
   # Task/cancelamento de `TurnoAssincrono`.
+  #
+  # ADIADO quando há turno em curso (ADR 0163, RN-578). A api chama
+  # `offer_infra_handoff` e, na sequência, este — e até o ADR 0163 a
+  # sequência só acontecia depois de o turno de fechamento TERMINAR, porque o
+  # primeiro `GenServer.call` segurava a resposta até lá. Com o aceite
+  # imediato, este chegaria no meio do turno e o handoff ao Dev Lead nasceria
+  # ANTES do de Infra (que é criado no fim da Task). Guardar e rodar no fecho
+  # preserva a ordem, e o fecho cobre os mesmos quatro desfechos em que o
+  # handoff era oferecido antes: sucesso, falha narrada, crash e cancelamento.
+  @impl true
+  def handle_call(:offer_dev_handoff, _from, %{turno_assincrono: %{}} = state) do
+    {:reply, :ok, Map.put(state, :handoff_dev_pendente, true)}
+  end
+
   @impl true
   def handle_call(:offer_dev_handoff, _from, state) do
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "dev-lead",
-             nil
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
-      end
-
-    {:reply, :ok, state}
+    {:reply, :ok, oferecer_handoff_dev(state)}
   end
 
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
-      {:ok, novo_state} -> {:noreply, novo_state}
-      :ignorado -> {:noreply, state}
+      # A marca vem do state ANTERIOR à mensagem: o `novo_state` é o que a
+      # Task devolveu, e ela capturou o state do INÍCIO do turno — antes de o
+      # `:offer_dev_handoff` chegar e marcar a pendência.
+      {:ok, novo_state} ->
+        pendente = Map.get(state, :handoff_dev_pendente, false)
+
+        {:noreply,
+         novo_state
+         |> Map.put(:handoff_dev_pendente, pendente)
+         |> drenar_handoff_dev_pendente()}
+
+      :ignorado ->
+        {:noreply, state}
+    end
+  end
+
+  defp oferecer_handoff_dev(state) do
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "dev-lead",
+           nil
+         ) do
+      {:ok, _handoff} -> state
+      {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
+    end
+  end
+
+  # `Map.get/3` com default: um state reidratado por um caminho antigo não
+  # carrega a chave, e a ausência vale "nada pendente".
+  defp drenar_handoff_dev_pendente(state) do
+    if Map.get(state, :handoff_dev_pendente, false) do
+      state
+      |> Map.put(:handoff_dev_pendente, false)
+      |> oferecer_handoff_dev()
+    else
+      state
     end
   end
 

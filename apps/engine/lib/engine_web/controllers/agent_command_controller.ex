@@ -4,6 +4,10 @@ defmodule EngineWeb.AgentCommandController do
   Criativo, rotear uma mensagem do usuário, e sinalizar a confirmação de
   prontidão. Guardado pelo plug VerifyServiceToken (segredo compartilhado), igual ao
   SessionCommandController.
+
+  Desde o ADR 0163 (RN-578) a resposta das rotas que disparam turno é o
+  ACEITE: 202 assim que o turno sobe, sem esperar ele terminar; 409/422
+  nomeados quando o agente recusa antes de subir (`responder_ao_aceite/2`).
   """
 
   use EngineWeb, :controller
@@ -104,13 +108,11 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
-    # O retorno já não é sempre `:ok` (RN-122): um `:cancel` concorrente pode
-    # ter interrompido o turno (`{:error, :cancelado}`), ou uma segunda
-    # mensagem pode ter chegado com outra já em curso (`{:error,
-    # :turno_em_andamento}`). Nos dois casos o desfecho de verdade já está
-    # gravado no event log (`agent.error`) — esta resposta é só o aceite.
-    _ = PoServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    # A resposta é o ACEITE e chega antes do turno terminar (ADR 0163,
+    # RN-578): `:ok` é 202, e a recusa ANTES de subir o turno (turno já em
+    # curso) é 409 — ver `responder_ao_aceite/2`. O desfecho do turno segue
+    # pelo canal e, quando é falha, pelo `agent.error` durável.
+    responder_ao_aceite(conn, PoServer.user_message(session_id, text))
   end
 
   def message(conn, %{
@@ -120,8 +122,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = DevLeadSupervisor.start_agent(session_id, project_id)
-    _ = DevLeadServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, DevLeadServer.user_message(session_id, text))
   end
 
   def message(conn, %{
@@ -131,8 +132,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
-    _ = ArquitetoServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, ArquitetoServer.user_message(session_id, text))
   end
 
   def message(conn, %{
@@ -142,8 +142,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = UxDesignerSupervisor.start_agent(session_id, project_id)
-    _ = UxDesignerServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, UxDesignerServer.user_message(session_id, text))
   end
 
   def message(conn, %{
@@ -153,8 +152,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid, _origin} = StaffSupervisor.start_agent(session_id, project_id)
-    _ = StaffServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, StaffServer.user_message(session_id, text))
   end
 
   def message(conn, %{
@@ -163,8 +161,7 @@ defmodule EngineWeb.AgentCommandController do
         "text" => text
       }) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
-    _ = CriativoServer.user_message(session_id, text)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, CriativoServer.user_message(session_id, text))
   end
 
   @doc """
@@ -185,8 +182,10 @@ defmodule EngineWeb.AgentCommandController do
         "reason" => reason
       }) do
     if PoServer.vivo?(session_id) do
-      _ = PoServer.revise(session_id, %{"id" => story_id, "title" => title, "reason" => reason})
-      send_resp(conn, 202, "")
+      responder_ao_aceite(
+        conn,
+        PoServer.revise(session_id, %{"id" => story_id, "title" => title, "reason" => reason})
+      )
     else
       conn
       |> put_status(404)
@@ -195,13 +194,11 @@ defmodule EngineWeb.AgentCommandController do
   end
 
   def readiness(conn, %{"sessionId" => session_id}) do
-    _ = CriativoServer.confirm_readiness(session_id)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, CriativoServer.confirm_readiness(session_id))
   end
 
   def offer_infra_handoff(conn, %{"sessionId" => session_id}) do
-    _ = ArquitetoServer.offer_infra_handoff(session_id)
-    send_resp(conn, 202, "")
+    responder_ao_aceite(conn, ArquitetoServer.offer_infra_handoff(session_id))
   end
 
   def offer_dev_handoff(conn, %{"sessionId" => session_id}) do
@@ -233,6 +230,51 @@ defmodule EngineWeb.AgentCommandController do
   # `"agent"`, o alvo é o Criativo (único que nasce sem handoff).
   def cancel(conn, %{"sessionId" => session_id}),
     do: cancel(conn, %{"sessionId" => session_id, "agent" => "criativo"})
+
+  # O `handle_call` de todo conversacional responde AO ACEITAR desde o ADR
+  # 0163 (RN-578) — o turno segue numa Task e o desfecho vai pelo canal. Esta
+  # resposta é, portanto, o único sinal síncrono que o clique recebe, e ela
+  # deixou de poder ser descartada: até lá o controller ignorava o retorno e
+  # dizia 202 também para a mensagem RECUSADA (medido: um "Continue" digitado
+  # durante o kickoff do Arquiteto foi aceito e nunca lido). A frase de cada
+  # recusa é a mesma do `agent.error` que o agente já gravou.
+  defp responder_ao_aceite(conn, :ok), do: send_resp(conn, 202, "")
+
+  defp responder_ao_aceite(conn, {:error, :turno_em_andamento}) do
+    recusar(
+      conn,
+      409,
+      "turno_em_andamento",
+      "O agente ainda está no meio de um turno — a mensagem ficou registrada, " <>
+        "mas não foi lida. Mande de novo quando ele terminar, ou pare o turno atual."
+    )
+  end
+
+  defp responder_ao_aceite(conn, {:error, :aguardando_aprovacao}) do
+    recusar(
+      conn,
+      409,
+      "aguardando_aprovacao",
+      "Há uma decisão de plano de execução pendente em Aprovações — a " <>
+        "conversa não segue até ela ser decidida."
+    )
+  end
+
+  defp responder_ao_aceite(conn, {:error, :sem_regra_de_negocio}) do
+    recusar(
+      conn,
+      422,
+      "sem_regra_de_negocio",
+      "Nenhuma regra de negócio foi capturada nesta conversa — não há o que " <>
+        "consolidar num resumo do produto ainda."
+    )
+  end
+
+  defp recusar(conn, status, motivo, mensagem) do
+    conn
+    |> put_status(status)
+    |> json(%{error: mensagem, motivo: motivo})
+  end
 
   defp via_for("criativo", session_id), do: {:ok, CriativoServer.via(session_id)}
   defp via_for("po", session_id), do: {:ok, PoServer.via(session_id)}
