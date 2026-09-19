@@ -74,6 +74,7 @@ export function StructuredQuestionCard({
   respondida,
   respostasExistentes,
   onTurnoIniciado,
+  onTurnoAceito,
   onTurnoTerminado,
 }: {
   projectId: string;
@@ -91,6 +92,13 @@ export function StructuredQuestionCard({
    * `streaming`/`statusAgent`, e este caminho não ligava nenhum dos dois.
    */
   onTurnoIniciado: () => void;
+  /**
+   * ADR 0163 (RN-578) — a api ACEITOU as respostas e o turno segue no engine.
+   * A chamada resolve no aceite, não no fim do turno; quem sabe acompanhar o
+   * fim (canal + leitura do log) é a página.
+   */
+  onTurnoAceito: () => void;
+  /** A chamada falhou ou foi recusada: desfaz o arme de `onTurnoIniciado`. */
   onTurnoTerminado: () => void;
 }) {
   const { t } = useTranslation('sessionPage');
@@ -137,26 +145,25 @@ export function StructuredQuestionCard({
   async function handleSubmit() {
     if (enviando || !completo) return;
     setEnviando(true);
-    // RN-174: o turno começa AQUI, antes do `await` — a chamada é síncrona no
-    // engine (o mesmo `SendAgentMessageUseCase` de `handleSend`) e pode levar
-    // dezenas de segundos. Armar depois de ela resolver seria armar quando o
-    // turno já acabou.
+    // RN-174: o turno começa AQUI, antes do `await` — o indicador precisa
+    // estar de pé quando o `agent.status` do canal chegar.
     onTurnoIniciado();
     try {
       await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
+      // ADR 0163 (RN-578): resolver é o ACEITE. Até lá a chamada segurava o
+      // turno inteiro (97,3 s medidos numa instalação real) e o `finally`
+      // tratava "resolveu" como "o turno acabou".
+      onTurnoAceito();
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
+      onTurnoTerminado();
       showToast({
         title: mensagemDaApi(erro, t('perguntas.erroEnviar')),
         tone: 'danger',
       });
     } finally {
       setEnviando(false);
-      // Mesma rede de segurança de `handleSend`/`handleReadiness`: resolver
-      // esta chamada é sinal de fim de turno tão confiável quanto o
-      // `agent.done` do canal, e `finalizarTurnoDoAgente` é idempotente.
-      onTurnoTerminado();
     }
   }
 

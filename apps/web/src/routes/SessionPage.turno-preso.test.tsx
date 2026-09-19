@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
@@ -19,17 +19,19 @@ import i18n from '../lib/i18n';
  * persistido chega por outra via) e o composer/indicador de "digitando" nunca
  * voltam ao normal.
  *
- * `sendAgentMessage` (POST .../agents/:agent/message) só RESOLVE depois que o
- * engine termina o turno inteiro (`GenServer.call` síncrono no
- * `CriativoServer.user_message/2`, com timeout de 120s) — é sinal de
- * conclusão tão confiável quanto `agent.done`, e a correção usa isso como
- * rede de segurança. Este teste simula exatamente o cenário em que o canal
- * NUNCA entrega `onAgentDone` e confirma que o estado se reconcilia mesmo
- * assim.
+ * Desde o ADR 0163 (RN-578) `sendAgentMessage` resolve no ACEITE — o turno
+ * segue no engine —, então "a chamada resolveu" deixou de ser sinal de fim
+ * de turno (era a rede de segurança até aqui). A rede passou a ser a leitura
+ * da cauda do log: o `agent.status` persistido mais recente do agente. Este
+ * teste simula o canal que NUNCA entrega `onAgentDone` e prova as duas
+ * metades: resolver NÃO libera a tela enquanto o log diz `working`, e o log
+ * dizendo `idle` libera.
  */
 
 const getSession = vi.fn();
 const sendAgentMessage = vi.fn();
+/** A cauda do log que a rede de segurança lê (ADR 0163). */
+const cauda = vi.fn();
 /** Handlers que `connectSessionHeartbeat` recebeu — o teste nunca chama
  *  `onAgentDone` a partir daqui, simulando o broadcast perdido. */
 let canalHandlers: SessionChannelHandlers | undefined;
@@ -95,6 +97,7 @@ vi.mock('../lib/api-client', () => ({
   confirmReadiness: vi.fn(),
   denyAction: vi.fn(),
   sendAgentMessage: (...args: unknown[]) => sendAgentMessage(...args),
+  listSessionEvents: (...args: unknown[]) => cauda(...args),
   setSessionModelBinding: vi.fn(),
   startAgent: vi.fn(),
   transitionSession: vi.fn(),
@@ -157,15 +160,29 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
+const STATUS = (seq: number, status: string) => ({
+  id: `st-${seq}`,
+  seq,
+  type: 'agent.status',
+  actor: { kind: 'agent', id: 'criativo' },
+  payload: { status },
+  createdAt: '2026-08-10T12:00:02.000Z',
+});
+
 describe('SessionPage — turno preso quando o canal perde o agent.done', () => {
-  it('caminho feliz: sendAgentMessage resolver reconcilia streaming/otimista mesmo sem onAgentDone', async () => {
-    let resolverEnvio: () => void = () => {};
-    sendAgentMessage.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolverEnvio = () => resolve();
-        }),
-    );
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('caminho feliz: aceito, a tela segue o log — working segura, idle libera, sem onAgentDone', async () => {
+    // ADR 0163: o aceite volta na hora.
+    sendAgentMessage.mockResolvedValue({ ok: true });
+    // O `working` do turno novo já está gravado quando o aceite volta.
+    cauda.mockResolvedValue({ items: [STATUS(3, 'working')], nextCursor: null });
 
     montar();
 
@@ -175,23 +192,29 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     fireEvent.change(campo, { target: { value: 'Quero uma API que responda oi' } });
     fireEvent.keyDown(campo, { key: 'Enter' });
 
-    // A bolha otimista aparece, e só UMA vez — nada de duplicata antes mesmo
-    // do turno terminar.
+    // A bolha otimista aparece, e só UMA vez.
     expect(
       await screen.findAllByText('Quero uma API que responda oi'),
     ).toHaveLength(1);
+    await waitFor(() => expect(cauda).toHaveBeenCalled());
 
-    // O composer fica desabilitado (streaming) enquanto o turno está em
-    // curso — sinal isolado do `draft` vazio, que também desabilitaria o
-    // botão "Enviar".
+    // A chamada JÁ resolveu, e o composer continua desabilitado: resolver é
+    // o aceite, não o fim do turno. Até o ADR 0163 esta era a linha que
+    // liberava a tela.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
     expect(campo).toBeDisabled();
 
     // O canal registrou os handlers, mas o teste NUNCA chama onAgentDone —
     // simula o broadcast perdido (join tardio, ticket expirado, etc.).
     expect(canalHandlers?.onAgentDone).toBeTypeOf('function');
 
-    // O evento persistido chega por outra via (poll independente do canal) —
-    // simulado atualizando o que `useSessionEvents` devolve.
+    // O turno termina: o log ganha o `idle` e o evento persistido.
+    cauda.mockResolvedValue({
+      items: [STATUS(3, 'working'), STATUS(5, 'idle')],
+      nextCursor: null,
+    });
     eventos.mockReturnValue({
       items: [
         {
@@ -213,19 +236,40 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
       ],
     });
 
-    // A REST call resolve — é o sinal de fim de turno que a correção usa
-    // como rede de segurança, já que onAgentDone nunca chegou.
-    resolverEnvio();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
 
-    // `streaming` volta a `false`.
+    // `streaming` volta a `false` pela leitura do log.
     await waitFor(() => expect(campo).not.toBeDisabled());
 
-    // Sem a correção, a bolha otimista ficaria presa e o evento persistido
-    // (trazido pelo refetch que a correção também dispara) apareceria ao
-    // lado dela — duas bolhas com o mesmo texto. Com a correção, só uma.
+    // Sem duplicata: a bolha otimista saiu quando o persistido chegou.
     expect(
       await screen.findAllByText('Quero uma API que responda oi'),
     ).toHaveLength(1);
+  });
+
+  it('CASO DE FALHA: 409 com o agente ainda em turno mostra a frase do engine', async () => {
+    sendAgentMessage.mockRejectedValue(
+      Object.assign(new Error('409'), {
+        status: 409,
+        body: {
+          message:
+            'O agente ainda está no meio de um turno — a mensagem ficou registrada, mas não foi lida.',
+        },
+      }),
+    );
+
+    montar();
+
+    const campo = await screen.findByPlaceholderText(
+      'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
+    );
+    fireEvent.change(campo, { target: { value: 'Continue' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+
+    expect(await screen.findByText(/mas não foi lida/)).toBeInTheDocument();
+    await waitFor(() => expect(campo).not.toBeDisabled());
   });
 
   it('CASO DE FALHA: erro no envio limpa o estado otimista e avisa o usuário', async () => {
