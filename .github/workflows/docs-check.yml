@@ -149,13 +149,19 @@ jobs:
       # No mesmo job, o passo seguinte lê o corpo novo por `PR_BODY_FILE`, na
       # ordem, sem corrida e sem redisparo.
       #
-      # Não roda em `edited`: se um humano apagou a linha do bot, a vontade dele
-      # manda. O token de PR do Dependabot escreve porque este workflow declara
+      # Em `edited`, só avalia quando QUEM editou é o próprio bot (AT-100): o
+      # `@dependabot rebase` emite `synchronize` e `edited` no mesmo segundo, o
+      # `concurrency` cancela um e o sobrevivente pode ser o `edited` — que, com
+      # o passo pulado, deixava o drift ler um corpo sem a linha (#578, runs
+      # 35412983999/35412984299). Se um HUMANO apagou a linha do bot, a vontade
+      # dele manda: a decisão (`editorPodeAvaliar`, testada) recusa em `edited`
+      # com sender que não é o bot. Sem laço: a escrita do passo usa o
+      # `GITHUB_TOKEN`, que não dispara `edited` (AT-094). O token de PR do Dependabot escreve porque este workflow declara
       # `pull-requests: write` (evento do Dependabot respeita `permissions:`);
       # se a escrita falhar, nenhum arquivo é gravado e o drift usa o corpo do
       # evento — falha FECHADO, o PR fica bloqueado como antes.
       - name: Justificativa do bot para troca de pin (Dependabot)
-        if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.action != 'edited'
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -164,6 +170,8 @@ jobs:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_AUTOR: ${{ github.event.pull_request.user.login }}
           PR_TIPO_DO_AUTOR: ${{ github.event.pull_request.user.type }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_SENDER: ${{ github.event.sender.login }}
           BASE_REF: ${{ github.base_ref }}
           CORPO_NOVO: ${{ runner.temp }}/corpo-do-pr.md
         run: |

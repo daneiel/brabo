@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci**: o `@dependabot rebase` **deixa de cancelar a justificativa do bot**
+  (AT-100). O rebase emite `synchronize` e `edited` no mesmo segundo; o
+  `concurrency` cancela um, e quando o sobrevivente era o `edited` o passo que
+  escreve `docs-not-needed:` era pulado e o drift reprovava (#578, runs
+  `35412983999`/`35412984299`). O passo agora também avalia em `edited` quando
+  o editor é o próprio Dependabot (`editorPodeAvaliar`, testada); edição de
+  humano continua sem avaliar, e autor humano continua sem justificativa.
+  Falha fechado, sem laço (o token do workflow não dispara `edited`).
+
 - **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
   quando era para outro agente** (AT-098). A última cláusula da rota interna
   de mensagem não olhava o agente, então o que fosse escrito para o `infra` —

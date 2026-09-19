@@ -249,6 +249,17 @@ Cross-references `git diff --name-only <base>...HEAD` with the map.
 For every triggered rule whose document wasn't touched: `block` fails
 it, `warn` comments.
 
+For a Dependabot PR whose diff is only action-pin bumps, a step just before the
+drift (`scripts/ci/dependabot-justifica-pin.ts`) writes the `docs-not-needed:`
+line into the body, in the same job so it writes and reads in one execution.
+The workflow listens to `edited`, and `@dependabot rebase` emits `synchronize`
+and `edited` together; `concurrency` cancels one, so the surviving run may be
+the `edited` one. Hence the step also evaluates on `edited` **when the editor is
+the bot** (AT-100), and never when it is a human (their deletion of the line
+wins). It can't loop: body edits made with the workflow token don't fire
+`edited`. Failure stays closed: if the write fails, the drift reads the event
+body and the PR stays blocked.
+
 ### `audit.mjs` — the monthly audit
 
 The drift check catches a doc that went **wrong** in a PR. The audit
