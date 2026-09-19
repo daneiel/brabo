@@ -248,6 +248,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `GITHUB_TOKEN` não dispara `edited`, e re-executar o job reusa o corpo
   antigo do evento (medido na run 34898913072).
 
+- **docs**: o `pnpm docs:check` passa a **conferir as refs `caminho:linha` das
+  RNs que nomeiam o símbolo** daquela linha — `` `install.sh:1463` (`fechar_a_instalacao`) ``
+  e a continuação `` `:1165` (`post_interno`) `` — contra o código, numa janela
+  de ±3 linhas, nos três arquivos de RN. Em **warn**: lista o que não bate, com
+  a linha mais próxima onde o símbolo aparece, e não reprova; só reprova se o
+  padrão extrair ZERO refs (`CEGO`). Medido em 18/09: 592 refs `…:N`, 187 casam
+  o padrão, 116 batiam e 71 não. O bullet de código da
+  [RN-547](docs/business-rules.md#rn-547) foi relido pelo símbolo e corrigido
+  (`fechar_a_instalacao` em `:966` → `:1463`, `post_interno` em `:682` →
+  `:1165`, e os demais do mesmo bullet); ficam 63, listados pelo check. Padrão,
+  janela e critério para `block` em
+  `docs/explanation/documentation-workflow.md`.
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades

@@ -102,6 +102,87 @@ the source of truth is the ADR directory, `verificarVersaoAnunciada`
 when it's the CHANGELOG's latest release — or a function of its own
 next to them, when it's neither.
 
+### Line references with a symbol
+
+An RN cites code by `path:line`, and a line number goes stale every
+time someone edits the file. RN-547 cited `fechar_a_instalacao` at
+`install.sh:966` and `post_interno` at `:682`. By 2026-09-17 they were
+at `:1107` and `:809`, and by 2026-09-18 at `:1463` and `:1165`. A line
+number can't be generated, and in general it can't be verified either,
+because `apps/api/src/foo.ts:40` alone doesn't say what should be
+there. When the RN also **names the symbol** next to the line, though,
+the line *can* be verified. That's the only case `generate.mjs` checks
+(`verificarRefsComSimbolo`, with its logic in
+`scripts/docs/refs-com-simbolo.mjs`, tested).
+
+**The pattern is narrow on purpose.** A noisy check gets switched off in
+its first month. It reads the three RN files (`business-rules.md`,
+`business-rules/custo.md`, `business-rules/autenticacao.md`) and takes
+only these two forms:
+
+```
+`<path>:<N>` (`<symbol>`     explicit reference
+`:<N>` (`<symbol>`           continuation — inherits the path
+```
+
+- The symbol has to come **right after** the reference, opening a
+  parenthesis and in backticks. Only whitespace may sit between them,
+  including a line break.
+- The symbol has to be an **identifier**: `fechar_a_instalacao`,
+  `join/3`, `git_dir?`, `Engine.Runners.RunnerReadiness`, `decide()`.
+  `MARCADOR_SCHEMA=3`, a phrase or a path is not a symbol, and gets
+  skipped.
+- **Ambiguous pairs are skipped**: `:640`/`:647` (`a`/`b`), or two
+  references before one symbol. The check can't know which symbol goes
+  with which line.
+- A continuation inherits the last explicit path **in the same list
+  item**. A blank line or a new `- ` ends the item.
+- The path resolves from the repo root. If it isn't there, the check
+  uses the **single** tracked file whose path ends with it. If no file
+  matches, or more than one does, the reference is counted apart as
+  unresolved.
+
+A reference **matches** when the symbol, or its last `.` segment, shows
+up as a whole word within **±3 lines** of `N`. The window allows for a
+citation that points at the docblock rather than the signature. It stays
+small because drift moves by dozens or hundreds of lines. When a
+reference doesn't match, the output names the nearest line where the
+symbol does appear. That line is a hint, not a fix, because the nearest
+occurrence may be a call rather than the definition.
+
+**Measured on 2026-09-18**, over every `path:N` in the three files:
+
+| | count |
+|---|---|
+| `…:N` references in total | 592 |
+| match the pattern | 187 |
+| correct (within ±3) | 116 |
+| wrong | 71 |
+| unresolved path | 0 |
+
+A spot check of the 71 found no false positives: each reference it
+covered was real drift, a rename, or a symbol that moved to another
+file. Widening the window to ±5 would clear only three of them. Nine are
+between 4 and 10 lines off, and the other 62 are further. The RN-547 code bullet was
+re-read by symbol and fixed in the same PR, which leaves **63**. They
+are too many to fix one by one inside this change, and the nearest
+occurrence is not always the definition. The list is what `pnpm
+docs:check` prints.
+
+**Severity: `warn`.** It reports and doesn't fail, because a `block`
+would stop every PR that touches an RN file over debt someone else left.
+There is one exception, the house rule: if the check extracts **zero**
+references, that is `CEGO` and **fails**. Zero means the RN syntax
+changed or the extractor broke, and a blind check stays green forever.
+
+**When to promote it to `block`:** once the list is **empty**, and
+after **four consecutive weeks** of `docs:check` on `dev` with no new
+wrong references in RNs touched during those weeks. At that point every
+new wrong reference is the current PR's fault, and the PR can fix it.
+Promote it earlier and it charges each PR for someone else's debt. If
+the pattern shows a real false positive before then, narrow the
+pattern. Don't widen the window.
+
 ## The pieces
 
 ```mermaid
