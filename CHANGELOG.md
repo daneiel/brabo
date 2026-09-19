@@ -36,6 +36,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `DevLeadTools.run_assessment/2` passa a pedir os 200 mais recentes, então o
   plano de teste emitido depois do 200º evento é encontrado em vez de pedir
   QA-estratégia de novo.
+- **deploy**: o `bootstrap.sh` **diz o que viu quando o pod `seed-smoke` não
+  chega a `Succeeded`** (AT-176). A fase durava sempre 3m00s (o
+  `--timeout=180s` estourando, escondido por `|| true`); agora a saída registra
+  quanto o wait levou e, se ele falhar, a fase do pod, o estado do contêiner e o
+  fim do log. É só instrumentação: a hipótese de o seed não terminar por falta
+  de `process.exit` NÃO se confirmou localmente (termina sozinho, exit 0, em
+  ~2s), e o `|| true` fica, com o motivo escrito no script. A economia é a
+  confirmar em CI.
+
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
   aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
