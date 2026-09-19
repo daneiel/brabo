@@ -19,6 +19,7 @@ import {
   mensagemDaApi,
   requestParallelization,
   getAgentModelBinding,
+  getRepository,
   listAgentAutonomy,
   listModels,
   rearmDevAgent,
@@ -352,6 +353,19 @@ function ExecutionSection({
 
   const activated = executionActivated;
 
+  // RN-582 (ADR 0165): sem repositório, `POST .../execution/activate` responde
+  // 409 — os dev agents trabalham em worktrees dele. A tela tira o CONTROLE e
+  // diz o motivo uma vez, em texto (RN-102/ADR 0064). Mesma `queryKey` que
+  // `ProjectPage`, `CodeShell` e Configurações já usam: nenhuma requisição a
+  // mais. Só a ausência CONFIRMADA tranca — carregando ou com erro o botão
+  // fica como estava ("não sei" não vira "não tem"), e o backend recusa de
+  // qualquer forma, com a frase que nomeia o handoff que falta.
+  const repositorioQuery = useQuery({
+    queryKey: ['repository', projectId],
+    queryFn: () => getRepository(projectId),
+  });
+  const semRepositorio = repositorioQuery.isSuccess && repositorioQuery.data === null;
+
   // Dev agents a partir do event log: módulo/branch/task (dev.started/
   // dev.working) + iteração/custo ao vivo do ÚLTIMO agent.response do agente
   // (emitido pelo ToolLoop a cada turno de LLM). A redução é pura e vive em
@@ -473,11 +487,27 @@ function ExecutionSection({
       ) : !activated ? (
         <div className={styles.execIntro}>
           <div className={styles.sectionSub}>
-            {hasModuleMap
-              ? t('executionSection.introReady')
-              : t('executionSection.introNeedsModuleMap')}
+            {!hasModuleMap
+              ? t('executionSection.introNeedsModuleMap')
+              : semRepositorio
+                ? t('executionSection.introNeedsRepository')
+                : t('executionSection.introReady')}
           </div>
-          <Button variant="primary" onClick={handleActivate} disabled={!hasModuleMap}>
+          {hasModuleMap && semRepositorio && (
+            <Link
+              to="/projects/$projectId/provisioning"
+              params={{ projectId }}
+              search={{ provider: 'local' }}
+              data-testid="provisionar-repositorio"
+            >
+              {t('executionSection.provisionNow')}
+            </Link>
+          )}
+          <Button
+            variant="primary"
+            onClick={handleActivate}
+            disabled={!hasModuleMap || semRepositorio}
+          >
             {t('executionSection.activate')}
           </Button>
         </div>

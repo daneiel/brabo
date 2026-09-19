@@ -10908,6 +10908,9 @@ Isso deixa de ser borda e passa a ser o estado normal do começo de um projeto.
 **O gatilho é a próxima entrega**, e sem ele um projeto criado hoje ficaria sem
 repositório para sempre: o aceite do handoff Arquiteto → Dev Lead passa a
 provisionar `local`, o único provider que não pede credencial.
+Desde a [RN-582](#rn-582), esse gatilho é o aceite do handoff **ao Arquiteto**
+(o do Dev Lead ficou como segunda porta), e ativar a execução sem repositório é
+recusado.
 
 O aviso "no plano gratuito do GitHub, repositório privado não aceita proteção de
 branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
@@ -10931,6 +10934,12 @@ há mais provider escolhido.
 ## O repositório nasce no handoff para o Dev Lead (RN-522)
 
 ### RN-522 — O repositório é provisionado ao ACEITAR o handoff Arquiteto → Dev Lead, sempre `local`, e a falha nunca derruba o aceite {#rn-522}
+
+> **Revisada pela [RN-582](#rn-582) ([ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)):**
+> o GATILHO passou a ser o aceite do handoff ao **Arquiteto**. O aceite ao Dev
+> Lead descrito abaixo continua provisionando, como segunda porta idempotente,
+> e o resto desta regra (sempre `local`, falha como evento, adotado não é
+> falha) segue valendo. O texto abaixo é o da decisão original.
 
 A [RN-541](#rn-541) tirou o provisionamento da criação e declarou que o gatilho
 viria em seguida. Este é o gatilho — e sem ele um projeto criado ficaria sem
@@ -13953,17 +13962,22 @@ o rastro dele continua sendo a própria `proposed_action`.
 profundidade: a recusa do agente é uma camada ANTES, nunca no lugar.
 
 **O que esta regra NÃO decide:** ONDE o repositório deveria nascer. O texto da
-recusa descreve o gatilho de HOJE (o aceite do handoff ao Dev Lead, RN-522); se
-o gatilho mudar, é a AT-092, com decisão do mantenedor pendente — e o texto
-muda junto. A `open_infra_pr` também é afetada no projeto novo por outro
+recusa descreve o gatilho vigente, e ele MUDOU: a AT-092 foi decidida na
+[RN-582](#rn-582) (ADR 0165) — o repositório nasce no aceite do handoff AO
+Arquiteto, antes do primeiro turno dele, com o aceite ao Dev Lead como segunda
+porta. O texto mudou junto, como esta regra prometia: ele nomeia o gatilho
+novo e, como o Arquiteto só trabalha depois desse aceite, diz que a recusa
+significa provisionamento FALHADO (o `repository.provision_failed`) ou projeto
+anterior à regra, com as duas saídas. Deixou de ser o caso comum; a recusa
+continua, porque essas duas situações existem. A `open_infra_pr` também é afetada no projeto novo por outro
 caminho (o Infra Lead é acionado pelo handoff do Arquiteto, que pode acontecer
 antes do handoff ao Dev Lead); esta regra só faz a proposta não nascer, não
 reordena os handoffs.
 
-- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:69`
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:74`
   (`recusa_de_pr_sem_repositorio/2` — o predicado e o texto, únicos para as
-  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:52` (a
-  recusa antes de propor), `:59` (o `tool.result` com o motivo);
+  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
+  recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
   `propose_infra_pr` perguntando antes do HALT), `:301`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
@@ -14300,3 +14314,113 @@ nova.
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
 - **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
   8h e causa própria; sessão encerrada recusa conversa, nomeado)
+
+## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
+
+### RN-582 — O aceite do handoff ao Arquiteto provisiona o repositório; o aceite ao Dev Lead é a segunda porta, idempotente; e `execution/activate` sem repositório é 409 nomeado {#rn-582}
+
+Revisa o GATILHO da [RN-522](#rn-522), que cumpria a promessa da
+[RN-541](#rn-541). O mecanismo não muda — o mesmo `ProvisionRepositoryUseCase`,
+chamado pelo mesmo `AcceptHandoffUseCase`, sempre `local`, com a falha virando
+`repository.provision_failed` e nunca derrubando o aceite. Decisão estrutural
+no [ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md).
+
+**O que a instalação real mostrou (AT-092, v6.1.0, 2026-09-14).** O Arquiteto
+propôs `open_adr_pr` três vezes antes de o repositório existir; os handoffs a
+`infra` e `dev-lead` foram oferecidos juntos, só o de `infra` foi aceito, e
+`POST /projects/:id/execution/activate` respondeu **201**. As tabelas
+`project_repositories`, `project_git_connections` e `repo_bootstraps` ficaram
+vazias — o projeto sem repositório para sempre. Dois defeitos: o gatilho vinha
+DEPOIS de quem precisa do repositório (Arquiteto e Infra Lead escrevem nele
+antes do Dev Lead), e o único gatilho era PULÁVEL (ativar a execução não exige
+o aceite ao Dev Lead).
+
+**1. O gatilho é o aceite do handoff ao `arquiteto`.** O Arquiteto só é ativado
+por handoff `accepted` endereçado a ele (`canActivateAgent`), e esse handoff
+nasce do PO (`offer_handoff(to_agent: "arquiteto")`) ou do usuário (handoff
+manual) — as duas portas passam pelo mesmo aceite. O provisionamento roda
+ANTES de `activateAgent`: o Arquiteto acorda num projeto que já tem onde
+escrever. Consequência: o Infra Lead, ativado por handoff DO Arquiteto, nunca
+mais acorda sem repositório.
+
+**2. O aceite ao `dev-lead` continua provisionando, como SEGUNDA PORTA.** É a
+saída do projeto que passou pelo Arquiteto antes desta regra (o `exp001` da
+AT-092: Arquiteto aceito, Dev Lead `offered`) e a retomada natural de um
+provisionamento que falhou no aceite ao Arquiteto. Com o repositório `created`
+já de pé, a segunda chamada não cria nada — nem repositório, nem sessão, nem
+linha de bootstrap, nem branch, nem commit —, e isso está provado pelas DUAS
+portas em sequência contra o Postgres e o `LocalGitProvider` de verdade.
+
+**3. `execution/activate` sem repositório é RECUSADO com 409**, logo depois da
+checagem de `module_map` e ANTES de qualquer efeito (orçamento persistido,
+`permissions.json`, sessão, engine, evento). A frase é escolhida pelo estado dos
+handoffs do projeto, lidos por `HandoffRepository.findByProject` (de todas as
+sessões — o handoff ao Arquiteto mora na do PO): handoff ao Arquiteto
+`offered` → aceite-o; senão ao Dev Lead `offered` → aceite-o; senão algum dos
+dois já `accepted` → o provisionamento não deixou repositório, veja o
+`repository.provision_failed` e use a página de provisionamento
+(`/projects/:id/provisioning?provider=local`); senão → nenhum handoff ao
+Arquiteto foi aceito. Um handoff oferecido a OUTRO agente nunca vira instrução
+de aceite (aceitar a Infra não provisiona nada). Repositório ADOTADO conta como
+repositório. Recusar e não provisionar aqui é decisão: provisionar dentro da
+ativação esconderia um efeito de git, e os agentes anteriores a ela seguiriam
+sem repositório.
+
+**4. A tela tira o controle e diz o motivo uma vez, em texto** (a régua da
+[RN-102](business-rules/custo.md#rn-102) e do [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)). Na seção de Execução da Visão Geral, com o
+`GET .../git/repository` respondendo `null` CONFIRMADO, "Ativar execução" fica
+inerte no lugar, o texto diz onde o repositório nasce, e há um link para
+provisionar. No card do handoff ao Dev Lead, dentro da sessão, o atalho
+"Ativar execução" sai e o card diz que aceitar aquele handoff provisiona o
+repositório. Carregando ou com erro, nada tranca — "não sei" não vira "não
+tem", e o backend recusa de qualquer forma. Aceitar um handoff invalida a
+consulta do repositório, porque o aceite pode tê-lo criado.
+
+**Consequência declarada (ADR 0165):** a sessão `git-bootstrap` que o
+provisionamento abre passa a nascer no MEIO da fase do Arquiteto, e é a
+"sessão mais recente" do projeto (a Visão Geral e o resumo do workspace escolhem
+por `createdAt`) até a próxima nascer. A tela da sessão de chat não é afetada.
+Não decidido aqui.
+
+**Adjacência com a [RN-581](#rn-581), declarada e não corrigida:** aceitar um
+handoff numa sessão ENCERRADA é 409 `sessao_encerrada`, checado ANTES de o
+handoff virar `accepted` — então nada é provisionado pela metade. Mas a frase
+da recusa da ativação lê os handoffs do projeto sem olhar o estado da sessão
+de cada um, e pode mandar "aceitar o handoff ao Arquiteto, que está oferecido"
+quando esse handoff mora numa sessão já fechada; o caminho que resolve ali é a
+página de provisionamento. Os eventos que o provisionamento grava não caem na
+recusa: o ator é `system` e o destino é a sessão `git-bootstrap`, recém-criada.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:54`
+  (`AGENTES_QUE_PROVISIONAM_O_REPOSITORIO`, gatilho e segunda porta) e `:141`
+  (o ramo, antes de `activateAgent`);
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
+  (a recusa, antes de qualquer efeito);
+  `apps/api/src/domain/execution/repositorio-para-executar.ts:37`
+  (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
+  também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
+  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;
+  `apps/web/src/routes/SessionPage.tsx:318`, `:964` e `:1616`;
+  `apps/engine/lib/engine/projects/project_repository.ex:74` (o texto da recusa
+  da [RN-577](#rn-577), que nomeava o gatilho antigo e muda junto)
+- **Teste:**
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts`
+  ("aceitar para o Arquiteto provisiona `local` com o slug do projeto", "o
+  repositório nasce ANTES de o Arquiteto acordar", "aceitar para o Dev Lead
+  continua provisionando `local` (segunda porta)");
+  `apps/api/test/application/use-cases/agents/accept-handoff-provisiona-uma-vez.spec.ts`
+  (as duas portas contra o banco: "UM createRepo, UMA linha, nenhuma falha", e
+  "o exp001: Arquiteto aceito SEM repositório, e a segunda porta provisiona");
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts:723`
+  ("sem repositório: 409, e NENHUM efeito antes da recusa", "a frase nomeia o
+  handoff ao Dev Lead pendente — a saída do exp001", "repositório ADOTADO conta
+  como repositório"); `apps/api/test/domain/execution/repositorio-para-executar.spec.ts`;
+  `apps/api/test/infrastructure/persistence/handoff-por-projeto.repository.spec.ts`;
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx:409`, `:427` e `:440`;
+  `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx:610`;
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:134` e
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:520` (a recusa
+  nomeia o gatilho novo)
+- **Origem:** AT-092 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
+  mantenedor em 2026-09-18

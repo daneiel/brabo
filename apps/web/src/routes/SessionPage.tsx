@@ -12,6 +12,7 @@ import {
   confirmReadiness,
   denyAction,
   getProject,
+  getRepository,
   getSession,
   getSessionBudget,
   getSessionModelBinding,
@@ -306,6 +307,15 @@ export function SessionPage({
   const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
+  // RN-582 (ADR 0165): o atalho "Ativar execução" do card do handoff ao Dev
+  // Lead só existe com repositório — sem ele a api responde 409. Só a
+  // ausência CONFIRMADA esconde o atalho ("não sei" não vira "não tem"), e a
+  // mesma `queryKey` das outras telas evita requisição a mais.
+  const repositorioQuery = useQuery({
+    queryKey: ['repository', projectId],
+    queryFn: () => getRepository(projectId),
+  });
+  const semRepositorio = repositorioQuery.isSuccess && repositorioQuery.data === null;
   const { data: session } = useQuery({
     queryKey: ['session', projectId, sessionId],
     queryFn: () => getSession(projectId, sessionId),
@@ -947,14 +957,23 @@ export function SessionPage({
                 <>
                   {/* Atalho pra quem já sabe o que quer (RN-137): ativa a
                       execução direto daqui, sem passar pela conversa com o
-                      Dev Lead — mesma `activateExecution` da Visão Geral. */}
-                  <Button
-                    variant="primary"
-                    loading={ativandoExecucao}
-                    onClick={handleActivateExecution}
-                  >
-                    {t('handoff.ativarExecucao')}
-                  </Button>
+                      Dev Lead — mesma `activateExecution` da Visão Geral.
+                      Sem repositório ele SAI (RN-582) e o card diz por quê:
+                      o aceite ao lado é a segunda porta que o provisiona, e
+                      é o gesto que resolve — ativar daria 409. */}
+                  {semRepositorio ? (
+                    <span className={styles.timelineLink} data-testid="sem-repositorio-no-handoff">
+                      {t('handoff.semRepositorio')}
+                    </span>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      loading={ativandoExecucao}
+                      onClick={handleActivateExecution}
+                    >
+                      {t('handoff.ativarExecucao')}
+                    </Button>
+                  )}
                   <Link
                     to="/projects/$projectId"
                     params={{ projectId }}
@@ -1592,6 +1611,9 @@ export function SessionPage({
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      // O aceite ao Arquiteto (e ao Dev Lead, segunda porta) provisiona o
+      // repositório (RN-582) — as telas que perguntam por ele precisam saber.
+      queryClient.invalidateQueries({ queryKey: ['repository', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
       // RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já
       // pode ativar a execução (mesma exigência do backend em

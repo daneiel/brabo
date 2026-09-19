@@ -350,7 +350,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     // Provider e credencial são do caminho de ADOÇÃO, e só dele (RN-541).
     //
     // Criar um projeto deixou de provisionar repositório: o git nasce quando o
-    // Arquiteto passa o handoff ao Dev Lead, e nasce `local`, que é o único
+    // handoff ao Arquiteto é aceito (RN-582, ADR 0165 — antes era o do Dev
+    // Lead, RN-522), e nasce `local`, que é o único
     // provider que não pede credencial nenhuma. Perguntar "onde hospedar" na
     // criação seria perguntar por uma decisão que a tela não vai usar — e
     // cobrar um PAT para um repositório que ninguém vai criar agora.

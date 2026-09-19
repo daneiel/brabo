@@ -55,6 +55,7 @@ const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
 const activateExecutionMock = vi.fn();
+const getRepository = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -74,6 +75,7 @@ vi.mock('../lib/api-client', async () => {
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
     activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
+    getRepository: (...args: unknown[]) => getRepository(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -242,6 +244,9 @@ beforeEach(() => {
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
   activateExecutionMock.mockResolvedValue({ sessionId: 'sess-1', modules: [] });
+  // O estado normal de um projeto que chega à seção de Execução: repositório
+  // provisionado no aceite ao Arquiteto (RN-582). Os casos sem ele sobrescrevem.
+  getRepository.mockResolvedValue({ id: 'repo-1', projectId: 'proj-1', provider: 'local' });
 });
 
 /**
@@ -392,5 +397,56 @@ describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () 
     expect(
       await screen.findByText('Não foi possível ativar a execução'),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-582 (ADR 0165) — `execution/activate` sem repositório é 409. A tela tira
+ * o CONTROLE e diz o motivo uma vez, em texto (RN-102/ADR 0064), e nunca
+ * transforma "não sei" em "não tem".
+ */
+describe('ProjectOverviewTab — sem repositório, não se oferece ativar (RN-582)', () => {
+  it('repositório ausente CONFIRMADO: botão inerte, motivo em texto e o caminho para provisionar', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockResolvedValue(null);
+
+    montar();
+
+    expect(
+      await screen.findByText(/O projeto ainda não tem repositório/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Provisionar o repositório agora')).toBeInTheDocument();
+    const botao = screen.getByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeDisabled();
+    await userEvent.click(botao);
+    expect(activateExecutionMock).not.toHaveBeenCalled();
+  });
+
+  it('repositório ainda carregando: o botão fica como estava — "não sei" não vira "não tem"', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockReturnValue(new Promise(() => {}));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeEnabled();
+    expect(screen.queryByText(/O projeto ainda não tem repositório/)).not.toBeInTheDocument();
+  });
+
+  it('consulta do repositório FALHOU: o botão fica como estava, e o backend decide', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockRejectedValue(new ApiError(500, { message: 'fora' }));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeEnabled();
+    expect(screen.queryByText(/O projeto ainda não tem repositório/)).not.toBeInTheDocument();
   });
 });
