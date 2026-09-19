@@ -398,7 +398,7 @@ It will complain unfairly sometimes. A refactor that renames internal
 variables triggers `dominio-e-regras` without changing any business
 rule. That's expected: the map works by file path, not by semantics.
 
-There are **two** ways out, and both require a human explaining why:
+There are **two** ways out, and both require someone explaining why:
 
 ```
 PR label:      docs-not-needed
@@ -409,6 +409,15 @@ Use it without guilt when it applies. The escape hatch exists **on
 purpose**: without a legitimate way out, the habit that forms is to
 cheat — a cosmetic commit to the doc just to make the check pass. Then
 the mechanism starts lying, which is worse than not existing.
+
+**One class of PR gets the body line from a bot**, and only one: a Dependabot
+PR whose diff is nothing but action pin changes (the `uses:` SHA and its
+version comment). A step right before the drift writes the line, marked as the
+bot's, and the drift still reads only the line — see
+[A pin bump justifies itself](./branching-policy.md#a-pin-bump-justifies-itself).
+Because editing the body with `GITHUB_TOKEN` fires no `edited` event, and a
+re-run reuses the original payload, the drift reads the body from
+`PR_BODY_FILE` when that step rewrote it, and from the event otherwise.
 
 What's **not** okay is using the escape hatch out of haste. If you
 used it three times in the same week for the same rule, the rule is

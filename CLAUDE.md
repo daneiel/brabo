@@ -1191,6 +1191,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o destino do PR e o redundante é REDIRECIONADO, não fechado. Depois de
   redirecionar, os checks da `dev` só rodam com `@dependabot rebase` de quem
   tem escrita (evento do `GITHUB_TOKEN` não dispara workflow).
+  PR do Dependabot que SÓ troca pin de action (SHA do `uses:` + comentário de
+  versão, mesma action, mesma indentação) ganha `docs-not-needed:` escrito
+  pelo BOT, num passo do job `Drift, gerados e build` antes do drift
+  (`scripts/ci/dependabot-justifica-pin.ts`, AT-094) — autor E diff, as duas;
+  qualquer outra linha e nada é escrito. NÃO mova isso para workflow irmão: o
+  `GITHUB_TOKEN` não dispara `edited`, re-executar o job reusa o corpo ANTIGO
+  do payload (medido, run 34898913072) e `pull_request_target` só roda o
+  workflow da `main`. É por isso que o drift lê `PR_BODY_FILE` antes de
+  `PR_BODY`. A linha do bot é marcada e sai sozinha se o diff deixar de ser
+  pin; a de humano nunca é tocada.
 - Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
   (`.github/workflows/archive-merged-branch.yml`) — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico
