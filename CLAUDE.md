@@ -360,14 +360,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
   AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
   ao Dev Lead (RN-522)
-- **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
-  `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
-  engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,
-  então a leitura provável é corrida intermitente na adoção/drenagem, não
-  atraso. Declarado e NÃO corrigido: o workflow agendado existe para pegar
-  isto, e a próxima ocorrência sai com o teto esperado, a réplica de cada
-  sessão e as linhas do engine que citam a órfã. A correção é do engine, não
-  da prova — não afrouxe o teto para o verde voltar
+- **O `rollout-test` acusa sessão órfã de forma intermitente — DUAS em dez
+  rodadas** do `propriedades.yml` (BRB-009, AT-078; a última, `35448353884`,
+  com as cinco sessões no MESMO pod antigo: quatro adotadas, uma sem dono e sem
+  drenagem por 120s). Nas rodadas verdes a convergência leva 2–3s, então a
+  leitura provável é corrida na adoção/drenagem, não atraso. Declarado e NÃO
+  corrigido, e a regra do AT-078 é NENHUMA correção antes de reproduzir: o log
+  que diria o que houve morria com o pod antigo, e desde o AT-078 a prova o
+  guarda (`deploy/k8s/rollout-evidencia.sh`, artefato `rollout-evidencia`),
+  junto com o instante do scale-down do HPA — o confundidor conhecido, que
+  derruba réplicas NOVAS ~75s depois do rollout — e o veredito de a órfã ter
+  ficado sem dono ANTES ou DEPOIS dele. A correção é do engine, não da prova —
+  não afrouxe o teto, não ponha `sleep`, não mude o que conta como adotada ou
+  drenada para o verde voltar
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
