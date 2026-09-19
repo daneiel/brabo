@@ -999,6 +999,18 @@ reason in the URL.
   inactivity heartbeat, [RN-073](business-rules/custo.md#rn-073)) confirms
   there's no handoff, action, or turn hanging there. It never closes the
   execution session the call itself just activated.
+- **`GET /internal/sessions/:sessionId/pending-work` gained
+  `aguardandoUsuarioDesde`, and no route changed classification**
+  ([RN-581](business-rules.md#rn-581)). Still `engine-service`: the field
+  is the instant a conversational agent's turn ended, read from the same
+  event log the engine already writes, and it only decides how long the
+  engine keeps a session open. The same RN made the session routes that
+  append conversation (`POST .../agents/:agent/message`, the chat,
+  handoffs, `POST .../agents/:agent/start`,
+  `POST /internal/sessions/:sessionId/events`) answer **409**
+  `sessao_encerrada` on a terminal session — a refusal by STATE, after
+  the role check, never a new role. `terminationReason` on the session
+  responses gained one documented value, `conversation_idle_timeout`.
 - **`POST /projects/:projectId/execution/activate` refuses with `409` when
   the project has no repository, and the classification didn't change**
   — still `role:maintainer` ([RN-582](business-rules.md#rn-582),

@@ -153,6 +153,56 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     end
   end
 
+  # RN-581: a sessão fechou e o agente está sendo parado. Diferente de
+  # cancelar, NADA é gravado — a api recusaria (sessão encerrada não aceita
+  # conversa) e o canal já foi embora. A task é `async_nolink`: sem isto ela
+  # sobreviveria ao servidor e seguiria chamando o modelo.
+  describe "abandonar/1 e terminate/2 (sessão encerrada)" do
+    test "abandonar mata a task, NÃO responde de novo e NÃO grava nem transmite nada", %{
+      state: state
+    } do
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+      # ADR 0163: o `from` já recebeu `:ok` no aceite e não mora no state.
+      {state_with_task, {_pid, tag}} = turno_pendurado(state)
+      refute Map.has_key?(state_with_task.turno_assincrono, :from)
+      task_pid = state_with_task.turno_assincrono.task.pid
+      # O que o INÍCIO do turno gravou/transmitiu (agent.status working) não é
+      # o assunto — o que se afirma é que abandonar não acrescenta nada.
+      esvaziar_caixa()
+
+      abandonado = TurnoAssincrono.abandonar(state_with_task)
+
+      refute Process.alive?(task_pid)
+      assert abandonado.turno_assincrono == nil
+      refute_received {^tag, _}
+      refute_received {:event_appended, _, _, _}
+      refute_received %Phoenix.Socket.Broadcast{}
+    end
+
+    test "abandonar sem turno é no-op", %{state: state} do
+      assert TurnoAssincrono.abandonar(state) == state
+    end
+
+    defp esvaziar_caixa do
+      receive do
+        _ -> esvaziar_caixa()
+      after
+        0 -> :ok
+      end
+    end
+
+    test "o terminate/2 do servidor abandona o turno em curso", %{state: state} do
+      {state_with_task, _from} = turno_pendurado(state)
+      task_pid = state_with_task.turno_assincrono.task.pid
+      esvaziar_caixa()
+
+      assert :ok = CriativoServer.terminate({:shutdown, :sessao_encerrada}, state_with_task)
+
+      refute Process.alive?(task_pid)
+      refute_received {:event_appended, _, _, _}
+    end
+  end
+
   describe "cancelar/1 sem turno em curso é NO-OP idempotente" do
     test "não muda o state e não manda mensagem nenhuma", %{state: state} do
       assert state.turno_assincrono == nil

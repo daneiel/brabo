@@ -134,6 +134,14 @@ defmodule Engine.Sessions.Monitor do
   # o hop implícito active->closing que a api resolve do lado dela), não
   # "closed_abnormally" como as outras causas.
   defp classify({:shutdown, :heartbeat_timeout}), do: {"heartbeat_timeout", "closed"}
+
+  # RN-581: conversa ociosa além do teto é o MESMO tipo de fim — ninguém do
+  # outro lado, só que medido pela conversa e não pela aba —, e fecha do mesmo
+  # jeito, `closed`. A causa é que muda, e é ela que separa os dois no
+  # `termination_reason`.
+  defp classify({:shutdown, :conversation_idle_timeout}),
+    do: {"conversation_idle_timeout", "closed"}
+
   defp classify(:normal), do: {"normal", "closed_abnormally"}
   defp classify(:killed), do: {"killed", "closed_abnormally"}
 

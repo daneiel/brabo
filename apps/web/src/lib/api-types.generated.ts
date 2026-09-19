@@ -8415,7 +8415,7 @@ export interface components {
         };
         SessionPendingWorkResponseDto: {
             /**
-             * @description There is work that blocks closing due to tab inactivity. Today: an `offered` handoff waiting for acceptance.
+             * @description There is work that blocks closing due to tab inactivity: an `offered` handoff, a `pending` action, an agent mid-turn, a dev agent working or blocked, or a conversational agent waiting for the user (RN-064, RN-581).
              * @example true
              */
             pending: boolean;
@@ -8424,6 +8424,11 @@ export interface components {
              * @example handoff po → arquiteto aguardando aceite
              */
             motivo: Record<string, never> | null;
+            /**
+             * @description Set ONLY when the one thing pending is a conversational agent waiting for the user (RN-581): the instant its turn ended. It is the only pending signal with a ceiling, and the engine applies it (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default 8h) — past it the session closes with `conversation_idle_timeout`. `null` otherwise.
+             * @example 2026-09-18T12:00:00.000Z
+             */
+            aguardandoUsuarioDesde: string | null;
         };
         SessionResponseDto: {
             /**
@@ -8477,7 +8482,7 @@ export interface components {
              */
             closedAt: Record<string, never> | null;
             /**
-             * @description Reason reported by the engine when terminating (heartbeat_timeout, killed, exception…). `null` on a human close or a still-live session.
+             * @description Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.
              * @example null
              */
             terminationReason: Record<string, never> | null;

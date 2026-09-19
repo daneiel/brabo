@@ -239,6 +239,29 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   def cancelar(state), do: Map.put(state, :turno_assincrono, nil)
 
+  @doc """
+  Abandona o turno em curso porque a SESSÃO fechou (RN-581): mata a task como
+  `cancelar/1`, mas NÃO grava nem transmite nada. Gravar seria pedir à api um
+  evento de conversa numa sessão encerrada, que ela recusa; e o canal da
+  sessão já foi embora. Chamado do `terminate/2` dos servidores, quando
+  `Engine.Agents.Conversacionais` os para. Sem turno, é no-op.
+
+  A task é `async_nolink`: sem isto ela SOBREVIVERIA ao servidor, seguiria
+  chamando o modelo (gastando) e tentaria gravar a resposta depois.
+
+  Não responde a ninguém: desde o ADR 0163 (RN-578) quem disparou o turno já
+  recebeu `:ok` no ACEITE, e o `from` não fica no state. O casamento é só por
+  `task` de propósito — um padrão que exigisse `from` cairia no no-op abaixo e
+  deixaria a task viva, que é o defeito que esta função existe para fechar.
+  """
+  @spec abandonar(map()) :: map()
+  def abandonar(%{turno_assincrono: %{task: task}} = state) do
+    Task.shutdown(task, :brutal_kill)
+    Map.put(state, :turno_assincrono, nil)
+  end
+
+  def abandonar(state), do: state
+
   # --- Herança de dicionário de processo para a task ---
 
   defp copiar_dicionario do
