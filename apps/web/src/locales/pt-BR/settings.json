@@ -228,6 +228,7 @@
     },
     "selectAria": "Novo modo de execução",
     "pathAria": "Novo caminho da pasta",
+    "noBroker": "Esta instalação não tem o broker de container (BROKER_URL vazia), que é quem sobe os containers de projetos Container e Pasta montada. Converter para qualquer um deles deixaria um projeto que nunca executa. Projetos Runner não dependem dele.",
     "path": {
       "underBase": "A pasta fica dentro da base de projetos desta instalação ({{base}}), e é nela que o navegador abre.",
       "noBase": "Esta instalação não declarou base de projetos montados: não há de onde navegar, e o modo Pasta montada não tem onde existir aqui.",

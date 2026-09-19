@@ -156,3 +156,33 @@ export function decidirSubida(input: {
 export function podeDecidirCicloDeVida(papel: Role | null | undefined): boolean {
   return roleAtLeast(papel, 'maintainer');
 }
+
+/**
+ * Parar/remover container de `container`/`mounted` também passam pelo BROKER
+ * (ADR 0144/RN-495), então numa instalação sem ele só podem terminar em falha
+ * (AT-105, RN-591). `!== true`: "não sei" nunca vira "tem" (RN-468). Só vale
+ * onde há container REGISTRADO — a régua de papel/estado continua sendo a de
+ * `podeDecidirCicloDeVida`.
+ */
+export function semBrokerParaCicloDeVida(item: ContainerOverviewItem): boolean {
+  return usaBroker(item.executionMode) && item.brokerConfigurado !== true;
+}
+
+/**
+ * Converter para um modo que sobe pelo broker, numa instalação em que a
+ * ausência dele foi CONFIRMADA (`false`), produz um projeto que nunca executa
+ * (AT-105, RN-591). Três estados: só `false` bloqueia — carregando, consulta
+ * falha ou campo ausente (`undefined`) não afirmam nada, e NÃO viram "tem"
+ * nem "não tem". Converter para o modo que o projeto já tem não é conversão.
+ */
+export function conversaoSemBroker(input: {
+  atual: ContainerOverviewItem['executionMode'];
+  alvo: ContainerOverviewItem['executionMode'];
+  brokerConfigurado: boolean | null | undefined;
+}): boolean {
+  return (
+    input.alvo !== input.atual &&
+    usaBroker(input.alvo) &&
+    input.brokerConfigurado === false
+  );
+}

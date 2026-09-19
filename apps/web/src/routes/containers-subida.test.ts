@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   acaoDeSubidaDoModo,
+  conversaoSemBroker,
+  semBrokerParaCicloDeVida,
   decidirSubida,
   podeDecidirCicloDeVida,
 } from './containers-subida';
@@ -253,5 +255,33 @@ describe('podeDecidirCicloDeVida', () => {
     expect(podeDecidirCicloDeVida('developer')).toBe(false);
     expect(podeDecidirCicloDeVida('viewer')).toBe(false);
     expect(podeDecidirCicloDeVida(undefined)).toBe(false);
+  });
+});
+
+describe('sem broker: parar/remover e conversão (AT-105, RN-591)', () => {
+  it('parar/remover em container/mounted sem broker (ou "não sei") é recusado; runner não', () => {
+    expect(semBrokerParaCicloDeVida(item({ brokerConfigurado: false }))).toBe(true);
+    expect(
+      semBrokerParaCicloDeVida(item({ executionMode: 'mounted', brokerConfigurado: false })),
+    ).toBe(true);
+    expect(
+      semBrokerParaCicloDeVida(
+        item({ brokerConfigurado: undefined as unknown as boolean }),
+      ),
+    ).toBe(true);
+    expect(semBrokerParaCicloDeVida(item({ brokerConfigurado: true }))).toBe(false);
+    expect(
+      semBrokerParaCicloDeVida(item({ executionMode: 'runner', brokerConfigurado: false })),
+    ).toBe(false);
+  });
+
+  it('conversão: só a ausência CONFIRMADA para um modo de broker bloqueia', () => {
+    const base = { atual: 'runner', alvo: 'container' } as const;
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: false })).toBe(true);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: true })).toBe(false);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: null })).toBe(false);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: undefined })).toBe(false);
+    expect(conversaoSemBroker({ atual: 'container', alvo: 'runner', brokerConfigurado: false })).toBe(false);
+    expect(conversaoSemBroker({ atual: 'container', alvo: 'container', brokerConfigurado: false })).toBe(false);
   });
 });

@@ -228,6 +228,7 @@
     },
     "selectAria": "New execution mode",
     "pathAria": "New folder path",
+    "noBroker": "This installation has no container broker (BROKER_URL is empty), and the broker is what starts containers for Container and Mounted folder projects. Converting to either mode would leave a project that can never run. Runner projects do not depend on it.",
     "path": {
       "underBase": "The folder lives inside this installation's projects base ({{base}}), and that is where the browser opens.",
       "noBase": "This installation declared no mounted-projects base: there is nothing to browse, and the Mounted folder mode has nowhere to exist here.",

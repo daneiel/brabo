@@ -351,7 +351,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
   contexto do Infra Lead com modo e presença de runner é frente à parte, mais
   cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
-  `mounted` pode dar certo de verdade, pelo broker. Desde a RN-577 o mesmo
+  `mounted` pode dar certo de verdade, pelo broker. Desde a RN-591 a instalação SEM
+  broker também é dita: a api recusa a proposta com 409
+  `sem_broker_na_instalacao` (a fonte é `ContainerBrokerPort.configurado()`; o
+  engine NÃO lê `BROKER_URL`, e o texto da recusa chega ao modelo), a conversão
+  de modo e "Parar"/"Remover" ficam inertes com o motivo em texto — só a
+  ausência CONFIRMADA bloqueia a conversão, "não sei" não Desde a RN-577 o mesmo
   molde vale para a PR: `propose_infra_pr` (e o `propose_adr` do Arquiteto)
   recusam LOCALMENTE, antes de propor, projeto SEM repositório — o predicado é
   o MESMO de `ExecuteAdrPrUseCase`/`ExecuteInfraPrUseCase` (linha em

@@ -19,6 +19,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
+- **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também
+  dizem que a instalação não tem broker (AT-105, RN-591). A conversão para
+  `container`/`mounted` fica inerte com o motivo em texto quando a ausência do
+  broker é CONFIRMADA ("não sei" não bloqueia); "Parar"/"Remover" na
+  `/containers` ficam inertes em `container`/`mounted`; e a api recusa com 409
+  `sem_broker_na_instalacao` a proposta de `container_start`/`_stop`/`_remove`
+  nesses modos — o Infra Lead lê o texto da recusa como resultado da
+  ferramenta, sem HTTP a mais no laço.
 - **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
   conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
   texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam

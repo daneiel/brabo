@@ -280,3 +280,42 @@ describe('RN-560 — o aviso da conversão', () => {
     expect(screen.queryByText(/O que estiver em \s*—/)).toBeNull();
   });
 });
+
+describe('RN-591 — a conversão sabe se a instalação tem broker (AT-105)', () => {
+  it('caso de falha: ausência CONFIRMADA — converter para `container` fica inerte, com o motivo em texto', async () => {
+    getProjectsBase.mockResolvedValue({
+      projectsBase: '/home/dani/projetos',
+      brokerConfigurado: false,
+    });
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/d/x' }));
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('container');
+
+    expect(await screen.findByText(settingsPtBR.executionMode.noBroker)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Converter' })).toBeDisabled();
+  });
+
+  it('caminho feliz: broker confirmado, ou "não sei", não bloqueia a conversão', async () => {
+    getProjectsBase.mockResolvedValue({
+      projectsBase: '/home/dani/projetos',
+      brokerConfigurado: true,
+    });
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/d/x' }));
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('container');
+
+    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Converter' })).not.toBeDisabled();
+  });
+
+  it('ausência confirmada NÃO bloqueia converter para `runner`', async () => {
+    getProjectsBase.mockResolvedValue({ projectsBase: null, brokerConfigurado: false });
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('runner');
+
+    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+  });
+});

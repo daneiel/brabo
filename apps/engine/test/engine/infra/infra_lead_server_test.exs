@@ -506,6 +506,43 @@ defmodule Engine.Infra.InfraLeadServerTest do
                      %{type: "tool.call", payload: %{tool: "propose_container_start"}}}
   end
 
+  test "propose_container_start sem broker na instalação: a recusa 409 da api chega ao modelo como TEXTO, não como tupla crua (AT-105)",
+       %{state: state} do
+    insert_project!(state.project_id, "container")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(
+      :fake_propose_action_erro,
+      {409,
+       %{
+         "code" => "sem_broker_na_instalacao",
+         "message" => "Esta instalação não tem broker de container (BROKER_URL vazia)."
+       }}
+    )
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada"
+      }),
+      FakeEngineApiClient.final_response("depois-do-409")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+    assert recusa["content"] =~ "container_start recusado: Esta instalação não tem broker"
+    refute recusa["content"] =~ "{409"
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "depois-do-409"}}}
+  end
+
   # --- `propose_infra_pr` sem repositório (RN-577, AT-088) ---
 
   test "propose_infra_pr SEM repositório: recusa NOMEADA antes do HALT, NUNCA propõe nem roda o Workflows (RN-577)",

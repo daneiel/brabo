@@ -9586,6 +9586,10 @@ chave.
 > local, `sem_broker_na_instalacao`, para `container`/`mounted` numa
 > instalação sem broker de container — depois de "já está de pé" e antes de
 > "sem imagem decidida".
+>
+> **Estendida pela [RN-590](#rn-590) (AT-105):** a mesma leitura vale na
+> conversão de modo, em parar/remover e na proposta do Infra Lead (recusa 409
+> da api ao propor).
 
 Subir o container de um projeto tinha **um** caminho: o Infra Lead, dentro de
 uma sessão, chamando a ferramenta dele. Numa execução real do `exp004` (modo
@@ -15003,3 +15007,57 @@ backup — é derivada, o argumento do [ADR 0152](adr/0152-backup-de-volumes-con
   `apps/api/test/application/artifact-projection/artifact-projector.spec.ts`
   (o projetor para frente, inalterado, sobre o tradutor extraído)
 - **Origem:** AT-128 — a lacuna que o ADR 0148 declarou (custo 3)
+### RN-591 — A instalação sem broker é dita na conversão de modo, em parar/remover e na proposta do Infra Lead, pela mesma fonte da RN-574 {#rn-591}
+
+A [RN-573](#rn-573)/[RN-574](#rn-574) (ADR 0161) ensinaram a **criação** de
+projeto e a **subida** na `/containers` a saber que a instalação não tem
+broker (`BROKER_URL` vazia). O fechamento declarou fora o resto: a conversão de
+modo, parar/remover e o Infra Lead. Esta regra leva as três portas, com a MESMA
+fonte — `ContainerBrokerPort.configurado()` — e nenhuma rota nova. Ela diz que
+a variável EXISTE, nunca que o broker responde (isso segue sendo
+`naoObservado`, [RN-486](#rn-486)).
+
+1. **Conversão de modo (`ExecutionModeSection`).** O campo
+   `brokerConfigurado` já vinha em `GET .../projects-base`, que a seção já lê.
+   Converter para `container`/`mounted` com a ausência **CONFIRMADA** (`false`)
+   deixa o botão inerte e diz o motivo em texto; "consultando", consulta que
+   falha e campo ausente NÃO afirmam nada — "não sei" não vira "tem" nem "não
+   tem" — e não bloqueiam. Converter para `runner`, ou para o modo que o projeto
+   já tem, nunca é bloqueado. É regra de TELA, como a da criação: o
+   `PUT projects/:projectId/execution-mode` não a aplica.
+2. **Parar/remover na `/containers`.** `container_stop`/`container_remove` em
+   `container`/`mounted` também passam pelo broker
+   ([RN-495](#rn-495)), então sem ele só podem terminar em falha: a tela deixa
+   "Parar"/"Remover" inertes com texto próprio (`sem_broker_para_parar`), `!==
+   true` como na subida. `runner` nunca cai aqui.
+3. **A api recusa ao propor.** `ProposeActionUseCase` responde 409
+   `sem_broker_na_instalacao`, ANTES de criar a proposta, para
+   `container_start`/`container_stop`/`container_remove` em projeto que não é
+   `runner` quando `configurado()` é `false`. É a decisão de COMO o Infra Lead
+   sabe sem HTTP no laço: o engine não lê `BROKER_URL` (uma segunda fonte
+   divergiria da `configurado()`), e a chamada que a tool JÁ fazia devolve a
+   recusa. `dispatch_container_start/2` passou a entregar ao modelo o TEXTO da
+   mensagem da api (`container_start recusado: …`), como resultado de
+   ferramenta ([RN-163](business-rules/autenticacao.md#rn-163)), e não a tupla
+   crua. A [RN-566](#rn-566) segue como estava: recusa por MODO, local.
+
+**O que NÃO fecha:** a proposta às cegas por ausência de IMAGEM continua
+possível (a [RN-566](#rn-566) já declarava); a recusa da api vale também para
+quem chama sem ser o agente, o que é o desejado — a aprovação só terminaria
+`failed`; e o `PUT execution-mode` continua aceitando a conversão por chamada
+direta.
+
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:88`
+  (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
+  (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
+  `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:388`
+  (`motivo_da_recusa_da_api`)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
+  (409 nas três ações, e `container_stop` segue `pending` com broker),
+  `apps/web/src/routes/containers-subida.test.ts` (as duas funções, três
+  estados), `apps/web/src/routes/settings/conversao-de-modo.test.tsx`,
+  `apps/web/src/routes/ContainersPage.test.tsx`,
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs` (o texto do 409
+  chega ao modelo)
+- **Origem:** AT-105 — declarado fora do recorte pelo ADR 0161
