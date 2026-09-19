@@ -6,6 +6,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine/api/web**: o clique que dispara turno de agente **responde ao
+  aceitar**, não no fim do turno ([RN-578](docs/business-rules.md#rn-578),
+  [ADR 0163](docs/adr/0163-o-clique-responde-ao-aceitar.md)). Medido numa
+  instalação real da v6.1.0: responder o formulário de perguntas do Criativo
+  levou 97,3 s, confirmar a prontidão 97,3 s e confirmar a arquitetura 51,8 s —
+  cada um esperando o turno inteiro, e turno acima de 120/180 s virava 500 num
+  comando que tinha funcionado. O turno segue no engine e a tela acompanha o
+  fim pelo canal e pela cauda do log. Junto, a **recusa deixa de ser calada**:
+  mensagem mandada com o agente ainda em turno era aceita com 202 e nunca lida
+  (um *"Continue"* digitado durante o kickoff do Arquiteto, na mesma
+  instalação); agora é **409** com a frase do motivo e `agent.error` no fio. A
+  prontidão sem regra de negócio passa a responder **422**. O status e o corpo
+  de sucesso da api não mudam (`201 { ok: true }`).
+
 - **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
   registro validava, EM RUNTIME, que todo arquivo de prova citado em
   `docs/gates.yml` existia no disco — e a imagem de produção carrega
