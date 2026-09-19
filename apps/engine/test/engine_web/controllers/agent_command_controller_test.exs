@@ -4,7 +4,7 @@ defmodule EngineWeb.AgentCommandControllerTest do
   # é a decisão do controller, não o pipeline de auth.
   use EngineWeb.ConnCase, async: false
 
-  alias Engine.Agents.{PoServer, PoSupervisor}
+  alias Engine.Agents.{CriativoSupervisor, PoServer, PoSupervisor}
   alias Engine.Sessions.FakeEngineApiClient
   alias EngineWeb.AgentCommandController
 
@@ -27,6 +27,109 @@ defmodule EngineWeb.AgentCommandControllerTest do
     end)
 
     %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+  end
+
+  # ADR 0163 (RN-578). O defeito medido: três cliques de 97,3 s, 97,3 s e
+  # 51,8 s numa instalação real, cada um esperando o turno inteiro.
+  describe "a resposta é o ACEITE, e a recusa não é mais calada" do
+    test "202 com o turno do agente AINDA rodando", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
+      drenar_kickoff(pid)
+      # `:sys.replace_state/2` roda a função DENTRO do processo do PO — é o
+      # dicionário dele que a Task do turno herda.
+      :sys.replace_state(pid, fn s ->
+        Process.put(:fake_llm_turn_stream_hang, true)
+        s
+      end)
+
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "text" => "e o cadastro?"
+        })
+
+      assert conn.status == 202
+      # O turno começou e está PRESO — e a resposta já voltou.
+      assert_receive :turno_pendurado, 1_000
+      assert %{turno_assincrono: %{task: %Task{}}} = :sys.get_state(pid)
+
+      GenServer.cast(pid, :cancel)
+      _ = :sys.get_state(pid)
+    end
+
+    test "turno já em curso: 409 nomeado, não 202", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
+      drenar_kickoff(pid)
+
+      :sys.replace_state(pid, fn s ->
+        Process.put(:fake_llm_turn_stream_hang, true)
+        s
+      end)
+
+      primeira =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "text" => "primeira"
+        })
+
+      assert primeira.status == 202
+      assert_receive :turno_pendurado, 1_000
+
+      segunda =
+        AgentCommandController.message(build_conn(), %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "text" => "Continue"
+        })
+
+      assert %{"motivo" => "turno_em_andamento", "error" => mensagem} =
+               json_response(segunda, 409)
+
+      assert mensagem =~ "não foi lida"
+
+      GenServer.cast(pid, :cancel)
+      _ = :sys.get_state(pid)
+    end
+
+    test "readiness sem regra de negócio: 422 nomeado", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
+
+      conn = AgentCommandController.readiness(conn, %{"sessionId" => session_id})
+
+      assert %{"motivo" => "sem_regra_de_negocio"} = json_response(conn, 422)
+    end
+  end
+
+  # O kickoff do PO sobe um turno no start FRESCO; espera ele fechar para o
+  # teste partir de um agente ocioso.
+  defp drenar_kickoff(pid) do
+    Enum.reduce_while(1..100, nil, fn _, _ ->
+      case :sys.get_state(pid) do
+        %{turno_assincrono: nil} ->
+          {:halt, :ok}
+
+        _ ->
+          Process.sleep(20)
+          {:cont, nil}
+      end
+    end)
   end
 
   describe "revise — devolução de história recusada (Fase 12c, RN-048)" do

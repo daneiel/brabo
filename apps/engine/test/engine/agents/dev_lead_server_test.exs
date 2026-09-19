@@ -301,7 +301,9 @@ defmodule Engine.Agents.DevLeadServerTest do
 
       from = {self(), make_ref()}
 
-      assert {:reply, :ok, ainda_suspenso} =
+      # ADR 0163 (RN-578): a recusa é a resposta — `:ok` diria "aceito"
+      # sobre uma mensagem que não foi lida, e o controller vira isto em 409.
+      assert {:reply, {:error, :aguardando_aprovacao}, ainda_suspenso} =
                DevLeadServer.handle_call({:user_message, "e aí?"}, from, suspenso)
 
       # Nada mudou: nem a suspensão, nem subiu turno novo.
