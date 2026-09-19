@@ -67,6 +67,40 @@ Os dois casos que forçaram o campo a existir:
 Sem `evidencia`, a regra "gate `block` sem prova reprova" tornaria as duas
 travas mais duras do produto vermelhas para sempre.
 
+## Duas validações, e só uma roda em produção
+
+O registro é validado em duas camadas, e a divisão não é cosmética:
+
+| camada | o que afirma | quem roda |
+|---|---|---|
+| `validarRegistro` | afirmações sobre o **conteúdo** — `block` exige `script`, os quatro gates humanos continuam humanos, `active` exige evidência, nenhum id duplicado, nenhuma `entrada` órfã | quem quer que leia o registro, a api em runtime inclusive |
+| `validarLocalizadores` | o **arquivo de prova** de `teste`/`ci` existe | o teste contra o arquivo real, e a fase 2 do `validacao-gates.ts` — nunca a api |
+
+A primeira vale onde quer que o registro seja lido. A segunda é afirmação
+sobre o **repositório**, e só faz sentido dentro de um checkout.
+
+As duas já foram uma função só, chamada pelo loader da api. A consequência
+foi medida na v6.1.0 instalada: `GET /gates` respondia `500` com
+`RegistroDeGatesInvalido` listando os onze alvos como "não existe" — doze
+respostas 5xx em cerca de 55 minutos. Não havia nada errado com o registro. A
+imagem de produção carrega `/app/docs/gates.yml` e mais nada de `docs/`;
+`apps/api/test/`, `scripts/ci/` e `.github/` nunca entram nela, então uma
+afirmação sobre o repositório avaliada contra aquela árvore reprova todo gate,
+em toda instalação.
+
+Nada foi afrouxado. A régua continua existindo, cobre os mesmos alvos, e alvo
+que some continua reprovando — só que onde a pergunta significa alguma coisa.
+Duas guardas mantêm isso: o teste que sobe até a raiz do repositório e confere
+cada localizador, e um teste do loader que reconstrói em disco a árvore da
+imagem (uma raiz com `docs/gates.yml` e nada mais) e afirma que o registro
+carrega. Devolver a checagem ao loader deixa o segundo vermelho com a mensagem
+exata que a instalação produziu.
+
+E a api servindo o registro passou a ser exercitada contra a imagem de
+produção: `docker/smoke.sh` chama `GET /gates` e exige o registro de volta.
+Nenhuma suíte unitária pegaria isto — vitest e ExUnit rodam de um checkout,
+onde os alvos existem.
+
 ## A armadilha do tipo compartilhado
 
 `qa-verificada` e `secops-segura` **não são dois tipos de evento**: os dois
@@ -97,6 +131,12 @@ Três fases, nesta ordem: **registro** (carrega e valida), **localizadores**
 (alvo de `teste`/`ci` existe?) e **event log** (última passagem, com event id).
 As duas primeiras não tocam o banco — é o que torna o script útil em CI sem
 Postgres.
+
+A fase 2 relata **todos** os localizadores do registro, não só os de gate
+`active`+`block`. Ela tinha um laço próprio, mais estreito, enquanto o loader
+da api tinha um mais largo, e `rag-acertivo` — `active`, `warn`, citando
+workflow e teste — nunca aparecia na tabela. Agora é uma régua só,
+`validarLocalizadores`, compartilhada com o teste.
 
 | saída | quando |
 |---|---|

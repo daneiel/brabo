@@ -270,7 +270,15 @@ rules:
       # é a forma de envelhecimento que o registro existe para impedir.
       - "apps/api/src/interfaces/http/gates/**"
       - "apps/web/src/components/PrGateTimeline.tsx"
-    docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
+    docs: ["docs/explanation/gates.md"]
+    # As RNs dos gates (070, 071, 084) moraram em `business-rules.md` até ele
+    # ser partido POR TAMANHO e elas irem para `custo.md`. A regra continuou
+    # cobrando o índice, que não contém mais nenhuma delas — cobrar um arquivo
+    # que não tem a regra ensina a usar o escape hatch, que é o defeito que o
+    # `docs_alternativos` nasceu para evitar. Os dois lados da família contam.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
     severity: block
 
   # O fluxo (ADR 0085) declara as RELAÇÕES entre papéis — quem entrega o
