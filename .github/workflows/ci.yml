@@ -67,7 +67,7 @@ env:
   ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
   KUSTOMIZE_SHA256: '029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d'
   KUBECONFORM_SHA256: 'c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3'
-  # Binário do trivy usado no job `images` (scan das quatro imagens de
+  # Binário do trivy usado no job `images` (scan das cinco imagens de
   # produção). Baixado à parte — e não pela action `aquasecurity/trivy-action`
   # — porque os quatro scans passam a rodar em PARALELO no mesmo job, e
   # GitHub Actions não paraleliza steps de um `uses:`. Mesma versão `v0.70.0`
@@ -854,7 +854,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
-      # Os quatro alvos em PARALELO num builder só. Em sequência somavam ~6
+      # Os cinco alvos em PARALELO num builder só. Em sequência somavam ~6
       # dos 8 minutos do job (api 130s, engine 160s, web 49s, backup 20s).
       # Medido localmente com cache frio: 201s em sequência, 111s em paralelo.
       # No runner o ganho é menor — 2 vCPUs não sobrepõem `tsc` com `mix
@@ -862,7 +862,7 @@ jobs:
       #
       # O que cada alvo constrói, com que cache e com que tag está no
       # docker-bake.hcl da raiz, que também é o que se roda na mão.
-      - name: Build das quatro imagens (em paralelo)
+      - name: Build das cinco imagens (em paralelo)
         uses: docker/bake-action@5be5f02ff8819ecd3092ea6b2e6261c31774f2b4  # v6
         with:
           files: docker-bake.hcl
@@ -874,7 +874,7 @@ jobs:
       - name: Nenhuma imagem pode rodar como root
         run: |
           set -euo pipefail
-          for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod; do
+          for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod brabo-broker:prod; do
             user="$(docker inspect --format '{{.Config.User}}' "$img")"
             if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ]; then
               echo "::error::$img roda como root (Config.User='$user')"
@@ -890,7 +890,7 @@ jobs:
       # escanear várias imagens numa chamada só — só dava pra paralelizar
       # trocando por um binário chamado direto num script de shell.
       #
-      # As quatro imagens já estão no MESMO daemon (é por isso que build, scan
+      # As imagens já estão no MESMO daemon (é por isso que build, scan
       # e smoke ficam neste único job, ver o comentário no topo), então não
       # havia razão pras quatro serem sequenciais: o gargalo de cada scan é
       # I/O (base de vulnerabilidades + análise de camada), não CPU.
@@ -901,7 +901,7 @@ jobs:
       # process: timeout" — mesmo com `--skip-db-update`, porque o cache de
       # ANÁLISE DE CAMADA usa o mesmo arquivo que a base de vulnerabilidades,
       # não só ela. A saída: baixar a base UMA vez, copiar pra um `--cache-dir`
-      # PRÓPRIO por imagem (isola o lock) e só então escanear as quatro em
+      # PRÓPRIO por imagem (isola o lock) e só então escanear todas em
       # paralelo — o download de ~110MB deixa de se repetir quatro vezes e a
       # cópia local em disco é bem mais barata que refazer o download.
       - name: Instalar o binário do trivy
@@ -917,7 +917,7 @@ jobs:
       - name: Baixar a base de vulnerabilidades do trivy
         run: trivy image --cache-dir /tmp/trivy-cache/seed --no-progress --download-db-only
 
-      - name: Trivy nas quatro imagens (em paralelo)
+      - name: Trivy nas cinco imagens (em paralelo)
         run: |
           set -uo pipefail
           # NÃO "set -e" aqui: cada scan roda em background (&) dentro de um
@@ -932,6 +932,7 @@ jobs:
             [engine]="brabo-engine:prod"
             [web]="brabo-web:prod"
             [backup]="brabo-backup:prod"
+            [broker]="brabo-broker:prod"
           )
 
           # Cache PRÓPRIO por imagem, apontando pra MESMA base já baixada —
@@ -977,6 +978,43 @@ jobs:
             fi
           done
           exit "$status"
+
+      # A imagem do broker SOBE — e não só constrói (ADR 0162). O `smoke.sh`
+      # não a exercita: ele usa o compose de validação SEM o profile
+      # `container-broker`, de propósito, e continua provando as mesmas três
+      # imagens de app. Até esta imagem ser publicada ninguém a rodava fora da
+      # máquina de quem ligasse o profile à mão; agora ela vai para a instalação
+      # de quem consentir, e subir com o endurecimento de produção (rootfs
+      # read-only, sem capability, sem rede, non-root) é o mínimo a provar antes.
+      #
+      # Sem rede e sem api de propósito: o que se mede aqui é a IMAGEM — o
+      # processo aceita a configuração de produção e responde `/health` —, não
+      # a integração, que é do E2E do instalador. O gid do grupo vem do socket
+      # do runner, o mesmo cálculo que o instalador faz.
+      - name: O broker de produção sobe healthy, endurecido
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -base64 32 | tr -d '\n')"
+          cid="$(docker run -d --read-only --tmpfs /tmp --cap-drop ALL \
+            --security-opt no-new-privileges:true --network none \
+            -e NODE_ENV=production -e BRABO_SERVICE_TOKEN="$token" \
+            --group-add "$(stat -c %g /var/run/docker.sock)" \
+            --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+            brabo-broker:prod)"
+          for _ in $(seq 1 30); do
+            estado="$(docker inspect --format '{{.State.Health.Status}}' "$cid")"
+            [ "$estado" = 'healthy' ] && break
+            [ "$(docker inspect --format '{{.State.Running}}' "$cid")" = 'true' ] || break
+            sleep 2
+          done
+          docker logs "$cid"
+          if [ "${estado:-}" != 'healthy' ]; then
+            echo "::error::o broker de produção não chegou a healthy (estado: ${estado:-desconhecido})"
+            docker rm -f "$cid" >/dev/null
+            exit 1
+          fi
+          docker rm -f "$cid" >/dev/null
+          echo 'ok: brabo-broker:prod healthy com rootfs read-only e sem rede'
 
       # SMOKE_NO_BUILD: as imagens já estão no daemon, construídas com cache
       # acima — o compose reusaria a tag e reconstruiria à toa.

@@ -120,6 +120,11 @@ docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
+In an **installation** made by `install.sh` the broker is the same service,
+from the published image, and the installer asks whether to turn it on — see
+[the broker in an installation](#broker-na-instalacao)
+([ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
+
 **The broker has TWO roots, and neither stands in for the other**
 ([RN-503](business-rules.md#rn-503),
 [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)).
@@ -3179,12 +3184,9 @@ runs with stdin on `/dev/null` so the menu can keep reading keys from the same
 terminal, and this installer is built to *ask*. The note on the item carries
 the one-line command that installs for real.
 
-> **What it does not do:** bring up the container **broker** — that service is
-> absent from the installation compose because its image is not published, and
-> without it a project in **mounted** mode cannot start a container
-> ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)); the **runner** mode uses
-> the Docker on that machine and does not depend on it. It also does not
-> **pair** the local agent: the binary and the base are ready, and the key
+> **What it does not do:** turn the container **broker** on without asking —
+> see [the broker in an installation](#broker-na-instalacao) right below. It
+> also does not **pair** the local agent: the binary and the base are ready, and the key
 > material can now be made right there
 > (`brabo-runner device-key create`, [RN-551](business-rules.md#rn-551)), but
 > `install.sh` does not yet chain the three commands — registering the public
@@ -3193,6 +3195,102 @@ the one-line command that installs for real.
 > project-bound pairing, the device key and `brabo-runner.config.json` still
 > come from the project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
 > Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
+
+### The container broker in an installation {#broker-na-instalacao}
+
+Projects in **Container** and **Mounted** mode run inside a container, and the
+one that brings that container up is the **broker**
+([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)). Without it neither mode
+ever executes: `container_start` ends `failed` with `BrokerIndisponivelError`
+and the dev agents stay in `dev.blocked_by_container`. **Runner** mode does not
+depend on it — there the local agent uses the Docker on your machine.
+
+Since [ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) the
+broker is the **fifth published image** (`ghcr.io/daneiel/brabo-broker`, by
+digest, signed like the other four) and the installation compose has the
+service — **off by default**, under the same `container-broker` profile as the
+validation compose. The installer **asks** (*"Ligar o broker de container?
+[s/N]"*), right after the projects base, and says in text what turning it on
+grants: the broker receives **this machine's Docker socket**, and whoever
+commands the broker commands your Docker. What contains it is the five layers
+of [ADR 0130](adr/0130-broker-de-container.md): no published port, a network
+(`internal: true`, no internet) that only the api reaches, the service token,
+five operations on ONE project's container, and a spec the broker composes
+from what the Architect decided — there is no request that turns on
+`privileged`, host networking or a free `-v`.
+
+| answer | what happens |
+|---|---|
+| **`s`** / **`sim`** | it measures the socket's group **from inside a container** (the broker image itself, no network, read-only, the socket bound with `--mount` so a missing socket is an error instead of an empty folder created on your host), computes where Docker keeps the managed-folder volume, and writes `COMPOSE_PROFILES=container-broker`, `BROKER_URL=http://broker:8090`, `DOCKER_GID` and `PROJECT_WORKSPACES_HOST_ROOT` into `.env` — the four together |
+| Enter, `n`, anything else | off. `.env` gets none of the four lines, and the final summary says *"Broker de container: DESLIGADO"* |
+| no terminal | off, and it says so — no question is asked where no one can answer |
+
+**Two refusals and two pending items, all named:**
+
+- *"não consegui medir o grupo do socket do Docker…"* — the measurement failed
+  (rootless or remote Docker: the socket is not at `/var/run/docker.sock`,
+  which is the path the compose mounts). Nothing was written. Run again and
+  answer **no**, or fix what the message quotes from Docker. It never writes a
+  guessed `999` in its place.
+- *"… não é um socket …"* — same outcome, same fix.
+- pending *"a raiz da pasta gerenciada…"* — the computed
+  `<DockerRootDir>/volumes/brabo_project_workspaces/_data` did not match the
+  volume's real `Mountpoint` after the stack came up (or `docker info` did not
+  say where volumes live). **Mounted** projects work; **Container** projects do
+  not until you fix `PROJECT_WORKSPACES_HOST_ROOT` — the message carries the
+  value the daemon reported and the command to recreate the broker.
+- pending *"o broker de container: a api NÃO o alcançou…"* — the service came
+  up healthy but the api could not reach it on the internal network. `docker
+  compose -f docker/docker-compose.install.yml logs broker` says why.
+
+`COMPOSE_PROFILES` in the `--env-file` is what makes `up -d --wait` bring the
+broker up with no flag on the command line — measured on Compose v5.5.1. The
+image variable, `BRABO_BROKER_IMAGE`, is written **whether you turn it on or
+not**: Compose interpolates the whole file before filtering by profile, so a
+required variable on a disabled service still refuses the file.
+
+**Turning it on later** (same folder as `.env`):
+
+```bash
+# 1. the group of the socket AS A CONTAINER SEES IT — with the broker image
+#    itself, no network; this is the number the compose needs
+docker run --rm --network none --read-only --entrypoint stat \
+  --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+  "$(grep '^BRABO_BROKER_IMAGE=' .env | cut -d= -f2)" -c '%F %g' /var/run/docker.sock
+# expected: socket <gid>
+
+# 2. where Docker keeps the managed-folder volume
+docker volume inspect --format '{{.Mountpoint}}' brabo_project_workspaces
+
+# 3. append to .env (all four — never one without the others)
+#    COMPOSE_PROFILES=container-broker
+#    BROKER_URL=http://broker:8090
+#    DOCKER_GID=<gid from step 1>
+#    PROJECT_WORKSPACES_HOST_ROOT=<path from step 2>
+
+# 4. recreate — the api too, so it picks up BROKER_URL
+docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait
+
+# 5. ask before claiming
+docker compose -f docker/docker-compose.install.yml --env-file .env exec -T api \
+  node -e "fetch('http://broker:8090/health').then(r=>r.text()).then(console.log)"
+# expected: {"status":"ok","servico":"broker"}
+```
+
+**Turning it off:** remove the four lines from `.env`, then remove the broker
+container and recreate the api without `BROKER_URL`:
+
+```bash
+docker compose -f docker/docker-compose.install.yml --env-file .env \
+  --profile container-broker rm -sf broker
+docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait
+```
+
+`up --remove-orphans` does **not** do the first step — measured: a service
+under a disabled profile is still *defined* in the file, so its container is
+not an orphan and keeps running. Nothing in your projects is deleted; Container
+and Mounted projects stop executing, and the project screen stops offering
+them ([ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
 
 ---
 

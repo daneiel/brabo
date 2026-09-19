@@ -156,6 +156,7 @@ estado lido do repositório e não da conversa.
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 | A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
+| O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
 
 ## Estado atual e aberto
 
@@ -194,18 +195,22 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
   o profile ligado, `container_start` continua terminando `failed` com
   `BrokerIndisponivelError`. Na INSTALAÇÃO por Release
-  (`docker-compose.install.yml`) o serviço `broker` NEM EXISTE — não é profile
-  desligado: a imagem não é publicada (ADR 0150, decisão 7) —, e desde o ADR
-  0161 (RN-573/574) a TELA sabe disso: `brokerConfigurado`
+  (`docker-compose.install.yml`) o serviço `broker` EXISTE desde o ADR 0162
+  (RN-575), desligado sob o MESMO profile, e quem o liga é o `install.sh`,
+  PERGUNTANDO — só um "s" digitado liga, o `DOCKER_GID` é MEDIDO de dentro de
+  um container com a própria imagem do broker (recusa nomeada, nunca o 999 de
+  palpite), e `COMPOSE_PROFILES`/`BROKER_URL`/`DOCKER_GID`/
+  `PROJECT_WORKSPACES_HOST_ROOT` vão juntos para o `.env` ou nenhum vai. É o
+  argumento da RN-512 (quem instala na PRÓPRIA máquina já tem o socket), com
+  consentimento no lugar do "sobe por padrão" do dev porque quem instala nunca
+  leu este repositório. `BRABO_BROKER_IMAGE` é obrigatória ligado ou não — o
+  Compose interpola o arquivo inteiro antes de filtrar por profile (medido). E
+  desde o ADR 0161 (RN-573/574) a TELA sabe se há broker: `brokerConfigurado`
   (`ContainerBrokerPort.configurado()`, a mesma fonte do estado observado) vem
   em `GET .../projects-base` e em cada linha de `GET .../containers`, o
   assistente para de pré-selecionar `mounted` sem broker confirmado e a
-  `/containers` recusa antes do clique a subida de `container`/`mounted`. A
-  outra metade da decisão do mantenedor — o `install.sh` PERGUNTAR se liga o
-  broker — foi MEDIDA e PAROU: a imagem não é obtível por uma instalação de
-  Release (`ghcr.io/daneiel/brabo-broker` responde `denied`, o bake tem quatro
-  alvos, e o one-liner roda sem código para construir). Publicar o broker como
-  quinta imagem vem ANTES da pergunta; não escreva a pergunta sem ela. O
+  `/containers` recusa antes do clique a subida de `container`/`mounted`. As
+  duas metades são a MESMA decisão do mantenedor ("os dois"). O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
   `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
   `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
@@ -496,6 +501,16 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
   prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
   é apagado), mas a migração por compose não fecha
+- O broker da instalação (ADR 0162, RN-575) só existe a partir da PRÓXIMA tag
+  final: o `install.sh` exige `broker` no `images.json`, que Releases
+  anteriores não têm, e a prova ponta a ponta (o E2E responde SIM à pergunta e
+  confere o broker healthy, a api o alcançando e a raiz conferida) só roda em
+  tag. Não medidos: o `DOCKER_GID` e a raiz da pasta gerenciada no Docker
+  Desktop do macOS (a metade interativa do E2E é só Linux); Docker rootless ou
+  remoto cai na recusa da medição, porque o compose monta
+  `/var/run/docker.sock` fixo. Desligar depois exige `rm -sf broker` com o
+  profile — `up --remove-orphans` NÃO o remove (medido: serviço sob profile
+  desligado continua DEFINIDO, não é órfão)
 - `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
   disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
   SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
@@ -887,9 +902,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Desde a RN-512 (ADR 0146) sobe POR PADRÃO no compose local e
-  permanece sob `profiles: ["container-broker"]` no de produção — a divergência
-  entre os dois arquivos é a decisão, não descuido; a imagem dele NÃO é
-  publicada no GHCR (as quatro do ADR 0119 seguem sendo quatro). A imagem de
+  permanece sob `profiles: ["container-broker"]` no de produção e no de
+  INSTALAÇÃO — a divergência entre o de dev e os outros dois é a decisão, não
+  descuido; no de instalação quem liga o profile é o `install.sh`, perguntando
+  (ADR 0162, RN-575). A imagem de PRODUÇÃO (`docker/broker/Dockerfile.prod`) é
+  a QUINTA publicada no GHCR desde o ADR 0162, com os mesmos gates das outras
+  quatro (Trivy, non-root, healthy read-only sem rede no `ci.yml`; digest,
+  assinatura e verificação no `release.yml`) — e o Kubernetes NÃO a conhece, de
+  propósito: não há Deployment de broker, e `argumentosDeSetImage` emite só as
+  quatro que a base do kustomize declara. A imagem de
   DEV instala as dependências no BUILD e NUNCA em runtime, e isso é
   consequência direta da rede: sem egress não há registry alcançável, e a
   resposta a "o corepack/pnpm não baixa" é SEMPRE tirar o registry do caminho
@@ -948,10 +969,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
   preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
-- Deploy: Kubernetes (k3d/kind em validação local). As quatro imagens de
+- Deploy: Kubernetes (k3d/kind em validação local). As cinco imagens de
   produção são PUBLICADAS no GHCR a cada tag final, públicas e por digest
-  (ADR 0119) — `.release/images.json` registra o que cada tag publicou, e
-  `make imagens-do-release` aplica no overlay. O overlay do repositório
+  (ADR 0119; a quinta, o broker, desde o ADR 0162) — `.release/images.json`
+  registra o que cada tag publicou, e `make imagens-do-release` aplica no
+  overlay as QUATRO que o kustomize conhece (o broker fica fora do k8s). O overlay do repositório
   guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
@@ -1000,7 +1022,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
   0149) a esteira também ASSINA o que publica: `cosign` keyless (OIDC do
-  Actions) nas quatro imagens por DIGEST — nunca por tag, que é ponteiro
+  Actions) nas imagens publicadas (cinco desde o ADR 0162) por DIGEST — nunca por tag, que é ponteiro
   móvel — e UM `checksums.txt` assinado cobrindo os cinco binários do
   runner, não cinco assinaturas. Os dois workflows VERIFICAM o que
   assinaram no mesmo run, porque assinatura que ninguém tenta verificar é
