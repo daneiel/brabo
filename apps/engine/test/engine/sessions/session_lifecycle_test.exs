@@ -148,6 +148,80 @@ defmodule Engine.Sessions.SessionLifecycleTest do
                       "conversation_idle_timeout", "closed"}
     end
 
+    # AT-152: aba aberta = pings chegando, heartbeat nunca expira.
+    test "com a aba ABERTA (pings), conversa ociosa além do teto fecha por conversation_idle_timeout" do
+      Application.put_env(:engine, :session_heartbeat_timeout_ms, 200)
+      Application.put_env(:engine, :session_conversation_idle_check_ms, 50)
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :session_heartbeat_timeout_ms)
+        Application.delete_env(:engine, :session_conversation_idle_check_ms)
+      end)
+
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente criativo aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -61, :second)
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+      pinger =
+        spawn_link(fn ->
+          Stream.repeatedly(fn ->
+            try do
+              SessionServer.heartbeat(session_id)
+            catch
+              :exit, _ -> :ok
+            end
+
+            Process.sleep(30)
+          end)
+          |> Stream.run()
+        end)
+
+      on_exit(fn -> Process.exit(pinger, :kill) end)
+
+      assert_receive {:termination_reported, "project-1", ^session_id,
+                      "conversation_idle_timeout", "closed"},
+                     1_000
+
+      refute Process.alive?(pid)
+    end
+
+    test "com a aba ABERTA, conversa DENTRO do teto não fecha" do
+      Application.put_env(:engine, :session_heartbeat_timeout_ms, 200)
+      Application.put_env(:engine, :session_conversation_idle_check_ms, 50)
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :session_heartbeat_timeout_ms)
+        Application.delete_env(:engine, :session_conversation_idle_check_ms)
+      end)
+
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente criativo aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -30, :second)
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+      Process.sleep(60)
+      :ok = SessionServer.heartbeat(session_id)
+      Process.sleep(60)
+      :ok = SessionServer.heartbeat(session_id)
+
+      refute_receive {:termination_reported, _, ^session_id, _, _}, 150
+      assert Process.alive?(pid)
+
+      :ok = Monitor.expect_stop(session_id)
+      SessionServer.stop(pid)
+    end
+
     test "pendência SEM instante continua sem teto (os quatro sinais de antes)" do
       Application.put_env(:engine, :session_conversation_idle_timeout_ms, 0)
       session_id = unique_id()

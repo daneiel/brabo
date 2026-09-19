@@ -82,6 +82,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   gravar. `GET /internal/sessions/:id/pending-work` ganha
   `aguardandoUsuarioDesde` ([RN-581](docs/business-rules.md#rn-581)).
 
+- **engine**: o teto de **8 horas da conversa ociosa vale também com a aba
+  aberta** (AT-152). Ele só era checado quando o heartbeat expirava, e uma aba
+  aberta pinga a cada ~10s: uma conversa parada numa aba esquecida seguia viva
+  para sempre. Agora a sessão confere o teto num relógio próprio (a cada 5 min), sem relação com o ping, e fecha com a
+  mesma causa `conversation_idle_timeout`. O valor do teto não mudou
+  ([RN-581](docs/business-rules.md#rn-581)).
+
 - **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
   repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
   Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
