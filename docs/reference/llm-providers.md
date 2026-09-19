@@ -110,17 +110,17 @@ from the model's name would be a guess dressed up as data.
 
 Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — **9 providers**.
 
-| provider | streaming | tool calling | list_models | embeddings | credential | model origin | summarized quirks | source |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `anthropic` | yes | yes | yes | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | yes | yes | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | yes | yes | yes | no | API key | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | yes | yes | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
-| `ollama` | yes | yes | yes | yes | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
-| `openai` | yes | yes | yes | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | yes | yes | yes | no | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | yes | yes | yes | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | yes | yes | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `anthropic` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `bitdeer` | yes | yes | no | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | yes | yes | yes | no | no | API key | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | yes | yes | no | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `ollama` | yes | yes | yes | yes | no | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `openrouter` | yes | yes | yes | no | no | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | yes | yes | yes | no | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 A provider without `list_models` is SKIPPED by the catalog sync, with the reason
 logged in the report — never treated as "the catalog came back empty".
@@ -131,6 +131,9 @@ provider's prose section below — the why for each one lives there, not here.
 "embeddings" is the ADR 0075 capability, and it is only `yes` with PROOF of
 execution: reading the docs doesn't count, and the reason for each `no` is in
 the literal's comment, in the file named in the last column.
+"routing preference" is the ADR 0166 capability (a hub choosing the upstream
+by `price`, `throughput` or `latency`), under the same rule: `yes` only after
+a smoke against the real API returns the chosen upstream.
 <!-- END:GENERATED:providers-capabilities -->
 
 The default for `supports_tool_calling` is `false`. This is deliberate: a model
