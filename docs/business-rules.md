@@ -14390,7 +14390,7 @@ nova.
   (`findLatestOfTypesInSession`);
   `apps/engine/lib/engine/sessions/session_server.ex:113` (a pendência com
   instante), `:141` (`conversa_ociosa`), `:166` (`encerrar`), `:184`
-  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:142`
+  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
   (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
@@ -14671,3 +14671,44 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
   antes de ler o state)
 - **Origem:** AT-099 — teste intermitente do `PoServerTest`, medido em
   2026-09-19
+
+
+### RN-588 — Repassar uma sessão não deixa o pod antigo apagar a linha do par {#rn-588}
+
+No rollout, o drain do pod antigo para o `SessionServer` e pede a um par que
+assuma a sessão (`Engine.Shutdown`); o `init` do par regrava a linha de
+`engine.session_states`. O `:DOWN` do processo parado, porém, chega ao
+`Engine.Sessions.Monitor` do pod antigo por mensagem — e o Monitor é um
+GenServer único, que serializa o `:DOWN` de cada sessão com um DELETE por ida
+ao banco, sem esperar pelo repasse seguinte. Quando o `:DOWN` era processado
+DEPOIS do upsert do par, o `DELETE ... WHERE session_id` — que não olha dono
+nem geração — levava a linha DO PAR: a sessão ficava com dono e sem linha,
+invisível ao `Adopter`, ao `Rehydrator` e ao `local_sessions/0` do drain do
+par. Se o par era OUTRO pod antigo (`.33 → .28 → novo`), ele não a via ao
+drenar, e o SIGTERM dele a matava: `active` na api e sem dono (AT-078, o
+`rollout-test` do `propriedades.yml`, ~3 órfãs em 13 rodadas).
+
+A regra: o drain marca o stop com `Monitor.expect_handoff/1` (o
+`expect_stop/1` de sempre MAIS "a linha não é minha"), e o Monitor NÃO apaga a
+linha de uma sessão repassada — registra em `Logger.info` que a manteve. Sem
+adoção, quem apaga é o próprio drain (`terminate_unadopted`), como já era; o
+Monitor continua apagando a linha de toda sessão que morre por outra causa e a
+do `expect_stop/1` do `SessionLifecycleWorker` (a api já encerrou a sessão).
+Sem migration: a linha não ganhou coluna de dono, e a marca vive no estado do
+Monitor, por sessão. Toda apagada do Monitor passou a deixar UMA linha de log
+com sessão, nó e linhas removidas — o log da drenagem nunca chega ao log do
+pod (o `preStop` o descarta), o do Monitor chega.
+
+**Inferência que fica:** o instante em que a linha sumiu nunca foi medido no
+k3d; a leitura vem do artefato da rodada `35452845830` (sem linha + segundo pod
+antigo) e do código, e a corrida foi provada em ExUnit, não observada. A
+próxima falha do k3d, se houver, traz a linha do Monitor.
+
+- **Código:** `apps/engine/lib/engine/sessions/monitor.ex:45`
+  (`expect_handoff/1`), `:119` (`apagar_linha/1`);
+  `apps/engine/lib/engine/shutdown.ex:136` (o drain marca o repasse)
+- **Teste:** `apps/engine/test/engine/sessions/monitor_repasse_test.exs:52`
+  (Monitor suspenso: o `:DOWN` tardio não apaga a linha regravada pelo par),
+  `:67` (cadeia antigo → antigo → novo: o segundo drain ainda vê a sessão),
+  `:87` (sem adoção a linha continua saindo pelo drain)
+- **Origem:** AT-078 — sessão órfã intermitente do rollout do engine
