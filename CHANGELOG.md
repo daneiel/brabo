@@ -53,6 +53,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ao próprio `systemd --test --user` o valor RESOLVIDO e o compara com o
   gravado, e pula nomeando o motivo onde não há systemd.
 
+- **web**: a árvore do time **para de afirmar trabalho sobre dev agent
+  bloqueado** (AT-087). Numa instalação real o event log tinha `dev.started`
+  seguido de `dev.blocked_by_container`, e a árvore descartava o bloqueio (não
+  havia tradução para ele): o ramo ficava em "começou a task", ativo, enquanto
+  o painel ao lado já dizia `aguardando`. Agora o bloqueio é marco próprio, com
+  o motivo do engine como detalhe, e o ramo fica parado. Três mudanças
+  visíveis vêm junto ([RN-572](docs/business-rules.md#rn-572)): o ramo de um
+  dev agent só fica ativo quando o painel diz `trabalhando` para o mesmo evento
+  — `dev.idle`, `dev.blocked`, `dev.awaiting_gate`, `dev.awaiting_approval` e
+  `dev.idle_tripped` também deixam de contar como ativos; `dev.started` passa a
+  dizer "procurando task" (ele sai antes de reivindicar task nenhuma), e
+  `dev.working` mostra o título da task; e `dev.error` vira marco de falha com
+  o motivo. A classe fecha no CI: `scripts/ci/vocabulario-de-eventos-dev.spec.ts`
+  passa a reprovar tipo `dev.*` do engine sem decisão na árvore, como já
+  fazia com o painel. `container.start_failed` segue fora da árvore, de
+  propósito — o ator é `system`, e o tronco onde ele caberia não é desenhado
+  por tela nenhuma.
+
 - **runner**: o serviço do agente local **passa a iniciar**. A unit gerada por
   `brabo-runner service install` escrevia `WorkingDirectory="/home/…"`, e o
   systemd **não** faz unquoting nessa diretiva (ao contrário do `ExecStart=`,

@@ -154,6 +154,7 @@ estado lido do repositório e não da conversa.
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
+| A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 
 ## Estado atual e aberto
 

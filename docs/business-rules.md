@@ -13618,3 +13618,71 @@ migração por compose não fecha.
   está no ambiente do instalador)
 - **Origem:** AT-026 — o achado da AT-008 (RN-549), decidido pelo mantenedor em
   2026-09-13
+
+### RN-572 — A árvore do time traduz todo tipo `dev.*` que o engine emite, e só diz trabalho em curso onde o painel diz `trabalhando` {#rn-572}
+
+Numa instalação real (14/09) os dev agents "não saíram do *começou a task*".
+O event log tinha `dev.started` seguido de `dev.blocked_by_container`, com o
+`reason` por extenso ([RN-502](#rn-502)). A árvore do time
+(`timeline-tree.ts`) não tinha tradução para o bloqueio — o que não está em
+`TRADUCAO` é descartado —, então o ramo parava no marco anterior e a frase do
+presente afirmava trabalho sobre um agente parado. O painel do time, na mesma
+tela de execução, já dizia `aguardando` para o mesmo evento
+(`DEV_STATUS_EVENTS`, [RN-411](#rn-411)): duas telas, duas tabelas, e só uma
+delas estava coberta pela comparação com o vocabulário do engine.
+
+**A regra**, em três partes:
+
+1. **Todo tipo `dev.*` que o engine emite tem decisão na árvore** — traduzido
+   em `TRADUCAO` ou declarado em `TRADUCAO_FORA` com o motivo (vazia hoje).
+   Omitir deixou de ser possível: `scripts/ci/vocabulario-de-eventos-dev.spec.ts`
+   deriva o vocabulário do engine pelo mesmo extrator do inventário de eventos
+   e reprova, nomeando o tipo, o que faltar; e reprova também o tipo `dev.*`
+   traduzido que o engine não emite. Na primeira rodada ele achou DOIS
+   faltando (`dev.blocked_by_container` e `dev.error`) e UM sobrando
+   (`dev.rearmed`, que a api grava com ator `user` e que por isso nunca chegou
+   a ramo nenhum — a árvore só pendura marco de ator `agent`).
+2. **Se o último marco de um dev agent é trabalho em curso não se decide na
+   árvore.** Para marco `dev.*`, o ramo só fica ATIVO quando o painel dá
+   `trabalhando` ao mesmo evento (`statusDoEventoDev`, lido de
+   `DEV_STATUS_EVENTS`). `aguardando`, `ocioso`, `falhou` e `travado` deixam o
+   ramo parado — e com eles `dev.idle`, `dev.blocked`, `dev.awaiting_gate`,
+   `dev.awaiting_approval` e `dev.idle_tripped`, que antes também contavam
+   como ativos. Tipo `dev.*` que o painel não decidiu NÃO vira ativo: na
+   dúvida a tela não afirma trabalho.
+3. **O bloqueio por container é marco próprio** (`espera`, cor de
+   `warning`, a mesma do gate), com o `reason` do engine como detalhe — é ele
+   que diz o que fazer. E `dev.started` deixa de dizer "começou a task":
+   medido no engine, ele sai ao RECEBER a ordem de trabalhar, antes de
+   `try_claim` (`DevAgentServer.handle_cast(:work)`); passa a dizer
+   "procurando task", e quem afirma a task é `dev.working`, que agora mostra o
+   título dela.
+
+**O que esta regra NÃO faz, e por quê:**
+
+- **`container.start_failed` não entra na árvore.** É a razão do bloqueio,
+  mas o ator é `system` (`action-executor`): pendurá-lo no ramo de um dev
+  agent seria inventar autoria, e o único outro lugar da estrutura, o
+  `tronco`, NÃO É RENDERIZADO por consumidor nenhum (medido:
+  `AgentTimelineTree` e a seção Atividades do `Shell` leem só `ramos`). O
+  evento continua no log cronológico, a um clique, e o ramo bloqueado já diz,
+  pelo `reason`, que falta subir o container.
+- **Os rótulos da árvore continuam em pt-BR fixo**, como todos os outros da
+  mesma tabela: a árvore nunca passou pelo `react-i18next`. Migrá-la é
+  mudança da tela inteira, não desta correção.
+
+- **Código:** `apps/web/src/lib/timeline-tree.ts:111` (`TRADUCAO`), `:155`
+  (`dev.started`), `:156` (`dev.working` com o título), `:172`
+  (`dev.blocked_by_container`), `:177` (`dev.error`), `:196`
+  (`TRADUCAO_FORA`), `:239` (o `ativo` lido do painel);
+  `apps/web/src/lib/agent-status.ts:127` (`statusDoEventoDev`);
+  `apps/web/src/components/AgentTimelineTree.module.css` (`.espera`)
+- **Teste:** `scripts/ci/vocabulario-de-eventos-dev.spec.ts:300` (o bloco da
+  árvore: `:308` todo tipo do engine decidido, `:324` nada traduzido que o
+  engine não emite, `:342` nada nos dois lados);
+  `apps/web/src/lib/timeline-tree.test.ts:111` (a sequência medida:
+  `dev.started` + `dev.blocked_by_container` deixa o ramo parado com o
+  motivo — caso de falha), `:130` (`dev.started` não afirma task), `:137`
+  (estados que o painel não chama de trabalho deixam o ramo parado; `dev.working`
+  segue ativo com o título), `:149` (`dev.error` encerra com o motivo)
+- **Origem:** AT-087 — instalação real de 14/09
