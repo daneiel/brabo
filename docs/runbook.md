@@ -942,10 +942,13 @@ HEAD; the command to go back appears in the log.
 ### Deploying a release's images {#imagens-de-uma-release}
 
 Since [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) every
-final tag publishes the four production images to GHCR
-(`ghcr.io/daneiel/brabo-{api,engine,web,backup}`, public — no
+final tag publishes the production images to GHCR
+(`ghcr.io/daneiel/brabo-{api,engine,web,backup,broker}`, public — no
 `imagePullSecret` anywhere) and records what it published, **by digest**,
-in `.release/images.json`.
+in `.release/images.json`. The fifth, the container broker
+([ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)), is
+for installations — the overlay has no broker Deployment, and
+`make imagens-do-release` writes only the other four.
 
 The overlays in this repository keep `newTag: REPLACE_WITH_DIGEST`, a
 marker. **The repository never declares which release is in production** —
