@@ -19,11 +19,21 @@ const { FakeSocket, fakeChannel, socketInstances, createSocketTicketMock } = vi.
       on: vi.fn(),
       push: vi.fn(),
       leave: vi.fn(),
+      onError: vi.fn(),
+      onClose: vi.fn(),
       state: 'joined',
     };
-    fakeChannel.join.mockReturnValue({
-      receive: vi.fn().mockReturnValue({ receive: vi.fn() }),
-    });
+    // O `joinPush` do Phoenix é encadeável e guarda os ganchos por status —
+    // `ganchosDoJoin.ok()` simula o servidor confirmando o join (RN-579).
+    const ganchosDoJoin: Record<string, (resp?: unknown) => void> = {};
+    const joinPush = {
+      receive: vi.fn((status: string, cb: (resp?: unknown) => void) => {
+        ganchosDoJoin[status] = cb;
+        return joinPush;
+      }),
+    };
+    fakeChannel.join.mockReturnValue(joinPush);
+    (fakeChannel as unknown as { ganchos: typeof ganchosDoJoin }).ganchos = ganchosDoJoin;
 
     const socketInstances: FakeSocket[] = [];
 
@@ -68,6 +78,7 @@ vi.mock('./logger', () => ({
 }));
 
 import { connectSessionHeartbeat } from './session-channel';
+import { canalDaSessaoVivo } from './canal-vivo';
 
 async function flush() {
   await Promise.resolve();
@@ -214,6 +225,58 @@ describe('connectSessionHeartbeat (RN-108)', () => {
     onToolCall.mockClear();
     callback({});
     expect(onToolCall).not.toHaveBeenCalled();
+
+    disconnect();
+  });
+});
+
+describe('connectSessionHeartbeat — canal VIVO (RN-579)', () => {
+  const ganchos = () =>
+    (fakeChannel as unknown as { ganchos: Record<string, () => void> }).ganchos;
+
+  it('caminho feliz: vivo só depois do join CONFIRMADO, não no connect', async () => {
+    createSocketTicketMock.mockResolvedValue({ ticket: 't', expiresAt: '' });
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-vivo', {});
+    await flush();
+
+    // Socket conectado e canal pedido — mas o servidor ainda não respondeu.
+    expect(canalDaSessaoVivo('sess-vivo')).toBe(false);
+
+    ganchos().ok();
+    expect(canalDaSessaoVivo('sess-vivo')).toBe(true);
+
+    disconnect();
+    // O cleanup devolve o poll curto: a tela saiu, o canal também.
+    expect(canalDaSessaoVivo('sess-vivo')).toBe(false);
+  });
+
+  it('CASO DE FALHA: queda do socket devolve o poll curto na hora', async () => {
+    createSocketTicketMock.mockResolvedValue({ ticket: 't', expiresAt: '' });
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-queda', {});
+    await flush();
+    ganchos().ok();
+    expect(canalDaSessaoVivo('sess-queda')).toBe(true);
+
+    const onClose = socketInstances[0].onClose.mock.calls[0][0] as () => void;
+    onClose();
+    expect(canalDaSessaoVivo('sess-queda')).toBe(false);
+
+    disconnect();
+  });
+
+  it('erro do CANAL (socket de pé) também devolve o poll curto', async () => {
+    createSocketTicketMock.mockResolvedValue({ ticket: 't', expiresAt: '' });
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-canal', {});
+    await flush();
+    ganchos().ok();
+
+    const onErrorDoCanal = fakeChannel.onError.mock.calls.at(-1)![0] as () => void;
+    onErrorDoCanal();
+    expect(canalDaSessaoVivo('sess-canal')).toBe(false);
+
+    // O rejoin automático do Phoenix reusa o MESMO joinPush: o `ok` volta.
+    ganchos().ok();
+    expect(canalDaSessaoVivo('sess-canal')).toBe(true);
 
     disconnect();
   });

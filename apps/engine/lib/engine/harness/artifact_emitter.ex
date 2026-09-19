@@ -20,7 +20,7 @@ defmodule Engine.Harness.ArtifactEmitter do
   """
 
   alias Engine.Harness.ArtifactSchemas
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @doc """
   Emite `artifact.<type>` como `actor_id`. Devolve `:ok` mesmo quando o
@@ -43,14 +43,17 @@ defmodule Engine.Harness.ArtifactEmitter do
 
   @doc "Grava o evento e transmite no canal, sem validação de artefato."
   def append(project_id, session_id, actor_id, type, payload) do
-    EngineApiClient.append_event(project_id, session_id, %{
-      type: type,
-      actorKind: "agent",
-      actorId: actor_id,
-      payload: payload
-    })
+    # O aviso no canal sai da própria fachada, só com a escrita confirmada
+    # (AT-093, RN-579) — aqui ele saía mesmo quando a api recusava o append.
+    _ =
+      EngineApiClient.append_event(project_id, session_id, %{
+        type: type,
+        actorKind: "agent",
+        actorId: actor_id,
+        payload: payload
+      })
 
-    LiveBroadcast.event_appended(session_id, type, actor_id, payload)
+    :ok
   end
 
   @doc """
@@ -80,20 +83,14 @@ defmodule Engine.Harness.ArtifactEmitter do
     end
   end
 
+  # O aviso no canal sai da fachada quando a api confirma (RN-579).
   defp append_returning(project_id, session_id, actor_id, type, payload) do
-    case EngineApiClient.append_event_returning(project_id, session_id, %{
-           type: type,
-           actorKind: "agent",
-           actorId: actor_id,
-           payload: payload
-         }) do
-      {:ok, event} ->
-        LiveBroadcast.event_appended(session_id, type, actor_id, payload)
-        {:ok, event}
-
-      error ->
-        error
-    end
+    EngineApiClient.append_event_returning(project_id, session_id, %{
+      type: type,
+      actorKind: "agent",
+      actorId: actor_id,
+      payload: payload
+    })
   end
 
   # ArtifactSchemas valida chaves string; os emissores montam payload com

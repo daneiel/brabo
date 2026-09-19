@@ -41,6 +41,11 @@ import {
   useHandoffs,
 } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
+import {
+  INTERVALO_DO_ORCAMENTO_COM_CANAL_MS,
+  intervaloDaSessao,
+  useCanalDaSessaoVivo,
+} from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS, addressableAgents, corDoAgente, nomeDoAgente } from '../lib/agents';
 import {
@@ -307,6 +312,11 @@ export function SessionPage({
   const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
+  // RN-579: com o canal da sessão VIVO, os polls desta tela viram fallback
+  // longo e quem diz quando buscar é o aviso do canal (`canal-vivo.ts`). A
+  // transição de status da sessão é da api e não tem aviso — é o fallback
+  // que a traz; as transições feitas AQUI já invalidam a chave na hora.
+  const canalVivo = useCanalDaSessaoVivo(sessionId);
   // RN-582 (ADR 0165): o atalho "Ativar execução" do card do handoff ao Dev
   // Lead só existe com repositório — sem ele a api responde 409. Só a
   // ausência CONFIRMADA esconde o atalho ("não sei" não vira "não tem"), e a
@@ -319,7 +329,7 @@ export function SessionPage({
   const { data: session } = useQuery({
     queryKey: ['session', projectId, sessionId],
     queryFn: () => getSession(projectId, sessionId),
-    refetchInterval: pollQueParaNoErro(5000),
+    refetchInterval: pollQueParaNoErro(intervaloDaSessao(5000, canalVivo)),
   });
   // Extraído para cima do bloco de rótulo/hashtag/tipo (onde vivia antes): o
   // card de handoff inline no fio (RN-125) precisa da mesma pergunta antes
@@ -441,7 +451,7 @@ export function SessionPage({
   // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
   // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
   // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
-  const backlogQuery = useBacklog(projectId);
+  const backlogQuery = useBacklog(projectId, undefined, sessionId);
   const {
     criativoActive,
     arquitetoActive,
@@ -530,10 +540,15 @@ export function SessionPage({
     queryKey: ['session-model-binding', projectId, sessionId, activeAgent],
     queryFn: () => getSessionModelBinding(projectId, sessionId, activeAgent ?? undefined),
   });
+  // `null` (sessão sem teto próprio) é o estado normal, e volta 304 desde a
+  // RN-579 (`etag-do-corpo-vazio.ts` na api). Gasto de token não tem evento
+  // próprio: quem antecipa é o `agent.done` e a atividade dos agentes.
   const { data: budget } = useQuery({
     queryKey: ['session-budget', projectId, sessionId],
     queryFn: () => getSessionBudget(projectId, sessionId),
-    refetchInterval: pollQueParaNoErro(5000),
+    refetchInterval: pollQueParaNoErro(
+      intervaloDaSessao(5000, canalVivo, INTERVALO_DO_ORCAMENTO_COM_CANAL_MS),
+    ),
   });
 
   // O agente que está streamando agora, quando o delta disse quem é (achado C).

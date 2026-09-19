@@ -5,6 +5,9 @@ import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
 import { pollQueParaNoErro } from './query-policy';
+// Com o canal da sessão VIVO, o poll da sessão vira fallback longo e quem diz
+// QUANDO buscar é o aviso do canal (RN-579, `canal-vivo.ts`).
+import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 
 // App opera sobre o primeiro workspace do usuário — sem UI de troca de
 // workspace ainda (nunca especificado nos mockups, ver design/COMPONENTS.md).
@@ -183,12 +186,15 @@ export function useSessionEvents(
   intervalMs = 3000,
   pausarPoll = false,
 ) {
+  const canalVivo = useCanalDaSessaoVivo(sessionId);
   return useQuery({
     queryKey: ['session-events', projectId, sessionId],
     queryFn: () =>
       listSessionEvents(projectId!, sessionId!, { limit: 200, latest: true }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: pausarPoll ? false : pollQueParaNoErro(intervalMs),
+    refetchInterval: pausarPoll
+      ? false
+      : pollQueParaNoErro(intervaloDaSessao(intervalMs, canalVivo)),
   });
 }
 
@@ -373,11 +379,12 @@ export function useSessionTokenUsage(
 // linha do projeto. Não voltem: reintroduzi-los é reintroduzir o N+1.
 
 export function usePendingActions(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+  const canalVivo = useCanalDaSessaoVivo(sessionId);
   return useQuery({
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    refetchInterval: pollQueParaNoErro(intervaloDaSessao(intervalMs, canalVivo)),
   });
 }
 
@@ -404,22 +411,33 @@ export function useProjectPendingActions(
 
 // Handoffs entre agentes da sessão (Fase 3b) — poll de 3s, como os eventos.
 export function useHandoffs(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
+  const canalVivo = useCanalDaSessaoVivo(sessionId);
   return useQuery({
     queryKey: ['session-handoffs', projectId, sessionId],
     queryFn: () => listHandoffs(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    refetchInterval: pollQueParaNoErro(intervaloDaSessao(intervalMs, canalVivo)),
   });
 }
 
 // Backlog do projeto (árvore épico→história→tarefa) — poll pra refletir o PO
 // gerando em tempo real.
-export function useBacklog(projectId: string | undefined, intervalMs = 4000) {
+//
+// `sessionIdDoCanal` (RN-579): a tela de Sessão passa a própria sessão, e com
+// o canal dela vivo o backlog vira fallback longo — o PO cria épico/história/
+// task pelo engine, e a fachada do engine avisa `backlog.*_created` no canal.
+// Sem ele (aba Backlog, Visão geral), o poll é o de sempre.
+export function useBacklog(
+  projectId: string | undefined,
+  intervalMs = 4000,
+  sessionIdDoCanal?: string,
+) {
+  const canalVivo = useCanalDaSessaoVivo(sessionIdDoCanal);
   return useQuery({
     queryKey: ['backlog', projectId],
     queryFn: () => listBacklog(projectId!),
     enabled: !!projectId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    refetchInterval: pollQueParaNoErro(intervaloDaSessao(intervalMs, canalVivo)),
   });
 }
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { connectSessionHeartbeat } from './session-channel';
+import { criarInvalidadorDoCanal } from './canal-vivo';
 import { listSessionEvents } from './api-client';
 import type { SessionEvent } from './api-types';
 import {
@@ -42,6 +43,25 @@ export function turnoTerminouNoLog(
   if (!maisRecente) return false;
   const status = (maisRecente.payload as { status?: unknown } | null)?.status;
   return status !== 'working';
+}
+
+/**
+ * O aviso do canal pede a leitura da cauda AGORA? (RN-579 sobre o ADR 0163)
+ *
+ * O acompanhamento pelo log (`acompanharTurnoPeloLog`) lê a cauda a cada
+ * `INTERVALO_DO_ACOMPANHAMENTO_MS` porque o `agent.done` do canal pode se
+ * perder. Desde a RN-579 o engine avisa `event.appended` de toda escrita que
+ * a api confirmou — inclusive o `agent.status` PERSISTIDO que fecha o turno.
+ * Quando esse aviso é do agente acompanhado, a leitura não espera o próximo
+ * tique: roda na hora. O intervalo NÃO muda — é a rede de segurança contra o
+ * aviso que também se perde, e dura só enquanto há turno acompanhado.
+ */
+export function avisoPedeVerificacaoDoTurno(
+  type: string,
+  actorId: string,
+  agenteAcompanhado: string | null,
+): boolean {
+  return !!agenteAcompanhado && type === 'agent.status' && actorId === agenteAcompanhado;
 }
 
 /**
@@ -166,6 +186,12 @@ export function useTurnoDoAgente(
   // O agente cujo turno ACEITO a tela acompanha pelo event log (ADR 0163,
   // RN-578) — ver `acompanharTurnoPeloLog`. `null` = nada a acompanhar.
   const [agenteAcompanhado, setAgenteAcompanhado] = useState<string | null>(null);
+  // O canal (efeito abaixo) não depende de `agenteAcompanhado` — reconectar a
+  // cada turno custaria um ticket novo (RN-108). Ele lê o acompanhado e a
+  // leitura imediata por estes dois refs (RN-579).
+  const agenteAcompanhadoRef = useRef<string | null>(null);
+  agenteAcompanhadoRef.current = agenteAcompanhado;
+  const verificarTurnoAgoraRef = useRef<(() => void) | null>(null);
 
   /**
    * RN-174 — arma o indicador de turno em curso a partir de uma ação que NÃO
@@ -314,9 +340,12 @@ export function useTurnoDoAgente(
 
     void verificar();
     const timer = setInterval(() => void verificar(), INTERVALO_DO_ACOMPANHAMENTO_MS);
+    // RN-579: o aviso do `agent.status` do acompanhado antecipa a leitura.
+    verificarTurnoAgoraRef.current = () => void verificar();
     return () => {
       desligado = true;
       clearInterval(timer);
+      verificarTurnoAgoraRef.current = null;
     };
   }, [agenteAcompanhado, turnoViaCanal, projectId, sessionId, finalizarTurnoDoAgente]);
 
@@ -324,6 +353,7 @@ export function useTurnoDoAgente(
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
   useEffect(() => {
     if (sessionStatus !== 'active') return;
+    const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onAgentDelta: (text, agent) => {
         streamingRef.current = true;
@@ -367,12 +397,31 @@ export function useTurnoDoAgente(
       // ser persistido, e trazer o evento antes de `agent.done` põe as duas na
       // tela ao mesmo tempo — a duplicação do achado C. `onAgentDone` invalida
       // logo em seguida, então nada se perde; só deixa de aparecer duas vezes.
-      onEvent: () => {
-        if (streamingRef.current) return;
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      //
+      // RN-579: o aviso deixou de invalidar SÓ os eventos. O TIPO decide o que
+      // mais fica velho (ações, handoffs, backlog, orçamento — `alvosDoEvento`),
+      // e cada alvo tem janela mínima entre duas buscas: uma rajada de
+      // `tool.result` de um dev agent vira UMA busca por janela, não uma por
+      // evento. É isso que deixa as queries da sessão trocarem o poll de 3s
+      // pelo fallback de 15s enquanto o canal está vivo. A regra do achado C
+      // continua, e só para os EVENTOS: a proposta de ação que chega no meio
+      // de um turno do Dev Lead aparece na hora.
+      //
+      // E compõe com o acompanhamento pelo log (ADR 0163): o `agent.status`
+      // persistido do agente acompanhado faz a leitura da cauda rodar na hora,
+      // em vez de esperar até 4s — o turno fecha assim que o log diz que
+      // fechou, mesmo com o `agent.done` perdido.
+      onEvent: ({ type, actorId }) => {
+        invalidador.aoEvento(type, streamingRef.current);
+        if (avisoPedeVerificacaoDoTurno(type, actorId, agenteAcompanhadoRef.current)) {
+          verificarTurnoAgoraRef.current?.();
+        }
       },
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      invalidador.encerrar();
+    };
   }, [sessionStatus, sessionId, projectId, queryClient, finalizarTurnoDoAgente]);
 
   // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131) — o MESMO

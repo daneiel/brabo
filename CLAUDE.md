@@ -161,6 +161,7 @@ estado lido do repositório e não da conversa.
 | A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
 | O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
 | O clique que dispara turno responde ao aceitar, e a recusa deixa de ser calada (AT-089) | ADR 0163, RN-578 |
+| A tela de Sessão para de pollar a 3s com o canal vivo, e o corpo vazio ganha ETag (AT-093) | RN-579, CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -1602,6 +1603,25 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é asserida por teste sobre a OPÇÃO passada ao construtor: teste que só
   verifica "conecta" passa com o defeito de pé, e passou. Comentário não é
   mecanismo.
+- O teto de 300 req/min é do USUÁRIO, não da aba, e NÃO se resolve subindo o
+  teto (RN-579, AT-093: um navegador na Sessão fazia 118/min de mediana e 263
+  de pico). Com o canal `session:<id>` VIVO (join confirmado), as queries da
+  sessão pollam no fallback de 15s (30s o orçamento) e quem diz QUANDO buscar
+  é o `event.appended` — que a fachada `EngineApiClient` emite para TODA
+  escrita que a api confirmou, só com `type`/`actorId`. Query nova de sessão
+  passa por `intervaloDaSessao` (`apps/web/src/lib/canal-vivo.ts`), senão um
+  único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
+  passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
+  aviso SEM janela só troca poll por rajada. O número é guardado por
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
+  que NÃO passa pelo engine (humano noutra aba, transição feita pela api) não
+  tem aviso e chega pelo fallback. E 304 não reduz a contagem do rate limit —
+  o guard conta antes do handler —, mas corpo `null` agora tem `ETag`
+  (`etag-do-corpo-vazio.ts`): sem ele, a rota que responde vazio nunca
+  voltava 304. A leitura de 4s da cauda que acompanha um turno aceito
+  (RN-578) NÃO vira fallback de 15s: ela é a rede contra o `agent.done`
+  perdido, e o aviso pode se perder junto; o que o canal faz é ANTECIPÁ-LA
+  (`avisoPedeVerificacaoDoTurno`, só o `agent.status` do agente acompanhado).
 - Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
   contra uma asserção de string — é a mesma lição do `#` no `FROM` do
   Dockerfile ("linter concordar não é build concordar"), medida uma segunda
