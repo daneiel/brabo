@@ -10556,6 +10556,11 @@ terminar em silêncio.
 
 ### RN-527 — A instalação sobe de um compose PRÓPRIO, por imagem escolhida, e confere a saúde antes de dizer que instalou {#rn-527}
 
+> **Revisada pela [RN-575](#rn-575) (ADR 0162):** o serviço `broker` passou a
+> existir neste compose, desligado sob o profile `container-broker` e ligado
+> pelo instalador só com consentimento; as imagens obrigatórias são CINCO. O
+> resto desta regra vale como está.
+
 `docker/docker-compose.install.yml` é o que roda na máquina de quem instalou, e
 ele **não é** o `docker-compose.prod.yml`. Três diferenças, cada uma com um
 motivo:
@@ -13806,3 +13811,72 @@ instalação sem broker continua possível pelo agente.
   em texto, nunca propõe), `:547` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
+
+---
+
+## O broker de container na instalação, com consentimento (RN-575)
+
+### RN-575 — O instalador só liga o broker de container com um "s" digitado, mede o grupo do socket de dentro de um container, e grava as quatro linhas juntas ou nenhuma {#rn-575}
+
+Numa instalação por Release, projeto `container` ou `mounted` nunca executava:
+quem sobe o container desses dois modos é o broker ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)),
+e a instalação não tinha o serviço porque a imagem não era publicada (ADR 0150,
+decisão 7). O [ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)
+publica a imagem como a quinta e põe o serviço no compose de instalação,
+DESLIGADO; esta regra é o que decide quando ele liga, porque ligar entrega o
+socket do Docker da máquina a um serviço da instalação.
+
+**A regra:**
+
+1. **Só um "s"/"sim" digitado liga.** A pergunta vem depois da base (a segunda
+   raiz do broker deriva dela) e antes do `.env`, e DIZ em texto o que concede —
+   o socket do Docker desta máquina, e que quem comanda o broker comanda o
+   Docker — e o que o contém. Enter, qualquer outra resposta e a falta de
+   terminal deixam desligado, e a falta de terminal é DITA, nunca decidida em
+   silêncio. Enquanto a resposta não é sim, o Docker não é tocado.
+2. **O grupo do socket é MEDIDO, de dentro de um container**, com a própria
+   imagem do broker, sem rede, rootfs read-only e o socket montado por
+   `--mount type=bind` — que recusa uma origem inexistente em vez de criar uma
+   pasta no host, como `-v` faria. É o gid visto de dentro que o `group_add`
+   precisa (no Docker Desktop o do host não diz nada). Medição que falha, caminho
+   que não é socket ou gid que não é número são RECUSA nomeada, que ensina a
+   rodar de novo respondendo não — nunca o `999` do default do compose.
+3. **As quatro linhas vão juntas ou nenhuma vai:** `COMPOSE_PROFILES=container-broker`,
+   `BROKER_URL=http://broker:8090`, `DOCKER_GID` e `PROJECT_WORKSPACES_HOST_ROOT`.
+   Profile sem URL sobe um broker que ninguém chama; URL sem profile aponta a
+   api para um serviço que não sobe. `escrever_env` recusa gravar o bloco sem o
+   gid medido — defeito do script, não da máquina. `BRABO_BROKER_IMAGE` é
+   gravada SEMPRE, ligado ou não: o Compose interpola o arquivo inteiro antes de
+   filtrar por profile.
+4. **A raiz da pasta gerenciada é CALCULADA e depois CONFERIDA.** Antes da
+   subida, `<DockerRootDir>/volumes/brabo_project_workspaces/_data`; depois,
+   comparada com o `Mountpoint` do volume. Divergir, ou a api não alcançar o
+   broker pela rede interna, vira PENDÊNCIA nomeada no fim — nunca recusa, que
+   derrubaria uma instalação de pé por um passo que se conserta editando o
+   `.env`.
+5. **A decisão aparece no resumo final**, nos dois sentidos, e a frase do que
+   o instalador NÃO faz deixa de dizer que só a Pasta montada fica sem
+   container: `container` também fica.
+
+**O que esta regra NÃO fecha:** o `DOCKER_GID` e a raiz calculada não foram
+medidos no Docker Desktop do macOS, e o E2E da tag roda a metade interativa só
+no Linux. Docker rootless ou remoto não tem o socket em `/var/run/docker.sock`,
+que é o caminho que o compose monta, e cai na recusa do item 2 — ligar o broker
+ali não é oferecido por outro caminho.
+
+- **Código:** `install.sh:931` (`consentir_broker`), `:883`
+  (`medir_gid_do_socket`), `:918` (`calcular_raiz_gerenciada`), `:987`
+  (`conferir_o_broker`), `:731` (`escrever_env_do_broker`), `:784` (o broker no
+  manifesto), `:1741` (a ordem: depois da base, antes do `.env`);
+  `docker/docker-compose.install.yml` (o serviço `broker` e a rede `broker`)
+- **Teste:** `scripts/dev/install-broker.spec.ts:158` (sem terminal: desligado,
+  dito, Docker intocado — caso de falha), `:169` (Enter), `:179` (`n`), `:187`
+  (`s` liga, com `--mount` e sem rede), `:208`/`:221`/`:229` (as três recusas),
+  `:237` (a raiz como pendência), `:248` (a frase final);
+  `scripts/dev/install-env.spec.ts:250`/`:259` (as quatro linhas juntas ou
+  nenhuma), `:270` (a guarda do gid), `:291`/`:307` (o `.env` contra o parser do
+  Compose: o broker sobe sem flag, com o token, as duas raízes e o gid, e a api
+  aponta para ele — ou nada disso); `scripts/dev/composes-em-conformidade.spec.ts:114`
+  (as camadas do ADR 0130 no arquivo que viaja)
+- **ADR:** [0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)
+- **Origem:** AT-097 — decidido pelo mantenedor em 2026-09-18

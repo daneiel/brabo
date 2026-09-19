@@ -571,6 +571,24 @@ rules:
     severity: block
     note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
 
+  # O QUE a esteira publica — os alvos do bake e o manifesto por digest que o
+  # instalador e o overlay leem. Até o ADR 0162 nenhuma regra vigiava estes
+  # arquivos, e foi assim que "a imagem do broker não é publicada" virou
+  # verdade silenciosa em quatro documentos: o `Dockerfile.prod` existia e o
+  # bake não o construía. Alvo novo (ou um a menos) muda o que se escaneia, se
+  # assina e se instala, e a página que diz isso é a da cadeia de suprimentos.
+  # `warn` e não `block`: trocar cache ou tag de um alvo não é regra nova, e a
+  # decisão de publicar uma imagem a mais já passa pelo `adr-trigger`.
+  - id: imagens-publicadas
+    watch:
+      - "docker-bake.hcl"
+      - "scripts/ci/images-manifest.ts"
+      - "scripts/ci/aplicar-imagens.ts"
+    docs:
+      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: warn
+    note: "Imagem publicada a mais ou a menos muda o que se escaneia, assina, instala e aplica no overlay."
+
   # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no
   # repositório procura isso no getting-started, não num README de pasta.
