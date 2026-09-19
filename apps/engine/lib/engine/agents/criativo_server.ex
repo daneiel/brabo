@@ -136,6 +136,14 @@ defmodule Engine.Agents.CriativoServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do

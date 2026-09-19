@@ -29,6 +29,10 @@ defmodule Engine.Psychologist.TerminationClassifier do
   Motivos que `Monitor.classify/1` produz, e onde cada um cai:
 
     * `{"heartbeat_timeout", "closed"}` -> `:timeout`
+    * `{"conversation_idle_timeout", "closed"}` -> `:timeout` (RN-581: a
+      conversa esperou o usuário além do teto — o mesmo "ninguém do outro
+      lado", medido pela conversa e não pela aba; a api só conhece seis
+      causas e abrir uma sétima seria mexer no contrato das hipóteses)
     * `{"killed", "closed_abnormally"}` -> `:kill`
     * `{Exception.message(e), "closed_abnormally"}` -> `:crash`
     * `{"normal", "closed_abnormally"}` -> `:unknown` (o processo saiu limpo
@@ -39,6 +43,7 @@ defmodule Engine.Psychologist.TerminationClassifier do
   def classify(reason, status) when is_binary(reason) do
     cond do
       String.contains?(reason, "heartbeat_timeout") -> :timeout
+      String.contains?(reason, "conversation_idle_timeout") -> :timeout
       # ANTES do catch-all de `closed_abnormally`, senão o drain de shutdown
       # apareceria como `:crash` e o Psicólogo levantaria hipótese sobre um
       # defeito que não existe.
@@ -67,7 +72,10 @@ defmodule Engine.Psychologist.TerminationClassifier do
   @doc "Rótulo pt-BR pra causa, usado no prompt do Psicólogo."
   @spec label(cause()) :: String.t()
   def label(:normal), do: "encerramento normal"
-  def label(:timeout), do: "timeout de heartbeat (ninguém reconectou)"
+
+  def label(:timeout),
+    do: "timeout de heartbeat ou de conversa ociosa (ninguém do outro lado)"
+
   def label(:kill), do: "processo morto externamente (kill)"
   def label(:crash), do: "crash (exceção no processo da sessão)"
 

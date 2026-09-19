@@ -17,6 +17,13 @@ defmodule Engine.Psychologist.TerminationClassifierTest do
     assert Classifier.classify("heartbeat_timeout", "closed_abnormally") == :timeout
   end
 
+  test "conversation_idle_timeout (RN-581) é :timeout, não encerramento normal" do
+    # Sem a cláusula própria, a causa nova caía em `true -> :normal` (status
+    # `closed`, motivo sem "kill") — o Psicólogo leria uma conversa abandonada
+    # por 8h como fecho gracioso.
+    assert Classifier.classify("conversation_idle_timeout", "closed") == :timeout
+  end
+
   test "kill (qualquer caixa) vira :kill" do
     assert Classifier.classify("killed", "closed_abnormally") == :kill
     assert Classifier.classify("Killed by operator", "closed_abnormally") == :kill

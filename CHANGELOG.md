@@ -6,6 +6,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine/api**: a sessão **deixa de expirar no meio de uma conversa, e a
+  sessão encerrada deixa de aceitar conversa** (AT-072). O heartbeat fechava a
+  sessão 30s depois de a aba parar mesmo com o Criativo esperando resposta, e a
+  conversa seguia gravando na sessão morta. Agora um agente conversacional
+  esperando o usuário segura a sessão por até **8 horas** contadas do fim do
+  turno dele (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`); passado o teto, a sessão
+  fecha `closed` com causa própria, `conversation_idle_timeout`. E uma sessão
+  `closed`/`closed_abnormally` recusa evento de conversa com **409** nomeado
+  (`reason: "sessao_encerrada"`) — mensagem, handoff, ativação de agente —,
+  enquanto o que o fechamento produz (Psicólogo, Anamnese) e a decisão humana
+  sobre ação pendente continuam entrando. Ao fechar, os agentes conversacionais
+  da sessão são parados em todos os nós, e o turno em curso é abandonado sem
+  gravar. `GET /internal/sessions/:id/pending-work` ganha
+  `aguardandoUsuarioDesde` ([RN-581](docs/business-rules.md#rn-581)).
+
 - **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
   repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
   Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
