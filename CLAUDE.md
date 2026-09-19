@@ -1708,6 +1708,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Na tela, "a chamada resolveu" deixou de significar "o turno acabou": depois
   do aceite chama-se `acompanharTurnoPeloLog`, nunca `finalizarTurnoDoAgente`.
   Não volte a segurar o request pelo turno.
+  O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
+  processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
+  + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos seis
+  (`Engine.Agents.TurnoOrfao`, RN-586); NUNCA reexecuta o turno, e só fecha o
+  que não tem processo vivo em nenhum nó. Sem isso a faixa da tela e o sinal de
+  trabalho pendente da RN-064 ficavam presos para sempre. O Infra Lead segue de
+  fora (roda no `handle_call`).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   Desde o ADR 0163 o `from` já foi respondido no aceite (como em todo turno);

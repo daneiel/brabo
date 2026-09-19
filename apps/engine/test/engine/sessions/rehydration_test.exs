@@ -35,6 +35,28 @@ defmodule Engine.Sessions.RehydrationTest do
     SessionServer.stop(pid)
   end
 
+  defmodule ClienteQueAvisaALeitura do
+    @moduledoc false
+    def list_events(_project_id, session_id, opts) do
+      send(Application.get_env(:engine, :test_pid), {:leitura_de_status, session_id, opts})
+      {:ok, []}
+    end
+  end
+
+  test "RN-586: o boot varre os status da sessão reidratada (turno órfão), fora do readiness" do
+    Application.put_env(:engine, :engine_api_client, ClienteQueAvisaALeitura)
+    session_id = unique_id()
+    SessionState.upsert_active!(session_id, "project-1")
+
+    Rehydrator.run()
+
+    assert_receive {:leitura_de_status, ^session_id, opts}, 1_000
+    assert opts[:types] == ["agent.status"]
+
+    :ok = Monitor.expect_stop(session_id)
+    if pid = SessionServer.whereis(session_id), do: SessionServer.stop(pid)
+  end
+
   test "sessão reidratada fecha sozinha por heartbeat_timeout se ninguém reconectar" do
     Application.put_env(:engine, :session_heartbeat_timeout_ms, 50)
     on_exit(fn -> Application.delete_env(:engine, :session_heartbeat_timeout_ms) end)

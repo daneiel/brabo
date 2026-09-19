@@ -42,7 +42,7 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
   alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
@@ -86,6 +86,10 @@ defmodule Engine.Agents.CriativoServer do
 
     # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
     # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,

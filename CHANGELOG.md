@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o turno **interrompido pelo reinício do engine fecha com desfecho
+  durável** (AT-156). O `agent.status: working` é gravado antes do aceite, e o
+  fim do turno só sai do processo do agente; com o engine reiniciado no meio, o
+  último status ficava `working` para sempre — a faixa de atividade da tela não
+  saía e a sessão contava trabalho pendente sem teto, então não fechava por
+  heartbeat. Agora, no boot (para toda sessão reidratada) e na subida de cada um
+  dos seis conversacionais, o `working` sem turno vivo em nenhum nó do cluster
+  ganha um `agent.error` de origem `infra` que diz o que houve, seguido de
+  `agent.status: idle`. O turno **não** é refeito. O Infra Lead segue de fora
+  ([RN-586](docs/business-rules.md#rn-586)).
+
 - **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
   quando era para outro agente** (AT-098). A última cláusula da rota interna
   de mensagem não olhava o agente, então o que fosse escrito para o `infra` —
