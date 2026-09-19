@@ -3183,12 +3183,13 @@ git checkout at another commit that leaves `git status` dirty.
 > gap [RN-549](business-rules.md#rn-549) measured). For those tags, run the
 > installer from a checkout of the repository at the tag you are installing.
 
-> **Measured and not fixed:** on the *migration* path, the restore proof
-> (`test-restore-compose.sh`) calls Compose without `--env-file`, and Compose
-> looks for `.env` next to the compose file, not in the directory you run from.
-> With the compose under `docker/` and `.env` one level up, the proof tends to
-> fail — which is the safe outcome ([RN-530](business-rules.md#rn-530): nothing
-> is deleted), but a compose-to-compose migration does not complete.
+> On the *migration* path the restore proof (`test-restore-compose.sh`) gets the
+> installation's `.env` through `BRABO_ENV_FILE` (passed to Compose as
+> `--env-file`), because Compose looks for `.env` next to the compose file — not
+> in the directory you run from. If you run the proof by hand against an
+> installation, export `BRABO_ENV_FILE=/path/to/.env` first; a path that does not
+> exist is refused, never replaced by another file. A failing proof still
+> deletes nothing ([RN-530](business-rules.md#rn-530)).
 
 Two sources:
 

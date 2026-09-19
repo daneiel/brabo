@@ -532,10 +532,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `scripts/ci/assets-do-instalador.ts` e o `case` do `install.sh` (bash 3.2, sem
   Node) — e o spec reprova a divergência e todo bind-mount relativo do compose
   fora dela: bind-mount novo no compose de instalação ENTRA NA TABELA, senão não
-  viaja. Adjacência medida e NÃO corrigida: `test-restore-compose.sh` chama o
-  Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
-  prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
-  é apagado), mas a migração por compose não fecha
+  viaja. A prova de restauração da MIGRAÇÃO fechou (AT-102): o `install.sh` passa
+  `BRABO_ENV_FILE="$PWD/.env"` a `test-restore-compose.sh`, que o entrega ao
+  Compose por `--env-file` (e recusa arquivo inexistente, sem cair noutro), e o
+  compose de instalação passou a DECLARAR o volume `backup_local` — a ausência
+  dele invalidava o arquivo inteiro assim que o profile `backup` ligava, por um
+  motivo que nem o `.env` corrigia
 - O broker da instalação (ADR 0162, RN-575) só existe a partir da PRÓXIMA tag
   final: o `install.sh` exige `broker` no `images.json`, que Releases
   anteriores não têm, e a prova ponta a ponta (o E2E responde SIM à pergunta e

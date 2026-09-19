@@ -1509,7 +1509,7 @@ migrar_instalacao_anterior() {
 
   # 2. provar que restaura, ANTES de apagar
   dizer 'Provando que o backup restaura…'
-  BRABO_COMPOSE_FILE="$COMPOSE_DE_INSTALACAO" BACKUP_DIR=/backups \
+  BRABO_COMPOSE_FILE="$COMPOSE_DE_INSTALACAO" BRABO_ENV_FILE="$PWD/.env" BACKUP_DIR=/backups \
     bash "$PROVA_DE_RESTAURACAO" \
     || recusar "o backup NÃO restaurou. Nada foi apagado. Um backup que não restaura não autoriza deleção nenhuma."
   ok 'backup provado'
