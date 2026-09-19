@@ -20,6 +20,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   caminhos local e `runner`) desfaz o `.git` que criou e relança a exceção
   original, então a tentativa seguinte repete o mesmo erro
   ([RN-558](docs/business-rules.md#rn-558)).
+- **web**: a tela **trata o 409 de conversa em sessão encerrada** e o botão
+  **Encerrar** fica inerte nos dois estados terminais (AT-154, AT-155). Enviar
+  mensagem, responder pergunta estruturada e confirmar prontidão numa sessão que
+  fechou por baixo mostravam o erro genérico; agora a tela reconhece o
+  `reason: "sessao_encerrada"`, diz que a sessão foi encerrada, refaz a leitura
+  dela (o composer some) e mantém o texto digitado. O botão "Encerrar" só
+  desabilitava em `closed` e, em `closed_abnormally`, devolvia 409 ao clique
+  ([RN-581](docs/business-rules.md#rn-581)).
 
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando

@@ -14386,6 +14386,18 @@ o engine — olhava o estado da sessão antes de gravar.
 10. **A recusa nunca é calada no engine.** Quase todo chamador de
     `append_event/3` descarta o retorno; o cliente registra o 409
     `sessao_encerrada` como aviso no log, e o retorno segue o mesmo.
+11. **A tela reconhece o 409 pelo CÓDIGO e diz que a sessão fechou** (AT-154).
+    `ehRecusaDeSessaoEncerrada` confere `status === 409` E
+    `body.reason === "sessao_encerrada"` — nunca o texto, e nunca só o 409, que
+    também é "turno em andamento". Nas quatro ações de conversa (enviar
+    mensagem, responder pergunta estruturada, confirmar prontidão do Criativo e
+    do Arquiteto) a tela mostra uma frase própria em vez do erro genérico, refaz
+    a leitura da sessão (é o `status` novo que faz o composer sumir) e NÃO perde
+    o que foi digitado: a mensagem volta ao rascunho e aparece somente leitura
+    no lugar do composer, e as respostas do formulário continuam nos campos. A
+    frase não promete "Reabrir" — a ação não existe. E o botão "Encerrar" fica
+    inerte nos DOIS estados terminais (`sessaoEhTerminal`, o espelho de
+    `isTerminal`), não só em `closed` (AT-155).
 
 **O que esta regra NÃO fecha:** o teto só é aferido quando o HEARTBEAT expira —
 com a aba aberta e mandando heartbeat, a sessão continua viva sem teto, como
@@ -14393,11 +14405,13 @@ sempre (quem está olhando não é conversa ociosa). A resposta do chat humano
 stateless a um turno que COMEÇOU com a sessão aberta entra mesmo que ela feche
 no meio (o ator é o modelo, e o gasto já foi medido). `deploy/k8s/` não carrega
 `SESSION_CONVERSATION_IDLE_TIMEOUT_MS`: vale o default do `runtime.exs`, e mudar
-o teto ali é acrescentar a variável ao ConfigMap. A tela não ganhou tratamento
-próprio para o 409 — mostra a mensagem da api, que diz para abrir uma sessão
-nova.
+o teto ali é acrescentar a variável ao ConfigMap. Desde a AT-154 a tela trata o
+409 com frase própria (item 11); as demais ações da tela que gravam em sessão
+fechada seguem mostrando a mensagem da api.
 
-- **Código:** `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
+- **Código:** `apps/web/src/lib/sessao-encerrada.ts`
+  (`ehRecusaDeSessaoEncerrada`, `sessaoEhTerminal`);
+  `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
   (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
   (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
   `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:37`

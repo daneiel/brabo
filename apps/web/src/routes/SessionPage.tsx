@@ -103,6 +103,7 @@ import {
   type TimelineEntry,
 } from '../lib/session-timeline';
 import { StorySlide } from './StorySlide';
+import { ehRecusaDeSessaoEncerrada, sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { ContextAside } from './ContextAside';
 import { AGENTES_DE_CHAT, useSessionReadiness } from '../lib/session-readiness';
@@ -1519,6 +1520,24 @@ export function SessionPage({
     }
   }
 
+  /**
+   * AT-154 (RN-581): a api recusou conversa porque a sessão já é terminal. A
+   * tela diz isso e refaz a leitura da sessão — é o `status` novo que faz o
+   * composer sumir, como já some em `closed`. Não promete "Reabrir": a ação
+   * não existe ainda (AT-071). Devolve `true` quando era essa recusa.
+   */
+  function avisarSessaoEncerrada(erro: unknown): boolean {
+    if (!ehRecusaDeSessaoEncerrada(erro)) return false;
+    showToast({
+      title: t('toasts.erro'),
+      message: t('toasts.sessaoEncerrada'),
+      tone: 'danger',
+    });
+    queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+    return true;
+  }
+
   async function handleReadiness() {
     try {
       iniciarTurnoDoAgente('criativo');
@@ -1530,6 +1549,7 @@ export function SessionPage({
       acompanharTurnoPeloLog('criativo');
     } catch (erro) {
       cancelarTurnoOtimista();
+      if (avisarSessaoEncerrada(erro)) return;
       // A recusa do agente (409 turno em curso, 422 sem regra de negócio) traz
       // a frase dele; a mensagem genérica fica para o que não tem frase.
       showToast({
@@ -1555,6 +1575,7 @@ export function SessionPage({
       acompanharTurnoPeloLog('arquiteto');
     } catch (erro) {
       cancelarTurnoOtimista();
+      if (avisarSessaoEncerrada(erro)) return;
       showToast({
         title: t('toasts.erro'),
         message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarArquitetura')),
@@ -1868,6 +1889,12 @@ export function SessionPage({
       } catch (erro) {
         cancelarTurnoOtimista();
         setOptimisticUser(null);
+        // AT-154: a sessão fechou por baixo — devolve o texto, que já saiu do
+        // campo, e diz por quê em vez do erro genérico.
+        if (avisarSessaoEncerrada(erro)) {
+          setDraft((atual) => atual || text);
+          return;
+        }
         // 409 com o agente ainda no meio de um turno traz a frase do engine
         // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
         showToast({
@@ -2125,7 +2152,7 @@ export function SessionPage({
             texto visíveis ao mesmo tempo na tela. */}
         {/* Encerrar é destrutivo e o desenho o marca como tal: contorno em
             `danger`, não um botão fantasma indistinguível dos outros. */}
-        <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>
+        <Button variant="danger" onClick={handleClose} disabled={!session || sessaoEhTerminal(session.status)}>
           <StopSquareIcon size={15} />
           {t('topbar.encerrar')}
         </Button>
@@ -2529,6 +2556,14 @@ export function SessionPage({
             </div>
           ) : (
             <div className={styles.activatePrompt}>
+              {sessaoEhTerminal(session?.status) && draft.trim() !== '' && (
+                <textarea
+                  className={styles.textarea}
+                  value={draft}
+                  readOnly
+                  aria-label={t('ativacao.mensagemNaoEnviada')}
+                />
+              )}
               {session?.status === 'created' ? (
                 <>
                   {t('ativacao.naoAtivada')}

@@ -54,6 +54,7 @@
     "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
   },
   "ativacao": {
+    "mensagemNaoEnviada": "Sua mensagem não enviada",
     "naoAtivada": "Sessão ainda não ativada.",
     "ativarSessao": "Ativar sessão",
     "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens."
@@ -106,6 +107,7 @@
     "erroEnviar": "Não foi possível enviar as respostas"
   },
   "toasts": {
+    "sessaoEncerrada": "Esta sessão foi encerrada e não aceita mais mensagens. Abra uma sessão nova para continuar.",
     "erro": "Erro",
     "erroAtivarSessao": "Não foi possível ativar a sessão",
     "erroRenomear": "Não foi possível renomear a sessão",

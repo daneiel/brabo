@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { answerStructuredQuestion, mensagemDaApi } from '../lib/api-client';
+import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
@@ -158,6 +159,14 @@ export function StructuredQuestionCard({
       showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
       onTurnoTerminado();
+      // AT-154 (RN-581): a sessão fechou. As respostas continuam nos campos
+      // (o estado é deste card); a tela diz por quê e refaz a leitura da sessão.
+      if (ehRecusaDeSessaoEncerrada(erro)) {
+        showToast({ title: t('toasts.sessaoEncerrada'), tone: 'danger' });
+        queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+        return;
+      }
       showToast({
         title: mensagemDaApi(erro, t('perguntas.erroEnviar')),
         tone: 'danger',
