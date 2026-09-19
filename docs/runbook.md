@@ -1666,6 +1666,15 @@ parts, and the collectors against a fake `kubectl`, are covered by
 directory as the `rollout-evidencia` artifact on every run that reached the
 proof, green included.
 
+What it does **not** capture, measured on the first green run with it
+(`35449815544`): the drain's own lines (`shutdown: drenando…`,
+`shutdown: drain concluído — …`) never reach the pod's log. `Engine.Shutdown.drain/0`
+runs inside the `preStop`'s `bin/engine rpc`, so its `Logger` output goes to
+that hook's stdout, which kubelet discards when the hook succeeds. The
+old pods' logs end at `SIGTERM received`. The per-session outcome of the drain
+has to be read from `donos-durante-rollout.log` (which replica each session
+went to) and `engine-estado.txt` (whether its `session_states` row survived).
+
 Manually, the same question:
 
 ```sql
