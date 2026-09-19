@@ -15,7 +15,14 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
 
   alias Engine.Harness.Tools.{
     CreateModuleMap,
@@ -332,11 +339,9 @@ defmodule Engine.Agents.ArquitetoServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    {_, text} = resultado
 
     append(state, %{
       "role" => "tool",

@@ -83,7 +83,16 @@ defmodule Engine.Agents.DevLeadServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{DevLeadTools, FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
+
+  alias Engine.Agents.{
+    DevLeadTools,
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
   alias Engine.Dev.Wake
   alias Engine.Sessions.EngineApiClient
 
@@ -404,6 +413,7 @@ defmodule Engine.Agents.DevLeadServer do
 
     case run_tool(name, args, state) do
       {:ok, texto} ->
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(name, {:ok, texto}))
         {append_tool_message(state, id, name, texto), :ok}
 
       {:pending, action_id} ->
@@ -416,6 +426,7 @@ defmodule Engine.Agents.DevLeadServer do
         {state, {:pending, action_id, id, name}}
 
       {:error, texto} ->
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(name, {:error, texto}))
         {append_tool_message(state, id, name, texto), :error}
     end
   end

@@ -42,7 +42,14 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
   alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
@@ -379,11 +386,11 @@ defmodule Engine.Agents.CriativoServer do
     # as regras", quatro regras iam para o lixo e o painel ficava vazio.
     case fun.() do
       {:ok, texto} ->
-        emit(state, "tool.result", %{tool: tool, ok: true})
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
         {realimentar(state, call, texto, tool), {:ok, tool}}
 
       {:error, motivo} ->
-        emit(state, "tool.result", %{tool: tool, ok: false, erro: to_string(motivo)})
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:error, motivo}))
 
         # O erro VOLTA para o modelo: na volta seguinte ele lê o motivo e
         # reemite corrigido, que é como um laço de ferramenta deve funcionar —

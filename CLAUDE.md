@@ -1704,7 +1704,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `chat.structured_question_answered` (a resposta já vem no `chat.message`) e,
   quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
   `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
-  memória sobre a leitura geral.
+  memória sobre a leitura geral. O `tool.result` dos seis leva o TEXTO que a
+  ferramenta devolveu (`resultado`, 2.000 caracteres, `resultadoTotal` quando
+  corta — RN-589), montado por `Engine.Agents.ResultadoDeFerramenta`; não grave
+  o evento à mão num servidor.
   que o turno termina (RN-460).
 - O clique que dispara turno de agente conversacional responde ao ACEITAR,
   nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`

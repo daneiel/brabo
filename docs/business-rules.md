@@ -14081,10 +14081,8 @@ tinham a MESMA cópia de `rehydrate/2`, com três defeitos:
 PO, Arquiteto, Dev Lead e UX Designer mudaram; o Criativo mudou nas refs do
 product_brief e no guardrail de zero regra; o Staff não tem kickoff (ADR 0088).
 
-**O que esta regra NÃO fecha:** só o Criativo grava `tool.result` — nos outros
-cinco a nota diz que o log não registra o desfecho, e o TEXTO que a ferramenta
-devolveu (o id do épico criado, por exemplo) não está no log de nenhum dos seis;
-gravá-lo é mudar o formato de `tool.result` daqui em diante, e não foi feito.
+**O que esta regra NÃO fecha:** o texto que a ferramenta devolveu não estava no
+log — fechado pela [RN-589](#rn-589), daqui em diante (sessão antiga continua sem).
 `InfraLeadServer` (que reidrata por `Reidratacao.historico/3` desde a AT-150,
 sem cópia própria) e `DevLeadTools.run_assessment/2` (que lê a CAUDA, `latest`
 com o mesmo teto de 200) também passam pelo caminho comum; nenhum leitor de
@@ -14875,3 +14873,52 @@ próxima falha do k3d, se houver, traz a linha do Monitor.
   (`Shutdown.release/1` marca o repasse — trocar a chamada de volta por
   `expect_stop/1` reprova SÓ este teste)
 - **Origem:** AT-078 — sessão órfã intermitente do rollout do engine
+
+### RN-589 — O texto que a ferramenta devolveu entra no `tool.result`, cortado com o total dito {#rn-589}
+
+A RN-580 declarou aberto: só o Criativo gravava `tool.result`, e sem o texto —
+nos outros cinco a nota da reidratação dizia que o log não registra o
+desfecho, e o agente reidratado sabia QUE chamou `create_epic`, não o id do
+épico que ela respondeu.
+
+**A regra:**
+
+1. **Os seis gravam.** Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff
+   emitem `tool.result` depois de TODA chamada que devolve texto. O payload sai
+   de UM lugar, `Engine.Agents.ResultadoDeFerramenta.payload/2`: `tool`, `ok`
+   e — no sucesso — `resultado`; na falha, `erro` (como o Criativo já fazia).
+2. **Com teto, e o teto diz o total.** O texto é cortado em 2.000 caracteres;
+   quando corta, `resultadoTotal` traz o tamanho REAL (ADR 0060). O motivo do
+   teto: o log é lido por todo membro do projeto e entra no backup, e uma
+   listagem (`listar_backlog`) pode ser grande.
+3. **Aditivo.** Campo novo em tipo existente, sem migration; `tool`/`ok`/`erro`
+   seguem como eram. Evento é imutável: sessão anterior continua sem o texto, e
+   a nota da reidratação segue dizendo isso para a chamada sem `tool.result`.
+4. **A reidratação usa o texto.** `desfecho: ok, devolveu: <texto>` (com aviso
+   `[cortado; o total real tinha N caracteres]` quando houver `resultadoTotal`).
+   Continua nota de texto, nunca `role: tool` — o evento não guarda o id da
+   chamada.
+5. `propose_adr` deixou de gravar o próprio `tool.result` de recusa: o servidor
+   do Arquiteto o grava para toda ferramenta, e os dois duplicariam o evento.
+
+**O que fica aberto:** (a) o Dev Lead que SUSPENDE (`{:pending, _}`,
+`propose_execution_plan`/`assess_implementability`) não grava `tool.result` na
+suspensão nem no `action_settled` — o desfecho real chega depois, e não foi
+tocado; (b) o `InfraLeadServer` tem o próprio `tool.result` e não passa por
+este módulo (outro card); (c) o teto de 2.000 é ESCOLHA, não medida sobre o
+acervo — nenhum resultado real foi amostrado; (d) **decisão de produto
+pendente (TODO humano da AT-151):** as ferramentas dos seis devolvem ids,
+listas de regras/backlog/métricas e mensagens de erro — nenhuma lê arquivo do
+repositório nem saída de comando —, mas se uma ferramenta assim nascer, ela
+gravaria conteúdo dele no log; o corte é a única contenção.
+
+- **Código:** `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:24`
+  (`payload/2`), `criativo_server.ex:382`, `po_server.ex:259`,
+  `arquiteto_server.ex:336`, `dev_lead_server.ex:407`,
+  `ux_designer_server.ex:232`, `staff_server.ex:198`;
+  `apps/engine/lib/engine/agents/reidratacao.ex:224` (`desfecho/1`)
+- **Teste:** `apps/engine/test/engine/agents/reidratacao_test.exs:128` (texto e
+  aviso de corte na nota; `:145` sessão antiga sem `tool.result`),
+  `apps/engine/test/engine/agents/po_server_test.exs:252` (o evento gravado,
+  cortado, com `resultadoTotal`)
+- **Origem:** AT-151 — declarado aberto na RN-580 (AT-073)

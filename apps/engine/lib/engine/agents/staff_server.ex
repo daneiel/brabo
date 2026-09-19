@@ -40,7 +40,16 @@ defmodule Engine.Agents.StaffServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, StaffTools, TurnoAssincrono, TurnoOrfao}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    StaffTools,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
   alias Engine.Sessions.EngineApiClient
 
   @agent "staff"
@@ -194,11 +203,9 @@ defmodule Engine.Agents.StaffServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    {_, text} = resultado
 
     append(state, %{
       "role" => "tool",

@@ -24,7 +24,15 @@ defmodule Engine.Agents.PoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
   alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
@@ -256,6 +264,7 @@ defmodule Engine.Agents.PoServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
     result = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, result))
 
     text =
       case result do
