@@ -1039,7 +1039,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é `scripts/dev/install-e2e.spec.ts`, e ele guarda as duas formas de o E2E
   apodrecer calado — o gatilho afrouxado, e uma frase do `install.sh` reescrita
   (que não faz as asserções falharem: faz elas SUMIREM). Mesma decisão, mesmo
-  motivo, do golden-set do RAG (ADR 0138)
+  motivo, do golden-set do RAG (ADR 0138). E ele guarda uma TERCEIRA, medida na
+  AT-083: o instrumento que não mede. O passo "com TTY" rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o
+  instalador nunca viu terminal — o comentário afirmava o contrário. Quem roda o
+  instalador agora é um driver de pty em Python, e o spec EXTRAI esse driver do
+  workflow e o roda contra um instalador de mentira; lógica de workflow que só
+  roda em tag se prova assim, em PR, nunca por leitura. A forma de instalar é
+  BAIXAR e rodar um arquivo (`curl -fsSLO … && bash install.sh`, RN-526) — o
+  `sh -c "$(curl …)"` antigo nunca funcionou, porque a autoverificação calcula o
+  hash de `$0`; não reabra essa forma nem dê à verificação uma porta de pular
 
 ## Convenções
 - Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
@@ -1500,7 +1509,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   passa em silêncio nem reprova por ambiente, a mesma régua do golden-set. O
   plist do macOS não tinha o defeito (o valor vai num `<string>` de XML), e a
   leitura de volta aceita as DUAS formas, para não tirar `status`/`uninstall`
-  de quem tem a unit quebrada em disco — o conserto é REINSTALAR.
+  de quem tem a unit quebrada em disco — o conserto é REINSTALAR. Terceira vez,
+  AT-083: o `.env` do `install.sh` saía com o `SECRET_KEY_BASE` quebrado em duas
+  linhas (`openssl rand -base64` quebra aos 64), e o Compose ora recusava, ora
+  ACEITAVA cortando o segredo. `scripts/dev/install-env.spec.ts` passa o `.env`
+  das funções de verdade por `docker compose config` e cobra cada valor INTEIRO
+  do outro lado — "parseia" não basta quando o parser aceita o arquivo errado.
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).

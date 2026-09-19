@@ -56,6 +56,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que ela for verdade. `--print-plan` continua imprimível sem nenhuma das duas,
   e declara qual aceita (`conferir-hash`).
 
+- **instalador**: a forma documentada de instalar **passa a ser baixar e rodar
+  um arquivo** — `curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh`
+  — e o `.env` gerado deixa de sair quebrado (AT-083, achada instalando a v6.1.0
+  numa máquina limpa). Três defeitos em sequência:
+
+  1. A forma que o runbook, o cabeçalho do `install.sh`, o `pnpm bootstrap` e o
+     próprio relato sem TTY ensinavam, `sh -c "$(curl … install.sh)"`, **nunca
+     funcionou**: o instalador confere o hash de `$0` contra o manifesto
+     assinado ([RN-526](docs/business-rules.md#rn-526)), e em `X -c "…"` o `$0`
+     é o nome do shell. Com `dash` como `sh` (Debian/Ubuntu) morria antes, em
+     `set -o pipefail`. A verificação por `$0` **fica**, sem porta de pular
+     ([ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)); o que muda é a doc,
+     e as formas erradas viram **recusas nomeadas antes de qualquer download**
+     que imprimem a certa: shell que não é bash, e rodar sem arquivo (`-c` ou
+     pipe).
+  2. A falha saía sem nome: na v6.1.0 o `sha256sum` do `$0` inexistente
+     derrubava o script pelo `pipefail` com só o erro cru da ferramenta; na
+     `dev`, depois da AT-091, ela chegava como **acusação de adulteração**
+     (*"o hash deste arquivo não está no manifesto"*), porque a função de hash
+     devolvia vazio de dentro do subshell. Hash que a ferramenta não consegue
+     calcular é agora uma terceira recusa, própria.
+  3. O `SECRET_KEY_BASE` vinha de `openssl rand -base64 64`, que quebra a linha
+     aos 64 caracteres: o `.env` ganhava uma linha solta. Medido em 100
+     gerações, o Compose recusou 49 e **aceitou 51 com o segredo cortado** em 64
+     caracteres. Todo base64 perde as quebras de linha agora, e um spec novo
+     passa o `.env` das funções de verdade pelo parser do Compose, cobrando cada
+     segredo inteiro ([RN-527](docs/business-rules.md#rn-527)).
+
+  O instrumento também mentia: o E2E do instalador rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o stdin do
+  instalador nunca foi um terminal — o fluxo interativo nunca tinha sido
+  exercitado. Ele passa a rodar o instalador num pty de verdade, por um driver
+  que espera cada pergunta (e o eco desligado, nas de senha), e pela mesma forma
+  que o runbook manda ([RN-534](docs/business-rules.md#rn-534)). O workflow
+  segue sem rodar em PR; o driver é exercitado em PR por
+  `scripts/dev/install-e2e.spec.ts`.
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades
