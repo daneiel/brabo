@@ -152,6 +152,7 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
 
 ## Estado atual e aberto
@@ -1470,6 +1471,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
   silenciosa — reporta origem ao lead, que decide e registra evento.
 - O contrato externo dos gates é estável: quem consome vê um veredito
   por gate, independente da estrutura interna da área.
+- Validação que fala do REPOSITÓRIO não roda em RUNTIME (RN-070). O registro
+  de gates é validado em DUAS camadas, e a divisão não é cosmética:
+  `validarRegistro` afirma sobre o CONTEÚDO (vale onde quer que o registro
+  seja lido, e é a única que `gate-registry.loader.ts` chama) e
+  `validarLocalizadores` afirma que o arquivo de prova existe no disco — só
+  faz sentido dentro de um checkout, e quem a cobra é o teste do arquivo real
+  e a fase 2 do `validacao-gates.ts`. Juntas numa função só custaram `GET
+  /gates` respondendo 500 em TODA instalação: a imagem de produção leva
+  `/app/docs/gates.yml` e nada de `apps/api/test/`, `scripts/ci/` ou
+  `.github/`, então os onze alvos "não existiam". NÃO devolva a checagem ao
+  loader — há teste que reconstrói a árvore da imagem em disco e fica
+  vermelho —, e não a troque por `try/catch` devolvendo registro vazio:
+  registro inválido por conteúdo continua LANÇANDO. A lição é geral: suíte
+  que roda de um checkout não prova nada sobre o que a IMAGEM carrega, e
+  quem faz essa pergunta é `docker/smoke.sh`.
 - A lista de áreas tem UMA fonte —
   `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
   engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
