@@ -163,6 +163,26 @@ export interface Entrada {
   tipoDoAutor?: string;
   diff: string;
   corpo: string;
+  /** `github.event.action` (opened, synchronize, edited, ...). Ausente = não é `edited`. */
+  acao?: string;
+  /** `github.event.sender.login`: em `edited`, QUEM editou o corpo. */
+  editor?: string;
+}
+
+/**
+ * Quem pode disparar a avaliação num `edited`. O `@dependabot rebase` emite
+ * `synchronize` E `edited` (o bot reescreve o corpo) no mesmo segundo, o
+ * `concurrency` do workflow cancela um dos dois, e o sobrevivente pode ser o
+ * `edited` (AT-100, runs 35412983999/35412984299 do #578). Um `edited` do PRÓPRIO
+ * bot, então, tem de avaliar; um `edited` de HUMANO continua sem avaliar — quem
+ * apagou a linha do bot manda. Edição feita pelo `GITHUB_TOKEN` (o passo do
+ * workflow) nem chega a disparar `edited`, então não há laço.
+ */
+const EDITORES_DO_BOT: readonly string[] = ['dependabot[bot]'];
+
+export function editorPodeAvaliar(acao: string | undefined, editor: string | undefined): boolean {
+  if (acao !== 'edited') return true;
+  return typeof editor === 'string' && EDITORES_DO_BOT.includes(editor);
 }
 
 export type Decisao =
@@ -192,6 +212,9 @@ export function semBlocoDoBot(corpo: string): string {
 }
 
 export function decidir(entrada: Entrada): Decisao {
+  if (!editorPodeAvaliar(entrada.acao, entrada.editor)) {
+    return { acao: 'manter', motivo: 'edição do corpo por quem não é o bot: a vontade dele manda' };
+  }
   const temBloco = entrada.corpo.includes(MARCA);
   const semBloco = semBlocoDoBot(entrada.corpo);
 
@@ -232,7 +255,7 @@ export function decidir(entrada: Entrada): Decisao {
 // uso: dependabot-justifica-pin.ts <arquivo-do-diff> <arquivo-do-corpo> <arquivo-de-saida>
 //
 // Lê head, autor e tipo do autor de `PR_HEAD_REF`, `PR_AUTOR` e
-// `PR_TIPO_DO_AUTOR` — do payload do evento, nunca do corpo. Imprime UMA linha
+// `PR_TIPO_DO_AUTOR` (e `EVENT_ACTION`/`EVENT_SENDER`, para o caso `edited`) — do payload do evento, nunca do corpo. Imprime UMA linha
 // JSON `{acao, motivo}` e, quando a ação muda o corpo, grava o corpo novo em
 // <arquivo-de-saida> para o workflow aplicar com `gh pr edit --body-file`.
 
@@ -248,6 +271,8 @@ async function principal(): Promise<void> {
     head: process.env.PR_HEAD_REF ?? '',
     autor: process.env.PR_AUTOR,
     tipoDoAutor: process.env.PR_TIPO_DO_AUTOR,
+    acao: process.env.EVENT_ACTION,
+    editor: process.env.EVENT_SENDER,
     diff: readFileSync(arquivoDoDiff, 'utf8'),
     corpo: readFileSync(arquivoDoCorpo, 'utf8'),
   });

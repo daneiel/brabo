@@ -335,8 +335,15 @@ always does. The rule never becomes "a bot's PR skips the docmap". The line
 carries an HTML marker (`<!-- dependabot-justifica-pin -->`), and the marker is
 what makes it **reversible**: if a later push adds something that isn't a pin,
 the bot's line is **removed**. A `docs-not-needed:` written by a human is never
-touched, neither to duplicate nor to delete, and the step doesn't run on
-`edited`, so a human who deletes the bot's line wins.
+touched, neither to duplicate nor to delete, and on `edited` the step only
+evaluates when the editor is the bot itself, so a human who deletes the bot's
+line wins.
+
+Since AT-100 that `edited` case is explicit: `@dependabot rebase` emits
+`synchronize` **and** `edited` at once, `concurrency` cancels one, and when the
+survivor was the `edited` the step was skipped and the drift read a body
+without the line (#578, runs `35412983999`/`35412984299`). The bot's own
+`edited` now evaluates; a human's does not.
 
 **Why a step in the drift job and not a sibling workflow** — three measurements:
 
