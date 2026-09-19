@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  editorPodeAvaliar,
   MARCA,
   analisarDiff,
   blocoDoBot,
@@ -274,5 +275,38 @@ index 1..2 100644
     const corpo = `${CORPO}\ndocs-not-needed: escrevi eu\n\n${blocoDoBot({ linhas: 1, arquivos: ['.github/workflows/ci.yml'] })}\n`;
     expect(semBlocoDoBot(corpo)).toContain('docs-not-needed: escrevi eu');
     expect(semBlocoDoBot(corpo)).not.toContain(MARCA);
+  });
+});
+
+describe('decidir em `edited` (AT-100)', () => {
+  it('edited pelo PRÓPRIO bot (sobrevivente do rebase) → escreve', () => {
+    const d = decidir(entrada({ acao: 'edited', editor: 'dependabot[bot]' }));
+    expect(d.acao).toBe('escrever');
+  });
+
+  it('edited por humano → mantém, mesmo com diff de pin puro', () => {
+    expect(decidir(entrada({ acao: 'edited', editor: 'daneiel' })).acao).toBe('manter');
+  });
+
+  it('edited sem editor conhecido → falha fechado (mantém)', () => {
+    expect(decidir(entrada({ acao: 'edited' })).acao).toBe('manter');
+  });
+
+  it('edited por humano NÃO remove o bloco do bot', () => {
+    const d = decidir(
+      entrada({ acao: 'edited', editor: 'daneiel', corpo: `${CORPO}\n${MARCA}\ndocs-not-needed: x\n` }),
+    );
+    expect(d.acao).toBe('manter');
+  });
+
+  it('synchronize/opened continuam avaliando, seja quem for o editor', () => {
+    expect(editorPodeAvaliar('synchronize', undefined)).toBe(true);
+    expect(editorPodeAvaliar('opened', 'daneiel')).toBe(true);
+  });
+
+  it('o autor humano continua sem escrever mesmo se o "editor" for o bot', () => {
+    expect(
+      decidir(entrada({ autor: 'daneiel', tipoDoAutor: 'User', acao: 'edited', editor: 'dependabot[bot]' })).acao,
+    ).toBe('manter');
   });
 });

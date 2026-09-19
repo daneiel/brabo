@@ -17,6 +17,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `agent.status: idle`. O turno **não** é refeito. O Infra Lead segue de fora
   ([RN-586](docs/business-rules.md#rn-586)).
 
+- **ci**: o `@dependabot rebase` **deixa de cancelar a justificativa do bot**
+  (AT-100). O rebase emite `synchronize` e `edited` no mesmo segundo; o
+  `concurrency` cancela um, e quando o sobrevivente era o `edited` o passo que
+  escreve `docs-not-needed:` era pulado e o drift reprovava (#578, runs
+  `35412983999`/`35412984299`). O passo agora também avalia em `edited` quando
+  o editor é o próprio Dependabot (`editorPodeAvaliar`, testada); edição de
+  humano continua sem avaliar, e autor humano continua sem justificativa.
+  Falha fechado, sem laço (o token do workflow não dispara `edited`).
+
 - **engine**: o rollout **deixa de produzir sessão sem dono** (AT-078). O
   `Monitor` do pod antigo apagava a linha de `session_states` quando o `:DOWN`
   da sessão repassada chegava — depois de o par tê-la regravado —, e a sessão
