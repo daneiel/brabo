@@ -643,7 +643,9 @@ defmodule Engine.Agents.CriativoServerTest do
     {:ok, state} = CriativoServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
 
     roles = Enum.map(state.messages, & &1["role"])
-    # system (pinned) + user + assistant; o tool.call é ignorado.
+    # system (pinned) + user + assistant; o tool.call SEM ator nem ferramenta
+    # é ignorado — o que entra é a chamada do PRÓPRIO agente (RN-580, coberto
+    # em `reidratacao_test.exs`).
     assert roles == ["system", "user", "assistant"]
     assert Enum.at(state.messages, 1)["content"] == "minha ideia é X"
     assert Enum.at(state.messages, 2)["content"] == "legal, me conta mais"

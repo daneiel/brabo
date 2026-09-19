@@ -13965,3 +13965,110 @@ reordena os handoffs.
   turno segue, rastro durável), `:89` (caminho feliz: com repositório, a PR
   consolidada é proposta)
 - **Origem:** AT-088 — instalação real em 2026-09-14
+
+### RN-580 — O agente conversacional que sobe sobre uma conversa recebe o FIM dela, com perguntas e ferramentas, e o começo que não coube é resumido com o número escrito {#rn-580}
+
+Os seis agentes conversacionais (Criativo, PO, Arquiteto, Dev Lead, UX
+Designer e Staff) reconstroem o histórico do event log no `init/1` — no
+restart e, também, quando sobem numa sessão que já tem conversa (o PO no
+handoff do Criativo). Medido em 13/09 (AT-073, contra a `b61bc49cd`), os seis
+tinham a MESMA cópia de `rehydrate/2`, com três defeitos:
+
+1. **Liam o começo.** `EngineApiClient.list_events/2` pede `limit=200` sem
+   `latest`, e a rota interna — que nem aceitava `latest` — devolve os
+   PRIMEIROS 200. Numa conversa de 201 eventos o agente acordava sem a
+   mensagem que estava respondendo. A tela já tinha resolvido isso com
+   `latest: true` e aviso de recorte ([RN-180](business-rules/autenticacao.md#rn-180));
+   o engine não tinha herdado.
+2. **Reconstruíam só `chat.message` e `agent.response`.** A pergunta feita por
+   formulário (`chat.structured_question`) e as ferramentas chamadas
+   (`tool.call`/`tool.result`) sumiam.
+3. **Cortavam calados.** E as leituras dos kickoffs (PO, Arquiteto, Dev Lead,
+   UX Designer) e das regras do product_brief (Criativo) filtravam em memória
+   os mesmos PRIMEIROS 200 eventos de todos os tipos: numa conversa longa com o
+   Criativo, o brief nascia depois do evento 200 e o PO recebia "(sem product
+   brief disponível)".
+
+**A regra:**
+
+1. **Um caminho só.** `Engine.Agents.Reidratacao` substitui as seis cópias; os
+   seis servidores chamam `historico/3` no `init/1`.
+2. **A cauda, com o teto do ADR 0060.** A leitura é `latest=true&limit=200` — o
+   `MAX_LIMIT` da rota, nem mais (a api cortaria) nem menos (deixaria de fora o
+   que ela entrega de graça). O teto NÃO ficou ilimitado.
+3. **O que entra.** `chat.message` e `agent.response` como sempre (de qualquer
+   agente da sessão — é o que o PO herda do Criativo); `chat.structured_question`
+   como fala do agente, com rótulos e opções; `tool.call`/`tool.result` do
+   PRÓPRIO agente como nota de texto com a ferramenta, os argumentos (cortados
+   em 1.500 caracteres) e o desfecho — nunca como mensagem `role: "tool"`, porque
+   o evento não guarda o id da chamada e um `tool_result` sem o `tool_use`
+   correspondente é recusado pelo provider. `chat.structured_question_answered`
+   fica DE FORA de propósito: a api grava as mesmas respostas num `chat.message`
+   logo depois (`AnswerStructuredQuestionUseCase` reusa
+   `SendAgentMessageUseCase`), e reidratar os dois duplicaria a resposta.
+4. **O começo que não coube é dito, com o número.** O `seq` é gapless e começa
+   em 1, então o número de eventos omitidos é o `seq` do primeiro da cauda menos
+   um — SUBTRAÇÃO, sem requisição a mais. Quando ele é maior que zero, o
+   histórico abre com UMA mensagem de sistema que escreve esse número e traz o
+   resumo da compactação de contexto mais recente do agente (quando foi
+   gravado) e a abertura da conversa (as seis primeiras mensagens dos primeiros
+   40 eventos, cortadas em 500 caracteres). São mais duas leituras com teto —
+   três no total, e uma só quando a conversa cabe.
+5. **`context.compacted` grava o resumo daqui em diante** — `summary`, `agent`
+   e `messagesSummarized`, ao lado das contagens de sempre. Conversa compactada
+   antes disto fica DECLARADA ("compactada N vez(es) antes de o resumo passar a
+   ser gravado; aquele resumo se perdeu"), nunca reconstruída; os eventos
+   antigos não mudam.
+6. **Histórico ilegível não vira conversa vazia.** Se a leitura falha, o agente
+   recebe uma mensagem de sistema dizendo que não conseguiu ler o histórico.
+7. **Kickoffs e refs do brief leem POR TIPO, pela cauda.** A rota interna ganhou
+   `types` (até 20, validados; malformado é 400) — mudança de CONTRATO,
+   aditiva: sem `latest`/`types` a resposta é a de antes. Quando a leitura por
+   tipo bate no teto, o kickoff diz que pode haver itens mais antigos.
+
+**Medido por agente:** os seis mudaram na reidratação (`init/1`). Nos kickoffs,
+PO, Arquiteto, Dev Lead e UX Designer mudaram; o Criativo mudou nas refs do
+product_brief e no guardrail de zero regra; o Staff não tem kickoff (ADR 0088).
+
+**O que esta regra NÃO fecha:** só o Criativo grava `tool.result` — nos outros
+cinco a nota diz que o log não registra o desfecho, e o TEXTO que a ferramenta
+devolveu (o id do épico criado, por exemplo) não está no log de nenhum dos seis;
+gravá-lo é mudar o formato de `tool.result` daqui em diante, e não foi feito.
+`InfraLeadServer` tem a mesma cópia antiga de `rehydrate/2` e
+`DevLeadTools.run_assessment/2` lê o plano de teste pelos PRIMEIROS 200 — os dois
+seguem em `list_events/2`, fora dos seis. A reidratação pode trazer MAIS do que o
+contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
+`ContextManager` compacta de novo no próximo turno.
+
+- **Código:** `apps/engine/lib/engine/agents/reidratacao.ex:71` (`historico/3`),
+  `:46` (o teto), `:104` (`eventos_do_tipo/3`), `:152` (`mensagens/2`), `:167`
+  (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
+  subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
+  abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:835`
+  (`list_events/3`); os seis `init/1` —
+  `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
+  `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
+  `staff_server.ex:86`; as leituras por tipo — `criativo_server.ex:435`,
+  `po_server.ex:352`, `arquiteto_server.ex:311`, `dev_lead_server.ex:431`,
+  `ux_designer_server.ex:246`;
+  `apps/api/src/interfaces/http/internal/leitura-interna-de-eventos.ts:24`,
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:306`,
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:56`
+- **Teste:** `apps/engine/test/engine/agents/reidratacao_test.exs:57` (pergunta
+  estruturada), `:92` (a resposta entra UMA vez), `:108` (ferramenta com
+  desfecho), `:128` (sem `tool.result`), `:136` (ferramenta de outro agente
+  fica de fora), `:157` (pede a cauda com teto 200), `:176` (o fim entra, o
+  começo vira resumo com o número), `:194` (o resumo da compactação), `:233`
+  (compactação antiga declarada), `:248` (histórico ilegível — caso de falha),
+  `:255` (abertura falhando não apaga o número), `:270` (leitura por tipo e o
+  aviso de teto); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:59`
+  (os seis `init/1`), `:84` (o brief depois do evento 200 chega ao PO), `:118`
+  (a regra depois do evento 200 entra no brief do Criativo), `:135` (Arquiteto,
+  Dev Lead e UX leem por tipo); `apps/engine/test/engine/harness/context_manager_test.exs:74`
+  (o resumo gravado), `:101` (fallback do sumarizador);
+  `apps/api/test/interfaces/http/internal/leitura-interna-de-eventos.spec.ts:13`
+  (sem os parâmetros, as opções de antes), `:40` (tipo malformado é 400);
+  `apps/api/test/infrastructure/persistence/session-event-latest.repository.spec.ts:123`
+  (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
+- **Origem:** AT-073, levantada em 2026-09-13
