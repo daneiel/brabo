@@ -13,6 +13,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   dizendo o tamanho real, e o agente reidratado o lê. Campo aditivo, sem
   migration; sessão antiga segue sem o texto. `propose_adr` deixa de gravar o
   próprio `tool.result` de recusa (o servidor o grava).
+- **docker (dev)**: o volume novo de `node_modules` deixa de nascer `root` e de
+  derrubar a `api` e a `web` com `EACCES: mkdir '/workspace/node_modules/.pnpm'`
+  (AT-172). Os Dockerfiles de dev das duas criam e dão dono aos três pontos de
+  montagem antes do `USER` — o mesmo remédio das linhas de `/data` — e o
+  `preflight.mjs` cria, como o usuário, as pastas correspondentes DENTRO do
+  checkout (o Docker as criava no host como root, ex.:
+  `packages/shared/node_modules`). Provado do zero, com volumes inexistentes e
+  sem `chown` à mão. Só aparece com volume inexistente: `reset-total.sh` não
+  remove esses volumes e o escondia.
 - **ci**: o build das imagens de produção deixa de reaproveitar uma camada de
   `apk upgrade` congelada em cache (AT-110). O `docker-bake.hcl` passa
   `no-cache-filter = ["runtime"]` ao alvo base dos cinco `Dockerfile.prod`, e o

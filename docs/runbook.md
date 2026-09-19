@@ -772,6 +772,19 @@ so this class of problem shouldn't recur.
    docker run --rm -v brabo_api_app_node_modules:/v alpine chown -R "$(id -u):$(id -g)" /v
    # repeat for the other node_modules/_build/deps/.mix/.hex volumes
    ```
+   **Brand-new volumes** (a first clone, or a machine that only ran the
+   installer, which defines none of these volumes) used to fail the other way:
+   `api` and `web` exited with `EACCES: permission denied, mkdir
+   '/workspace/node_modules/.pnpm'`, because a new volume inherits its owner
+   from the path **in the image** and the path did not exist there, so it was
+   born `root:root` (AT-172). `docker/api/Dockerfile` and `docker/web/Dockerfile`
+   now create and `chown` the three `node_modules` mount points before `USER`.
+   The mount points **inside the bind mount on your disk** are a separate
+   half: Docker creates a missing one on the host as `root` (it left
+   `packages/shared/node_modules` root-owned in the checkout), and no image can
+   change that. `pnpm dev` runs `scripts/dev/preflight.mjs`, which creates them
+   as you first; `docker compose up` run by hand skips it, so run
+   `pnpm dev:preflight` once before your first hand-run `up`.
 3. For a file already written by an agent into a **`mounted`**-mode project
    folder on the host, the fix is the same `sudo chown -R $USER <folder>`
    this section used to prescribe for the whole repo — it's now a one-off
