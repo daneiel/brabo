@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine (segurança)**: `mint` sobe de 1.10.0 para 1.10.1, que fecha o
+  advisory EEF-CVE-2026-82672 (GHSA-rj5m-69wp-cxq9, MEDIUM): o cliente HTTP/1
+  aceitava lixo depois do tamanho do chunk, o que permitia *response smuggling*
+  contra intermediários estritos numa conexão reaproveitada. O advisory
+  reprovava o job "Auditoria de dependências" (`mix hex.audit`) em todo PR
+  desde 19/09; só `mint` mudou no `mix.lock`.
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
   aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
