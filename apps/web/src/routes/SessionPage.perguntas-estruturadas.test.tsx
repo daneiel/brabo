@@ -247,6 +247,40 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
     });
   });
 
+  it('AT-154: 409 sessao_encerrada diz que a sessão fechou, refaz a leitura dela e mantém o que foi digitado', async () => {
+    answerStructuredQuestion.mockRejectedValue(
+      Object.assign(new Error('409'), {
+        status: 409,
+        body: { message: 'A sessão está encerrada.', reason: 'sessao_encerrada', status: 'closed' },
+      }),
+    );
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+
+    montar();
+
+    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
+      target: { value: 'Checkout Fácil' },
+    });
+    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
+      target: { value: 'Lojistas' },
+    });
+    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+
+    const leiturasAntes = getSession.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
+
+    expect(
+      await screen.findByText(
+        'Esta sessão foi encerrada e não aceita mais mensagens. Abra uma sessão nova para continuar.',
+      ),
+    ).toBeInTheDocument();
+    // Não é o erro genérico, e a sessão foi relida.
+    expect(screen.queryByText('Não foi possível enviar as respostas')).not.toBeInTheDocument();
+    await waitFor(() => expect(getSession.mock.calls.length).toBeGreaterThan(leiturasAntes));
+    // As respostas continuam nos campos.
+    expect(screen.getByLabelText('Qual o nome do produto?')).toHaveValue('Checkout Fácil');
+  });
+
   it('já respondido (chat.structured_question_answered posterior): vira somente leitura, sem formulário', async () => {
     eventos.mockReturnValue({
       items: [

@@ -54,6 +54,7 @@
     "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need"
   },
   "ativacao": {
+    "mensagemNaoEnviada": "Your unsent message",
     "naoAtivada": "Session not activated yet.",
     "ativarSessao": "Activate session",
     "statusGenerico": "Session {{status}} — can't send messages."
@@ -106,6 +107,7 @@
     "erroEnviar": "Could not send the answers"
   },
   "toasts": {
+    "sessaoEncerrada": "This session was closed and no longer accepts messages. Start a new session to continue.",
     "erro": "Error",
     "erroAtivarSessao": "Could not activate the session",
     "erroRenomear": "Could not rename the session",
