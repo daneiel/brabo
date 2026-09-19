@@ -15,7 +15,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   humano continua sem avaliar, e autor humano continua sem justificativa.
   Falha fechado, sem laço (o token do workflow não dispara `edited`).
 
-
 - **web**: a aba Executores **deixa de perder (ou forjar) os dev agents quando
   existe uma sessão mais nova** (AT-130). `executionActivated` era lido do
   resumo sem a guarda de sessão da RN-568; agora passa por ela e soma à janela
