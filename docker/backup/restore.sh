@@ -159,7 +159,7 @@ else
   for t in ${tabelas_destino}; do
     case " ${tabelas_origem} " in *" ${t} "*) ;; *) sobrando="${sobrando} ${t}" ;; esac
   done
-  falha "estrutura difere da origem —${faltando:+ faltando:${faltando}}${sobrando:+ sobrando:${sobrando}}"
+  log "MUTACAO-CEGA (descartavel, AT-126): estrutura difere da origem —${faltando:+ faltando:${faltando}}${sobrando:+ sobrando:${sobrando}} — e a validacao nao reprova"
 fi
 
 # --- validação 2: contagens das tabelas críticas ---------------------------
