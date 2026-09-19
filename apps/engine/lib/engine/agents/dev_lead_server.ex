@@ -185,6 +185,12 @@ defmodule Engine.Agents.DevLeadServer do
   # resposta HTTP desta rota já é descartada pelo controller do engine para
   # todos os agentes, então `{:reply, :ok, state}` basta.
   #
+  # Desde o ADR 0163 (RN-578) o controller NÃO descarta mais: o turno deixou
+  # de segurar o request, e a resposta do `handle_call` passou a ser o único
+  # sinal síncrono que o clique recebe. Responder `:ok` aqui diria "aceito"
+  # sobre uma mensagem que não foi lida — por isso `{:error,
+  # :aguardando_aprovacao}`, que vira 409 com a mesma frase do `agent.error`.
+  #
   # `emit` (durável) E `broadcast` (efêmero) — mesmo par que `emit_falha/2`
   # usa em todo o resto deste arquivo. Só `emit` deixaria quem está com a
   # aba aberta sem sinal nenhum até o próximo poll do event log.
@@ -204,7 +210,7 @@ defmodule Engine.Agents.DevLeadServer do
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
 
-    {:reply, :ok, state}
+    {:reply, {:error, :aguardando_aprovacao}, state}
   end
 
   @impl true

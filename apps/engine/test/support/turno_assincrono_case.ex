@@ -16,26 +16,30 @@ defmodule Engine.Agents.TurnoAssincronoCase do
 
   @doc """
   Roda `mod.handle_call(msg, from, state)` com um `from` de verdade
-  (`{pid, tag}}` — o `handle_call` de antes ignorava `_from`, mas o novo usa
-  `GenServer.reply/2`, que exige a forma certa). Se o turno foi pra uma Task,
-  drena o resultado dela e chama `handle_info/2` para completar o ciclo.
-  Devolve `{:reply, reply, state}` — a mesma forma de antes, com `reply`
-  sendo `:ok` no caminho feliz.
+  (`{pid, tag}`) e, se o turno foi pra uma Task, drena o resultado dela e
+  chama `handle_info/2` para completar o ciclo. Devolve `{:reply, reply,
+  state}` — `reply` é o ACEITE que o `handle_call` deu na hora (ADR 0163,
+  RN-578: `:ok` com o turno subindo, `{:error, _}` quando recusou antes), e
+  `state` é o do FIM do turno.
+
+  Até o ADR 0163 o `handle_call` devolvia `{:noreply, _}` e a resposta
+  chegava pelo `GenServer.reply/2` no fim do turno; agora ela vem na própria
+  tupla, e nada mais é mandado ao `from` depois — o `refute_received` abaixo
+  prova isso a cada chamada.
   """
   def sync_call(mod, msg, state, timeout \\ 5_000) do
     tag = make_ref()
     from = {self(), tag}
 
     case mod.handle_call(msg, from, state) do
-      {:reply, reply, new_state} ->
-        {:reply, reply, new_state}
-
-      {:noreply, state_with_task} ->
-        %{turno_assincrono: %{task: %Task{ref: ref}}} = state_with_task
+      {:reply, reply, %{turno_assincrono: %{task: %Task{ref: ref}}} = state_with_task} ->
         assert_receive {^ref, resultado}, timeout
         {:noreply, final_state} = mod.handle_info({ref, resultado}, state_with_task)
-        assert_receive {^tag, reply}, timeout
+        refute_received {^tag, _}
         {:reply, reply, final_state}
+
+      {:reply, reply, new_state} ->
+        {:reply, reply, new_state}
     end
   end
 

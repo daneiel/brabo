@@ -261,6 +261,57 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
   end
 
+  # ADR 0163 (RN-578): o aceite do `offer_infra_handoff` volta antes do turno
+  # de fechamento acabar, e a api chama `offer_dev_handoff` logo em seguida.
+  # Sem o adiamento, o handoff ao Dev Lead nasceria ANTES do de Infra.
+  describe "offer_dev_handoff com o turno de fechamento em curso" do
+    test "fica pendente e nasce DEPOIS do handoff ao infra", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+      from = {self(), make_ref()}
+
+      assert {:reply, :ok, em_curso} =
+               ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
+
+      assert {:reply, :ok, pendente} =
+               ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
+
+      assert pendente.handoff_dev_pendente
+      refute_received {:handoff_created, _, _, "arquiteto", "dev-lead", _}
+
+      %{task: %Task{ref: ref}} = pendente.turno_assincrono
+      assert_receive {^ref, resultado}, 5_000
+      assert {:noreply, final} = ArquitetoServer.handle_info({ref, resultado}, pendente)
+
+      refute final.handoff_dev_pendente
+
+      # A ORDEM é o que se prova: infra primeiro, dev-lead depois.
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_1, nil}
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_2, nil}
+      assert [destino_1, destino_2] == ["infra", "dev-lead"]
+    end
+
+    test "cancelar o turno de fechamento ainda oferece o handoff ao dev-lead", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_llm_turn_stream_hang, true)
+      from = {self(), make_ref()}
+
+      {:reply, :ok, em_curso} = ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
+      assert_receive :turno_pendurado, 1_000
+      {:reply, :ok, pendente} = ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
+
+      assert {:noreply, depois} = ArquitetoServer.handle_cast(:cancel, pendente)
+
+      refute depois.handoff_dev_pendente
+      refute_received {:handoff_created, _, _, "arquiteto", "infra", _}
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+    end
+  end
+
   # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui
   # nos dois handoffs do Arquiteto. `{:ok, _handoff} = ...` era um match
   # rígido — a api recusando o handoff derrubava o GenServer inteiro.
