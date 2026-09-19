@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o rollout **deixa de produzir sessão sem dono** (AT-078). O
+  `Monitor` do pod antigo apagava a linha de `session_states` quando o `:DOWN`
+  da sessão repassada chegava — depois de o par tê-la regravado —, e a sessão
+  ficava com dono e sem linha, invisível à adoção e ao drain do par. O drain
+  agora marca o repasse (`Monitor.expect_handoff/1`) e o Monitor não apaga a
+  linha de quem foi repassado; cada apagamento do Monitor passou a deixar uma
+  linha de log com sessão e nó. Provado por teste determinístico do
+  entrelaçamento, não pelo k3d ([RN-588](docs/business-rules.md#rn-588)).
+
 - **web**: a aba Executores **deixa de perder (ou forjar) os dev agents quando
   existe uma sessão mais nova** (AT-130). `executionActivated` era lido do
   resumo sem a guarda de sessão da RN-568; agora passa por ela e soma à janela
