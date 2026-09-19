@@ -4,10 +4,21 @@ defmodule Engine.Harness.Tools.ProposeAdr do
   `open_adr_pr` (efeito git → pipeline de aprovação). Quando o usuário aprova, a
   api commita `docs/adr/<slug>.md` no repo do projeto e abre a PR real.
   `:pipeline` (não executa direto; nasce pending).
+
+  Desde a RN-577 ela RECUSA localmente, ANTES de propor, quando o projeto não
+  tem repositório (`ProjectRepository.recusa_de_pr_sem_repositorio/2`). Num
+  projeto novo isso é o caso comum, não a borda: o Arquiteto trabalha ANTES do
+  handoff ao Dev Lead, e é esse handoff que provisiona o repositório (RN-522).
+  Sem a recusa, cada chamada virava uma `proposed_action` que o humano aprovava
+  e que `ExecuteAdrPrUseCase` só podia terminar `failed` (AT-088). A recusa é
+  resultado de ferramenta (RN-163) e deixa rastro durável: o `tool.call` o
+  `ArquitetoServer` já emite antes de rodar a tool, e o motivo vai num
+  `tool.result` com `ok: false` — a forma que o Criativo já usa.
   """
 
   @behaviour Engine.Harness.Tool
 
+  alias Engine.Projects.ProjectRepository
   alias Engine.Sessions.EngineApiClient
 
   @impl true
@@ -38,7 +49,26 @@ defmodule Engine.Harness.Tools.ProposeAdr do
   def category, do: :pipeline
 
   @impl true
-  def run(%{"title" => title, "slug" => slug, "content" => content} = args, ctx) do
+  def run(%{"title" => _, "slug" => _, "content" => _} = args, ctx) do
+    case ProjectRepository.recusa_de_pr_sem_repositorio(ctx.project_id, "open_adr_pr") do
+      nil ->
+        propor(args, ctx)
+
+      motivo ->
+        EngineApiClient.append_event(ctx.project_id, ctx.session_id, %{
+          type: "tool.result",
+          actorKind: "agent",
+          actorId: ctx.agent,
+          payload: %{tool: "propose_adr", ok: false, erro: motivo}
+        })
+
+        {:error, motivo}
+    end
+  end
+
+  def run(_args, _ctx), do: {:error, "propose_adr exige `title`, `slug` e `content`"}
+
+  defp propor(%{"title" => title, "slug" => slug, "content" => content} = args, ctx) do
     actor = %{kind: "agent", id: ctx.agent}
 
     payload = %{
@@ -64,6 +94,4 @@ defmodule Engine.Harness.Tools.ProposeAdr do
         {:error, "falha ao propor ADR: #{inspect(reason)}"}
     end
   end
-
-  def run(_args, _ctx), do: {:error, "propose_adr exige `title`, `slug` e `content`"}
 end

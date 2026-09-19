@@ -40,7 +40,7 @@ on:
 permissions:
   contents: write # criar a GitHub Release e a branch do corte do CHANGELOG
   pull-requests: write # abrir a PR do CHANGELOG para `dev`
-  packages: write # publicar as quatro imagens no GHCR (ADR 0119)
+  packages: write # publicar as cinco imagens no GHCR (ADR 0119, ADR 0162)
   id-token: write # assinar as imagens com cosign keyless (ADR 0149) — o token
   # OIDC é a IDENTIDADE que assina, e é ela que a verificação cobra depois.
   # Escopado a este workflow: não amplia o que `packages: write` já permitia.
@@ -246,12 +246,12 @@ jobs:
           echo "versao=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
-      # As quatro imagens, cada uma com DUAS tags: a versão (legível, é o que
+      # As cinco imagens (o broker desde o ADR 0162), cada uma com DUAS tags: a versão (legível, é o que
       # se cita numa conversa) e o SHA do commit (imutável, é o que identifica
       # o build sem ambiguidade quando uma tag é movida). O `TAG_EXTRA` do
       # `docker-bake.hcl` existe exatamente para a segunda.
       #
-      # BAKE, não quatro `docker build` em loop. O `ci.yml` já usa este mesmo
+      # BAKE, não cinco `docker build` em loop. O `ci.yml` já usa este mesmo
       # bakefile desde a Fase 5, e o comentário no topo dele MEDE o motivo: em
       # sequência os builds somavam ~359s (api 130, engine 160, web 49, backup
       # 20); em paralelo num builder só, ~195s. O loop daqui pagava aquele preço
@@ -306,7 +306,7 @@ jobs:
           OUTPUT: type=registry
 
       # O registro por DIGEST do que esta tag publicou. Reprova se qualquer um
-      # dos quatro alvos vier sem digest — três imagens novas e uma velha em
+      # dos cinco alvos vier sem digest — quatro imagens novas e uma velha em
       # produção é pior que release nenhum, e nada no arquivo diria que faltou.
       - name: Registrar as imagens publicadas
         run: |
@@ -321,7 +321,7 @@ jobs:
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
 
-      # ADR 0149 (BRB-005). Assina as QUATRO imagens por DIGEST, lido do
+      # ADR 0149 (BRB-005). Assina as CINCO imagens por DIGEST, lido do
       # manifesto que o passo acima acabou de gerar — nunca por tag, que é
       # ponteiro móvel: assinar `:5.0.0` garantiria o que aquela tag apontava
       # no instante da assinatura, e não o que ela aponta quando alguém baixa.
@@ -435,7 +435,7 @@ jobs:
             --body "Corte do CHANGELOG na versão \`${TAG}\`, gerado por \`scripts/changelog.mjs\`,
           mais a versão anunciada no README e em \`docs/intro.md\`, gerada por
           \`scripts/ci/readme-version.ts\`, mais \`.release/images.json\` — o registro
-          por DIGEST das quatro imagens que esta tag publicou no GHCR (ADR 0119),
+          por DIGEST das cinco imagens que esta tag publicou no GHCR (ADR 0119),
           que também está anexado à GitHub Release.
 
           Entra por PR porque \`main\` não aceita push, e commitar em \`qa\`/\`dev\`

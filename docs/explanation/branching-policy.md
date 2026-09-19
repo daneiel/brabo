@@ -513,10 +513,10 @@ deliberately modest:
 | GitHub Release | with notes generated from the CHANGELOG by
 `scripts/changelog.mjs` |
 | version check | the four versioned files, as a **warning** |
-| the four production images | built to prove the tag is **buildable** |
-| the version baked into two of them | baked in as an `ARG` in the api
-and web — see below |
-| **signatures for the four images** | `cosign` keyless, **by digest**,
+| the five production images | built to prove the tag is **buildable** — the fifth, the container broker, since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) |
+| the version baked into three of them | baked in as an `ARG` in the api,
+the web and the broker — see below |
+| **signatures for the five images** | `cosign` keyless, **by digest**,
 signed and then verified in the same run
 ([ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)) |
 
@@ -544,8 +544,8 @@ the tag can be moved. So `release.yml` **passes the version into the
 build** — and it's the only place in the repository that does this.
 
 `VERSION` is a `docker-bake.hcl` variable, separate from `TAG`, with a
-default of `dev`. The `api` target converts it into `BRABO_VERSION` and
-the `web` target into `VITE_BRABO_VERSION`; each `Dockerfile.prod`
+default of `dev`. The `api` and `broker` targets convert it into
+`BRABO_VERSION` and the `web` target into `VITE_BRABO_VERSION`; each `Dockerfile.prod`
 declares it as an `ARG` with the same default. From there it reaches the
 api's spans' `service.version` and the auth screens' footer on the web
 ([ADR 0036](../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
@@ -661,8 +661,12 @@ lands in the next cycle like any other change.
 ### `.release/images.json` rides the same PR — and adds no exception
 
 Since [ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md),
-`release.yml` publishes the four production images to GHCR and records
-what that tag published, **by digest**, in `.release/images.json`.
+`release.yml` publishes the production images to GHCR — five since
+[ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) —
+and records what that tag published, **by digest**, in
+`.release/images.json`. The installer reads all five from it; the
+Kubernetes overlay applies the four its base declares (there is no broker
+Deployment, by decision).
 
 The obvious implementation — the bot writing the digests into
 `deploy/k8s/overlays/prod/kustomization.yaml` and pushing — was rejected
