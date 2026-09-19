@@ -7966,6 +7966,13 @@ imagem final e já tinha `HEALTHCHECK`.
 
 ### RN-513 — Com base consentida, `mounted` é o pré-selecionado com `<base>/<slug>` sugerido; sem base, ou sem saber, ele não é oferecido {#rn-513}
 
+> **Revisada pela [RN-573](#rn-573) (ADR 0161):** a pré-seleção de `mounted`
+> passou a exigir TAMBÉM o broker de container confirmado. Com base e sem
+> broker (a instalação por Release), `runner` é o pré-selecionado e
+> `container`/`mounted` ficam inertes com o motivo em texto; com o broker
+> desconhecido, `container` segue selecionado. O resto desta regra vale como
+> está.
+
 Duas metades desta regra **já eram regra** e nunca tinham chegado ao cliente.
 "Não oferecer o modo sem base" é a [RN-500](#rn-500); "sugerir `<base>/<slug>`"
 é a [RN-501](#rn-501), e o ADR 0142 adiou a validação de disco justamente para
@@ -9561,6 +9568,11 @@ chave.
   só; e nenhuma tela dispara isto ainda (a metade web da [RN-519](#rn-519))
 
 ### RN-521 — A página `/containers` lista TODO projeto do workspace e vira o caminho HUMANO de subir o container, ramificado por `execution_mode` {#rn-521}
+
+> **Estendida pela [RN-574](#rn-574) (ADR 0161):** um quarto motivo de recusa
+> local, `sem_broker_na_instalacao`, para `container`/`mounted` numa
+> instalação sem broker de container — depois de "já está de pé" e antes de
+> "sem imagem decidida".
 
 Subir o container de um projeto tinha **um** caminho: o Infra Lead, dentro de
 uma sessão, chamando a ferramenta dele. Numa execução real do `exp004` (modo
@@ -13686,3 +13698,111 @@ delas estava coberta pela comparação com o vocabulário do engine.
   (estados que o painel não chama de trabalho deixam o ramo parado; `dev.working`
   segue ativo com o título), `:149` (`dev.error` encerra com o motivo)
 - **Origem:** AT-087 — instalação real de 14/09
+
+### RN-573 — O assistente de criação só pré-seleciona o modo que a instalação executa: sem broker, `runner` é o sugerido e `container`/`mounted` ficam inertes com o motivo em texto {#rn-573}
+
+Numa instalação real da v6.1.0 (AT-085), o assistente pré-selecionou `mounted`
+— o `install.sh` sempre grava `BRABO_PROJECTS_BASE`, e com base conhecida a
+[RN-513](#rn-513) pré-selecionava o modo. Mas a instalação por Release não tem
+broker de container (a imagem não é publicada, decisão 7 do
+[ADR 0150](adr/0150-instalador-de-uma-linha.md)), e `container`/`mounted` só
+sobem container pelo broker ([RN-503](#rn-503)). Resultado: seis
+`dev.blocked_by_container` e duas `container.start_failed` — ninguém trabalha
+no projeto, para sempre ([RN-502](#rn-502)).
+
+**A regra ([ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)):**
+
+1. **A api diz se há broker, na rota que o assistente já lê.**
+   `GET workspaces/:workspaceId/projects-base` passa a devolver
+   `brokerConfigurado` ao lado de `projectsBase` — mesma pergunta ("que modo
+   esta INSTALAÇÃO executa?"), mesmo mínimo (`maintainer`), nenhuma rota nova.
+   A fonte é `ContainerBrokerPort.configurado()`, a mesma da leitura do estado
+   observado. Diz que `BROKER_URL` existe, nunca que o broker responde.
+2. **Três estados, que não colapsam.** Broker **confirmado**: a RN-513 intacta.
+   Ausência **confirmada**: `container` e `mounted` continuam na tela, **inertes**
+   (o controle sai, a informação fica — [RN-102](business-rules/custo.md#rn-102)),
+   o motivo é dito UMA vez em texto abaixo dos cards, e `runner` é o
+   pré-selecionado. **Não sei** (carregando, consulta que falha, campo ausente):
+   não vira "tem" — `mounted` NÃO é pré-selecionado, a revisão da RN-513 — e
+   também não vira "não tem": nenhum card trava e nada se afirma em texto;
+   `container` segue selecionado, como antes.
+3. **A escolha humana não aponta para o que não roda.** Quem clicou num modo
+   antes de a resposta chegar, e a resposta confirma que ele não executa aqui,
+   cai para `runner` — a mesma regra que já derrubava `mounted` quando a base
+   some.
+
+**O que esta regra NÃO fecha:** a conversão de modo
+([RN-559](#rn-559)) continua oferecendo `container`/`mounted` numa instalação
+sem broker; o instalador não pergunta se liga o broker, porque a imagem dele
+não é obtível por uma instalação de Release (medido — ver o ADR 0161); e no
+compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) mas
+deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
+certo, porque sem a variável a api nunca chama o broker.
+
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:253`
+  (`getProjectsBase`, `:256` o campo novo),
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
+  `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
+  importado só pela pergunta `configurado()`);
+  `apps/web/src/routes/NewProjectWizard.tsx:246` (`brokerConfirmado`), `:249`
+  (`semBrokerConfirmado`), `:259` (`modoExecutavel`), `:272` (o modo vigente),
+  `:668` (o card inerte), `:681` (o motivo em texto);
+  `apps/web/src/locales/{pt-BR,en}/newProject.json` (`workspace.noBroker`)
+- **Teste:** `apps/api/test/interfaces/http/iam/workspaces-projects-base.controller.spec.ts:59`
+  (com `BROKER_URL`, `true`), `:69` (sem, `false` mesmo com base — caso de
+  falha), `:79` (só espaço conta como ausente), `:52` (o mínimo continua
+  `maintainer`); `apps/web/src/routes/NewProjectWizard.test.tsx:504` (sem
+  broker: `runner` pré-selecionado, os dois cards inertes, o motivo em texto),
+  `:523` (broker desconhecido: não pré-seleciona `mounted` nem trava nada),
+  `:534` (clique em `container` antes da resposta cai para `runner`), `:479`
+  (consulta que falha não afirma ausência)
+- **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
+  mantenedor em 2026-09-18
+
+### RN-574 — A `/containers` recusa antes do clique a subida de `container`/`mounted` numa instalação sem broker, com motivo próprio em texto {#rn-574}
+
+A mesma instalação do AT-085 deixou aprovar, pela página de containers
+([RN-521](#rn-521)), duas `container_start` que só podiam terminar `failed` com
+`BrokerIndisponivelError`. A página já recusava localmente o que sabia que ia
+falhar — sem imagem, `runner` sem pasta confirmada, papel abaixo de
+`maintainer` — e não sabia desta.
+
+**A regra ([ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)):**
+
+1. **A lista diz se há broker, em toda linha.**
+   `GET workspaces/:workspaceId/containers` ganha `brokerConfigurado` por linha,
+   com o MESMO valor em todas, lido UMA vez por carga — é configuração da
+   instalação, e trocar a lista por um envelope quebraria o contrato.
+2. **Um quarto motivo de recusa, `sem_broker_na_instalacao`,** para `container`
+   e `mounted` quando `brokerConfigurado !== true` ("não sei" não vira "tem").
+   Vem logo depois de "já está de pé" e ANTES de "sem imagem decidida": numa
+   instalação sem quem suba o container, mandar decidir a imagem seria apontar
+   a porta errada. O texto diz o quê (esta instalação não sobe container para
+   esses dois modos), por quê (sem broker, `BROKER_URL` vazia) e o que não é
+   afetado (`runner`).
+3. **`runner` nunca cai nele.** Quem depende do broker é decidido pela MESMA
+   ramificação por destino de `acaoDeSubidaDoModo` (`usaBroker`), não por uma
+   segunda régua.
+
+**O que esta regra NÃO fecha:** parar e remover não ganharam a recusa (sem
+broker não há container de `container`/`mounted` registrado de pé para parar,
+e o caso não foi medido), e o Infra Lead continua sem saber de broker ausente
+— ele recusa por MODO ([RN-566](#rn-566)), e propor `container_start` numa
+instalação sem broker continua possível pelo agente.
+
+- **Código:** `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:71`
+  (o campo), `:150` (lido uma vez por carga);
+  `apps/api/src/interfaces/http/containers/dto/containers.response.dto.ts:408`;
+  `apps/web/src/routes/containers-subida.ts:33` (o motivo), `:87`
+  (`usaBroker`), `:122` (a recusa);
+  `apps/web/src/locales/{pt-BR,en}/containers.json`
+  (`actions.bloqueio.sem_broker_na_instalacao`)
+- **Teste:** `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts:252`
+  (sem broker, `false` em toda linha — caso de falha), `:264` (com broker,
+  `true`); `apps/web/src/routes/containers-subida.test.ts:54` (`container` e
+  `mounted` recusam antes da imagem), `:70` (`runner` não é afetado), `:84`
+  (campo ausente recusa), `:93` (já de pé continua dizendo isso);
+  `apps/web/src/routes/ContainersPage.test.tsx:522` (botão inerte e o motivo
+  em texto, nunca propõe), `:547` (`runner` segue subindo)
+- **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
+  mantenedor em 2026-09-18

@@ -231,17 +231,54 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     ? (projectsBaseQuery.data?.projectsBase ?? null)
     : null;
 
+  /**
+   * O broker de container, a OUTRA metade da mesma pergunta (ADR 0161,
+   * RN-573): `container` e `mounted` só sobem container pelo broker (ADR
+   * 0144), e sem container `running` nenhum dev agent trabalha (ADR 0143).
+   *
+   * TRÊS estados, e eles não colapsam. `true` e `false` vêm da api; enquanto
+   * a consulta não chegou, ou quando ela FALHA, é "não sei" — e "não sei" não
+   * vira "tem" (não pré-seleciona `mounted`) nem vira "não tem" (não trava os
+   * cards nem afirma em texto uma ausência que ninguém confirmou): fica o
+   * comportamento de antes, `container` selecionado e `mounted` fora da tela
+   * pela régua da RN-513.
+   */
+  const brokerConfirmado =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.brokerConfigurado === true;
+  const semBrokerConfirmado =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.brokerConfigurado === false;
+
+  /**
+   * O modo que esta instalação CONSEGUE executar. Sem broker CONFIRMADO,
+   * `container` e `mounted` continuam na tela (tirar o card esconderia a
+   * informação, ADR 0064), mas inertes, com o motivo dito UMA vez em texto
+   * abaixo deles — e `runner` passa a ser o pré-selecionado.
+   */
+  const modoExecutavel = (modo: ModoDeWorkspace): boolean =>
+    modo === 'runner' || !semBrokerConfirmado;
+
   // O modo VIGENTE: a escolha humana quando existe, senão o default da
-  // instalação. Uma escolha em `mounted` que deixe de ser oferecível (a
-  // consulta invalidada devolvendo `null`) cai para o default em vez de
-  // ficar apontando para um card que saiu da tela.
+  // instalação. Uma escolha que deixe de ser oferecível (a consulta
+  // invalidada devolvendo `null`, ou um clique em `container` antes de a
+  // resposta dizer que não há broker) cai para o default em vez de ficar
+  // apontando para um card que saiu da tela ou ficou inerte.
+  //
+  // `mounted` só é PRÉ-selecionado com base E broker confirmados (RN-513
+  // revisada pela RN-573): pré-selecionar um modo que não sobe container foi
+  // o que deixou a instalação do AT-085 com seis dev agents bloqueados para
+  // sempre.
   const modoDeWorkspace: ModoDeWorkspace =
     modoDeWorkspaceEscolhido !== undefined &&
-    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted)
+    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted) &&
+    modoExecutavel(modoDeWorkspaceEscolhido)
       ? modoDeWorkspaceEscolhido
-      : podeOferecerMounted
-        ? 'mounted'
-        : 'container';
+      : semBrokerConfirmado
+        ? 'runner'
+        : podeOferecerMounted && brokerConfirmado
+          ? 'mounted'
+          : 'container';
 
   /**
    * DE ONDE o navegador de pastas lê o disco, decidido pelo MODO (RN-533).
@@ -628,6 +665,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 ]
                   .filter(Boolean)
                   .join(' ')}
+                disabled={!modoExecutavel(m.id)}
                 onClick={() => setModoDeWorkspaceEscolhido(m.id)}
               >
                 <span className={styles.providerLabel}>{t(m.labelKey)}</span>
@@ -635,6 +673,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               </button>
             ))}
           </div>
+
+          {/* O motivo dos cards inertes, em TEXTO e uma vez (ADR 0064):
+              `title` em elemento `disabled` não abre no Chromium. Só com a
+              ausência CONFIRMADA pela api — "não sei" não afirma nada. */}
+          {semBrokerConfirmado && (
+            <div style={{ marginTop: 12 }} data-testid="aviso-sem-broker">
+              <Alert tone="warning">
+                <Trans
+                  i18nKey="workspace.noBroker"
+                  ns="newProject"
+                  components={{ strong: <strong />, code: <code /> }}
+                />
+              </Alert>
+            </div>
+          )}
 
           {modoDeWorkspace !== 'container' && (
             <div className={styles.field} style={{ marginTop: 16 }}>

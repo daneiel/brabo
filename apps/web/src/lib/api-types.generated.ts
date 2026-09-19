@@ -3781,6 +3781,8 @@ export interface paths {
         /**
          * The base folder for projects in Mounted mode
          * @description The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.
+         *
+         *     `brokerConfigurado` answers the other half of the same question: `container` and `mounted` only start a container through the broker (ADR 0144), so without it the wizard does not pre-select Mounted and offers Runner instead (ADR 0161, RN-573).
          */
         get: operations["WorkspacesController_getProjectsBase"];
         put?: never;
@@ -4972,6 +4974,11 @@ export interface components {
             naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | "sem_container_registrado" | null;
             /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
+            /**
+             * @description Whether THIS INSTALLATION has a container broker configured (`BROKER_URL` set, ADR 0130) — the same value on every row, because it is installation configuration and not a property of the project. `container` and `mounted` projects only start a container through the broker (ADR 0144), so with `false` the page refuses the start button for them BEFORE the click and says why (ADR 0161, RN-574); `runner` projects are unaffected. It says the variable exists, never that the broker answers — that is what `naoObservado` reports.
+             * @example false
+             */
+            brokerConfigurado: boolean;
         };
         ContainerSpecInternalResponseDto: {
             /** @example f52be111-0000-4000-8000-000000000000 */
@@ -7253,6 +7260,11 @@ export interface components {
              * @example /home/voce/brabo
              */
             projectsBase: Record<string, never> | null;
+            /**
+             * @description Whether this installation has a container broker configured (`BROKER_URL` set, ADR 0130). `container` and `mounted` projects only start a container through the broker (ADR 0144), and without one every dev agent is blocked forever (ADR 0143). With `false` the project wizard does not pre-select Mounted, keeps Container and Mounted visible but not selectable with the reason in text, and pre-selects Runner (ADR 0161, RN-573). It says the variable exists, never that the broker answers. Installation configuration, like `projectsBase`: the same for every workspace.
+             * @example false
+             */
+            brokerConfigurado: boolean;
         };
         ProjectUnreadEventsResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */

@@ -35,6 +35,7 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     detalheDaObservacao: null,
     naoVerificado: 'sem_container_registrado',
     acaoPendente: null,
+    brokerConfigurado: true,
     ...overrides,
   };
 }
@@ -48,6 +49,57 @@ describe('acaoDeSubidaDoModo', () => {
 });
 
 describe('decidirSubida', () => {
+  // ADR 0161, RN-574.
+  it.each(['container', 'mounted'] as const)(
+    'instalação sem broker, projeto %s: recusa com motivo próprio, antes da imagem',
+    (executionMode) => {
+      const decisao = decidirSubida({
+        item: item({
+          executionMode,
+          brokerConfigurado: false,
+          temImagemDecidida: false,
+        }),
+        papel: 'maintainer',
+        temSessao: true,
+      });
+
+      expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
+    },
+  );
+
+  it('instalação sem broker não recusa projeto runner — quem sobe é o agente local', () => {
+    const decisao = decidirSubida({
+      item: item({
+        executionMode: 'runner',
+        brokerConfigurado: false,
+        workspaceVerifiedAt: '2026-09-01T10:00:00.000Z',
+      }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toMatchObject({ pode: true, acao: 'container_start_via_runner' });
+  });
+
+  it('broker "não sei" (campo ausente) não vira "tem": recusa', () => {
+    const semCampo = item();
+    delete (semCampo as Partial<ContainerOverviewItem>).brokerConfigurado;
+
+    const decisao = decidirSubida({ item: semCampo, papel: 'maintainer', temSessao: true });
+
+    expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
+  });
+
+  it('container já de pé continua dizendo isso, mesmo sem broker', () => {
+    const decisao = decidirSubida({
+      item: item({ registrado: registro(), brokerConfigurado: false }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toEqual({ pode: false, motivo: 'ja_esta_de_pe' });
+  });
+
   it('projeto sem container, imagem decidida, maintainer com sessão: pode subir pelo broker', () => {
     const decisao = decidirSubida({
       item: item(),

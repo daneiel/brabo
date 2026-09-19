@@ -140,9 +140,22 @@ const BASE = '/home/user/projetos-brabo';
  * — até lá o card não existe, por decisão (RN-513).
  */
 async function ateWorkspaceComBase(base: string = BASE) {
-  getProjectsBase.mockResolvedValue({ projectsBase: base });
+  getProjectsBase.mockResolvedValue({ projectsBase: base, brokerConfigurado: true });
   await ateWorkspace();
   await screen.findByText('Pasta montada');
+}
+
+/**
+ * O CARD de um modo, mesmo quando o rótulo também aparece em texto corrido (o
+ * aviso de instalação sem broker nomeia "Runner local" em negrito).
+ */
+function cardDoModo(rotulo: string): HTMLButtonElement {
+  const card = screen
+    .getAllByText(rotulo)
+    .map((el) => el.closest('button'))
+    .find((b): b is HTMLButtonElement => b !== null);
+  if (!card) throw new Error(`sem card para ${rotulo}`);
+  return card;
 }
 
 /** A classe do card selecionado é hasheada pelo CSS module — só o sufixo importa. */
@@ -157,7 +170,7 @@ beforeEach(async () => {
   // O default dos testes é a instalação SEM base — o estado de quem clonou
   // o produto e ainda não rodou o consentimento do `pnpm bootstrap`. Quem
   // precisa do modo Pasta montada liga a base explicitamente.
-  getProjectsBase.mockResolvedValue({ projectsBase: null });
+  getProjectsBase.mockResolvedValue({ projectsBase: null, brokerConfigurado: true });
   listProjectFolders.mockResolvedValue({
     base: '/home/user/brabo',
     path: '/home/user/brabo',
@@ -447,7 +460,7 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
    * (400) depois de o usuário ter escolhido, digitado e chegado ao fim.
    */
   it('sem base, o card Pasta montada não existe e Container segue selecionado', async () => {
-    getProjectsBase.mockResolvedValue({ projectsBase: null });
+    getProjectsBase.mockResolvedValue({ projectsBase: null, brokerConfigurado: true });
     await ateWorkspace();
 
     // Espera a resposta chegar: se o card fosse aparecer, apareceria aqui.
@@ -475,6 +488,65 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
     await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
     expect(screen.queryByText('Pasta montada')).toBeNull();
     expect(estaSelecionado('Container')).toBe(true);
+    // "Não sei" também não vira "não tem" (RN-573): nenhum card fica inerte
+    // e a tela não afirma a ausência de um broker que ninguém confirmou.
+    expect(screen.queryByTestId('aviso-sem-broker')).toBeNull();
+    expect(screen.getByText('Container').closest('button')).not.toBeDisabled();
+  });
+
+  /**
+   * A instalação do AT-085 (ADR 0161, RN-573): o `install.sh` grava a base,
+   * mas não há broker. `mounted` era pré-selecionado e seis dev agents ficaram
+   * bloqueados para sempre. Sem broker CONFIRMADO, Container e Pasta montada
+   * continuam na tela (a informação não some, ADR 0064) mas inertes, o motivo
+   * vem em TEXTO, e Runner local passa a ser o pré-selecionado.
+   */
+  it('sem broker, mesmo com base: Runner local pré-selecionado, Container e Pasta montada inertes, motivo em texto', async () => {
+    getProjectsBase.mockResolvedValue({
+      projectsBase: BASE,
+      brokerConfigurado: false,
+    });
+    await ateWorkspace();
+    await screen.findByText('Pasta montada');
+
+    expect(cardDoModo('Runner local').className).toMatch(/selected/);
+    expect(estaSelecionado('Pasta montada')).toBe(false);
+    expect(screen.getByText('Pasta montada').closest('button')).toBeDisabled();
+    expect(screen.getByText('Container').closest('button')).toBeDisabled();
+    expect(cardDoModo('Runner local')).not.toBeDisabled();
+    const aviso = screen.getByTestId('aviso-sem-broker');
+    expect(aviso.textContent).toMatch(/não sobe container/);
+    expect(aviso.textContent).toMatch(/BROKER_URL/);
+    expect(aviso.textContent).toMatch(/Runner local/);
+  });
+
+  it('base conhecida mas broker DESCONHECIDO (campo ausente): não pré-seleciona Pasta montada nem trava nada', async () => {
+    getProjectsBase.mockResolvedValue({ projectsBase: BASE });
+    await ateWorkspace();
+    await screen.findByText('Pasta montada');
+
+    expect(estaSelecionado('Container')).toBe(true);
+    expect(estaSelecionado('Pasta montada')).toBe(false);
+    expect(screen.getByText('Pasta montada').closest('button')).not.toBeDisabled();
+    expect(screen.queryByTestId('aviso-sem-broker')).toBeNull();
+  });
+
+  it('sem broker, quem clicou Container antes da resposta cai para Runner local', async () => {
+    let liberar!: (v: { projectsBase: string | null; brokerConfigurado: boolean }) => void;
+    getProjectsBase.mockReturnValue(
+      new Promise<{ projectsBase: string | null; brokerConfigurado: boolean }>((resolve) => {
+        liberar = resolve;
+      }),
+    );
+    await ateWorkspace();
+    fireEvent.click(screen.getByText('Container'));
+    expect(estaSelecionado('Container')).toBe(true);
+
+    liberar({ projectsBase: null, brokerConfigurado: false });
+
+    await screen.findByTestId('aviso-sem-broker');
+    expect(cardDoModo('Runner local').className).toMatch(/selected/);
+    expect(estaSelecionado('Container')).toBe(false);
   });
 
   /**
@@ -482,9 +554,9 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
    * debaixo da mão de quem já clicou é defeito, não conveniência.
    */
   it('quem escolheu Container antes de a base chegar não é sobrescrito', async () => {
-    let liberar!: (v: { projectsBase: string | null }) => void;
+    let liberar!: (v: { projectsBase: string | null; brokerConfigurado: boolean }) => void;
     getProjectsBase.mockReturnValue(
-      new Promise<{ projectsBase: string | null }>((resolve) => {
+      new Promise<{ projectsBase: string | null; brokerConfigurado: boolean }>((resolve) => {
         liberar = resolve;
       }),
     );
@@ -494,7 +566,7 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
     expect(screen.queryByText('Pasta montada')).toBeNull();
     fireEvent.click(screen.getByText('Container'));
 
-    liberar({ projectsBase: BASE });
+    liberar({ projectsBase: BASE, brokerConfigurado: true });
 
     // O card passa a existir (a base existe), mas a escolha humana fica.
     expect(await screen.findByText('Pasta montada')).toBeTruthy();
@@ -587,7 +659,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
    */
   it('o modo decide o transporte: `runner` pelo agente local, `mounted` pela api', async () => {
     createProject.mockResolvedValue({ id: 'proj-runner-1' });
-    getProjectsBase.mockResolvedValue({ projectsBase: BASE });
+    getProjectsBase.mockResolvedValue({ projectsBase: BASE, brokerConfigurado: true });
     await ateWorkspace();
     await screen.findByText('Pasta montada');
 

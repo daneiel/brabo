@@ -319,6 +319,20 @@ reason in the URL.
   doesn't enter the computation: the base is **installation**
   configuration, identical for every workspace, and the parameter is there
   only to give the `RolesGuard` a scope.
+
+  Since [ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)
+  ([RN-573](business-rules.md#rn-573)) the response also carries
+  `brokerConfigurado: boolean` — whether `BROKER_URL` is set, read through
+  `ContainerBrokerPort.configurado()`. It discloses one bit of installation
+  topology (is there a Docker-socket-holding broker at all), never its
+  address, and the minimum stays `maintainer`. The same bit rides on every
+  row of `GET /workspaces/:workspaceId/containers` (`viewer`,
+  [RN-574](business-rules.md#rn-574)), a deliberate widening: that page must
+  say BEFORE the click that `container`/`mounted` cannot start here, and
+  anyone who can see the page could already infer the absence from
+  `naoObservado: broker-nao-configurado` whenever a row is
+  `provisioning`/`running`. It says the
+  variable exists, never that the broker answers.
 - **`GET /workspaces/:workspaceId/project-folders` serves directory
   listings from a client-supplied path, and its whole safety is ONE
   containment** ([RN-504](business-rules.md#rn-504),
