@@ -33,6 +33,44 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   é por isso que uma suíte inteira verde não pegou nada (vitest e ExUnit rodam
   de um checkout, onde os alvos existem).
 
+- **runner**: o agente local de MÁQUINA **passa a receber o `XDG_CONFIG_HOME`
+  que foi instalado**, e o `PATH` congelado chega inteiro (AT-095). A unit
+  escrevia `Environment=XDG_CONFIG_HOME=<pasta>` e `Environment=PATH=<path>`
+  crus, e `Environment=` separa por espaço e expande especificador: medido com
+  `XDG_CONFIG_HOME=/home/dan/50%off com espaco`, o valor efetivo
+  (`systemctl --user show -p Environment`) era `/home/dan/50popff`. A unit
+  carregava, `systemd-analyze verify` aprovava, o serviço subia — e procurava a
+  base e a chave numa pasta que não existe, calado
+  ([RN-545](docs/business-rules.md#rn-545), [RN-518](docs/business-rules.md#rn-518)).
+  Agora a atribuição inteira vai entre aspas (`Environment="VAR=valor"`), com
+  `\` e `"` escapados e `%` como `%%`. O `--dir` do `ExecStart=` da unit de
+  PROJETO tinha a mesma classe (`%` expandido na carga, `\` lido como escape,
+  `$` como variável) e foi junto. Quebra de linha em `PATH`/`XDG_CONFIG_HOME`
+  passa a ser recusada no `install`, nomeando a variável — era injeção de
+  diretiva. **Quem tem um desses caracteres no caminho reinstala**
+  (`brabo-runner service install`, com `--machine` se for a de máquina). A
+  prova deixou de ser o `verify`, que aprova a forma quebrada: o teste pergunta
+  ao próprio `systemd --test --user` o valor RESOLVIDO e o compara com o
+  gravado, e pula nomeando o motivo onde não há systemd.
+
+- **web**: a árvore do time **para de afirmar trabalho sobre dev agent
+  bloqueado** (AT-087). Numa instalação real o event log tinha `dev.started`
+  seguido de `dev.blocked_by_container`, e a árvore descartava o bloqueio (não
+  havia tradução para ele): o ramo ficava em "começou a task", ativo, enquanto
+  o painel ao lado já dizia `aguardando`. Agora o bloqueio é marco próprio, com
+  o motivo do engine como detalhe, e o ramo fica parado. Três mudanças
+  visíveis vêm junto ([RN-572](docs/business-rules.md#rn-572)): o ramo de um
+  dev agent só fica ativo quando o painel diz `trabalhando` para o mesmo evento
+  — `dev.idle`, `dev.blocked`, `dev.awaiting_gate`, `dev.awaiting_approval` e
+  `dev.idle_tripped` também deixam de contar como ativos; `dev.started` passa a
+  dizer "procurando task" (ele sai antes de reivindicar task nenhuma), e
+  `dev.working` mostra o título da task; e `dev.error` vira marco de falha com
+  o motivo. A classe fecha no CI: `scripts/ci/vocabulario-de-eventos-dev.spec.ts`
+  passa a reprovar tipo `dev.*` do engine sem decisão na árvore, como já
+  fazia com o painel. `container.start_failed` segue fora da árvore, de
+  propósito — o ator é `system`, e o tronco onde ele caberia não é desenhado
+  por tela nenhuma.
+
 - **runner**: o serviço do agente local **passa a iniciar**. A unit gerada por
   `brabo-runner service install` escrevia `WorkingDirectory="/home/…"`, e o
   systemd **não** faz unquoting nessa diretiva (ao contrário do `ExecStart=`,
@@ -82,6 +120,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   acusar adulteração por falta de `shasum` ensina a ignorar a frase no dia em
   que ela for verdade. `--print-plan` continua imprimível sem nenhuma das duas,
   e declara qual aceita (`conferir-hash`).
+
+- **instalador**: a forma documentada de instalar **passa a ser baixar e rodar
+  um arquivo** — `curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh`
+  — e o `.env` gerado deixa de sair quebrado (AT-083, achada instalando a v6.1.0
+  numa máquina limpa). Três defeitos em sequência:
+
+  1. A forma que o runbook, o cabeçalho do `install.sh`, o `pnpm bootstrap` e o
+     próprio relato sem TTY ensinavam, `sh -c "$(curl … install.sh)"`, **nunca
+     funcionou**: o instalador confere o hash de `$0` contra o manifesto
+     assinado ([RN-526](docs/business-rules.md#rn-526)), e em `X -c "…"` o `$0`
+     é o nome do shell. Com `dash` como `sh` (Debian/Ubuntu) morria antes, em
+     `set -o pipefail`. A verificação por `$0` **fica**, sem porta de pular
+     ([ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)); o que muda é a doc,
+     e as formas erradas viram **recusas nomeadas antes de qualquer download**
+     que imprimem a certa: shell que não é bash, e rodar sem arquivo (`-c` ou
+     pipe).
+  2. A falha saía sem nome: na v6.1.0 o `sha256sum` do `$0` inexistente
+     derrubava o script pelo `pipefail` com só o erro cru da ferramenta; na
+     `dev`, depois da AT-091, ela chegava como **acusação de adulteração**
+     (*"o hash deste arquivo não está no manifesto"*), porque a função de hash
+     devolvia vazio de dentro do subshell. Hash que a ferramenta não consegue
+     calcular é agora uma terceira recusa, própria.
+  3. O `SECRET_KEY_BASE` vinha de `openssl rand -base64 64`, que quebra a linha
+     aos 64 caracteres: o `.env` ganhava uma linha solta. Medido em 100
+     gerações, o Compose recusou 49 e **aceitou 51 com o segredo cortado** em 64
+     caracteres. Todo base64 perde as quebras de linha agora, e um spec novo
+     passa o `.env` das funções de verdade pelo parser do Compose, cobrando cada
+     segredo inteiro ([RN-527](docs/business-rules.md#rn-527)).
+
+  O instrumento também mentia: o E2E do instalador rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o stdin do
+  instalador nunca foi um terminal — o fluxo interativo nunca tinha sido
+  exercitado. Ele passa a rodar o instalador num pty de verdade, por um driver
+  que espera cada pergunta (e o eco desligado, nas de senha), e pela mesma forma
+  que o runbook manda ([RN-534](docs/business-rules.md#rn-534)). O workflow
+  segue sem rodar em PR; o driver é exercitado em PR por
+  `scripts/dev/install-e2e.spec.ts`.
 
 ### Novidades
 

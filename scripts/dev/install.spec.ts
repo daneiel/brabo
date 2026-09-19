@@ -499,12 +499,15 @@ describe('install.sh — invariantes do arquivo', () => {
     expect(texto).toMatch(/Windows está fora de escopo por decisão declarada/);
   });
 
-  // O próprio uso que o script documenta é `sh -c "$(curl …)"`. Se algum dia
+  // O próprio uso que o script documenta é baixar e rodar um arquivo
+  // (`curl -fsSLO … && bash install.sh`) — até a AT-083 era `sh -c "$(curl …)"`,
+  // que nunca funcionou (a autoverificação calcula o hash de `$0`). Se algum dia
   // alguém o "simplificar" para o pipe, o consentimento morre junto — o stdin
-  // do processo passa a ser o download.
+  // do processo passa a ser o download. As recusas das formas erradas estão em
+  // `install-invocacao.spec.ts`.
   it('não instrui a forma que ele mesmo recusa', () => {
     const texto = fonte();
-    expect(texto).toContain('sh -c "$(curl -fsSL');
+    expect(texto).toContain('curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh');
 
     // Só linhas de CÓDIGO. O cabeçalho MENCIONA `curl … | sh` de propósito —
     // é onde ele explica por que aquela forma mata o consentimento —, e um

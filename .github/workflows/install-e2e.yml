@@ -80,14 +80,19 @@ jobs:
       # O `install.sh` vem da RELEASE, não do checkout — é o arquivo que uma
       # pessoa de verdade baixa, e é ele que precisa provar que funciona. Baixar
       # do checkout testaria um arquivo que ninguém executa.
+      #
+      # E vem pela MESMA forma que o runbook manda (AT-083): `curl -fsSLO` para
+      # um arquivo, e depois `bash install.sh` em todo passo — nunca
+      # `./install.sh`, que dependeria de um `chmod +x` que quem instala não faz.
+      # A única diferença é a URL, por tag e não `latest`, porque este job
+      # exercita a tag que o disparou.
       - name: Baixar o instalador publicado
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'install.sh' --dir .
-          chmod +x install.sh
+          curl -fsSLO "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/install.sh"
+          test -f install.sh || { echo "::error::o curl -fsSLO não deixou um install.sh na pasta"; exit 1; }
 
       # Não há mais passo que traga arquivos à mão, e a AUSÊNCIA é a asserção.
       #
@@ -113,13 +118,13 @@ jobs:
       - name: O plano e o estado, numa máquina limpa
         run: |
           set -euo pipefail
-          NO_COLOR=1 ./install.sh --print-state | tee estado.txt
+          NO_COLOR=1 bash install.sh --print-state | tee estado.txt
           grep -q 'marcador-existe	nao' estado.txt \
             || { echo "::error::máquina limpa e o instalador diz que há marcador"; exit 1; }
           grep -qE '^sinal' estado.txt \
             && { echo "::error::máquina limpa e o instalador achou sinais de instalação"; exit 1; }
 
-          NO_COLOR=1 ./install.sh --print-plan | tee plano.txt
+          NO_COLOR=1 bash install.sh --print-plan | tee plano.txt
           grep -q 'apagar-base-de-projetos	nunca' plano.txt || { echo "::error::o plano deixou de prometer que nunca apaga a base"; exit 1; }
           grep -q 'apagar-pasta-de-espelho	nunca' plano.txt || { echo "::error::o plano deixou de prometer que nunca apaga o espelho"; exit 1; }
           grep -q 'apagar-sem-backup-provado	nunca' plano.txt || { echo "::error::o plano deixou de prometer que não apaga sem backup provado"; exit 1; }
@@ -130,13 +135,17 @@ jobs:
       - name: Sem TTY, relata e sai bem
         run: |
           set -euo pipefail
-          NO_COLOR=1 ./install.sh < /dev/null > saida.txt 2>&1 || {
+          NO_COLOR=1 bash install.sh < /dev/null > saida.txt 2>&1 || {
             echo "::error::sem TTY o instalador deveria sair 0"
             cat saida.txt
             exit 1
           }
           grep -q 'Sem terminal interativo' saida.txt \
             || { echo "::error::sem TTY, o instalador não disse que não decidiu nada"; cat saida.txt; exit 1; }
+          # E ensina a forma que FUNCIONA (AT-083: ensinava o `sh -c "$(curl …)"`,
+          # que nunca rodou).
+          grep -qF 'curl -fsSLO' saida.txt \
+            || { echo "::error::sem TTY, o instalador não ensinou baixar e rodar com bash"; cat saida.txt; exit 1; }
           test ! -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
             || { echo "::error::sem TTY o instalador GRAVOU o marcador"; exit 1; }
 
@@ -178,20 +187,35 @@ jobs:
           done
           echo "systemd de usuário de pé em ${XDG_RUNTIME_DIR}"
 
-      # O fluxo completo exige um terminal, e `script -qec` dá um de verdade
-      # (não um pipe — que é justamente o que mataria o consentimento). As
-      # respostas vão por um arquivo, não por `echo |`, pelo mesmo motivo.
+      # O fluxo completo exige um terminal, e o que dá um é um PTY de verdade —
+      # não um pipe, que é justamente o que mataria o consentimento.
       #
-      # A ORDEM das respostas é a ordem dos `read` do script NUMA MÁQUINA LIMPA,
-      # e ela NÃO tem a pergunta de migração: o bloco que a faz está sob
+      # Até a AT-083 este passo rodava `script -qec "… ./install.sh … < respostas"`,
+      # e o `<` ficava DENTRO do comando do `script`: o stdin do INSTALADOR era o
+      # arquivo de respostas, `[ -t 0 ]` era sempre falso, e o fluxo interativo
+      # nunca foi exercitado — o instalador relatava "Sem terminal interativo" e
+      # saía 0, enquanto este comentário afirmava o contrário. Agora quem roda o
+      # instalador é um driver de PTY em Python (o `python3` do runner, sem
+      # dependência nova): o instalador nasce com o lado ESCRAVO do pty como
+      # stdin/stdout/stderr, e o driver ESPERA cada pergunta aparecer antes de
+      # escrever a resposta no lado MESTRE — como uma pessoa no teclado.
+      #
+      # Esperar a pergunta, e não despejar tudo de uma vez, não é capricho: o pty
+      # ECOA o que recebe enquanto o eco está ligado, e a senha despejada antes de
+      # o `stty -echo` do instalador rodar apareceria na saída (e reprovaria a
+      # asserção de vazamento logo abaixo). Para as respostas marcadas como
+      # SEGREDO o driver vai além: só escreve depois de ler, no próprio pty, que o
+      # eco foi DESLIGADO — o que prova, de passagem, o "lida sem eco" da RN-547.
+      #
+      # A ORDEM é a dos `read` do script NUMA MÁQUINA LIMPA, e ela NÃO tem a
+      # pergunta de migração: o bloco que a faz está sob
       # `if [ -n "$marcador" ] || [ -n "$sinais" ]`, e numa máquina limpa os dois
       # são vazios. São SETE — marcador, base, consentimento da conta, e-mail,
-      # senha, senha de novo, e nome (linha vazia, que é "pular"). As três de
-      # antes começavam por `nao-migrar`, que caía na pergunta do MARCADOR: ela
-      # não casa `s|S|sim|SIM`, o script dizia "Nada foi gravado" e saía 0, e a
-      # asserção do marcador logo abaixo reprovaria. Nunca apareceu porque este
-      # workflow só roda em tag e ainda não rodou nenhuma.
-      - name: Instalação completa, com TTY simulado — e o fechamento inteiro
+      # senha, senha de novo, e nome (vazio, que é "pular"). Cada uma espera um
+      # TRECHO da pergunta, e `scripts/dev/install-e2e.spec.ts` confere que cada
+      # trecho existe no `install.sh` e roda este mesmo driver contra um
+      # instalador de mentira — este workflow NÃO roda em PR, e aquele spec roda.
+      - name: Instalação completa, com TTY de verdade — e o fechamento inteiro
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
@@ -206,14 +230,128 @@ jobs:
           echo "::add-mask::${senha}"
           ( umask 077; printf '%s\n%s\n' "$email" "$senha" > "${RUNNER_TEMP}/credencial" )
 
-          respostas="${RUNNER_TEMP}/respostas"
-          ( umask 077
-            printf 's\n%s/projetos-brabo\ns\n%s\n%s\n%s\n\n' \
-              "$HOME" "$email" "$senha" "$senha" > "$respostas" )
+          # A senha entra no JSON pelo AMBIENTE (`env.E2E_SENHA`), nunca por
+          # `--arg`, que é argv — a mesma régua do passo que faz login.
+          respostas="${RUNNER_TEMP}/respostas.json"
+          E2E_SENHA="$senha" E2E_EMAIL="$email" E2E_BASE="${HOME}/projetos-brabo" \
+            jq -n '[
+              {espera: "Gravar o marcador de instalação", resposta: "s"},
+              {espera: "Base [", resposta: env.E2E_BASE},
+              {espera: "Criar a primeira conta agora?", resposta: "s"},
+              {espera: "E-mail: ", resposta: env.E2E_EMAIL},
+              {espera: "Senha (não aparece na tela): ", resposta: env.E2E_SENHA, segredo: true},
+              {espera: "Repita a senha: ", resposta: env.E2E_SENHA, segredo: true},
+              {espera: "Nome (opcional, Enter para pular): ", resposta: ""}
+            ]' > "$respostas"
+          chmod 600 "$respostas"
 
-          script -qec "NO_COLOR=1 ./install.sh --source=ghcr < ${respostas}" /dev/null \
-            | tee completa.txt || true
+          cat > "${RUNNER_TEMP}/terminal-do-e2e.py" <<'PY'
+          import json, os, pty, select, sys, termios, time
+
+          # Uso: terminal-do-e2e.py <respostas.json> <comando...>
+          # Sai com o código do instalador; 3 quando uma pergunta não chegou, 4
+          # quando uma resposta SECRETA teria sido escrita com o eco ligado.
+          respostas = json.load(open(sys.argv[1], encoding="utf-8"))
+          comando = sys.argv[2:]
+          TETO = float(os.environ.get("TETO_POR_PERGUNTA", "1800"))
+          TETO_DO_ECO = float(os.environ.get("TETO_DO_ECO", "10"))
+
+          pid, mestre = pty.fork()
+          if pid == 0:
+              os.execvp(comando[0], comando)
+
+          lido = bytearray()
+          terminou = False
+          saida_do_filho = None
+
+          # Fim de conversa é o FILHO sair, e não só o EOF do pty: um neto que
+          # herdasse o terminal o manteria aberto, e o driver esperaria o teto.
+          def filho_saiu():
+              global saida_do_filho
+              if saida_do_filho is None:
+                  fim, status = os.waitpid(pid, os.WNOHANG)
+                  if fim:
+                      saida_do_filho = os.waitstatus_to_exitcode(status)
+              return saida_do_filho is not None
+
+          def ler(espera):
+              global terminou
+              pronto, _, _ = select.select([mestre], [], [], espera)
+              if not pronto:
+                  if filho_saiu():
+                      terminou = True
+                  return
+              try:
+                  pedaco = os.read(mestre, 65536)
+              except OSError:
+                  pedaco = b""
+              if not pedaco:
+                  terminou = True
+                  return
+              lido.extend(pedaco)
+              sys.stdout.buffer.write(pedaco)
+              sys.stdout.buffer.flush()
+
+          def eco_ligado():
+              return bool(termios.tcgetattr(mestre)[3] & termios.ECHO)
+
+          def morrer(codigo, motivo):
+              sys.stdout.buffer.write(("\n[terminal-do-e2e] " + motivo + "\n").encode())
+              sys.stdout.buffer.flush()
+              try:
+                  os.kill(pid, 15)
+              except OSError:
+                  pass
+              sys.exit(codigo)
+
+          inicio = 0
+          for item in respostas:
+              alvo = item["espera"].encode("utf-8")
+              limite = time.monotonic() + TETO
+              while True:
+                  achou = lido.find(alvo, inicio)
+                  if achou >= 0:
+                      inicio = achou + len(alvo)
+                      break
+                  if terminou:
+                      morrer(3, "o instalador terminou sem perguntar: " + item["espera"])
+                  if time.monotonic() > limite:
+                      morrer(3, "a pergunta não chegou em %ds: %s" % (TETO, item["espera"]))
+                  ler(1.0)
+              if item.get("segredo"):
+                  limite = time.monotonic() + TETO_DO_ECO
+                  while eco_ligado():
+                      if time.monotonic() > limite:
+                          morrer(4, "o eco seguia LIGADO ao pedir: " + item["espera"])
+                      ler(0.05)
+              os.write(mestre, (item["resposta"] + "\n").encode("utf-8"))
+
+          while not terminou:
+              ler(1.0)
+          if saida_do_filho is None:
+              _, status = os.waitpid(pid, 0)
+              saida_do_filho = os.waitstatus_to_exitcode(status)
+          sys.exit(saida_do_filho)
+          PY
+
+          # `-I` tira a pasta do script do `sys.path`: um `tty.py` ao lado dele
+          # (foi o primeiro nome deste driver) sombreia o `tty` da biblioteca
+          # padrão que o `pty` importa, e o driver morre antes de começar.
+          codigo=0
+          NO_COLOR=1 python3 -I "${RUNNER_TEMP}/terminal-do-e2e.py" "$respostas" bash install.sh --source=ghcr \
+            > completa.txt || codigo=$?
           rm -f "$respostas"
+          cat completa.txt
+          case "$codigo" in
+            3|4) echo "::error::o driver do TTY parou (código ${codigo}) — ver a última linha acima"; exit 1 ;;
+          esac
+
+          # A prova de que o TTY chegou ao instalador, e a que faltou por meses:
+          # sem ela, o resto deste passo reprovaria por motivos que nada dizem.
+          if grep -qF 'Sem terminal interativo' completa.txt; then
+            echo '::error::o instalador não viu um terminal — o stdin dele não é o pty'
+            exit 1
+          fi
 
           exigir() {
             grep -qF -- "$2" completa.txt \

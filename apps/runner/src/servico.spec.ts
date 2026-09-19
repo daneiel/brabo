@@ -129,7 +129,7 @@ describe('service install (RN-518)', () => {
     expect(unit).toContain(`"--project" "${PROJETO}"`);
     expect(unit).toContain(`"--dir" "${PASTA}"`);
     expect(unit).toContain('"--api-url" "https://brabo.example"');
-    expect(unit).toContain('Environment=PATH=/usr/local/bin:/usr/bin:/bin');
+    expect(unit).toContain('Environment="PATH=/usr/local/bin:/usr/bin:/bin"');
     // Alvo de SESSÃO, nunca `multi-user.target` (que é do gerenciador de sistema).
     expect(unit).toContain('WantedBy=default.target');
     // `on-abnormal` e nunca `on-failure`: exit 1 do runner é recusa fatal
@@ -656,10 +656,58 @@ describe('service install --machine (RN-545)', () => {
     instalar(ctx, depsDeMaquina());
 
     const unit = sistema.arquivos.get('/home/dev/.cfg/systemd/user/brabo-runner.service');
-    expect(unit).toContain('Environment=XDG_CONFIG_HOME=/home/dev/.cfg');
+    expect(unit).toContain('Environment="XDG_CONFIG_HOME=/home/dev/.cfg"');
     // O VALOR da base NÃO vai para a unit: trocá-la é editar o arquivo e
     // reiniciar, nunca reinstalar.
     expect(unit).not.toContain('"--base"');
+  });
+
+  it('a unit de PROJETO não grava XDG_CONFIG_HOME, mesmo com ela posta (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      xdgConfigHome: '/home/dev/.cfg',
+      argv: ['node', 'x', 'service', 'install'],
+    });
+
+    instalar(ctx, depsInstalar());
+
+    const unit = sistema.arquivos.get(
+      `/home/dev/.cfg/systemd/user/brabo-runner-${PROJETO}.service`,
+    );
+    expect(unit).toBeDefined();
+    expect(unit).not.toContain('XDG_CONFIG_HOME');
+  });
+
+  it('RECUSA XDG_CONFIG_HOME com quebra de linha — seria diretiva nova na unit, e nada é escrito (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      cwd: PASTA_DA_MAQUINA,
+      xdgConfigHome: '/home/dev/.cfg\nExecStartPre=/bin/false',
+      argv: ['node', 'x', 'service', 'install', '--machine'],
+    });
+
+    const resposta = instalar(ctx, depsDeMaquina());
+
+    expect(resposta.codigo).not.toBe(0);
+    expect(resposta.linhas.join('\n')).toContain('XDG_CONFIG_HOME');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA PATH com quebra de linha — vale também para a unit de PROJETO, que o grava (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      path: '/usr/bin\n[Install]',
+      argv: ['node', 'x', 'service', 'install'],
+    });
+
+    const resposta = instalar(ctx, depsInstalar());
+
+    expect(resposta.codigo).not.toBe(0);
+    expect(resposta.linhas.join('\n')).toContain('PATH');
+    expect(sistema.arquivos.size).toBe(0);
   });
 
   it('macOS: o Label não leva projectId, e o log perde o sufixo', () => {
