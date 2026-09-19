@@ -633,6 +633,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # teste saber exatamente quando o turno "começou a gastar" — e nunca
     # manda mensagem nenhuma depois: se a task NÃO for morta, o teste que
     # espera silêncio (`refute_receive`) prova a diferença.
+    # `:fake_llm_turn_stream_gate` — o turno PARA aqui até o teste mandar
+    # `:abrir_portao` para a task, e avisa `{:turno_no_portao, task_pid}` antes.
+    # Diferente do `hang`, ele SEGUE depois: existe para o teste controlar o
+    # instante em que a task termina (AT-099 — a ordem entre o fim da task e o
+    # fechamento do turno no GenServer), sem sono nenhum.
+    if Process.get(:fake_llm_turn_stream_gate) do
+      if pid = Application.get_env(:engine, :test_pid),
+        do: send(pid, {:turno_no_portao, self()})
+
+      receive do
+        :abrir_portao -> :ok
+      end
+    end
+
     if Process.get(:fake_llm_turn_stream_hang) do
       if pid = Application.get_env(:engine, :test_pid), do: send(pid, :turno_pendurado)
       Process.sleep(:infinity)

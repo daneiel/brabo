@@ -401,4 +401,92 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
     end
   end
+
+  # AT-099, RN-585. A tela fecha o turno por DOIS sinais, e só por eles: o
+  # `agent.done` do canal e o `agent.status` persistido que não é `working`
+  # (`turnoTerminouNoLog`, `apps/web/src/lib/session-turno.ts`). Os dois saem
+  # de `finalizar/1`, dentro do `handle_info` do GenServer, DEPOIS de
+  # `turno_assincrono` virar `nil` — e a mensagem seguinte do usuário só é
+  # atendida quando esse `handle_info` devolve o state. É isso que impede a
+  # tela de ver o turno fechado e ouvir 409 `turno_em_andamento` na mensagem
+  # seguinte.
+  #
+  # O que a Task grava (`agent.response`, `agent.error`) NÃO fecha o turno: é
+  # gravado ANTES de o resultado chegar ao GenServer, e nessa janela o turno
+  # continua aberto de verdade. Por isso o teste para o GenServer
+  # (`:sys.suspend/1`) com a Task no portão, deixa a Task terminar, e espera o
+  # `:DOWN` dela: tudo o que ela mandou chegou ANTES do `:DOWN` (ordem entre
+  # um par de processos), então a ausência do sinal de fim é prova, sem
+  # timeout. Uma mutação que emitisse o fim de dentro da Task reprova aqui
+  # sempre, não às vezes.
+  describe "o fim do turno só é visível depois de o turno fechar no GenServer (RN-585)" do
+    alias Engine.Agents.{ArquitetoServer, DevLeadServer, PoServer, StaffServer, UxDesignerServer}
+
+    for servidor <- [
+          CriativoServer,
+          PoServer,
+          ArquitetoServer,
+          DevLeadServer,
+          UxDesignerServer,
+          StaffServer
+        ] do
+      @servidor servidor
+      test "#{inspect(servidor)}: sinal de fim só depois do turno fechado; a mensagem seguinte é aceita" do
+        project_id = Ecto.UUID.generate()
+        session_id = Ecto.UUID.generate()
+        Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+
+        {:ok, pid} = GenServer.start(@servidor, {session_id, project_id})
+
+        :sys.replace_state(pid, fn estado ->
+          Process.put(:fake_llm_turn_stream_gate, true)
+          estado
+        end)
+
+        assert :ok = GenServer.call(pid, {:user_message, "primeira"})
+        assert_receive {:turno_no_portao, task_pid}, 1_000
+
+        # O GenServer para de atender mensagens comuns; `:sys.get_state/1`
+        # continua funcionando (é mensagem de sistema).
+        :ok = :sys.suspend(pid)
+        ref = Process.monitor(task_pid)
+        send(task_pid, :abrir_portao)
+        assert_receive {:DOWN, ^ref, :process, ^task_pid, _}, 1_000
+
+        # A Task terminou e gravou o desfecho dela...
+        assert_received {:event_appended, _, ^session_id, %{type: "agent.response"}}
+        # ...mas o turno segue aberto, e NENHUM dos dois sinais que a tela usa
+        # para fechá-lo saiu.
+        assert %{turno_assincrono: %{task: %Task{}}} = :sys.get_state(pid)
+        refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+
+        refute_received {:event_appended, _, ^session_id,
+                         %{type: "agent.status", payload: %{status: "idle"}}}
+
+        :ok = :sys.resume(pid)
+
+        # O sinal chega agora — e quem o viu pode mandar a próxima mensagem:
+        # ela é ACEITA, nunca recusada como turno em andamento.
+        assert_receive {:event_appended, _, ^session_id,
+                        %{type: "agent.status", payload: %{status: "idle"}}},
+                       1_000
+
+        assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+        assert :sys.get_state(pid).turno_assincrono == nil
+        assert :ok = GenServer.call(pid, {:user_message, "segunda"})
+
+        refute_received {:event_appended, _, ^session_id,
+                         %{type: "agent.error", payload: %{reason: "turno_em_andamento"}}}
+
+        assert_receive {:turno_no_portao, segunda_task}, 1_000
+        send(segunda_task, :abrir_portao)
+
+        assert_receive {:event_appended, _, ^session_id,
+                        %{type: "agent.status", payload: %{status: "idle"}}},
+                       1_000
+
+        GenServer.stop(pid)
+      end
+    end
+  end
 end

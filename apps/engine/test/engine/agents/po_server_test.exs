@@ -465,6 +465,20 @@ defmodule Engine.Agents.PoServerTest do
 
     # O turno fechou de verdade: sem isto, um `turno_assincrono` pendurado
     # faria a próxima mensagem do usuário responder `:turno_em_andamento`.
+    #
+    # Espera-se o `agent.status: idle` PERSISTIDO antes de ler o state, e não o
+    # `agent.error` acima (AT-099): o `agent.error` é gravado de DENTRO da Task,
+    # antes de o resultado chegar ao GenServer, e ler o state logo depois dele
+    # reprovava ~1 em 4 rodadas com o turno ainda aberto — corretamente. O
+    # `idle` sai de `finalizar/1`, dentro do `handle_info` que já zerou o
+    # turno, e `:sys.get_state/1` só é atendido depois que esse `handle_info`
+    # devolve o state. É também o sinal que a tela usa para fechar o turno
+    # (`turnoTerminouNoLog`), e a RN-585 fixa essa ordem para os seis
+    # conversacionais em `turno_assincrono_test.exs`.
+    assert_receive {:event_appended, ^project_id, ^session_id,
+                    %{type: "agent.status", payload: %{status: "idle"}}},
+                   5_000
+
     assert :sys.get_state(pid).turno_assincrono == nil
 
     GenServer.stop(pid)

@@ -14151,7 +14151,7 @@ perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
 depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
-  aceite), `:130` e `:283` (a recusa durável);
+  aceite), `:130` e `:314` (a recusa durável);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
   (202), `:243`/`:253`/`:263` (409/409/422);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:211`;
@@ -14625,3 +14625,49 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
   `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:575`
   (o destino viaja como escolhido, e o 422 chega com a frase)
 - **Origem:** AT-098 — adjacência medida no PR #594 (AT-089)
+
+### RN-585 — O fim do turno só fica visível depois de o turno fechar no agente {#rn-585}
+
+Desde o [ADR 0163](adr/0163-o-clique-responde-ao-aceitar.md)
+([RN-578](#rn-578)) o turno dos seis conversacionais roda numa Task, e o
+desfecho que a Task grava — `agent.response`, ou `agent.error` quando a api
+narra orçamento, credencial ou binding no frame final — sai ANTES de o
+resultado chegar ao GenServer do agente e zerar `turno_assincrono`. Um teste
+que lia o state logo depois do `agent.error` reprovava em ~1 de 4 rodadas
+(AT-099: 8 de 30 medidas). A pergunta era se a MESMA janela existia para
+o usuário: a tela via o turno acabar e a mensagem seguinte ouvia 409
+`turno_em_andamento`?
+
+Não existe, e a regra é o que faz ela não existir:
+
+1. **Os dois sinais de fim de turno saem só de `finalizar/1`**, que roda no
+   processo do GenServer, dentro do `handle_info` que JÁ zerou
+   `turno_assincrono`: `agent.done` no canal e `agent.status: idle`
+   persistido. São os dois, e só eles, que a tela usa para fechar o turno
+   (`onAgentDone` e `turnoTerminouNoLog`, [RN-578](#rn-578) item 4).
+2. **A mensagem de quem viu um desses sinais é atendida depois desse
+   `handle_info`** — o GenServer atende uma mensagem por vez —, então encontra
+   o agente livre e é aceita.
+3. **O que a Task grava não é sinal de fim.** `agent.response` e `agent.error`
+   aparecem no fio com o turno ainda aberto no agente. Tela ou cliente que
+   passasse a fechar o turno por eles reabriria a janela; emitir `agent.done`
+   ou `idle` de dentro da Task também.
+
+Não houve mudança de comportamento: a ordem já era esta desde a RN-578. O que
+esta RN acrescenta é a ordem ESCRITA e travada por teste nos seis
+conversacionais — o teste para o GenServer com a Task terminada e prova que
+nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
+passa a esperar o `idle` persistido em vez do `agent.error`.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
+  turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
+  sinais); `apps/web/src/lib/session-turno.ts:34` (`turnoTerminouNoLog`)
+- **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
+  (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
+  `agent.response` já está no log e nem `agent.done` nem `idle` saíram; depois
+  do `idle`, a mensagem seguinte é aceita — o caso de falha é a recusa
+  `turno_em_andamento`, que o teste nega);
+  `apps/engine/test/engine/agents/po_server_test.exs:478` (espera o `idle`
+  antes de ler o state)
+- **Origem:** AT-099 — teste intermitente do `PoServerTest`, medido em
+  2026-09-19
