@@ -226,6 +226,21 @@ the same debt the action SHAs carry. `.github/dependabot.yml` enables the
 `github-actions` ecosystem for that reason; the `docker` ecosystem is
 **not** enabled, and turning it on is a separate decision.
 
+## The build cache cannot hide a stale package
+
+The final stage (`runtime`) of every `Dockerfile.prod` runs `apk upgrade`.
+BuildKit keys a layer by instruction plus parent layer, never by time, so with
+`cache-from` on, a PR build reused an `apk upgrade` layer frozen at that PR's
+first build (measured: `CACHED` on 5 of 5 images), and Trivy scanned an old
+openssl that the tag, built cold, would not carry. `docker-bake.hcl` therefore
+sets `no-cache-filter = ["runtime"]` on the shared base target: the final stage
+and what follows it are rebuilt every time, the build stages keep their cache
+(that is where the time is), and the scan looks at what the tag would publish.
+It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.
+
+What this does **not** fix: `release.yml` has no Trivy step, so the image a tag
+publishes is still never scanned (AT-179).
+
 ## What is still trusted on faith
 
 Declared, not fixed:

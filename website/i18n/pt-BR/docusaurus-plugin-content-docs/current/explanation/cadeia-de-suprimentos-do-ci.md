@@ -132,6 +132,22 @@ As imagens que a gente **publica** são o oposto: as quatro de produção vão
 para o GHCR e o overlay as prende **por digest**, registrado por tag em
 `.release/images.json` ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)).
 
+## O cache do build não pode esconder um pacote velho
+
+O estágio final (`runtime`) de todo `Dockerfile.prod` roda `apk upgrade`. O
+BuildKit chaveia a camada por instrução mais camada-pai, nunca por tempo; com
+`cache-from` ligado, o build de um PR reaproveitava uma camada de `apk upgrade`
+congelada no primeiro build dele (medido: `CACHED` em 5 de 5 imagens), e o Trivy
+escaneava um openssl velho que a tag, construída a frio, não teria. Por isso o
+`docker-bake.hcl` põe `no-cache-filter = ["runtime"]` no alvo base
+compartilhado: o estágio final e o que vem depois são refeitos sempre, os
+estágios de build mantêm o cache (é onde está o tempo), e o scan olha o que a
+tag publicaria. Não é allowlist do Trivy. O custo é de uns 7–9 s por imagem, em
+paralelo.
+
+O que isto **não** resolve: o `release.yml` não tem passo de Trivy, então a
+imagem que uma tag publica continua sem ser escaneada (AT-179).
+
 ## O que ainda é confiado na fé
 
 Declarado, não corrigido:
