@@ -137,7 +137,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
 | `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
-| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster) |
+| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
