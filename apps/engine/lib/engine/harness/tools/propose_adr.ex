@@ -6,10 +6,12 @@ defmodule Engine.Harness.Tools.ProposeAdr do
   `:pipeline` (não executa direto; nasce pending).
 
   Desde a RN-577 ela RECUSA localmente, ANTES de propor, quando o projeto não
-  tem repositório (`ProjectRepository.recusa_de_pr_sem_repositorio/2`). Num
-  projeto novo isso é o caso comum, não a borda: o Arquiteto trabalha ANTES do
-  handoff ao Dev Lead, e é esse handoff que provisiona o repositório (RN-522).
-  Sem a recusa, cada chamada virava uma `proposed_action` que o humano aprovava
+  tem repositório (`ProjectRepository.recusa_de_pr_sem_repositorio/2`). Sob a
+  RN-522 isso era o caso comum: o Arquiteto trabalhava ANTES do handoff ao Dev
+  Lead, que era quem provisionava. Desde a RN-582 (ADR 0165) o repositório
+  nasce no aceite do handoff AO Arquiteto, antes do primeiro turno dele, e a
+  recusa passou a cobrir o que sobra — provisionamento que falhou no aceite, e
+  projeto que passou pelo Arquiteto antes da regra. Sem a recusa, cada chamada virava uma `proposed_action` que o humano aprovava
   e que `ExecuteAdrPrUseCase` só podia terminar `failed` (AT-088). A recusa é
   resultado de ferramenta (RN-163) e deixa rastro durável: o `tool.call` o
   `ArquitetoServer` já emite antes de rodar a tool, e o motivo vai num

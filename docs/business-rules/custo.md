@@ -2046,6 +2046,11 @@ plano meio proposto não teria como ser retratado.
 
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
+> **Estendida pela [RN-581](../business-rules.md#rn-581) (AT-072):** um agente
+> conversacional esperando o usuário passou a ser o QUINTO sinal, e o único com
+> teto (8h, causa `conversation_idle_timeout`); a resposta ganhou
+> `aguardandoUsuarioDesde`. O resto desta regra vale como está.
+
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
 de encerrar, o `SessionServer` pergunta à api se sobrou trabalho
 (`GET /internal/sessions/:id/pending-work`); havendo, reagenda o timeout e

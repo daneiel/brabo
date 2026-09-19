@@ -179,11 +179,25 @@ defmodule Engine.Agents.DevLeadServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
   # Guarda: enquanto o plano de execução está aguardando decisão do usuário,
   # a conversa NÃO recomeça — precisa vir ANTES da cláusula genérica de
   # `{:user_message, text}` para o pattern match casar aqui primeiro. A
   # resposta HTTP desta rota já é descartada pelo controller do engine para
   # todos os agentes, então `{:reply, :ok, state}` basta.
+  #
+  # Desde o ADR 0163 (RN-578) o controller NÃO descarta mais: o turno deixou
+  # de segurar o request, e a resposta do `handle_call` passou a ser o único
+  # sinal síncrono que o clique recebe. Responder `:ok` aqui diria "aceito"
+  # sobre uma mensagem que não foi lida — por isso `{:error,
+  # :aguardando_aprovacao}`, que vira 409 com a mesma frase do `agent.error`.
   #
   # `emit` (durável) E `broadcast` (efêmero) — mesmo par que `emit_falha/2`
   # usa em todo o resto deste arquivo. Só `emit` deixaria quem está com a
@@ -204,7 +218,7 @@ defmodule Engine.Agents.DevLeadServer do
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
 
-    {:reply, :ok, state}
+    {:reply, {:error, :aguardando_aprovacao}, state}
   end
 
   @impl true

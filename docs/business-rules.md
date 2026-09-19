@@ -334,6 +334,12 @@ is already running) never spawn a second task:
 `TurnoAssincrono.iniciar/3` replies `{:error, :turno_em_andamento}`
 (turn in progress) right away.
 
+> **Revised by [RN-578](#rn-578) (ADR 0163):** the reply to the original
+> `GenServer.call` is no longer deferred until the task finishes — it goes out
+> on ACCEPTANCE, as soon as the task is up, and cancelling answers nobody (the
+> caller already has `:ok`). `{:error, :turno_em_andamento}` stopped being
+> discarded by the controller: it is a named 409 and a durable `agent.error`.
+
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
   (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:170`
@@ -2449,6 +2455,12 @@ achado A2) — o fluxo já declarava a saída `plano-de-paralelismo` do `dev-lea
 como `via: proposed_action`, e o código nunca foi ajustado para bater.
 
 ### RN-284 — O turno do agente conversacional pode SUSPENDER esperando aprovação humana {#rn-284}
+
+> **Revisada pela [RN-578](#rn-578) (ADR 0163):** o turno de TODO
+> conversacional deixou de segurar o `GenServer.call` — o `from` é respondido
+> no aceite, e a suspensão aqui descrita mudou só o FECHO do turno
+> (`awaiting_approval` em vez de `agent.done`), não mais o momento da resposta.
+> A `user_message` recusada durante a suspensão passa a ser 409 no clique.
 
 Primeira vez que um agente conversacional (Criativo, PO, Arquiteto, Dev Lead —
 todos rodam turno síncrono via `GenServer.call` de até 180s, mediado por
@@ -10896,6 +10908,9 @@ Isso deixa de ser borda e passa a ser o estado normal do começo de um projeto.
 **O gatilho é a próxima entrega**, e sem ele um projeto criado hoje ficaria sem
 repositório para sempre: o aceite do handoff Arquiteto → Dev Lead passa a
 provisionar `local`, o único provider que não pede credencial.
+Desde a [RN-582](#rn-582), esse gatilho é o aceite do handoff **ao Arquiteto**
+(o do Dev Lead ficou como segunda porta), e ativar a execução sem repositório é
+recusado.
 
 O aviso "no plano gratuito do GitHub, repositório privado não aceita proteção de
 branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
@@ -10919,6 +10934,12 @@ há mais provider escolhido.
 ## O repositório nasce no handoff para o Dev Lead (RN-522)
 
 ### RN-522 — O repositório é provisionado ao ACEITAR o handoff Arquiteto → Dev Lead, sempre `local`, e a falha nunca derruba o aceite {#rn-522}
+
+> **Revisada pela [RN-582](#rn-582) ([ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)):**
+> o GATILHO passou a ser o aceite do handoff ao **Arquiteto**. O aceite ao Dev
+> Lead descrito abaixo continua provisionando, como segunda porta idempotente,
+> e o resto desta regra (sempre `local`, falha como evento, adotado não é
+> falha) segue valendo. O texto abaixo é o da decisão original.
 
 A [RN-541](#rn-541) tirou o provisionamento da criação e declarou que o gatilho
 viria em seguida. Este é o gatilho — e sem ele um projeto criado ficaria sem
@@ -13941,17 +13962,22 @@ o rastro dele continua sendo a própria `proposed_action`.
 profundidade: a recusa do agente é uma camada ANTES, nunca no lugar.
 
 **O que esta regra NÃO decide:** ONDE o repositório deveria nascer. O texto da
-recusa descreve o gatilho de HOJE (o aceite do handoff ao Dev Lead, RN-522); se
-o gatilho mudar, é a AT-092, com decisão do mantenedor pendente — e o texto
-muda junto. A `open_infra_pr` também é afetada no projeto novo por outro
+recusa descreve o gatilho vigente, e ele MUDOU: a AT-092 foi decidida na
+[RN-582](#rn-582) (ADR 0165) — o repositório nasce no aceite do handoff AO
+Arquiteto, antes do primeiro turno dele, com o aceite ao Dev Lead como segunda
+porta. O texto mudou junto, como esta regra prometia: ele nomeia o gatilho
+novo e, como o Arquiteto só trabalha depois desse aceite, diz que a recusa
+significa provisionamento FALHADO (o `repository.provision_failed`) ou projeto
+anterior à regra, com as duas saídas. Deixou de ser o caso comum; a recusa
+continua, porque essas duas situações existem. A `open_infra_pr` também é afetada no projeto novo por outro
 caminho (o Infra Lead é acionado pelo handoff do Arquiteto, que pode acontecer
 antes do handoff ao Dev Lead); esta regra só faz a proposta não nascer, não
 reordena os handoffs.
 
-- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:69`
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:74`
   (`recusa_de_pr_sem_repositorio/2` — o predicado e o texto, únicos para as
-  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:52` (a
-  recusa antes de propor), `:59` (o `tool.result` com o motivo);
+  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
+  recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
   `propose_infra_pr` perguntando antes do HALT), `:301`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
@@ -14073,6 +14099,80 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
 - **Origem:** AT-073, levantada em 2026-09-13
 
+### RN-578 — O clique que dispara turno de agente responde ao ACEITAR, e a recusa deixa de ser calada {#rn-578}
+
+Numa instalação real da v6.1.0 (2026-09-14), responder o formulário de
+perguntas do Criativo levou **97,3 s**, confirmar a prontidão **97,3 s** e
+confirmar a arquitetura pronta **51,8 s** — cada clique segurado pelo turno
+INTEIRO do agente, porque o `handle_call` do conversacional só respondia ao
+`GenServer.call` do controller do engine quando a Task do turno terminava. Turno
+acima do teto (120 s no Criativo, 180 s nos outros) virava 500 num comando que
+tinha funcionado. E a recusa de uma segunda mensagem com turno em curso
+(`{:error, :turno_em_andamento}`) era descartada pelo controller, que respondia
+202: um *"Continue"* digitado durante o kickoff do Arquiteto foi aceito e nunca
+lido, sem rastro nenhum.
+
+**A regra ([ADR 0163](adr/0163-o-clique-responde-ao-aceitar.md), que generaliza
+o [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)):**
+
+1. **O aceite sai na hora.** `TurnoAssincrono.iniciar/3` responde `:ok` ao
+   `from` assim que a Task sobe — depois de persistir `agent.status: working`,
+   nunca antes. Vale para os seis conversacionais e para as quatro rotas de
+   usuário que disparam turno (`…/agents/:agent/message` e, por ela,
+   `…/structured-question/:id/answer`; `…/readiness`;
+   `…/agents/arquiteto/handoff-infra`) e para a devolução de história
+   (`ReturnStoryUseCase`). O status e o corpo da api NÃO mudam
+   (`201 { ok: true }`): sempre significaram "aceito"; o que mudou foi quando
+   chegam.
+2. **A recusa ANTES de o turno subir é síncrona e nomeada.** O engine responde
+   409 (`turno_em_andamento`, `aguardando_aprovacao`) ou 422
+   (`sem_regra_de_negocio`) com `{error, motivo}`, e a api repassa o MESMO
+   status com a MESMA frase. `turno_em_andamento` ganha `agent.error` durável
+   (origem `politica`); os outros dois já tinham.
+3. **O desfecho do turno segue pelo canal e pelo log, nunca pelo HTTP.** Falha
+   continua `agent.error` durável, com a mesma origem de antes.
+4. **A tela deixa de tratar "a chamada resolveu" como fim de turno.** Depois do
+   aceite, ela acompanha o fim pelo canal (`agent.done`) e, como rede de
+   segurança, pela cauda do log a cada 4 s: fecha quando o `agent.status`
+   persistido mais recente daquele agente não é `working`. Sem nenhum
+   `agent.status` do agente na janela, não fecha — não saber não é "acabou".
+5. **O handoff ao Dev Lead continua nascendo DEPOIS do de Infra.** O
+   `:offer_dev_handoff` que chega com o turno de fechamento do Arquiteto em
+   curso fica pendente e roda quando o turno fecha — sucesso, falha, crash ou
+   cancelamento.
+
+**O que esta regra NÃO fecha:** o `chat.message` que a api grava antes de
+perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
+`agent.error`, antes órfão e mudo); engine reiniciado no meio do turno não grava
+`idle`, e a faixa fica até o "Parar" ou um recarregamento; e mensagem ao
+`infra` pelo compositor segue caindo no Criativo pela cláusula final de
+`AgentCommandController.message/2` — pré-existente, medido, não corrigido.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
+  aceite), `:130` e `:283` (a recusa durável);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
+  (202), `:243`/`:253`/`:263` (409/409/422);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:211`;
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
+  (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
+  `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
+  `:292` (`acompanharTurnoPeloLog`), `:316`;
+  `apps/web/src/routes/SessionPage.tsx:1496`, `:1521`, `:1770`, `:1830`;
+  `apps/web/src/lib/recusa-do-agente.ts:17`
+- **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:66`
+  (aceite com a task viva), `:84` (`working` gravado antes do aceite), `:178`
+  (recusa durável — caso de falha);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:35`,
+  `:66` (409), `:107` (422);
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:209` (ordem dos
+  handoffs), `:237` (cancelamento);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:520`,
+  `:538`, `:580` (500 continua genérico);
+  `apps/web/src/routes/SessionPage.turno-preso.test.tsx:181`, `:252` (409);
+  `apps/web/src/routes/SessionPage.readiness-turno-preso.test.tsx:172`, `:210`
+  (422); `apps/web/src/lib/fim-do-turno-pelo-log.test.ts:29`, `:76`
+- **Origem:** AT-089 — instalação real da v6.1.0 em 2026-09-14
+
 ### RN-579 — Com o canal da sessão vivo, a tela de Sessão troca o poll curto por invalidação e um fallback longo; resposta de corpo vazio tem `ETag` {#rn-579}
 
 A instalação medida na AT-093 (v6.1.0, 14/09) mostrou UM navegador fazendo
@@ -14122,6 +14222,17 @@ voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
    sobre o que vai ao fio, não sobre o valor do handler, para que um handler
    com `@Res()` que escreve depois nunca herde o validador do vazio. 304 NÃO
    reduz a contagem do rate limit (o guard conta antes do handler); reduz banda.
+7. **Compõe com o acompanhamento do turno pela cauda do log ([RN-578](#rn-578)).**
+   O turno ACEITO continua sendo acompanhado pela leitura da cauda a cada 4s
+   (`acompanharTurnoPeloLog`) — é a rede contra o `agent.done` perdido, e o
+   aviso do canal pode se perder junto com ele, então o tique NÃO vira
+   fallback de 15s. O que muda: o `event.appended` do `agent.status` do agente
+   ACOMPANHADO roda a leitura NA HORA (`avisoPedeVerificacaoDoTurno`), e o
+   turno fecha assim que o log diz que fechou, sem esperar o tique. Aviso de
+   outro agente, de outro tipo, ou sem turno acompanhado não lê nada a mais. E
+   o poll de 3s dos eventos continua PAUSADO durante o streaming (achados 2/7):
+   `intervaloDaSessao` só vale quando a pausa não vale, e a invalidação pelo
+   canal respeita a mesma regra do achado C.
 
 **Números** (teste de orçamento, uma aba na tela de Sessão, por minuto):
 **123** com o canal caído (o comportamento de antes, intacto como fallback) e
@@ -14133,17 +14244,20 @@ decisão de um humano noutra aba, uma transição de sessão feita pela api — 
 têm aviso no canal e chegam pelo fallback, em até 15s (eram 3s). O status
 `working` do roster continua dependendo do `event.appended` do `agent.status`,
 que sai depois de a api gravá-lo. `projects-summary` e `execution/session`
-(Shell) seguem em 5s. Não é mudança de modelo de consistência (sem ADR): a
+(Shell) seguem em 5s. Durante um turno aceito, a leitura da cauda de 4s da
+RN-578 soma até 15 req/min, só enquanto o turno dura. Não é mudança de modelo de consistência (sem ADR): a
 fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
-- **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:575`,
-  `:601`, `:624`, `:800` (`avisar_canal`);
+- **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
+  `:607`, `:630`, `:806` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
   (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
-  `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:292`;
+  `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:59`
+  (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
   `apps/api/src/interfaces/http/shared/etag-do-corpo-vazio.ts:40`;
@@ -14157,5 +14271,260 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/api/test/interfaces/http/shared/etag-do-corpo-vazio.spec.ts:56` (a
   causa), `:69`, `:98` (`@Res()` tardio — caso de falha);
   `apps/api/test/interfaces/rate-limit.guard.spec.ts:183` (2 × 263 estoura,
-  2 × 118 não)
+  2 × 118 não); `apps/web/src/routes/SessionPage.canal-e-acompanhamento.test.tsx:166`
+  (o predicado), `:203` (o aviso do acompanhado fecha o turno sem esperar o
+  tique), `:221` (aviso de outro agente não lê, e o tique de 4s segue sendo a
+  rede — caso de falha), `:244` (turno fechado: nem aviso nem tique leem)
 - **Origem:** AT-093 — logs da api instalada (v6.1.0), 2026-09-14
+
+### RN-581 — A conversa em curso segura a sessão por até 8h, e a sessão encerrada recusa conversa {#rn-581}
+
+No `exp001` o heartbeat fechou a sessão 30 segundos depois de a aba parar, com
+o Criativo tendo acabado de perguntar — e o event log continuou recebendo
+eventos por quatro minutos depois do `closed_at`. Dois defeitos, um de cada
+lado do fechamento: nenhum dos sinais de trabalho pendente da
+[RN-064](business-rules/custo.md#rn-064) via uma conversa esperando o usuário
+(um Criativo que terminou o turno está `idle`, sem handoff, sem ação, sem
+`dev.*`), e nada — nem o funil de eventos, nem os casos de uso da conversa, nem
+o engine — olhava o estado da sessão antes de gravar.
+
+**A regra, pelo lado do heartbeat:**
+
+1. **Conversa esperando o usuário é trabalho pendente.** É o QUINTO sinal do
+   `pending-work`: o evento de fim de turno mais recente da sessão
+   (`agent.response`, `chat.structured_question` ou `agent.error` do lado do
+   agente; `chat.message` ou `chat.structured_question_answered` do lado do
+   usuário) é do AGENTE, e o ator é um conversacional. `agent.error` conta como
+   fim de turno de propósito: pela [RN-059](business-rules/custo.md#rn-059) o
+   agente diz no fio o que houve, e a próxima jogada é do usuário. Fala de quem
+   não conversa (Psicólogo, dev agent) não segura.
+2. **É o único sinal com TETO: 8 horas**, contadas do FIM do turno do agente
+   (o `created_at` daquele evento), não do último heartbeat. A api devolve o
+   instante (`aguardandoUsuarioDesde`) e o engine aplica o teto
+   (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default `28800000`). Passado ele, a
+   sessão fecha `closed` com causa PRÓPRIA, `conversation_idle_timeout` — não
+   `heartbeat_timeout`, porque quem lê `termination_reason` (o Psicólogo, uma
+   métrica por sessão) precisa separar a aba que sumiu da conversa que ninguém
+   retomou. O `TerminationClassifier` a lê como `:timeout`: a api conhece seis
+   causas nas hipóteses, e abrir uma sétima seria mudar aquele contrato.
+3. **Sinal sem teto vence.** Com handoff `offered`, ação `pending`, agente em
+   turno ou dev agent trabalhando, o instante volta `null` e a sessão fica sem
+   teto, como sempre ficou. É por isso que o sinal é o ÚLTIMO da lista.
+4. **Instante presente e ilegível é ERRO, nunca `nil`.** `nil` com
+   `pending: true` é pendência sem teto; um formato quebrado viraria sessão
+   imortal. Como erro, cai no caminho da api fora do ar — encerra por
+   heartbeat, dizendo por quê.
+
+**A regra, pelo lado da sessão encerrada:**
+
+5. **Sessão `closed`/`closed_abnormally` recusa evento de CONVERSA** com 409
+   NOMEADO: `{ message, reason: "sessao_encerrada", status, type }`. `closing`
+   ainda aceita — a trava é de estado TERMINAL.
+6. **"Conversa" tem duas cláusulas, e as duas são necessárias.** O TIPO só
+   existe como conversa (`chat.message`, `chat.structured_question[_answered]`,
+   `agent.status`, `agent.activated`, `handoff.offered`/`accepted`,
+   `readiness.confirmed`, `necessity.validated`,
+   `architecture.readiness_confirmed`), OU o ATOR é um agente conversacional (os
+   seis mais `dev-lead` e `infra`). Uma lista de PERMITIDOS por tipo foi medida
+   e recusada: quem escreve legitimamente numa sessão fechada são os
+   CONSUMIDORES do fechamento — o Psicólogo roda um `ToolLoop` contra ela e grava
+   `tool.call`, `agent.response`, `agent.error`; a Anamnese grava os próprios
+   desfechos —, e eles falam o MESMO vocabulário genérico do Criativo. O tipo é
+   igual; quem difere é o ator.
+7. **A decisão humana sobre ação continua entrando.** `action.approved`/
+   `action.denied` e os desfechos de execução não são conversa: a ação é item de
+   uma fila DURÁVEL que sobrevive à sessão, e recusar a decisão deixaria uma
+   pendência impossível de resolver. O caso normal nem chega aqui (ação
+   `pending` segura a sessão, sinal 2 da RN-064); ele só existe quando a sessão
+   morreu por outra porta.
+8. **A recusa não deixa rastro.** O estado vem do MESMO `UPDATE` que reserva o
+   `seq` (sem consulta a mais no caminho mais quente, sob o mesmo lock de linha
+   da transição), e a recusa lança dentro da transação: o incremento volta, o
+   `seq` segue sem buraco. O chat humano, que grava `chat.message` sem o funil,
+   tem a mesma trava. Os casos de uso com efeito ANTES do evento recusam antes
+   do efeito: `CreateHandoff` antes de criar a linha, `AcceptHandoff` antes de
+   marcar `accepted` (que ativaria o agente seguinte), `ActivateAgent` antes de
+   chamar o engine.
+9. **O fechamento PARA os conversacionais.** `SessionLifecycleWorker`, por onde
+   todo fechamento passa (heartbeat, conversa ociosa, humano, crash), para os
+   conversacionais da sessão em TODOS os nós (`Engine.Agents.Conversacionais`,
+   por `:erpc` — o registro é local e o job cai em qualquer réplica). O turno em
+   curso é ABANDONADO no `terminate/2` dos seis servidores
+   (`TurnoAssincrono.abandonar/1`): a task morre sem gravar nem transmitir nada,
+   porque gravar seria pedir à api o que ela recusa. Não há resposta a dar:
+   desde a [RN-578](#rn-578) (ADR 0163) quem disparou o turno já recebeu `:ok`
+   no aceite. Pelo mesmo motivo o `offer_dev_handoff` que o Arquiteto guardou
+   para o fecho do turno NÃO roda quando o fecho é o da sessão — o handoff
+   seria recusado. O Infra Lead, que roda o turno dentro do `handle_call`, é
+   morto se não sair em 5s.
+10. **A recusa nunca é calada no engine.** Quase todo chamador de
+    `append_event/3` descarta o retorno; o cliente registra o 409
+    `sessao_encerrada` como aviso no log, e o retorno segue o mesmo.
+
+**O que esta regra NÃO fecha:** o teto só é aferido quando o HEARTBEAT expira —
+com a aba aberta e mandando heartbeat, a sessão continua viva sem teto, como
+sempre (quem está olhando não é conversa ociosa). A resposta do chat humano
+stateless a um turno que COMEÇOU com a sessão aberta entra mesmo que ela feche
+no meio (o ator é o modelo, e o gasto já foi medido). `deploy/k8s/` não carrega
+`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`: vale o default do `runtime.exs`, e mudar
+o teto ali é acrescentar a variável ao ConfigMap. A tela não ganhou tratamento
+próprio para o 409 — mostra a mensagem da api, que diz para abrir uma sessão
+nova.
+
+- **Código:** `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
+  (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
+  (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:37`
+  (`conflitoDeSessaoEncerrada`), `:110` (o estado no mesmo `UPDATE` do `seq`),
+  `:189` (`garantirQueAceita`);
+  `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
+  (`incrementSeq`);
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
+  (o chat humano); `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts:67`,
+  `accept-handoff.use-case.ts:90`, `activate-agent.use-case.ts:52`;
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:30`
+  (`FALA_DO_AGENTE`), `:238` (o quinto sinal);
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:116`
+  (`findLatestOfTypesInSession`);
+  `apps/engine/lib/engine/sessions/session_server.ex:113` (a pendência com
+  instante), `:141` (`conversa_ociosa`), `:166` (`encerrar`), `:184`
+  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:142`
+  (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
+  (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/agents/conversacionais.ex:48` (`parar_da_sessao`),
+  `:64` (`parar_da_sessao_no_cluster`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
+  (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
+- **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
+  (sessão encerrada recusa `chat.message` com 409 nomeado — caso de falha),
+  `:167` (sem evento e sem `seq` consumido), `:183` (Psicólogo e Anamnese
+  continuam entrando), `:211` (decisão sobre ação continua entrando), `:223`
+  (sessão ativa aceita — caminho feliz), `:235` (`closing` aceita), `:249`
+  (`SendAgentMessage` não chama o engine), `:263` (nenhum handoff órfão),
+  `:276` (o aceite não ativa ninguém), `:309` (a ativação não sobe o
+  agente); `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts:478`
+  (o Criativo respondeu: pendente com o instante), `:519` (o usuário falou por
+  último), `:546` (quem não conversa não segura), `:563` (sinal sem teto vence);
+  `apps/engine/test/engine/sessions/session_lifecycle_test.exs:87` (dentro do
+  teto, reagenda), `:106` (acima do teto, `conversation_idle_timeout`,
+  `closed`), `:124` (o default é 8h), `:151` (pendência sem instante segue sem
+  teto); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
+  (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
+  (para só os da sessão), `:84` (`session.closed` para o Criativo vivo);
+  `apps/engine/test/engine/agents/turno_assincrono_test.exs:161` (abandonar não
+  grava nem transmite, e não responde de novo), `:194` (o `terminate/2` abandona);
+  `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
+- **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
+  8h e causa própria; sessão encerrada recusa conversa, nomeado)
+
+## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
+
+### RN-582 — O aceite do handoff ao Arquiteto provisiona o repositório; o aceite ao Dev Lead é a segunda porta, idempotente; e `execution/activate` sem repositório é 409 nomeado {#rn-582}
+
+Revisa o GATILHO da [RN-522](#rn-522), que cumpria a promessa da
+[RN-541](#rn-541). O mecanismo não muda — o mesmo `ProvisionRepositoryUseCase`,
+chamado pelo mesmo `AcceptHandoffUseCase`, sempre `local`, com a falha virando
+`repository.provision_failed` e nunca derrubando o aceite. Decisão estrutural
+no [ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md).
+
+**O que a instalação real mostrou (AT-092, v6.1.0, 2026-09-14).** O Arquiteto
+propôs `open_adr_pr` três vezes antes de o repositório existir; os handoffs a
+`infra` e `dev-lead` foram oferecidos juntos, só o de `infra` foi aceito, e
+`POST /projects/:id/execution/activate` respondeu **201**. As tabelas
+`project_repositories`, `project_git_connections` e `repo_bootstraps` ficaram
+vazias — o projeto sem repositório para sempre. Dois defeitos: o gatilho vinha
+DEPOIS de quem precisa do repositório (Arquiteto e Infra Lead escrevem nele
+antes do Dev Lead), e o único gatilho era PULÁVEL (ativar a execução não exige
+o aceite ao Dev Lead).
+
+**1. O gatilho é o aceite do handoff ao `arquiteto`.** O Arquiteto só é ativado
+por handoff `accepted` endereçado a ele (`canActivateAgent`), e esse handoff
+nasce do PO (`offer_handoff(to_agent: "arquiteto")`) ou do usuário (handoff
+manual) — as duas portas passam pelo mesmo aceite. O provisionamento roda
+ANTES de `activateAgent`: o Arquiteto acorda num projeto que já tem onde
+escrever. Consequência: o Infra Lead, ativado por handoff DO Arquiteto, nunca
+mais acorda sem repositório.
+
+**2. O aceite ao `dev-lead` continua provisionando, como SEGUNDA PORTA.** É a
+saída do projeto que passou pelo Arquiteto antes desta regra (o `exp001` da
+AT-092: Arquiteto aceito, Dev Lead `offered`) e a retomada natural de um
+provisionamento que falhou no aceite ao Arquiteto. Com o repositório `created`
+já de pé, a segunda chamada não cria nada — nem repositório, nem sessão, nem
+linha de bootstrap, nem branch, nem commit —, e isso está provado pelas DUAS
+portas em sequência contra o Postgres e o `LocalGitProvider` de verdade.
+
+**3. `execution/activate` sem repositório é RECUSADO com 409**, logo depois da
+checagem de `module_map` e ANTES de qualquer efeito (orçamento persistido,
+`permissions.json`, sessão, engine, evento). A frase é escolhida pelo estado dos
+handoffs do projeto, lidos por `HandoffRepository.findByProject` (de todas as
+sessões — o handoff ao Arquiteto mora na do PO): handoff ao Arquiteto
+`offered` → aceite-o; senão ao Dev Lead `offered` → aceite-o; senão algum dos
+dois já `accepted` → o provisionamento não deixou repositório, veja o
+`repository.provision_failed` e use a página de provisionamento
+(`/projects/:id/provisioning?provider=local`); senão → nenhum handoff ao
+Arquiteto foi aceito. Um handoff oferecido a OUTRO agente nunca vira instrução
+de aceite (aceitar a Infra não provisiona nada). Repositório ADOTADO conta como
+repositório. Recusar e não provisionar aqui é decisão: provisionar dentro da
+ativação esconderia um efeito de git, e os agentes anteriores a ela seguiriam
+sem repositório.
+
+**4. A tela tira o controle e diz o motivo uma vez, em texto** (a régua da
+[RN-102](business-rules/custo.md#rn-102) e do [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)). Na seção de Execução da Visão Geral, com o
+`GET .../git/repository` respondendo `null` CONFIRMADO, "Ativar execução" fica
+inerte no lugar, o texto diz onde o repositório nasce, e há um link para
+provisionar. No card do handoff ao Dev Lead, dentro da sessão, o atalho
+"Ativar execução" sai e o card diz que aceitar aquele handoff provisiona o
+repositório. Carregando ou com erro, nada tranca — "não sei" não vira "não
+tem", e o backend recusa de qualquer forma. Aceitar um handoff invalida a
+consulta do repositório, porque o aceite pode tê-lo criado.
+
+**Consequência declarada (ADR 0165):** a sessão `git-bootstrap` que o
+provisionamento abre passa a nascer no MEIO da fase do Arquiteto, e é a
+"sessão mais recente" do projeto (a Visão Geral e o resumo do workspace escolhem
+por `createdAt`) até a próxima nascer. A tela da sessão de chat não é afetada.
+Não decidido aqui.
+
+**Adjacência com a [RN-581](#rn-581), declarada e não corrigida:** aceitar um
+handoff numa sessão ENCERRADA é 409 `sessao_encerrada`, checado ANTES de o
+handoff virar `accepted` — então nada é provisionado pela metade. Mas a frase
+da recusa da ativação lê os handoffs do projeto sem olhar o estado da sessão
+de cada um, e pode mandar "aceitar o handoff ao Arquiteto, que está oferecido"
+quando esse handoff mora numa sessão já fechada; o caminho que resolve ali é a
+página de provisionamento. Os eventos que o provisionamento grava não caem na
+recusa: o ator é `system` e o destino é a sessão `git-bootstrap`, recém-criada.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:54`
+  (`AGENTES_QUE_PROVISIONAM_O_REPOSITORIO`, gatilho e segunda porta) e `:141`
+  (o ramo, antes de `activateAgent`);
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
+  (a recusa, antes de qualquer efeito);
+  `apps/api/src/domain/execution/repositorio-para-executar.ts:37`
+  (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
+  também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
+  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;
+  `apps/web/src/routes/SessionPage.tsx:318`, `:964` e `:1616`;
+  `apps/engine/lib/engine/projects/project_repository.ex:74` (o texto da recusa
+  da [RN-577](#rn-577), que nomeava o gatilho antigo e muda junto)
+- **Teste:**
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts`
+  ("aceitar para o Arquiteto provisiona `local` com o slug do projeto", "o
+  repositório nasce ANTES de o Arquiteto acordar", "aceitar para o Dev Lead
+  continua provisionando `local` (segunda porta)");
+  `apps/api/test/application/use-cases/agents/accept-handoff-provisiona-uma-vez.spec.ts`
+  (as duas portas contra o banco: "UM createRepo, UMA linha, nenhuma falha", e
+  "o exp001: Arquiteto aceito SEM repositório, e a segunda porta provisiona");
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts:723`
+  ("sem repositório: 409, e NENHUM efeito antes da recusa", "a frase nomeia o
+  handoff ao Dev Lead pendente — a saída do exp001", "repositório ADOTADO conta
+  como repositório"); `apps/api/test/domain/execution/repositorio-para-executar.spec.ts`;
+  `apps/api/test/infrastructure/persistence/handoff-por-projeto.repository.spec.ts`;
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx:409`, `:427` e `:440`;
+  `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx:610`;
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:134` e
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:520` (a recusa
+  nomeia o gatilho novo)
+- **Origem:** AT-092 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
+  mantenedor em 2026-09-18

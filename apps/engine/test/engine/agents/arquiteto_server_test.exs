@@ -105,8 +105,9 @@ defmodule Engine.Agents.ArquitetoServerTest do
   end
 
   test "propose_adr em projeto SEM repositório: recusa NOMEADA, NUNCA propõe, deixa rastro (RN-577)" do
-    # Projeto novo, antes do handoff ao Dev Lead: nenhuma linha em
-    # project_repositories. É o caso COMUM do Arquiteto, não a borda (AT-088).
+    # Projeto sem repositório — o provisionamento do aceite ao Arquiteto
+    # falhou, ou o projeto passou por ele antes da RN-582: nenhuma linha em
+    # project_repositories (AT-088).
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
     {:ok, state} = ArquitetoServer.init({session_id, project_id})
@@ -130,7 +131,7 @@ defmodule Engine.Agents.ArquitetoServerTest do
     recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_adr"))
     assert recusa["role"] == "tool"
     assert recusa["content"] =~ "sem repositório provisionado"
-    assert recusa["content"] =~ "handoff do Arquiteto para o Dev Lead"
+    assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
 
     assert_received {:event_appended, _, _,
                      %{type: "agent.response", payload: %{content: "depois-de-recusar-adr"}}}
@@ -258,6 +259,57 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
 
     assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+  end
+
+  # ADR 0163 (RN-578): o aceite do `offer_infra_handoff` volta antes do turno
+  # de fechamento acabar, e a api chama `offer_dev_handoff` logo em seguida.
+  # Sem o adiamento, o handoff ao Dev Lead nasceria ANTES do de Infra.
+  describe "offer_dev_handoff com o turno de fechamento em curso" do
+    test "fica pendente e nasce DEPOIS do handoff ao infra", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
+      from = {self(), make_ref()}
+
+      assert {:reply, :ok, em_curso} =
+               ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
+
+      assert {:reply, :ok, pendente} =
+               ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
+
+      assert pendente.handoff_dev_pendente
+      refute_received {:handoff_created, _, _, "arquiteto", "dev-lead", _}
+
+      %{task: %Task{ref: ref}} = pendente.turno_assincrono
+      assert_receive {^ref, resultado}, 5_000
+      assert {:noreply, final} = ArquitetoServer.handle_info({ref, resultado}, pendente)
+
+      refute final.handoff_dev_pendente
+
+      # A ORDEM é o que se prova: infra primeiro, dev-lead depois.
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_1, nil}
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_2, nil}
+      assert [destino_1, destino_2] == ["infra", "dev-lead"]
+    end
+
+    test "cancelar o turno de fechamento ainda oferece o handoff ao dev-lead", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_llm_turn_stream_hang, true)
+      from = {self(), make_ref()}
+
+      {:reply, :ok, em_curso} = ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
+      assert_receive :turno_pendurado, 1_000
+      {:reply, :ok, pendente} = ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
+
+      assert {:noreply, depois} = ArquitetoServer.handle_cast(:cancel, pendente)
+
+      refute depois.handoff_dev_pendente
+      refute_received {:handoff_created, _, _, "arquiteto", "infra", _}
+      assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+    end
   end
 
   # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui

@@ -6,6 +6,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine/api**: a sessão **deixa de expirar no meio de uma conversa, e a
+  sessão encerrada deixa de aceitar conversa** (AT-072). O heartbeat fechava a
+  sessão 30s depois de a aba parar mesmo com o Criativo esperando resposta, e a
+  conversa seguia gravando na sessão morta. Agora um agente conversacional
+  esperando o usuário segura a sessão por até **8 horas** contadas do fim do
+  turno dele (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`); passado o teto, a sessão
+  fecha `closed` com causa própria, `conversation_idle_timeout`. E uma sessão
+  `closed`/`closed_abnormally` recusa evento de conversa com **409** nomeado
+  (`reason: "sessao_encerrada"`) — mensagem, handoff, ativação de agente —,
+  enquanto o que o fechamento produz (Psicólogo, Anamnese) e a decisão humana
+  sobre ação pendente continuam entrando. Ao fechar, os agentes conversacionais
+  da sessão são parados em todos os nós, e o turno em curso é abandonado sem
+  gravar. `GET /internal/sessions/:id/pending-work` ganha
+  `aguardandoUsuarioDesde` ([RN-581](docs/business-rules.md#rn-581)).
+
 - **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
   repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
   Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
@@ -38,6 +53,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   PO recebia "(sem product brief disponível)". A rota interna
   `GET /internal/sessions/:id/events` ganha `latest` e `types`, aditivos.
 
+- **engine/api/web**: o clique que dispara turno de agente **responde ao
+  aceitar**, não no fim do turno ([RN-578](docs/business-rules.md#rn-578),
+  [ADR 0163](docs/adr/0163-o-clique-responde-ao-aceitar.md)). Medido numa
+  instalação real da v6.1.0: responder o formulário de perguntas do Criativo
+  levou 97,3 s, confirmar a prontidão 97,3 s e confirmar a arquitetura 51,8 s —
+  cada um esperando o turno inteiro, e turno acima de 120/180 s virava 500 num
+  comando que tinha funcionado. O turno segue no engine e a tela acompanha o
+  fim pelo canal e pela cauda do log. Junto, a **recusa deixa de ser calada**:
+  mensagem mandada com o agente ainda em turno era aceita com 202 e nunca lida
+  (um *"Continue"* digitado durante o kickoff do Arquiteto, na mesma
+  instalação); agora é **409** com a frase do motivo e `agent.error` no fio. A
+  prontidão sem regra de negócio passa a responder **422**. O status e o corpo
+  de sucesso da api não mudam (`201 { ok: true }`).
+
 - **web/engine/api**: a tela de Sessão **deixa de pollar a cada 3s enquanto o
   canal da sessão está vivo** ([RN-579](docs/business-rules.md#rn-579),
   AT-093). Medido na v6.1.0: um navegador fazia mediana de 118 e pico de 263
@@ -47,7 +76,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mínima por alvo, para uma rajada virar uma busca) e o poll fica como
   fallback de 15s (30s para o orçamento). Uma aba vai de **123 para 46**
   req/min; canal caído volta ao poll de sempre na hora. O teto do rate limit
-  não mudou.
+  não mudou. Com um turno aceito em curso, o aviso do `agent.status` do agente
+  acompanhado faz a tela ler o fim do turno na hora, em vez de esperar a
+  leitura de 4s do log ([RN-578](docs/business-rules.md#rn-578)), que continua
+  valendo como rede.
 - **api**: resposta de corpo vazio (`null`) passa a ter `ETag` e a voltar
   **304**. `GET .../sessions/:id/budget` nunca voltava 304 (0% de 483) e
   `GET .../execution/session` quase nunca (22%) porque sem corpo o Express não
@@ -223,6 +255,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
   Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
   está certo: sem a variável a api nunca chama o broker.
+- **api/web**: o repositório do projeto **nasce no aceite do handoff ao
+  Arquiteto**, e não mais no do Dev Lead — o Arquiteto e o Infra Lead escrevem
+  no repositório antes do Dev Lead, e numa instalação real propuseram PRs para
+  um repositório que ainda não existia. O aceite ao Dev Lead continua
+  provisionando, como segunda porta que não cria nada quando o repositório já
+  existe: é a saída do projeto que passou pelo Arquiteto sem ganhar repositório.
+  `POST /projects/:id/execution/activate` sem repositório deixa de responder 201
+  e passa a responder **409**, dizendo qual handoff falta aceitar ou onde
+  provisionar; a Visão Geral deixa "Ativar execução" inerte com esse motivo em
+  texto, e o card do handoff ao Dev Lead tira o atalho de ativar enquanto não
+  há repositório ([RN-582](docs/business-rules.md#rn-582),
+  [ADR 0165](docs/adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)).
+  A recusa do Arquiteto e do Infra Lead a propor PR sem repositório
+  ([RN-577](docs/business-rules.md#rn-577)) muda de texto junto: deixa de
+  mandar esperar o aceite ao Dev Lead e diz que, com o gatilho no Arquiteto,
+  chegar ali é provisionamento que falhou ou projeto anterior à regra.
 
 - **instalador/esteira**: o **broker de container vira a quinta imagem
   publicada**, e o `install.sh` **pergunta** se o liga

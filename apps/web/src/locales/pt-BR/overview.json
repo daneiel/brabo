@@ -75,6 +75,8 @@
     "activationErrorTitle": "Não foi possível saber se a execução já foi ativada.",
     "introReady": "Ative a execução para os dev agents implementarem o backlog em paralelo.",
     "introNeedsModuleMap": "Defina o module_map (Arquiteto) antes de ativar a execução.",
+    "introNeedsRepository": "O projeto ainda não tem repositório, e sem ele os dev agents não têm onde trabalhar. Ele nasce quando você aceita o handoff ao Arquiteto — ou, se esse já foi aceito, o handoff ao Dev Lead.",
+    "provisionNow": "Provisionar o repositório agora",
     "activate": "Ativar execução",
     "devAgentsLabel": "Dev agents",
     "spinningUp": "Subindo os agentes…",
