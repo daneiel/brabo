@@ -9286,6 +9286,27 @@ deliberada com quem já tem uma unit quebrada no disco: `status` e `uninstall`
 precisam continuar alcançando a pasta dela. Quem está nesse estado conserta
 **reinstalando** — `install` sobrescreve o arquivo inteiro.
 
+**E há uma TERCEIRA sintaxe no mesmo arquivo: `Environment=` (AT-095).** Ela é
+uma LISTA de atribuições separadas por espaço, com *unquoting* e escape estilo
+C, e também expande especificador. Escrita crua — como saía o
+`XDG_CONFIG_HOME` da unit de MÁQUINA e o `PATH` das duas espécies —,
+`Environment=XDG_CONFIG_HOME=/home/dan/50%off com espaco` chegava ao serviço
+como `/home/dan/50popff`: `%o` expandido e `com`/`espaco` descartados pela
+separação em palavras. A unit carrega, `verify` aprova, o serviço sobe — e o
+agente procura a base e a chave numa pasta que não existe, calado. Por isso a
+atribuição INTEIRA vai entre aspas (`Environment="VAR=valor"`), com `\` e `"`
+escapados por barra e `%` como `%%`; `$` não se escapa ali (`Environment=` não
+expande variável). O `--dir` do `ExecStart=` tinha a mesma classe e foi junto:
+cada argumento continua entre aspas, e agora `\` vira `\\`, `%` vira `%%` e `$`
+vira `$$` (a substituição de variável do `ExecStart=`). Quebra de linha em
+`PATH`/`XDG_CONFIG_HOME` é RECUSADA antes de escrever — num arquivo de unit ela
+é diretiva nova, não valor. Nada disso muda a LEITURA de volta: ela só lê o
+`WorkingDirectory=`, e nenhum dos dois valores de ambiente é lido do disco. A
+prova é o VALOR EFETIVO, não o `verify` (que aprova a forma quebrada): o
+próprio `systemd --test --user --unit=<u>`, sobre uma pasta de units
+temporária, despeja a configuração resolvida, e o teste compara o que o
+systemd ENTENDEU com o que foi gravado.
+
 **Ativação que falha NÃO apaga o arquivo, e não diz "instalado".** Escrever a
 unit e ativá-la são dois passos, e o gerenciador pode não estar lá
 (`systemctl` fora do PATH, `launchd` recusando). O arquivo **fica** — é o que a
@@ -9356,7 +9377,14 @@ cuja configuração está quebrada, que é justamente quando alguém pergunta.
   `systemd-analyze --user verify` de verdade, nas duas espécies, com pasta que
   tem espaço e pasta que tem `%` — mais a forma ANTIGA, entre aspas, sendo
   REPROVADA pelo mesmo validador; sem systemd na máquina o arquivo PULA
-  nomeando o motivo, nunca passa em silêncio nem reprova por ambiente)
+  nomeando o motivo, nunca passa em silêncio nem reprova por ambiente) — e,
+  desde a AT-095, `describe "o valor EFETIVO de Environment= é o valor
+  gravado"` e `describe "o --dir do ExecStart= e o WorkingDirectory= também
+  chegam intactos"`, que perguntam ao despejo de `systemd --test --user` o
+  valor RESOLVIDO de `XDG_CONFIG_HOME`, `PATH`, `WorkingDirectory` e do `--dir`
+  com `%`, espaço, aspas, barra invertida e `$`, e fixam a forma antiga do
+  `Environment=` como entregando OUTRO valor; `servico.spec.ts` ganhou as duas
+  recusas de quebra de linha e a unit de projeto sem `XDG_CONFIG_HOME`
 - **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 5
 - **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **BRB-031** (o
   `chmod +x` manual do fluxo do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))

@@ -524,6 +524,20 @@ absolute, accepted, and wrong. Check the resolved value, never the file:
 systemctl --user show -p WorkingDirectory brabo-runner.service
 ```
 
+The same holds for the **environment** the unit freezes (AT-095). Units written
+before that fix carried `Environment=XDG_CONFIG_HOME=<folder>` and
+`Environment=PATH=<path>` unquoted, and `Environment=` both splits on spaces
+and expands specifiers: with `XDG_CONFIG_HOME=/home/you/50%off com espaco` the
+service received `/home/you/50<os-id>ff` — it loads, it starts, and the
+per-machine agent looks for its base and device key in a folder that does not
+exist, without a word. The CLI now writes the whole assignment quoted
+(`Environment="XDG_CONFIG_HOME=…"`, with `\`, `"` and `%` escaped). **Fix:
+reinstall**, as above. Check what systemd resolved:
+
+```bash
+systemctl --user show -p Environment brabo-runner.service
+```
+
 ### Device key from the terminal {#chave-de-dispositivo-pelo-terminal}
 
 **Symptom:** a machine needs a device key and there is no browser to run the
