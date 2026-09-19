@@ -286,8 +286,10 @@ A domain event almost always produces an `event.appended`; the reverse doesn't h
 Since [RN-579](../business-rules.md#rn-579) the engine emits it for **every**
 write the api confirmed through the `EngineApiClient` facade (appends, proposed
 actions, handoffs, the PO's backlog), and never for a refused one. Writes the
-api makes on its own — a human deciding an action, a session transition — have
-no broadcast. The browser uses it only as a trigger: it invalidates what the
+api makes on its own — a human deciding an action, a session transition — reach
+the same broadcast since AT-157: the api asks the engine for it after the write
+commits (`POST /internal/sessions/:id/event-appended`), and does not ask for
+writes that came from the engine, which already announces them. The browser uses it only as a trigger: it invalidates what the
 `type` affects (events and budget always; actions, handoffs or backlog by
 prefix), with a minimum window per target, and while the channel is alive the
 session screen's polls fall back to 15s (30s for the budget).

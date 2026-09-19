@@ -1650,8 +1650,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
   aviso SEM janela só troca poll por rajada. O número é guardado por
   `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
-  que NÃO passa pelo engine (humano noutra aba, transição feita pela api) não
-  tem aviso e chega pelo fallback. E 304 não reduz a contagem do rate limit —
+  que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
+  também avisa desde a AT-157: a api pede ao engine
+  `POST /internal/sessions/:id/event-appended` DEPOIS do commit
+  (`SessionChannelNotifier`, `aposCommit`), e não pede para escrita vinda do
+  engine (`/internal/*`), que a fachada já avisou. É melhor esforço: o aviso
+  perdido cai no fallback de 15s. Caso de uso novo que grave em
+  `session_events` sem `AppendSessionEventUseCase` chama o notifier. E 304 não reduz a contagem do rate limit —
   o guard conta antes do handler —, mas corpo `null` agora tem `ETag`
   (`etag-do-corpo-vazio.ts`): sem ele, a rota que responde vazio nunca
   voltava 304. A leitura de 4s da cauda que acompanha um turno aceito

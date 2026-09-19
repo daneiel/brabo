@@ -229,9 +229,17 @@ OWN channel, not on the api: when the api **confirms** a write to a session —
 nothing. No route and no request body changed; before this, only
 `ArtifactEmitter` and the Infra Lead broadcast, by hand, and even for writes
 the api had refused. It is what lets the browser drop its 3s poll while the
-channel is alive. Writes the api makes on its own (a human deciding an action,
-a session transition) still have no broadcast — the browser's 15s fallback
-poll covers them.
+channel is alive.
+
+Writes the api makes on its own — a human deciding an action, a session
+transition, a chat message answered by the api's own LLM turn — do not go
+through that facade, and since AT-157 they reach the channel the other way
+round: after the write **commits**, the api calls
+`POST /internal/sessions/:id/event-appended` (see *api → engine*) and the
+engine broadcasts the same `event.appended`. Writes that arrived from the
+engine itself (`/internal/*`) are not announced a second time. The call is
+best effort and never awaited; if it is lost, the browser's 15s fallback poll
+covers it, as before.
 
 ### LLM
 
@@ -1183,6 +1191,7 @@ Twenty command routes, plus the health ones. Under `/internal` with `VerifyServi
 | method | path | what it triggers |
 |---|---|---|
 | POST | `/sessions` | starts the `SessionServer` |
+| POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
 | POST | `/sessions/:id/agent/message` | user message in the thread — **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)) |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |

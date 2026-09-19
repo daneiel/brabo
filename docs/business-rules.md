@@ -9557,7 +9557,7 @@ chave.
   `apps/engine/lib/engine_web/channels/runner_socket.ex:66` (`id/1`, que deixou
   de ser `nil`);
   `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:27`;
-  `apps/engine/lib/engine_web/router.ex:82`
+  `apps/engine/lib/engine_web/router.ex:86`
 - **Teste:**
   `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
   (`describe "a revogação alcança a conexão viva"` — o projeto da linha; a
@@ -14235,7 +14235,22 @@ voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
    `create_handoff` (`handoff.offered`) e `create_epic/story/task`
    (`backlog.*_created`). Escrita recusada não avisa. Antes, só
    `ArtifactEmitter` e o Infra Lead avisavam, à mão — e avisavam mesmo quando a
-   api recusava o append.
+   api recusava o append. **Desde a AT-157, a escrita que a API faz por conta
+   própria também avisa** — a decisão de um humano noutra aba, uma transição de
+   sessão, o chat respondido pelo modelo da própria api. `AppendSessionEventUseCase`
+   e o `SendChatMessageUseCase` (os dois únicos pontos que gravam em
+   `session_events` sem passar pelo engine) chamam
+   `SessionChannelNotifier.eventAppended`, que pede ao engine
+   `POST /internal/sessions/:id/event-appended`; o engine faz o MESMO
+   `event.appended` (só `type` e `actorId`). O aviso sai DEPOIS do commit da
+   transação mais externa (`aposCommit` no `DrizzleUnitOfWork`): transação
+   desfeita não avisa, e avisar de dentro dela faria a web buscar antes de o
+   evento existir. Escrita que veio do engine (rota `/internal/*`, marcada pelo
+   `OrigemEngineMiddleware`) NÃO é avisada de novo pela api — a fachada já
+   avisou. É melhor esforço e não é aguardado: o aviso perdido nunca falha a
+   escrita, e o fallback de 15s o cobre. São só os dois pontos: outro caso de
+   uso que passe a gravar em `session_events` sem `AppendSessionEventUseCase`
+   precisa chamar o notifier também.
 2. **"Canal vivo" é join CONFIRMADO.** `connectSessionHeartbeat` marca a sessão
    viva no `ok` do join e a desmarca em erro/fechamento do canal ou do socket e
    no cleanup. O estado é por sessão e por aba, fora do React, porque o
@@ -14282,9 +14297,11 @@ voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
 **46** com ele vivo — dos quais 24 são do Shell (resumo dos projetos e sessão
 de execução, que não são da sessão e seguem em 5s). Duas abas: 246 → 92.
 
-**O que esta regra NÃO fecha:** escritas que não passam pelo engine — a
-decisão de um humano noutra aba, uma transição de sessão feita pela api — não
-têm aviso no canal e chegam pelo fallback, em até 15s (eram 3s). O status
+**O que esta regra NÃO fecha:** o aviso da escrita que a api faz por conta
+própria (item 1, AT-157) é melhor esforço — se o engine estiver fora ou o
+aviso se perder, a tela chega pelo fallback, em até 15s (eram 3s); o aviso vai
+ao nó do engine que recebeu a chamada, e o broadcast do Phoenix PubSub o
+entrega aos inscritos de qualquer nó do cluster (não medido em cluster). O status
 `working` do roster continua dependendo do `event.appended` do `agent.status`,
 que sai depois de a api gravá-lo. `projects-summary` e `execution/session`
 (Shell) seguem em 5s. Durante um turno aceito, a leitura da cauda de 4s da
@@ -14295,6 +14312,12 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
   `:607`, `:630`, `:806` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
+  `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
+  (`event_appended`, a rota do aviso da api);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:182`
+  (`eventAppended`);
+  `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
+  (`aposCommit`), `:53` (`veioDoEngine`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
   (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
@@ -14311,6 +14334,12 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (queda — caso de falha), `:267`;
   `apps/engine/test/engine/sessions/engine_api_client_aviso_no_canal_test.exs:29`,
   `:57` (append recusado não avisa — caso de falha), `:71`;
+  `apps/api/test/application/use-cases/sessions/aviso-ao-canal-da-sessao.spec.ts`
+  (AT-157: avisa com tipo e ator; recusada não avisa e transação desfeita não
+  avisa — casos de falha; engine fora do ar não falha a escrita; escrita vinda
+  do engine não é avisada em dobro),
+  `apps/api/test/infrastructure/http-clients/origem-engine.middleware.spec.ts`,
+  `apps/engine/test/engine_web/controllers/session_command_controller_event_appended_test.exs`;
   `apps/api/test/interfaces/http/shared/etag-do-corpo-vazio.spec.ts:56` (a
   causa), `:69`, `:98` (`@Res()` tardio — caso de falha);
   `apps/api/test/interfaces/rate-limit.guard.spec.ts:183` (2 × 263 estoura,
@@ -14318,7 +14347,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (o predicado), `:203` (o aviso do acompanhado fecha o turno sem esperar o
   tique), `:221` (aviso de outro agente não lê, e o tique de 4s segue sendo a
   rede — caso de falha), `:244` (turno fechado: nem aviso nem tique leem)
-- **Origem:** AT-093 — logs da api instalada (v6.1.0), 2026-09-14
+- **Origem:** AT-093 — logs da api instalada (v6.1.0), 2026-09-14; AT-157 — o aviso da escrita da própria api
 
 ### RN-581 — A conversa em curso segura a sessão por até 8h, e a sessão encerrada recusa conversa {#rn-581}
 
@@ -14439,9 +14468,9 @@ fechada seguem mostrando a mensagem da api.
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
   (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
   (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:37`
-  (`conflitoDeSessaoEncerrada`), `:110` (o estado no mesmo `UPDATE` do `seq`),
-  `:189` (`garantirQueAceita`);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:39`
+  (`conflitoDeSessaoEncerrada`), `:114` (o estado no mesmo `UPDATE` do `seq`),
+  `:198` (`garantirQueAceita`);
   `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
   (`incrementSeq`);
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
