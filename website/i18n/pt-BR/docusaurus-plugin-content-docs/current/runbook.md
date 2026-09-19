@@ -1845,3 +1845,20 @@ O relatório mostra **todo** provider, inclusive o pulado, com o motivo e a
 origem da falha. `sem_credencial` significa que a chave não chegou;
 `falha · origem infra` significa que nem se conseguiu falar com o provider;
 `falha · origem modelo` significa que ele respondeu recusando.
+
+### Volume novo de `node_modules` nasce root e a `api`/`web` não sobem {#volume-novo-de-node-modules}
+
+**Sintoma:** com os volumes de `node_modules` inexistentes (primeiro clone, ou
+máquina que só rodou o instalador, que não os define), `api` e `web` saem com
+`EACCES: permission denied, mkdir '/workspace/node_modules/.pnpm'` (AT-172).
+
+**Causa:** volume novo herda o dono do caminho que existir NA IMAGEM, e o
+caminho não existia — nascia `root:root`. `docker/api/Dockerfile` e
+`docker/web/Dockerfile` agora criam e dão `chown` nos três pontos de montagem
+de `node_modules` antes do `USER`.
+
+**A outra metade:** o ponto de montagem DENTRO do bind mount, no seu disco, o
+Docker cria como `root` quando falta (ex.: `packages/shared/node_modules`), e
+imagem nenhuma muda isso. O `pnpm dev` roda `scripts/dev/preflight.mjs`, que
+cria essas pastas como você antes; `docker compose up` rodado à mão pula o
+preflight, então rode `pnpm dev:preflight` uma vez antes do primeiro `up`.
