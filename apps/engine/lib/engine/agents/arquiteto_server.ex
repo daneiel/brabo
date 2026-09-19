@@ -15,7 +15,7 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
 
   alias Engine.Harness.Tools.{
     CreateModuleMap,
@@ -83,6 +83,10 @@ defmodule Engine.Agents.ArquitetoServer do
 
     # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
     # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,

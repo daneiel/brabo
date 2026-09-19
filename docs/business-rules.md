@@ -14679,6 +14679,68 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
 - **Origem:** AT-099 — teste intermitente do `PoServerTest`, medido em
   2026-09-19
 
+### RN-586 — O turno que o reinício do engine interrompeu fecha com desfecho durável, e nunca é refeito {#rn-586}
+
+Desde a [RN-578](#rn-578) o `agent.status: working` é gravado ANTES do aceite, e
+o fim do turno (`agent.status: idle` e `agent.done`) só sai de `finalizar/1`,
+dentro do processo do agente ([RN-585](#rn-585)). Se o engine cai no meio do
+turno, o processo e a Task morrem juntos e ninguém grava o fim: o último
+`agent.status` do agente fica `working` **para sempre** (AT-156, reproduzido —
+subir o servidor de novo sobre esse log não gravava nada, nos seis). Os dois
+leitores desse sinal o tomam por turno em curso: a tela (`turnoTerminouNoLog`,
+[RN-578](#rn-578) item 4) mantém a faixa de atividade, e o
+`GetSessionPendingWorkUseCase` conta trabalho pendente SEM teto (o terceiro
+sinal da [RN-064](business-rules/custo.md#rn-064)), então a sessão não fecha por heartbeat. Só a
+próxima mensagem do usuário destravava, e só porque ela sobe o agente.
+
+1. **O `working` que ficou sem turno vivo é fechado por evento NOVO**, nunca
+   reescrito (evento é imutável): um `agent.error` com origem `infra` e
+   `reason: turno_interrompido_por_reinicio` — a frase diz que o engine foi
+   reiniciado, que o turno não foi concluído e que quem decide tentar de novo é
+   o usuário ([RN-059](business-rules/custo.md#rn-059): falha nunca vira
+   resposta vazia) — seguido de `agent.status: idle` persistido. O canal recebe
+   `agent.error` e `agent.done`, para a faixa de quem está com a tela aberta
+   sair sem recarregar. Vale para os SEIS que compartilham `TurnoAssincrono`.
+2. **O turno NUNCA é reexecutado.** Refazê-lo gastaria token em nome de uma
+   mensagem que o usuário talvez já tenha esquecido, sobre um histórico
+   reconstruído; nenhuma chamada ao modelo acontece no fechamento.
+3. **Só o ÚLTIMO `agent.status` de cada agente conta**, e só `working`:
+   `idle` já está fechado, e `awaiting_approval` (Dev Lead suspenso,
+   [RN-284](#rn-284)) é decisão pendente, não turno morto.
+4. **"Sem turno vivo" olha o cluster, e na dúvida não fecha.** O registro dos
+   agentes é local; num rollout o pod antigo pode estar rodando o turno, e
+   fechá-lo dali mataria um turno saudável. Nó que não responde conta como vivo.
+   O repasse de sessão do drain ([RN-588](#rn-588), `Monitor.expect_handoff/1`)
+   é do `SessionServer`, não dos conversacionais: enquanto o pod antigo está de
+   pé o agente dele segue registrado lá, e a varredura do pod novo o enxerga;
+   o `Adopter` não varre — quem chega ao `working` órfão depois que o pod antigo
+   morre é o `init/1` do agente.
+5. **Dois pontos de entrada, uma função** (`Engine.Agents.TurnoOrfao`): a
+   varredura de boot em cada sessão reidratada (`Rehydrator`, fora do caminho do
+   readiness — o boot não espera a api), que fecha o turno mesmo que ninguém
+   mande mensagem, e o `init/1` de cada servidor, rede de segurança para quando
+   o boot não conseguiu escrever (api ainda fora do ar). Falha de leitura ou de
+   escrita é logada e o agente sobe.
+
+Declarado e não fechado: o Infra Lead (`infra`) roda o turno dentro do
+`handle_call`, sem `TurnoAssincrono`, e fica de fora; a janela de leitura é a
+das 200 mais recentes `agent.status` da sessão; se a api estiver fora no boot E
+ninguém acordar o agente, o `working` fica até a próxima subida dele; e o
+fechamento não recupera o que o turno já tinha gravado antes da queda.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:71` (`varrer/2`),
+  `:81` (`fechar_ao_subir/3`), `:134` (`encerrar/3`);
+  `apps/engine/lib/engine/sessions/rehydrator.ex:75` (varredura no boot); o
+  `init/1` dos seis `*_server.ex` chama `TurnoOrfao.fechar_ao_subir/3`
+- **Teste:** `apps/engine/test/engine/agents/turno_orfao_test.exs:72` (nos seis:
+  o `working` sem turno vivo vira `agent.error` `infra` + `idle`, e o LLM não é
+  chamado), `:104` (`awaiting_approval` não é órfão; `idle` e o `working` de
+  outro agente não são fechados), `:120` (`varrer/2` pula o agente com processo
+  vivo em ESTE nó ou num nó `:peer` de verdade do cluster; leitura e escrita
+  que falham não derrubam a subida);
+  `apps/engine/test/engine/sessions/rehydration_test.exs:46` (o boot dispara a
+  varredura)
+- **Origem:** AT-156, herdada da AT-089 (RN-578) — reproduzida em 2026-09-19
 
 ### RN-588 — Repassar uma sessão não deixa o pod antigo apagar a linha do par {#rn-588}
 
