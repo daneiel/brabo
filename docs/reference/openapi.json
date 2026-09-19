@@ -1519,7 +1519,7 @@
     },
     "/internal/sessions/{sessionId}/events": {
       "get": {
-        "description": "Used to REHYDRATE an agent's conversation history after a restart. The equivalent human route is protected by RBAC; this one, by the service token.",
+        "description": "Used to REHYDRATE a conversational agent's history and to read the artifacts its kickoff needs. The equivalent human route is protected by RBAC; this one, by the service token. `latest=true` returns the TAIL (still in ascending `seq`) and ignores `afterSeq`; `types` restricts the page to those event types. The page is capped at 200 either way (ADR 0060).",
         "operationId": "InternalSessionsController_listEvents",
         "parameters": [
           {
@@ -1553,6 +1553,26 @@
             "in": "query",
             "schema": {
               "example": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "latest",
+            "required": false,
+            "in": "query",
+            "description": "Fetches the tail of the log; ignores `afterSeq`.",
+            "schema": {
+              "example": "true",
+              "type": "string"
+            }
+          },
+          {
+            "name": "types",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated event types (at most 20). Only events of these types count toward `limit`.",
+            "schema": {
+              "example": "artifact.product_brief,artifact.business_rule",
               "type": "string"
             }
           }

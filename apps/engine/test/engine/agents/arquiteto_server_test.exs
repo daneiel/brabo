@@ -28,8 +28,26 @@ defmodule Engine.Agents.ArquitetoServerTest do
 
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
+    # Desde a RN-577 `propose_adr` só propõe com repositório: o projeto do
+    # setup TEM um. O teste da recusa usa um projeto sem.
+    insert_repo!(project_id)
     {:ok, state} = ArquitetoServer.init({session_id, project_id})
     %{state: state, session_id: session_id}
+  end
+
+  defp insert_repo!(project_id) do
+    Repo.query!(
+      """
+      INSERT INTO public.project_repositories
+        (id, project_id, provider, external_id, url, default_branch, visibility, provisioned_by)
+      VALUES ($1, $2, 'local', '/tmp/repo.git', 'file:///tmp/repo.git', 'main', 'private', $3)
+      """,
+      [
+        Ecto.UUID.dump!(Ecto.UUID.generate()),
+        Ecto.UUID.dump!(project_id),
+        Ecto.UUID.dump!(Ecto.UUID.generate())
+      ]
+    )
   end
 
   defp tool_turn(name, args) do
@@ -84,6 +102,46 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:story_modules_assigned, %{storyId: "st-1", moduleIds: ["api"]}}
     assert_received {:propose_action, "open_adr_pr", _actor, %{slug: "0001-usar-postgres"}}
     assert_received {:event_appended, _, _, %{type: "artifact.insight"}}
+  end
+
+  test "propose_adr em projeto SEM repositório: recusa NOMEADA, NUNCA propõe, deixa rastro (RN-577)" do
+    # Projeto novo, antes do handoff ao Dev Lead: nenhuma linha em
+    # project_repositories. É o caso COMUM do Arquiteto, não a borda (AT-088).
+    project_id = Ecto.UUID.generate()
+    session_id = Ecto.UUID.generate()
+    {:ok, state} = ArquitetoServer.init({session_id, project_id})
+
+    Process.put(:fake_events, brief_rules_backlog())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_adr", %{
+        "title" => "Usar Postgres",
+        "slug" => "0001-usar-postgres",
+        "content" => "# ADR"
+      }),
+      FakeEngineApiClient.final_response("depois-de-recusar-adr")
+    ])
+
+    assert {:noreply, new_state} = sync_cast(ArquitetoServer, :kickoff, state)
+
+    refute_received {:propose_action, "open_adr_pr", _, _}
+
+    # Entrada do laço (RN-163): o modelo lê o motivo e o turno segue.
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_adr"))
+    assert recusa["role"] == "tool"
+    assert recusa["content"] =~ "sem repositório provisionado"
+    assert recusa["content"] =~ "handoff do Arquiteto para o Dev Lead"
+
+    assert_received {:event_appended, _, _,
+                     %{type: "agent.response", payload: %{content: "depois-de-recusar-adr"}}}
+
+    # Rastro durável: a chamada e o porquê.
+    assert_received {:event_appended, _, _, %{type: "tool.call", payload: %{tool: "propose_adr"}}}
+
+    assert_received {:event_appended, _, _,
+                     %{type: "tool.result", payload: %{tool: "propose_adr", ok: false} = r}}
+
+    assert r.erro =~ "sem repositório provisionado"
   end
 
   test "module_map com ciclo vira tool-result de erro (não derruba o loop)", %{state: state} do

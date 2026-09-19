@@ -66,10 +66,65 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # event log (RN-539: histórico ilegível não prova ausência de artefato,
     # então nada é disparado).
     case Process.get(:fake_events_error) do
-      nil -> {:ok, Process.get(:fake_events, [])}
+      # Os PRIMEIROS 200, como a api devolve para `limit=200` sem `latest` — o
+      # fake devolvia TUDO, e por isso nenhum teste enxergava o corte que a
+      # RN-580 fechou.
+      nil -> {:ok, Enum.take(Process.get(:fake_events, []), 200)}
       reason -> {:error, reason}
     end
   end
+
+  # Leitura COM opções (RN-580) — simula a rota da api sobre `:fake_events`:
+  # filtra por `:types`, aplica `:after_seq`, e corta pelo FIM (`:latest`) ou
+  # pelo COMEÇO, como o repositório faz. Evento sem `"seq"` ganha a posição
+  # (1-based) como seq — é o que o `seq` gapless da api seria.
+  #
+  # Cada chamada é registrada em `:fake_list_events_calls` (dicionário de
+  # processo, NÃO mensagem ao `:test_pid`: testes antigos fazem
+  # `refute_received` amplos e uma mensagem nova os contaminaria).
+  #
+  # Falha: `:fake_events_error` derruba TODA leitura (mesmo contrato da /2);
+  # `:fake_events_error_quando` é uma função `opts -> motivo | nil`, para falhar
+  # só UMA das leituras (a da abertura, a das compactações).
+  @impl true
+  def list_events(_project_id, _session_id, opts) do
+    Process.put(:fake_list_events_calls, Process.get(:fake_list_events_calls, []) ++ [opts])
+
+    erro_seletivo =
+      case Process.get(:fake_events_error_quando) do
+        f when is_function(f, 1) -> f.(opts)
+        _ -> nil
+      end
+
+    case Process.get(:fake_events_error) || erro_seletivo do
+      nil ->
+        eventos =
+          Process.get(:fake_events, [])
+          |> Enum.with_index(1)
+          |> Enum.map(fn {e, i} -> Map.put_new(e, "seq", i) end)
+          |> filtrar_tipos(Keyword.get(opts, :types))
+          |> filtrar_after_seq(Keyword.get(opts, :after_seq), Keyword.get(opts, :latest))
+
+        limite = min(Keyword.get(opts, :limit, 200), 200)
+
+        if Keyword.get(opts, :latest),
+          do: {:ok, Enum.take(eventos, -limite)},
+          else: {:ok, Enum.take(eventos, limite)}
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  defp filtrar_tipos(eventos, [_ | _] = tipos),
+    do: Enum.filter(eventos, &(Map.get(&1, "type") in tipos))
+
+  defp filtrar_tipos(eventos, _), do: eventos
+
+  defp filtrar_after_seq(eventos, seq, latest) when is_integer(seq) and latest != true,
+    do: Enum.filter(eventos, &(&1["seq"] > seq))
+
+  defp filtrar_after_seq(eventos, _seq, _latest), do: eventos
 
   @impl true
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
