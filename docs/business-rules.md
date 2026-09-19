@@ -13271,19 +13271,19 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 `maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:299` (o
-  dispatch de `container_start` consultando antes de propor), `:401`
-  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:417` (a
-  cláusula de `container_start`: lista de permitidos), `:420` (a recusa
-  nomeando `container_start_via_runner`), `:435` (a cláusula da irmã, com a
-  segunda pergunta — runner conectado), `:342` (o `emit` do `tool.call`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:351` (o
+  dispatch de `container_start` consultando antes de propor), `:453`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:469` (a
+  cláusula de `container_start`: lista de permitidos), `:472` (a recusa
+  nomeando `container_start_via_runner`), `:487` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:394` (o `emit` do `tool.call`
   movido para antes da recusa);
   `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
   (moduledoc — a tool deixou de propor às cegas)
-- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:397`
-  (caminho feliz em `mounted` — o broker atende os dois), `:423` (caso de
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:422`
+  (caminho feliz em `mounted` — o broker atende os dois), `:448` (caso de
   falha: `runner` recusa NOMEADO, `propose_action` nunca chamada, o `tool.call`
-  narrado mesmo assim), `:464` (projeto inexistente), `:355` (o caminho feliz
+  narrado mesmo assim), `:538` (projeto inexistente), `:380` (o caminho feliz
   de `container`, que passou a exigir a linha no banco)
 - **ADR:** [0144](adr/0144-a-segunda-raiz-do-broker.md),
   [0145](adr/0145-docker-pre-requisito-do-runner.md)
@@ -13880,3 +13880,85 @@ ali não é oferecido por outro caminho.
   (as camadas do ADR 0130 no arquivo que viaja)
 - **ADR:** [0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)
 - **Origem:** AT-097 — decidido pelo mantenedor em 2026-09-18
+
+---
+
+### RN-577 — `open_adr_pr` e `open_infra_pr` são recusadas pelo agente, antes de propor, quando o projeto não tem repositório {#rn-577}
+
+Numa instalação real (AT-088, 2026-09-14), um projeto sem repositório —
+`project_repositories`, `project_git_connections` e `repo_bootstraps` vazias —
+recebeu três `open_adr_pr` do Arquiteto e uma `open_infra_pr` do Infra Lead. O
+humano aprovou as quatro, e as quatro terminaram `failed` com *"Projeto sem
+repositório provisionado"* (`ExecuteAdrPrUseCase`, `ExecuteInfraPrUseCase`).
+A pessoa aprovou quatro ações que só podiam falhar.
+
+**Não é borda, é o caso comum.** Desde a [RN-541](#rn-541) criar um projeto
+não cria repositório, e o gatilho do repositório é o aceite do handoff do
+Arquiteto para o Dev Lead ([RN-522](#rn-522)). O Arquiteto trabalha ANTES desse
+handoff — então num projeto novo **todo** `open_adr_pr` falhava por
+construção.
+
+**A regra:** as duas tools perguntam, ANTES de propor, se o projeto tem
+repositório, e sem ele RECUSAM com motivo NOMEADO — o que falta, e quando passa
+a existir. A `proposed_action` não nasce, e a fila de aprovação não recebe o
+que não pode dar certo.
+
+**O molde é o da [RN-566](#rn-566), sem régua nova e sem tocar prompt.** A
+recusa é resultado de ferramenta ([RN-163](business-rules/autenticacao.md#rn-163)),
+entrada do laço — nunca `agent.error`, nunca fim de turno —, e o modelo segue
+o turno lendo o motivo.
+
+**A leitura é LOCAL, e o predicado é o MESMO da execução.** O engine já lia
+`project_repositories` direto do Postgres (`Engine.Projects.ProjectRepository`,
+os consumidores de `default_branch/1` e `remoto_de_trabalho/1`), então não
+houve HTTP no laço do agente a medir nem a justificar: a pergunta nova,
+`recusa_de_pr_sem_repositorio/2`, é a MESMA que
+`ProvisionedRepositoryRepository.findByProjectId` faz nos dois casos de uso —
+existe linha para o projeto. Se os dois divergissem, a tool deixaria passar o
+que a execução recusa, ou recusaria o que ela aceitaria. As duas tools usam a
+MESMA função, com o mesmo texto.
+
+**No Infra Lead a pergunta vem antes do HALT.** `propose_infra_pr` não propõe
+na hora: ela interrompe o turno para `finalize/3` rodar o `WorkflowsAgent` e
+consolidar numa PR só. Recusar depois disso (em `abrir_pr/3`) teria gastado um
+laço de LLM inteiro e registrado duas delegações `completed` para uma PR que
+não pode existir. A recusa acontece na interceptação, e o turno CONTINUA.
+
+**Rastro durável nas duas.** A AT-048 achou que recusa local não deixava rastro
+no event log; a RN-566 resolveu emitindo o `tool.call` antes da recusa, e aqui
+vale o mesmo — no Arquiteto o `dispatch_tool/2` já o emitia; no Infra Lead a
+interceptação de `propose_infra_pr` não emitia nada e passa a emitir, no ramo
+da recusa, com o título e os CAMINHOS (nunca o conteúdo dos arquivos). E o
+PORQUÊ vai junto: um `tool.result` com `ok: false` e `erro` com o motivo — a
+forma que o Criativo já usa —, porque só o `tool.call` diria que a chamada
+existiu, não por que ela não virou proposta. No caminho que propõe nada muda:
+o rastro dele continua sendo a própria `proposed_action`.
+
+**Os casos de uso de execução continuam recusando como antes** — defesa em
+profundidade: a recusa do agente é uma camada ANTES, nunca no lugar.
+
+**O que esta regra NÃO decide:** ONDE o repositório deveria nascer. O texto da
+recusa descreve o gatilho de HOJE (o aceite do handoff ao Dev Lead, RN-522); se
+o gatilho mudar, é a AT-092, com decisão do mantenedor pendente — e o texto
+muda junto. A `open_infra_pr` também é afetada no projeto novo por outro
+caminho (o Infra Lead é acionado pelo handoff do Arquiteto, que pode acontecer
+antes do handoff ao Dev Lead); esta regra só faz a proposta não nascer, não
+reordena os handoffs.
+
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:69`
+  (`recusa_de_pr_sem_repositorio/2` — o predicado e o texto, únicos para as
+  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:52` (a
+  recusa antes de propor), `:59` (o `tool.result` com o motivo);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
+  `propose_infra_pr` perguntando antes do HALT), `:301`
+  (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
+  `tool.result`)
+- **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
+  (caso de falha: sem repositório, `open_adr_pr` nunca proposta, motivo como
+  resultado de ferramenta, `tool.call` e `tool.result` no event log), `:80`
+  (caminho feliz: com repositório, propõe);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:491` (caso de
+  falha: sem repositório, nem `propose_action` nem delegação do Workflows, o
+  turno segue, rastro durável), `:89` (caminho feliz: com repositório, a PR
+  consolidada é proposta)
+- **Origem:** AT-088 — instalação real em 2026-09-14

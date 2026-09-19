@@ -36,6 +36,10 @@ defmodule Engine.Infra.InfraLeadServer do
   `runner` pelo agente local. O que o agente NÃO checa, e a tela checa, é
   imagem decidida e pasta confirmada — declarado no CLAUDE.md.
 
+  Desde a RN-577, `propose_infra_pr` também recusa localmente, antes do HALT,
+  quando o projeto não tem repositório (`recusa_de_infra_pr/4`) — o mesmo
+  predicado que `ExecuteInfraPrUseCase` aplica na api, lido do mesmo Postgres.
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -73,7 +77,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ArtifactEmitter
-  alias Engine.Projects.Project
+  alias Engine.Projects.{Project, ProjectRepository}
   # `as: RunnerRegistry`, nunca `Registry` puro: este módulo já usa o
   # `Registry` NATIVO do Elixir/OTP em `via/1` (`{:via, Registry, ...}`) — um
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
@@ -244,16 +248,23 @@ defmodule Engine.Infra.InfraLeadServer do
           title = Map.get(args, "title", "Dockerfiles e compose de dev")
           files = Map.get(args, "files", [])
 
-          st =
-            append(st, %{
-              "role" => "tool",
-              "content" => "arquivos recebidos, consolidando com o Workflows antes de propor.",
-              "toolCallId" => Map.get(call, "id"),
-              "name" => "propose_infra_pr",
-              :pinned => false
-            })
+          case recusa_de_infra_pr(call, title, files, st) do
+            nil ->
+              st =
+                append(st, %{
+                  "role" => "tool",
+                  "content" =>
+                    "arquivos recebidos, consolidando com o Workflows antes de propor.",
+                  "toolCallId" => Map.get(call, "id"),
+                  "name" => "propose_infra_pr",
+                  :pinned => false
+                })
 
-          {:halt, {:proposed, title, files, st}}
+              {:halt, {:proposed, title, files, st}}
+
+            st_recusado ->
+              {:cont, {:cont, st_recusado}}
+          end
 
         "propose_container_start" ->
           {:cont, {:cont, dispatch_container_start(call, st)}}
@@ -268,6 +279,47 @@ defmodule Engine.Infra.InfraLeadServer do
     |> case do
       {:proposed, _title, _files, _state} = result -> result
       {:cont, state} -> run_turn(state, remaining - 1)
+    end
+  end
+
+  # `propose_infra_pr` sem repositório (RN-577) — `nil` quando o projeto TEM
+  # repositório e o turno segue para o HALT de sempre; o `state` com a recusa
+  # anexada como resultado de ferramenta quando não tem.
+  #
+  # A pergunta vem ANTES do HALT, e não em `abrir_pr/3`, de propósito: depois
+  # do HALT o `finalize/3` já rodou o `WorkflowsAgent` (um laço de LLM inteiro,
+  # pago) e registrou duas delegações `completed` para uma PR que não pode
+  # existir. Recusar aqui não gasta nada, e o laço CONTINUA — o modelo lê o
+  # motivo e segue o turno (RN-163), como nas recusas da RN-566.
+  #
+  # Rastro durável: `tool.call` ANTES da pergunta (o molde da RN-566) e
+  # `tool.result` com `ok: false` e o motivo — sem ele o event log teria a
+  # chamada mas não o porquê. O `tool.call` leva o título e os CAMINHOS, nunca
+  # o conteúdo dos arquivos (que viaja inteiro no payload da proposta quando
+  # ela existe). No caminho que propõe nada muda: a `proposed_action` continua
+  # sendo o rastro dele, como sempre foi.
+  defp recusa_de_infra_pr(call, title, files, state) do
+    case ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") do
+      nil ->
+        nil
+
+      motivo ->
+        caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+        emit(state, "tool.call", %{
+          tool: "propose_infra_pr",
+          args: %{title: title, paths: caminhos}
+        })
+
+        emit(state, "tool.result", %{tool: "propose_infra_pr", ok: false, erro: motivo})
+
+        append(state, %{
+          "role" => "tool",
+          "content" => motivo,
+          "toolCallId" => Map.get(call, "id"),
+          "name" => "propose_infra_pr",
+          :pinned => false
+        })
     end
   end
 
