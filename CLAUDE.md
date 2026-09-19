@@ -152,6 +152,7 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
@@ -333,7 +334,17 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
   contexto do Infra Lead com modo e presença de runner é frente à parte, mais
   cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
-  `mounted` pode dar certo de verdade, pelo broker
+  `mounted` pode dar certo de verdade, pelo broker. Desde a RN-577 o mesmo
+  molde vale para a PR: `propose_infra_pr` (e o `propose_adr` do Arquiteto)
+  recusam LOCALMENTE, antes de propor, projeto SEM repositório — o predicado é
+  o MESMO de `ExecuteAdrPrUseCase`/`ExecuteInfraPrUseCase` (linha em
+  `project_repositories`, lida direto do Postgres por
+  `ProjectRepository.recusa_de_pr_sem_repositorio/2`), e no Infra Lead a
+  pergunta vem ANTES do HALT, para não gastar o laço do Workflows numa PR
+  impossível. A recusa deixa `tool.call` e `tool.result` (`ok: false`, com o
+  motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
+  AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
+  ao Dev Lead (RN-522)
 - **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
   `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
   engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,

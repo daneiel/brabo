@@ -6,6 +6,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
+  repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
+  Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
+  nasce ([RN-522](docs/business-rules.md#rn-522)) —, e a pessoa aprovava
+  ações que só podiam terminar `failed` com *"Projeto sem repositório
+  provisionado"* (medido numa instalação real: quatro de quatro). As tools
+  `propose_adr` e `propose_infra_pr` passam a perguntar ANTES de propor, lendo
+  `project_repositories` localmente com o MESMO predicado dos casos de uso de
+  execução, e recusam com o motivo como resultado de ferramenta — o que falta
+  e quando passa a existir. No Infra Lead a recusa vem antes da consolidação
+  com o Workflows, então nenhum laço de LLM é gasto numa PR impossível. A
+  recusa deixa `tool.call` e `tool.result` (`ok: false`, com o motivo) no
+  event log. Os casos de uso continuam recusando como antes
+  ([RN-577](docs/business-rules.md#rn-577)).
+
 - **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
   registro validava, EM RUNTIME, que todo arquivo de prova citado em
   `docs/gates.yml` existia no disco — e a imagem de produção carrega
