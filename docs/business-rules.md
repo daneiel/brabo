@@ -14690,7 +14690,7 @@ subir o servidor de novo sobre esse log não gravava nada, nos seis). Os dois
 leitores desse sinal o tomam por turno em curso: a tela (`turnoTerminouNoLog`,
 [RN-578](#rn-578) item 4) mantém a faixa de atividade, e o
 `GetSessionPendingWorkUseCase` conta trabalho pendente SEM teto (o terceiro
-sinal da [RN-064](#rn-064)), então a sessão não fecha por heartbeat. Só a
+sinal da [RN-064](business-rules/custo.md#rn-064)), então a sessão não fecha por heartbeat. Só a
 próxima mensagem do usuário destravava, e só porque ela sobe o agente.
 
 1. **O `working` que ficou sem turno vivo é fechado por evento NOVO**, nunca
