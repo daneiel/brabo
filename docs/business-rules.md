@@ -14717,5 +14717,7 @@ para o usuário, que já vê a mensagem e a explicação no fio.
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
   (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
   não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
-  falha); mutação medida: com o registro removido, 4 dos 5 falham
+  falha); mutação medida: com o registro removido, 4 dos 5 falham;
+  `scripts/ci/destinos-do-composer.spec.ts` (a recusa de `message/2` é
+  `recusar_mensagem/5` e ela grava o `agent.error`; seis mutações mortas)
 - **Origem:** AT-132 — declarado aberto nas RN-578 (AT-089) e RN-584 (AT-098)
