@@ -210,8 +210,14 @@ jobs:
       # A ORDEM é a dos `read` do script NUMA MÁQUINA LIMPA, e ela NÃO tem a
       # pergunta de migração: o bloco que a faz está sob
       # `if [ -n "$marcador" ] || [ -n "$sinais" ]`, e numa máquina limpa os dois
-      # são vazios. São SETE — marcador, base, consentimento da conta, e-mail,
-      # senha, senha de novo, e nome (vazio, que é "pular"). Cada uma espera um
+      # são vazios. São OITO — marcador, base, o broker de container,
+      # consentimento da conta, e-mail, senha, senha de novo, e nome (vazio, que
+      # é "pular"). O broker responde SIM (ADR 0162): o runner Linux tem Docker
+      # e o socket em `/var/run/docker.sock`, e só respondendo sim o E2E prova
+      # o que a pergunta nova promete — a imagem publicada puxada por digest, o
+      # gid medido de dentro de um container, o serviço healthy e a api o
+      # alcançando pela rede interna. Responder não provaria só que uma linha
+      # de texto foi impressa. Cada uma espera um
       # TRECHO da pergunta, e `scripts/dev/install-e2e.spec.ts` confere que cada
       # trecho existe no `install.sh` e roda este mesmo driver contra um
       # instalador de mentira — este workflow NÃO roda em PR, e aquele spec roda.
@@ -237,6 +243,7 @@ jobs:
             jq -n '[
               {espera: "Gravar o marcador de instalação", resposta: "s"},
               {espera: "Base [", resposta: env.E2E_BASE},
+              {espera: "Ligar o broker de container? [s/N] ", resposta: "s"},
               {espera: "Criar a primeira conta agora?", resposta: "s"},
               {espera: "E-mail: ", resposta: env.E2E_EMAIL},
               {espera: "Senha (não aparece na tela): ", resposta: env.E2E_SENHA, segredo: true},
@@ -367,6 +374,19 @@ jobs:
           # numa pasta que não tinha `docker/` nenhum.
           exigir 'os arquivos da instalação não foram verificados' 'arquivos da instalação verificados contra o manifesto assinado'
           exigir 'os arquivos da instalação não foram gravados' 'arquivos da instalação gravados em '
+
+          # ADR 0162: o broker foi ligado com consentimento, o gid saiu de uma
+          # medição (não do default 999), e a api o alcança pela rede interna.
+          # A raiz da pasta gerenciada conferida com o volume vem na prova
+          # negativa abaixo: divergir vira pendência, e pendência reprova.
+          exigir 'o gid do socket não foi medido' 'grupo do socket, visto de dentro de um container: '
+          exigir 'o broker não foi ligado' 'broker de container: ligado'
+          exigir 'a api não alcançou o broker' 'a api alcança o broker pela rede interna'
+          exigir 'a raiz da pasta gerenciada não conferiu' 'a raiz da pasta gerenciada confere com o volume'
+          grep -qx 'COMPOSE_PROFILES=container-broker' .env \
+            || { echo "::error::o .env não liga o profile do broker"; exit 1; }
+          grep -qx 'BROKER_URL=http://broker:8090' .env \
+            || { echo "::error::o .env não aponta a api para o broker"; exit 1; }
 
           # Os CINCO elos da RN-547, um a um, contra api e binário de verdade.
           # Nos testes da sessão 6 o `brabo-runner` é dublê de shell e a api é
