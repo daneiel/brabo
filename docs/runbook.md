@@ -2093,6 +2093,13 @@ edge counts plus the list of keys, and reprojects again. It needs Neo4j up and
 skips without it — the api CI job has no Neo4j, so there it skips. It does not
 depend on a backup having happened, on purpose.
 
+The same proof also runs **inside the local cluster**: `make test-reprojecao-k8s`
+(`deploy/k8s/test-reprojecao.sh`) is the fourth target of the scheduled
+`propriedades.yml` (see [Scheduled property proofs](#provas-de-propriedade-agendadas)).
+It runs the command exactly as this section tells you to run it in an incident
+(`kubectl exec deploy/api -- node scripts/reprojetar-grafo.js --project <id>`),
+against the cluster's Postgres and Neo4j, on a project it creates itself.
+
 The graph being empty until you run this has a named effect: reads that depend
 on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
 is inside the dump.
@@ -2128,7 +2135,14 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
 3. runs `make smoke-k8s`, then `make hpa-test`, `make rollout-test` and
    `make test-restore`, in the `Makefile`'s order, each one even when an earlier
    one failed (a broken HPA must not hide a broken restore);
-4. writes each step's duration into the run summary.
+4. runs `make test-reprojecao-k8s` (AT-127, BRB-018): the graph is not backed up
+   ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)) because it is
+   reprojected from the event log, so the workflow proves that too — it creates
+   its own project with a closed session and two events, reprojects it, **wipes
+   that subgraph** in Neo4j, reprojects, and requires the same node and edge
+   counts, then reprojects again. It uses no state left by the other targets and
+   is **not** coupled to `test-restore` (the graph does not depend on a backup);
+5. writes each step's duration into the run summary.
 
 | trigger | when |
 |---|---|
@@ -2152,6 +2166,7 @@ free disk on `ubuntu-latest`):
 | `make hpa-test` | 19 s |
 | `make rollout-test` | 24 s |
 | `make test-restore` | 21 s |
+| `make test-reprojecao-k8s` | 16 s (run `35471428634`) |
 | whole job | 12 min 56 s |
 
 (First fully green run, `34784563928`, on 2026-09-13.)

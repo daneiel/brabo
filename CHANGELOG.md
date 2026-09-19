@@ -499,6 +499,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: a **reprojeção do grafo roda no cluster local, como quarto
+  alvo do `propriedades.yml`** (AT-127, BRB-018). `make test-reprojecao-k8s`
+  cria pela API um projeto próprio (sessão fechada, dois eventos), roda
+  `node scripts/reprojetar-grafo.js --project` dentro do pod da api, APAGA o
+  subgrafo dele no Neo4j do cluster, reprojeta e exige a mesma contagem
+  (5 nós, 4 arestas), depois reprojeta de novo. Não depende do estado que os
+  outros alvos deixam nem do `test-restore`. Falha vira issue por alvo, como os
+  outros; nunca é gate de PR. Verde na rodada `35471428634` (16 s). O que segue
+  aberto no BRB-018 é a medição de tempo num event log grande.
 - **deploy/k8s**: `make rollout-test` **passa a guardar a evidência que morria
   com o pod antigo** (AT-078). Antes do `rollout restart` ele anexa o log de
   TODO pod do engine — os que já existem, desde o boot, e os que nascerem —,
