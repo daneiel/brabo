@@ -214,6 +214,14 @@ export interface ProjectUnreadEvents {
  */
 export interface ProjectsBase {
   projectsBase: string | null;
+  /**
+   * Esta instalação tem broker de container (`BROKER_URL`)? (ADR 0161,
+   * RN-573). `container` e `mounted` só sobem container pelo broker (ADR
+   * 0144); sem ele o assistente não pré-seleciona `mounted`, deixa os dois
+   * cards inertes com o motivo em texto e pré-seleciona `runner`. Diz que a
+   * variável existe, nunca que o broker responde.
+   */
+  brokerConfigurado: boolean;
 }
 
 /**
@@ -1400,6 +1408,12 @@ export interface ContainerOverviewItem {
   naoVerificado: MotivoDeNaoVerificacao | null;
   /** A `proposed_action` pendente de container deste projeto, se houver. */
   acaoPendente: ProposedAction | null;
+  /**
+   * Esta INSTALAÇÃO tem broker (`BROKER_URL`)? O mesmo valor em toda linha
+   * (ADR 0161, RN-574): sem ele, `container`/`mounted` não sobem container, e
+   * a tela recusa a subida ANTES do clique dizendo por quê.
+   */
+  brokerConfigurado: boolean;
 }
 
 // --- Aba Code, só leitura (FASE 26) — espelha

@@ -77,6 +77,7 @@
     "hintRunner": "absolute path, as it appears on YOUR machine",
     "mountedUnderBase": "The folder sits <strong>inside this installation's projects base</strong> (<code>{{base}}</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
     "mountedOutsideBase": "This path is <strong>outside this installation's projects base</strong> (<code>{{base}}</code>), and the api <strong>refuses to create</strong> a mounted project outside it. Pick a folder under <code>{{base}}</code>.",
+    "noBroker": "<strong>This installation cannot start a container for Container or Mounted folder projects.</strong> It has no container broker (<code>BROKER_URL</code> is empty), and the broker is what starts the container for those two modes — without a container no development agent works. Use <strong>Local runner</strong>: the code lives in a folder of yours, and the local agent starts the container on your machine.",
     "runnerHint": {
       "intro": "After creating the project, run this on your machine:",
       "introExisting": "The project already exists — run this on your machine:",

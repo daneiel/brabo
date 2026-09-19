@@ -51,6 +51,7 @@
     "startRationale": "Subida pedida por um humano na página de containers.",
     "bloqueio": {
       "ja_esta_de_pe": "O container já está de pé — pare-o antes de subir de novo.",
+      "sem_broker_na_instalacao": "Esta instalação não sobe container para projetos Container ou Pasta montada: ela não tem o broker de container (BROKER_URL vazia), que é quem os sobe. Aprovar a subida só terminaria em falha. Projetos Runner local não dependem dele — quem sobe o container deles é o agente local.",
       "sem_imagem_decidida": "Sem imagem decidida: o Arquiteto (ou a Infra) precisa decidir uma antes de qualquer container subir.",
       "runner_nunca_confirmou": "Nenhum agente local jamais confirmou a pasta deste projeto — rode o `brabo-runner` na máquina dele antes de subir.",
       "sem_papel": "Subir container exige o papel maintainer neste workspace.",

@@ -152,6 +152,7 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
 
 ## Estado atual e aberto
 
@@ -189,7 +190,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `preflight.mjs` RELATA o estado dele a cada subida (errar não quebra o boot,
   quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
   o profile ligado, `container_start` continua terminando `failed` com
-  `BrokerIndisponivelError`. O
+  `BrokerIndisponivelError`. Na INSTALAÇÃO por Release
+  (`docker-compose.install.yml`) o serviço `broker` NEM EXISTE — não é profile
+  desligado: a imagem não é publicada (ADR 0150, decisão 7) —, e desde o ADR
+  0161 (RN-573/574) a TELA sabe disso: `brokerConfigurado`
+  (`ContainerBrokerPort.configurado()`, a mesma fonte do estado observado) vem
+  em `GET .../projects-base` e em cada linha de `GET .../containers`, o
+  assistente para de pré-selecionar `mounted` sem broker confirmado e a
+  `/containers` recusa antes do clique a subida de `container`/`mounted`. A
+  outra metade da decisão do mantenedor — o `install.sh` PERGUNTAR se liga o
+  broker — foi MEDIDA e PAROU: a imagem não é obtível por uma instalação de
+  Release (`ghcr.io/daneiel/brabo-broker` responde `denied`, o bake tem quatro
+  alvos, e o one-liner roda sem código para construir). Publicar o broker como
+  quinta imagem vem ANTES da pergunta; não escreva a pergunta sem ela. O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
   `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
   `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
@@ -1273,7 +1286,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   passo), só oferece `mounted` com a base CONHECIDA e presente — carregando ou
   consulta FALHADA não viram oferta, "não sei" nunca vira "tem" —, e com base
   ele PRÉ-SELECIONA o modo sugerindo `<base>/<slug>`, sem jamais sobrescrever
-  escolha humana nem caminho digitado.
+  escolha humana nem caminho digitado. Desde a RN-573 (ADR 0161) a
+  pré-seleção exige TAMBÉM o broker CONFIRMADO (`brokerConfigurado`, na MESMA
+  rota): base não é broker, e `container`/`mounted` só sobem container por ele
+  (ADR 0144). Ausência CONFIRMADA deixa os dois cards NA TELA mas inertes, com
+  o motivo UMA vez em texto, e pré-seleciona `runner`; broker DESCONHECIDO não
+  pré-seleciona `mounted` e também não trava nada nem afirma ausência — são
+  três estados, não dois.
   A base NÃO entra em `caminhoDeWorkspaceLocalValido` (que roda em toda LEITURA
   e faria projeto montado legado explodir ao ser lido): é regra de criação e
   conversão. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout do
@@ -1383,7 +1402,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do broker) e ramifica por `execution_mode` — `container`/`mounted` propõem
   `container_start`, `runner` propõe `container_start_via_runner`, cada um com
   o payload que o schema dele aceita. Ela RECUSA localmente (botão inerte, com
-  o motivo em TEXTO) sem imagem decidida, em `runner` sem pasta jamais
+  o motivo em TEXTO) em `container`/`mounted` numa instalação SEM broker
+  (`sem_broker_na_instalacao`, RN-574 — antes da imagem, e `!== true`: "não
+  sei" não vira "tem"), sem imagem decidida, em `runner` sem pasta jamais
   confirmada, e para papel abaixo de `maintainer` — o mínimo do ENDPOINT, por
   `roleAtLeast`. Desde a RN-566 o AGENTE também ramifica por modo antes de
   propor: as duas tools do Infra Lead passam por `recusa_local_de_subida/2`

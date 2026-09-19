@@ -77,6 +77,7 @@
     "hintRunner": "caminho absoluto, como ele aparece na SUA máquina",
     "mountedUnderBase": "A pasta fica <strong>dentro da base de projetos</strong> desta instalação (<code>{{base}}</code>) — a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
     "mountedOutsideBase": "Este caminho está <strong>fora da base de projetos</strong> desta instalação (<code>{{base}}</code>), e a api <strong>recusa a criação</strong> de um projeto montado fora dela. Escolha uma pasta sob <code>{{base}}</code>.",
+    "noBroker": "<strong>Esta instalação não sobe container para os modos Container e Pasta montada.</strong> Ela não tem o broker de container (<code>BROKER_URL</code> vazia), que é quem sobe o container desses dois modos — e sem container nenhum agente de desenvolvimento trabalha. Use <strong>Runner local</strong>: o código mora numa pasta sua, e o agente local sobe o container na sua máquina.",
     "runnerHint": {
       "intro": "Depois de criar o projeto, rode na sua máquina:",
       "introExisting": "O projeto já existe — rode na sua máquina:",

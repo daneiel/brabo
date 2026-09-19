@@ -56,6 +56,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que ela for verdade. `--print-plan` continua imprimível sem nenhuma das duas,
   e declara qual aceita (`conferir-hash`).
 
+### Novidades
+
+- **web/api**: a criação de projeto e a página de containers **só oferecem o
+  modo que a instalação executa**. Numa instalação sem broker de container (a
+  instalação por Release — a imagem do broker não é publicada), o assistente
+  deixa de pré-selecionar "Pasta montada": os cards Container e Pasta montada
+  continuam visíveis mas inertes, um aviso em texto diz que esta instalação
+  não sobe container para esses modos, e "Runner local" vem pré-selecionado
+  ([RN-573](docs/business-rules.md#rn-573)). A página `/containers` recusa
+  antes do clique a subida de projeto `container`/`mounted` nessa instalação,
+  com o motivo em texto, em vez de deixar aprovar uma `container_start` que só
+  pode falhar ([RN-574](docs/business-rules.md#rn-574)). A api passa a
+  devolver `brokerConfigurado` em `GET /workspaces/:id/projects-base` e em
+  cada linha de `GET /workspaces/:id/containers` — sem rota nova
+  ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
+  Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
+  está certo: sem a variável a api nunca chama o broker.
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades

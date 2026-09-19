@@ -122,6 +122,7 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     detalheDaObservacao: null,
     naoVerificado: null,
     acaoPendente: null,
+    brokerConfigurado: true,
     ...overrides,
   };
 }
@@ -512,6 +513,49 @@ describe('ContainersPage', () => {
       ),
     ).toBeInTheDocument();
     expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  // ADR 0161, RN-574 — a instalação do AT-085: sem broker, a tela deixou
+  // aprovar duas `container_start` que só podiam falhar. Agora ela recusa
+  // ANTES do clique, para `container` E `mounted`, e diz por quê em TEXTO.
+  it.each(['container', 'mounted'] as const)(
+    'instalação SEM broker, projeto %s: botão inerte e o motivo dito em TEXTO — nunca propõe',
+    (executionMode) => {
+      useContainersOverview.mockReturnValue({
+        isPending: false,
+        isError: false,
+        data: [
+          itemRunnerSemContainer({
+            executionMode,
+            workspaceVerifiedAt: null,
+            brokerConfigurado: false,
+          }),
+        ],
+        refetch: vi.fn(),
+      });
+
+      montar();
+
+      expect(screen.getByRole('button', { name: 'Subir container' })).toBeDisabled();
+      expect(
+        screen.getByText(/Esta instalação não sobe container para projetos Container ou Pasta montada/),
+      ).toBeInTheDocument();
+      expect(proposeAction).not.toHaveBeenCalled();
+    },
+  );
+
+  it('instalação SEM broker não afeta projeto runner: ele sobe pelo agente local', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer({ brokerConfigurado: false })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir container' })).not.toBeDisabled();
+    expect(screen.queryByText(/Esta instalação não sobe container/)).toBeNull();
   });
 
   it('runner que nunca confirmou pasta: botão inerte, motivo próprio — nunca confundido com "sem imagem"', () => {

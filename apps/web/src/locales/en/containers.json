@@ -51,6 +51,7 @@
     "startRationale": "Start requested by a human on the containers page.",
     "bloqueio": {
       "ja_esta_de_pe": "The container is already up — stop it before starting again.",
+      "sem_broker_na_instalacao": "This installation cannot start containers for Container or Mounted projects: it has no container broker (BROKER_URL is empty), and the broker is what starts them. Approving the start could only fail. Local runner projects do not depend on it — the local agent starts their container.",
       "sem_imagem_decidida": "No image decided: the Architect (or Infra) must decide one before any container can start.",
       "runner_nunca_confirmou": "No local agent has ever confirmed this project's folder — run `brabo-runner` on that machine before starting.",
       "sem_papel": "Starting a container requires the maintainer role in this workspace.",
