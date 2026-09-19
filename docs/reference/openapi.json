@@ -8273,7 +8273,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
       "post": {
-        "description": "The response is just the acknowledgment. What the agent replies arrives via the session's event log and the chat SSE — not through this call.",
+        "description": "The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.",
         "operationId": "AgentsController_message",
         "parameters": [
           {
@@ -8337,7 +8337,7 @@
             "description": "Project, session, or handoff not found."
           },
           "409": {
-            "description": "The agent is not active in this session."
+            "description": "The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163)."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -8426,7 +8426,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/structured-question/{questionSetId}/answer": {
       "post": {
-        "description": "Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once.",
+        "description": "Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.",
         "operationId": "AgentsController_submitStructuredQuestionAnswer",
         "parameters": [
           {
@@ -8500,7 +8500,7 @@
             "description": "Project, session, or handoff not found."
           },
           "409": {
-            "description": "This question set has already been answered."
+            "description": "This question set has already been answered; or the agent is still in the middle of a turn and did not read the answers (ADR 0163)."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -8584,7 +8584,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
       "post": {
-        "description": "Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous.",
+        "description": "Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.",
         "operationId": "AgentsController_handoffInfra",
         "parameters": [
           {
@@ -8623,6 +8623,9 @@
           },
           "404": {
             "description": "Project, session, or handoff not found."
+          },
+          "409": {
+            "description": "The Arquiteto is still in the middle of a turn — the confirmation was recorded but the closing turn did not start (ADR 0163)."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -9555,7 +9558,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/readiness": {
       "post": {
-        "description": "It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log.",
+        "description": "It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.",
         "operationId": "AgentsController_readiness",
         "parameters": [
           {
@@ -9594,6 +9597,12 @@
           },
           "404": {
             "description": "Project, session, or handoff not found."
+          },
+          "409": {
+            "description": "The Criativo is still in the middle of a turn — the confirmation was recorded but the brief did not start (ADR 0163)."
+          },
+          "422": {
+            "description": "No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163)."
           },
           "429": {
             "description": "Rate limit per user or per IP."
