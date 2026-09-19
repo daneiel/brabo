@@ -349,6 +349,26 @@ defmodule Engine.Infra.InfraLeadServerTest do
     assert roles == ["system", "user", "assistant"]
   end
 
+  test "rehydration (RN-580): sessão com mais de 200 eventos traz a CAUDA, não o começo" do
+    Process.put(
+      :fake_events,
+      Enum.map(1..250, &%{"type" => "chat.message", "payload" => %{"text" => "m#{&1}"}})
+    )
+
+    Process.put(:fake_list_events_calls, [])
+
+    {:ok, state} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+
+    textos = state.messages |> Enum.map(& &1["content"]) |> Enum.join("\n")
+    assert textos =~ "m250"
+    refute textos =~ "\nm1\n"
+    assert textos =~ "50"
+
+    assert [primeira | _] = Process.get(:fake_list_events_calls)
+    assert primeira[:latest] == true
+    assert primeira[:limit] == 200
+  end
+
   # --- Regressão: `{:ok, %{"error" => erro}}` não crasha o GenServer ---
 
   test "api narra erro no próprio frame final: NÃO crasha, turno conclui, agent.error é gravado",

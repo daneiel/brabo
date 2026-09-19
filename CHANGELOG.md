@@ -29,6 +29,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   desabilitava em `closed` e, em `closed_abnormally`, devolvia 409 ao clique
   ([RN-581](docs/business-rules.md#rn-581)).
 
+- **engine**: o Infra Lead e o parecer de implementabilidade do Dev Lead leem
+  a **cauda** da sessão, não o começo (AT-150). `InfraLeadServer` reidratava
+  por uma cópia antiga que lia os primeiros 200 eventos e só reconstruía
+  mensagens — passa a usar `Reidratacao.historico/3` (RN-580) — e
+  `DevLeadTools.run_assessment/2` passa a pedir os 200 mais recentes, então o
+  plano de teste emitido depois do 200º evento é encontrado em vez de pedir
+  QA-estratégia de novo.
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
   aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
