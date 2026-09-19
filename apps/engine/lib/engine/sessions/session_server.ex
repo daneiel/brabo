@@ -80,7 +80,8 @@ defmodule Engine.Sessions.SessionServer do
      %{
        session_id: session_id,
        project_id: project_id,
-       heartbeat_ref: heartbeat_ref
+       heartbeat_ref: heartbeat_ref,
+       idle_check_ref: schedule_idle_check()
      }}
   end
 
@@ -130,6 +131,32 @@ defmodule Engine.Sessions.SessionServer do
     end
   end
 
+  # AT-152: o teto da conversa ociosa também vale com a aba ABERTA. O ramo
+  # acima só roda quando o heartbeat expira, e aba aberta pinga a cada ~10s —
+  # ele nunca expirava, e a sessão com conversa parada seria imortal (o que o
+  # teto existe para evitar). Este relógio é INDEPENDENTE do heartbeat: não o
+  # reseta, não o consulta, e o ping não o adia. Só fecha por teto; api fora do
+  # ar, sem pendência ou pendência sem instante apenas reagendam — quem encerra
+  # por api fora do ar continua sendo o heartbeat.
+  def handle_info(:conversation_idle_check, state) do
+    case EngineApiClient.session_pending_work(state.session_id) do
+      {:ok, %{pending: true, motivo: motivo} = pendencia} ->
+        case Map.get(pendencia, :aguardando_usuario_desde) do
+          %DateTime{} = desde ->
+            case conversa_ociosa(state, motivo, desde, :sem_reagendar) do
+              {:stop, _, _} = parada -> parada
+              :segue -> {:noreply, %{state | idle_check_ref: schedule_idle_check()}}
+            end
+
+          _sem_teto ->
+            {:noreply, %{state | idle_check_ref: schedule_idle_check()}}
+        end
+
+      _ ->
+        {:noreply, %{state | idle_check_ref: schedule_idle_check()}}
+    end
+  end
+
   # RN-581: a ÚNICA pendência com teto. Um agente conversacional esperando o
   # usuário segura a sessão — no `exp001` o heartbeat a fechou 30s depois de a
   # aba parar, com o Criativo tendo acabado de perguntar —, mas não para
@@ -138,7 +165,7 @@ defmodule Engine.Sessions.SessionServer do
   # própria porque o motivo é outro: não é a aba que sumiu, é a conversa que
   # ninguém retomou — e quem lê `termination_reason` (o Psicólogo, uma métrica
   # por sessão) precisa conseguir separar os dois.
-  defp conversa_ociosa(state, motivo, desde) do
+  defp conversa_ociosa(state, motivo, desde, modo \\ :reagendar) do
     ociosa_ms = DateTime.diff(DateTime.utc_now(), desde, :millisecond)
     teto_ms = conversation_idle_timeout_ms()
 
@@ -150,7 +177,7 @@ defmodule Engine.Sessions.SessionServer do
 
       encerrar(state, :conversation_idle_timeout)
     else
-      reagendar(state, motivo)
+      if modo == :reagendar, do: reagendar(state, motivo), else: :segue
     end
   end
 
@@ -173,6 +200,17 @@ defmodule Engine.Sessions.SessionServer do
 
   defp schedule_heartbeat_timeout do
     Process.send_after(self(), :heartbeat_timeout, heartbeat_timeout_ms())
+  end
+
+  defp schedule_idle_check do
+    Process.send_after(self(), :conversation_idle_check, idle_check_ms())
+  end
+
+  # Cadência da checagem do teto com a aba aberta: 5min contra um teto de 8h —
+  # a sessão passa do teto por no máximo 5min, ao custo de uma leitura de
+  # pendência por sessão a cada 5min.
+  defp idle_check_ms do
+    Application.get_env(:engine, :session_conversation_idle_check_ms, 300_000)
   end
 
   defp heartbeat_timeout_ms do

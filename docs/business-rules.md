@@ -14316,6 +14316,14 @@ o engine — olhava o estado da sessão antes de gravar.
    métrica por sessão) precisa separar a aba que sumiu da conversa que ninguém
    retomou. O `TerminationClassifier` a lê como `:timeout`: a api conhece seis
    causas nas hipóteses, e abrir uma sétima seria mudar aquele contrato.
+   **O teto vale com a aba ABERTA também** (AT-152): o `SessionServer` tem um
+   relógio próprio (`:conversation_idle_check`, a cada 5 min — sem variável de
+   ambiente, só o hook de teste `:session_conversation_idle_check_ms`),
+   independente do heartbeat — o ping da aba não o reseta nem o adia. A cada volta ele lê a pendência e só FECHA por teto (mesma causa,
+   `conversation_idle_timeout`); api fora do ar, sem pendência ou pendência sem
+   instante apenas reagendam, porque quem encerra por api fora do ar continua
+   sendo o heartbeat. Antes, o teto só era checado quando o heartbeat expirava, e
+   uma aba aberta (ping a cada ~10s) o tornava inalcançável: sessão imortal.
 3. **Sinal sem teto vence.** Com handoff `offered`, ação `pending`, agente em
    turno ou dev agent trabalhando, o instante volta `null` e a sessão fica sem
    teto, como sempre ficou. É por isso que o sinal é o ÚLTIMO da lista.
@@ -14395,8 +14403,9 @@ nova.
   (`FALA_DO_AGENTE`), `:238` (o quinto sinal);
   `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:116`
   (`findLatestOfTypesInSession`);
-  `apps/engine/lib/engine/sessions/session_server.ex:113` (a pendência com
-  instante), `:141` (`conversa_ociosa`), `:166` (`encerrar`), `:184`
+  `apps/engine/lib/engine/sessions/session_server.ex:115` (a pendência com
+  instante), `:141` (`handle_info` do relógio próprio, AT-152), `:168`
+  (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
@@ -14419,7 +14428,8 @@ nova.
   `apps/engine/test/engine/sessions/session_lifecycle_test.exs:87` (dentro do
   teto, reagenda), `:106` (acima do teto, `conversation_idle_timeout`,
   `closed`), `:124` (o default é 8h), `:151` (pendência sem instante segue sem
-  teto); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
+  teto), `:152` e `:194` (AT-152: com a aba aberta — pings — a conversa ociosa
+  além do teto fecha, e dentro do teto não fecha); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
   (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
   (para só os da sessão), `:84` (`session.closed` para o Criativo vivo);
   `apps/engine/test/engine/agents/turno_assincrono_test.exs:161` (abandonar não
