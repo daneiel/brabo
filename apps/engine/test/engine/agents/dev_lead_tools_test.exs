@@ -158,6 +158,22 @@ defmodule Engine.Agents.DevLeadToolsTest do
       refute_received {:propose_action, "assess_implementability", _actor, _payload}
     end
 
+    test "sessão com mais de 200 eventos: lê a CAUDA e acha o plano emitido depois do 200º",
+         %{ctx: ctx} do
+      ruido = Enum.map(1..250, &%{"type" => "chat.message", "payload" => %{"text" => "m#{&1}"}})
+      Process.put(:fake_events, ruido ++ [plano_de_teste_event("st-1")])
+      Process.put(:fake_list_events_calls, [])
+
+      assert {:ok, msg} = DevLeadTools.run_assessment(assessment(), ctx)
+      assert msg =~ "st-1"
+      assert_received {:propose_action, "assess_implementability", _actor, _payload}
+      refute_received {:qa_estrategia_dispatch, _, _, _}
+
+      assert [opts] = Process.get(:fake_list_events_calls)
+      assert opts[:latest] == true
+      assert opts[:limit] == 200
+    end
+
     test "com plano de teste: propõe o parecer com o plano embutido no payload", %{ctx: ctx} do
       Process.put(:fake_events, [plano_de_teste_event("st-1")])
 

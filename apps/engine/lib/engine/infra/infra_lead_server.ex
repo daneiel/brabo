@@ -87,7 +87,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   @agent "infra"
 
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao}
   @max_iterations 14
 
   # --- API pública ---
@@ -117,7 +117,7 @@ defmodule Engine.Infra.InfraLeadServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -742,23 +742,6 @@ defmodule Engine.Infra.InfraLeadServer do
     #{routing_text}
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

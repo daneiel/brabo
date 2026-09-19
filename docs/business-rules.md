@@ -14077,9 +14077,10 @@ product_brief e no guardrail de zero regra; o Staff não tem kickoff (ADR 0088).
 cinco a nota diz que o log não registra o desfecho, e o TEXTO que a ferramenta
 devolveu (o id do épico criado, por exemplo) não está no log de nenhum dos seis;
 gravá-lo é mudar o formato de `tool.result` daqui em diante, e não foi feito.
-`InfraLeadServer` tem a mesma cópia antiga de `rehydrate/2` e
-`DevLeadTools.run_assessment/2` lê o plano de teste pelos PRIMEIROS 200 — os dois
-seguem em `list_events/2`, fora dos seis. A reidratação pode trazer MAIS do que o
+`InfraLeadServer` (que reidrata por `Reidratacao.historico/3` desde a AT-150,
+sem cópia própria) e `DevLeadTools.run_assessment/2` (que lê a CAUDA, `latest`
+com o mesmo teto de 200) também passam pelo caminho comum; nenhum leitor de
+`list_events/2` sem `latest` sobra em `apps/engine/lib`. A reidratação pode trazer MAIS do que o
 contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
 `ContextManager` compacta de novo no próximo turno.
 
