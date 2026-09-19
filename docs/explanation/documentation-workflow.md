@@ -160,10 +160,10 @@ occurrence may be a call rather than the definition.
 | wrong | 71 |
 | unresolved path | 0 |
 
-A spot check found no false positives among the 71: every one was real
-drift, a rename, or a symbol that moved to another file. Widening the
-window to ±5 would clear only one of them, because nine are between 4
-and 10 lines off and the rest are further. The RN-547 code bullet was
+A spot check of the 71 found no false positives: each reference it
+covered was real drift, a rename, or a symbol that moved to another
+file. Widening the window to ±5 would clear only three of them. Nine are
+between 4 and 10 lines off, and the other 62 are further. The RN-547 code bullet was
 re-read by symbol and fixed in the same PR, which leaves **63**. They
 are too many to fix one by one inside this change, and the nearest
 occurrence is not always the definition. The list is what `pnpm
