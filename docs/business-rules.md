@@ -342,7 +342,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:170`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:288`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -7617,7 +7617,8 @@ em excluir `infra`: o `agent_command_controller.ex` do engine não tem cláusula
 de `message` pro Infra Lead, e a última cláusula (sem guarda) trataria
 `"infra"` como se fosse o Criativo — pôr `infra` na lista faria a tela
 oferecer um fio de conversa que não existe e o composer mandar mensagem pro
-agente errado. Aceitar a Infra é uma ação **propositiva**, não conversacional.
+agente errado. (Desde a [RN-584](#rn-584) o engine recusa com nome em vez de
+entregar ao Criativo; o filtro continua certo pelo mesmo motivo.) Aceitar a Infra é uma ação **propositiva**, não conversacional.
 
 O card acionável mora, então, **fora do fio**: na faixa fixa entre a área que
 rola e o composer, a mesma que hospeda o handoff manual
@@ -14145,8 +14146,9 @@ o [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)):**
 perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
 `agent.error`, antes órfão e mudo); engine reiniciado no meio do turno não grava
 `idle`, e a faixa fica até o "Parar" ou um recarregamento; e mensagem ao
-`infra` pelo compositor segue caindo no Criativo pela cláusula final de
-`AgentCommandController.message/2` — pré-existente, medido, não corrigido.
+`infra` pelo compositor caía no Criativo pela cláusula final de
+`AgentCommandController.message/2` — pré-existente, medido aqui e fechado
+depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
   aceite), `:130` e `:314` (a recusa durável);
@@ -14528,6 +14530,101 @@ recusa: o ator é `system` e o destino é a sessão `git-bootstrap`, recém-cria
   nomeia o gatilho novo)
 - **Origem:** AT-092 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
+
+### RN-584 — A mensagem de chat não tem destinatário padrão: cada agente que conversa tem cláusula própria, e o resto é recusa nomeada {#rn-584}
+
+A última cláusula de `EngineWeb.AgentCommandController.message/2` não olhava o
+agente: casava QUALQUER nome que as cláusulas de cima não tivessem pegado e
+entregava a mensagem ao **Criativo**. Uma mensagem escrita para o `infra` era
+lida por outro agente, o clique respondia 202, e o Criativo respondia no fio —
+nada quebrava, e ninguém via. Achado como adjacência da
+[RN-578](#rn-578) (AT-089) e corrigido aqui (AT-098).
+
+**A medição, antes do conserto** (os três lados, na `dev` de `72ee8cdcf`):
+
+| Destino | A tela oferece? | A api aceita? | O engine tinha cláusula? |
+|---|---|---|---|
+| `criativo` | sim (composer: fallback da sessão criativa e `AGENTES_DE_CHAT`) | sim | NÃO — era a cláusula final, sem guarda |
+| `po`, `arquiteto`, `dev-lead`, `ux-designer`, `staff` | sim (`AGENTES_DE_CHAT`, o `agent.activated` mais recente) | sim | sim, uma cada |
+| `infra` | não no composer (fora de `AGENTES_DE_CHAT` desde o achado 9-fix e a [RN-499](#rn-499)) | sim | não — caía no Criativo |
+| qualquer outro nome do roster (`qa`, subagentes, `secops`, `psicologo`…) | só pelo formulário de perguntas estruturadas, que responde ao ATOR que perguntou (`agent={event.actor.id}`); hoje só Criativo e PO perguntam | sim | não — caía no Criativo |
+| nome desconhecido, ou nenhum | não | sim (a api não valida o `agent`; só o `sessionId` vira segmento de URL checado, RN-128) | não — caía no Criativo |
+
+**A regra:**
+
+1. **Cada agente que conversa tem cláusula PRÓPRIA**, o Criativo inclusive
+   (`"agent" => "criativo"`). A cláusula final deixou de existir como
+   entrega: ela é RECUSA.
+2. **Nome sem cláusula é 422 NOMEADO**, `{error, motivo}` no molde da
+   [RN-578](#rn-578): `agente_sem_conversa`, com uma frase que nomeia o agente
+   e diz que a mensagem ficou registrada e nenhum agente a leu. A api repassa
+   422 como `UnprocessableEntityException` com a MESMA frase (o
+   `postComandoDeTurno` da RN-578, sem código novo), e a tela a mostra pelo
+   `mensagemDaRecusaDoAgente` que já existia. Sem `"agent"` no corpo é
+   `agente_ausente`, e agente que conversa sem texto é `mensagem_sem_texto` —
+   três motivos, porque "não conversa" dito a quem conversa seria mentira.
+3. **O `infra` tem recusa PRÓPRIA**, com frase que diz o que ele faz: trabalha
+   por proposta (a PR de infra, a subida do container), e o que pede decisão
+   aparece em Aprovações. Não é falta de código, é a mesma leitura da
+   [RN-499](#rn-499) — o Infra Lead é propositivo. E o `user_message/2` que o
+   `InfraLeadServer` ainda exporta **não serve** para uma cláusula: ele roda o
+   turno INTEIRO dentro do `handle_call` (até 180 s), sem o aceite do ADR 0163
+   e sem "Parar" (`via_for/2` não o conhece). Ligá-lo devolveria ao clique a
+   espera que a [RN-578](#rn-578) tirou.
+4. **O "Parar" também não adivinha.** `cancel/2` sem `"agent"` parava o turno
+   do Criativo; passa a ser 422 `agente_ausente`. A api sempre manda o agente
+   nas duas rotas, então essas duas recusas só alcançam chamador quebrado.
+5. **A tela continua não oferecendo o `infra` no composer** — nenhuma mudança
+   de UI: `AGENTES_DE_CHAT` já o excluía, e o que mudou é que, se um dia
+   alguém o puser lá, o engine recusa com nome em vez de entregar a outro, e a
+   guarda do CI reprova antes.
+
+**A guarda que fecha a classe** mora em
+`scripts/ci/destinos-do-composer.spec.ts`, porque o destino nasce em
+TypeScript e a cláusula mora em Elixir — nenhuma das duas suítes lê a outra
+linguagem. Ela DERIVA os destinos da fonte (`AGENTES_DE_CHAT`, os literais
+`agentParaEnviar = '…'` do `SessionPage.tsx` e o `AgentKey` do roster) e exige:
+cláusula própria que conversa e `via_for/2` do "Parar" para cada destino do
+composer; nenhuma cláusula sem agente fixo na cabeça que entregue a um agente;
+a última cláusula de `message/2` sendo recusa; o `infra` fora do composer e
+com recusa própria; e `@agentes_de_conversa` igual ao conjunto das cláusulas
+que conversam. Cinco mutações medidas, todas mortas (o catch-all antigo de
+volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
+`via_for` do Staff removido, a cláusula do `infra` renomeada).
+
+**O que esta regra NÃO fecha, declarado:**
+
+- **Se o Infra Lead passa a conversar pelo composer é decisão de produto, sem
+  dono.** Dar a ele uma cláusula exige, antes, migrar o turno dele para o
+  `TurnoAssincrono` (o aceite e a recusa `turno_em_andamento` da
+  [RN-578](#rn-578)) e registrá-lo no "Parar"; e exige decidir o que uma
+  conversa faz com um agente cujo contrato é propor. O `user_message/2` dele
+  segue exportado e sem chamador.
+- **O `chat.message` gravado pela api antes da recusa continua no log**, como
+  o da [RN-578](#rn-578) — a api grava primeiro para a mensagem ser durável com
+  o engine fora do ar. Diferente daquela, aqui não há `agent.error` ao lado:
+  não há agente de pé a quem atribuir a fala, e a explicação vive só no toast.
+- **A api não valida o `agent`.** Recusar lá, antes de gravar, exigiria uma
+  segunda lista de quem conversa do lado TypeScript — e divergir dela das
+  cláusulas é o defeito que esta regra fecha. Quem decide é quem tem as
+  cláusulas.
+
+- **Código:**
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:42`
+  (`@agentes_de_conversa`), `:177` (a cláusula do Criativo), `:192` (a recusa
+  do `infra`), `:207` (`mensagem_sem_texto`), `:221` (`agente_sem_conversa`),
+  `:234` (`agente_ausente`), `:303` (o "Parar" sem agente);
+  `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
+  (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:29`
+  (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
+- **Teste:** `scripts/ci/destinos-do-composer.spec.ts` (a guarda da classe);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
+  (caminho feliz: o Criativo pela cláusula própria), `:152` (o `infra`: 422 e
+  nenhum dos dois sobe — caso de falha), `:179` (todo nome do catálogo de
+  áreas e do roster fora de conversa), `:207`, `:223`, `:238`;
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:575`
+  (o destino viaja como escolhido, e o 422 chega com a frase)
+- **Origem:** AT-098 — adjacência medida no PR #594 (AT-089)
 
 ### RN-585 — O fim do turno só fica visível depois de o turno fechar no agente {#rn-585}
 

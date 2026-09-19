@@ -16728,7 +16728,7 @@ export interface operations {
             path: {
                 projectId: string;
                 sessionId: string;
-                /** @description Slug of the active agent. */
+                /** @description Slug of the conversational agent that reads the message: criativo, po, arquiteto, dev-lead, ux-designer or staff. Any other slug — infra included — is refused with 422; it is never delivered to a default agent (RN-584). */
                 agent: string;
             };
             cookie?: never;
@@ -16777,6 +16777,13 @@ export interface operations {
             };
             /** @description The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16908,6 +16915,13 @@ export interface operations {
             };
             /** @description This question set has already been answered; or the agent is still in the middle of a turn and did not read the answers (ADR 0163). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The agent that asked does not take chat messages — the answers were recorded but NO agent read them (RN-584). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

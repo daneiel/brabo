@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
+  quando era para outro agente** (AT-098). A última cláusula da rota interna
+  de mensagem não olhava o agente, então o que fosse escrito para o `infra` —
+  ou para qualquer nome sem cláusula própria — era lido pelo Criativo, com 202
+  e resposta no fio. Agora cada agente que conversa tem cláusula própria, e
+  todo o resto recebe **422** nomeado (`agente_sem_conversa`,
+  `agente_ausente`, `mensagem_sem_texto`) com uma frase que a tela mostra; o
+  Infra Lead tem frase própria, porque ele trabalha por proposta e não
+  conversa pelo chat. O "Parar" sem agente também deixa de parar o Criativo
+  por padrão. A OpenAPI documenta o 422 em `POST …/agents/:agent/message` e na
+  resposta ao formulário de perguntas. A tela não muda: ela já não oferecia o
+  `infra` no composer ([RN-584](docs/business-rules.md#rn-584)).
+
 - **engine/api**: a sessão **deixa de expirar no meio de uma conversa, e a
   sessão encerrada deixa de aceitar conversa** (AT-072). O heartbeat fechava a
   sessão 30s depois de a aba parar mesmo com o Criativo esperando resposta, e a
