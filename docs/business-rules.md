@@ -12619,15 +12619,18 @@ de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
 TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
 existia, antes de qualquer escrita.
 
-- **Código:** `install.sh:966` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:769` (`perguntar_e_criar_a_conta`, o consentimento, o laço e o
-  teto), `:866` (`parear_esta_maquina`, o `id` virando `--id`), `:942`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:682`
-  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600), `:704`
-  e `:727` (os vereditos das duas rotas), `:747` (`ler_sem_eco`), `:661`
-  (`nome_da_maquina`), `:929` (`avisar_chave_parcial`), `:640`/`:647`
-  (`escapar_json`/`sem_controle`), `:79` (`MARCADOR_SCHEMA=3`), `:1280` (a
-  chamada, depois do runner e antes do marcador), `:1291` (o `ownerEmail`)
+- **Código:** `install.sh:1463` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1262` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1362` (`parear_esta_maquina`, o `id` virando `--id`), `:1439`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1165`
+  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
+  `:1205` (`criar_primeira_conta`) e `:1225` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1240` (`ler_sem_eco`), `:1144`
+  (`nome_da_maquina`), `:1426` (`avisar_chave_parcial`), `:1123`/`:1130`
+  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1781` (a
+  chamada, depois do runner e antes do marcador), `:1792` (o `ownerEmail`).
+  Números relidos pelo símbolo em 18/09 (AT-096); os de `:966`/`:682` já não
+  batiam em 17/09
 - **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
   rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
   de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o

@@ -1885,6 +1885,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+  Irmã em `warn` (AT-096): `verificarRefsComSimbolo` confere, nos três arquivos
+  de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
+  que herda o caminho do MESMO item — contra o código, ±3 linhas. Só esse
+  padrão: ref sem símbolo, par por `/` e símbolo que não é identificador ficam
+  de FORA, de propósito (aferição barulhenta é desligada no primeiro mês).
+  Relata e não reprova, exceto ZERO refs extraídas (`CEGO`). Ao escrever RN
+  nova, cite `caminho:N` (`símbolo`) — é o que a torna conferível — e releia
+  pelo símbolo, nunca por um número antigo. NÃO alargue a janela para o aviso
+  sumir; o critério para `block` está em `documentation-workflow.md`.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de
