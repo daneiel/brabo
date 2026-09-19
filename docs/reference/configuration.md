@@ -22,6 +22,14 @@ changes behavior by being edited in production: the registry DESCRIBES the
 gates, it doesn't apply them. It travels inside the api image; see the
 [runbook](../runbook.md#registro-de-gates).
 
+What travels is the registry and **nothing it points at**. The `evidencia`
+of a `teste`/`ci` gate names files under `apps/api/test/`, `scripts/ci/`
+and `.github/`, and none of those are in the image. Checking that those
+targets exist is therefore a claim about the repository, enforced in CI,
+never by the process serving `GET /gates` — which is why the api reads the
+registry without looking for them. It used to look, and it answered `500`
+in every installation ([RN-070](../business-rules/custo.md#rn-070)).
+
 > **`up --wait` only proves what has a healthcheck.** In the development
 > compose, `api`, `engine` and `web` had none, so `docker compose up --wait`
 > reported them ready the moment the container started — before the process

@@ -6,6 +6,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
+  registro validava, EM RUNTIME, que todo arquivo de prova citado em
+  `docs/gates.yml` existia no disco — e a imagem de produção carrega
+  `/app/docs/gates.yml` e mais nada de `docs/`: `apps/api/test/`,
+  `scripts/ci/` e `.github/` nunca entram nela. O registro era, portanto,
+  inválido em **toda** instalação, com `RegistroDeGatesInvalido` listando os
+  **onze** alvos como "não existe" (medido na v6.1.0: 12 respostas 5xx em
+  ~55min), e a tela de gates caía no fallback da
+  [RN-084](docs/business-rules/custo.md#rn-084) em vez de mostrar erro — por
+  isso ninguém viu.
+
+  A régua **não foi desligada**, foi separada em duas
+  ([RN-070](docs/business-rules/custo.md#rn-070)): `validarRegistro` é
+  afirmação sobre o CONTEÚDO do registro e vale onde quer que ele seja lido —
+  é a única que o loader chama; `validarLocalizadores` é afirmação sobre o
+  REPOSITÓRIO e roda onde a pergunta existe, no teste do arquivo real (CI, a
+  cada PR) e na fase 2 do `pnpm --filter api validacao:gates`. Alvo que sumir
+  continua reprovando, e o loader continua **lançando** para registro
+  inválido por conteúdo — nunca devolvendo registro vazio.
+
+  De quebra, a fase 2 do medidor passou a enumerar **todos** os localizadores
+  em vez de só os de gate `active`+`block`: `rag-acertivo` cita workflow e
+  teste e nunca aparecia na tabela. E `docker/smoke.sh` passa a chamar
+  `GET /gates` contra a imagem de produção — nenhum E2E ou smoke a chamava, e
+  é por isso que uma suíte inteira verde não pegou nada (vitest e ExUnit rodam
+  de um checkout, onde os alvos existem).
+
 - **runner**: o agente local de MÁQUINA **passa a receber o `XDG_CONFIG_HOME`
   que foi instalado**, e o `PATH` congelado chega inteiro (AT-095). A unit
   escrevia `Environment=XDG_CONFIG_HOME=<pasta>` e `Environment=PATH=<path>`

@@ -968,6 +968,29 @@ neighbors; `teste` and `ci` carry the path, and a target that
 disappeared FAILS. It's the same failure mode the docmap calls a dead
 glob — a rule that never fires and fakes coverage.
 
+**That last claim is about the REPOSITORY, and it is never evaluated at
+runtime.** The registry is validated in two layers: `validarRegistro`
+(the content — `block` needs `script`, the four human gates stay human,
+`active` needs evidence, no duplicate id, no orphan `entrada`) holds
+wherever the file is read and is what the api's loader calls;
+`validarLocalizadores` (the target file is on disk) only means anything
+inside a checkout, and is enforced by the test on the real file and by
+phase 2 of `validacao-gates.ts`.
+
+The two used to be one function, and it cost a production defect,
+measured on the installed v6.1.0: `GET /gates` returned `500` with
+`RegistroDeGatesInvalido` listing all eleven targets as missing — twelve
+5xx in about 55 minutes, in every installation. The production image
+carries `/app/docs/gates.yml` and nothing else from `docs/`;
+`apps/api/test/`, `scripts/ci/` and `.github/` never enter it. The rule
+was not loosened — it moved to where the question exists. Do not put it
+back in the loader: `arquivoExiste` in a process that has no repository
+answers about a different tree.
+
+The screen hid it: [RN-084](#rn-084) makes `PrGateTimeline` fall back to
+the full pipeline when the route fails, so the 500 showed up only in the
+api's logs.
+
 Three types because not every gate lives in the event log:
 [`merge-protegida`](../business-rules.md#rn-014) is a ceiling in a pure rule that emits no
 event of its own (what guarantees it is a test) and `backmerge` is CI
@@ -985,12 +1008,21 @@ column would open up the whole query. Who promoted a story (human or
 the PO) lives in the `actor_kind` column and stays outside the
 declarative vocabulary.
 
-- **Where:** `apps/api/src/domain/gates/gate-registry.ts`, registered in
-  `docs/gates.yml`, measured in `apps/api/scripts/validacao-gates.ts`
+- **Where:** `apps/api/src/domain/gates/gate-registry.ts`
+  (`validarRegistro` and `validarLocalizadores`), registered in
+  `docs/gates.yml`, measured in `apps/api/scripts/validacao-gates.ts`;
+  the loader that deliberately calls only the first is
+  `apps/api/src/infrastructure/gates/gate-registry.loader.ts`
 - **Test:** `apps/api/test/domain/gates/gate-registry.spec.ts`
-  (`is valid: no accumulated problem`; `no (event_types + filtro) pair
-  repeats between gates`)
-- **Origin:** PHASE 15a (ADR 0054)
+  (`é válido: nenhum problema acumulado`; `todo alvo de prova citado
+  existe no repositório`; `validarRegistro ignora o disco: alvo ausente
+  não é problema DELE`; `nenhum par (event_types + filtro) se repete
+  entre gates`) and
+  `apps/api/test/infrastructure/gates/gate-registry.loader.spec.ts`
+  (`carrega o registro real sem exigir os alvos que a imagem não leva`,
+  against a root rebuilt as the production image's tree)
+- **Origin:** PHASE 15a (ADR 0054); the two-layer split came from the
+  `GET /gates` 500 measured on the installed v6.1.0 (AT-086)
 
 ### RN-071 — The four user-authority gates cannot be declared automatic {#rn-071}
 
