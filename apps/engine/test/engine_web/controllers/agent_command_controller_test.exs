@@ -4,7 +4,8 @@ defmodule EngineWeb.AgentCommandControllerTest do
   # é a decisão do controller, não o pipeline de auth.
   use EngineWeb.ConnCase, async: false
 
-  alias Engine.Agents.{CriativoSupervisor, PoServer, PoSupervisor}
+  alias Engine.Agents.{Areas, CriativoServer, CriativoSupervisor, PoServer, PoSupervisor}
+  alias Engine.Infra.InfraLeadServer
   alias Engine.Sessions.FakeEngineApiClient
   alias EngineWeb.AgentCommandController
 
@@ -114,6 +115,133 @@ defmodule EngineWeb.AgentCommandControllerTest do
       conn = AgentCommandController.readiness(conn, %{"sessionId" => session_id})
 
       assert %{"motivo" => "sem_regra_de_negocio"} = json_response(conn, 422)
+    end
+  end
+
+  # RN-584 (AT-098). O defeito medido: a última cláusula de `message/2` não
+  # olhava o agente, e uma mensagem ao `infra` era lida pelo CRIATIVO.
+  describe "message/2 não tem destinatário padrão (RN-584)" do
+    test "o Criativo recebe pela cláusula PRÓPRIA: 202 e o turno é dele", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      {:ok, pid} = CriativoSupervisor.start_agent(session_id, project_id)
+
+      :sys.replace_state(pid, fn s ->
+        Process.put(:fake_llm_turn_stream_hang, true)
+        s
+      end)
+
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "criativo",
+          "text" => "quero um app de agenda"
+        })
+
+      assert conn.status == 202
+      assert_receive :turno_pendurado, 1_000
+      assert %{turno_assincrono: %{task: %Task{}}} = :sys.get_state(pid)
+
+      GenServer.cast(pid, :cancel)
+      _ = :sys.get_state(pid)
+    end
+
+    test "infra: 422 nomeado, e NINGUÉM lê — nem o Criativo, nem o Infra Lead", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "infra",
+          "text" => "sobe o container"
+        })
+
+      assert %{"motivo" => "agente_sem_conversa", "error" => mensagem} =
+               json_response(conn, 422)
+
+      assert mensagem =~ "Infra Lead"
+      assert mensagem =~ "nenhum agente a leu"
+      assert GenServer.whereis(CriativoServer.via(session_id)) == nil
+      assert GenServer.whereis(InfraLeadServer.via(session_id)) == nil
+    end
+
+    # A enumeração vem do catálogo de áreas (GERADO de `agent-areas.ts`, a
+    # fonte da api), mais os agentes do roster que não são de área e não
+    # conversam, mais um nome que ninguém conhece. A guarda que compara com o
+    # que a TELA oferece mora em `scripts/ci/destinos-do-composer.spec.ts` —
+    # ExUnit não lê TypeScript.
+    test "todo nome sem cláusula é 422 nomeado, e o Criativo nunca sobe", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      das_areas =
+        Enum.flat_map(Areas.all(), fn area -> [area.lead | area.members] end)
+
+      fora_de_conversa =
+        (das_areas ++ ~w(secops psicologo anamnese dev-backend agente-que-nao-existe))
+        |> Enum.uniq()
+        |> Enum.reject(&(&1 == "dev-lead"))
+
+      for agente <- fora_de_conversa do
+        conn =
+          AgentCommandController.message(build_conn(), %{
+            "sessionId" => session_id,
+            "projectId" => project_id,
+            "agent" => agente,
+            "text" => "oi"
+          })
+
+        assert %{"motivo" => "agente_sem_conversa"} = json_response(conn, 422),
+               "#{agente} não foi recusado com nome"
+      end
+
+      assert GenServer.whereis(CriativoServer.via(session_id)) == nil
+    end
+
+    test "sem agent no corpo: 422 agente_ausente, e o Criativo não sobe", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "text" => "oi"
+        })
+
+      assert %{"motivo" => "agente_ausente"} = json_response(conn, 422)
+      assert GenServer.whereis(CriativoServer.via(session_id)) == nil
+    end
+
+    test "agente que conversa, mas sem texto: 422 próprio, não 'não conversa'", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po"
+        })
+
+      assert %{"motivo" => "mensagem_sem_texto"} = json_response(conn, 422)
+    end
+
+    test "cancel sem agent: 422 agente_ausente, nunca o Criativo por padrão", %{
+      conn: conn,
+      session_id: session_id
+    } do
+      conn = AgentCommandController.cancel(conn, %{"sessionId" => session_id})
+
+      assert %{"motivo" => "agente_ausente"} = json_response(conn, 422)
     end
   end
 

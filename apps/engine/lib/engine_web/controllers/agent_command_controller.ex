@@ -8,6 +8,11 @@ defmodule EngineWeb.AgentCommandController do
   Desde o ADR 0163 (RN-578) a resposta das rotas que disparam turno é o
   ACEITE: 202 assim que o turno sobe, sem esperar ele terminar; 409/422
   nomeados quando o agente recusa antes de subir (`responder_ao_aceite/2`).
+
+  Desde a RN-584, `message/2` não tem destinatário padrão: cada agente que
+  conversa tem cláusula PRÓPRIA, e todo o resto — `infra` inclusive — é 422
+  nomeado. Até lá a última cláusula não olhava o agente e entregava ao
+  Criativo o que fosse escrito para qualquer outro.
   """
 
   use EngineWeb, :controller
@@ -28,6 +33,13 @@ defmodule EngineWeb.AgentCommandController do
   }
 
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
+
+  # Quem tem cláusula de `message/2` que chega a um `*Server.user_message/2`
+  # (RN-584). Não decide o roteamento — quem decide são as cláusulas, uma por
+  # nome —, só separa, na recusa, "mandou sem texto" de "não conversa".
+  # `scripts/ci/destinos-do-composer.spec.ts` reprova esta lista divergindo das
+  # cláusulas, e as cláusulas divergindo do que a tela oferece.
+  @agentes_de_conversa ~w(criativo po arquiteto dev-lead ux-designer staff)
 
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "criativo"}) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
@@ -155,13 +167,73 @@ defmodule EngineWeb.AgentCommandController do
     responder_ao_aceite(conn, StaffServer.user_message(session_id, text))
   end
 
+  # O Criativo tem cláusula PRÓPRIA desde a RN-584. Até lá ele era a cláusula
+  # final, sem guarda de agente — e por isso o destinatário de QUALQUER nome
+  # que não casasse acima: uma mensagem ao `infra` era lida pelo Criativo, e a
+  # pessoa que escreveu para um agente via outro responder.
   def message(conn, %{
         "sessionId" => session_id,
         "projectId" => project_id,
+        "agent" => "criativo",
         "text" => text
       }) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
     responder_ao_aceite(conn, CriativoServer.user_message(session_id, text))
+  end
+
+  # O Infra Lead NÃO recebe mensagem de chat (RN-584), e a recusa é NOMEADA.
+  # Não é falta de código: `InfraLeadServer` é PROPOSITIVO (RN-499) — o
+  # trabalho dele chega como proposta (PR de infra, subida de container) —
+  # e o `user_message/2` que ele ainda exporta roda o turno INTEIRO dentro do
+  # `handle_call` (até 180 s), sem o aceite do ADR 0163 e sem "Parar"
+  # (`via_for/2` não o conhece). Dar a ele uma cláusula aqui devolveria ao
+  # clique a espera que a RN-578 tirou; decidir se ele passa a conversar é
+  # decisão de produto, não correção.
+  def message(conn, %{"agent" => "infra"}) do
+    recusar(
+      conn,
+      422,
+      "agente_sem_conversa",
+      "O Infra Lead não conversa pelo chat: ele trabalha por proposta — a PR " <>
+        "de infra e a subida do container —, e o que pede decisão aparece em " <>
+        "Aprovações. A mensagem ficou registrada, mas nenhum agente a leu."
+    )
+  end
+
+  def message(conn, %{"agent" => agent}) when agent in @agentes_de_conversa do
+    recusar(
+      conn,
+      422,
+      "mensagem_sem_texto",
+      "A mensagem chegou sem texto — nenhum agente a leu."
+    )
+  end
+
+  # Qualquer outro nome: recusa NOMEADA, nunca um destinatário padrão. É esta
+  # cláusula — e não uma lista — que fecha a classe: nome novo nasce recusado
+  # até alguém escrever a cláusula dele acima
+  # (`scripts/ci/destinos-do-composer.spec.ts` reprova a tela que oferecer um
+  # destino sem cláusula).
+  def message(conn, %{"agent" => agent}) when is_binary(agent) do
+    recusar(
+      conn,
+      422,
+      "agente_sem_conversa",
+      "O agente \"#{agent}\" não recebe mensagem de chat nesta sessão. A " <>
+        "mensagem ficou registrada, mas nenhum agente a leu."
+    )
+  end
+
+  # Sem `"agent"` no corpo: também é recusa. A api sempre o manda (é segmento
+  # da rota pública), então chegar aqui é chamador quebrado — e adivinhar o
+  # Criativo foi exatamente o defeito da RN-584.
+  def message(conn, _params) do
+    recusar(
+      conn,
+      422,
+      "agente_ausente",
+      "A mensagem chegou sem dizer para qual agente é — nenhum agente a leu."
+    )
   end
 
   @doc """
@@ -226,10 +298,16 @@ defmodule EngineWeb.AgentCommandController do
     end
   end
 
-  # Sem "agent" no corpo: mesmo default do `message/2` de baixo — sem
-  # `"agent"`, o alvo é o Criativo (único que nasce sem handoff).
-  def cancel(conn, %{"sessionId" => session_id}),
-    do: cancel(conn, %{"sessionId" => session_id, "agent" => "criativo"})
+  # Sem "agent" no corpo: recusa, como em `message/2` (RN-584). O default era
+  # o Criativo — parar o turno de quem a pessoa não escolheu.
+  def cancel(conn, _params) do
+    recusar(
+      conn,
+      422,
+      "agente_ausente",
+      "O pedido de parar chegou sem dizer de qual agente — nenhum turno foi parado."
+    )
+  end
 
   # O `handle_call` de todo conversacional responde AO ACEITAR desde o ADR
   # 0163 (RN-578) — o turno segue numa Task e o desfecho vai pelo canal. Esta

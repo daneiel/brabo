@@ -5,13 +5,14 @@ import type { Epic, SessionEvent } from './api-types';
  * Agentes que participam do fluxo de CHAT do composer (achado 9-fix) —
  * quem tem rota de `message` wireada no engine, não só `start`.
  *
- * Conferido em `agent_command_controller.ex`: há cláusula própria pra
- * po/dev-lead/arquiteto/ux-designer/staff, e a última cláusula (sem guarda
- * de agente) trata qualquer outro valor — incluindo `"infra"` — como se
- * fosse o Criativo. Infra Lead nunca teve `message` wireada, só `start`;
- * incluí-lo aqui faria o composer mandar mensagens que o engine rotearia em
- * silêncio pro agente errado. Ele é propositivo (CLAUDE.md Fase 4), não
- * conversacional pelo composer.
+ * Conferido em `agent_command_controller.ex`: há cláusula própria pra cada
+ * um dos seis. Até a RN-584 a última cláusula não olhava o agente e entregava
+ * ao Criativo qualquer outro valor — `"infra"` inclusive —; desde ela, todo
+ * nome sem cláusula é 422 NOMEADO (`agente_sem_conversa`), e a frase chega ao
+ * toast por `mensagemDaRecusaDoAgente`. Infra Lead continua de fora: é
+ * propositivo (RN-499), e o engine recusa mensagem a ele com frase própria.
+ * `scripts/ci/destinos-do-composer.spec.ts` lê ESTA lista e reprova o nome
+ * que não tiver cláusula do outro lado.
  *
  * `ux-designer` e `staff` entraram aqui pelo handoff manual (ADR 0109/
  * RN-440): as duas cláusulas já existiam no engine (ADR 0087/0088) sem

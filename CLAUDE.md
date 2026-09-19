@@ -162,6 +162,7 @@ estado lido do repositório e não da conversa.
 | O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
 | O clique que dispara turno responde ao aceitar, e a recusa deixa de ser calada (AT-089) | ADR 0163, RN-578 |
 | A tela de Sessão para de pollar a 3s com o canal vivo, e o corpo vazio ganha ETag (AT-093) | RN-579, CHANGELOG |
+| A mensagem ao `infra` era lida pelo Criativo; o chat deixa de ter destinatário padrão (AT-098) | RN-584 |
 
 ## Estado atual e aberto
 
@@ -182,6 +183,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Botão "Ativar execução" mudar de dono continua fora de escopo, por decisão
   declarada (ADR 0053 item 5) — só a metade da delegação Dev Lead →
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
+- Se o Infra Lead passa a CONVERSAR pelo composer (RN-584): hoje a mensagem a
+  ele é 422 nomeado no engine e a tela não o oferece. Dar-lhe cláusula de
+  `message/2` exige antes migrar o turno dele para o `TurnoAssincrono` (o
+  `user_message/2` que ele exporta roda o turno inteiro no `handle_call`, sem
+  aceite nem "Parar") — não religue esse `user_message/2` de passagem
 
 **Cortes e pausas vigentes:**
 - FASE 25b DEIXOU de ser corte no compose LOCAL (RN-512, ADR 0146 ponto 3): o
