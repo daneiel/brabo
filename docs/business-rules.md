@@ -11747,13 +11747,22 @@ ele roda no HOST (`criarPastaDoProjeto`), não no container.
   contenção do ADR 0130 (dar `env` à operação; um arquivo de credencial montado
   e apagado; rodar o `fetch` no host mesmo com container ativo, o que quebraria
   o invariante de que o trabalho acontece dentro do container). É ADR, nunca
-  correção de passagem. Fica declarada também uma ADJACÊNCIA medida e não
-  corrigida: a recusa acontece DEPOIS de `init_from_bare!/5` já ter feito
-  `mkdir`/`git init`/`remote add`, e o `git_dir?/2` de `ensure!/5` marca o
-  workspace como pronto numa tentativa seguinte por encontrar o `.git` — então
-  a segunda tentativa não repete a recusa, ela falha adiante no `worktree add`.
-  É comportamento PRÉ-EXISTENTE da idempotência de `ensure!/5` (vale para
-  qualquer `fetch` que falhe, não só para este) e corrigi-lo é entrega própria
+  correção de passagem. A ADJACÊNCIA que esta entrega também declarou — a
+  recusa acontecia DEPOIS de `init_from_bare!/5` já ter feito `git init`, e o
+  `git_dir?/2` de `ensure!/5` marcava o workspace pronto na tentativa seguinte
+  por encontrar o `.git`, de modo que a segunda tentativa falhava adiante no
+  `worktree add` em vez de repetir a recusa — **FECHOU no AT-112**: a
+  inicialização que falha (qualquer passo, não só o `fetch` credenciado)
+  DESFAZ o `.git` que ela mesma criou (`inicializar_ou_desfazer!` em
+  `Engine.Actions.Workspace` e em `RunnerGit`) e relança a exceção original,
+  então a tentativa seguinte repete a MESMA causa. O desfazer só roda no ramo em
+  que NÃO havia `.git` — o de "workspace de antes da marca" (que tem `.git` e
+  não se re-inicializa) segue intacto, então não apaga trabalho de ninguém. Do
+  lado `runner` o `rm -rf` é best-effort (o runner pode ter caído, uma das
+  causas da falha). Sinais considerados e recusados: marcador de "em
+  andamento" (segundo arquivo a manter, e órfão se o processo morrer entre os
+  dois passos) e checar a ref esperada (o repositório vazio, sem
+  `origin/<branch>`, é um estado LEGÍTIMO e cairia como falha)
 - **ADR:** nenhum novo — a entrega não move fronteira nenhuma. Ela CONSOME o
   [0130](adr/0130-broker-de-container.md) (a porta sem `env`), o
   [0137](adr/0137-o-runner-sobe-o-container-do-projeto.md) (o container na

@@ -96,13 +96,36 @@ defmodule Engine.Actions.Workspace.RunnerGit do
             marcar_pronto!(project_id, dir)
 
           true ->
-            init_from_bare!(project_id, dir, bare_repo_path, default_branch, remoto)
+            inicializar_ou_desfazer!(project_id, dir, bare_repo_path, default_branch, remoto)
             marcar_pronto!(project_id, dir)
         end
       end)
 
       dir
     end
+  end
+
+  # AT-112 — mesmo motivo e mesmo ramo do caminho local
+  # (`Engine.Actions.Workspace.inicializar_ou_desfazer!/4`): o `.git` criado
+  # pelo `init` não sobrevive a uma falha, senão a tentativa seguinte o lê
+  # como "workspace de antes da marca" e o marca pronto. O `rm -rf` é
+  # best-effort (o runner pode ter caído — é uma das causas da falha) e nunca
+  # mascara a exceção original.
+  defp inicializar_ou_desfazer!(project_id, dir, bare_repo_path, default_branch, remoto) do
+    init_from_bare!(project_id, dir, bare_repo_path, default_branch, remoto)
+  rescue
+    erro ->
+      desfazer_git_dir(project_id, dir)
+      reraise erro, __STACKTRACE__
+  catch
+    tipo, valor ->
+      desfazer_git_dir(project_id, dir)
+      :erlang.raise(tipo, valor, __STACKTRACE__)
+  end
+
+  defp desfazer_git_dir(project_id, dir) do
+    _ = exec(project_id, "rm -rf #{shq(Path.join(dir, ".git"))}", nil)
+    :ok
   end
 
   @doc "Espelho de `Engine.Dev.WorktreeManager.add_worktree/3`, via o runner."
