@@ -31,6 +31,19 @@ defmodule Engine.Sessions.Monitor do
   """
   def expect_stop(session_id), do: GenServer.call(@name, {:expect_stop, session_id})
 
+  @doc """
+  Como `expect_stop/1`, mais uma promessa: a linha de `session_states` NÃO é
+  deste Monitor para apagar. É o que o drain de shutdown usa ao repassar uma
+  sessão a um par (AT-078): o par regrava a linha no `init` do SessionServer
+  dele, e o `:DOWN` deste nó chega DEPOIS — o Monitor é um GenServer único,
+  serializa o `:DOWN` de cada sessão com um DELETE por ida ao banco, e o
+  repasse seguinte não espera por ele. Apagar ali levava a linha do PAR, e a
+  sessão ficava com dono e sem linha, invisível ao `Adopter`, ao `Rehydrator` e
+  ao `local_sessions/0` do drain do par. Quem apaga a linha de uma sessão que
+  ninguém adotou é o próprio drain (`terminate_unadopted`).
+  """
+  def expect_handoff(session_id), do: GenServer.call(@name, {:expect_handoff, session_id})
+
   @impl true
   def init(state), do: {:ok, state}
 
@@ -49,13 +62,18 @@ defmodule Engine.Sessions.Monitor do
   end
 
   def handle_call({:expect_stop, session_id}, _from, state) do
-    state =
-      case Map.fetch(state.by_session, session_id) do
-        {:ok, pid} -> put_in(state.by_pid[pid].expect_stop, true)
-        :error -> state
-      end
+    {:reply, :ok, marcar(state, session_id, %{expect_stop: true})}
+  end
 
-    {:reply, :ok, state}
+  def handle_call({:expect_handoff, session_id}, _from, state) do
+    {:reply, :ok, marcar(state, session_id, %{expect_stop: true, handoff: true})}
+  end
+
+  defp marcar(state, session_id, marcas) do
+    case Map.fetch(state.by_session, session_id) do
+      {:ok, pid} -> update_in(state.by_pid[pid], &Map.merge(&1, marcas))
+      :error -> state
+    end
   end
 
   @impl true
@@ -72,7 +90,7 @@ defmodule Engine.Sessions.Monitor do
         # rollout marcava como anormal exatamente as sessões que estavam
         # saudáveis.
         unless node_shutdown?(reason) do
-          safe_delete(entry.session_id)
+          apagar_linha(entry)
           maybe_report(entry, reason)
         end
 
@@ -94,14 +112,39 @@ defmodule Engine.Sessions.Monitor do
   # nenhum término posterior vira callback pra api. Uma indisponibilidade do
   # banco não pode ter esse efeito — o :DOWN já foi consumido de qualquer
   # forma, então registra e segue.
+  # AT-078: a linha desta linha de log é a observação direta que faltava — o
+  # log da drenagem nunca chega ao log do pod (o `preStop` o descarta), mas
+  # este Monitor roda no processo normal do pod. `handoff` = a linha foi
+  # deixada de propósito para o par que adotou a sessão.
+  defp apagar_linha(%{handoff: true} = entry) do
+    Logger.info(
+      "Monitor: session_state #{entry.session_id} mantido em #{node()} " <>
+        "(repasse a um par — a linha é dele)"
+    )
+  end
+
+  defp apagar_linha(entry) do
+    resultado = safe_delete(entry.session_id)
+
+    Logger.info(
+      "Monitor: session_state #{entry.session_id} apagado em #{node()} " <>
+        "(linhas removidas: #{linhas_removidas(resultado)})"
+    )
+  end
+
+  defp linhas_removidas({n, _}) when is_integer(n), do: n
+  defp linhas_removidas(_), do: "falhou"
+
   defp safe_delete(session_id) do
     SessionState.delete(session_id)
   rescue
     e ->
       Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(e)}")
+      :falhou
   catch
     :exit, reason ->
       Logger.warning("Monitor: falha ao apagar session_state #{session_id}: #{inspect(reason)}")
+      :falhou
   end
 
   # :normal precedido de expect_stop -> api já sabe, sem callback.

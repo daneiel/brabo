@@ -360,10 +360,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
   AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
   ao Dev Lead (RN-522)
-- **O `rollout-test` acusa sessão órfã de forma intermitente — DUAS em dez
-  rodadas** do `propriedades.yml` (BRB-009, AT-078; a última, `35448353884`,
+- **O `rollout-test` acusou sessão órfã de forma intermitente — TRÊS em treze
+  rodadas** do `propriedades.yml` (BRB-009, AT-078). A causa provável foi
+  CORRIGIDA na RN-588: o `Monitor` do pod antigo apagava a linha de
+  `session_states` que o par acabara de regravar; o drain agora marca o repasse
+  (`Monitor.expect_handoff/1`) e o Monitor não a apaga. Provado em ExUnit
+  (entrelaçamento determinístico), NÃO no k3d — a confirmação é a próxima
+  sequência de rodadas verdes, e uma nova órfã traria a linha de log do
+  Monitor ("mantido"/"apagado"). Restam inferência: o instante do apagamento
+  nunca foi medido, e a leitura vem do artefato da rodada `35452845830`.
+  Histórico, até a correção: a rodada `35448353884`
   com as cinco sessões no MESMO pod antigo: quatro adotadas, uma sem dono e sem
-  drenagem por 120s). Nas rodadas verdes a convergência leva 2–3s, então a
+  drenagem por 120s. Nas rodadas verdes a convergência leva 2–3s, então a
   leitura provável é corrida na adoção/drenagem, não atraso. Declarado e NÃO
   corrigido, e a regra do AT-078 é NENHUMA correção antes de reproduzir: o log
   que diria o que houve morria com o pod antigo, e desde o AT-078 a prova o
