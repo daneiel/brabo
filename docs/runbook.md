@@ -524,6 +524,20 @@ absolute, accepted, and wrong. Check the resolved value, never the file:
 systemctl --user show -p WorkingDirectory brabo-runner.service
 ```
 
+The same holds for the **environment** the unit freezes (AT-095). Units written
+before that fix carried `Environment=XDG_CONFIG_HOME=<folder>` and
+`Environment=PATH=<path>` unquoted, and `Environment=` both splits on spaces
+and expands specifiers: with `XDG_CONFIG_HOME=/home/you/50%off com espaco` the
+service received `/home/you/50<os-id>ff` — it loads, it starts, and the
+per-machine agent looks for its base and device key in a folder that does not
+exist, without a word. The CLI now writes the whole assignment quoted
+(`Environment="XDG_CONFIG_HOME=…"`, with `\`, `"` and `%` escaped). **Fix:
+reinstall**, as above. Check what systemd resolved:
+
+```bash
+systemctl --user show -p Environment brabo-runner.service
+```
+
 ### Device key from the terminal {#chave-de-dispositivo-pelo-terminal}
 
 **Symptom:** a machine needs a device key and there is no browser to run the
@@ -3021,14 +3035,26 @@ branch, a ceiling on corrections, verdicts as an artifact, and a terminal
 ## Installing {#instalando}
 
 ```sh
-sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
 ```
 
-**Never `curl … | sh`.** The reason is mechanical, not stylistic: with the
-script arriving through the pipe, the process's `stdin` **is** the download,
-so any `read` reads bytes of the script itself or hits EOF. An installer that
-cannot ask would have to pick folder locations on someone else's machine by
-itself ([RN-526](business-rules.md#rn-526)).
+**Download a file, then run it with `bash`.** The two shorter forms that look
+equivalent are not, and the script refuses both **by name**, before
+downloading anything, printing the line above:
+
+- **Never `curl … | sh`.** The reason is mechanical, not stylistic: with the
+  script arriving through the pipe, the process's `stdin` **is** the download,
+  so any `read` reads bytes of the script itself or hits EOF. An installer that
+  cannot ask would have to pick folder locations on someone else's machine by
+  itself ([RN-526](business-rules.md#rn-526)).
+- **Not `sh -c "$(curl …)"` either** — this was the documented form until
+  AT-083, and it never worked. The script checks **its own hash** against the
+  signed manifest, and under `X -c "…"` there is no file to hash: `$0` is the
+  shell's name. With `dash` as `sh` (Debian, Ubuntu) it died even earlier, on
+  `set -o pipefail`. There is no switch to skip that self-check, and there will
+  not be one ([ADR 0150](adr/0150-instalador-de-uma-linha.md)) — the fix is for
+  a file to exist. Running it under a non-bash shell is its own named refusal
+  too.
 
 The script verifies **its own origin** before doing anything — the signature
 of the Release's `checksums.txt`, and then its own hash inside that verified

@@ -153,6 +153,7 @@ estado lido do repositório e não da conversa.
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
+| O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 
 ## Estado atual e aberto
@@ -1041,7 +1042,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é `scripts/dev/install-e2e.spec.ts`, e ele guarda as duas formas de o E2E
   apodrecer calado — o gatilho afrouxado, e uma frase do `install.sh` reescrita
   (que não faz as asserções falharem: faz elas SUMIREM). Mesma decisão, mesmo
-  motivo, do golden-set do RAG (ADR 0138)
+  motivo, do golden-set do RAG (ADR 0138). E ele guarda uma TERCEIRA, medida na
+  AT-083: o instrumento que não mede. O passo "com TTY" rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o
+  instalador nunca viu terminal — o comentário afirmava o contrário. Quem roda o
+  instalador agora é um driver de pty em Python, e o spec EXTRAI esse driver do
+  workflow e o roda contra um instalador de mentira; lógica de workflow que só
+  roda em tag se prova assim, em PR, nunca por leitura. A forma de instalar é
+  BAIXAR e rodar um arquivo (`curl -fsSLO … && bash install.sh`, RN-526) — o
+  `sh -c "$(curl …)"` antigo nunca funcionou, porque a autoverificação calcula o
+  hash de `$0`; não reabra essa forma nem dê à verificação uma porta de pular
 
 ## Convenções
 - Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
@@ -1507,17 +1517,27 @@ o RACIOCÍNIO da triagem, que continua valendo.
   vez e mais cara. A unit de `systemd --user` do `brabo-runner` saía com
   `WorkingDirectory="…"` e NUNCA iniciou, em instalação nenhuma e nas duas
   espécies (`bad-setting`, `path is not absolute`), com a suíte VERDE: cada
-  asserção pedia de volta exatamente a forma errada. As DUAS metades do arquivo
-  não têm a mesma sintaxe — `ExecStart=` é unquoted e separado em palavras (as
-  aspas ali são o certo), `WorkingDirectory=` toma a linha INTEIRA (aspa
-  nenhuma, espaço literal, e `%` escapado como `%%` porque a diretiva expande
-  especificador). Quem prova é `systemd-analyze --user verify` sobre a unit
-  GERADA (`apps/runner/src/servico-systemd.spec.ts`), com a forma antiga fixada
-  como REPROVADA; sem systemd na máquina o teste PULA nomeando o motivo — nunca
+  asserção pedia de volta exatamente a forma errada. As TRÊS diretivas que
+  carregam valor não têm a mesma sintaxe — `ExecStart=` é unquoted e separado
+  em palavras (cada argumento entre aspas, `\`→`\\`, `%`→`%%`, `$`→`$$`),
+  `WorkingDirectory=` toma a linha INTEIRA (aspa nenhuma, espaço literal, só
+  `%`→`%%`) e `Environment=` é LISTA separada por espaço (a atribuição inteira
+  entre aspas, `"VAR=valor"`, com `\`, `"` e `%` escapados — AT-095). Não reuse
+  o escape de uma na outra. `systemd-analyze --user verify` sobre a unit GERADA
+  (`apps/runner/src/servico-systemd.spec.ts`) prova que ela CARREGA, e não
+  basta: `Environment=X=/a/50%off b` carrega e entrega OUTRO valor. O que prova
+  o VALOR é o despejo de `systemd --test --user --unit=<u>` sobre uma pasta de
+  units temporária, comparado com o gravado; as formas antigas ficam fixadas
+  como reprovadas; sem systemd na máquina o teste PULA nomeando o motivo — nunca
   passa em silêncio nem reprova por ambiente, a mesma régua do golden-set. O
   plist do macOS não tinha o defeito (o valor vai num `<string>` de XML), e a
   leitura de volta aceita as DUAS formas, para não tirar `status`/`uninstall`
-  de quem tem a unit quebrada em disco — o conserto é REINSTALAR.
+  de quem tem a unit quebrada em disco — o conserto é REINSTALAR. Terceira vez,
+  AT-083: o `.env` do `install.sh` saía com o `SECRET_KEY_BASE` quebrado em duas
+  linhas (`openssl rand -base64` quebra aos 64), e o Compose ora recusava, ora
+  ACEITAVA cortando o segredo. `scripts/dev/install-env.spec.ts` passa o `.env`
+  das funções de verdade por `docker compose config` e cobra cada valor INTEIRO
+  do outro lado — "parseia" não basta quando o parser aceita o arquivo errado.
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).

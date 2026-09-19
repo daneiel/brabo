@@ -3,14 +3,23 @@
 #
 # USO — e a forma importa:
 #
-#   sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+#   curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
 #
-# E **nunca** `curl … | sh`. O motivo é mecânico, não estético: com o script
-# chegando pelo pipe, o `stdin` do processo É o download, e qualquer `read`
-# para perguntar alguma coisa lê bytes do próprio script ou encontra EOF. Um
-# instalador que não pode perguntar teria de escolher sozinho onde criar pastas
-# no computador de alguém — e a régua deste produto é a oposta (RN-511, o passo
-# de consentimento do `pnpm bootstrap`, que sem TTY relata em vez de consentir).
+# BAIXAR e rodar um ARQUIVO, com `bash`. As duas formas que parecem equivalentes
+# não são, e as duas são RECUSADAS com nome:
+#
+#   - `curl … | sh`: com o script chegando pelo pipe, o `stdin` do processo É o
+#     download, e qualquer `read` para perguntar alguma coisa lê bytes do
+#     próprio script ou encontra EOF. Um instalador que não pode perguntar teria
+#     de escolher sozinho onde criar pastas no computador de alguém — e a régua
+#     deste produto é a oposta (RN-511, o passo de consentimento do
+#     `pnpm bootstrap`, que sem TTY relata em vez de consentir).
+#   - `sh -c "$(curl …)"`, que era a forma DOCUMENTADA até a AT-083: ali o `$0`
+#     é o nome do shell, não um arquivo, e a autoverificação (o hash DESTE
+#     arquivo contra o manifesto assinado, RN-526) não tem o que medir. Não há
+#     porta para pular essa verificação, e não vai haver (ADR 0150) — a saída é
+#     existir um arquivo. Com `dash` como `sh` (Debian/Ubuntu) ela morria antes
+#     ainda, no `set -o pipefail`.
 #
 # O QUE ELE FAZ, em ordem: verifica a própria origem contra o manifesto
 # assinado da Release, baixa e verifica contra o MESMO manifesto os arquivos que
@@ -34,7 +43,24 @@
 # Eles existem pelo mesmo motivo do `--print-commands` do `bootstrap.sh`: a
 # parte que erra na prática é a DECISÃO (o que foi detectado, o que seria
 # apagado), e ela se testa sem TTY e sem efeito — ver `install.spec.ts`.
+
+# Este bloco é POSIX e vem ANTES de tudo, porque é o único que roda sob
+# qualquer `sh`: o `dash` do Debian/Ubuntu morria na linha seguinte, no
+# `set -o pipefail`, com um "Illegal option" que não diz o que fazer.
+if [ -z "${BASH_VERSION:-}" ]; then
+  printf '%s\n' '✗ este instalador é um script de bash, e está rodando sob outro shell. Baixe o arquivo e rode com bash:' >&2
+  printf '%s\n' '    curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh' >&2
+  exit 1
+fi
+
 set -euo pipefail
+
+# O arquivo que o bash está lendo, capturado no NÍVEL DE CIMA — dentro de uma
+# função, `BASH_SOURCE[0]` é outra coisa. Vazio quando não há arquivo nenhum
+# (`bash -c "$(curl …)"`, `curl … | bash`): é o que `exigir_o_proprio_arquivo`
+# usa para não confundir um `$0` que por acaso é um arquivo (`/bin/bash -c`
+# deixa `$0=/bin/bash`, que existe e é legível) com o próprio instalador.
+ORIGEM_DO_SCRIPT="${BASH_SOURCE[0]:-}"
 
 # --------------------------------------------------------------------------
 # Constantes
@@ -84,6 +110,12 @@ MARCADOR_SCHEMA=3
 # existiam escrevem a URL inteira; os arquivos da instalação (ADR 0160) passam
 # por esta, porque são quatro no mesmo laço.
 URL_DA_RELEASE="https://github.com/${REPO}/releases/latest/download"
+
+# A forma de rodar que este script ENSINA — nas recusas e no relato sem TTY. Uma
+# constante, para que a frase que manda a pessoa rodar de novo não possa
+# divergir da que o cabeçalho e o runbook documentam (AT-083: ela ensinava a
+# forma quebrada).
+COMO_RODAR="curl -fsSLO ${URL_DA_RELEASE}/install.sh && bash install.sh"
 
 # Os caminhos ABSOLUTOS das cópias verificadas, preenchidos por
 # `materializar_os_arquivos_da_instalacao` — e VAZIOS até lá, de propósito. Até
@@ -166,11 +198,21 @@ exigir_ferramenta_de_hash() {
 # `<hash>  <arquivo>`, então o corte é o mesmo — e é feito com expansão de
 # parâmetro, não com `cut`, para não somar uma terceira dependência ao caminho
 # que existe justamente porque uma faltou.
+# O `|| falha_ao_calcular_hash` em `hash_sha256` é o que impede o `set -e` de
+# derrubar a substituição de comando CALADO (AT-083): sem ele, uma ferramenta
+# que não consegue ler o arquivo matava o script com o erro cru dela, antes de
+# qualquer recusa. E a recusa é a TERCEIRA, diferente das duas de
+# `conferir_hash`: não faltou ferramenta, e não há hash divergente — não houve
+# o que comparar.
+falha_ao_calcular_hash() {
+  recusar "não consegui calcular o sha256 de '${1}' — ${FERRAMENTA_DE_HASH} falhou ao ler o arquivo. Isto não é sinal de adulteração: não houve o que comparar."
+}
+
 hash_sha256() {
   local saida
   case "$FERRAMENTA_DE_HASH" in
-    sha256sum) saida="$(sha256sum "$1")" ;;
-    shasum)    saida="$(shasum -a 256 "$1")" ;;
+    sha256sum) saida="$(sha256sum "$1")" || falha_ao_calcular_hash "$1" ;;
+    shasum)    saida="$(shasum -a 256 "$1")" || falha_ao_calcular_hash "$1" ;;
     *) recusar 'hash pedido antes de a ferramenta ter sido resolvida — isto é defeito deste script, não da sua máquina.' ;;
   esac
   printf '%s\n' "${saida%% *}"
@@ -430,6 +472,21 @@ baixar_cosign() {
   chmod +x "$destino"
 }
 
+# O defeito que isto fecha (AT-083, instalando a v6.1.0 numa máquina limpa):
+# a forma que o runbook documentava, `sh -c "$(curl …)"`, roda o script sem
+# ARQUIVO — o `$0` é o nome do shell —, e a autoverificação logo abaixo fazia
+# `sha256sum bash`. O `set -euo pipefail` derrubava a substituição de comando
+# antes de qualquer recusa, e a pessoa via só o erro cru da ferramenta de hash.
+# A verificação NÃO muda e NÃO ganha porta de pular (ADR 0150): o que muda é
+# que a falta do arquivo é dita pelo nome, com a forma certa, e ANTES de baixar
+# qualquer coisa.
+exigir_o_proprio_arquivo() {
+  if [ -z "$ORIGEM_DO_SCRIPT" ] || [ ! -f "$0" ] || [ ! -r "$0" ]; then
+    recusar "este instalador precisa rodar de um ARQUIVO, e está rodando sem um (por sh -c/bash -c, ou por pipe). Ele confere o próprio hash contra o manifesto assinado da Release antes de fazer qualquer coisa, e sem arquivo não há o que conferir — nada foi baixado nem gravado. Baixe e rode:
+    ${COMO_RODAR}"
+  fi
+}
+
 # A cadeia inteira, e cada elo com um motivo:
 #   1. o `checksums.txt` da Release é assinado — verifica-se o BUNDLE;
 #   2. o hash DESTE arquivo tem de estar dentro do manifesto verificado.
@@ -466,6 +523,9 @@ verificar_a_si_mesmo() {
     || recusar "a assinatura do checksums.txt NÃO confere. O manifesto não foi publicado por esta esteira."
   ok 'assinatura do manifesto confere'
 
+  # Nunca chega aqui sem arquivo: `exigir_o_proprio_arquivo` recusou antes do
+  # primeiro download. Se chegar, `hash_sha256` recusa NOMEADO em vez de o
+  # `set -e` derrubar a substituição calado (AT-083).
   meu_hash="$(hash_sha256 "$0")"
   if ! grep -qi "^${meu_hash}  install.sh$" "${tmp}/checksums.txt"; then
     recusar "o hash deste arquivo não está no manifesto assinado. Ou ele foi alterado, ou não é o instalador desta Release."
@@ -592,13 +652,56 @@ materializar_os_arquivos_da_instalacao() {
 #
 # `${VAR:-$(gerar)}` respeita valor já exportado: quem já tem um segredo não o
 # vê ser trocado por uma reinstalação.
+#
+# E todo base64 passa por `segredo_base64`, que tira as quebras de linha. O
+# `openssl rand -base64` QUEBRA a saída a cada 64 caracteres: 32 bytes dão 44 e
+# cabem numa linha, mas os 64 bytes do SECRET_KEY_BASE dão 88, em DUAS — e o
+# `.env` saía com uma segunda linha solta (AT-083). Medido em 100 gerações: o
+# Compose recusou 49 com "unexpected character in variable name", e as outras
+# 51 ele ACEITOU — com o segredo cortado em 64 caracteres e uma variável de
+# lixo a mais. Por isso o spec (`install-env.spec.ts`) não pergunta só se o
+# arquivo parseia: pergunta se cada valor chega INTEIRO ao outro lado.
+segredo_base64() {
+  openssl rand -base64 "$1" | tr -d '\n'
+}
+
 gerar_segredos() {
-  GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(openssl rand -base64 32)}"
-  AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(openssl rand -base64 32)}"
-  BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(openssl rand -base64 32)}"
-  CREDENTIALS_MASTER_KEY="${CREDENTIALS_MASTER_KEY:-$(openssl rand -base64 32)}"
-  SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -base64 64)}"
+  GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(segredo_base64 32)}"
+  AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(segredo_base64 32)}"
+  BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(segredo_base64 32)}"
+  CREDENTIALS_MASTER_KEY="${CREDENTIALS_MASTER_KEY:-$(segredo_base64 32)}"
+  SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(segredo_base64 64)}"
   NEO4J_PASSWORD="${NEO4J_PASSWORD:-$(openssl rand -hex 24)}"
+}
+
+# O `.env` da instalação, numa função e não no corpo de `main`, para que o
+# spec (`install-env.spec.ts`) grave o MESMO arquivo que a instalação grava e o
+# passe pelo parser do Compose — a classe de defeito da AT-083 (um valor que o
+# `.env` não comporta) só se prova contra quem vai ler o arquivo.
+#
+# O arquivo nasce com modo 600 ANTES de receber conteúdo: criar com o umask
+# do usuário e apertar depois deixaria os segredos legíveis por uma janela,
+# e é justamente o arquivo que não pode ter essa janela.
+escrever_env() {
+  local env_arquivo="$1"
+  : > "$env_arquivo"
+  chmod 600 "$env_arquivo"
+  cat > "$env_arquivo" <<ENV
+# Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
+# Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
+# \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
+BRABO_API_IMAGE=${BRABO_API_IMAGE}
+BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
+BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
+BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
+BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
+GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
+AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
+CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
+SECRET_KEY_BASE=${SECRET_KEY_BASE}
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
+ENV
 }
 
 # --------------------------------------------------------------------------
@@ -1282,6 +1385,10 @@ main() {
     esac
   done
 
+  # ANTES da plataforma e de qualquer download: rodar sem arquivo é defeito de
+  # INVOCAÇÃO, e a pessoa precisa ler a forma certa, não o que viria depois.
+  exigir_o_proprio_arquivo
+
   local plataforma
   plataforma="$(detectar_plataforma)"
 
@@ -1423,7 +1530,7 @@ main() {
     dizer ''
     dizer 'Sem terminal interativo: nada foi decidido nem gravado.'
     dizer 'Para instalar, rode num terminal:'
-    dizer '  sh -c "$(curl -fsSL https://github.com/'"${REPO}"'/releases/latest/download/install.sh)"'
+    dizer "  ${COMO_RODAR}"
     exit 0
   fi
 
@@ -1439,28 +1546,8 @@ main() {
   consentir_base
   gerar_segredos
 
-  # O `.env` nasce com modo 600 ANTES de receber conteúdo: criar com o umask
-  # do usuário e apertar depois deixaria os segredos legíveis por uma janela,
-  # e é justamente o arquivo que não pode ter essa janela.
   local env_arquivo="${PWD}/.env"
-  : > "$env_arquivo"
-  chmod 600 "$env_arquivo"
-  cat > "$env_arquivo" <<ENV
-# Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
-# Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
-# \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
-BRABO_API_IMAGE=${BRABO_API_IMAGE}
-BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
-BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
-BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
-BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
-GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
-AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
-BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
-CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
-SECRET_KEY_BASE=${SECRET_KEY_BASE}
-NEO4J_PASSWORD=${NEO4J_PASSWORD}
-ENV
+  escrever_env "$env_arquivo"
   ok ".env gravado com modo 600"
 
   dizer ''

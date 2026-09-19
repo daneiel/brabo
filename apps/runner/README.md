@@ -414,6 +414,15 @@ gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 > O `%` é o único caractere que a pasta escapa (`%%`), porque essa diretiva
 > passa por expansão de especificador — espaço vai literal, já que a linha
 > inteira é o caminho.
+>
+> **`XDG_CONFIG_HOME` ou `PATH` com `%`, espaço, aspas ou barra: reinstale
+> também.** Até a AT-095 os dois saíam crus (`Environment=XDG_CONFIG_HOME=…`),
+> e `Environment=` separa por espaço e expande `%`: a unit subia, mas com
+> `/home/eu/50%off com espaco` o serviço recebia `/home/eu/50<id-do-os>ff` e
+> procurava a chave numa pasta que não existe. Agora a atribuição inteira vai
+> entre aspas e escapada. Quebra de linha nesses dois valores é recusada no
+> `install`. Confira o valor que o systemd entendeu, nunca o arquivo:
+> `systemctl --user show -p Environment brabo-runner.service`.
 
 ## Reconexão
 
