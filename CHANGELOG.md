@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci**: o build das imagens de produção deixa de reaproveitar uma camada de
+  `apk upgrade` congelada em cache (AT-110). O `docker-bake.hcl` passa
+  `no-cache-filter = ["runtime"]` ao alvo base dos cinco `Dockerfile.prod`, e o
+  Trivy do PR volta a escanear o que a tag publicaria; o cache dos estágios de
+  build continua. Custo: ~7–9 s por imagem, em paralelo. Não muda o que o
+  `release.yml` faz, e ele segue sem Trivy (AT-179).
 - **engine (segurança)**: `mint` sobe de 1.10.0 para 1.10.1, que fecha o
   advisory EEF-CVE-2026-82672 (GHSA-rj5m-69wp-cxq9, MEDIUM): o cliente HTTP/1
   aceitava lixo depois do tamanho do chunk, o que permitia *response smuggling*
