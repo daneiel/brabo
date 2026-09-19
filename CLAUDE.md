@@ -1584,7 +1584,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
   tela de Sessão narra em tempo real o que o agente está fazendo numa
   faixa acima do composer — o fio só recebe a bolha de resposta depois
-  que o turno termina (RN-460).
+  que o turno termina (RN-460). Os seis reconstroem o histórico por UM
+  caminho, `Engine.Agents.Reidratacao` (RN-580) — não reintroduza
+  `rehydrate/2` por servidor: lê a CAUDA (`latest`, teto 200 do ADR 0060),
+  traz pergunta estruturada e as PRÓPRIAS ferramentas como texto (nunca
+  `role: "tool"`: o evento não tem id de chamada), pula
+  `chat.structured_question_answered` (a resposta já vem no `chat.message`) e,
+  quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
+  `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
+  memória sobre a leitura geral.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora

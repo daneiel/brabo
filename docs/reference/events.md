@@ -63,6 +63,21 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook |
 | `handoff.offered` | one agent offered the work to another |
 | `handoff.accepted` | the recipient accepted |
+| `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
+
+**What a conversational agent reads back ([RN-580](../business-rules.md#rn-580)).**
+When one of the six conversational agents comes up over a session that already
+has a conversation, `Engine.Agents.Reidratacao` rebuilds its history from the
+**tail** of this log (the last 200 events): `chat.message`, `agent.response`,
+`chat.structured_question` (as the agent's own turn, with labels and options),
+and its OWN `tool.call`/`tool.result` (as a text note — the events carry no call
+id, so they are never replayed as `role: tool`). `chat.structured_question_answered`
+is deliberately skipped: the api records the same answers as a `chat.message`
+right after it, and that is what the agent read live. Only `CriativoServer`
+records `tool.result`; for the other five the note says the log has no outcome.
+When the conversation is longer than the tail, the history opens with a system
+message stating how many earlier events were left out, the latest recorded
+compaction summary, and the opening messages.
 
 ### Proposed actions
 

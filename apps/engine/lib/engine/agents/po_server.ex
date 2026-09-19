@@ -24,7 +24,7 @@ defmodule Engine.Agents.PoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono}
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
   alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
@@ -88,7 +88,9 @@ defmodule Engine.Agents.PoServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -343,16 +345,22 @@ defmodule Engine.Agents.PoServer do
 
   # --- Kickoff: monta a instrução a partir do brief + regras do event log ---
 
+  # Leitura POR TIPO, pela cauda (RN-580): antes eram os PRIMEIROS 200 eventos
+  # de todos os tipos, e numa conversa longa com o Criativo o brief — que nasce
+  # no FIM dela — ficava de fora e o PO recebia "(sem product brief)".
   defp kickoff_instruction(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} ->
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.product_brief",
+           "artifact.business_rule"
+         ]) do
+      {:ok, events, truncado?} ->
         brief =
           events
           |> Enum.filter(&(Map.get(&1, "type") == "artifact.product_brief"))
           |> List.last()
 
         rules = Enum.filter(events, &(Map.get(&1, "type") == "artifact.business_rule"))
-        build_kickoff(brief, rules)
+        build_kickoff(brief, rules) <> Reidratacao.aviso_de_recorte(truncado?)
 
       _ ->
         # Sem event log não há brief nem regra para citar — mas a obrigação e o
@@ -428,23 +436,6 @@ defmodule Engine.Agents.PoServer do
        história inventada.
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 
