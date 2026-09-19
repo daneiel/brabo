@@ -84,7 +84,11 @@ interface ClausulaDeMensagem {
   agente: string | null;
   /** A cláusula entrega a um `*Server.user_message/2`. */
   conversa: boolean;
-  /** A cláusula responde com `recusar/4` (4xx com `motivo`). */
+  /**
+   * A cláusula responde com `recusar_mensagem/5` (4xx com `motivo` E o
+   * `agent.error` durável, RN-587). `recusar/4` cru NÃO conta: a recusa que não
+   * grava deixa a mensagem no fio com cara de entregue.
+   */
   recusa: boolean;
   texto: string;
 }
@@ -100,7 +104,7 @@ const clausulasDeMensagem: ClausulaDeMensagem[] = controller
     return {
       agente,
       conversa: /\.user_message\(/.test(texto),
-      recusa: /recusar\(/.test(texto),
+      recusa: /recusar_mensagem\(/.test(texto),
       texto,
     };
   });
@@ -177,6 +181,28 @@ describe('RN-584 — os destinos que a tela oferece, contra as cláusulas do eng
     expect(daInfra).toHaveLength(1);
     expect(daInfra[0]!.recusa).toBe(true);
     expect(daInfra[0]!.conversa).toBe(false);
+  });
+
+  it('a recusa de `message/2` GRAVA o `agent.error` (RN-587)', () => {
+    // O `chat.message` já está no log quando o engine recusa (a api grava
+    // antes). Sem o registro, a mensagem fica no fio como entregue.
+    const corpo = extrair(
+      controller,
+      /defp recusar_mensagem\(conn, params, status, motivo, mensagem\) do\n([\s\S]*?)\n  end\n/,
+      '`recusar_mensagem/5` no controller',
+    );
+    expect(corpo).toMatch(/registrar_recusa_de_mensagem\(params, motivo, mensagem\)/);
+    expect(corpo).toMatch(/recusar\(conn, status, motivo, mensagem\)/);
+    const registro = extrair(
+      controller,
+      /defp registrar_recusa_de_mensagem\(\n([\s\S]*?)\n  defp registrar_recusa_de_mensagem\(_params/,
+      '`registrar_recusa_de_mensagem/3` no controller',
+    );
+    expect(registro).toMatch(/EngineApiClient\.append_event\(/);
+    expect(registro).toMatch(/type: "agent\.error"/);
+    // Nenhuma cláusula de `message/2` responde com `recusar/4` cru.
+    const cruas = clausulasDeMensagem.filter((c) => /\brecusar\(/.test(c.texto));
+    expect(cruas.map((c) => c.texto.split('\n')[0])).toEqual([]);
   });
 
   it('`@agentes_de_conversa` é exatamente o conjunto das cláusulas que conversam', () => {
