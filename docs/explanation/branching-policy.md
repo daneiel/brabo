@@ -305,6 +305,56 @@ their own — events created by `GITHUB_TOKEN` don't trigger workflows, and
 Dependabot doesn't accept commands from that bot. Someone with write access
 comments `@dependabot rebase`; the workflow's comment says so on the PR.
 
+### A pin bump justifies itself
+
+A Dependabot PR that bumps an action touches workflow files, and the
+documentation drift check fires by **file**: `release.yml` is watched by the
+`politica-de-branches` rule, in `block`. When the whole diff is the `uses:` SHA
+and the version comment beside it, that rule has nothing to ask — PRs #578 and
+#580 were unblocked by hand, with a human writing `docs-not-needed:` in the
+body.
+
+Since AT-094 the **bot writes that line**, and only in that class of PR. A
+step of the `Drift, gerados e build` job (`.github/workflows/docs-check.yml`),
+right before the drift, calls
+[`scripts/ci/dependabot-justifica-pin.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-justifica-pin.ts)
+on the same range the drift evaluates. It writes the line when **both** hold:
+
+- the **author** is Dependabot (`ehBranchDoDependabot`: the `dependabot/`
+  prefix **and** the app login — the prefix alone would be a door for a human);
+- the **diff** is only pin changes: every file is YAML under
+  `.github/workflows/` or `.github/actions/`, modified in place (never created,
+  deleted, renamed, or mode-changed), and every changed line is a
+  `uses: <action>@<sha>  # <version>` paired with another of the **same**
+  action, at the **same** indentation, changing only the SHA and/or the version
+  token.
+
+Anything else — a job, a trigger, a `with:`, a `package.json`, a lockfile, a
+new workflow, a human author — and nothing is written: the docmap judges as it
+always does. The rule never becomes "a bot's PR skips the docmap". The line
+carries an HTML marker (`<!-- dependabot-justifica-pin -->`), and the marker is
+what makes it **reversible**: if a later push adds something that isn't a pin,
+the bot's line is **removed**. A `docs-not-needed:` written by a human is never
+touched, neither to duplicate nor to delete, and the step doesn't run on
+`edited`, so a human who deletes the bot's line wins.
+
+**Why a step in the drift job and not a sibling workflow** — three measurements:
+
+- editing the body with `GITHUB_TOKEN` doesn't fire `edited`, so a separate
+  workflow would write the line and leave the required check red;
+- re-running the drift job doesn't help: a re-run reuses the original event
+  **payload**, with the old body (run 34898913072, attempt 2, on 2026-09-17:
+  the body already had the line, `PR_BODY` didn't, and the drift failed);
+- `pull_request_target`, where the token writes without asking, only runs the
+  workflow from the **default** branch — the trap measured in `pr-police.yml`.
+
+In the same job the drift reads the new body from `PR_BODY_FILE`, in order,
+with no race and no re-dispatch. If the edit fails, no file is written and the
+drift reads the event's body: fail-closed, the PR stays blocked as before.
+Measured against every Dependabot PR in the repository's history: the ten
+`github_actions` ones (#561–#565, #577–#581) are pure pin changes; the
+`npm_and_yarn` one (#553) is not.
+
 ## Who approves
 
 The approval requirement has **two modes**, chosen by the repository
