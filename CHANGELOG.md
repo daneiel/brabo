@@ -6,6 +6,38 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
+  repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
+  Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
+  nasce ([RN-522](docs/business-rules.md#rn-522)) —, e a pessoa aprovava
+  ações que só podiam terminar `failed` com *"Projeto sem repositório
+  provisionado"* (medido numa instalação real: quatro de quatro). As tools
+  `propose_adr` e `propose_infra_pr` passam a perguntar ANTES de propor, lendo
+  `project_repositories` localmente com o MESMO predicado dos casos de uso de
+  execução, e recusam com o motivo como resultado de ferramenta — o que falta
+  e quando passa a existir. No Infra Lead a recusa vem antes da consolidação
+  com o Workflows, então nenhum laço de LLM é gasto numa PR impossível. A
+  recusa deixa `tool.call` e `tool.result` (`ok: false`, com o motivo) no
+  event log. Os casos de uso continuam recusando como antes
+  ([RN-577](docs/business-rules.md#rn-577)).
+
+- **engine/api**: o agente conversacional que sobe sobre uma conversa que já
+  existe **recebe o FIM dela, não o começo** (AT-073). Os seis (Criativo, PO,
+  Arquiteto, Dev Lead, UX Designer e Staff) reconstruíam o histórico lendo os
+  PRIMEIROS 200 eventos da sessão — numa conversa de 201 eventos o agente
+  acordava sem a mensagem que estava respondendo — e só com mensagens e
+  respostas: a pergunta que ele fez por formulário e as ferramentas que chamou
+  sumiam. Agora os seis passam por um caminho só, que lê os 200 mais recentes,
+  traz as perguntas estruturadas e as próprias chamadas de ferramenta, e,
+  quando a conversa não cabe, abre com um resumo do começo que escreve quantos
+  eventos ficaram de fora ([RN-580](docs/business-rules.md#rn-580)). O
+  `context.compacted` passa a gravar o resumo da compactação (antes só as
+  contagens de tokens); conversa compactada antes disto é declarada como tal.
+  Os kickoffs do PO, Arquiteto, Dev Lead e UX Designer e as regras do product
+  brief do Criativo passam a ler por tipo, pela cauda — numa conversa longa o
+  PO recebia "(sem product brief disponível)". A rota interna
+  `GET /internal/sessions/:id/events` ganha `latest` e `types`, aditivos.
+
 - **engine/api/web**: o clique que dispara turno de agente **responde ao
   aceitar**, não no fim do turno ([RN-578](docs/business-rules.md#rn-578),
   [ADR 0163](docs/adr/0163-o-clique-responde-ao-aceitar.md)). Medido numa
@@ -189,6 +221,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
   Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
   está certo: sem a variável a api nunca chama o broker.
+
+- **instalador/esteira**: o **broker de container vira a quinta imagem
+  publicada**, e o `install.sh` **pergunta** se o liga
+  ([ADR 0162](docs/adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
+  [RN-575](docs/business-rules.md#rn-575)). Numa instalação por Release,
+  projeto Container ou Pasta montada nunca executava — quem sobe o container
+  desses modos é o broker, e a instalação não tinha o serviço porque a imagem
+  não existia no registry (`ghcr.io/daneiel/brabo-broker` respondia `denied`).
+  Agora `docker-bake.hcl` tem o alvo `broker`, e a imagem passa pelos mesmos
+  gates das outras quatro: construída e escaneada (Trivy) a cada PR, recusada
+  se rodar como root, provada subindo healthy com rootfs read-only e sem rede,
+  e publicada, registrada em `.release/images.json`, assinada e verificada por
+  digest a cada tag. O compose de instalação ganha o serviço **desligado**, sob
+  o profile `container-broker`, com as cinco camadas do ADR 0130 intactas. O
+  instalador pergunta *"Ligar o broker de container? [s/N]"* depois da base,
+  dizendo em texto que ligar entrega o socket do Docker da máquina ao serviço;
+  só um "s" liga, e aí ele **mede** o grupo do socket de dentro de um container
+  (recusa nomeada se não conseguir — nunca o `999` de palpite) e grava
+  `COMPOSE_PROFILES`, `BROKER_URL`, `DOCKER_GID` e a raiz da pasta gerenciada no
+  `.env`, juntos. Depois da subida confere que a api alcança o broker e que a
+  raiz calculada é a do volume; o que não confere vira pendência nomeada. A
+  decisão aparece no resumo final, e a frase de fechamento deixa de dizer que
+  só a Pasta montada fica sem container sem o broker — o modo Container também
+  fica. **Vale a partir da próxima tag**: o instalador exige `broker` no
+  `images.json`, que Releases anteriores não têm. O Kubernetes não conhece o
+  broker (`make imagens-do-release` segue aplicando quatro imagens).
+
+- **ci**: PR do Dependabot que **só troca o pin de uma action** (o SHA do
+  `uses:` e o comentário de versão ao lado) deixa de ficar bloqueado pelo drift
+  da documentação. O passo novo do `docs-check.yml` escreve no corpo do PR a
+  linha `docs-not-needed: <motivo>`, marcada como do bot, quando o autor é o
+  Dependabot **e** toda linha alterada é troca de pin — decidido por
+  `scripts/ci/dependabot-justifica-pin.ts`, testado. Job, gatilho, `with:`
+  novo, dependência pnpm, workflow novo ou autor humano: nada é escrito, e o
+  docmap julga como sempre. Se um push posterior trouxer algo além do pin, a
+  linha do bot é **removida**; a de um humano nunca é tocada. Os #578/#580
+  tinham sido destravados à mão. O drift passa a ler o corpo de
+  `PR_BODY_FILE` quando o passo o reescreve — editar o corpo com o
+  `GITHUB_TOKEN` não dispara `edited`, e re-executar o job reusa o corpo
+  antigo do evento (medido na run 34898913072).
 
 ## v6.1.0 — 2026-09-13
 

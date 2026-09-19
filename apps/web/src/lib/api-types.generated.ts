@@ -707,7 +707,7 @@ export interface paths {
         };
         /**
          * Paginates the session's event log for the engine
-         * @description Used to REHYDRATE an agent's conversation history after a restart. The equivalent human route is protected by RBAC; this one, by the service token.
+         * @description Used to REHYDRATE a conversational agent's history and to read the artifacts its kickoff needs. The equivalent human route is protected by RBAC; this one, by the service token. `latest=true` returns the TAIL (still in ascending `seq`) and ignores `afterSeq`; `types` restricts the page to those event types. The page is capped at 200 either way (ADR 0060).
          */
         get: operations["InternalSessionsController_listEvents"];
         put?: never;
@@ -10434,6 +10434,10 @@ export interface operations {
                 projectId: string;
                 afterSeq?: string;
                 limit?: string;
+                /** @description Fetches the tail of the log; ignores `afterSeq`. */
+                latest?: string;
+                /** @description Comma-separated event types (at most 20). Only events of these types count toward `limit`. */
+                types?: string;
             };
             header?: never;
             path: {

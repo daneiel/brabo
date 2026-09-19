@@ -100,6 +100,11 @@ const OUTRAS_FRASES_ASSERIDAS: readonly string[] = [
   // instalador que os grava.
   'arquivos da instalação verificados contra o manifesto assinado',
   'arquivos da instalação gravados em ',
+  // ADR 0162: o broker ligado com consentimento, medido, e alcançado pela api.
+  'grupo do socket, visto de dentro de um container: ',
+  'broker de container: ligado',
+  'a api alcança o broker pela rede interna',
+  'a raiz da pasta gerenciada confere com o volume',
   // A prova NEGATIVA da RN-547: nenhuma pendência é o que afirma que os cinco
   // elos fecharam, inclusive os que o workflow não sabe nomear.
   'O que ficou pendente',
@@ -126,7 +131,7 @@ const ESPERA_DO_RUNNER = path.join(RAIZ, 'apps/runner/src/espera-de-projetos.ts'
  * de estado em runtime), mas dá para saber que o CONJUNTO mudou — e isso basta
  * para mandar alguém olhar o arquivo de respostas.
  */
-const PROMPTS_INTERATIVOS = 8;
+const PROMPTS_INTERATIVOS = 9;
 
 describe('o E2E do instalador não pode ser afrouxado para passar', () => {
   it('NÃO roda em `pull_request` — a porta de pular a verificação é a que o ADR 0150 recusa', () => {
@@ -236,13 +241,31 @@ describe('as respostas do TTY simulado acompanham os prompts do instalador', () 
     expect(lista[1]?.espera).toBe('Base [');
   });
 
+  it('a pergunta do broker vem DEPOIS da base e o E2E responde SIM (ADR 0162)', () => {
+    // Depois da base porque é na ordem dos `read` do script (`consentir_broker`
+    // roda logo depois de `consentir_base`). SIM porque só assim o E2E exercita
+    // o que a pergunta promete: a imagem publicada, o gid medido e a api
+    // alcançando o broker — e o runner Linux da tag tem Docker para isso.
+    const lista = respostasDoWorkflow();
+    expect(lista[2]).toEqual({
+      espera: 'Ligar o broker de container? [s/N] ',
+      resposta: '"s"',
+      segredo: false,
+    });
+    const texto = instalador();
+    expect(texto.indexOf('\n  consentir_base\n')).toBeGreaterThan(0);
+    expect(texto.indexOf('\n  consentir_broker\n')).toBeGreaterThan(
+      texto.indexOf('\n  consentir_base\n'),
+    );
+  });
+
   it('cada pergunta que o driver espera EXISTE no install.sh, e as duas de senha são segredo', () => {
     // O driver espera o TRECHO da pergunta aparecer antes de responder. Um
     // trecho que o instalador deixou de imprimir não desalinha nada: ele faz o
     // driver esperar até o teto e parar com código 3, nomeando a pergunta — mas
     // só na tag. Aqui, em PR.
     const lista = respostasDoWorkflow();
-    expect(lista).toHaveLength(7);
+    expect(lista).toHaveLength(8);
     for (const { espera } of lista) {
       expect(instalador(), `o install.sh não imprime mais: ${espera}`).toContain(espera);
     }
