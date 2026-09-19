@@ -1216,6 +1216,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/llm/provider-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists what each LLM provider can do, independent of the model
+         * @description The PROVIDER layer of the capabilities (ADR 0041) for the nine providers, read from the same instances that serve the calls. A capability is only `true` when proven against the real API. The screen reads `routingPreference` from here before offering a routing preference on a binding (ADR 0166).
+         */
+        get: operations["ProviderCapabilitiesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics": {
         parameters: {
             query?: never;
@@ -6140,6 +6160,27 @@ export interface components {
             content: string;
             toolCalls: components["schemas"]["ToolCallResponseDto"][];
         };
+        LLMProviderCapabilitiesResponseDto: {
+            /** @example true */
+            streaming: boolean;
+            /** @example true */
+            toolCalling: boolean;
+            /**
+             * @description The provider can LIST its own catalog (catalog sync).
+             * @example true
+             */
+            listModels: boolean;
+            /**
+             * @description Text → vector (ADR 0075). Only `true` when proven.
+             * @example false
+             */
+            embeddings: boolean;
+            /**
+             * @description The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count.
+             * @example false
+             */
+            routingPreference: boolean;
+        };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];
             usage: components["schemas"]["LlmUsageResponseDto"];
@@ -6333,6 +6374,12 @@ export interface components {
             scopeId: string;
             /** @example 01JC4Z0000MODELO00000000001 */
             modelId: string;
+            /**
+             * @description How a hub picks the upstream for this binding (ADR 0166, RN-583). `null` = the hub decides on its own. Only ever set for a provider that declares the `routingPreference` capability.
+             * @example null
+             * @enum {string|null}
+             */
+            routingPreference: "price" | "throughput" | "latency" | null;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
             /**
@@ -7501,6 +7548,14 @@ export interface components {
              */
             rationale: string;
         };
+        ProviderCapabilitiesResponseDto: {
+            /**
+             * @example openrouter
+             * @enum {string}
+             */
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            capabilities: components["schemas"]["LLMProviderCapabilitiesResponseDto"];
+        };
         ProvisionedRepositoryResponseDto: {
             /** @example 01JC4Z0000REPOSITORIO000001 */
             id: string;
@@ -8093,6 +8148,12 @@ export interface components {
              * @enum {string}
              */
             origin: "workspace" | "project" | "area" | "agent" | "session";
+            /**
+             * @description The routing preference OF THE BINDING THAT WON the cascade (ADR 0166). It never cascades on its own: a skipped level takes its preference with it, and no level inherits only the preference of another.
+             * @example null
+             * @enum {string|null}
+             */
+            routingPreference: "price" | "throughput" | "latency" | null;
             /** @description More specific scopes the cascade discarded before reaching `origin`. Empty on the normal path. */
             skipped: components["schemas"]["SkippedBindingResponseDto"][];
         };
@@ -8534,6 +8595,12 @@ export interface components {
              * @example 9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b
              */
             modelId: string;
+            /**
+             * @description How a HUB picks the upstream that serves the model (ADR 0166, RN-583). ABSENT keeps the stored value when the new model's provider accepts it, and clears it otherwise; `null` clears it; a value for a model whose provider does not declare the `routingPreference` capability (`GET /llm/provider-capabilities`) is refused with 422. It travels WITH this binding: it never cascades on its own.
+             * @example throughput
+             * @enum {string|null}
+             */
+            routingPreference?: "price" | "throughput" | "latency" | null;
         };
         SetModelsActiveDto: {
             /**
@@ -11646,6 +11713,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthStatusResponseDto"];
                 };
+            };
+        };
+    };
+    ProviderCapabilitiesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCapabilitiesResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

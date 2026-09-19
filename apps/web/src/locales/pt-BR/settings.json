@@ -491,5 +491,21 @@
       "errorTitle": "Erro",
       "errorMessage": "Não foi possível reverter"
     }
+  },
+  "roteamento": {
+    "label": "Roteamento",
+    "ariaLabel": "Preferência de roteamento de {{alvo}}",
+    "options": {
+      "hub": "o hub decide",
+      "price": "menor preço",
+      "throughput": "maior vazão",
+      "latency": "menor latência"
+    },
+    "notSupported": "Sem preferência de roteamento: o provider {{provider}} não declara essa capacidade — ela só é declarada depois de provada contra a API real.",
+    "inherited": "Roteamento: {{valor}} — vem com o modelo do nível {{nivel}}.",
+    "inheritedHint": "Para defini-lo aqui, escolha um modelo próprio para esta linha.",
+    "toast": {
+      "saveError": "Não foi possível salvar a preferência de roteamento"
+    }
   }
 }
