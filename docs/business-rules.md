@@ -11735,6 +11735,19 @@ ele roda no HOST (`criarPastaDoProjeto`), não no container.
   `RN-558`: a recusa que vira mensagem nomeada com origem `politica`, e a falha
   REAL do fetch que mantém a mensagem de sempre com origem `codigo` — o par
   negativo que prova que a cláusula nova não sequestrou a antiga);
+  `apps/engine/test/engine_web/channels/credencial_no_runner_test.exs` (AT-111,
+  a CORRENTE inteira pelo `TerminalChannel` real: o `env` chega ao canal só no
+  `fetch`, a resposta do runner é a fixture
+  `apps/runner/fixtures/exec-result-recusa-de-credencial.json` — que o spec do
+  runner compara byte a byte com a saída real de `tratarExec` —, `RunnerGit`
+  devolve a mensagem nomeada, e o `DevAgentServer` grava `dev.blocked` com origem
+  `politica`; mais o ramo sem container ativo, em que o `fetch` responde 0, e a
+  falha real, que segue `codigo`. NÃO prova a ponte entre linguagens por
+  execução: nenhum processo `node` sobe no ExUnit, e o par que a fecha é a
+  fixture comum. Verificado por mutação: cortar o `env` no canal, no
+  `RunnerGit`, o reconhecimento da recusa, o `desfecho/1` ou o uso dele no dev
+  agent reprova o teste; desligar a recusa em `tratarExec` reprova o spec do
+  runner);
   `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
   lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
   o teste do engine com a mensagem antiga à vista

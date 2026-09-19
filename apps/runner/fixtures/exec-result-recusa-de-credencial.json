@@ -1,0 +1,5 @@
+{
+  "exitCode": -1,
+  "output": "[runner recusou o comando: credencial-nao-atravessa-o-container] o comando veio com credencial (2 variável(is) de ambiente, ADR 0056), mas este runner tem um container ativo e roteia todo comando para dentro dele por `docker exec`, que NÃO tem campo de `env` (ADR 0130: sem `-e` livre, de propósito). Executar assim descartaria a credencial em silêncio e a falha apareceria como erro de autenticação do git. NADA foi executado. Enquanto a metade que falta não existir, um repositório remoto autenticado em modo `runner` não pode ser clonado com o container de pé.",
+  "timedOut": false
+}
