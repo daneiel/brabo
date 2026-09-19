@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "bc4ee0c46f9d71fb319000d0c11998c48908d6de701945894317dc1ac18a1341",
+  "openapiSha256": "9ef03ef953ab4ae88110ed9f1c0d3a55e24dfe26d4d12118b344b0062819ff8e",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -479,10 +479,10 @@
     "internal-sessions-controller-instruction-patch.RequestSchema.json": "78de0dab2da5b07c63a6d6b8c3e4e84ed5a11af90d0cdfac3b262b92be5d1989",
     "internal-sessions-controller-instruction-patch.StatusCodes.json": "584c71e288adea08f47e5e07d0cf618cd6dde67d51a223d145777386a51c6e6e",
     "internal-sessions-controller-instruction-patch.api.mdx": "abbed73effd0d6612e82426c18b8432b1703658f5dc0c12b2c164447fa80363e",
-    "internal-sessions-controller-list-events.ParamsDetails.json": "c1bbb92439c897284eccdcfcb30b6ffdf5ac3e7ca1436de821c187cc1602235d",
+    "internal-sessions-controller-list-events.ParamsDetails.json": "3410366e25ba09a8f7392dfab7b8d80d24b9c7b1cf8f5852de6488fc614b2c47",
     "internal-sessions-controller-list-events.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "internal-sessions-controller-list-events.StatusCodes.json": "255fa09c973f4a6da88cdfcac583b9c42ff2080a3001c9b108cdcb5576f29e70",
-    "internal-sessions-controller-list-events.api.mdx": "35f11b841491437a54067eed40cddcb416cb1a0f7d8dbba7d69140e63182215a",
+    "internal-sessions-controller-list-events.api.mdx": "9a47ed1537d2bc0941b5a856da1c7da50853d15b858bf35db7f4cbe21889e8f7",
     "internal-sessions-controller-llm-turn-stream.ParamsDetails.json": "79c9c0d586794de1f5e38a4eed459e9ada1748283f464e89e5030d0cfbc4ec59",
     "internal-sessions-controller-llm-turn-stream.RequestSchema.json": "f935c16bdf54f84099d9b801a644ff3a064367d4163fefa3306015d32b1f4a77",
     "internal-sessions-controller-llm-turn-stream.StatusCodes.json": "b33b1de81e501c274ae54e830ed5c20c43201ba80fef82c26bd7f856d812214a",

@@ -73,7 +73,7 @@ failure mode in production.
 
 ## Installation compose (`docker-compose.install.yml`)
 
-The compose that runs on an **installed** machine takes the four product
+The compose that runs on an **installed** machine takes the five product
 images from **mandatory variables**, with no default — `install.sh` writes them
 into `.env`:
 
@@ -82,6 +82,8 @@ into `.env`:
 | `BRABO_API_IMAGE` | full reference of the api image; `ghcr.io/…@sha256:…` when the source is GHCR, `brabo-api:prod` when built locally |
 | `BRABO_ENGINE_IMAGE` | same, for the engine |
 | `BRABO_WEB_IMAGE` | same, for the web |
+| `BRABO_BACKUP_IMAGE` | same, for the backup job (under the `backup` profile) |
+| `BRABO_BROKER_IMAGE` | same, for the container broker ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). Written **whether or not** the broker is turned on: Compose interpolates the whole file before filtering by profile, so a `${VAR:?…}` on a disabled service still refuses the file (measured) |
 
 They are `${VAR:?…}` on purpose. With a default, a missing variable would bring
 half the stack up on an image nobody picked, and the mistake would show up as
@@ -90,6 +92,22 @@ strange behaviour instead of a refusal.
 These are **not** in the generated inventory below: the generator scans
 `apps/`, and these are read by Compose, not by product code
 ([RN-527](../business-rules.md#rn-527)).
+
+The **broker** is in this compose since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
+**off**, under the `container-broker` profile, and `install.sh` turns it on
+only when asked and answered "s" ([RN-575](../business-rules.md#rn-575)). Then
+it writes four lines, together or not at all:
+
+| variable | what `install.sh` writes |
+|---|---|
+| `COMPOSE_PROFILES` | `container-broker` — read by Compose from the `--env-file`, so `up -d --wait` brings the broker up with no flag |
+| `BROKER_URL` | `http://broker:8090` — the api's side; without it the api never calls the broker |
+| `DOCKER_GID` | the socket's gid **as seen from inside a container**, measured with the broker image itself; failing to measure is a named refusal, never the `999` default |
+| `PROJECT_WORKSPACES_HOST_ROOT` | `<DockerRootDir>/volumes/brabo_project_workspaces/_data`, computed before startup and checked against the volume's real `Mountpoint` after it |
+
+`BRABO_PROJECTS_HOST_BASE` is not written: the compose derives it from
+`BRABO_PROJECTS_BASE`, as in the validation compose. Turning it on or off later
+is in the [runbook](../runbook.md#broker-na-instalacao).
 
 
 ## api
