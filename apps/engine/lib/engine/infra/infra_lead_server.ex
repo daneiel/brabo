@@ -774,7 +774,8 @@ defmodule Engine.Infra.InfraLeadServer do
       payload: payload
     })
 
-    Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, @agent, payload)
+    # O `event.appended` sai da fachada, com a escrita confirmada (RN-579).
+    :ok
   end
 
   # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do

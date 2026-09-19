@@ -1,22 +1,31 @@
 defmodule Engine.Sessions.LiveBroadcast do
   @moduledoc """
   Broadcast no canal Phoenix da sessão pra todo evento recém-persistido no
-  event log (Fase 4a — painel do time ao vivo). Chamado ao lado de
-  `EngineApiClient.append_event` nos GenServers de execução/gates
-  (Dev/QA/SecOps/Infra), que hoje só ESCREVEM eventos (a web deriva status
-  via polling) — sem outbox-relay novo, é o caminho mínimo pra "tudo pelos
-  canais Phoenix". Os agentes conversacionais (Criativo/PO/Arquiteto) já
+  event log (Fase 4a — painel do time ao vivo). Desde a AT-093 (RN-579) quem
+  chama `event_appended/3` é a fachada `EngineApiClient`, depois de a api
+  CONFIRMAR a escrita — `append_event`, `append_event_returning` e as quatro
+  escritas que a api registra como evento (`propose_action`,
+  `create_handoff`, `create_epic/story/task`). Antes eram chamadas à mão ao
+  lado de alguns appends, e o resto escrevia calado; a web só descobria pelo
+  poll de 3s. Sem outbox-relay novo: as escritas que a api faz por conta
+  própria (a decisão de um humano noutra aba, por exemplo) seguem sem aviso,
+  e é para elas que o poll de fallback da web existe. Os agentes
+  conversacionais (Criativo/PO/Arquiteto) já
   broadcastam `agent.delta`/`agent.done` pelo seu próprio `broadcast/3`
   local; ganham `agent.status` nos limites de turno à parte.
   """
 
   alias Engine.Sessions.EngineApiClient
 
-  def event_appended(session_id, type, actor_id, payload) do
+  # AT-093 (RN-579): chamado SÓ pela fachada `EngineApiClient`, depois de a api
+  # confirmar a escrita — antes eram três chamadores à mão (`ArtifactEmitter`
+  # e o Infra Lead) e o resto das escritas não avisava ninguém. Sem `payload`:
+  # a web usa o aviso só como gatilho de refetch (o conteúdo vem do GET), e
+  # o cru de um `tool.result` não tem por que atravessar o socket.
+  def event_appended(session_id, type, actor_id) do
     EngineWeb.Endpoint.broadcast("session:" <> session_id, "event.appended", %{
       type: type,
-      actorId: actor_id,
-      payload: payload
+      actorId: actor_id || ""
     })
   end
 
