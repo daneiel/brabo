@@ -3,7 +3,9 @@ import type { RunnerDeviceKeyListItem } from './api-types';
 import {
   maquinaJaPareada,
   podeLerChavesDeDispositivo,
+  projetoJaPareado,
   reconhecerAgenteDeMaquina,
+  reconhecerChaveDeProjeto,
 } from './agente-de-maquina';
 
 /**
@@ -154,5 +156,51 @@ describe('reconhecerAgenteDeMaquina — os estados não colapsam (RN-088/RN-470)
       nomes: ['laptop'],
       ultimoUso: '2026-09-09T09:00:00.000Z',
     });
+  });
+});
+
+describe('reconhecerChaveDeProjeto (AT-107)', () => {
+  const deProjeto = (parcial: Partial<RunnerDeviceKeyListItem> = {}) =>
+    chave({ especie: 'projeto', projectId: 'proj-1', name: 'kit', ...parcial });
+
+  it('chave de projeto ativa deste projeto: pareada, com o uso mais recente', () => {
+    const r = reconhecerChaveDeProjeto({
+      projectId: 'proj-1',
+      chaves: [
+        deProjeto({ id: 'a', lastUsedAt: '2026-09-01T12:00:00.000Z' }),
+        deProjeto({ id: 'b', name: 'outro', lastUsedAt: '2026-09-10T08:00:00.000Z' }),
+      ],
+    });
+    expect(r).toEqual({
+      estado: 'pareada',
+      nomes: ['kit', 'outro'],
+      ultimoUso: '2026-09-10T08:00:00.000Z',
+    });
+    expect(projetoJaPareado(r)).toBe(true);
+  });
+
+  it('ativa e nunca usada: a órfã, ainda pareada', () => {
+    const r = reconhecerChaveDeProjeto({ projectId: 'proj-1', chaves: [deProjeto()] });
+    expect(r).toEqual({ estado: 'pareadaNuncaUsada', nomes: ['kit'] });
+    expect(projetoJaPareado(r)).toBe(true);
+  });
+
+  it('revogada não é pareamento', () => {
+    const r = reconhecerChaveDeProjeto({
+      projectId: 'proj-1',
+      chaves: [deProjeto({ revokedAt: '2026-09-11T00:00:00.000Z' })],
+    });
+    expect(r).toEqual({ estado: 'revogada', nomes: ['kit'] });
+    expect(projetoJaPareado(r)).toBe(false);
+  });
+
+  it('chave de OUTRO projeto, de máquina, ou sem dado: nenhuma', () => {
+    const nenhuma = { estado: 'nenhuma' };
+    expect(
+      reconhecerChaveDeProjeto({ projectId: 'proj-1', chaves: [deProjeto({ projectId: 'proj-2' })] }),
+    ).toEqual(nenhuma);
+    expect(reconhecerChaveDeProjeto({ projectId: 'proj-1', chaves: [chave()] })).toEqual(nenhuma);
+    expect(reconhecerChaveDeProjeto({ projectId: 'proj-1', chaves: undefined })).toEqual(nenhuma);
+    expect(reconhecerChaveDeProjeto({ projectId: null, chaves: [deProjeto()] })).toEqual(nenhuma);
   });
 });

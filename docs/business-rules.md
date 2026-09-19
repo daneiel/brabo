@@ -12296,7 +12296,13 @@ diferença não é escolha de desenho: é a forma do endpoint.
   `brabo-runner service status --project <id>`, a forma que existe HOJE; a
   forma por máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa
   NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
-  à parte. E o web continua sem TELA onde listar ou revogar chave de
+  à parte — **FECHADO depois (AT-107)**: o painel reconhece chave de PROJETO
+  ativa DESTE projeto (`reconhecerChaveDeProjeto`, `lib/agente-de-maquina.ts`,
+  mesma listagem e mesma `queryKey`, nenhuma rota nova), com o mesmo
+  vocabulário — tom `accent`, chave registrada não é agente de pé, o gatilho é
+  conferir o serviço — e o custo da ESPÉCIE dito: revogar derruba o agente
+  NESTE projeto, não em todos. Chave de outro projeto e revogada não contam, e
+  o `<details>` do ADR 0118 continua alcançável. E o web continua sem TELA onde listar ou revogar chave de
   dispositivo (a metade aberta da [RN-519](#rn-519)) — esta entrega consome a
   listagem e não a constrói. **FECHADA depois pela [RN-561](#rn-561)**, que a
   constrói: a seção de Configurações reusa `podeLerChavesDeDispositivo` daqui
