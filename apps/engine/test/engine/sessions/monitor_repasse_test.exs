@@ -92,4 +92,25 @@ defmodule Engine.Sessions.MonitorRepasseTest do
 
     refute Repo.get(SessionState, ctx.session_id)
   end
+
+  # A linha que sustenta a correção é a chamada em `Shutdown.release/1`: sem
+  # este teste, trocá-la de volta por `expect_stop/1` deixava os outros verdes
+  # e a órfã voltava. Sem par (Node.list() vazio) o repasse não regrava nada,
+  # então a linha só sobrevive ao :DOWN se o Monitor foi avisado do REPASSE.
+  test "Shutdown.release marca o repasse: a linha sobrevive ao :DOWN do stop", ctx do
+    {:ok, pid} = SessionSupervisor.start_session(ctx.session_id, ctx.project_id)
+    assert Repo.get(SessionState, ctx.session_id)
+
+    Engine.Shutdown.release(%{session_id: ctx.session_id, project_id: ctx.project_id})
+
+    refute Process.alive?(pid)
+    # O :DOWN já está na fila do Monitor (o stop só volta com o processo
+    # morto); `get_state` entra depois dele.
+    _ = :sys.get_state(Monitor)
+
+    assert Repo.get(SessionState, ctx.session_id),
+           "release/1 não marcou o repasse: o Monitor apagou a linha no :DOWN (AT-078)"
+
+    refute_receive {:termination_reported, _, _, _, _}, 100
+  end
 end

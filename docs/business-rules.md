@@ -13494,10 +13494,17 @@ tabela `delegations` que o resumo lê e os eventos `delegation.*` que a janela
 lê nascem juntos em `RecordDelegationUseCase` (uma linha, um evento, os três
 desfechos), então os dois conjuntos descrevem a mesma coisa.
 
-**O que esta regra NÃO fecha:** `executionActivated`, na aba Executores,
-continua lido do resumo SEM a guarda de sessão do item 3 — com uma sessão mais
-nova que a de execução, o resumo diz `false` e os dev agents somem da aba.
-Declarado no comentário da tela, não corrigido aqui.
+**`executionActivated` (AT-130).** É o terceiro fato do mesmo molde: a aba
+Executores o lia do resumo SEM a guarda do item 3, então com uma sessão mais
+nova que a de execução o resumo (dela) dizia `false` e os dev agents sumiam —
+ou `true`, e apareciam sem prova. Agora ele vai em `agregado.executionActivated`
+só quando `latestSessionId === sessionId`, e `deriveAgentRoster` o SOMA (OU
+lógico, monótono) à janela e ao parâmetro, que também passa a olhar
+`execution.activated` nos eventos. Sem campo novo na API. Testes:
+`ProjectExecutorsTab.test.tsx` (resumo de OUTRA sessão, nos dois sentidos).
+**Segue aberto:** com a sessão de execução longa E o resumo de outra sessão, o
+evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
+da guarda, o mesmo dos outros dois fatos.
 
 - **Código:** `apps/web/src/lib/agent-status.ts:285` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
@@ -14706,9 +14713,11 @@ próxima falha do k3d, se houver, traz a linha do Monitor.
 
 - **Código:** `apps/engine/lib/engine/sessions/monitor.ex:45`
   (`expect_handoff/1`), `:119` (`apagar_linha/1`);
-  `apps/engine/lib/engine/shutdown.ex:136` (o drain marca o repasse)
+  `apps/engine/lib/engine/shutdown.ex:139` (`release/1`, o drain marca o repasse)
 - **Teste:** `apps/engine/test/engine/sessions/monitor_repasse_test.exs:52`
   (Monitor suspenso: o `:DOWN` tardio não apaga a linha regravada pelo par),
   `:67` (cadeia antigo → antigo → novo: o segundo drain ainda vê a sessão),
-  `:87` (sem adoção a linha continua saindo pelo drain)
+  `:87` (sem adoção a linha continua saindo pelo drain), `:100`
+  (`Shutdown.release/1` marca o repasse — trocar a chamada de volta por
+  `expect_stop/1` reprova SÓ este teste)
 - **Origem:** AT-078 — sessão órfã intermitente do rollout do engine

@@ -15,6 +15,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   linha de log com sessão e nó. Provado por teste determinístico do
   entrelaçamento, não pelo k3d ([RN-588](docs/business-rules.md#rn-588)).
 
+- **web**: a aba Executores **deixa de perder (ou forjar) os dev agents quando
+  existe uma sessão mais nova** (AT-130). `executionActivated` era lido do
+  resumo sem a guarda de sessão da RN-568; agora passa por ela e soma à janela
+  ([RN-568](docs/business-rules.md#rn-568)).
 - **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
   quando era para outro agente** (AT-098). A última cláusula da rota interna
   de mensagem não olhava o agente, então o que fosse escrito para o `infra` —

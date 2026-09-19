@@ -88,7 +88,6 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const { data: workspace } = useCurrentWorkspace();
   const summaryQuery = useProjectsSummary(workspace?.id);
   const projectSummary = summaryQuery.data?.find((s) => s.projectId === projectId);
-  const executionActivated = projectSummary?.roster.executionActivated ?? false;
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
@@ -103,11 +102,12 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   // RECENTE do projeto, e esta aba lê a sessão de EXECUÇÃO vigente (RN-139).
   // Uma ideação aberta depois faz as duas divergirem, e aí o agregado é de
   // OUTRA sessão — a janela volta a decidir sozinha, como antes.
-  // `executionActivated`, logo acima, é lido do resumo SEM essa guarda: o
-  // mesmo descasamento o afeta, e segue declarado, não corrigido aqui.
+  // AT-130: `executionActivated` passa pela MESMA guarda — antes era lido do
+  // resumo sem ela, e o resumo de outra sessão apagava (ou forjava) os dev agents.
   const agregado =
     projectSummary && projectSummary.latestSessionId === sessionId
       ? {
+          executionActivated: projectSummary.roster.executionActivated,
           gatesEverOpened: projectSummary.roster.gatesEverOpened,
           delegatedSubagents: projectSummary.roster.delegatedSubagents,
         }
@@ -115,7 +115,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
-    executionActivated,
+    false,
     handoffs,
     pendingActionAgentIds,
     agregado,

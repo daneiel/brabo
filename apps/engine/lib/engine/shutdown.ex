@@ -124,7 +124,10 @@ defmodule Engine.Shutdown do
   end
 
   # Emite o evento e solta o nome global, para que outro nó possa assumir.
-  defp release(state) do
+  # Público só para o teste do repasse (`monitor_repasse_test.exs`, AT-078):
+  # sem par no cluster ele é exercitável de ponta a ponta.
+  @doc false
+  def release(state) do
     emit_draining_event(state)
 
     if pid = SessionServer.whereis(state.session_id) do
