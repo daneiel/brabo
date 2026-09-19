@@ -385,13 +385,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   lista por projeto da sidebar (`LinhaDeAba`, RN-196). Pré-existente (a
   régua horizontal duplicava a mesma lista), só ficou visualmente paralela;
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
-- A presença de QA/SecOps e dos membros de área (`gatesEverOpened`,
-  `delegatedSubagents`) deixou de sofrer da janela de 200 eventos (RN-568): as
-  duas telas passam o agregado do resumo como `agregado`, que SOMA à janela e
-  só vale com o resumo da MESMA sessão. O que sobra: `executionActivated` na aba
-  Executores continua lido do resumo SEM essa guarda de sessão — com uma sessão
-  mais nova que a de execução, os dev agents somem da aba. Declarado, não
-  corrigido
+- A presença de QA/SecOps, dos membros de área e dos dev agents
+  (`gatesEverOpened`, `delegatedSubagents`, `executionActivated`) deixou de
+  sofrer da janela de 200 eventos (RN-568): as duas telas passam o agregado do
+  resumo como `agregado`, que SOMA à janela e só vale com o resumo da MESMA
+  sessão. Desde o AT-130 o `executionActivated` da aba Executores passa pela
+  mesma guarda (antes um resumo de sessão mais nova apagava os dev agents), e
+  `deriveAgentRoster` também o lê da janela — a lacuna fechou
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111). O órfão CONTINUA; o que mudou na
   RN-560 é que a tela parou de dizer o contrário: o aviso afirmava *"isto
