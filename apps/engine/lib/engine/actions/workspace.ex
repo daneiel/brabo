@@ -124,13 +124,34 @@ defmodule Engine.Actions.Workspace do
             marcar_pronto!(dir)
 
           true ->
-            init_from_bare!(dir, bare_repo_path, default_branch, remoto)
+            inicializar_ou_desfazer!(dir, bare_repo_path, default_branch, remoto)
             marcar_pronto!(dir)
         end
       end)
 
       dir
     end
+  end
+
+  # AT-112 — o `.git` que `init_from_bare!` cria na primeira linha NÃO pode
+  # sobreviver a uma falha: o ramo `git_dir?/1` de `ensure_local!/5` trata
+  # "tem `.git`" como workspace de ANTES da marca (utilizável, não se
+  # re-inicializa) e o marcaria pronto na tentativa seguinte, que então
+  # falharia adiante (`worktree add`), longe da causa. Este ramo só é
+  # alcançado quando NÃO havia `.git` — logo o que existe ali foi criado por
+  # esta tentativa, e desfazê-lo não apaga trabalho de ninguém. Vale para
+  # QUALQUER passo que falhe (fetch, credencial, remote add), e a exceção
+  # original é relançada intacta.
+  defp inicializar_ou_desfazer!(dir, bare_repo_path, default_branch, remoto) do
+    init_from_bare!(dir, bare_repo_path, default_branch, remoto)
+  rescue
+    erro ->
+      File.rm_rf(Path.join(dir, ".git"))
+      reraise erro, __STACKTRACE__
+  catch
+    tipo, valor ->
+      File.rm_rf(Path.join(dir, ".git"))
+      :erlang.raise(tipo, valor, __STACKTRACE__)
   end
 
   @marca ".brabo-workspace-pronto"

@@ -12,6 +12,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   contra intermediários estritos numa conexão reaproveitada. O advisory
   reprovava o job "Auditoria de dependências" (`mix hex.audit`) em todo PR
   desde 19/09; só `mint` mudou no `mix.lock`.
+- **engine**: o workspace cujo **`fetch` inicial falhou deixa de ser marcado
+  pronto na tentativa seguinte** (AT-112). `ensure!` cria o `.git` na primeira
+  linha da inicialização, e o ramo de "workspace de antes da marca" o tomava por
+  um repositório utilizável — a segunda tentativa falhava adiante, no `worktree
+  add`, longe da causa. Agora a inicialização que falha (qualquer passo, nos
+  caminhos local e `runner`) desfaz o `.git` que criou e relança a exceção
+  original, então a tentativa seguinte repete o mesmo erro
+  ([RN-558](docs/business-rules.md#rn-558)).
+
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
   aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três

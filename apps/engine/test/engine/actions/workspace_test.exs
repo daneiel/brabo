@@ -144,6 +144,29 @@ defmodule Engine.Actions.WorkspaceTest do
     assert File.exists?(Path.join(dir1, "README.md"))
   end
 
+  # AT-112 — o `.git` criado pelo `init` não pode sobreviver a um fetch que
+  # falhou: o ramo de "workspace de antes da marca" o marcaria pronto na
+  # tentativa seguinte, que falharia adiante em vez de repetir a causa.
+  test "AT-112: fetch que falha desfaz o init — a 2ª tentativa repete o MESMO erro" do
+    project_id = Ecto.UUID.generate()
+    dir = Workspace.workspace_dir(project_id)
+    inexistente = Path.join(System.tmp_dir!(), unique_tmp_name("brabo-sem-bare") <> ".git")
+
+    erro1 = assert_raise MatchError, fn -> Workspace.ensure!(project_id, inexistente) end
+
+    refute File.exists?(Path.join(dir, ".git")), "o .git do init tem de ser desfeito"
+    refute File.regular?(Path.join(dir, ".brabo-workspace-pronto"))
+
+    erro2 = assert_raise MatchError, fn -> Workspace.ensure!(project_id, inexistente) end
+    assert Exception.message(erro1) == Exception.message(erro2)
+    refute File.regular?(Path.join(dir, ".brabo-workspace-pronto"))
+
+    # E o que ficou não impede o caminho feliz depois.
+    bare = create_bare_repo!(true)
+    assert Workspace.ensure!(project_id, bare) == dir
+    assert File.exists?(Path.join(dir, "README.md"))
+  end
+
   describe "a corrida de dois dev agents (achado da 1ª execução com 2 módulos)" do
     test "um `.git` recém-criado NÃO conta como pronto", %{} do
       # A guarda do caminho rápido era `.git` existir, e `init_from_bare!`

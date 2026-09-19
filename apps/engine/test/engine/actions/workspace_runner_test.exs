@@ -239,6 +239,50 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
     end
   end
 
+  # AT-112 — fake COM ESTADO: sabe se o `.git` existe (o `init` o cria, o
+  # `rm -rf ... .git` o apaga, `test -d .git` o consulta) e o fetch sempre
+  # falha. É o que permite provar a SEGUNDA tentativa, que um fake sem estado
+  # não distingue: `test -d .git` respondia 1 sempre.
+  defp start_fake_runner_com_git_dir_e_fetch_que_falha!(project_id) do
+    start_fake_runner!(project_id, &fake_runner_loop_com_git_dir(&1, false))
+  end
+
+  defp fake_runner_loop_com_git_dir(parent, tem_git_dir?) do
+    receive do
+      {:dispatch_exec, ref, command, _cwd, _env, from, _timeout_ms} ->
+        send(parent, {:comando_recebido, command})
+
+        {exit_code, output, tem_git_dir?} =
+          cond do
+            String.starts_with?(command, "test -d ") ->
+              {if(tem_git_dir?, do: 0, else: 1), "", tem_git_dir?}
+
+            String.starts_with?(command, "test ") ->
+              {1, "", tem_git_dir?}
+
+            String.starts_with?(command, "git init") ->
+              {0, "", true}
+
+            String.contains?(command, "fetch origin") ->
+              {128, "fatal: Authentication failed", tem_git_dir?}
+
+            String.starts_with?(command, "rm -rf ") and String.contains?(command, ".git") ->
+              {0, "", false}
+
+            true ->
+              {0, "", tem_git_dir?}
+          end
+
+        send(
+          from,
+          {:runner_exec_result, ref,
+           %{"exitCode" => exit_code, "output" => output, "timedOut" => false}}
+        )
+
+        fake_runner_loop_com_git_dir(parent, tem_git_dir?)
+    end
+  end
+
   test "runner sem workspace verificado: recusa nomeada, sem tentar I/O nenhum" do
     id = Ecto.UUID.generate()
     pasta = caminho_impossivel()
@@ -411,6 +455,32 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
     assert mensagem =~ "Authentication failed"
     refute CredencialDeGit.recusada?(mensagem)
     assert {_motivo, "codigo"} = CredencialDeGit.desfecho(mensagem)
+  end
+
+  test "AT-112: fetch que falha desfaz o init — a 2ª tentativa repete o erro do fetch, não marca pronto" do
+    id = Ecto.UUID.generate()
+    pasta = caminho_impossivel()
+
+    insert_project!(id, %{
+      execution_mode: "runner",
+      workspace_dir_name: "exp-at112-001",
+      workspace_path: pasta,
+      verified: true
+    })
+
+    insert_container_lifecycle!(id, "'running'")
+    start_fake_runner_com_git_dir_e_fetch_que_falha!(id)
+
+    assert {:error, m1} = Workspace.ensure_remoto(id, remoto_com_token())
+    assert m1 =~ "Authentication failed"
+
+    assert {:error, m2} = Workspace.ensure_remoto(id, remoto_com_token())
+    assert m2 =~ "Authentication failed"
+
+    comandos = coletar_comandos()
+    assert Enum.count(comandos, &String.contains?(&1, "rm -rf")) == 2
+    refute Enum.any?(comandos, &String.starts_with?(&1, "touch "))
+    refute Enum.any?(comandos, &String.contains?(&1, "worktree add"))
   end
 
   test "projeto no modo de sempre: mensagem original passa intacta, sem menção a runner nem RN-507" do
