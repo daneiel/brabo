@@ -999,6 +999,16 @@ reason in the URL.
   inactivity heartbeat, [RN-073](business-rules/custo.md#rn-073)) confirms
   there's no handoff, action, or turn hanging there. It never closes the
   execution session the call itself just activated.
+- **`POST /projects/:projectId/execution/activate` refuses with `409` when
+  the project has no repository, and the classification didn't change**
+  — still `role:maintainer` ([RN-582](business-rules.md#rn-582),
+  [ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)). The
+  refusal comes before any side effect. Its message is chosen from the
+  project's handoffs, read across ALL its sessions — so it can say "accept
+  the handoff to the Architect/Dev Lead". What it reveals is only that such a
+  handoff exists and its status, which any `viewer` of the project already reads
+  through `GET .../sessions/:sessionId/handoffs`; it never names a session or
+  a user.
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT

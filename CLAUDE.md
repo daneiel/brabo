@@ -152,6 +152,7 @@ estado lido do repositório e não da conversa.
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| O repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (AT-092) | ADR 0165, RN-582 |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
@@ -1189,6 +1190,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ele que `findActiveExecutionSession` procura. `execution.activated` em
   sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
   Não faça a derivação por evento olhar `kind`
+- O repositório de projeto CRIADO nasce no aceite do handoff ao ARQUITETO
+  (RN-582, ADR 0165), dentro de `AcceptHandoffUseCase`, ANTES de
+  `activateAgent` — criar projeto não provisiona (RN-541). O aceite ao Dev Lead
+  repete a chamada como SEGUNDA PORTA idempotente (a saída do projeto que
+  passou pelo Arquiteto sem repositório); não a remova. E
+  `execution/activate` sem repositório é 409 antes de qualquer efeito —
+  RECUSA, nunca provisiona: provisionar ali esconderia um efeito de git na
+  ativação e deixaria Arquiteto e Infra, que trabalham antes dela, sem onde
+  escrever
 - O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
   para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
   como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
