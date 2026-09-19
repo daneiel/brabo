@@ -10556,6 +10556,11 @@ terminar em silêncio.
 
 ### RN-527 — A instalação sobe de um compose PRÓPRIO, por imagem escolhida, e confere a saúde antes de dizer que instalou {#rn-527}
 
+> **Revisada pela [RN-575](#rn-575) (ADR 0162):** o serviço `broker` passou a
+> existir neste compose, desligado sob o profile `container-broker` e ligado
+> pelo instalador só com consentimento; as imagens obrigatórias são CINCO. O
+> resto desta regra vale como está.
+
 `docker/docker-compose.install.yml` é o que roda na máquina de quem instalou, e
 ele **não é** o `docker-compose.prod.yml`. Três diferenças, cada uma com um
 motivo:
@@ -12614,15 +12619,18 @@ de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
 TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
 existia, antes de qualquer escrita.
 
-- **Código:** `install.sh:966` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:769` (`perguntar_e_criar_a_conta`, o consentimento, o laço e o
-  teto), `:866` (`parear_esta_maquina`, o `id` virando `--id`), `:942`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:682`
-  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600), `:704`
-  e `:727` (os vereditos das duas rotas), `:747` (`ler_sem_eco`), `:661`
-  (`nome_da_maquina`), `:929` (`avisar_chave_parcial`), `:640`/`:647`
-  (`escapar_json`/`sem_controle`), `:79` (`MARCADOR_SCHEMA=3`), `:1280` (a
-  chamada, depois do runner e antes do marcador), `:1291` (o `ownerEmail`)
+- **Código:** `install.sh:1463` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1262` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1362` (`parear_esta_maquina`, o `id` virando `--id`), `:1439`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1165`
+  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
+  `:1205` (`criar_primeira_conta`) e `:1225` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1240` (`ler_sem_eco`), `:1144`
+  (`nome_da_maquina`), `:1426` (`avisar_chave_parcial`), `:1123`/`:1130`
+  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1781` (a
+  chamada, depois do runner e antes do marcador), `:1792` (o `ownerEmail`).
+  Números relidos pelo símbolo em 18/09 (AT-096); os de `:966`/`:682` já não
+  batiam em 17/09
 - **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
   rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
   de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o
@@ -13266,19 +13274,19 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 `maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:299` (o
-  dispatch de `container_start` consultando antes de propor), `:401`
-  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:417` (a
-  cláusula de `container_start`: lista de permitidos), `:420` (a recusa
-  nomeando `container_start_via_runner`), `:435` (a cláusula da irmã, com a
-  segunda pergunta — runner conectado), `:342` (o `emit` do `tool.call`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:351` (o
+  dispatch de `container_start` consultando antes de propor), `:453`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:469` (a
+  cláusula de `container_start`: lista de permitidos), `:472` (a recusa
+  nomeando `container_start_via_runner`), `:487` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:394` (o `emit` do `tool.call`
   movido para antes da recusa);
   `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
   (moduledoc — a tool deixou de propor às cegas)
-- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:397`
-  (caminho feliz em `mounted` — o broker atende os dois), `:423` (caso de
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:422`
+  (caminho feliz em `mounted` — o broker atende os dois), `:448` (caso de
   falha: `runner` recusa NOMEADO, `propose_action` nunca chamada, o `tool.call`
-  narrado mesmo assim), `:464` (projeto inexistente), `:355` (o caminho feliz
+  narrado mesmo assim), `:538` (projeto inexistente), `:380` (o caminho feliz
   de `container`, que passou a exigir a linha no banco)
 - **ADR:** [0144](adr/0144-a-segunda-raiz-do-broker.md),
   [0145](adr/0145-docker-pre-requisito-do-runner.md)
@@ -13807,6 +13815,264 @@ instalação sem broker continua possível pelo agente.
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
+---
+
+## O broker de container na instalação, com consentimento (RN-575)
+
+### RN-575 — O instalador só liga o broker de container com um "s" digitado, mede o grupo do socket de dentro de um container, e grava as quatro linhas juntas ou nenhuma {#rn-575}
+
+Numa instalação por Release, projeto `container` ou `mounted` nunca executava:
+quem sobe o container desses dois modos é o broker ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)),
+e a instalação não tinha o serviço porque a imagem não era publicada (ADR 0150,
+decisão 7). O [ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)
+publica a imagem como a quinta e põe o serviço no compose de instalação,
+DESLIGADO; esta regra é o que decide quando ele liga, porque ligar entrega o
+socket do Docker da máquina a um serviço da instalação.
+
+**A regra:**
+
+1. **Só um "s"/"sim" digitado liga.** A pergunta vem depois da base (a segunda
+   raiz do broker deriva dela) e antes do `.env`, e DIZ em texto o que concede —
+   o socket do Docker desta máquina, e que quem comanda o broker comanda o
+   Docker — e o que o contém. Enter, qualquer outra resposta e a falta de
+   terminal deixam desligado, e a falta de terminal é DITA, nunca decidida em
+   silêncio. Enquanto a resposta não é sim, o Docker não é tocado.
+2. **O grupo do socket é MEDIDO, de dentro de um container**, com a própria
+   imagem do broker, sem rede, rootfs read-only e o socket montado por
+   `--mount type=bind` — que recusa uma origem inexistente em vez de criar uma
+   pasta no host, como `-v` faria. É o gid visto de dentro que o `group_add`
+   precisa (no Docker Desktop o do host não diz nada). Medição que falha, caminho
+   que não é socket ou gid que não é número são RECUSA nomeada, que ensina a
+   rodar de novo respondendo não — nunca o `999` do default do compose.
+3. **As quatro linhas vão juntas ou nenhuma vai:** `COMPOSE_PROFILES=container-broker`,
+   `BROKER_URL=http://broker:8090`, `DOCKER_GID` e `PROJECT_WORKSPACES_HOST_ROOT`.
+   Profile sem URL sobe um broker que ninguém chama; URL sem profile aponta a
+   api para um serviço que não sobe. `escrever_env` recusa gravar o bloco sem o
+   gid medido — defeito do script, não da máquina. `BRABO_BROKER_IMAGE` é
+   gravada SEMPRE, ligado ou não: o Compose interpola o arquivo inteiro antes de
+   filtrar por profile.
+4. **A raiz da pasta gerenciada é CALCULADA e depois CONFERIDA.** Antes da
+   subida, `<DockerRootDir>/volumes/brabo_project_workspaces/_data`; depois,
+   comparada com o `Mountpoint` do volume. Divergir, ou a api não alcançar o
+   broker pela rede interna, vira PENDÊNCIA nomeada no fim — nunca recusa, que
+   derrubaria uma instalação de pé por um passo que se conserta editando o
+   `.env`.
+5. **A decisão aparece no resumo final**, nos dois sentidos, e a frase do que
+   o instalador NÃO faz deixa de dizer que só a Pasta montada fica sem
+   container: `container` também fica.
+
+**O que esta regra NÃO fecha:** o `DOCKER_GID` e a raiz calculada não foram
+medidos no Docker Desktop do macOS, e o E2E da tag roda a metade interativa só
+no Linux. Docker rootless ou remoto não tem o socket em `/var/run/docker.sock`,
+que é o caminho que o compose monta, e cai na recusa do item 2 — ligar o broker
+ali não é oferecido por outro caminho.
+
+- **Código:** `install.sh:931` (`consentir_broker`), `:883`
+  (`medir_gid_do_socket`), `:918` (`calcular_raiz_gerenciada`), `:987`
+  (`conferir_o_broker`), `:731` (`escrever_env_do_broker`), `:784` (o broker no
+  manifesto), `:1741` (a ordem: depois da base, antes do `.env`);
+  `docker/docker-compose.install.yml` (o serviço `broker` e a rede `broker`)
+- **Teste:** `scripts/dev/install-broker.spec.ts:158` (sem terminal: desligado,
+  dito, Docker intocado — caso de falha), `:169` (Enter), `:179` (`n`), `:187`
+  (`s` liga, com `--mount` e sem rede), `:208`/`:221`/`:229` (as três recusas),
+  `:237` (a raiz como pendência), `:248` (a frase final);
+  `scripts/dev/install-env.spec.ts:250`/`:259` (as quatro linhas juntas ou
+  nenhuma), `:270` (a guarda do gid), `:291`/`:307` (o `.env` contra o parser do
+  Compose: o broker sobe sem flag, com o token, as duas raízes e o gid, e a api
+  aponta para ele — ou nada disso); `scripts/dev/composes-em-conformidade.spec.ts:114`
+  (as camadas do ADR 0130 no arquivo que viaja)
+- **ADR:** [0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)
+- **Origem:** AT-097 — decidido pelo mantenedor em 2026-09-18
+
+---
+
+### RN-577 — `open_adr_pr` e `open_infra_pr` são recusadas pelo agente, antes de propor, quando o projeto não tem repositório {#rn-577}
+
+Numa instalação real (AT-088, 2026-09-14), um projeto sem repositório —
+`project_repositories`, `project_git_connections` e `repo_bootstraps` vazias —
+recebeu três `open_adr_pr` do Arquiteto e uma `open_infra_pr` do Infra Lead. O
+humano aprovou as quatro, e as quatro terminaram `failed` com *"Projeto sem
+repositório provisionado"* (`ExecuteAdrPrUseCase`, `ExecuteInfraPrUseCase`).
+A pessoa aprovou quatro ações que só podiam falhar.
+
+**Não é borda, é o caso comum.** Desde a [RN-541](#rn-541) criar um projeto
+não cria repositório, e o gatilho do repositório é o aceite do handoff do
+Arquiteto para o Dev Lead ([RN-522](#rn-522)). O Arquiteto trabalha ANTES desse
+handoff — então num projeto novo **todo** `open_adr_pr` falhava por
+construção.
+
+**A regra:** as duas tools perguntam, ANTES de propor, se o projeto tem
+repositório, e sem ele RECUSAM com motivo NOMEADO — o que falta, e quando passa
+a existir. A `proposed_action` não nasce, e a fila de aprovação não recebe o
+que não pode dar certo.
+
+**O molde é o da [RN-566](#rn-566), sem régua nova e sem tocar prompt.** A
+recusa é resultado de ferramenta ([RN-163](business-rules/autenticacao.md#rn-163)),
+entrada do laço — nunca `agent.error`, nunca fim de turno —, e o modelo segue
+o turno lendo o motivo.
+
+**A leitura é LOCAL, e o predicado é o MESMO da execução.** O engine já lia
+`project_repositories` direto do Postgres (`Engine.Projects.ProjectRepository`,
+os consumidores de `default_branch/1` e `remoto_de_trabalho/1`), então não
+houve HTTP no laço do agente a medir nem a justificar: a pergunta nova,
+`recusa_de_pr_sem_repositorio/2`, é a MESMA que
+`ProvisionedRepositoryRepository.findByProjectId` faz nos dois casos de uso —
+existe linha para o projeto. Se os dois divergissem, a tool deixaria passar o
+que a execução recusa, ou recusaria o que ela aceitaria. As duas tools usam a
+MESMA função, com o mesmo texto.
+
+**No Infra Lead a pergunta vem antes do HALT.** `propose_infra_pr` não propõe
+na hora: ela interrompe o turno para `finalize/3` rodar o `WorkflowsAgent` e
+consolidar numa PR só. Recusar depois disso (em `abrir_pr/3`) teria gastado um
+laço de LLM inteiro e registrado duas delegações `completed` para uma PR que
+não pode existir. A recusa acontece na interceptação, e o turno CONTINUA.
+
+**Rastro durável nas duas.** A AT-048 achou que recusa local não deixava rastro
+no event log; a RN-566 resolveu emitindo o `tool.call` antes da recusa, e aqui
+vale o mesmo — no Arquiteto o `dispatch_tool/2` já o emitia; no Infra Lead a
+interceptação de `propose_infra_pr` não emitia nada e passa a emitir, no ramo
+da recusa, com o título e os CAMINHOS (nunca o conteúdo dos arquivos). E o
+PORQUÊ vai junto: um `tool.result` com `ok: false` e `erro` com o motivo — a
+forma que o Criativo já usa —, porque só o `tool.call` diria que a chamada
+existiu, não por que ela não virou proposta. No caminho que propõe nada muda:
+o rastro dele continua sendo a própria `proposed_action`.
+
+**Os casos de uso de execução continuam recusando como antes** — defesa em
+profundidade: a recusa do agente é uma camada ANTES, nunca no lugar.
+
+**O que esta regra NÃO decide:** ONDE o repositório deveria nascer. O texto da
+recusa descreve o gatilho de HOJE (o aceite do handoff ao Dev Lead, RN-522); se
+o gatilho mudar, é a AT-092, com decisão do mantenedor pendente — e o texto
+muda junto. A `open_infra_pr` também é afetada no projeto novo por outro
+caminho (o Infra Lead é acionado pelo handoff do Arquiteto, que pode acontecer
+antes do handoff ao Dev Lead); esta regra só faz a proposta não nascer, não
+reordena os handoffs.
+
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:69`
+  (`recusa_de_pr_sem_repositorio/2` — o predicado e o texto, únicos para as
+  duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:52` (a
+  recusa antes de propor), `:59` (o `tool.result` com o motivo);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
+  `propose_infra_pr` perguntando antes do HALT), `:301`
+  (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
+  `tool.result`)
+- **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
+  (caso de falha: sem repositório, `open_adr_pr` nunca proposta, motivo como
+  resultado de ferramenta, `tool.call` e `tool.result` no event log), `:80`
+  (caminho feliz: com repositório, propõe);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:491` (caso de
+  falha: sem repositório, nem `propose_action` nem delegação do Workflows, o
+  turno segue, rastro durável), `:89` (caminho feliz: com repositório, a PR
+  consolidada é proposta)
+- **Origem:** AT-088 — instalação real em 2026-09-14
+
+### RN-580 — O agente conversacional que sobe sobre uma conversa recebe o FIM dela, com perguntas e ferramentas, e o começo que não coube é resumido com o número escrito {#rn-580}
+
+Os seis agentes conversacionais (Criativo, PO, Arquiteto, Dev Lead, UX
+Designer e Staff) reconstroem o histórico do event log no `init/1` — no
+restart e, também, quando sobem numa sessão que já tem conversa (o PO no
+handoff do Criativo). Medido em 13/09 (AT-073, contra a `b61bc49cd`), os seis
+tinham a MESMA cópia de `rehydrate/2`, com três defeitos:
+
+1. **Liam o começo.** `EngineApiClient.list_events/2` pede `limit=200` sem
+   `latest`, e a rota interna — que nem aceitava `latest` — devolve os
+   PRIMEIROS 200. Numa conversa de 201 eventos o agente acordava sem a
+   mensagem que estava respondendo. A tela já tinha resolvido isso com
+   `latest: true` e aviso de recorte ([RN-180](business-rules/autenticacao.md#rn-180));
+   o engine não tinha herdado.
+2. **Reconstruíam só `chat.message` e `agent.response`.** A pergunta feita por
+   formulário (`chat.structured_question`) e as ferramentas chamadas
+   (`tool.call`/`tool.result`) sumiam.
+3. **Cortavam calados.** E as leituras dos kickoffs (PO, Arquiteto, Dev Lead,
+   UX Designer) e das regras do product_brief (Criativo) filtravam em memória
+   os mesmos PRIMEIROS 200 eventos de todos os tipos: numa conversa longa com o
+   Criativo, o brief nascia depois do evento 200 e o PO recebia "(sem product
+   brief disponível)".
+
+**A regra:**
+
+1. **Um caminho só.** `Engine.Agents.Reidratacao` substitui as seis cópias; os
+   seis servidores chamam `historico/3` no `init/1`.
+2. **A cauda, com o teto do ADR 0060.** A leitura é `latest=true&limit=200` — o
+   `MAX_LIMIT` da rota, nem mais (a api cortaria) nem menos (deixaria de fora o
+   que ela entrega de graça). O teto NÃO ficou ilimitado.
+3. **O que entra.** `chat.message` e `agent.response` como sempre (de qualquer
+   agente da sessão — é o que o PO herda do Criativo); `chat.structured_question`
+   como fala do agente, com rótulos e opções; `tool.call`/`tool.result` do
+   PRÓPRIO agente como nota de texto com a ferramenta, os argumentos (cortados
+   em 1.500 caracteres) e o desfecho — nunca como mensagem `role: "tool"`, porque
+   o evento não guarda o id da chamada e um `tool_result` sem o `tool_use`
+   correspondente é recusado pelo provider. `chat.structured_question_answered`
+   fica DE FORA de propósito: a api grava as mesmas respostas num `chat.message`
+   logo depois (`AnswerStructuredQuestionUseCase` reusa
+   `SendAgentMessageUseCase`), e reidratar os dois duplicaria a resposta.
+4. **O começo que não coube é dito, com o número.** O `seq` é gapless e começa
+   em 1, então o número de eventos omitidos é o `seq` do primeiro da cauda menos
+   um — SUBTRAÇÃO, sem requisição a mais. Quando ele é maior que zero, o
+   histórico abre com UMA mensagem de sistema que escreve esse número e traz o
+   resumo da compactação de contexto mais recente do agente (quando foi
+   gravado) e a abertura da conversa (as seis primeiras mensagens dos primeiros
+   40 eventos, cortadas em 500 caracteres). São mais duas leituras com teto —
+   três no total, e uma só quando a conversa cabe.
+5. **`context.compacted` grava o resumo daqui em diante** — `summary`, `agent`
+   e `messagesSummarized`, ao lado das contagens de sempre. Conversa compactada
+   antes disto fica DECLARADA ("compactada N vez(es) antes de o resumo passar a
+   ser gravado; aquele resumo se perdeu"), nunca reconstruída; os eventos
+   antigos não mudam.
+6. **Histórico ilegível não vira conversa vazia.** Se a leitura falha, o agente
+   recebe uma mensagem de sistema dizendo que não conseguiu ler o histórico.
+7. **Kickoffs e refs do brief leem POR TIPO, pela cauda.** A rota interna ganhou
+   `types` (até 20, validados; malformado é 400) — mudança de CONTRATO,
+   aditiva: sem `latest`/`types` a resposta é a de antes. Quando a leitura por
+   tipo bate no teto, o kickoff diz que pode haver itens mais antigos.
+
+**Medido por agente:** os seis mudaram na reidratação (`init/1`). Nos kickoffs,
+PO, Arquiteto, Dev Lead e UX Designer mudaram; o Criativo mudou nas refs do
+product_brief e no guardrail de zero regra; o Staff não tem kickoff (ADR 0088).
+
+**O que esta regra NÃO fecha:** só o Criativo grava `tool.result` — nos outros
+cinco a nota diz que o log não registra o desfecho, e o TEXTO que a ferramenta
+devolveu (o id do épico criado, por exemplo) não está no log de nenhum dos seis;
+gravá-lo é mudar o formato de `tool.result` daqui em diante, e não foi feito.
+`InfraLeadServer` tem a mesma cópia antiga de `rehydrate/2` e
+`DevLeadTools.run_assessment/2` lê o plano de teste pelos PRIMEIROS 200 — os dois
+seguem em `list_events/2`, fora dos seis. A reidratação pode trazer MAIS do que o
+contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
+`ContextManager` compacta de novo no próximo turno.
+
+- **Código:** `apps/engine/lib/engine/agents/reidratacao.ex:71` (`historico/3`),
+  `:46` (o teto), `:104` (`eventos_do_tipo/3`), `:152` (`mensagens/2`), `:167`
+  (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
+  subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
+  abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:835`
+  (`list_events/3`); os seis `init/1` —
+  `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
+  `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
+  `staff_server.ex:86`; as leituras por tipo — `criativo_server.ex:435`,
+  `po_server.ex:352`, `arquiteto_server.ex:311`, `dev_lead_server.ex:431`,
+  `ux_designer_server.ex:246`;
+  `apps/api/src/interfaces/http/internal/leitura-interna-de-eventos.ts:24`,
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:306`,
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:56`
+- **Teste:** `apps/engine/test/engine/agents/reidratacao_test.exs:57` (pergunta
+  estruturada), `:92` (a resposta entra UMA vez), `:108` (ferramenta com
+  desfecho), `:128` (sem `tool.result`), `:136` (ferramenta de outro agente
+  fica de fora), `:157` (pede a cauda com teto 200), `:176` (o fim entra, o
+  começo vira resumo com o número), `:194` (o resumo da compactação), `:233`
+  (compactação antiga declarada), `:248` (histórico ilegível — caso de falha),
+  `:255` (abertura falhando não apaga o número), `:270` (leitura por tipo e o
+  aviso de teto); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:59`
+  (os seis `init/1`), `:84` (o brief depois do evento 200 chega ao PO), `:118`
+  (a regra depois do evento 200 entra no brief do Criativo), `:135` (Arquiteto,
+  Dev Lead e UX leem por tipo); `apps/engine/test/engine/harness/context_manager_test.exs:74`
+  (o resumo gravado), `:101` (fallback do sumarizador);
+  `apps/api/test/interfaces/http/internal/leitura-interna-de-eventos.spec.ts:13`
+  (sem os parâmetros, as opções de antes), `:40` (tipo malformado é 400);
+  `apps/api/test/infrastructure/persistence/session-event-latest.repository.spec.ts:123`
+  (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
+- **Origem:** AT-073, levantada em 2026-09-13
+
 ### RN-579 — Com o canal da sessão vivo, a tela de Sessão troca o poll curto por invalidação e um fallback longo; resposta de corpo vazio tem `ETag` {#rn-579}
 
 A instalação medida na AT-093 (v6.1.0, 14/09) mostrou UM navegador fazendo
@@ -13871,13 +14137,13 @@ que sai depois de a api gravá-lo. `projects-summary` e `execution/session`
 fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
-- **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:554`,
-  `:580`, `:600`, `:776` (`avisar_canal`);
+- **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:575`,
+  `:601`, `:624`, `:800` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
   (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
-  (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:159`,
-  `:163`, `:129`, `:228`; `apps/web/src/lib/session-turno.ts:292`;
+  (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
+  `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:292`;
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
   `apps/api/src/interfaces/http/shared/etag-do-corpo-vazio.ts:40`;

@@ -40,6 +40,27 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, [map()]} | {:error, term()}
 
   @doc """
+  Leitura dos eventos da sessão COM opções (RN-580) — o que a reidratação dos
+  agentes conversacionais e as leituras dos kickoffs usam. Opções (todas
+  opcionais, `keyword`):
+
+    * `:latest` — `true` pede a CAUDA (os `:limit` mais recentes), ainda em
+      ordem crescente de `seq`; ignora `:after_seq`;
+    * `:types` — lista de tipos; só eventos desses tipos voltam;
+    * `:after_seq` — só eventos com `seq` maior que este;
+    * `:limit` — teto da página; a api corta em 200 (ADR 0060) de qualquer jeito.
+
+  `list_events/2` continua existindo, byte a byte, para os chamadores que não
+  migraram (os PRIMEIROS 200, todos os tipos).
+  """
+  @callback list_events(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              opts :: keyword()
+            ) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
   Turno de LLM STREAMADO pros agentes conversacionais (Criativo). Consome a
   SSE da api chamando `on_delta.(text)` por delta de texto; retorna
   `{:ok, %{"message" => ..., "usage" => ...}}` (turno completo acumulado) ou
@@ -590,6 +611,9 @@ defmodule Engine.Sessions.EngineApiClient do
   def list_events(project_id, session_id),
     do: impl().list_events(project_id, session_id)
 
+  def list_events(project_id, session_id, opts),
+    do: impl().list_events(project_id, session_id, opts)
+
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
     do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
 
@@ -842,6 +866,37 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         "/internal/sessions/#{session_id}/events?projectId=#{project_id}&limit=200"
 
     case Req.get(url, headers: headers()) do
+      {:ok, %Req.Response{status: status, body: %{"items" => items}}}
+      when status in 200..299 ->
+        {:ok, items}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def list_events(project_id, session_id, opts) do
+    # Os parâmetros viajam por `params:` (o Req codifica), nunca interpolados
+    # na URL: `types` é lista de tipos com ponto (`artifact.business_rule`).
+    params =
+      [projectId: project_id, limit: Keyword.get(opts, :limit, 200)] ++
+        if(Keyword.get(opts, :latest, false), do: [latest: "true"], else: []) ++
+        case Keyword.get(opts, :after_seq) do
+          nil -> []
+          seq -> [afterSeq: seq]
+        end ++
+        case Keyword.get(opts, :types) do
+          [_ | _] = tipos -> [types: Enum.join(tipos, ",")]
+          _ -> []
+        end
+
+    url = api_url() <> "/internal/sessions/#{session_id}/events"
+
+    case Req.get(url, headers: headers(), params: params) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}

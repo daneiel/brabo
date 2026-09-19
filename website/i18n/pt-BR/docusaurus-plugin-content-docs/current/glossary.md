@@ -119,6 +119,15 @@ deixou de ser silencioso: esgotado, emite o MESMO `toolloop.limit_reached`
 ([RN-166](business-rules/autenticacao.md#rn-166)), porque é o mesmo fato e quem lê o event
 log não deve precisar de um segundo nome.
 
+**Reidratação (agente conversacional)** — como o processo de um agente
+conversacional reconstrói o histórico a partir do event log quando sobe sobre
+uma sessão que já tem conversa (restart, ou o PO assumindo depois do
+Criativo). Um caminho só para os seis, `Engine.Agents.Reidratacao`
+(RN-580): lê a **cauda** (os 200 eventos mais
+recentes, não os primeiros), traz as perguntas estruturadas e as chamadas de
+ferramenta do próprio agente, e, quando a conversa não cabe, abre com uma
+mensagem de sistema que diz quantos eventos anteriores ficaram de fora.
+
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
 porque o destino e o motivo ficam registrados no event log, em vez de um agente
 "assumir" o contexto do outro implicitamente.

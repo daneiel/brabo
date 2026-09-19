@@ -13,6 +13,12 @@ defmodule Engine.Projects.ProjectRepository do
     colateral de uma função que devolvia mais do que eles pediam.
   - `remoto_de_trabalho/1` — o que materializa o working tree. Para provider
     remoto, a credencial vem da api (ver `Engine.Sessions.EngineApiClient`).
+
+  Desde a RN-577 responde a uma TERCEIRA, a mais barata das três: se o projeto
+  TEM repositório (`recusa_de_pr_sem_repositorio/2`). É a pergunta que as tools
+  que propõem PR (`open_adr_pr` do Arquiteto, `open_infra_pr` do Infra Lead)
+  fazem ANTES de propor, para não pôr na fila de aprovação uma ação que o caso
+  de uso de execução só pode recusar.
   """
 
   use Ecto.Schema
@@ -39,6 +45,38 @@ defmodule Engine.Projects.ProjectRepository do
     case Repo.get_by(__MODULE__, project_id: project_id) do
       nil -> {:error, :not_found}
       %{default_branch: branch} -> {:ok, branch}
+    end
+  end
+
+  @doc """
+  `nil` quando o projeto TEM repositório; motivo NOMEADO quando não tem
+  (RN-577). O motivo é resultado de ferramenta que o modelo lê (RN-163), nunca
+  `agent.error`.
+
+  O predicado é o MESMO do caso de uso que executaria a ação na api
+  (`ProvisionedRepositoryRepository.findByProjectId` em
+  `ExecuteAdrPrUseCase`/`ExecuteInfraPrUseCase`: existe linha em
+  `project_repositories` para o projeto) — lido aqui, localmente, do mesmo
+  Postgres, sem HTTP no laço do agente. Se os dois divergissem, a tool deixaria
+  passar o que a execução recusa (o defeito da AT-088) ou recusaria o que a
+  execução aceitaria. Os casos de uso continuam recusando como antes: isto é
+  uma camada ANTES, nunca no lugar.
+
+  O texto diz o que falta e QUANDO passa a existir, sem decidir onde o
+  repositório deveria nascer: hoje ele nasce no aceite do handoff do Arquiteto
+  para o Dev Lead (RN-522/RN-541), ou na adoção de um repositório existente.
+  """
+  def recusa_de_pr_sem_repositorio(project_id, tipo_de_acao) do
+    case Repo.get_by(__MODULE__, project_id: project_id) do
+      nil ->
+        "projeto sem repositório provisionado — `#{tipo_de_acao}` não foi " <>
+          "proposta, porque aprovada ela só poderia falhar. O repositório " <>
+          "deste projeto ainda não existe: ele nasce quando o handoff do " <>
+          "Arquiteto para o Dev Lead é aceito (RN-522). Não repita a chamada " <>
+          "agora; ela passa a valer depois desse aceite."
+
+      _repo ->
+        nil
     end
   end
 

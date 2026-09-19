@@ -210,6 +210,20 @@ rules:
     severity: warn
     note: "Config do site ou mecanismo de publicação mudou — o documento que explica o mecanismo precisa acompanhar."
 
+  # O MECANISMO que confere a documentação era o outro ponto cego do mapa: os
+  # scripts de `scripts/docs/` só apareciam na regra `scripts` (que cobra o
+  # inventário gerado de comandos, não a explicação). Aferição nova ou
+  # escape hatch novo — as refs com símbolo da AT-096, o `PR_BODY_FILE` do
+  # drift da AT-094 — mudam o que `documentation-workflow.md` promete.
+  # `warn`: um ajuste interno de gerador não muda o mecanismo.
+  - id: mecanismo-de-documentacao
+    watch:
+      - "scripts/docs/*.mjs"
+    docs:
+      - "docs/explanation/documentation-workflow.md"
+    severity: warn
+    note: "Aferição, gerador ou escape hatch mudou? O documento que explica o mecanismo precisa acompanhar."
+
   - id: contrato-web
     watch:
       - "apps/web/src/lib/api-client.ts"
@@ -255,6 +269,25 @@ rules:
     docs: ["docs/architecture.md", "docs/glossary.md"]
     severity: warn
     note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então; `dev/` e `agents/` entraram na 12d pelo mesmo motivo."
+
+  # RN-566/RN-577 — as tools de agente que RECUSAM localmente antes de propor
+  # são regra de negócio morando no ENGINE, e nenhuma regra ligava esses
+  # arquivos às RNs: `harness-e-gates` cobra arquitetura/glossário, e
+  # `apps/engine/lib/engine/projects/` (onde mora o predicado de repositório
+  # da RN-577) não era observado por regra nenhuma. Mudar uma recusa — ou o
+  # predicado que ela lê — muda o que a RN afirma, com arquivo:linha.
+  - id: recusas-locais-de-proposta
+    watch:
+      - "apps/engine/lib/engine/infra/infra_lead_server.ex"
+      - "apps/engine/lib/engine/harness/tools/propose_adr.ex"
+      - "apps/engine/lib/engine/projects/project_repository.ex"
+    docs: ["docs/business-rules.md"]
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
+    severity: warn
+    note: "Recusa local de tool (RN-566, RN-577) mudou? A RN diz arquivo:linha e o teste; o predicado tem de continuar o MESMO do caso de uso de execução na api."
 
   # O registro de gates é índice do que barra o trabalho. Gate novo, ou
   # evidência que mudou de lugar, exige a linha no registro e a RN — senão o
@@ -570,6 +603,24 @@ rules:
       - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: block
     note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
+
+  # O QUE a esteira publica — os alvos do bake e o manifesto por digest que o
+  # instalador e o overlay leem. Até o ADR 0162 nenhuma regra vigiava estes
+  # arquivos, e foi assim que "a imagem do broker não é publicada" virou
+  # verdade silenciosa em quatro documentos: o `Dockerfile.prod` existia e o
+  # bake não o construía. Alvo novo (ou um a menos) muda o que se escaneia, se
+  # assina e se instala, e a página que diz isso é a da cadeia de suprimentos.
+  # `warn` e não `block`: trocar cache ou tag de um alvo não é regra nova, e a
+  # decisão de publicar uma imagem a mais já passa pelo `adr-trigger`.
+  - id: imagens-publicadas
+    watch:
+      - "docker-bake.hcl"
+      - "scripts/ci/images-manifest.ts"
+      - "scripts/ci/aplicar-imagens.ts"
+    docs:
+      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: warn
+    note: "Imagem publicada a mais ou a menos muda o que se escaneia, assina, instala e aplica no overlay."
 
   # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no

@@ -160,6 +160,25 @@ the sender.
 The engine never writes directly to the events table — it **asks** the api, which
 controls the `seq` and the atomicity with the outbox.
 
+`GET /events` is what the six conversational agents read when their process
+comes up over a session that already has a conversation, and what their
+kickoffs read to find the brief, the rules, the module map and the stories
+([RN-580](../business-rules.md#rn-580)). Until then the route only understood
+`afterSeq` and `limit`, and the engine only sent `limit=200` — so it got the
+**first** 200 events, and an agent woken on a 201-event conversation came up
+without the message it was answering. Two query parameters were added, both
+**additive** (without them the response is byte for byte the old one):
+
+| parameter | effect |
+|---|---|
+| `latest=true` | returns the **tail** — the last `limit` events, still in ascending `seq` — and ignores `afterSeq`; same semantics as the human route (ADR 0021) |
+| `types=a.b,c.d` | only events of these types, and `limit` counts only them; at most 20 types, each matching `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`, otherwise **400** |
+
+The page stays capped at **200** ([ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md)):
+neither parameter makes the read unbounded. On the engine side the new reads go
+through `EngineApiClient.list_events/3`; `list_events/2` still exists, unchanged,
+for the callers that did not migrate (`InfraLeadServer`, `DevLeadTools`).
+
 And that's why the session-type guard lives in the append use case, and not
 in `ActivateExecutionUseCase`: `POST /events` here and the user's route fall into the
 same funnel. Since FASE 20, `execution.activated` in a `consultiva` session
@@ -439,7 +458,9 @@ exactly the session scope that caused the defect these routes fix
 
 The PO had **four tools and all of them writes** (`create_epic`,
 `create_story`, `create_task`, `offer_handoff`). Its context was assembled
-once, at kickoff, from the last 200 events of the **current session** —
+once, at kickoff, from the **first** 200 events of the **current session** (this
+page used to say "last"; it was the first, which is what
+[RN-580](../business-rules.md#rn-580) measured and fixed) —
 and after that it never re-read anything again. In a long session, or in a resumed
 one, it didn't know which rules existed, which it had already covered, nor what it
 had already created itself. The symptom that appeared in real use was a backlog with
