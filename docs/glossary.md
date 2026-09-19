@@ -114,7 +114,10 @@ a supervised `Task` (`Engine.Agents.TurnoAssincrono`), no longer inside
 the `handle_call` that received the message — that's what lets the
 composer's **"Stop"** button actually cancel the turn (kills the task,
 cuts the connection to the api) instead of just stopping the client-side
-render. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
+render. Since [RN-578](business-rules.md#rn-578) the command that starts a
+turn is answered on ACCEPTANCE: the click returns as soon as the Task is up,
+and the end of the turn arrives through the session channel and the event
+log, never through that HTTP response. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
 Architect, Dev Lead, and Staff 14) — it's a constant on the agent's own
 server, not the `ToolLoop`'s ceiling
 (`Engine.Harness.Iteracoes`), which applies to execution and gate agents.
