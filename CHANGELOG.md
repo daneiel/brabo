@@ -22,6 +22,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `packages/shared/node_modules`). Provado do zero, com volumes inexistentes e
   sem `chown` à mão. Só aparece com volume inexistente: `reset-total.sh` não
   remove esses volumes e o escondia.
+- **sessões**: a sessão `git-bootstrap` deixa de virar a "mais recente" do
+  projeto (AT-131). O resumo do workspace e a Visão Geral ordenam a sessão de
+  provisionamento depois das de trabalho — ela só é a mais recente quando é a
+  única. E o 409 de `execution/activate` sem repositório deixa de mandar aceitar
+  um handoff que mora em sessão encerrada (o aceite ali é recusado, RN-581): a
+  frase diz que a sessão está encerrada e aponta a página de provisionamento.
+  RN-582 revisada, sem ADR novo.
 - **ci**: o build das imagens de produção deixa de reaproveitar uma camada de
   `apk upgrade` congelada em cache (AT-110). O `docker-bake.hcl` passa
   `no-cache-filter = ["runtime"]` ao alvo base dos cinco `Dockerfile.prod`, e o
