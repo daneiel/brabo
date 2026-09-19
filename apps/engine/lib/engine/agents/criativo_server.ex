@@ -42,7 +42,7 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono}
   alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
@@ -84,7 +84,9 @@ defmodule Engine.Agents.CriativoServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -422,34 +424,21 @@ defmodule Engine.Agents.CriativoServer do
 
   # Refs das regras de negócio já emitidas nesta sessão — lidas do event log
   # (fonte da verdade), não de estado em memória que poderia divergir.
+  #
+  # A leitura é POR TIPO e pela cauda (RN-580). Antes era a leitura geral —
+  # os PRIMEIROS 200 eventos de todos os tipos, filtrados aqui —, então numa
+  # conversa longa a regra capturada depois do evento 200 não entrava no
+  # product_brief, e uma sessão cujas regras vieram todas depois dele era
+  # RECUSADA pelo guardrail de zero regra. O teto continua (200 regras); passou
+  # a contar só regras.
   defp business_rule_refs(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} ->
-        events
-        |> Enum.filter(&(Map.get(&1, "type") == "artifact.business_rule"))
-        |> Enum.map(&Map.get(&1, "id"))
-
-      _ ->
-        []
-    end
-  end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.business_rule"
+         ]) do
+      {:ok, events, _truncado?} -> Enum.map(events, &Map.get(&1, "id"))
       _ -> []
     end
   end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

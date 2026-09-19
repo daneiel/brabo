@@ -129,6 +129,15 @@ also stopped being silent: once exhausted, it emits the SAME
 it's the same fact and whoever reads the event log shouldn't need a
 second name for it.
 
+**Rehydration (conversational agent)** — how a conversational agent's
+process rebuilds its history from the event log when it comes up over a
+session that already has a conversation (restart, or the PO taking over from
+the Creative agent). One path for the six, `Engine.Agents.Reidratacao`
+([RN-580](business-rules.md#rn-580)): it reads the **tail** (the last 200
+events, not the first), brings back structured questions and the agent's own
+tool calls, and when the conversation doesn't fit, opens with a system message
+that states how many earlier events were left out.
+
 **Handoff** — the explicit handover of work from one agent to another.
 Explicit because the destination and the reason are recorded in the event
 log, instead of one agent implicitly "taking over" another's context.

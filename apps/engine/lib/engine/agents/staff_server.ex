@@ -40,7 +40,7 @@ defmodule Engine.Agents.StaffServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{FalhaDeTurno, StaffTools, TurnoAssincrono}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, StaffTools, TurnoAssincrono}
   alias Engine.Sessions.EngineApiClient
 
   @agent "staff"
@@ -81,7 +81,9 @@ defmodule Engine.Agents.StaffServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -198,23 +200,6 @@ defmodule Engine.Agents.StaffServer do
   defp run_tool("propose_rfc", args, state), do: StaffTools.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

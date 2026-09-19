@@ -21,6 +21,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   event log. Os casos de uso continuam recusando como antes
   ([RN-577](docs/business-rules.md#rn-577)).
 
+- **engine/api**: o agente conversacional que sobe sobre uma conversa que já
+  existe **recebe o FIM dela, não o começo** (AT-073). Os seis (Criativo, PO,
+  Arquiteto, Dev Lead, UX Designer e Staff) reconstruíam o histórico lendo os
+  PRIMEIROS 200 eventos da sessão — numa conversa de 201 eventos o agente
+  acordava sem a mensagem que estava respondendo — e só com mensagens e
+  respostas: a pergunta que ele fez por formulário e as ferramentas que chamou
+  sumiam. Agora os seis passam por um caminho só, que lê os 200 mais recentes,
+  traz as perguntas estruturadas e as próprias chamadas de ferramenta, e,
+  quando a conversa não cabe, abre com um resumo do começo que escreve quantos
+  eventos ficaram de fora ([RN-580](docs/business-rules.md#rn-580)). O
+  `context.compacted` passa a gravar o resumo da compactação (antes só as
+  contagens de tokens); conversa compactada antes disto é declarada como tal.
+  Os kickoffs do PO, Arquiteto, Dev Lead e UX Designer e as regras do product
+  brief do Criativo passam a ler por tipo, pela cauda — numa conversa longa o
+  PO recebia "(sem product brief disponível)". A rota interna
+  `GET /internal/sessions/:id/events` ganha `latest` e `types`, aditivos.
+
 - **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
   registro validava, EM RUNTIME, que todo arquivo de prova citado em
   `docs/gates.yml` existia no disco — e a imagem de produção carrega
