@@ -342,7 +342,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:288`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:293`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -14607,28 +14607,27 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
   [RN-578](#rn-578)) e registrá-lo no "Parar"; e exige decidir o que uma
   conversa faz com um agente cujo contrato é propor. O `user_message/2` dele
   segue exportado e sem chamador.
-- **O `chat.message` gravado pela api antes da recusa continua no log**, como
-  o da [RN-578](#rn-578) — a api grava primeiro para a mensagem ser durável com
-  o engine fora do ar. Diferente daquela, aqui não há `agent.error` ao lado:
-  não há agente de pé a quem atribuir a fala, e a explicação vive só no toast.
+- **O `chat.message` gravado pela api antes da recusa continua no log** — e
+  desde a [RN-587](#rn-587) o engine grava o `agent.error` da recusa ao lado,
+  então o fio explica a si mesmo.
 - **A api não valida o `agent`.** Recusar lá, antes de gravar, exigiria uma
   segunda lista de quem conversa do lado TypeScript — e divergir dela das
   cláusulas é o defeito que esta regra fecha. Quem decide é quem tem as
-  cláusulas.
+  cláusulas (decisão mantida na [RN-587](#rn-587)).
 
 - **Código:**
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:42`
   (`@agentes_de_conversa`), `:177` (a cláusula do Criativo), `:192` (a recusa
-  do `infra`), `:207` (`mensagem_sem_texto`), `:221` (`agente_sem_conversa`),
-  `:234` (`agente_ausente`), `:303` (o "Parar" sem agente);
+  do `infra`), `:207` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
+  `:239` (`agente_ausente`), `:310` (o "Parar" sem agente);
   `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
   (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:29`
   (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
 - **Teste:** `scripts/ci/destinos-do-composer.spec.ts` (a guarda da classe);
   `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
-  (caminho feliz: o Criativo pela cláusula própria), `:152` (o `infra`: 422 e
-  nenhum dos dois sobe — caso de falha), `:179` (todo nome do catálogo de
-  áreas e do roster fora de conversa), `:207`, `:223`, `:238`;
+  (caminho feliz: o Criativo pela cláusula própria), `:231` (o `infra`: 422 e
+  nenhum dos dois sobe — caso de falha), `:258` (todo nome do catálogo de
+  áreas e do roster fora de conversa), `:286`, `:302`, `:317`;
   `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:575`
   (o destino viaja como escolhido, e o 422 chega com a frase)
 - **Origem:** AT-098 — adjacência medida no PR #594 (AT-089)
@@ -14741,6 +14740,57 @@ fechamento não recupera o que o turno já tinha gravado antes da queda.
   `apps/engine/test/engine/sessions/rehydration_test.exs:46` (o boot dispara a
   varredura)
 - **Origem:** AT-156, herdada da AT-089 (RN-578) — reproduzida em 2026-09-19
+
+### RN-587 — A mensagem que nenhum agente leu fica no fio dizendo isso: o engine grava o `agent.error` da recusa {#rn-587}
+
+A api grava o `chat.message` ANTES de perguntar ao engine (o engine reconstrói a
+conversa lendo o log, e a mensagem precisa ser durável mesmo com ele fora do
+ar). Quando o engine recusava, a mensagem ficava no fio do usuário com cara de
+entregue e o motivo morava só no toast — a tela afirmando o que a fonte negou.
+As duas RNs de origem deixaram isso declarado ([RN-578](#rn-578), [RN-584](#rn-584));
+esta o fecha (AT-132).
+
+**A medição, antes do conserto**, por recusa:
+
+| Recusa | Quem a produz | `agent.error` durável ao lado do `chat.message`? |
+|---|---|---|
+| 409 `turno_em_andamento` | `TurnoAssincrono` (RN-578) | JÁ SIM — `emitir_recusa_por_turno_em_andamento/1`, com teste |
+| 409 `aguardando_aprovacao` | `DevLeadServer.handle_call` (RN-578) | JÁ SIM — `reason: "aguardando_aprovacao_de_plano"` |
+| 422 `agente_sem_conversa`, `mensagem_sem_texto`, `agente_ausente` | o controller (RN-584), sem `*Server` | NÃO — a explicação vivia só no toast |
+
+**A regra:**
+
+1. **O engine é a fonte da recusa E do registro.** As três recusas 422 gravam
+   `agent.error` (origem `politica`, `mensagem` igual à frase do 422,
+   `reason` igual ao `motivo`) e o transmitem no canal da sessão — o mesmo par
+   durável/efêmero das duas 409. O fio já desenha `agent.error`
+   (`SessionPage.tsx`, `lerFalhaDeTurno`), então nenhuma tela mudou.
+2. **Só há o que gravar com sessão nomeada.** Sem `projectId`/`sessionId` no
+   corpo (chamador quebrado) a recusa segue só como resposta.
+3. **O ator não vem da rota.** `infra` e os seis que conversam entram como
+   `agent`; qualquer outro nome (que a rota pública deixa passar) é o `system`
+   `engine` — um nome digitado nunca vira ator no log.
+4. **Não se apaga nem se adia o `chat.message`.** Evento é imutável, e gravá-lo
+   só depois do aceite reordenaria o log: o turno roda numa Task e o
+   `agent.response` poderia preceder a mensagem que responde (e uma falha entre
+   o aceite e o append rodaria um turno sobre mensagem não gravada).
+
+**A api continua sem validar `agent`, e agora isso é decisão e não lacuna.** A
+validação que a AT-098 pedia é a recusa 422 do engine, e ela é o mecanismo
+ÚNICO: a api a repassa (`postComandoDeTurno`) e o engine a registra. Uma lista
+do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
+uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
+para o usuário, que já vê a mensagem e a explicação no fio.
+
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:365`
+  (`recusar_mensagem/5`) e `:372` (`registrar_recusa_de_mensagem/3`)
+- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
+  (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
+  não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
+  falha); mutação medida: com o registro removido, 4 dos 5 falham;
+  `scripts/ci/destinos-do-composer.spec.ts` (a recusa de `message/2` é
+  `recusar_mensagem/5` e ela grava o `agent.error`; seis mutações mortas)
+- **Origem:** AT-132 — declarado aberto nas RN-578 (AT-089) e RN-584 (AT-098)
 
 ### RN-588 — Repassar uma sessão não deixa o pod antigo apagar a linha do par {#rn-588}
 

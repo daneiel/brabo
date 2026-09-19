@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
+  fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
+  aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
+  recusas 422 da rota de mensagem (`agente_sem_conversa`, `mensagem_sem_texto`,
+  `agente_ausente`) não, e a explicação sumia com o toast. Agora o engine grava
+  o `agent.error` (origem `politica`, a mesma frase do 422) e o transmite. A
+  api segue sem validar o `agent`: a recusa do engine é o único mecanismo
+  ([RN-587](docs/business-rules.md#rn-587)).
+
 - **engine**: o turno **interrompido pelo reinício do engine fecha com desfecho
   durável** (AT-156). O `agent.status: working` é gravado antes do aceite, e o
   fim do turno só sai do processo do agente; com o engine reiniciado no meio, o

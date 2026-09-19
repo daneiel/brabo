@@ -118,6 +118,85 @@ defmodule EngineWeb.AgentCommandControllerTest do
     end
   end
 
+  # RN-587 (AT-132). A api grava o `chat.message` ANTES de perguntar ao engine;
+  # o 422 deixava a mensagem no fio com cara de entregue e a frase só no toast.
+  describe "a recusa de mensagem fica no fio (RN-587)" do
+    test "infra: agent.error durável, origem politica, com a frase e o motivo", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "infra",
+          "text" => "sobe o container"
+        })
+
+      assert %{"error" => frase} = json_response(conn, 422)
+
+      assert_receive {:event_appended, ^project_id, ^session_id,
+                      %{type: "agent.error", actorKind: "agent", actorId: "infra", payload: p}}
+
+      assert p.origem == "politica"
+      assert p.reason == "agente_sem_conversa"
+      assert p.mensagem == frase
+    end
+
+    test "nome desconhecido: o ator é o engine, nunca o nome vindo da rota", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      AgentCommandController.message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "<script>",
+        "text" => "oi"
+      })
+
+      assert_receive {:event_appended, _, _,
+                      %{type: "agent.error", actorKind: "system", actorId: "engine"}}
+    end
+
+    test "conversacional sem texto: agent.error com mensagem_sem_texto", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      AgentCommandController.message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "po"
+      })
+
+      assert_receive {:event_appended, _, _,
+                      %{type: "agent.error", payload: %{reason: "mensagem_sem_texto"}}}
+    end
+
+    test "sem agent no corpo: agent.error com agente_ausente", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      AgentCommandController.message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "text" => "oi"
+      })
+
+      assert_receive {:event_appended, _, _,
+                      %{type: "agent.error", payload: %{reason: "agente_ausente"}}}
+    end
+
+    test "sem projectId no corpo: recusa só como resposta, nada é gravado", %{conn: conn} do
+      conn = AgentCommandController.message(conn, %{"agent" => "infra", "text" => "oi"})
+      assert conn.status == 422
+      refute_receive {:event_appended, _, _, _}, 100
+    end
+  end
+
   # RN-584 (AT-098). O defeito medido: a última cláusula de `message/2` não
   # olhava o agente, e uma mensagem ao `infra` era lida pelo CRIATIVO.
   describe "message/2 não tem destinatário padrão (RN-584)" do
