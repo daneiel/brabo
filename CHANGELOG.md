@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
+  contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
   conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
   texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam
