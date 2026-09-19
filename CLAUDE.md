@@ -1164,7 +1164,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   e o `permissions.json` de cada projeto não tinha onde ser escrito — ou seja,
   provisionar repositório era impossível na máquina de quem desenvolve o
   produto. Ao acrescentar volume nomeado novo, crie o diretório na imagem;
-  esquecer não dá erro de build, dá 403 em runtime. Volume JÁ criado continua
+  esquecer não dá erro de build, dá 403 em runtime. Vale também para os
+  `node_modules` de `api` e `web` (AT-172: `EACCES` no `pnpm install`), e o
+  ponto de montagem DENTRO do bind-mount do host o Docker cria como root —
+  isso a imagem não alcança, e quem o cria antes é o `preflight.mjs`. Volume JÁ criado continua
   com o dono antigo: a correção vale para volume novo, e destravar um ambiente
   existente exige `docker volume rm` (ou um `chown` pontual como root).
 - `docker compose up --wait` só prova o que tem `healthcheck` — para serviço
