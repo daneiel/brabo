@@ -357,6 +357,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   janela e critério para `block` em
   `docs/explanation/documentation-workflow.md`.
 
+### Testes
+
+- **deploy/k8s**: `make rollout-test` **passa a guardar a evidência que morria
+  com o pod antigo** (AT-078). Antes do `rollout restart` ele anexa o log de
+  TODO pod do engine — os que já existem, desde o boot, e os que nascerem —,
+  segue `kubectl get events -w` do namespace, amostra réplicas do Deployment e
+  do HPA a cada 2s e grava cada leitura de dono, tudo em
+  `ROLLOUT_EVIDENCE_DIR`. Numa órfã, a falha cita toda linha que menciona a
+  sessão em todos esses arquivos e diz se ela ficou sem dono ANTES ou DEPOIS
+  do scale-down do HPA. `propriedades.yml` sobe o diretório como artefato
+  `rollout-evidencia` em toda rodada que chegou à prova. Nada muda no que conta
+  como adotada ou drenada, nem no teto de 120s.
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades

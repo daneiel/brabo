@@ -827,6 +827,19 @@ estados: `active` com dono `:global` vivo (adotada), ou `closed_abnormally` com
 `node_shutdown` (drenada). Qualquer outra combinação reprova — em especial
 `active` sem dono, que é a definição operacional de órfã.
 
+**Ele guarda a evidência que os pods antigos levam junto** (AT-078). Antes do
+`rollout restart`, `deploy/k8s/rollout-evidencia.sh` passa a gravar em
+`ROLLOUT_EVIDENCE_DIR` (um `mktemp -d` se ausente; o caminho sai no fim) o log
+de **todo** pod do engine — os de pé, desde o boot, que o rollout mata, e os
+que nascerem —, `kubectl get events -w` do namespace, as réplicas do
+Deployment e do HPA a cada 2s e cada leitura de dono (`donos.log`). Numa
+órfã, a falha cita toda linha que menciona a sessão em todos esses arquivos,
+o log do pod antigo inclusive, e diz se ela ficou sem dono **ANTES ou DEPOIS
+do primeiro scale-down do HPA** — o confundidor conhecido: o `hpa-test` deixa
+três réplicas e, uns 75s depois do rollout, o HPA desce para uma. Nada disso
+muda o que conta como adotada ou drenada, nem o teto de 120s. A rodada
+agendada sobe o diretório como artefato `rollout-evidencia`.
+
 Manualmente, a mesma pergunta:
 
 ```sql

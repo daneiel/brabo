@@ -1637,6 +1637,33 @@ or `closed_abnormally` with `node_shutdown` (drained). Any other
 combination fails — especially `active` with no owner, which is the
 operational definition of an orphan.
 
+**It keeps the evidence the old pods take with them** (AT-078). Before the
+`rollout restart`, `deploy/k8s/rollout-evidencia.sh` starts writing into
+`ROLLOUT_EVIDENCE_DIR` (a `mktemp -d` when unset; the path is printed at the
+end):
+
+| file | what |
+|---|---|
+| `engine-<pod>.log` | `kubectl logs -f` of **every** engine pod — the ones already up (whole log, from boot), which the rollout kills, and every pod created later — attached as soon as it is `Running` |
+| `final-<pod>.log` | a non-follow copy of the pods still up at the end, covering a `logs -f` that dropped |
+| `events.log` | `kubectl get events -w` for the namespace, with each event's own timestamps (`SuccessfulRescale`, `ScalingReplicaSet`, `Killing`…) |
+| `replicas.log` | every 2 s: `<epoch> <Deployment spec.replicas> <ready> <HPA current> <HPA desired>` |
+| `donos.log` | every owner read the test makes: `<epoch> <session> <owner node or ->` |
+| `marcos.log`, `anexos.log`, `pods-antes.txt`, `pods-no-fim.txt` | test milestones (`rollout-restart`, `rollout-status-ok`…), when each log was attached, the pods at T0 and at the end |
+
+On an orphan the failure prints every line that names the session across all
+of those files — the old pod's log included — plus the replica changes
+relative to the rollout, and a verdict per orphan: **without an owner BEFORE
+or AFTER the first HPA scale-down**. That separates the known confounder: the
+`hpa-test` that runs first leaves three replicas, and ~75 s into the window the
+HPA scales down to one, killing new replicas. A drop in `spec.replicas` is
+read as the HPA, because `rollout restart` never changes it. None of this
+changes what counts as adopted or drained, nor the 120 s ceiling. The pure
+parts, and the collectors against a fake `kubectl`, are covered by
+`scripts/ci/rollout-evidencia.spec.ts`. The scheduled workflow uploads the
+directory as the `rollout-evidencia` artifact on every run that reached the
+proof, green included.
+
 Manually, the same question:
 
 ```sql
@@ -2153,7 +2180,11 @@ anyone running it:
     with them.
 
 **Measured and NOT fixed: the rollout proof has failed once out of four
-runs that reached it.** With the same script and the same fixed wait, run
+runs that reached it** (two out of ten by run `35448353884`, 2026-09-19, where
+all five sessions lived on the same old pod, four were adopted and one ended
+with no owner and no drain; the only logs that named it died with that pod —
+which is why the proof now keeps them, see
+[Proving nothing was left orphaned](#rollout-do-engine)). With the same script and the same fixed wait, run
 `34773908653` passed and run `34775712706` reported an orphan — a session
 `active` in the api with no owner in any of the three engine replicas, 15 s
 after `rollout status` returned. The two runs with the bounded wait passed, and
