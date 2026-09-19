@@ -76,7 +76,7 @@ its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 | `agent.activated` | an agent took on work in the session |
 | `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules/autenticacao.md#rn-175)) |
 | `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
-| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook |
+| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the six conversational agents, by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules.md#rn-589)) |
 | `handoff.offered` | one agent offered the work to another |
 | `handoff.accepted` | the recipient accepted |
 | `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
@@ -89,8 +89,10 @@ has a conversation, `Engine.Agents.Reidratacao` rebuilds its history from the
 and its OWN `tool.call`/`tool.result` (as a text note — the events carry no call
 id, so they are never replayed as `role: tool`). `chat.structured_question_answered`
 is deliberately skipped: the api records the same answers as a `chat.message`
-right after it, and that is what the agent read live. Only `CriativoServer`
-records `tool.result`; for the other five the note says the log has no outcome.
+right after it, and that is what the agent read live. Since [RN-589](../business-rules.md#rn-589) all six record `tool.result`
+with the text the tool returned (`resultado`, cut at 2,000 characters, with
+`resultadoTotal` giving the real length when it cuts); a call from a session
+recorded before that has no `tool.result` and the note says the log has no outcome.
 When the conversation is longer than the tail, the history opens with a system
 message stating how many earlier events were left out, the latest recorded
 compaction summary, and the opening messages.
@@ -468,7 +470,7 @@ Extracted from the emission points: **91 identifiers**, of which **2** are not d
 - `session.created` <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub>
 - `session.draining` <sub>(apps/engine/lib/engine/shutdown.ex)</sub>
 - `tool.call` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `tool.result` <sub>(apps/engine/lib/engine/agents/criativo_server.ex)</sub>
+- `tool.result` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 <!-- END:GENERATED:eventos-inventario -->
 
 ---

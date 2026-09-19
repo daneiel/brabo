@@ -125,7 +125,24 @@ defmodule Engine.Agents.ReidratacaoTest do
       assert erro["content"] =~ "desfecho: ERRO: schema."
     end
 
-    test "ferramenta sem tool.result (os cinco que só gravam a chamada) diz que o log não tem o desfecho" do
+    test "o texto que a ferramenta devolveu volta na nota, e o corte diz o total real (RN-589)" do
+      Process.put(:fake_events, [
+        tool_call("po", "create_epic", %{"title" => "Cadastro"}),
+        tool_result("po", "create_epic", %{"ok" => true, "resultado" => "épico criado id=ep-42"}),
+        tool_call("po", "listar_backlog", %{}),
+        tool_result("po", "listar_backlog", %{
+          "ok" => true,
+          "resultado" => "linhas...",
+          "resultadoTotal" => 9000
+        })
+      ])
+
+      [criado, cortado] = historico("po")
+      assert criado["content"] =~ "desfecho: ok, devolveu: épico criado id=ep-42."
+      assert cortado["content"] =~ "cortado; o total real tinha 9000 caracteres"
+    end
+
+    test "ferramenta sem tool.result (sessão anterior à RN-589) diz que o log não tem o desfecho" do
       Process.put(:fake_events, [tool_call("po", "create_epic", %{"title" => "Cadastro"})])
 
       [nota] = historico("po")

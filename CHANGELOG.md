@@ -6,6 +6,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
+  conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
+  texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam
+  `resultado` (ou `erro`), cortado em 2.000 caracteres com `resultadoTotal`
+  dizendo o tamanho real, e o agente reidratado o lê. Campo aditivo, sem
+  migration; sessão antiga segue sem o texto. `propose_adr` deixa de gravar o
+  próprio `tool.result` de recusa (o servidor o grava).
 - **ci**: o build das imagens de produção deixa de reaproveitar uma camada de
   `apk upgrade` congelada em cache (AT-110). O `docker-bake.hcl` passa
   `no-cache-filter = ["runtime"]` ao alvo base dos cinco `Dockerfile.prod`, e o

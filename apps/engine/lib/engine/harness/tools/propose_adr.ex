@@ -57,13 +57,8 @@ defmodule Engine.Harness.Tools.ProposeAdr do
         propor(args, ctx)
 
       motivo ->
-        EngineApiClient.append_event(ctx.project_id, ctx.session_id, %{
-          type: "tool.result",
-          actorKind: "agent",
-          actorId: ctx.agent,
-          payload: %{tool: "propose_adr", ok: false, erro: motivo}
-        })
-
+        # O `tool.result` da recusa é gravado pelo servidor do Arquiteto para
+        # TODA ferramenta (RN-589); gravá-lo aqui também o duplicaria.
         {:error, motivo}
     end
   end

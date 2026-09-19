@@ -249,6 +249,36 @@ defmodule Engine.Agents.PoServerTest do
       assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "id=evt-r1"))
     end
 
+    test "o texto da ferramenta vai para o event log em tool.result, cortado com o total (RN-589)",
+         %{state: state} do
+      Process.put(:fake_business_rules, %{
+        "rules" => [
+          %{
+            "id" => "evt-r1",
+            "title" => String.duplicate("x", 5_000),
+            "description" => "d",
+            "coveredByStoryIds" => [],
+            "covered" => false
+          }
+        ],
+        "uncoveredCount" => 1
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("listar_regras_de_negocio", %{}),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "o que falta?"}, state)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "listar_regras_de_negocio"} = p}}
+
+      assert p.ok == true
+      assert String.length(p.resultado) == Engine.Agents.ResultadoDeFerramenta.teto()
+      assert p.resultadoTotal > String.length(p.resultado)
+    end
+
     test "listar_backlog roda e injeta o resultado como tool-result", %{state: state} do
       Process.put(:fake_backlog, [%{"id" => "ep-1", "title" => "Cadastro", "stories" => []}])
 

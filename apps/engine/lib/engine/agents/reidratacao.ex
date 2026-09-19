@@ -219,6 +219,16 @@ defmodule Engine.Agents.Reidratacao do
 
   defp renderizar(mensagem), do: mensagem
 
+  defp desfecho(%{"ok" => true, "resultado" => r} = p) when is_binary(r) do
+    aviso =
+      case p["resultadoTotal"] do
+        n when is_integer(n) -> " [cortado; o total real tinha #{n} caracteres]"
+        _ -> ""
+      end
+
+    "ok, devolveu: #{r}#{aviso}"
+  end
+
   defp desfecho(%{"ok" => true}), do: "ok"
   defp desfecho(%{"ok" => false} = p), do: "ERRO: #{p["erro"] || "sem motivo registrado"}"
   defp desfecho(_), do: "desconhecido"
