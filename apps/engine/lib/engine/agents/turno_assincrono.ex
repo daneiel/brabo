@@ -277,6 +277,14 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   # --- Helpers ---
 
+  # Os dois sinais que a tela usa para fechar o turno (`agent.done` no canal,
+  # `agent.status: idle` no log) saem SÓ daqui, e `finalizar/1` só roda no
+  # processo do GenServer, com `turno_assincrono` já `nil` no state que o
+  # `handle_info` vai devolver (RN-585). Quem viu um dos dois e manda a próxima
+  # mensagem é atendido depois desse `handle_info` — nunca ouve
+  # `turno_em_andamento`. Não chame isto de dentro da Task: o que ela grava
+  # (`agent.response`, `agent.error`) sai ANTES de o turno fechar, e por isso
+  # não é sinal de fim.
   defp finalizar(state) do
     broadcast(state, "agent.done", %{})
     broadcast(state, "agent.status", %{status: "idle"})
