@@ -87,6 +87,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api lint:migracao` | `ts-node scripts/lint-migracao.ts` |
 | `pnpm --filter api relatorio:backup` | `ts-node scripts/relatorio-backup.ts` |
 | `pnpm --filter api grafo:reprojetar` | `ts-node src/scripts/reprojetar-grafo.ts` |
+| `pnpm --filter api artefatos:reprojetar` | `ts-node src/scripts/reprojetar-artefatos.ts` |
 | `pnpm --filter api db:generate` | `drizzle-kit generate` |
 | `pnpm --filter api db:migrate` | `drizzle-kit migrate` |
 
@@ -146,4 +147,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-101 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+102 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

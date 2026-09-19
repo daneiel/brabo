@@ -150,6 +150,7 @@ estado lido do repositório e não da conversa.
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
 | O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
+| A pasta `docs/` dos artefatos também se reconstrói do event log (AT-128) | RN-590 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 | O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
@@ -680,7 +681,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   projetado ganha tradução ALI, nunca num segundo tradutor — e não toca a
   outbox dele; `PromptTemplate` não vem do event log e volta por
   `scripts/dev/seed-prompts.ts`; pgvector CONTINUA sendo
-  o índice vetorial dos chunks, o grafo não guarda embedding
+  o índice vetorial dos chunks, o grafo não guarda embedding; a pasta `docs/`
+  dos artefatos (ADR 0148) é a SEGUNDA projeção derivada e tem o mesmo
+  caminho de volta — `pnpm --filter api artefatos:reprojetar` (RN-590), pelo
+  MESMO `ArtifactEventTranslator` do `ArtifactProjector`, sem backup, sem tocar
+  a outbox e sem apagar nada
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
   `i18next` (fundação de i18n, RN-425) atrás de `lib/i18n.ts`/`lib/idioma.ts`

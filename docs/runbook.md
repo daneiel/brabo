@@ -24,6 +24,7 @@ Start with triage.
 | I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
 | a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
 | the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) — `grafo:reprojetar` |
+| a project's `docs/` folder (the agents' artifacts) is missing after a restore, a volume loss or a mode conversion | [Losing the artifact folder](#perda-da-pasta-de-artefatos) — `artefatos:reprojetar` |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -1783,7 +1784,7 @@ making it is that "back up every volume" costs space while hiding what matters.
 | `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
 | `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
 | `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — `grafo:reprojetar`, see [Losing the graph](#perda-do-grafo) |
-| `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
+| `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo, **and** the agents' `docs/` folder of `container` and `runner` projects, which is a projection of the event log ([ADR 0148](adr/0148-artefatos-projetados-em-arquivo.md)) | no. The answer is **reprojection** — `artefatos:reprojetar`, see [Losing the artifact folder](#perda-da-pasta-de-artefatos) |
 | `ollama_data` | re-obtainable — models download again | no |
 | `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
 
@@ -2103,6 +2104,81 @@ against the cluster's Postgres and Neo4j, on a project it creates itself.
 The graph being empty until you run this has a named effect: reads that depend
 on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
 is inside the dump.
+
+### Losing the artifact folder (`docs/`) {#perda-da-pasta-de-artefatos}
+
+Every artifact the agents emit lives **only in the event log**; the `docs/`
+folder of the project is a **projection** of it ([ADR 0148](adr/0148-artefatos-projetados-em-arquivo.md)),
+so it is not in any backup and that is the decision, not an oversight
+([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md) reasons the same for the
+graph). Restoring the database does **not** bring it back by itself: the
+outbox rows that drive the live projector are already marked processed, so
+nothing rewrites the folder. The command that does exists
+([RN-590](business-rules.md#rn-590)):
+
+```bash
+# Kubernetes (the script ships inside the api image)
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-artefatos.js
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-artefatos.js --project <project-uuid>
+
+# installation compose (same image as Kubernetes)
+docker compose -f docker/docker-compose.install.yml exec api node scripts/reprojetar-artefatos.js
+
+# a dev checkout (DATABASE_URL pointing at the database)
+pnpm --filter api artefatos:reprojetar
+pnpm --filter api artefatos:reprojetar -- --project <project-uuid>
+```
+
+Expected output:
+
+```
+[reprojetar-artefatos] escopo: event log inteiro
+[reprojetar-artefatos] artefatos: 6 projetados, cursor 01M2DTREY0TBKHCHG9NWXYF0A4
+
+[reprojetar-artefatos] resultado
+
+  artefatos projetados=6  falhas=0
+```
+
+What it does, and what it guarantees:
+
+- **The same translation as the live projector.** Event → folder, file name
+  and Markdown live in one class (`ArtifactEventTranslator`), called by both
+  the forward projector and this command.
+- **Idempotent, and it never deletes.** The file name is a function of the
+  event (versioned types: `<type>.md`; append-only: with the `seq`), so running
+  it twice rewrites the same files with the same content, and **running it
+  again is how you retry**. A file you created in `docs/` stays.
+- **In batches, by cursor.** `session_events` is walked in `id` order, 200 rows
+  at a time; `--after-event <id>` resumes after the printed cursor.
+- **It does not touch the outbox**, so the api can stay up.
+- **It fails named, never as silent success.** A write that fails (full disk,
+  unreachable folder, a project whose folder is gone) is counted and named per
+  event, does not stop the rest, and the run exits `1` at the end. An unknown
+  `--project` is refused with nothing written.
+
+Where it writes, and what it does **not** cover:
+
+- **It must see the same disk as the api.** The folder is resolved by the same
+  function the projector uses (`container`/`runner`:
+  `<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>/docs/`; `mounted`: inside the
+  project folder). Run it in the api image, with the api's volumes.
+- **It writes to the project's *current* location.** A mode conversion does not
+  move `docs/` (the conversion code never touches it), so files written before
+  it stay at the old location; reprojecting recreates them at the current one.
+- **Versioned types show the last event, so do not resume in the middle of
+  them.** `module_map`, `module_routing`, `project_image` and `c4_diagram`
+  overwrite one file; a full run ends with the latest emitted version, while
+  `--after-event` starting between two versions can leave an older one.
+- **What it does not read:** types outside the projectable list (`qa_verdict`,
+  `secops_verdict`, `task_blocked`, `infra_delegation_files`) were never files
+  and are not recreated.
+- **No time measurement on a large event log** — unmeasured; the command is
+  safe to interrupt and run again.
+
+The proof is `apps/api/test/scripts/reprojetar-artefatos.spec.ts`: it builds a
+scenario with the forward projector on a real Postgres and a real disk, **wipes**
+the folder, reprojects, compares every path and content, and reprojects again.
 
 ### When the restore fails
 
