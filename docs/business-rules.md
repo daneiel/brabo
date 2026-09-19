@@ -14542,20 +14542,30 @@ repositório. Carregando ou com erro, nada tranca — "não sei" não vira "não
 tem", e o backend recusa de qualquer forma. Aceitar um handoff invalida a
 consulta do repositório, porque o aceite pode tê-lo criado.
 
-**Consequência declarada (ADR 0165):** a sessão `git-bootstrap` que o
-provisionamento abre passa a nascer no MEIO da fase do Arquiteto, e é a
-"sessão mais recente" do projeto (a Visão Geral e o resumo do workspace escolhem
-por `createdAt`) até a próxima nascer. A tela da sessão de chat não é afetada.
-Não decidido aqui.
+**A sessão técnica não desloca a de trabalho (AT-131).** A sessão que o
+provisionamento abre (`repo_bootstraps.session_id`, nome `git-bootstrap`) nasce
+no MEIO da fase do Arquiteto, e escolher "a mais recente" só por `createdAt` a
+punha no lugar da sessão de trabalho até a próxima nascer (ADR 0165 deixou isso
+declarado). Agora as duas leituras por `createdAt` do resumo do workspace
+(`latestSessionId` e o corte das não lidas) ordenam por "é sessão de bootstrap"
+ANTES de `createdAt`, e a Visão Geral (`useLatestSession`) faz o mesmo. A técnica
+só é a mais recente quando é a ÚNICA — no fluxo manual de provisionamento é nela
+que o projeto começa. A api lê o marcador por `repo_bootstraps`; a web só tem o
+NOME da sessão, e renomeá-la faz as duas divergirem (a Visão Geral então trata o
+resumo como de outra sessão e não o usa). O critério não muda o que o ADR 0165
+decidiu (onde o repositório nasce), por isso não há ADR novo.
 
-**Adjacência com a [RN-581](#rn-581), declarada e não corrigida:** aceitar um
-handoff numa sessão ENCERRADA é 409 `sessao_encerrada`, checado ANTES de o
-handoff virar `accepted` — então nada é provisionado pela metade. Mas a frase
-da recusa da ativação lê os handoffs do projeto sem olhar o estado da sessão
-de cada um, e pode mandar "aceitar o handoff ao Arquiteto, que está oferecido"
-quando esse handoff mora numa sessão já fechada; o caminho que resolve ali é a
-página de provisionamento. Os eventos que o provisionamento grava não caem na
-recusa: o ator é `system` e o destino é a sessão `git-bootstrap`, recém-criada.
+**A recusa da ativação não manda aceitar handoff de sessão encerrada
+([RN-581](#rn-581), AT-131).** Aceitar handoff numa sessão terminal é 409
+`sessao_encerrada`, checado ANTES de o handoff virar `accepted` — então nada é
+provisionado pela metade. A frase da recusa agora consulta o estado da sessão de
+cada handoff `offered`: só o que mora em sessão ABERTA vira "aceite-o"; se o
+único `offered` está em sessão encerrada, a frase diz isso e aponta a página de
+provisionamento. Sessão não encontrada conta como aberta ("não sei" não vira
+"encerrada"). Os eventos que o provisionamento grava não caem na RN-581: o ator
+é `system` e o destino é a sessão `git-bootstrap`, recém-criada. O que segue
+NÃO coberto: a Visão Geral e o card do handoff na sessão lêem o estado do
+repositório, não o de cada sessão, e não mudaram.
 
 - **Onde:**
   `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:54`
@@ -14563,7 +14573,7 @@ recusa: o ator é `system` e o destino é a sessão `git-bootstrap`, recém-cria
   (o ramo, antes de `activateAgent`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
   (a recusa, antes de qualquer efeito);
-  `apps/api/src/domain/execution/repositorio-para-executar.ts:37`
+  `apps/api/src/domain/execution/repositorio-para-executar.ts:50`
   (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
   também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
   (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;

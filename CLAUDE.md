@@ -163,6 +163,7 @@ estado lido do repositório e não da conversa.
 | O clique que dispara turno responde ao aceitar, e a recusa deixa de ser calada (AT-089) | ADR 0163, RN-578 |
 | A tela de Sessão para de pollar a 3s com o canal vivo, e o corpo vazio ganha ETag (AT-093) | RN-579, CHANGELOG |
 | A mensagem ao `infra` era lida pelo Criativo; o chat deixa de ter destinatário padrão (AT-098) | RN-584 |
+| A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 
 ## Estado atual e aberto
 
