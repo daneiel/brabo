@@ -2,6 +2,7 @@ import { Socket } from 'phoenix';
 import { logger } from './logger';
 import { runtimeConfig } from './runtime-config';
 import { createSocketTicket } from './api-client';
+import { marcarCanalDaSessao } from './canal-vivo';
 
 const ENGINE_URL = runtimeConfig.engineUrl;
 const PING_INTERVAL_MS = 10_000;
@@ -39,8 +40,10 @@ export interface SessionChannelHandlers {
   // Qualquer session_event recém-persistido (Dev/QA/SecOps/Infra, Fase 4a) —
   // broadcastado ao lado do append_event no engine. Usado só como GATILHO
   // pra antecipar o refetch do polling (nunca substitui o parsing/cache do
-  // GET .../events já existente).
-  onEvent?: (payload: { type: string; actorId: string; payload: unknown }) => void;
+  // GET .../events já existente). Desde a RN-579 o engine manda só `type` e
+  // `actorId` — o conteúdo vem do GET, e o cru de um `tool.result` não tem
+  // por que atravessar o socket.
+  onEvent?: (payload: { type: string; actorId: string }) => void;
   // Ferramenta chamada durante um turno de agente conversacional — broadcast
   // efêmero (faixa de atividade da sessão), rebroadcastado pelo server do
   // agente logo depois do `tool.call` durável (ver os seis servers em
@@ -124,14 +127,18 @@ export function connectSessionHeartbeat(
     // `OpentelemetryBandit` — um id inventado aqui não teria par nenhum do
     // lado do servidor. Quem correlaciona é o `sessionId`, que é o mesmo que
     // o engine agora emite em `Logger.metadata(session_id:)`.
-    socket.onError((erro: unknown) =>
+    socket.onError((erro: unknown) => {
+      marcarCanalDaSessao(sessionId, false);
       logger.warn('socket da sessão com erro', {
         sessionId,
         erro: String(erro),
-      }),
-    );
+      });
+    });
     socket.onClose(() => {
       logger.info('socket da sessão fechado', { sessionId });
+      // Canal caído: as queries da sessão voltam ao poll curto na hora
+      // (RN-579) — nenhum aviso vai chegar até a reconexão.
+      marcarCanalDaSessao(sessionId, false);
       limparPing();
       // Reconexão MANUAL — busca ticket novo, nunca reusa o que acabou de
       // cair. `parado` cobre o cleanup intencional (retorno desta função).
@@ -147,8 +154,15 @@ export function connectSessionHeartbeat(
 
     const canal = socket.channel(`session:${sessionId}`, {});
     channel = canal;
+    // RN-579: VIVO só com o join CONFIRMADO — socket aberto sem canal não
+    // entrega aviso nenhum. O `ok` volta a disparar a cada rejoin automático
+    // do canal (o gancho fica no `joinPush`), e qualquer erro/fechamento do
+    // canal ou do socket devolve o poll curto.
+    canal.onError(() => marcarCanalDaSessao(sessionId, false));
+    canal.onClose(() => marcarCanalDaSessao(sessionId, false));
     canal
       .join()
+      .receive('ok', () => marcarCanalDaSessao(sessionId, true))
       .receive('error', (resp: unknown) =>
         logger.warn('não foi possível entrar no canal da sessão', {
           sessionId,
@@ -192,12 +206,11 @@ export function connectSessionHeartbeat(
     if (handlers.onEvent) {
       canal.on(
         'event.appended',
-        (payload: { type?: string; actorId?: string; payload?: unknown }) => {
+        (payload: { type?: string; actorId?: string }) => {
           if (typeof payload?.type === 'string') {
             handlers.onEvent!({
               type: payload.type,
               actorId: payload.actorId ?? '',
-              payload: payload.payload,
             });
           }
         },
@@ -213,6 +226,7 @@ export function connectSessionHeartbeat(
 
   return () => {
     parado = true;
+    marcarCanalDaSessao(sessionId, false);
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;

@@ -579,7 +579,9 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().llm_turn(project_id, session_id, agent, messages, tools)
 
   def propose_action(project_id, session_id, action_type, actor, payload),
-    do: impl().propose_action(project_id, session_id, action_type, actor, payload)
+    do:
+      impl().propose_action(project_id, session_id, action_type, actor, payload)
+      |> avisar_canal(session_id, "proposed_action.created", campo(actor, :id))
 
   def confirm_workspace(project_id, session_id, path, user_id),
     do: impl().confirm_workspace(project_id, session_id, path, user_id)
@@ -603,10 +605,14 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().report_termination(project_id, session_id, reason, to)
 
   def append_event(project_id, session_id, event),
-    do: impl().append_event(project_id, session_id, event)
+    do:
+      impl().append_event(project_id, session_id, event)
+      |> avisar_canal(session_id, campo(event, :type), campo(event, :actorId))
 
   def append_event_returning(project_id, session_id, event),
-    do: impl().append_event_returning(project_id, session_id, event)
+    do:
+      impl().append_event_returning(project_id, session_id, event)
+      |> avisar_canal(session_id, campo(event, :type), campo(event, :actorId))
 
   def list_events(project_id, session_id),
     do: impl().list_events(project_id, session_id)
@@ -622,16 +628,24 @@ defmodule Engine.Sessions.EngineApiClient do
   def get_git_remote(project_id), do: impl().get_git_remote(project_id)
 
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
-    do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+    do:
+      impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+      |> avisar_canal(session_id, "handoff.offered", from_agent)
 
   def create_epic(project_id, session_id, fields),
-    do: impl().create_epic(project_id, session_id, fields)
+    do:
+      impl().create_epic(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.epic_created", nil)
 
   def create_story(project_id, session_id, fields),
-    do: impl().create_story(project_id, session_id, fields)
+    do:
+      impl().create_story(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.story_created", nil)
 
   def create_task(project_id, session_id, fields),
-    do: impl().create_task(project_id, session_id, fields)
+    do:
+      impl().create_task(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.task_created", nil)
 
   def list_business_rules(project_id), do: impl().list_business_rules(project_id)
 
@@ -775,6 +789,39 @@ defmodule Engine.Sessions.EngineApiClient do
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
+
+  # AT-093 (RN-579): toda escrita que a api CONFIRMOU numa sessão vira um
+  # `event.appended` no canal `session:<id>` — é o que deixa a web trocar o
+  # poll de 3s por invalidação enquanto o canal está vivo. O aviso sai DAQUI,
+  # da fachada, e não de cada chamador: antes só `ArtifactEmitter` e o Infra
+  # Lead avisavam, e o resto dos chamadores de `append_event` (o `EventLog` do
+  # harness, o `ToolLoop`, o `AgentIo` dos dev agents, o `agent.status`) e as
+  # escritas que a api registra como evento (`proposed_action.created`,
+  # `handoff.offered`, `backlog.*_created`) chegavam à tela só pelo poll.
+  #
+  # Só depois do `:ok`/`{:ok, _}`: avisar do que a api RECUSOU faria a web
+  # buscar para não achar nada. E o aviso leva o TIPO e o ator, nunca o
+  # `payload`: a web o usa só como gatilho de refetch, e um `tool.result`
+  # inteiro atravessando o socket a cada ferramenta seria tráfego sem leitor.
+  defp avisar_canal(resultado, session_id, type, actor_id)
+       when is_binary(session_id) and is_binary(type) do
+    if confirmado?(resultado) do
+      Engine.Sessions.LiveBroadcast.event_appended(session_id, type, actor_id)
+    end
+
+    resultado
+  end
+
+  defp avisar_canal(resultado, _session_id, _type, _actor_id), do: resultado
+
+  defp confirmado?(:ok), do: true
+  defp confirmado?({:ok, _}), do: true
+  defp confirmado?(_), do: false
+
+  defp campo(%{} = mapa, chave),
+    do: Map.get(mapa, chave) || Map.get(mapa, Atom.to_string(chave))
+
+  defp campo(_, _), do: nil
 end
 
 defmodule Engine.Sessions.EngineApiClient.Live do
