@@ -13649,12 +13649,14 @@ ter gravado o `.env` com os segredos. O mantenedor decidiu a saída em
 **O que esta regra NÃO fecha:** a prova ponta a ponta só acontece na primeira
 tag final depois do merge — o `install-e2e.yml` não roda em PR (ADR 0150) —, e
 nenhuma Release já publicada ganha os assets: elas seguem com o instalador
-antigo e o contorno de rodá-lo de dentro de um checkout na tag. E fica medida e
-NÃO corrigida a adjacência que o ADR 0160 declara: `test-restore-compose.sh`
-chama o Compose sem `--env-file`, o Compose procura o `.env` na pasta do
-compose e não na de onde se roda, e por isso a prova de restauração da
-migração tende a reprovar — desfecho seguro pela RN-530 (nada é apagado), mas a
-migração por compose não fecha.
+antigo e o contorno de rodá-lo de dentro de um checkout na tag. A adjacência
+que o ADR 0160 declarou — `test-restore-compose.sh` chamava o Compose sem
+`--env-file`, e o Compose procura o `.env` na pasta do compose — fechou na
+AT-102: o instalador passa `BRABO_ENV_FILE` (`--env-file`, e não
+`--project-directory`, que também mudaria o nome do projeto e a base dos
+caminhos relativos) e o compose de instalação declara o volume `backup_local`
+que o serviço `backup` referencia, cuja falta recusava o arquivo inteiro com o
+profile ligado. Coberto por `scripts/dev/prova-de-restauracao-env.spec.ts`.
 
 - **Código:** `install.sh:95` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
   `:497` (`ASSETS_DO_INSTALADOR`), `:499` (`destino_do_asset_do_instalador`, a

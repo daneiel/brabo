@@ -60,6 +60,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   é capacidade, e pedir +1 agente só multiplicava os bloqueados. O teto de
   `parallelize`/`raise_max_parallel` (RN-154) não muda. Custo declarado: a
   sugestão não é refeita quando o container sobe depois da ativação.
+- **instalador**: a **prova de restauração da migração deixa de reprovar por
+  ambiente** (AT-102). `test-restore-compose.sh` chamava o Compose sem
+  `--env-file` (o `.env` da instalação fica uma pasta acima do compose) e, além
+  disso, o compose de instalação não declarava o volume `backup_local` que o
+  serviço `backup` usa, o que invalidava o arquivo inteiro assim que o profile
+  ligava. Agora o `install.sh` passa `BRABO_ENV_FILE` e o volume existe; a
+  garantia da RN-530 segue igual (backup não provado, nada apagado).
 
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
