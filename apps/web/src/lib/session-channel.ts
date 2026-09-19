@@ -2,6 +2,7 @@ import { Socket } from 'phoenix';
 import { logger } from './logger';
 import { runtimeConfig } from './runtime-config';
 import { createSocketTicket } from './api-client';
+import { marcarCanalDaSessao } from './canal-vivo';
 
 const ENGINE_URL = runtimeConfig.engineUrl;
 const PING_INTERVAL_MS = 10_000;
@@ -124,14 +125,18 @@ export function connectSessionHeartbeat(
     // `OpentelemetryBandit` — um id inventado aqui não teria par nenhum do
     // lado do servidor. Quem correlaciona é o `sessionId`, que é o mesmo que
     // o engine agora emite em `Logger.metadata(session_id:)`.
-    socket.onError((erro: unknown) =>
+    socket.onError((erro: unknown) => {
+      marcarCanalDaSessao(sessionId, false);
       logger.warn('socket da sessão com erro', {
         sessionId,
         erro: String(erro),
-      }),
-    );
+      });
+    });
     socket.onClose(() => {
       logger.info('socket da sessão fechado', { sessionId });
+      // Canal caído: as queries da sessão voltam ao poll curto na hora
+      // (RN-579) — nenhum aviso vai chegar até a reconexão.
+      marcarCanalDaSessao(sessionId, false);
       limparPing();
       // Reconexão MANUAL — busca ticket novo, nunca reusa o que acabou de
       // cair. `parado` cobre o cleanup intencional (retorno desta função).
@@ -147,8 +152,15 @@ export function connectSessionHeartbeat(
 
     const canal = socket.channel(`session:${sessionId}`, {});
     channel = canal;
+    // RN-579: VIVO só com o join CONFIRMADO — socket aberto sem canal não
+    // entrega aviso nenhum. O `ok` volta a disparar a cada rejoin automático
+    // do canal (o gancho fica no `joinPush`), e qualquer erro/fechamento do
+    // canal ou do socket devolve o poll curto.
+    canal.onError(() => marcarCanalDaSessao(sessionId, false));
+    canal.onClose(() => marcarCanalDaSessao(sessionId, false));
     canal
       .join()
+      .receive('ok', () => marcarCanalDaSessao(sessionId, true))
       .receive('error', (resp: unknown) =>
         logger.warn('não foi possível entrar no canal da sessão', {
           sessionId,
@@ -213,6 +225,7 @@ export function connectSessionHeartbeat(
 
   return () => {
     parado = true;
+    marcarCanalDaSessao(sessionId, false);
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;

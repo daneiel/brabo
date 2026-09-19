@@ -16,7 +16,7 @@ import { onMudancaDeSessao, restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { logger } from './lib/logger';
 import { ApiError } from './lib/api-client';
-import { deveRetentar } from './lib/query-policy';
+import { OPCOES_PADRAO_DAS_QUERIES } from './lib/query-policy';
 import i18n from './lib/i18n';
 import { sincronizarIdiomaDaSessao } from './lib/idioma';
 
@@ -47,7 +47,8 @@ const queryClient = new QueryClient({
     // 4xx não se retenta (ver `query-policy.ts`). O default do TanStack são 3
     // tentativas para QUALQUER erro, e contra o rate limit da api isso
     // quadruplicava o tráfego exatamente quando o servidor pedia menos.
-    queries: { retry: deveRetentar },
+    // Aba oculta não polla (`refetchIntervalInBackground: false`, AT-093).
+    queries: OPCOES_PADRAO_DAS_QUERIES,
   },
   // Os dois caches são os únicos ganchos que veem TODA falha de dado da app —
   // um try/catch por chamada deixaria passar o que o react-query engole.

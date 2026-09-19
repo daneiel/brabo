@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { connectSessionHeartbeat } from './session-channel';
+import { criarInvalidadorDoCanal } from './canal-vivo';
 import {
   ESTADO_INICIAL_DA_ATIVIDADE,
   reduzirAtividadeDoTurno,
@@ -235,6 +236,7 @@ export function useTurnoDoAgente(
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
   useEffect(() => {
     if (sessionStatus !== 'active') return;
+    const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
       onAgentDelta: (text, agent) => {
         streamingRef.current = true;
@@ -278,12 +280,21 @@ export function useTurnoDoAgente(
       // ser persistido, e trazer o evento antes de `agent.done` põe as duas na
       // tela ao mesmo tempo — a duplicação do achado C. `onAgentDone` invalida
       // logo em seguida, então nada se perde; só deixa de aparecer duas vezes.
-      onEvent: () => {
-        if (streamingRef.current) return;
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
+      //
+      // RN-579: o aviso deixou de invalidar SÓ os eventos. O TIPO decide o que
+      // mais fica velho (ações, handoffs, backlog, orçamento — `alvosDoEvento`),
+      // e cada alvo tem janela mínima entre duas buscas: uma rajada de
+      // `tool.result` de um dev agent vira UMA busca por janela, não uma por
+      // evento. É isso que deixa as queries da sessão trocarem o poll de 3s
+      // pelo fallback de 15s enquanto o canal está vivo. A regra do achado C
+      // continua, e só para os EVENTOS: a proposta de ação que chega no meio
+      // de um turno do Dev Lead aparece na hora.
+      onEvent: ({ type }) => invalidador.aoEvento(type, streamingRef.current),
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      invalidador.encerrar();
+    };
   }, [sessionStatus, sessionId, projectId, queryClient, finalizarTurnoDoAgente]);
 
   // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131) — o MESMO
