@@ -271,7 +271,7 @@ describe('install.sh — a ordem em `main` é a garantia', () => {
       'migrar_instalacao_anterior "',
       'Sem terminal interativo',
       'consentir_base',
-      ': > "$env_arquivo"',
+      'escrever_env "$env_arquivo"',
     ]) {
       expect(main.indexOf(depois), depois).toBeGreaterThan(verificacao);
     }
@@ -280,7 +280,12 @@ describe('install.sh — a ordem em `main` é a garantia', () => {
   it('só materializa depois de gravar o `.env`, e imediatamente antes de subir', () => {
     const main = corpoDoMain();
     const materializa = main.indexOf('materializar_os_arquivos_da_instalacao "$PWD"');
-    expect(materializa).toBeGreaterThan(main.indexOf(': > "$env_arquivo"'));
+    // A âncora tem de EXISTIR: `indexOf` devolve -1 quando o texto some, e
+    // "maior que -1" passaria calado — foi o que a extração de `escrever_env`
+    // (AT-083) teria feito com a âncora antiga, `: > "$env_arquivo"`.
+    const gravaEnv = main.indexOf('escrever_env "$env_arquivo"');
+    expect(gravaEnv).toBeGreaterThan(0);
+    expect(materializa).toBeGreaterThan(gravaEnv);
     expect(main.indexOf('up -d --wait')).toBeGreaterThan(materializa);
   });
 

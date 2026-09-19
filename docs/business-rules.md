@@ -10435,12 +10435,25 @@ macOS, Authenticode do Windows), que exige identidade paga e segue no backlog.
 é a porta única de instalação. Quatro garantias, e cada uma existe contra um
 defeito concreto:
 
-**A invocação preserva o stdin.** A forma documentada é
-`sh -c "$(curl -fsSL …)"`, e **nunca** `curl … | sh`: com o script chegando
-pelo pipe, o `stdin` do processo É o download, e qualquer `read` lê bytes do
-próprio script ou encontra EOF. Um instalador que não consegue perguntar
-escolheria sozinho onde criar pastas no computador de alguém — o oposto da
-régua que a RN-511 já aplica ao consentimento da base.
+**A invocação preserva o stdin e deixa um ARQUIVO.** A forma documentada é
+`curl -fsSLO …/install.sh && bash install.sh` — baixar e rodar um arquivo com
+`bash` —, e **nunca** `curl … | sh`: com o script chegando pelo pipe, o `stdin`
+do processo É o download, e qualquer `read` lê bytes do próprio script ou
+encontra EOF. Um instalador que não consegue perguntar escolheria sozinho onde
+criar pastas no computador de alguém — o oposto da régua que a RN-511 já aplica
+ao consentimento da base. Até a AT-083 a forma documentada era
+`sh -c "$(curl -fsSL …)"`, e ela **nunca funcionou**: a verificação da própria
+origem (o parágrafo seguinte) calcula o hash de `$0`, e em `X -c "…"` o `$0` é o
+nome do shell, não um arquivo; com `dash` como `sh` o script morria antes, no
+`set -o pipefail`. A decisão do mantenedor (18/09) foi mudar a DOC e manter a
+verificação por `$0`, **sem** porta de pular (ADR 0150). As formas erradas
+viraram **recusas nomeadas**, antes do primeiro download, que imprimem a forma
+certa: rodar sob um shell que não é bash (bloco POSIX no topo, antes do
+`set -o pipefail`) e rodar sem arquivo (`exigir_o_proprio_arquivo`, que exige o
+`BASH_SOURCE` do nível de cima **e** um `$0` legível — `/bin/bash -c` deixa
+`$0=/bin/bash`, que existe, e sem a primeira metade o hash dele iria ao
+manifesto e a pessoa leria a frase de adulteração). A forma é UMA constante
+(`COMO_RODAR`), usada pelas recusas e pelo relato sem TTY.
 
 **Ele verifica a própria origem antes de agir**, e a cadeia tem dois elos: a
 assinatura do `checksums.txt` da Release (RN-524), e o hash **deste arquivo**
@@ -10461,7 +10474,13 @@ verificação, o macOS não o traz, e o `command not found` chegava a quem
 instalava como acusação de adulteração — bloqueando toda instalação na
 plataforma que o próprio script suporta (há `cosign` `darwin-*` pinado nele) e
 ensinando a ignorar a frase no dia em que ela for verdade. `--print-plan` roda
-sem nenhuma das duas e declara qual o script aceita (`conferir-hash`).
+sem nenhuma das duas e declara qual o script aceita (`conferir-hash`). E há uma
+TERCEIRA recusa, desde a AT-083: a ferramenta existe mas **não consegue ler o
+arquivo**. Sem ela, `hash_sha256` devolvia vazio de dentro da substituição de
+comando (o `errexit` não chega ao subshell) e a comparação seguinte falhava com
+o texto de incidente do chamador — a acusação de adulteração da AT-091 por outro
+caminho. Agora é `falha_ao_calcular_hash`, que nomeia o arquivo e diz que não
+houve o que comparar.
 
 **A detecção nomeia o que achou.** Pelo marcador
 (`$XDG_STATE_HOME/brabo/install-state.json`) quando ele existe; por sinais
@@ -10485,7 +10504,11 @@ são vidas diferentes, e juntá-los faria a remoção de um apagar o outro.
 `bootstrap.spec.ts`; e o bloco *"o hash num PATH sem sha256sum"* roda as
 funções de hash no shell de verdade, com o `PATH` montado ferramenta por
 ferramenta, conferindo as DUAS recusas (ferramenta ausente × hash divergente)
-e que a primeira nunca usa o vocabulário da segunda.
+e que a primeira nunca usa o vocabulário da segunda;
+`scripts/dev/install-invocacao.spec.ts` roda o script pelas formas erradas
+(`bash -c`, `/bin/bash -c`, pipe, `dash -c`, `dash install.sh`) e cobra a recusa
+nomeada com a forma certa antes de qualquer download, a terceira recusa de hash,
+e que runbook, bootstrap e cabeçalho ensinam a MESMA forma.
 **Origem:** FASE 29, sessão 3 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 Nesta sessão o script **não instala nada** — subir o compose, gerar segredos e
 instalar o runner são as sessões 4 e 7, e ele **diz isso** na saída em vez de
@@ -10529,6 +10552,16 @@ de `NEO4J_AUTH`. O `.env` é criado **vazio e com modo 600 ANTES** de receber
 conteúdo: criar com o umask do usuário e apertar depois deixaria os segredos
 legíveis por uma janela, e é justamente o arquivo que não pode ter essa janela.
 
+**E o `.env` é um arquivo que o COMPOSE parseia, e se prova contra ele**
+(AT-083). O `SECRET_KEY_BASE` saía de `openssl rand -base64 64`, que QUEBRA a
+linha aos 64 caracteres: os 88 do segredo iam em duas linhas, e a segunda ficava
+solta no `.env`. Medido em 100 gerações, o Compose recusou 49 (*"unexpected
+character in variable name"*) e ACEITOU 51 — com o segredo cortado em 64
+caracteres, que ainda é o mínimo do Phoenix e por isso subia sem aviso. Todo
+base64 passa agora por `segredo_base64` (`| tr -d '\n'`), e o arquivo é escrito
+por `escrever_env` — função, e não corpo de `main`, para que o spec grave o
+MESMO arquivo que a instalação grava.
+
 **Não há passo de migrate, e não deve haver:** o compose encadeia `api` →
 `migrate-api` com `service_completed_successfully`, e `up --wait` espera. Um
 segundo lugar mandando migrar seria a segunda fonte da mesma verdade.
@@ -10541,7 +10574,11 @@ que instalou. É a régua que o `reset-total.sh` custou a aprender: ele anunciav
 **Onde:** `install.sh` (raiz), `docker/docker-compose.install.yml`.
 **Teste:** `scripts/dev/install.spec.ts` (o plano, sem TTY nem efeito) e
 `scripts/dev/composes-em-conformidade.spec.ts` (a divergência entre os dois
-composes).
+composes); `scripts/dev/install-env.spec.ts` gera os segredos e o `.env` pelas
+funções de verdade, passa o arquivo por `docker compose config` contra o compose
+de instalação e cobra que CADA segredo chegue INTEIRO aos serviços (pula
+nomeando o motivo sem `docker compose`), com a geração antiga fixada como
+reprovada.
 **Origem:** FASE 29, sessão 4 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)
 seguem fora, e o `--print-plan` os declara `nao-nesta-versao`.
@@ -10727,10 +10764,26 @@ que está sendo assinado no mesmo job.
 Actions é: host recém-criado, sem Brabo, sem `.env`, sem marcador. O E2E prova,
 nessa ordem: o **plano** não deixou de prometer o que nunca apaga; o **estado**
 numa máquina limpa não inventa marcador nem sinais; **sem TTY** o instalador
-relata, sai 0 e **não grava**; e, com TTY simulado por `script -qec` (um
-terminal de verdade, não um pipe — o pipe é justamente o que mataria o
-consentimento), a instalação completa verifica assinatura, confere o próprio
-hash, grava o marcador e deixa o `.env` em modo **600**.
+relata, sai 0 e **não grava**; e, com um TTY de verdade (não um pipe — o pipe é
+justamente o que mataria o consentimento), a instalação completa verifica
+assinatura, confere o próprio hash, grava o marcador e deixa o `.env` em modo
+**600**.
+
+**Correção (AT-083):** o "TTY simulado por `script -qec`" que este parágrafo
+afirmava **nunca foi TTY para o instalador**. O passo rodava
+`script -qec "… ./install.sh … < respostas"`, com o `<` DENTRO do comando do
+`script`: o stdin do instalador era o arquivo, `[ -t 0 ]` era sempre falso, e o
+fluxo interativo nunca foi exercitado. Hoje quem roda o instalador é um driver
+de PTY em Python (`python3 -I`, sem dependência nova), que o põe no lado
+escravo do pty e ESPERA cada pergunta antes de responder — e, para as duas de
+senha, espera o eco estar DESLIGADO, o que prova o "sem eco" da RN-547 e impede
+a senha de aparecer na saída. O E2E também baixa e roda o instalador pela MESMA
+forma que o runbook manda (`curl -fsSLO` + `bash install.sh`, RN-526), e
+reprova de cara se o instalador disser "Sem terminal interativo". Como o
+workflow segue sem rodar em PR, o driver é extraído dele e exercitado em
+`scripts/dev/install-e2e.spec.ts` contra um instalador de mentira (terminal
+visto, respostas em ordem, senha fora da saída, e as duas paradas nomeadas),
+com a forma antiga fixada como a que NÃO dava terminal.
 
 **Ele não roda em `pull_request`**, e o motivo é o mesmo da assinatura: o
 manifesto assinado só existe depois de uma tag final. Fazer o script rodar em PR
@@ -10744,7 +10797,8 @@ de fingir cobertura.
 **Onde:** `.github/workflows/install-e2e.yml`;
 `.github/workflows/build-runner-binaries.yml`, job `checksums`.
 **Teste:** o próprio workflow — e `scripts/dev/install.spec.ts` continua
-cobrindo a decisão sem rede.
+cobrindo a decisão sem rede; `scripts/dev/install-e2e.spec.ts` (bloco *"o TTY
+do E2E é um TTY para o INSTALADOR"*) exercita o driver de PTY em PR.
 **Origem:** FASE 29, sessão 10 ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
 [ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 

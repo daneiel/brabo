@@ -1,4 +1,6 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -92,6 +94,8 @@ const OUTRAS_FRASES_ASSERIDAS: readonly string[] = [
   'assinatura do manifesto confere',
   'este arquivo é o que a Release publicou',
   'Sem terminal interativo',
+  // AT-083: o relato sem TTY ensina BAIXAR e rodar com bash.
+  'curl -fsSLO',
   // RN-570: os arquivos da instalação vêm da Release, conferidos, e é o próprio
   // instalador que os grava.
   'arquivos da instalação verificados contra o manifesto assinado',
@@ -115,10 +119,10 @@ const ESPERA_DO_RUNNER = path.join(RAIZ, 'apps/runner/src/espera-de-projetos.ts'
 
 /**
  * Prompts interativos do `install.sh` — `read -r` que NÃO é `while IFS= read`.
- * O workflow responde a eles por um arquivo, em ordem, e um prompt novo
- * desalinha TODAS as respostas seguintes: a base viraria a senha, e a
- * instalação falharia por um motivo que não tem nada a ver com o que se quer
- * medir. Não dá para derivar quais deles disparam numa máquina limpa (depende
+ * O driver de TTY do workflow responde a eles por uma LISTA, em ordem, esperando
+ * o trecho de cada pergunta; um prompt novo no meio faz o driver esperar até o
+ * teto por uma pergunta que já passou, e a instalação falharia por um motivo que
+ * não tem nada a ver com o que se quer medir. Não dá para derivar quais deles disparam numa máquina limpa (depende
  * de estado em runtime), mas dá para saber que o CONJUNTO mudou — e isso basta
  * para mandar alguém olhar o arquivo de respostas.
  */
@@ -154,10 +158,23 @@ describe('o E2E do instalador não pode ser afrouxado para passar', () => {
     }
   });
 
-  it('roda o instalador BAIXADO da Release, nunca o do checkout', () => {
-    const texto = workflow();
-    expect(texto).toContain("gh release download \"$TAG\"");
-    expect(texto).toContain("--pattern 'install.sh'");
+  it('roda o instalador BAIXADO da Release, nunca o do checkout — e pela forma que o runbook manda', () => {
+    // AT-083: a forma documentada passou a ser BAIXAR um arquivo e rodá-lo com
+    // `bash` (`curl -fsSLO … && bash install.sh`). O E2E exercita a MESMA forma
+    // — `curl -fsSLO` da Release da tag, e `bash install.sh` em todo passo —,
+    // porque uma prova que roda o instalador de outro jeito prova outra coisa.
+    const baixar = comandos(passo('Baixar o instalador publicado'));
+    expect(baixar).toContain('curl -fsSLO "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/install.sh"');
+    expect(baixar).not.toContain('chmod +x');
+
+    for (const p of passos()) {
+      const texto = comandos(p);
+      expect(texto, p.name).not.toContain('./install.sh');
+      expect(texto, p.name).not.toMatch(/sh -c "\$\(curl/);
+    }
+    expect(comandos(passo('O plano e o estado'))).toContain('bash install.sh --print-state');
+    expect(comandos(passo('Sem TTY'))).toContain('bash install.sh < /dev/null');
+    expect(comandos(passo('Instalação completa'))).toContain('bash install.sh --source=ghcr');
   });
 });
 
@@ -214,7 +231,28 @@ describe('as respostas do TTY simulado acompanham os prompts do instalador', () 
     // só roda em tag e ainda não rodou nenhuma.
     const instalacao = comandos(passo('Instalação completa'));
     expect(instalacao).not.toContain('nao-migrar');
-    expect(instalacao).toContain("printf 's\\n%s/projetos-brabo\\n");
+    const lista = respostasDoWorkflow();
+    expect(lista[0]).toEqual({ espera: 'Gravar o marcador de instalação', resposta: '"s"', segredo: false });
+    expect(lista[1]?.espera).toBe('Base [');
+  });
+
+  it('cada pergunta que o driver espera EXISTE no install.sh, e as duas de senha são segredo', () => {
+    // O driver espera o TRECHO da pergunta aparecer antes de responder. Um
+    // trecho que o instalador deixou de imprimir não desalinha nada: ele faz o
+    // driver esperar até o teto e parar com código 3, nomeando a pergunta — mas
+    // só na tag. Aqui, em PR.
+    const lista = respostasDoWorkflow();
+    expect(lista).toHaveLength(7);
+    for (const { espera } of lista) {
+      expect(instalador(), `o install.sh não imprime mais: ${espera}`).toContain(espera);
+    }
+    expect(lista.filter((r) => r.segredo).map((r) => r.espera)).toEqual([
+      'Senha (não aparece na tela): ',
+      'Repita a senha: ',
+    ]);
+    // A senha chega pelo AMBIENTE, nunca por argv.
+    expect(lista.filter((r) => r.segredo).every((r) => r.resposta === 'env.E2E_SENHA')).toBe(true);
+    expect(comandos(passo('Instalação completa'))).not.toContain('--arg senha');
   });
 });
 
@@ -302,5 +340,148 @@ describe('o E2E prova o agente, e diz o que ele NÃO prova', () => {
       .flatMap((j) => j.steps)
       .find((p) => p.name?.includes('Instalação completa'));
     expect(instalacao?.env).toBeUndefined();
+  });
+});
+
+/**
+ * A lista de respostas do driver, lida do `jq -n` do passo — o TRECHO de
+ * pergunta que cada uma espera, a expressão que a produz e se é segredo.
+ */
+function respostasDoWorkflow(): ReadonlyArray<{ espera: string; resposta: string; segredo: boolean }> {
+  const run = passo('Instalação completa').run;
+  const itens = [...run.matchAll(/\{espera: "([^"]*)", resposta: ([^,}]+)(, segredo: true)?\}/g)];
+  return itens.map((m) => ({ espera: m[1]!, resposta: m[2]!.trim(), segredo: Boolean(m[3]) }));
+}
+
+/** O driver de PTY do passo, extraído do heredoc — do `run` CRU, com os comentários de Python. */
+function driverDoWorkflow(): string {
+  const run = passo('Instalação completa').run;
+  const m = run.match(/<<'PY'\n([\s\S]*?)\nPY\n/);
+  if (!m) throw new Error("não achei o heredoc <<'PY' do driver de TTY no passo 'Instalação completa'");
+  return m[1]!;
+}
+
+const python = spawnSync('python3', ['--version']).status === 0;
+const temScript = spawnSync('script', ['--version']).status === 0;
+
+describe('o TTY do E2E é um TTY para o INSTALADOR (AT-083)', () => {
+  // O passo "Instalação completa" rodava `script -qec "… < respostas"`: o `<`
+  // ficava DENTRO do `script`, o stdin do instalador era o arquivo, e
+  // `[ -t 0 ]` era sempre falso — o fluxo interativo nunca foi exercitado.
+  // O workflow não roda em PR, então o driver que o substitui é EXERCITADO
+  // aqui: extraído do próprio workflow e rodado contra um instalador de
+  // mentira que faz as mesmas coisas que o de verdade — `[ -t 0 ]`, `read -r`
+  // e `stty -echo` para as senhas.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-tty-e2e-'));
+
+  const falso = (corpo: string): string => {
+    const caminho = path.join(tmp, `falso-${Math.random().toString(36).slice(2)}.sh`);
+    fs.writeFileSync(caminho, `#!/usr/bin/env bash\nset -euo pipefail\n${corpo}\n`);
+    return caminho;
+  };
+
+  const INSTALADOR_FALSO = `
+[ -t 0 ] || { echo 'SEM-TTY'; exit 0; }
+printf 'Gravar o marcador de instalação em /x? [s/N] '; read -r a; echo "R1=[$a]"
+printf 'Base [/home/x]: '; read -r b; echo "R2=[$b]"
+printf 'Criar a primeira conta agora? [S/n] '; read -r c; echo "R3=[$c]"
+printf 'E-mail: '; read -r e; echo "R4=[$e]"
+printf 'Senha (não aparece na tela): '; antigo="$(stty -g)"; stty -echo; read -r s1; stty "$antigo"; printf '\\n'
+printf 'Repita a senha: '; antigo="$(stty -g)"; stty -echo; read -r s2; stty "$antigo"; printf '\\n'
+printf 'Nome (opcional, Enter para pular): '; read -r n; echo "R7=[$n]"
+[ "$s1" = "$s2" ] && echo "SENHAS-IGUAIS tamanho=\${#s1}"
+exit 7`;
+
+  const SENHA = 'Xy7-segredo-do-teste-01';
+  const respostas = (senhaSemEco = true): string => {
+    const arquivo = path.join(tmp, `respostas-${Math.random().toString(36).slice(2)}.json`);
+    fs.writeFileSync(
+      arquivo,
+      JSON.stringify([
+        { espera: 'Gravar o marcador de instalação', resposta: 's' },
+        { espera: 'Base [', resposta: '/home/e2e/projetos-brabo' },
+        { espera: 'Criar a primeira conta agora?', resposta: 's' },
+        { espera: 'E-mail: ', resposta: 'e2e@example.com' },
+        { espera: 'Senha (não aparece na tela): ', resposta: SENHA, segredo: senhaSemEco },
+        { espera: 'Repita a senha: ', resposta: SENHA, segredo: senhaSemEco },
+        { espera: 'Nome (opcional, Enter para pular): ', resposta: '' },
+      ]),
+    );
+    return arquivo;
+  };
+
+  const rodarDriver = (arquivoDeRespostas: string, instalador: string, env: NodeJS.ProcessEnv = {}) => {
+    const driver = path.join(tmp, 'terminal-do-e2e.py');
+    fs.writeFileSync(driver, driverDoWorkflow());
+    const r = spawnSync('python3', ['-I', driver, arquivoDeRespostas, 'bash', instalador], {
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1', ...env },
+      timeout: 30_000,
+    });
+    return { codigo: r.status ?? -1, saida: r.stdout ?? '' };
+  };
+
+  it('o instalador vê um terminal, recebe as sete respostas em ordem, e o código de saída dele volta', (ctx) => {
+    if (!python) ctx.skip('sem python3 nesta máquina — o driver é Python, e é o mesmo do workflow');
+    const r = rodarDriver(respostas(), falso(INSTALADOR_FALSO));
+    expect(r.saida).not.toContain('SEM-TTY');
+    expect(r.saida).toContain('R1=[s]');
+    expect(r.saida).toContain('R2=[/home/e2e/projetos-brabo]');
+    expect(r.saida).toContain('R3=[s]');
+    expect(r.saida).toContain('R4=[e2e@example.com]');
+    expect(r.saida).toContain('R7=[]');
+    expect(r.saida).toContain(`SENHAS-IGUAIS tamanho=${SENHA.length}`);
+    expect(r.codigo).toBe(7);
+  });
+
+  it('a senha NÃO aparece na saída — o driver espera o eco desligar antes de escrevê-la', (ctx) => {
+    if (!python) ctx.skip('sem python3 nesta máquina');
+    const r = rodarDriver(respostas(), falso(INSTALADOR_FALSO));
+    expect(r.saida).not.toContain(SENHA);
+  });
+
+  it('pergunta secreta com o eco LIGADO faz o driver parar com 4, sem escrever a senha', (ctx) => {
+    if (!python) ctx.skip('sem python3 nesta máquina');
+    // O instalador que "esqueceu" o `stty -echo`: o driver é quem recusa, e a
+    // senha não chega a ser digitada.
+    const semStty = INSTALADOR_FALSO.replace(/stty -echo; /g, '');
+    const r = rodarDriver(respostas(), falso(semStty), { TETO_DO_ECO: '1' });
+    expect(r.codigo).toBe(4);
+    expect(r.saida).toContain('o eco seguia LIGADO');
+    expect(r.saida).not.toContain(SENHA);
+  });
+
+  it('pergunta que não chega faz o driver parar com 3, NOMEANDO a pergunta', (ctx) => {
+    if (!python) ctx.skip('sem python3 nesta máquina');
+    const curto = falso(`[ -t 0 ] || exit 0
+printf 'Gravar o marcador de instalação em /x? [s/N] '; read -r a
+echo 'Nada foi gravado.'`);
+    const r = rodarDriver(respostas(), curto, { TETO_POR_PERGUNTA: '5' });
+    expect(r.codigo).toBe(3);
+    expect(r.saida).toContain('Base [');
+  });
+
+  it('a forma ANTIGA — o `<` dentro do `script -qec` — NÃO dava terminal ao instalador', (ctx) => {
+    if (!temScript) ctx.skip('sem `script` (util-linux) nesta máquina');
+    // A mutação fixada: é o que o passo fazia, e o instalador de mentira diz
+    // SEM-TTY. O comentário do workflow afirmava o contrário.
+    const arquivo = path.join(tmp, 'respostas.txt');
+    fs.writeFileSync(arquivo, 's\n/home/x\ns\ne@x\nsenha\nsenha\n\n');
+    const r = spawnSync('script', ['-qec', `bash ${falso(INSTALADOR_FALSO)} < ${arquivo}`, '/dev/null'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    expect(r.stdout).toContain('SEM-TTY');
+
+    // E o passo de hoje não a usa mais.
+    expect(comandos(passo('Instalação completa'))).not.toContain('script -qec');
+    expect(comandos(passo('Instalação completa'))).toContain('python3 -I "${RUNNER_TEMP}/terminal-do-e2e.py"');
+  });
+
+  it('o passo reprova quando o instalador diz que não viu terminal', () => {
+    // A asserção que teria pegado a AT-083 na primeira tag: sem ela, o passo
+    // reprovaria adiante, em "elo 1", por um motivo que não diz nada.
+    const completa = comandos(passo('Instalação completa'));
+    expect(completa).toContain("grep -qF 'Sem terminal interativo' completa.txt");
   });
 });
