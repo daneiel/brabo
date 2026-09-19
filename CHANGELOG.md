@@ -52,6 +52,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   rodando e que revogá-la derruba o agente só neste projeto, e recolhe o
   pareamento num `<details>`. Nenhuma rota nova
   ([RN-548](docs/business-rules.md#rn-548)).
+- **api**: a sugestão de paralelização deixa de contar módulo cujo dev agent
+  está bloqueado (AT-104). `execution.parallelization_suggested` só é emitida
+  na ativação quando o projeto tem container `running` registrado — o mesmo
+  predicado do engine para `dev.blocked_by_container`
+  ([RN-502](docs/business-rules.md#rn-502)); sem ele, "há tasks pegáveis" não
+  é capacidade, e pedir +1 agente só multiplicava os bloqueados. O teto de
+  `parallelize`/`raise_max_parallel` (RN-154) não muda. Custo declarado: a
+  sugestão não é refeita quando o container sobe depois da ativação.
 
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
