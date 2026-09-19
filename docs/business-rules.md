@@ -14995,11 +14995,11 @@ backup — é derivada, o argumento do [ADR 0152](adr/0152-backup-de-volumes-con
   `:115` (o tradutor), `:137` (varredura por cursor sobre `session_events`),
   `:163` (a falha contada sem abortar), `:185` (`lerArgumentos`), `:241` (só a
   invocação direta reprojeta); `apps/api/package.json:45` (`artefatos:reprojetar`)
-- **Teste:** `apps/api/test/scripts/reprojetar-artefatos.spec.ts:204` (projetor
+- **Teste:** `apps/api/test/scripts/reprojetar-artefatos.spec.ts:215` (projetor
   para frente → apaga a pasta → reprojeta → mesmos caminhos e conteúdos; segunda
-  rodada idêntica; outbox intacta), `:243` (nunca apaga), `:254` (por projeto),
-  `:264` (projeto inexistente — caso de falha), `:278` (falha de escrita contada
-  sem abortar o resto — caso de falha), `:303` (argumento desconhecido);
+  rodada idêntica; outbox intacta), `:254` (nunca apaga), `:265` (por projeto),
+  `:275` (projeto inexistente — caso de falha), `:289` (falha de escrita contada
+  sem abortar o resto — caso de falha), `:314` (argumento desconhecido);
   `apps/api/test/application/artifact-projection/artifact-projector.spec.ts`
   (o projetor para frente, inalterado, sobre o tradutor extraído)
 - **Origem:** AT-128 — a lacuna que o ADR 0148 declarou (custo 3)
