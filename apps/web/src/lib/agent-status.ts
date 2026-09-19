@@ -297,6 +297,8 @@ export interface RosterFacts {
  * as duas só coincidem enquanto nenhuma sessão nova nasceu depois.
  */
 export interface AgregadoDaSessao {
+  /** `execution.activated` (monótono como os outros dois; AT-130). */
+  executionActivated?: boolean;
   gatesEverOpened?: boolean;
   delegatedSubagents?: readonly string[];
 }
@@ -427,7 +429,13 @@ export function deriveAgentRoster(
   const facts = rosterFactsFromEvents(
     events,
     moduleMap,
-    executionActivated && !!moduleMap,
+    // AT-130: a janela também conta — `execution.activated` visto nela é
+    // prova, e o resumo de OUTRA sessão (que a guarda descarta) não podia
+    // apagá-la. OU lógico, como os outros dois fatos.
+    (executionActivated ||
+      agregado.executionActivated === true ||
+      events.some((e) => e.type === 'execution.activated')) &&
+      !!moduleMap,
     handoffs,
     agregado,
   );
