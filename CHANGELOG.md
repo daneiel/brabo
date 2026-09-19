@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
+  fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
+  aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
+  recusas 422 da rota de mensagem (`agente_sem_conversa`, `mensagem_sem_texto`,
+  `agente_ausente`) não, e a explicação sumia com o toast. Agora o engine grava
+  o `agent.error` (origem `politica`, a mesma frase do 422) e o transmite. A
+  api segue sem validar o `agent`: a recusa do engine é o único mecanismo
+  ([RN-587](docs/business-rules.md#rn-587)).
+
 - **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
   quando era para outro agente** (AT-098). A última cláusula da rota interna
   de mensagem não olhava o agente, então o que fosse escrito para o `infra` —

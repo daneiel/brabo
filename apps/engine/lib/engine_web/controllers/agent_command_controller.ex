@@ -33,6 +33,7 @@ defmodule EngineWeb.AgentCommandController do
   }
 
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
+  alias Engine.Sessions.EngineApiClient
 
   # Quem tem cláusula de `message/2` que chega a um `*Server.user_message/2`
   # (RN-584). Não decide o roteamento — quem decide são as cláusulas, uma por
@@ -189,9 +190,10 @@ defmodule EngineWeb.AgentCommandController do
   # (`via_for/2` não o conhece). Dar a ele uma cláusula aqui devolveria ao
   # clique a espera que a RN-578 tirou; decidir se ele passa a conversar é
   # decisão de produto, não correção.
-  def message(conn, %{"agent" => "infra"}) do
-    recusar(
+  def message(conn, %{"agent" => "infra"} = params) do
+    recusar_mensagem(
       conn,
+      params,
       422,
       "agente_sem_conversa",
       "O Infra Lead não conversa pelo chat: ele trabalha por proposta — a PR " <>
@@ -200,9 +202,10 @@ defmodule EngineWeb.AgentCommandController do
     )
   end
 
-  def message(conn, %{"agent" => agent}) when agent in @agentes_de_conversa do
-    recusar(
+  def message(conn, %{"agent" => agent} = params) when agent in @agentes_de_conversa do
+    recusar_mensagem(
       conn,
+      params,
       422,
       "mensagem_sem_texto",
       "A mensagem chegou sem texto — nenhum agente a leu."
@@ -214,9 +217,10 @@ defmodule EngineWeb.AgentCommandController do
   # até alguém escrever a cláusula dele acima
   # (`scripts/ci/destinos-do-composer.spec.ts` reprova a tela que oferecer um
   # destino sem cláusula).
-  def message(conn, %{"agent" => agent}) when is_binary(agent) do
-    recusar(
+  def message(conn, %{"agent" => agent} = params) when is_binary(agent) do
+    recusar_mensagem(
       conn,
+      params,
       422,
       "agente_sem_conversa",
       "O agente \"#{agent}\" não recebe mensagem de chat nesta sessão. A " <>
@@ -227,9 +231,10 @@ defmodule EngineWeb.AgentCommandController do
   # Sem `"agent"` no corpo: também é recusa. A api sempre o manda (é segmento
   # da rota pública), então chegar aqui é chamador quebrado — e adivinhar o
   # Criativo foi exatamente o defeito da RN-584.
-  def message(conn, _params) do
-    recusar(
+  def message(conn, params) do
+    recusar_mensagem(
       conn,
+      params,
       422,
       "agente_ausente",
       "A mensagem chegou sem dizer para qual agente é — nenhum agente a leu."
@@ -347,6 +352,54 @@ defmodule EngineWeb.AgentCommandController do
         "consolidar num resumo do produto ainda."
     )
   end
+
+  # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
+  # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o
+  # log), então o 422 sozinho deixava no fio uma mensagem do usuário com cara
+  # de entregue e a explicação só no toast. As duas recusas 409 já gravavam
+  # `agent.error` (o `*Server` tem o state); estas não passam por `*Server`, e
+  # por isso quem grava é o controller — o engine é a fonte da recusa E do
+  # registro, a api nunca decide destinatário. Origem `politica`: é regra de
+  # roteamento, não falha. Sem `projectId`/`sessionId` no corpo não há onde
+  # gravar, e a recusa segue só como resposta.
+  defp recusar_mensagem(conn, params, status, motivo, mensagem) do
+    registrar_recusa_de_mensagem(params, motivo, mensagem)
+    recusar(conn, status, motivo, mensagem)
+  end
+
+  defp registrar_recusa_de_mensagem(
+         %{"projectId" => project_id, "sessionId" => session_id} = params,
+         motivo,
+         mensagem
+       )
+       when is_binary(project_id) and is_binary(session_id) do
+    agent = Map.get(params, "agent")
+
+    # O nome vem da rota pública: só vira ator quando é um agente que o
+    # roster conhece; qualquer outra coisa é o próprio engine falando.
+    {kind, id} =
+      if agent in ["infra" | @agentes_de_conversa],
+        do: {"agent", agent},
+        else: {"system", "engine"}
+
+    EngineApiClient.append_event(project_id, session_id, %{
+      type: "agent.error",
+      actorKind: kind,
+      actorId: id,
+      payload: %{origem: "politica", mensagem: mensagem, reason: motivo}
+    })
+
+    # Durável E efêmero, o mesmo par dos `*Server`: só o log deixaria a aba
+    # aberta sem sinal até o próximo poll.
+    EngineWeb.Endpoint.broadcast("session:" <> session_id, "agent.error", %{
+      origem: "politica",
+      mensagem: mensagem
+    })
+
+    :ok
+  end
+
+  defp registrar_recusa_de_mensagem(_params, _motivo, _mensagem), do: :ok
 
   defp recusar(conn, status, motivo, mensagem) do
     conn
