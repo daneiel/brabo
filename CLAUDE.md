@@ -1992,11 +1992,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Frase ancorada num lugar do CÓDIGO entra em
   `verificarFrasesAncoradasNoCodigo` (`scripts/docs/generate.mjs`) — mesma
   tabela-por-frase das contagens, só que o esperado é DERIVADO do artefato e
-  não é um número. Hoje são três: a escada da esteira no `description` do
+  não é um número. Hoje são seis: a escada da esteira no `description` do
   `branching-policy.md`, derivada de `ESCADA` em `scripts/ci/pr-police.ts`
   (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), e as duas frases
   de `db:generate` (`README.md` e `docs/getting-started.md`), derivadas de
-  `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
+  `apps/api/src/db/schema.ts` ser ou não barrel; e, desde a AT-123, as três
+  frases de QUANTAS imagens o produto publica (`THIRD_PARTY_NOTICES.md`,
+  `docs/runbook.md`, `docs/reference/brb.md`), derivadas de `ALVOS` em
+  `scripts/ci/images-manifest.ts`. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
   Irmã em `warn` (AT-096): `verificarRefsComSimbolo` confere, nos três arquivos

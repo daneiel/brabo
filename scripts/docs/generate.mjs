@@ -885,7 +885,48 @@ function verificarFrasesAncoradasNoCodigo() {
     ? 'apps/api/src/db/schema.ts'
     : 'apps/api/src/db/schema/';
 
+  // Quantas imagens o produto PUBLICA: `ALVOS` de `scripts/ci/images-manifest.ts`
+  // (AT-123). O número por extenso nas duas línguas, porque a prosa o escreve
+  // assim; passar de dez sem estender a tabela vira CEGO, não um erro calado.
+  const alvos = /export const ALVOS = \[([^\]]+)\] as const;/.exec(
+    ler('scripts/ci/images-manifest.ts'),
+  );
+  const POR_EXTENSO = {
+    en: ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'],
+    pt: ['zero', 'uma', 'duas', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez'],
+  };
+  const nImagens = alvos === null ? -1 : [...alvos[1].matchAll(/'[a-z-]+'/g)].length;
+  const imagensEn = POR_EXTENSO.en[nImagens];
+  const imagensPt = POR_EXTENSO.pt[nImagens];
+
+  if (imagensEn === undefined) {
+    pendencias.push('frases ancoradas no código');
+    console.log(
+      '  CEGO      scripts/ci/images-manifest.ts — não achei `export const ALVOS` (ou passou de dez).\n' +
+        '            Sem ela não há de onde derivar quantas imagens o produto publica.',
+    );
+    return;
+  }
+
   const afericoes = [
+    {
+      arquivo: 'THIRD_PARTY_NOTICES.md',
+      padrao: /^As (\S+) imagens \*\*são publicadas\*\*/m,
+      esperado: imagensPt,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
+    {
+      arquivo: 'docs/runbook.md',
+      padrao: /the (\S+) images the product publishes are already resolved/,
+      esperado: imagensEn,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
+    {
+      arquivo: 'docs/reference/brb.md',
+      padrao: /The (\S+) images the product publishes are \*\*deliberately not covered/,
+      esperado: imagensEn,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
     {
       arquivo: 'docs/explanation/branching-policy.md',
       padrao: /^description: The (.+?) ladder/m,
@@ -929,7 +970,8 @@ function verificarFrasesAncoradasNoCodigo() {
   else
     console.log(
       `  ok        frases ancoradas no código (escada ` +
-        `${afericoes[0].esperado}; schema em ${moradaDoSchema})`,
+        `${afericoes.find((a) => a.arquivo.endsWith('branching-policy.md')).esperado}; ` +
+        `${nImagens} imagens; schema em ${moradaDoSchema})`,
     );
 }
 

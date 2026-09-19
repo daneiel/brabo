@@ -17,7 +17,7 @@ documentação de projeto.
 | **Conteúdo da imagem do engine** | **Sim, se a imagem for publicada** | o binário sai empacotado dentro dela |
 | **Fontes do design system** | **Sim, se a imagem do web for publicada** | desde o ADR 0036 os `.woff2` são auto-hospedados e saem dentro da imagem |
 
-As quatro imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
+As cinco imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
 final ([ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). A
 seção 1 **é obrigação**, não informativo — esta frase dizia o contrário desde
 2026-07-27 e ficou para trás quando a publicação passou a acontecer de verdade.

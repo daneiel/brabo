@@ -3525,7 +3525,7 @@ anything.
 
 What the check does **not** cover, and why, is in
 [the CI supply chain](explanation/cadeia-de-suprimentos-do-ci.md#container-images-digest-with-the-tag-alongside):
-the four images the product publishes are already resolved by digest through
+the five images the product publishes are already resolved by digest through
 `.release/images.json` and `make imagens-do-release`
 ([ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)) — never pin
 those by hand in the overlay, which deliberately holds the marker.
