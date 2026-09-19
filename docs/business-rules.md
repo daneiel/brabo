@@ -14072,3 +14072,141 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   `apps/api/test/infrastructure/persistence/session-event-latest.repository.spec.ts:123`
   (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
 - **Origem:** AT-073, levantada em 2026-09-13
+
+### RN-581 — A conversa em curso segura a sessão por até 8h, e a sessão encerrada recusa conversa {#rn-581}
+
+No `exp001` o heartbeat fechou a sessão 30 segundos depois de a aba parar, com
+o Criativo tendo acabado de perguntar — e o event log continuou recebendo
+eventos por quatro minutos depois do `closed_at`. Dois defeitos, um de cada
+lado do fechamento: nenhum dos sinais de trabalho pendente da
+[RN-064](business-rules/custo.md#rn-064) via uma conversa esperando o usuário
+(um Criativo que terminou o turno está `idle`, sem handoff, sem ação, sem
+`dev.*`), e nada — nem o funil de eventos, nem os casos de uso da conversa, nem
+o engine — olhava o estado da sessão antes de gravar.
+
+**A regra, pelo lado do heartbeat:**
+
+1. **Conversa esperando o usuário é trabalho pendente.** É o QUINTO sinal do
+   `pending-work`: o evento de fim de turno mais recente da sessão
+   (`agent.response`, `chat.structured_question` ou `agent.error` do lado do
+   agente; `chat.message` ou `chat.structured_question_answered` do lado do
+   usuário) é do AGENTE, e o ator é um conversacional. `agent.error` conta como
+   fim de turno de propósito: pela [RN-059](business-rules/custo.md#rn-059) o
+   agente diz no fio o que houve, e a próxima jogada é do usuário. Fala de quem
+   não conversa (Psicólogo, dev agent) não segura.
+2. **É o único sinal com TETO: 8 horas**, contadas do FIM do turno do agente
+   (o `created_at` daquele evento), não do último heartbeat. A api devolve o
+   instante (`aguardandoUsuarioDesde`) e o engine aplica o teto
+   (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default `28800000`). Passado ele, a
+   sessão fecha `closed` com causa PRÓPRIA, `conversation_idle_timeout` — não
+   `heartbeat_timeout`, porque quem lê `termination_reason` (o Psicólogo, uma
+   métrica por sessão) precisa separar a aba que sumiu da conversa que ninguém
+   retomou. O `TerminationClassifier` a lê como `:timeout`: a api conhece seis
+   causas nas hipóteses, e abrir uma sétima seria mudar aquele contrato.
+3. **Sinal sem teto vence.** Com handoff `offered`, ação `pending`, agente em
+   turno ou dev agent trabalhando, o instante volta `null` e a sessão fica sem
+   teto, como sempre ficou. É por isso que o sinal é o ÚLTIMO da lista.
+4. **Instante presente e ilegível é ERRO, nunca `nil`.** `nil` com
+   `pending: true` é pendência sem teto; um formato quebrado viraria sessão
+   imortal. Como erro, cai no caminho da api fora do ar — encerra por
+   heartbeat, dizendo por quê.
+
+**A regra, pelo lado da sessão encerrada:**
+
+5. **Sessão `closed`/`closed_abnormally` recusa evento de CONVERSA** com 409
+   NOMEADO: `{ message, reason: "sessao_encerrada", status, type }`. `closing`
+   ainda aceita — a trava é de estado TERMINAL.
+6. **"Conversa" tem duas cláusulas, e as duas são necessárias.** O TIPO só
+   existe como conversa (`chat.message`, `chat.structured_question[_answered]`,
+   `agent.status`, `agent.activated`, `handoff.offered`/`accepted`,
+   `readiness.confirmed`, `necessity.validated`,
+   `architecture.readiness_confirmed`), OU o ATOR é um agente conversacional (os
+   seis mais `dev-lead` e `infra`). Uma lista de PERMITIDOS por tipo foi medida
+   e recusada: quem escreve legitimamente numa sessão fechada são os
+   CONSUMIDORES do fechamento — o Psicólogo roda um `ToolLoop` contra ela e grava
+   `tool.call`, `agent.response`, `agent.error`; a Anamnese grava os próprios
+   desfechos —, e eles falam o MESMO vocabulário genérico do Criativo. O tipo é
+   igual; quem difere é o ator.
+7. **A decisão humana sobre ação continua entrando.** `action.approved`/
+   `action.denied` e os desfechos de execução não são conversa: a ação é item de
+   uma fila DURÁVEL que sobrevive à sessão, e recusar a decisão deixaria uma
+   pendência impossível de resolver. O caso normal nem chega aqui (ação
+   `pending` segura a sessão, sinal 2 da RN-064); ele só existe quando a sessão
+   morreu por outra porta.
+8. **A recusa não deixa rastro.** O estado vem do MESMO `UPDATE` que reserva o
+   `seq` (sem consulta a mais no caminho mais quente, sob o mesmo lock de linha
+   da transição), e a recusa lança dentro da transação: o incremento volta, o
+   `seq` segue sem buraco. O chat humano, que grava `chat.message` sem o funil,
+   tem a mesma trava. Os casos de uso com efeito ANTES do evento recusam antes
+   do efeito: `CreateHandoff` antes de criar a linha, `AcceptHandoff` antes de
+   marcar `accepted` (que ativaria o agente seguinte), `ActivateAgent` antes de
+   chamar o engine.
+9. **O fechamento PARA os conversacionais.** `SessionLifecycleWorker`, por onde
+   todo fechamento passa (heartbeat, conversa ociosa, humano, crash), para os
+   conversacionais da sessão em TODOS os nós (`Engine.Agents.Conversacionais`,
+   por `:erpc` — o registro é local e o job cai em qualquer réplica). O turno em
+   curso é ABANDONADO no `terminate/2` dos seis servidores
+   (`TurnoAssincrono.abandonar/1`): a task morre sem gravar nem transmitir nada,
+   porque gravar seria pedir à api o que ela recusa. O Infra Lead, que roda o
+   turno dentro do `handle_call`, é morto se não sair em 5s.
+10. **A recusa nunca é calada no engine.** Quase todo chamador de
+    `append_event/3` descarta o retorno; o cliente registra o 409
+    `sessao_encerrada` como aviso no log, e o retorno segue o mesmo.
+
+**O que esta regra NÃO fecha:** o teto só é aferido quando o HEARTBEAT expira —
+com a aba aberta e mandando heartbeat, a sessão continua viva sem teto, como
+sempre (quem está olhando não é conversa ociosa). A resposta do chat humano
+stateless a um turno que COMEÇOU com a sessão aberta entra mesmo que ela feche
+no meio (o ator é o modelo, e o gasto já foi medido). `deploy/k8s/` não carrega
+`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`: vale o default do `runtime.exs`, e mudar
+o teto ali é acrescentar a variável ao ConfigMap. A tela não ganhou tratamento
+próprio para o 409 — mostra a mensagem da api, que diz para abrir uma sessão
+nova.
+
+- **Código:** `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
+  (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
+  (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:37`
+  (`conflitoDeSessaoEncerrada`), `:110` (o estado no mesmo `UPDATE` do `seq`),
+  `:189` (`garantirQueAceita`);
+  `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
+  (`incrementSeq`);
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
+  (o chat humano); `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts:67`,
+  `accept-handoff.use-case.ts:90`, `activate-agent.use-case.ts:52`;
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:30`
+  (`FALA_DO_AGENTE`), `:238` (o quinto sinal);
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:116`
+  (`findLatestOfTypesInSession`);
+  `apps/engine/lib/engine/sessions/session_server.ex:113` (a pendência com
+  instante), `:141` (`conversa_ociosa`), `:166` (`encerrar`), `:184`
+  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:142`
+  (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
+  (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/agents/conversacionais.ex:48` (`parar_da_sessao`),
+  `:64` (`parar_da_sessao_no_cluster`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:238` (`abandonar`);
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
+  (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
+- **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
+  (sessão encerrada recusa `chat.message` com 409 nomeado — caso de falha),
+  `:167` (sem evento e sem `seq` consumido), `:183` (Psicólogo e Anamnese
+  continuam entrando), `:211` (decisão sobre ação continua entrando), `:223`
+  (sessão ativa aceita — caminho feliz), `:235` (`closing` aceita), `:249`
+  (`SendAgentMessage` não chama o engine), `:263` (nenhum handoff órfão),
+  `:276` (o aceite não ativa ninguém), `:309` (a ativação não sobe o
+  agente); `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts:478`
+  (o Criativo respondeu: pendente com o instante), `:519` (o usuário falou por
+  último), `:546` (quem não conversa não segura), `:563` (sinal sem teto vence);
+  `apps/engine/test/engine/sessions/session_lifecycle_test.exs:87` (dentro do
+  teto, reagenda), `:106` (acima do teto, `conversation_idle_timeout`,
+  `closed`), `:124` (o default é 8h), `:151` (pendência sem instante segue sem
+  teto); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
+  (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
+  (para só os da sessão), `:84` (`session.closed` para o Criativo vivo);
+  `apps/engine/test/engine/agents/turno_assincrono_test.exs:114` (abandonar não
+  grava nem transmite), `:145` (o `terminate/2` abandona);
+  `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
+- **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
+  8h e causa própria; sessão encerrada recusa conversa, nomeado)

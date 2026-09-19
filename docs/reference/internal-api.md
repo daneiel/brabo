@@ -188,6 +188,20 @@ contract change: the other event types remain identical, and the rejection
 happens **before** `incrementSeq`, so a rejected attempt does not open a gap
 in `seq`.
 
+Since [RN-581](../business-rules.md#rn-581) the same funnel also refuses
+**conversation** in a session that is already `closed`/`closed_abnormally`:
+**409** with a named body — `{ message, reason: "sessao_encerrada", status,
+type }`. "Conversation" is a type that only exists as conversation
+(`chat.message`, `chat.structured_question[_answered]`, `agent.status`,
+`agent.activated`, `handoff.offered`/`accepted`, the readiness events) **or**
+any event whose actor is a conversational agent (the six plus `dev-lead` and
+`infra`). What the close itself produces keeps coming in — the Psychologist's
+`ToolLoop`, the Anamnesis outcomes, the human deciding a pending action. The
+status comes from the **same** `UPDATE` that reserves the `seq`, and the
+refusal rolls that increment back: no gap either. The engine's
+`append_event/3` logs the refusal as a warning instead of dropping it, since
+most of its callers discard the return value.
+
 `ActivateExecutionUseCase` gained a second side effect that does **not** go
 through any route in this document ([RN-135](../business-rules/custo.md#rn-135)): at the
 end of activation, if the user's route provides `originSessionId` (the CHAT
@@ -283,10 +297,23 @@ finished, not about who's still watching. In a real execution this held on to
 an `offered` handoff for the Architect inside a closed session
 ([RN-064](../business-rules/custo.md#rn-064)).
 
-Response: `{ pending, motivo }`. `motivo` goes to the engine log — a session that
+Response: `{ pending, motivo, aguardandoUsuarioDesde }`. `motivo` goes to the engine log — a session that
 refuses to close without saying why is undiagnosable. And the api being down
 does **not** prevent closing: trading an orphan session for an immortal session would be
 trading one defect for another.
+
+`aguardandoUsuarioDesde` is the fifth signal
+([RN-581](../business-rules.md#rn-581)), and the only one with a **ceiling**:
+when the most recent turn-ending event of the conversation (`agent.response`,
+`chat.structured_question`, `agent.error` on the agent side; `chat.message`,
+`chat.structured_question_answered` on the user side) came from a
+conversational agent, the conversation is waiting for the user, and the api
+returns the ISO instant that turn ended. The api says *since when*; the engine
+decides *for how long* (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, 8h) and, past
+it, closes the session as `closed` with cause `conversation_idle_timeout`. It
+is `null` whenever any of the four uncapped signals is present — those win,
+as they always did. A present value the engine cannot parse is treated as an
+error (the heartbeat close), never as "no ceiling".
 
 ### Gate registry
 

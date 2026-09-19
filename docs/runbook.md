@@ -1141,7 +1141,12 @@ Two checks before blaming the address, if `ENGINE_URL` is correct:
   problem. Look at `termination_reason`: `heartbeat_timeout` means
   activation worked and nobody joined the Phoenix channel — expected
   behavior when activating from outside the interface
-  (`SESSION_HEARTBEAT_TIMEOUT_MS`).
+  (`SESSION_HEARTBEAT_TIMEOUT_MS`). `conversation_idle_timeout` is the
+  other one: a conversational agent was waiting for the user for longer
+  than `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` (8h), counted from the end of
+  its turn ([RN-581](business-rules.md#rn-581)). A `409` with
+  `reason: "sessao_encerrada"` afterwards is the closed session refusing
+  conversation — open a new session.
 
 ### The Terminal tab is stuck on "Opening terminal..." forever {#terminal-preso-abrindo}
 

@@ -50,6 +50,22 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `session.closed` | normal termination |
 | `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
 
+**A terminal session no longer takes conversation ([RN-581](../business-rules.md#rn-581)).**
+Once a session is `closed` or `closed_abnormally`, appending a conversation
+event is refused with **409** and `reason: "sessao_encerrada"`. Conversation is
+either a type that only exists as conversation (`chat.message`,
+`chat.structured_question`, `chat.structured_question_answered`,
+`agent.status`, `agent.activated`, `handoff.offered`, `handoff.accepted`,
+`readiness.confirmed`, `necessity.validated`,
+`architecture.readiness_confirmed`) or any event whose actor is a
+conversational agent — so `tool.call`/`agent.response` from the Creative agent
+are refused while the same types from the Psychologist, which runs **on** the
+closed session, still come in. Human decisions on a pending action
+(`action.approved`/`action.denied`) also still come in: the action queue
+outlives the session. A session closed because the conversation sat idle past
+its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
+`closed`, like `heartbeat_timeout`.
+
 ### Chat and agents
 
 | type | when |
