@@ -82,6 +82,7 @@
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
+    "semRepositorio": "Sem repositório ainda: aceitar este handoff o provisiona, e só então a execução pode ser ativada.",
     "acompanheExecucao": "Acompanhe a execução em Executores",
     "infraTitulo": "{{de}} passou o bastão à Infra",
     "infraDetalhe": "Aceitar ativa o Infra Lead, que assume o provisionamento e vai PROPOR a subida do container do projeto — a proposta ainda passa por você em Aprovações.",

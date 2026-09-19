@@ -30,6 +30,7 @@ import i18n from '../lib/i18n';
 const getSession = vi.fn();
 const acceptHandoff = vi.fn();
 const activateExecution = vi.fn();
+const getRepository = vi.fn();
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 const handoffsMock = vi.fn<() => Handoff[]>(() => []);
@@ -101,6 +102,7 @@ vi.mock('../lib/api-client', async () => {
     renameSession: vi.fn(),
     acceptHandoff: (...args: unknown[]) => acceptHandoff(...args),
     activateExecution: (...args: unknown[]) => activateExecution(...args),
+    getRepository: (...args: unknown[]) => getRepository(...args),
     approveAction: vi.fn(),
     approveAlwaysAction: vi.fn(),
     confirmReadiness: vi.fn(),
@@ -168,6 +170,8 @@ beforeEach(async () => {
   actionsMock.mockReturnValue([]);
   workspaceComPapelMock.mockReturnValue(undefined);
   getSession.mockResolvedValue(sessao());
+  // Estado normal: o repositório nasceu no aceite ao Arquiteto (RN-582).
+  getRepository.mockResolvedValue({ id: 'repo-1', projectId: 'proj-1', provider: 'local' });
 });
 
 afterAll(() => {
@@ -594,5 +598,79 @@ describe('SessionPage — problema 3: colapso de mensagens por agente após pass
     // ...e a terceira, sozinha depois da quebra, também aparece direto (só
     // 1 entrada — não vira grupo de 1).
     expect(screen.getByText('Terceira mensagem do PO')).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-582 (ADR 0165) — sem repositório, `execution/activate` é 409. No card do
+ * handoff ao Dev Lead o atalho SAI e o card diz por quê: aceitar esse handoff
+ * é a segunda porta que provisiona o repositório (o caso exato do exp001 da
+ * AT-092, com o Arquiteto aceito antes da regra nova).
+ */
+describe('SessionPage — card do Dev Lead sem repositório (RN-582)', () => {
+  function montarCardDevLeadSemRepositorio() {
+    handoffsMock.mockReturnValue([
+      {
+        id: 'handoff-devlead',
+        sessionId: ID,
+        projectId: 'proj-1',
+        fromAgent: 'arquiteto',
+        toAgent: 'dev-lead',
+        artifactId: null,
+        status: 'offered',
+        createdAt: '2026-08-10T12:00:01.000Z',
+        updatedAt: '2026-08-10T12:00:01.000Z',
+      },
+    ]);
+    eventos.mockReturnValue({
+      items: [
+        {
+          id: 'ev-devlead',
+          seq: 1,
+          type: 'handoff.offered',
+          actor: { kind: 'agent', id: 'arquiteto' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
+          createdAt: '2026-08-10T12:00:00.000Z',
+        },
+      ],
+    });
+    return montar();
+  }
+
+  it('sem repositório CONFIRMADO: o atalho some, o motivo aparece, e aceitar continua lá', async () => {
+    getRepository.mockResolvedValue(null);
+    montarCardDevLeadSemRepositorio();
+
+    expect(
+      await screen.findByText(/Sem repositório ainda: aceitar este handoff o provisiona/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ativar execução' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+    ).toBeInTheDocument();
+  });
+
+  it('repositório ainda carregando: o atalho continua — "não sei" não vira "não tem"', async () => {
+    getRepository.mockReturnValue(new Promise(() => {}));
+    montarCardDevLeadSemRepositorio();
+
+    expect(await screen.findByRole('button', { name: 'Ativar execução' })).toBeInTheDocument();
+    expect(screen.queryByText(/Sem repositório ainda/)).not.toBeInTheDocument();
+  });
+
+  it('aceitar o handoff reconsulta o repositório, porque o aceite o provisiona', async () => {
+    getRepository.mockResolvedValue(null);
+    acceptHandoff.mockResolvedValue({});
+    montarCardDevLeadSemRepositorio();
+    await screen.findByText(/Sem repositório ainda/);
+    const consultasAntes = getRepository.mock.calls.length;
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+    );
+
+    await waitFor(() => {
+      expect(getRepository.mock.calls.length).toBeGreaterThan(consultasAntes);
+    });
   });
 });

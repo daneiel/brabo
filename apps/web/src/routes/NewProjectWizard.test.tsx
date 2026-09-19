@@ -89,8 +89,8 @@ function montar() {
 /**
  * Avança do passo 1 (modo) até o de nome e visibilidade.
  *
- * CRIAR não tem mais passo de provider (RN-541): o git nasce no handoff ao
- * Dev Lead, sempre `local`, então perguntar "onde hospedar" aqui seria
+ * CRIAR não tem mais passo de provider (RN-541): o git nasce no aceite do handoff ao
+ * Arquiteto (RN-582), sempre `local`, então perguntar "onde hospedar" aqui seria
  * perguntar por uma decisão que a tela não usa. O parâmetro sobrevive para os
  * casos que exercitam a ADOÇÃO, onde o provider é obrigatório.
  */
