@@ -1142,12 +1142,12 @@ Twenty command routes, plus the health ones. Under `/internal` with `VerifyServi
 |---|---|---|
 | POST | `/sessions` | starts the `SessionServer` |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
-| POST | `/sessions/:id/agent/message` | user message in the thread |
+| POST | `/sessions/:id/agent/message` | user message in the thread — **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)) |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
-| POST | `/sessions/:id/agent/readiness` | readiness confirmation |
-| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra |
-| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)) |
+| POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api; `202` on acceptance, `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra — `202` on acceptance, with the closing turn still running; `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)); arriving while the Arquiteto's closing turn runs, it is HELD and created when that turn ends, so it still lands after the Infra one ([RN-578](../business-rules.md#rn-578)) |
 | POST | `/sessions/:id/execution/start` | activates the execution phase |
 | POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |

@@ -1,12 +1,48 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { connectSessionHeartbeat } from './session-channel';
+import { listSessionEvents } from './api-client';
+import type { SessionEvent } from './api-types';
 import {
   ESTADO_INICIAL_DA_ATIVIDADE,
   reduzirAtividadeDoTurno,
   type EstadoDaAtividadeDoTurno,
 } from './atividade-do-turno';
 import { fraseDaFerramenta } from './narracao-de-ferramentas';
+
+/**
+ * De quanto em quanto tempo a rede de segurança lê a cauda do log enquanto um
+ * turno aceito está em curso (ADR 0163, RN-578). O poll de 3 s da tela está
+ * PAUSADO nesse período (achados 2/7), então este é o único que roda.
+ */
+export const INTERVALO_DO_ACOMPANHAMENTO_MS = 4000;
+
+/**
+ * O turno de `agente` terminou, segundo o event log? (ADR 0163, RN-578)
+ *
+ * Olha o `agent.status` persistido MAIS RECENTE (maior `seq`) daquele agente:
+ * `working` é turno em curso; qualquer outro (`idle`, `awaiting_approval`) é
+ * turno fechado — terminado ou suspenso esperando aprovação, e nos dois a
+ * faixa sai. Sem nenhum `agent.status` do agente na janela, a resposta é
+ * `false`: não saber não é "acabou".
+ *
+ * É confiável porque o engine grava o `working` do turno novo ANTES de
+ * responder o aceite (`TurnoAssincrono.iniciar/3`): depois que a chamada
+ * resolve, um `idle` antigo nunca é o mais recente.
+ */
+export function turnoTerminouNoLog(
+  eventos: readonly SessionEvent[],
+  agente: string,
+): boolean {
+  let maisRecente: SessionEvent | undefined;
+  for (const evento of eventos) {
+    if (evento.type !== 'agent.status' || evento.actor?.id !== agente) continue;
+    if (!maisRecente || evento.seq > maisRecente.seq) maisRecente = evento;
+  }
+  if (!maisRecente) return false;
+  const status = (maisRecente.payload as { status?: unknown } | null)?.status;
+  return status !== 'working';
+}
 
 /**
  * O cluster de estado do CANAL DE TURNO de `SessionPage.tsx` — deixado de
@@ -127,6 +163,9 @@ export function useTurnoDoAgente(
   // arma/desarma o timer, logo abaixo.
   const [pensandoVisivel, setPensandoVisivel] = useState(false);
   const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
+  // O agente cujo turno ACEITO a tela acompanha pelo event log (ADR 0163,
+  // RN-578) — ver `acompanharTurnoPeloLog`. `null` = nada a acompanhar.
+  const [agenteAcompanhado, setAgenteAcompanhado] = useState<string | null>(null);
 
   /**
    * RN-174 — arma o indicador de turno em curso a partir de uma ação que NÃO
@@ -147,10 +186,10 @@ export function useTurnoDoAgente(
    * dezenas de segundos — que é exatamente o relato ("a web deve apresentar
    * uma animação mostrando que o agente está pensando").
    *
-   * Quem chama é responsável por chamar `finalizarTurnoDoAgente` no fim (o
-   * `finally` da própria ação), pelo mesmo argumento do `handleSend`: a
-   * chamada RESOLVER é sinal de fim de turno tão confiável quanto o
-   * `agent.done` do canal, e a função é idempotente.
+   * Quem chama é responsável pelo desfecho da própria chamada: ACEITA, chama
+   * `acompanharTurnoPeloLog` (ADR 0163 — a chamada resolve no aceite, não no
+   * fim do turno, e resolver deixou de ser sinal de fim); RECUSADA ou
+   * falhada, desfaz o arme (`cancelarTurnoOtimista`/`finalizarTurnoDoAgente`).
    *
    * `comStatus` (default `true`) existe só para `handleAcceptHandoff`: o
    * kickoff do agente ali é um `GenServer.cast` ASSÍNCRONO no engine (achado
@@ -206,6 +245,7 @@ export function useTurnoDoAgente(
     // persistido) e o reducer volta ao estado vazio — ÚNICO ponto de reset,
     // pelo mesmo argumento do resto desta função.
     setTurnoViaCanal(false);
+    setAgenteAcompanhado(null);
     dispatchAtividade({ tipo: 'reset' });
     queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
@@ -227,9 +267,58 @@ export function useTurnoDoAgente(
   const cancelarTurnoOtimista = useCallback(() => {
     setStreaming(false);
     setTurnoViaCanal(false);
+    setAgenteAcompanhado(null);
     turnoAgentRef.current = null;
     setStatusAgent(null);
   }, []);
+
+  /**
+   * ADR 0163 (RN-578) — o comando foi ACEITO, e o turno segue no engine.
+   *
+   * Até o ADR 0163 as quatro ações que disparam turno (`handleSend`,
+   * `handleReadiness`, `handleArchitectureReadiness`, o formulário de perguntas
+   * estruturadas e a devolução de história) tratavam "a chamada resolveu"
+   * como "o turno acabou" — a rede de segurança da RN-131 contra o
+   * `agent.done` que o canal pode perder. A chamada agora resolve no ACEITE,
+   * então esse sinal deixou de existir, e chamar `finalizarTurnoDoAgente`
+   * ali apagaria a faixa no primeiro segundo de um turno de minutos.
+   *
+   * Quem chama isto depois do aceite entrega o fim do turno a DOIS caminhos:
+   * o canal (`agent.done`, como sempre) e a leitura da cauda do log a cada
+   * `INTERVALO_DO_ACOMPANHAMENTO_MS` (`turnoTerminouNoLog`). O primeiro a ver
+   * o fim fecha; `finalizarTurnoDoAgente` é idempotente e desliga os dois.
+   * Falha de rede numa leitura não fecha nada — a próxima tenta de novo.
+   */
+  const acompanharTurnoPeloLog = useCallback((agente: string | null) => {
+    setAgenteAcompanhado(agente);
+  }, []);
+
+  useEffect(() => {
+    if (!agenteAcompanhado || !turnoViaCanal) return;
+    let desligado = false;
+
+    const verificar = async () => {
+      try {
+        const pagina = await listSessionEvents(projectId, sessionId, {
+          limit: 200,
+          latest: true,
+        });
+        if (desligado) return;
+        if (turnoTerminouNoLog(pagina.items, agenteAcompanhado)) {
+          finalizarTurnoDoAgente();
+        }
+      } catch {
+        // Rede fora numa leitura não é fim de turno: a próxima volta tenta.
+      }
+    };
+
+    void verificar();
+    const timer = setInterval(() => void verificar(), INTERVALO_DO_ACOMPANHAMENTO_MS);
+    return () => {
+      desligado = true;
+      clearInterval(timer);
+    };
+  }, [agenteAcompanhado, turnoViaCanal, projectId, sessionId, finalizarTurnoDoAgente]);
 
   // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
@@ -322,6 +411,7 @@ export function useTurnoDoAgente(
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
     cancelarTurnoOtimista,
+    acompanharTurnoPeloLog,
     // setters/ref crus — dois consumidores, e só estes dois:
     // - `setStreaming`/`setStreamingText`/`setOptimisticUser`: o ramo
     //   SSE-fallback de `handleSend` (chat consultivo sem agente ativo),
