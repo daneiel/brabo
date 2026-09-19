@@ -153,12 +153,14 @@ estado lido do repositório e não da conversa.
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 | O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
+| O repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (AT-092) | ADR 0165, RN-582 |
 | O critério de roteamento do hub no binding de modelo, congelado no metering (AT-090) | ADR 0166, RN-583 |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
 | A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
 | O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
+| O clique que dispara turno responde ao aceitar, e a recusa deixa de ser calada (AT-089) | ADR 0163, RN-578 |
 
 ## Estado atual e aberto
 
@@ -1233,12 +1235,30 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
+  Estado TERMINAL recusa CONVERSA com 409 nomeado (`sessao_encerrada`,
+  RN-581), e "conversa" é TIPO de conversa OU ATOR conversacional — nunca uma
+  lista de permitidos por tipo: o Psicólogo e a Anamnese escrevem numa sessão
+  fechada com o MESMO vocabulário do Criativo, e a decisão humana sobre ação
+  pendente continua entrando. O heartbeat não fecha sessão com conversacional
+  esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
+  turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
+  continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
   evento `execution.activated` é o ESTADO de execução, e continua sendo
   ele que `findActiveExecutionSession` procura. `execution.activated` em
   sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
   Não faça a derivação por evento olhar `kind`
+- O repositório de projeto CRIADO nasce no aceite do handoff ao ARQUITETO
+  (RN-582, ADR 0165), dentro de `AcceptHandoffUseCase`, ANTES de
+  `activateAgent` — criar projeto não provisiona (RN-541). O aceite ao Dev Lead
+  repete a chamada como SEGUNDA PORTA idempotente (a saída do projeto que
+  passou pelo Arquiteto sem repositório); não a remova. E
+  `execution/activate` sem repositório é 409 antes de qualquer efeito —
+  RECUSA, nunca provisiona: provisionar ali esconderia um efeito de git na
+  ativação e deixaria Arquiteto e Infra, que trabalham antes dela, sem onde
+  escrever
 - O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
   para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
   como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
@@ -1643,14 +1663,27 @@ o RACIOCÍNIO da triagem, que continua valendo.
   quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
   `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
   memória sobre a leitura geral.
+  que o turno termina (RN-460).
+- O clique que dispara turno de agente conversacional responde ao ACEITAR,
+  nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
+  devolve `{:reply, :ok, _}` assim que a Task sobe — DEPOIS de persistir
+  `agent.status: working`, e essa ordem é contrato (é ela que deixa a tela,
+  lendo a cauda do log depois do aceite, saber que o `agent.status` mais
+  recente é do turno novo). O desfecho vai pelo canal e pelo `agent.error`
+  durável, NUNCA pelo HTTP; a recusa ANTES de o turno subir é síncrona e
+  NOMEADA (409 `turno_em_andamento`/`aguardando_aprovacao`, 422
+  `sem_regra_de_negocio`) e o controller do engine não descarta mais o
+  retorno — era esse descarte que fazia mensagem recusada virar 202 calado.
+  Na tela, "a chamada resolveu" deixou de significar "o turno acabou": depois
+  do aceite chama-se `acompanharTurnoPeloLog`, nunca `finalizarTurnoDoAgente`.
+  Não volte a segurar o request pelo turno.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
-  `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora
-  (rompendo o bloqueio do `GenServer.call` de até 180s), mas emite
-  `agent.status: awaiting_approval` em vez de `agent.done` quando o `state`
-  devolvido carrega `:aguardando_aprovacao` com valor não-nulo. Enquanto
-  suspenso, `user_message` não inicia turno novo — vira `agent.error`
-  explicando a pendência. Sem tabela de estado própria: restart do engine
+  Desde o ADR 0163 o `from` já foi respondido no aceite (como em todo turno);
+  o que a suspensão muda é o FECHO: `agent.status: awaiting_approval` em vez
+  de `agent.done` quando o `state` devolvido carrega `:aguardando_aprovacao`
+  com valor não-nulo. Enquanto suspenso, `user_message` não inicia turno novo
+  — vira `agent.error` explicando a pendência, e 409 no clique. Sem tabela de estado própria: restart do engine
   durante a espera perde a inscrição no `Engine.Dev.Wake`, lacuna aceita e
   declarada (a decisão continua registrada em Aprovações).
 - A chave de LLM que um agente gasta é a do OWNER do workspace

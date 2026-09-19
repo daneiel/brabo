@@ -517,7 +517,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_infra_pr"))
     assert recusa["role"] == "tool"
     assert recusa["content"] =~ "sem repositório provisionado"
-    assert recusa["content"] =~ "handoff do Arquiteto para o Dev Lead"
+    assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
 
     assert_received {:event_appended, _pid, _sid,
                      %{type: "agent.response", payload: %{content: "depois-de-recusar-pr"}}}

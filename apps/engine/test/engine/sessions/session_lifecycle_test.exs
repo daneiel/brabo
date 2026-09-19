@@ -69,6 +69,106 @@ defmodule Engine.Sessions.SessionLifecycleTest do
                     "closed"}
   end
 
+  # RN-581 (AT-072). No `exp001` o heartbeat fechou a sessão 30s depois de a
+  # aba parar, com o Criativo tendo acabado de perguntar. Conversa esperando o
+  # usuário segura a sessão — mas com TETO, contado do fim do turno.
+  describe "conversa esperando o usuário (RN-581)" do
+    setup do
+      Application.put_env(:engine, :session_conversation_idle_timeout_ms, 60_000)
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :session_conversation_idle_timeout_ms)
+        Application.delete_env(:engine, :fake_pending_work)
+      end)
+
+      :ok
+    end
+
+    test "dentro do teto, reagenda em vez de encerrar" do
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente criativo aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -30, :second)
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+      send(pid, :heartbeat_timeout)
+
+      refute_receive {:termination_reported, _, ^session_id, _, _}, 300
+      assert Process.alive?(pid)
+
+      :ok = Monitor.expect_stop(session_id)
+      SessionServer.stop(pid)
+    end
+
+    test "acima do teto, encerra com causa PRÓPRIA (conversation_idle_timeout), closed" do
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente criativo aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -61, :second)
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+      send(pid, :heartbeat_timeout)
+
+      assert_receive {:termination_reported, "project-1", ^session_id,
+                      "conversation_idle_timeout", "closed"}
+
+      refute Process.alive?(pid)
+    end
+
+    test "o teto default é 8h: uma conversa parada há 7h59 segura a sessão" do
+      Application.delete_env(:engine, :session_conversation_idle_timeout_ms)
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente po aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -(8 * 3600 - 60), :second)
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+      send(pid, :heartbeat_timeout)
+
+      refute_receive {:termination_reported, _, ^session_id, _, _}, 300
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "agente po aguardando resposta do usuário",
+        aguardando_usuario_desde: DateTime.add(DateTime.utc_now(), -(8 * 3600 + 1), :second)
+      })
+
+      send(pid, :heartbeat_timeout)
+
+      assert_receive {:termination_reported, "project-1", ^session_id,
+                      "conversation_idle_timeout", "closed"}
+    end
+
+    test "pendência SEM instante continua sem teto (os quatro sinais de antes)" do
+      Application.put_env(:engine, :session_conversation_idle_timeout_ms, 0)
+      session_id = unique_id()
+
+      Application.put_env(:engine, :fake_pending_work, %{
+        pending: true,
+        motivo: "handoff po → arquiteto aguardando aceite",
+        aguardando_usuario_desde: nil
+      })
+
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+      send(pid, :heartbeat_timeout)
+
+      refute_receive {:termination_reported, _, ^session_id, _, _}, 300
+      assert Process.alive?(pid)
+
+      :ok = Monitor.expect_stop(session_id)
+      SessionServer.stop(pid)
+    end
+  end
+
   test "parada normal SEM expect_stop dispara callback (defensivo, closed_abnormally)" do
     session_id = unique_id()
     {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")

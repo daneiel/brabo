@@ -41,6 +41,14 @@ doesn't do is enter execution. Whoever arrives at the type rule tends to assume 
 opposite, and the wrong assumption here would erase the record of an entire
 conversation.
 
+**The session STATE filters by actor.** Since [RN-581](../business-rules.md#rn-581)
+a `closed`/`closed_abnormally` session refuses conversation with a 409, and
+"conversation" includes any event whose actor is a conversational agent — so an
+`artifact.*` from the Creative agent, the PO, the Architect, the Dev Lead, the UX
+Designer, the Staff or the Infra Lead no longer lands in a closed session, while
+the same artifact types emitted by the Psychologist, which runs **on** the closed
+session, still do. The type never decides; the actor does.
+
 ## The schemas
 
 ### `note` — tool

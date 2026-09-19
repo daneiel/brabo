@@ -29,6 +29,8 @@ const answerStructuredQuestion =
   >();
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
+/** A cauda do log que a rede de segurança lê depois do aceite (ADR 0163). */
+const cauda = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -104,6 +106,7 @@ vi.mock('../lib/api-client', async () => {
     setSessionModelBinding: vi.fn(),
     startAgent: vi.fn(),
     transitionSession: vi.fn(),
+    listSessionEvents: (...args: unknown[]) => cauda(...args),
   };
 });
 
@@ -392,6 +395,17 @@ describe('SessionPage — saída por texto livre no select (RN-171)', () => {
  * terminou de conectar (ticket + join, RN-108), o `agent.status` "working" se
  * perde.
  */
+function statusDoCriativo(seq: number, status: string) {
+  return {
+    id: `st-${seq}`,
+    seq,
+    type: 'agent.status',
+    actor: { kind: 'agent', id: 'criativo' },
+    payload: { status },
+    createdAt: '2026-08-10T12:00:02.000Z',
+  };
+}
+
 describe('SessionPage — responder o formulário arma o indicador de turno (RN-174)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -432,9 +446,25 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
     });
     expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
-    // A chamada resolve: o turno acabou, e o indicador sai junto.
+    // A chamada resolve: é o ACEITE (ADR 0163), não o fim do turno — o log
+    // ainda diz `working`, e o indicador fica. Até o ADR 0163 era aqui que
+    // ele saía.
+    cauda.mockResolvedValue({ items: [statusDoCriativo(3, 'working')], nextCursor: null });
     await act(async () => {
       resolver();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
+
+    // O turno termina no log: o indicador sai.
+    cauda.mockResolvedValue({
+      items: [statusDoCriativo(3, 'working'), statusDoCriativo(7, 'idle')],
+      nextCursor: null,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
     });
     await waitFor(() =>
       expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),

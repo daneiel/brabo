@@ -2793,7 +2793,7 @@ export interface paths {
         put?: never;
         /**
          * Sends a message to the active agent
-         * @description The response is just the acknowledgment. What the agent replies arrives via the session's event log and the chat SSE — not through this call.
+         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.
          */
         post: operations["AgentsController_message"];
         delete?: never;
@@ -2833,7 +2833,7 @@ export interface paths {
         put?: never;
         /**
          * Answers a set of the agent's structured questions
-         * @description Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once.
+         * @description Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.
          */
         post: operations["AgentsController_submitStructuredQuestionAnswer"];
         delete?: never;
@@ -2873,7 +2873,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the architecture is ready and offers the handoff to Infra
-         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous.
+         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.
          */
         post: operations["AgentsController_handoffInfra"];
         delete?: never;
@@ -3108,7 +3108,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms that the discovery session with the Criativo is done
-         * @description It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log.
+         * @description It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.
          */
         post: operations["AgentsController_readiness"];
         delete?: never;
@@ -8476,7 +8476,7 @@ export interface components {
         };
         SessionPendingWorkResponseDto: {
             /**
-             * @description There is work that blocks closing due to tab inactivity. Today: an `offered` handoff waiting for acceptance.
+             * @description There is work that blocks closing due to tab inactivity: an `offered` handoff, a `pending` action, an agent mid-turn, a dev agent working or blocked, or a conversational agent waiting for the user (RN-064, RN-581).
              * @example true
              */
             pending: boolean;
@@ -8485,6 +8485,11 @@ export interface components {
              * @example handoff po → arquiteto aguardando aceite
              */
             motivo: Record<string, never> | null;
+            /**
+             * @description Set ONLY when the one thing pending is a conversational agent waiting for the user (RN-581): the instant its turn ended. It is the only pending signal with a ceiling, and the engine applies it (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default 8h) — past it the session closes with `conversation_idle_timeout`. `null` otherwise.
+             * @example 2026-09-18T12:00:00.000Z
+             */
+            aguardandoUsuarioDesde: string | null;
         };
         SessionResponseDto: {
             /**
@@ -8538,7 +8543,7 @@ export interface components {
              */
             closedAt: Record<string, never> | null;
             /**
-             * @description Reason reported by the engine when terminating (heartbeat_timeout, killed, exception…). `null` on a human close or a still-live session.
+             * @description Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.
              * @example null
              */
             terminationReason: Record<string, never> | null;
@@ -13784,7 +13789,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
+            /** @description The project has no repository yet (RN-582): the dev agents work in worktrees of it, so nothing starts. The message names what is missing — the handoff to the Architect (or, as a second door, to the Dev Lead) whose acceptance provisions it, or the provisioning page when that handoff was already accepted and left no repository. Also: the origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -16770,7 +16775,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The agent is not active in this session. */
+            /** @description The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -16901,7 +16906,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description This question set has already been answered. */
+            /** @description This question set has already been answered; or the agent is still in the middle of a turn and did not read the answers (ADR 0163). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -17004,6 +17009,13 @@ export interface operations {
             };
             /** @description Project, session, or handoff not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Arquiteto is still in the middle of a turn — the confirmation was recorded but the closing turn did not start (ADR 0163). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17844,6 +17856,20 @@ export interface operations {
             };
             /** @description Project, session, or handoff not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Criativo is still in the middle of a turn — the confirmation was recorded but the brief did not start (ADR 0163). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

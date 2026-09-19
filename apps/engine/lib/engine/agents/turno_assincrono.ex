@@ -15,26 +15,26 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   1. `iniciar/3` sobe uma `Task.Supervisor.async_nolink/2` rodando `fun`
      (a MESMA função que já rodava dentro do `handle_call` — `run_turn/1,2`
-     ou uma variação que também cria handoff — só que agora fora dele) e
-     devolve `{:noreply, state}`: a resposta ao `GenServer.call` original
-     fica ADIADA, e o `from` viaja junto da referência da task em
-     `state.turno_assincrono`. Chamado de um `handle_cast` (kickoff, que não
-     tem `from` nenhum para responder), `from` é `nil`.
+     ou uma variação que também cria handoff — só que agora fora dele). Com
+     `from` (um `handle_call`), responde `:ok` NA HORA — é o aceite, e desde
+     o ADR 0163 (RN-578) ele não espera o turno. Sem `from` (`handle_cast`
+     do kickoff, `handle_info` da retomada), `{:noreply, state}`.
   2. Quando a task termina, a mensagem `{ref, resultado}` chega no
      `handle_info` do agente, que repassa para `tratar_resultado/2`: ele
-     responde ao `from` (quando existe) com `GenServer.reply/2`, incorpora o
-     `resultado` (o `state` final que a task devolveu) e emite os
-     broadcasts efêmeros de fim de turno.
+     incorpora o `resultado` (o `state` final que a task devolveu) e emite os
+     broadcasts efêmeros de fim de turno. Não há mais ninguém esperando
+     síncrono: o desfecho vai pelo canal e, quando é falha, pelo
+     `agent.error` durável.
   3. `cancelar/1` mata a task em curso com `Task.shutdown/2` no modo
      `:brutal_kill` — o que derruba a CONEXÃO HTTP (SSE) que a task segura
      com a api, e é o que faz o cancelamento economizar token de verdade,
-     não só parar de renderizar no cliente — responde ao `from` original
-     com `{:error, :cancelado}` e grava o evento TERMINAL `agent.error`
-     (sem ele a sessão fica pendurada pro terceiro sinal de pendência do
-     `GetSessionPendingWorkUseCase`: `agent.activated` sem desfecho).
+     não só parar de renderizar no cliente — e grava o evento TERMINAL
+     `agent.error` (sem ele a sessão fica pendurada pro terceiro sinal de
+     pendência do `GetSessionPendingWorkUseCase`: `agent.activated` sem
+     desfecho).
 
   Sem turno em curso, `cancelar/1` é NO-OP idempotente — não existe task
-  para matar nem `from` pendente para responder.
+  para matar.
 
   ## Suspensão em aprovação (ADR 0086, RN-284)
 
@@ -45,12 +45,10 @@ defmodule Engine.Agents.TurnoAssincrono do
   Dev Lead faz isso, para `propose_execution_plan`). A checagem é pelo
   VALOR (`Map.get/2`, truthy), não pela presença da chave: o Dev Lead
   carrega `aguardando_aprovacao: nil` desde o `init/1`, então a chave em si
-  está sempre presente. `tratar_resultado/2` continua
-  respondendo ao `from` na mesma hora — é o que rompe o bloqueio síncrono de
-  até 180s do `handle_call` original —, mas em vez de `finalizar/1` (que
-  emite `agent.done` e `agent.status: idle`, dizendo que o agente terminou
-  e está livre) chama `suspender/1`: só `agent.status: awaiting_approval`,
-  sem `agent.done`. O turno NÃO terminou — está esperando
+  está sempre presente. Quem fecha esse turno é `suspender/1` em vez de
+  `finalizar/1` (que emite `agent.done` e `agent.status: idle`, dizendo que o
+  agente terminou e está livre): só `agent.status: awaiting_approval`, sem
+  `agent.done`. O turno NÃO terminou — está esperando
   `{:action_settled, ...}` (a mesma entrega da `Engine.Dev.Wake`/outbox que
   o dev agent já consome desde o ADR 0052) para retomar de onde parou.
   """
@@ -61,27 +59,45 @@ defmodule Engine.Agents.TurnoAssincrono do
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @typedoc "O que fica guardado no state do agente enquanto o turno roda."
-  @type turno :: %{task: Task.t(), from: GenServer.from() | nil}
+  @type turno :: %{task: Task.t()}
 
   @doc """
   Inicia o turno em background. `fun` é uma função de aridade zero que roda
   o turno (e o que mais precisar, como emitir o product_brief ou criar um
   handoff) e devolve o `state` final — a MESMA função que corria inline
-  dentro do `handle_call`/`handle_cast` antes desta mudança.
+  dentro do `handle_call`/`handle_cast` antes da RN-122.
 
-  `from` é o `GenServer.from()` de quem espera a resposta (`handle_call`),
-  ou `nil` quando quem chamou foi um `handle_cast` (kickoff) sem ninguém
-  esperando síncrono.
+  `from` é o `GenServer.from()` de quem chamou (`handle_call`), ou `nil`
+  quando quem chamou foi um `handle_cast` (kickoff) ou um `handle_info`
+  (retomada do Dev Lead suspenso) sem ninguém esperando síncrono.
+
+  ## A resposta sai AO ACEITAR (ADR 0163, RN-578)
+
+  Com `from`, a resposta é `{:reply, :ok, state}` na hora — com a Task de pé e
+  o `agent.status: working` JÁ persistido (é `LiveBroadcast.agent_status/4`,
+  síncrono no append). Até o ADR 0163 o `from` viajava junto da Task e só era
+  respondido no FIM do turno: quem clicava esperava o turno inteiro (97 s
+  medidos numa instalação real), e turno acima do teto do `GenServer.call`
+  virava 500 num comando que tinha funcionado. O ADR 0086 já rompia essa
+  espera para o Dev Lead suspenso; agora ela não existe para ninguém. A ORDEM
+  (persistir `working` → responder) é contrato: é ela que deixa a tela saber,
+  lendo o log depois do aceite, que o `agent.status` mais recente daquele
+  agente é do turno NOVO.
+
+  ## A recusa continua síncrona
 
   Se já existe um turno em curso para este agente, NÃO sobe uma segunda
   task — duas tasks mexendo no mesmo histórico de mensagens correriam uma
   condição de corrida. Com `from` presente (era um `handle_call`), responde
-  na hora com `{:error, :turno_em_andamento}`; sem `from` (era o `:kickoff`,
-  que só deveria disparar uma vez por sessão), ignora e loga — é defensivo,
-  não um caminho esperado.
+  na hora com `{:error, :turno_em_andamento}` E grava `agent.error` durável:
+  até o ADR 0163 esse retorno era descartado pelo controller, que respondia
+  202 — a mensagem era aceita e nunca lida, sem rastro nenhum (medido: um
+  "Continue" digitado durante o kickoff do Arquiteto). Sem `from` (era o
+  `:kickoff`, que só deveria disparar uma vez por sessão), ignora e loga — é
+  defensivo, não um caminho esperado.
   """
   @spec iniciar(map(), GenServer.from() | nil, (-> map())) ::
-          {:noreply, map()} | {:reply, {:error, :turno_em_andamento}, map()}
+          {:noreply, map()} | {:reply, :ok | {:error, :turno_em_andamento}, map()}
   def iniciar(state, from, fun) do
     case Map.get(state, :turno_assincrono) do
       nil ->
@@ -99,7 +115,9 @@ defmodule Engine.Agents.TurnoAssincrono do
         task =
           Task.Supervisor.async_nolink(Engine.TaskSupervisor, fn -> com_heranca(heranca, fun) end)
 
-        {:noreply, Map.put(state, :turno_assincrono, %{task: task, from: from})}
+        novo_state = Map.put(state, :turno_assincrono, %{task: task})
+
+        if from, do: {:reply, :ok, novo_state}, else: {:noreply, novo_state}
 
       %{} when is_nil(from) ->
         Logger.warning(
@@ -109,6 +127,7 @@ defmodule Engine.Agents.TurnoAssincrono do
         {:noreply, state}
 
       %{} ->
+        emitir_recusa_por_turno_em_andamento(state)
         {:reply, {:error, :turno_em_andamento}, state}
     end
   end
@@ -124,20 +143,17 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   Desde o ADR 0086 (RN-284), o `state` devolvido pode carregar a chave
   OPCIONAL `:aguardando_aprovacao` — usada pelo Dev Lead quando um tool call
-  virou `proposed_action` e ficou `pending`: o `GenServer.reply/2` acontece
-  do MESMO jeito e na MESMA hora (é o que rompe o bloqueio de até 180s do
-  `handle_call` original), mas o turno NÃO terminou. Presente a chave, quem
-  fecha é `suspender/1` (sem `agent.done`, `agent.status` vira
+  virou `proposed_action` e ficou `pending`: o turno NÃO terminou. Presente
+  a chave, quem fecha é `suspender/1` (sem `agent.done`, `agent.status` vira
   `"awaiting_approval"`); ausente, o caminho de sempre (`finalizar/1`).
   """
   @spec tratar_resultado(term(), map()) :: {:ok, map()} | :ignorado
   def tratar_resultado(
         {ref, resultado},
-        %{turno_assincrono: %{task: %Task{ref: ref}, from: from}} = _state
+        %{turno_assincrono: %{task: %Task{ref: ref}}} = _state
       )
       when is_reference(ref) and is_map(resultado) do
     Process.demonitor(ref, [:flush])
-    if from, do: GenServer.reply(from, :ok)
 
     novo_state = Map.put(resultado, :turno_assincrono, nil)
 
@@ -168,11 +184,10 @@ defmodule Engine.Agents.TurnoAssincrono do
   # perder o agente é pior.
   def tratar_resultado(
         {ref, resultado},
-        %{turno_assincrono: %{task: %Task{ref: ref}, from: from}} = state
+        %{turno_assincrono: %{task: %Task{ref: ref}}} = state
       )
       when is_reference(ref) do
     Process.demonitor(ref, [:flush])
-    if from, do: GenServer.reply(from, {:error, :resultado_invalido})
 
     novo_state =
       state
@@ -184,10 +199,8 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   def tratar_resultado(
         {:DOWN, ref, :process, _pid, reason},
-        %{turno_assincrono: %{task: %Task{ref: ref}, from: from}} = state
+        %{turno_assincrono: %{task: %Task{ref: ref}}} = state
       ) do
-    if from, do: GenServer.reply(from, {:error, {:crash, reason}})
-
     novo_state =
       state
       |> Map.put(:turno_assincrono, nil)
@@ -200,21 +213,23 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   @doc """
   Cancela o turno em curso: mata a task (`Task.shutdown/2`, `:brutal_kill`
-  — derruba a conexão HTTP no meio, não só o consumo do lado do engine),
-  responde ao `from` original com `{:error, :cancelado}` e grava o evento
-  TERMINAL. Sem turno em curso, é NO-OP idempotente.
+  — derruba a conexão HTTP no meio, não só o consumo do lado do engine) e
+  grava o evento TERMINAL. Sem turno em curso, é NO-OP idempotente.
+
+  Não responde a ninguém: desde o ADR 0163 quem disparou o turno já recebeu o
+  aceite no `iniciar/3`, e o desfecho do cancelamento chega pelo `agent.error`
+  durável e pelo canal, como todo outro desfecho de turno.
   """
   @spec cancelar(map()) :: map()
   def cancelar(%{turno_assincrono: nil} = state), do: state
 
-  def cancelar(%{turno_assincrono: %{task: task, from: from}} = state) do
+  def cancelar(%{turno_assincrono: %{task: task}} = state) do
     # `Task.shutdown/2` mata o processo E consome a mensagem de resposta ou
     # de :DOWN que ele mandaria — nada disso sobra na mailbox pro
     # `handle_info` genérico processar de novo (sem isto, `tratar_resultado/2`
     # rodaria uma segunda vez com `turno_assincrono` já `nil` e cairia no
     # `:ignorado`, mas só por sorte de guard — melhor não depender disso).
     Task.shutdown(task, :brutal_kill)
-    if from, do: GenServer.reply(from, {:error, :cancelado})
 
     state
     |> Map.put(:turno_assincrono, nil)
@@ -223,6 +238,29 @@ defmodule Engine.Agents.TurnoAssincrono do
   end
 
   def cancelar(state), do: Map.put(state, :turno_assincrono, nil)
+
+  @doc """
+  Abandona o turno em curso porque a SESSÃO fechou (RN-581): mata a task como
+  `cancelar/1`, mas NÃO grava nem transmite nada. Gravar seria pedir à api um
+  evento de conversa numa sessão encerrada, que ela recusa; e o canal da
+  sessão já foi embora. Chamado do `terminate/2` dos servidores, quando
+  `Engine.Agents.Conversacionais` os para. Sem turno, é no-op.
+
+  A task é `async_nolink`: sem isto ela SOBREVIVERIA ao servidor, seguiria
+  chamando o modelo (gastando) e tentaria gravar a resposta depois.
+
+  Não responde a ninguém: desde o ADR 0163 (RN-578) quem disparou o turno já
+  recebeu `:ok` no ACEITE, e o `from` não fica no state. O casamento é só por
+  `task` de propósito — um padrão que exigisse `from` cairia no no-op abaixo e
+  deixaria a task viva, que é o defeito que esta função existe para fechar.
+  """
+  @spec abandonar(map()) :: map()
+  def abandonar(%{turno_assincrono: %{task: task}} = state) do
+    Task.shutdown(task, :brutal_kill)
+    Map.put(state, :turno_assincrono, nil)
+  end
+
+  def abandonar(state), do: state
 
   # --- Herança de dicionário de processo para a task ---
 
@@ -254,6 +292,31 @@ defmodule Engine.Agents.TurnoAssincrono do
   # agent já usa para o laço suspenso do ADR 0052.
   defp suspender(state) do
     broadcast(state, "agent.status", %{status: "awaiting_approval"})
+    state
+  end
+
+  # A recusa de uma SEGUNDA mensagem com turno em curso (ADR 0163, RN-578).
+  # Até lá o `{:error, :turno_em_andamento}` era descartado pelo controller e
+  # o HTTP dizia 202: a mensagem estava gravada no log como `chat.message`
+  # (quem grava é a api, ANTES de falar com o engine) e nunca chegava ao
+  # modelo — sem rastro nenhum. Agora a recusa é 409 no clique E durável no
+  # fio. Origem `politica` pelo mesmo critério do cancelamento: é a regra "um
+  # turno por vez", não uma falha. Só `emit`/`broadcast` de `agent.error` —
+  # nunca `finalizar/1`, que diria à tela que o turno EM CURSO acabou.
+  defp emitir_recusa_por_turno_em_andamento(state) do
+    origem = "politica"
+
+    mensagem =
+      "Ainda estou no meio de um turno — esta mensagem ficou registrada, mas eu " <>
+        "não a li. Mande de novo quando eu terminar, ou pare o turno atual."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "turno_em_andamento"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
 

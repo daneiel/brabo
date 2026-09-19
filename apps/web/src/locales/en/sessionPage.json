@@ -82,6 +82,7 @@
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
+    "semRepositorio": "No repository yet: accepting this handoff provisions it, and only then can execution be activated.",
     "acompanheExecucao": "Follow the execution in Executors",
     "infraTitulo": "{{de}} handed off to Infra",
     "infraDetalhe": "Accepting activates the Infra Lead, who takes over provisioning and will PROPOSE starting the project container — the proposal still comes back to you in Approvals.",

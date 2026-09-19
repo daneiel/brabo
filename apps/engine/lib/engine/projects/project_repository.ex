@@ -63,17 +63,26 @@ defmodule Engine.Projects.ProjectRepository do
   uma camada ANTES, nunca no lugar.
 
   O texto diz o que falta e QUANDO passa a existir, sem decidir onde o
-  repositório deveria nascer: hoje ele nasce no aceite do handoff do Arquiteto
-  para o Dev Lead (RN-522/RN-541), ou na adoção de um repositório existente.
+  repositório deveria nascer: desde a RN-582 (ADR 0165) ele nasce no aceite do
+  handoff AO Arquiteto — antes do primeiro turno dele —, com o aceite ao Dev
+  Lead como segunda porta idempotente, ou na adoção de um repositório
+  existente. Com o gatilho ali, um agente que chega a esta recusa está num
+  projeto cujo provisionamento FALHOU no aceite (há `repository.provision_failed`
+  na sessão) ou que passou pelo Arquiteto antes da RN-582 — e o texto diz as
+  duas saídas, em vez de mandar esperar um aceite que já aconteceu.
   """
   def recusa_de_pr_sem_repositorio(project_id, tipo_de_acao) do
     case Repo.get_by(__MODULE__, project_id: project_id) do
       nil ->
         "projeto sem repositório provisionado — `#{tipo_de_acao}` não foi " <>
           "proposta, porque aprovada ela só poderia falhar. O repositório " <>
-          "deste projeto ainda não existe: ele nasce quando o handoff do " <>
-          "Arquiteto para o Dev Lead é aceito (RN-522). Não repita a chamada " <>
-          "agora; ela passa a valer depois desse aceite."
+          "deste projeto ainda não existe: ele nasce quando o handoff ao " <>
+          "Arquiteto é aceito (RN-582), e se esse aceite já aconteceu o " <>
+          "provisionamento falhou — o evento `repository.provision_failed` " <>
+          "diz por quê. Diga isso ao usuário: aceitar o handoff ao Dev Lead " <>
+          "provisiona de novo, e a página de provisionamento do projeto " <>
+          "também. Não repita a chamada agora; ela passa a valer quando o " <>
+          "repositório existir."
 
       _repo ->
         nil

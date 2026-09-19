@@ -12,6 +12,7 @@ import {
   confirmReadiness,
   denyAction,
   getProject,
+  getRepository,
   getSession,
   getSessionBudget,
   getSessionModelBinding,
@@ -30,6 +31,7 @@ import {
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { useTurnoDoAgente } from '../lib/session-turno';
+import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
   useCurrentWorkspaceWithRole,
@@ -305,6 +307,15 @@ export function SessionPage({
   const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
+  // RN-582 (ADR 0165): o atalho "Ativar execução" do card do handoff ao Dev
+  // Lead só existe com repositório — sem ele a api responde 409. Só a
+  // ausência CONFIRMADA esconde o atalho ("não sei" não vira "não tem"), e a
+  // mesma `queryKey` das outras telas evita requisição a mais.
+  const repositorioQuery = useQuery({
+    queryKey: ['repository', projectId],
+    queryFn: () => getRepository(projectId),
+  });
+  const semRepositorio = repositorioQuery.isSuccess && repositorioQuery.data === null;
   const { data: session } = useQuery({
     queryKey: ['session', projectId, sessionId],
     queryFn: () => getSession(projectId, sessionId),
@@ -334,6 +345,7 @@ export function SessionPage({
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
     cancelarTurnoOtimista,
+    acompanharTurnoPeloLog,
     setStreaming,
     setStreamingText,
     setOptimisticUser,
@@ -894,6 +906,7 @@ export function SessionPage({
               // próprio evento, e não `activeAgent`, que pode já ter mudado
               // enquanto o formulário ficava na tela sem resposta.
               onTurnoIniciado={() => iniciarTurnoDoAgente(event.actor.id)}
+              onTurnoAceito={() => acompanharTurnoPeloLog(event.actor.id)}
               onTurnoTerminado={finalizarTurnoDoAgente}
             />
           ),
@@ -944,14 +957,23 @@ export function SessionPage({
                 <>
                   {/* Atalho pra quem já sabe o que quer (RN-137): ativa a
                       execução direto daqui, sem passar pela conversa com o
-                      Dev Lead — mesma `activateExecution` da Visão Geral. */}
-                  <Button
-                    variant="primary"
-                    loading={ativandoExecucao}
-                    onClick={handleActivateExecution}
-                  >
-                    {t('handoff.ativarExecucao')}
-                  </Button>
+                      Dev Lead — mesma `activateExecution` da Visão Geral.
+                      Sem repositório ele SAI (RN-582) e o card diz por quê:
+                      o aceite ao lado é a segunda porta que o provisiona, e
+                      é o gesto que resolve — ativar daria 409. */}
+                  {semRepositorio ? (
+                    <span className={styles.timelineLink} data-testid="sem-repositorio-no-handoff">
+                      {t('handoff.semRepositorio')}
+                    </span>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      loading={ativandoExecucao}
+                      onClick={handleActivateExecution}
+                    >
+                      {t('handoff.ativarExecucao')}
+                    </Button>
+                  )}
                   <Link
                     to="/projects/$projectId"
                     params={{ projectId }}
@@ -1320,6 +1342,7 @@ export function SessionPage({
     podeAtivarAutoMode,
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
+    acompanharTurnoPeloLog,
     backlogQuery.data,
   ]);
 
@@ -1485,22 +1508,20 @@ export function SessionPage({
     try {
       iniciarTurnoDoAgente('criativo');
       await confirmReadiness(projectId, sessionId);
-      // O product_brief + handoff chegam via o canal (agent.done) + poll.
-      //
-      // Rede de segurança (RN-131), espelhando `handleSend` (ver o comentário
-      // lá): `confirmReadiness` também é um `GenServer.call` síncrono no
-      // engine (até 120s), e o canal Phoenix pode não ter terminado de
-      // conectar (ticket + join, RN-108) quando o turno acaba — o broadcast
-      // de `agent.done` se perde e, sem isto, a bolha do agente ficava presa
-      // vazia pra sempre, já que só `onAgentDone` resetava
-      // `streaming`/`streamingText`/`statusAgent` no caminho de sucesso.
-      // Resolver esta chamada é sinal de fim de turno tão confiável quanto
-      // `agent.done`, e `finalizarTurnoDoAgente` é idempotente — chamar de
-      // novo quando o canal também entrega o evento não tem efeito.
-      finalizarTurnoDoAgente();
-    } catch {
+      // ADR 0163 (RN-578): resolver é o ACEITE, não o fim do turno — o
+      // product_brief + handoff chegam depois, pelo canal (`agent.done`) e
+      // pelo log. Até lá esta linha era `finalizarTurnoDoAgente()` (a rede de
+      // segurança da RN-131), e a chamada só resolvia com o turno pronto.
+      acompanharTurnoPeloLog('criativo');
+    } catch (erro) {
       cancelarTurnoOtimista();
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
+      // A recusa do agente (409 turno em curso, 422 sem regra de negócio) traz
+      // a frase dele; a mensagem genérica fica para o que não tem frase.
+      showToast({
+        title: t('toasts.erro'),
+        message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarProntidao')),
+        tone: 'danger',
+      });
     }
   }
 
@@ -1508,23 +1529,20 @@ export function SessionPage({
    * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
    * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
    * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
-   * pronta no fio, e os dois handoffs nascem em seguida. Mesma rede de
-   * segurança do `handleReadiness`: `confirmArchitectureReadiness` também é
-   * um `GenServer.call` síncrono no engine, e o canal Phoenix pode não ter
-   * terminado de conectar quando o turno acaba — resolver esta chamada é
-   * sinal de fim de turno tão confiável quanto `agent.done`, e
-   * `finalizarTurnoDoAgente` é idempotente.
+   * pronta no fio, e os dois handoffs nascem em seguida. Desde o ADR 0163 a
+   * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
+   * canal e pelo log (`acompanharTurnoPeloLog`).
    */
   async function handleArchitectureReadiness() {
     try {
       iniciarTurnoDoAgente('arquiteto');
       await confirmArchitectureReadiness(projectId, sessionId);
-      finalizarTurnoDoAgente();
-    } catch {
+      acompanharTurnoPeloLog('arquiteto');
+    } catch (erro) {
       cancelarTurnoOtimista();
       showToast({
         title: t('toasts.erro'),
-        message: t('toasts.erroConfirmarArquitetura'),
+        message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarArquitetura')),
         tone: 'danger',
       });
     }
@@ -1593,6 +1611,9 @@ export function SessionPage({
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      // O aceite ao Arquiteto (e ao Dev Lead, segunda porta) provisiona o
+      // repositório (RN-582) — as telas que perguntam por ele precisam saber.
+      queryClient.invalidateQueries({ queryKey: ['repository', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
       // RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já
       // pode ativar a execução (mesma exigência do backend em
@@ -1754,7 +1775,10 @@ export function SessionPage({
     // `reviseStory`, que é um `handle_call({:revise, …})` no `po_server`, e
     // esta chamada só resolve depois de o PO rodar o turno INTEIRO (reescrever
     // a história). Sem armar o indicador, a tela ficava muda esse tempo todo.
-    iniciarTurnoDoAgente(activeAgent);
+    //
+    // Quem reescreve é SEMPRE o PO (`reviseStory` → `po_server`), não o
+    // `activeAgent` do momento — é por ele que o log é lido depois do aceite.
+    iniciarTurnoDoAgente('po');
     try {
       await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
       setRecusandoStory(null);
@@ -1762,13 +1786,17 @@ export function SessionPage({
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
+      // ADR 0163 (RN-578): resolver é o ACEITE. Se o PO não estava de pé, a
+      // api engoliu a notificação e nenhum `working` novo foi gravado — o
+      // `idle` antigo é o mais recente, e a leitura do log fecha na hora.
+      acompanharTurnoPeloLog('po');
     } catch {
       showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
+      // Um erro que deixasse `streaming` ligado travaria o composer até o
+      // próximo turno.
+      finalizarTurnoDoAgente();
     } finally {
       setEnviandoRecusa(false);
-      // Idempotente e nos DOIS caminhos: um erro que deixasse `streaming`
-      // ligado travaria o composer até o próximo turno.
-      finalizarTurnoDoAgente();
     }
   }
 
@@ -1816,30 +1844,22 @@ export function SessionPage({
       iniciarTurnoDoAgente(agentParaEnviar);
       try {
         await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
-        // Rede de segurança contra o canal perder o `agent.done` (achado da
-        // duplicata + botão preso): a conexão do canal (ticket + join, RN-108)
-        // é assíncrona e pode não ter terminado quando o turno acaba — nesse
-        // caso o broadcast de fim de turno não tem ninguém ouvindo do outro
-        // lado e se perde pra sempre, e como só `onAgentDone` resetava
-        // `streaming`/`optimisticUser` no caminho de sucesso, o cliente ficava
-        // preso: a mensagem otimista nunca some (daí a duplicata quando o
-        // evento persistido chega por outra via) e o convite/botão de
-        // "Iniciar ideação" nunca voltam a refletir o estado real.
-        //
-        // Esta chamada só RESOLVE depois que o engine termina o turno inteiro
-        // — a rota é síncrona no engine (`GenServer.call` com timeout de
-        // 120s em `CriativoServer.user_message`/2, ver
-        // `agent_command_controller.ex`), então "resolveu" é sinal tão
-        // confiável de "turno acabou" quanto `agent.done`. Na maioria das
-        // vezes `onAgentDone` chega primeiro (empurrado direto pelo canal,
-        // sem o salto extra de volta pela api) e este reset roda de novo sem
-        // efeito — é por isso que `finalizarTurnoDoAgente` é seguro de
-        // chamar duas vezes.
-        finalizarTurnoDoAgente();
-      } catch {
+        // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
+        // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
+        // broadcast (join ainda não concluído, RN-108), pela leitura da cauda
+        // do log. Até o ADR 0163 esta chamada só resolvia com o turno pronto
+        // e era ela a rede de segurança: aqui havia `finalizarTurnoDoAgente()`.
+        acompanharTurnoPeloLog(agentParaEnviar);
+      } catch (erro) {
         cancelarTurnoOtimista();
         setOptimisticUser(null);
-        showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
+        // 409 com o agente ainda no meio de um turno traz a frase do engine
+        // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
+        showToast({
+          title: t('toasts.erro'),
+          message: mensagemDaRecusaDoAgente(erro, t('toasts.erroEnviarMensagem')),
+          tone: 'danger',
+        });
       }
       return;
     }
