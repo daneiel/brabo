@@ -12,7 +12,7 @@ import {
 import { AREAS } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
-import type { Model } from '../../lib/api-types';
+import type { Model, RoutingPreference } from '../../lib/api-types';
 import { Button } from '../../components/ui/Button';
 import { ModelPicker } from '../../components/ModelPicker';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -20,6 +20,7 @@ import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca, useVoltarAHerdar } from './heranca';
 import { CadeiaDeCascata, montarCadeia } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
 
 /**
  * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
@@ -74,15 +75,17 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   });
 
   // Nome de exibição para os `title` da cadeia — mesma lista que o
-  // `ModelPicker` desta seção já recebe, sem consulta a mais.
+  // `ModelPicker` desta seção já recebe, sem consulta a mais. É também dela
+  // que sai o PROVIDER do modelo vigente, que decide se há critério de
+  // roteamento a oferecer (ADR 0166).
+  const todosOsModelos: Model[] = modelsByCategory
+    ? [
+        ...Object.values(modelsByCategory.local).flat(),
+        ...Object.values(modelsByCategory.cloud).flat(),
+      ]
+    : [];
   const nomeDoModelo = (modelId: string) =>
-    (modelsByCategory
-      ? [
-          ...Object.values(modelsByCategory.local).flat(),
-          ...Object.values(modelsByCategory.cloud).flat(),
-        ]
-      : []
-    ).find((m) => m.id === modelId)?.displayName;
+    todosOsModelos.find((m) => m.id === modelId)?.displayName;
 
   function invalidate(areaKey: string) {
     queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
@@ -98,6 +101,29 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('areaModels.toast.saveError')),
+        tone: 'danger',
+      });
+    }
+  }
+
+  /**
+   * O critério de roteamento do padrão PRÓPRIO da área (ADR 0166, RN-583) —
+   * regrava o mesmo modelo com o critério novo. Lead e subagentes que herdam
+   * a área passam a usá-lo; quem divergiu tem o do próprio binding.
+   */
+  async function handleRouting(
+    areaKey: string,
+    modelId: string,
+    routingPreference: RoutingPreference | null,
+  ) {
+    try {
+      await setAreaModelBinding(projectId, areaKey, modelId, {
+        routingPreference,
+      });
+      invalidate(areaKey);
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('roteamento.toast.saveError')),
         tone: 'danger',
       });
     }
@@ -194,6 +220,19 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   // consumidor do modelo de uma área é um agente dela —, então
                   // o 422 da RN-040 alcança quem escolhe daqui igualzinho.
                   filtroDeAgentesPadrao
+                />
+                {/* Mesmo `podeEditar` (`maintainer`) do picker: é o mesmo
+                    endpoint (ADR 0166, RN-102). Editável só com padrão
+                    PRÓPRIO — herdado, o critério vem com o modelo de cima. */}
+                <PreferenciaDeRoteamento
+                  resolvido={resolved}
+                  modelo={todosOsModelos.find((m) => m.id === resolved?.modelId)}
+                  proprio={divergiuDoProjeto}
+                  podeEditar={podeEditar}
+                  alvo={t('areaModels.card.title', { area: area.label })}
+                  onChange={(preferencia) =>
+                    resolved && handleRouting(key, resolved.modelId, preferencia)
+                  }
                 />
               </div>
             )}

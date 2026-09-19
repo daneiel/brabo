@@ -491,5 +491,21 @@
       "errorTitle": "Error",
       "errorMessage": "Could not revert"
     }
+  },
+  "roteamento": {
+    "label": "Routing",
+    "ariaLabel": "Routing preference for {{alvo}}",
+    "options": {
+      "hub": "the hub decides",
+      "price": "lowest price",
+      "throughput": "highest throughput",
+      "latency": "lowest latency"
+    },
+    "notSupported": "No routing preference: the {{provider}} provider does not declare that capability — it is only declared after being proven against the real API.",
+    "inherited": "Routing: {{valor}} — comes with the model of the {{nivel}} level.",
+    "inheritedHint": "To set it here, pick a model of its own for this row.",
+    "toast": {
+      "saveError": "Could not save the routing preference"
+    }
   }
 }

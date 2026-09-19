@@ -272,6 +272,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mandar esperar o aceite ao Dev Lead e diz que, com o gatilho no Arquiteto,
   chegar ali é provisionamento que falhou ou projeto anterior à regra.
 
+- **api/web**: o binding de modelo ganha um **critério de roteamento**
+  (`price` | `throughput` | `latency`) para o hub escolher o upstream, e ele
+  **congela em `token_usage`** ao lado do `upstream_provider`
+  ([RN-583](docs/business-rules/custo.md#rn-583),
+  [ADR 0166](docs/adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md)).
+  Motivo medido (AT-090): 23 de 24 chamadas de um modelo via OpenRouter
+  caíram num upstream ~4x mais lento, porque o corpo saía sem `provider.sort`.
+  O critério viaja com o binding que venceu a cascata, nunca cascateia
+  sozinho; `PUT .../model-binding` aceita `routingPreference` nos cinco
+  escopos (ausente preserva, `null` limpa, valor para provider sem a
+  capability é 422), e `GET /llm/provider-capabilities` é rota nova. **A
+  feature nasce DORMENTE**: a capability `routingPreference` é `false` nos nove
+  providers, inclusive no OpenRouter, porque ainda não foi provada contra a
+  API real — a tela diz isso em texto e nada muda no fio. Virá-la é um PR de
+  uma linha acompanhado da saída de
+  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`.
+  Migration `0060_preferencia_de_roteamento` (duas colunas anuláveis, sem
+  backfill).
+
 - **instalador/esteira**: o **broker de container vira a quinta imagem
   publicada**, e o `install.sh` **pergunta** se o liga
   ([ADR 0162](docs/adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),

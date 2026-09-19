@@ -148,6 +148,49 @@ cost.
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
+
+Um binding de modelo pode guardar um **critério de roteamento** —
+`routing_preference`: `price`, `throughput` ou `latency` — que diz ao HUB
+como escolher o upstream que serve o modelo. Anulável: `null` é o
+comportamento de sempre, nada vai ao fio e o hub decide sozinho.
+
+1. **Viaja com o binding que venceu, nunca cascateia sozinho.** A cascata
+   continua sendo de binding: o nível vencedor traz o modelo E o critério
+   dele. O nível que a cascata PULA (modelo indisponível, sem tool calling)
+   leva o critério junto — sobreviver só o critério produziria combinação que
+   ninguém escolheu.
+2. **Escrita em três formas.** No `PUT .../model-binding` dos cinco escopos,
+   `routingPreference` **ausente** preserva o gravado se o provider do modelo
+   novo declara a capability, e vira `null` se não declara; **`null`** limpa;
+   **valor** para provider sem a capability é **422**
+   (`RoutingPreferenceNotSupportedError`). Invariante: nenhum binding guarda
+   critério para provider que não o declara.
+3. **Congela o que FOI AO FIO.** `token_usage.routing_preference` é gravado
+   por chamada, ao lado do `upstream_provider` da [RN-042](#rn-042): o critério
+   enviado, e `null` quando o binding não tinha ou quando o provider não
+   declara a capability (o que não foi enviado não é procedência de nada).
+   Mesma régua do preço congelado (ADR 0042).
+4. **Capability de PROVIDER, só com prova.**
+   `LLMProviderCapabilities.routingPreference` é obrigatória nos nove, e é
+   `false` nos nove hoje — inclusive no OpenRouter, cujo fio (`provider: { sort
+   }`) está pronto mas não foi provado contra a API real (sem
+   `OPENROUTER_TEST_KEY` no ambiente). Enquanto for `false`, a feature é
+   DORMENTE: a rota recusa, a tela diz em texto que nenhum provider desta
+   instalação tem a opção provada, e nada muda no fio.
+
+- **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
+  `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
+  `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:93`
+  (congela no metering)
+- **Test:** `test/domain/llm/routing-preference.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts`; a prova
+  manual da capability é `test/infrastructure/llm/openrouter-provider.roteamento.smoke.spec.ts`
+- **Origin:** [ADR 0166](../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md) (AT-090)
+
 ### RN-043 — A discovered model enters disabled; a model that disappears is marked, never deleted {#rn-043}
 
 Catalog sync has three outcomes, and none of them is destructive:
@@ -2450,10 +2493,10 @@ só numa seção seria pior que a lacuna.
   `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
   "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
   mudar de mínimo),
-  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:195` e `:222`
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:208` e `:236`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
-  `apps/web/src/routes/settings/ModelsSection.tsx:77` (`podeEditar`, e por que
+  `apps/web/src/routes/settings/ModelsSection.tsx:85` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
   que diz o motivo)
@@ -2593,9 +2636,9 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:122` (`cadeiaDoAgente`),
-  `:242` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:285` (`handleClearAgentBinding` — os
+  `apps/web/src/routes/settings/ModelsSection.tsx:157` (`cadeiaDoAgente`),
+  `:322` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:391` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:352` (coluna Origem), `:422`
   (`não há nível abaixo`), `:441` (`sem gasto ainda`),
   `apps/web/src/components/ModelPicker.tsx:83` (`selected` sai do prop — o

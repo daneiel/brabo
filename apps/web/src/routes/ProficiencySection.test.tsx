@@ -47,6 +47,9 @@ vi.mock('../lib/hooks', () => ({
 }));
 
 vi.mock('../lib/api-client', () => ({
+  // O controle de roteamento (ADR 0166) renderiza dentro de Configurações:
+  // nenhum provider com a capability, o estado de produção hoje.
+  listProviderCapabilities: () => Promise.resolve([]),
   getProjectEvent: (projectId: string, eventId: string) =>
     getProjectEvent(projectId, eventId),
   deleteMyProficiency: (projectId: string) => deleteMyProficiency(projectId),

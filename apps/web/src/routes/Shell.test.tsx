@@ -127,6 +127,9 @@ vi.mock('../lib/api-client', async () => {
   const real =
     await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
   return {
+    // O controle de roteamento (ADR 0166) renderiza dentro de Configurações:
+    // nenhum provider com a capability, o estado de produção hoje.
+    listProviderCapabilities: () => Promise.resolve([]),
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
   };

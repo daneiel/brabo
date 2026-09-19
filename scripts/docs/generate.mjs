@@ -427,6 +427,9 @@ function descobrirProviders() {
       // — a coluna existe justamente para que virar essa flag sem prova fique
       // visível na doc, como aconteceu com `list_models` na Fase 9c.
       embeddings: flag('embeddings'),
+      // ADR 0166. Nasce `no` nos nove: o OpenRouter tem o fio pronto e a
+      // flag espera o smoke com credencial real.
+      routingPreference: flag('routingPreference'),
     });
   }
 
@@ -459,12 +462,12 @@ function gerarProvidersDeLlm() {
   let corpo = `\n${AVISO_BLOCO}\n\n`;
   corpo += `Read from the \`capabilities\` literals in \`apps/api/src/infrastructure/llm/\` — `;
   corpo += `**${ordenados.length} providers**.\n\n`;
-  corpo += '| provider | streaming | tool calling | list_models | embeddings | credential | model origin | summarized quirks | source |\n';
-  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n';
+  corpo += '| provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |\n';
+  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n';
   for (const [provider, c] of ordenados) {
     corpo +=
       `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | ` +
-      `${marca(c.embeddings)} | ` +
+      `${marca(c.embeddings)} | ${marca(c.routingPreference)} | ` +
       `${credencial(provider)} | ${origem(provider, c)} | ${quirks(provider)} | \`${c.arquivo}\` |\n`;
   }
   corpo += '\nA provider without `list_models` is SKIPPED by the catalog sync, with the reason\n';
@@ -476,6 +479,9 @@ function gerarProvidersDeLlm() {
   corpo += '"embeddings" is the ADR 0075 capability, and it is only `yes` with PROOF of\n';
   corpo += 'execution: reading the docs doesn\'t count, and the reason for each `no` is in\n';
   corpo += 'the literal\'s comment, in the file named in the last column.\n';
+  corpo += '"routing preference" is the ADR 0166 capability (a hub choosing the upstream\n';
+  corpo += 'by `price`, `throughput` or `latency`), under the same rule: `yes` only after\n';
+  corpo += 'a smoke against the real API returns the chosen upstream.\n';
 
   escreverBloco('docs/reference/llm-providers.md', 'providers-capabilities', corpo);
 }

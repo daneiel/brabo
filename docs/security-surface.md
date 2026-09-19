@@ -1129,6 +1129,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
 | GET | `/runner/projects` | jwt |
+| GET | `/llm/provider-capabilities` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials/:provider/test` | jwt |

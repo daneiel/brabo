@@ -154,6 +154,7 @@ estado lido do repositório e não da conversa.
 | O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
 | O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
 | O repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (AT-092) | ADR 0165, RN-582 |
+| O critério de roteamento do hub no binding de modelo, congelado no metering (AT-090) | ADR 0166, RN-583 |
 | O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
 | O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
 | A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
@@ -565,6 +566,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
   rodou real); `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` idem para git
+- A capability `routingPreference` (ADR 0166, RN-583) é `false` nos nove
+  providers, e a feature nasce DORMENTE: o fio do OpenRouter
+  (`provider: { sort }`) está pronto, mas virar a flag exige rodar
+  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`
+  (chave real com crédito) e citar a saída no PR — doc do hub não é prova.
+  Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
 - Binário standalone: DOIS dos cinco alvos chegam à Release. `v4.0.1` e
   `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com

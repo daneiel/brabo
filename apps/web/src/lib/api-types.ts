@@ -566,11 +566,25 @@ export type ModelBindingScope =
   | 'agent'
   | 'session';
 
+/**
+ * O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). Sai do
+ * tipo GERADO do OpenAPI (ADR 0116), não de uma cópia à mão.
+ */
+export type RoutingPreference = NonNullable<
+  components['schemas']['ResolvedBindingResponseDto']['routingPreference']
+>;
+
+/** As capabilities de PROVIDER (ADR 0041), por provider — gerado. */
+export type ProviderCapabilities =
+  components['schemas']['ProviderCapabilitiesResponseDto'];
+
 export interface ModelBinding {
   id: string;
   scope: ModelBindingScope;
   scopeId: string;
   modelId: string;
+  /** Critério do hub gravado NESTE binding (ADR 0166). */
+  routingPreference: RoutingPreference | null;
 }
 
 export interface SkippedBinding {
@@ -582,6 +596,11 @@ export interface SkippedBinding {
 export interface ResolvedBinding {
   modelId: string;
   origin: ModelBindingScope;
+  /**
+   * O critério do binding que VENCEU a cascata (ADR 0166). Não cascateia à
+   * parte: viaja com o modelo, do mesmo nível que `origin`.
+   */
+  routingPreference: RoutingPreference | null;
   /**
    * Escopos mais específicos que a cascata descartou antes de chegar em
    * `origin` (Fase 9c). Vazio no caminho normal; é o que permite a UI dizer

@@ -62,6 +62,8 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  RoutingPreference,
+  ProviderCapabilities,
   PromoteStoriesResult,
   Role,
   Session,
@@ -1027,6 +1029,21 @@ export const listModelPriceChanges = (workspaceId: string, modelId: string) =>
     `/workspaces/${workspaceId}/models/${modelId}/price-changes`,
   );
 
+/**
+ * As capabilities de PROVIDER dos nove (ADR 0166). Fato do código da
+ * instalação, igual para todo mundo — a tela lê `routingPreference` daqui
+ * antes de oferecer critério de roteamento num binding.
+ */
+export const listProviderCapabilities = () =>
+  get<ProviderCapabilities[]>('/llm/provider-capabilities');
+
+/**
+ * O corpo do PUT de binding. `routingPreference` AUSENTE preserva o gravado
+ * (se o provider do modelo aceita), `null` limpa — ver RN-583. Por isso a
+ * troca de modelo de sempre continua mandando só `modelId`.
+ */
+type CorpoDeBinding = { routingPreference?: RoutingPreference | null };
+
 export const getWorkspaceModelBinding = (workspaceId: string) =>
   get<{ modelId: string } | null>(`/workspaces/${workspaceId}/model-binding`);
 export const setWorkspaceModelBinding = (workspaceId: string, modelId: string) =>
@@ -1065,7 +1082,12 @@ export const setAgentModelBinding = (
   projectId: string,
   agentSlug: string,
   modelId: string,
-) => put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, { modelId });
+  extra: CorpoDeBinding = {},
+) =>
+  put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, {
+    modelId,
+    ...extra,
+  });
 /**
  * "Voltar a herdar" (ADR 0064, RN-102) — APAGA o binding do agente, nunca
  * grava nele o modelo da área. Copiar pareceria igual na tela e viraria uma
@@ -1080,7 +1102,12 @@ export const setAreaModelBinding = (
   projectId: string,
   areaKey: string,
   modelId: string,
-) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
+  extra: CorpoDeBinding = {},
+) =>
+  put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, {
+    modelId,
+    ...extra,
+  });
 export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
   del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
 

@@ -1,0 +1,69 @@
+---
+id: provider-capabilities-controller-list
+title: "Lists what each LLM provider can do, independent of the model"
+description: "The PROVIDER layer of the capabilities (ADR 0041) for the nine providers, read from the same instances that serve the calls. A capability is only `true` when proven against the real API. The screen reads `routingPreference` from here before offering a routing preference on a binding (ADR 0166)."
+sidebar_label: "Lists what each LLM provider can do, independent of the model"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lists what each LLM provider can do, independent of the model"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/llm/provider-capabilities"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+The PROVIDER layer of the capabilities (ADR 0041) for the nine providers, read from the same instances that serve the calls. A capability is only `true` when proven against the real API. The screen reads `routingPreference` from here before offering a routing preference on a binding (ADR 0166).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./provider-capabilities-controller-list.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./provider-capabilities-controller-list.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./provider-capabilities-controller-list.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
