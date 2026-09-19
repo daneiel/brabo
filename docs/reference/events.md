@@ -131,7 +131,7 @@ compaction summary, and the opening messages.
 |---|---|
 | `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
 | `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
-| `execution.parallelization_suggested` | the system proposed parallelizing |
+| `execution.parallelization_suggested` | the system proposed parallelizing — emitted at activation only when the project has a registered `running` container (otherwise the dev agents are blocked, `dev.blocked_by_container`, and more agents would only multiply the blocked ones; AT-104) |
 | `execution.parallelization_accepted` | accepted — the subagent inherits the base agent's cap |
 | `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
 | `dev.working` | claimed a task and set up the worktree |
