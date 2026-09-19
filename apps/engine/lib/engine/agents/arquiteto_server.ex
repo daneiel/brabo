@@ -180,7 +180,8 @@ defmodule Engine.Agents.ArquitetoServer do
          |> Map.put(:handoff_dev_pendente, pendente)
          |> drenar_handoff_dev_pendente()}
 
-      :ignorado -> {:noreply, state}
+      :ignorado ->
+        {:noreply, state}
     end
   end
 
