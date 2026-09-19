@@ -35,7 +35,7 @@ defmodule Engine.Agents.UxDesignerServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, UxDesignerTools}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao, UxDesignerTools}
   alias Engine.Sessions.EngineApiClient
 
   @agent "ux-designer"
@@ -82,6 +82,10 @@ defmodule Engine.Agents.UxDesignerServer do
 
     # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
     # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,

@@ -360,10 +360,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
   AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
   ao Dev Lead (RN-522)
-- **O `rollout-test` acusa sessão órfã de forma intermitente — DUAS em dez
-  rodadas** do `propriedades.yml` (BRB-009, AT-078; a última, `35448353884`,
+- **O `rollout-test` acusou sessão órfã de forma intermitente — TRÊS em treze
+  rodadas** do `propriedades.yml` (BRB-009, AT-078). A causa provável foi
+  CORRIGIDA na RN-588: o `Monitor` do pod antigo apagava a linha de
+  `session_states` que o par acabara de regravar; o drain agora marca o repasse
+  (`Monitor.expect_handoff/1`) e o Monitor não a apaga. Provado em ExUnit
+  (entrelaçamento determinístico), NÃO no k3d — a confirmação é a próxima
+  sequência de rodadas verdes, e uma nova órfã traria a linha de log do
+  Monitor ("mantido"/"apagado"). Restam inferência: o instante do apagamento
+  nunca foi medido, e a leitura vem do artefato da rodada `35452845830`.
+  Histórico, até a correção: a rodada `35448353884`
   com as cinco sessões no MESMO pod antigo: quatro adotadas, uma sem dono e sem
-  drenagem por 120s). Nas rodadas verdes a convergência leva 2–3s, então a
+  drenagem por 120s. Nas rodadas verdes a convergência leva 2–3s, então a
   leitura provável é corrida na adoção/drenagem, não atraso. Declarado e NÃO
   corrigido, e a regra do AT-078 é NENHUMA correção antes de reproduzir: o log
   que diria o que houve morria com o pod antigo, e desde o AT-078 a prova o
@@ -385,13 +393,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   lista por projeto da sidebar (`LinhaDeAba`, RN-196). Pré-existente (a
   régua horizontal duplicava a mesma lista), só ficou visualmente paralela;
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
-- A presença de QA/SecOps e dos membros de área (`gatesEverOpened`,
-  `delegatedSubagents`) deixou de sofrer da janela de 200 eventos (RN-568): as
-  duas telas passam o agregado do resumo como `agregado`, que SOMA à janela e
-  só vale com o resumo da MESMA sessão. O que sobra: `executionActivated` na aba
-  Executores continua lido do resumo SEM essa guarda de sessão — com uma sessão
-  mais nova que a de execução, os dev agents somem da aba. Declarado, não
-  corrigido
+- A presença de QA/SecOps, dos membros de área e dos dev agents
+  (`gatesEverOpened`, `delegatedSubagents`, `executionActivated`) deixou de
+  sofrer da janela de 200 eventos (RN-568): as duas telas passam o agregado do
+  resumo como `agregado`, que SOMA à janela e só vale com o resumo da MESMA
+  sessão. Desde o AT-130 o `executionActivated` da aba Executores passa pela
+  mesma guarda (antes um resumo de sessão mais nova apagava os dev agents), e
+  `deriveAgentRoster` também o lê da janela — a lacuna fechou
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111). O órfão CONTINUA; o que mudou na
   RN-560 é que a tela parou de dizer o contrário: o aviso afirmava *"isto
@@ -1708,6 +1716,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Na tela, "a chamada resolveu" deixou de significar "o turno acabou": depois
   do aceite chama-se `acompanharTurnoPeloLog`, nunca `finalizarTurnoDoAgente`.
   Não volte a segurar o request pelo turno.
+  O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
+  processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
+  + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos seis
+  (`Engine.Agents.TurnoOrfao`, RN-586); NUNCA reexecuta o turno, e só fecha o
+  que não tem processo vivo em nenhum nó. Sem isso a faixa da tela e o sinal de
+  trabalho pendente da RN-064 ficavam presos para sempre. O Infra Lead segue de
+  fora (roda no `handle_call`).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   Desde o ADR 0163 o `from` já foi respondido no aceite (como em todo turno);

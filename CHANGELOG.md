@@ -15,6 +15,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   api segue sem validar o `agent`: a recusa do engine é o único mecanismo
   ([RN-587](docs/business-rules.md#rn-587)).
 
+- **engine**: o turno **interrompido pelo reinício do engine fecha com desfecho
+  durável** (AT-156). O `agent.status: working` é gravado antes do aceite, e o
+  fim do turno só sai do processo do agente; com o engine reiniciado no meio, o
+  último status ficava `working` para sempre — a faixa de atividade da tela não
+  saía e a sessão contava trabalho pendente sem teto, então não fechava por
+  heartbeat. Agora, no boot (para toda sessão reidratada) e na subida de cada um
+  dos seis conversacionais, o `working` sem turno vivo em nenhum nó do cluster
+  ganha um `agent.error` de origem `infra` que diz o que houve, seguido de
+  `agent.status: idle`. O turno **não** é refeito. O Infra Lead segue de fora
+  ([RN-586](docs/business-rules.md#rn-586)).
+
+- **ci**: o `@dependabot rebase` **deixa de cancelar a justificativa do bot**
+  (AT-100). O rebase emite `synchronize` e `edited` no mesmo segundo; o
+  `concurrency` cancela um, e quando o sobrevivente era o `edited` o passo que
+  escreve `docs-not-needed:` era pulado e o drift reprovava (#578, runs
+  `35412983999`/`35412984299`). O passo agora também avalia em `edited` quando
+  o editor é o próprio Dependabot (`editorPodeAvaliar`, testada); edição de
+  humano continua sem avaliar, e autor humano continua sem justificativa.
+  Falha fechado, sem laço (o token do workflow não dispara `edited`).
+
+- **engine**: o rollout **deixa de produzir sessão sem dono** (AT-078). O
+  `Monitor` do pod antigo apagava a linha de `session_states` quando o `:DOWN`
+  da sessão repassada chegava — depois de o par tê-la regravado —, e a sessão
+  ficava com dono e sem linha, invisível à adoção e ao drain do par. O drain
+  agora marca o repasse (`Monitor.expect_handoff/1`) e o Monitor não apaga a
+  linha de quem foi repassado; cada apagamento do Monitor passou a deixar uma
+  linha de log com sessão e nó. Provado por teste determinístico do
+  entrelaçamento, não pelo k3d ([RN-588](docs/business-rules.md#rn-588)).
+
+- **web**: a aba Executores **deixa de perder (ou forjar) os dev agents quando
+  existe uma sessão mais nova** (AT-130). `executionActivated` era lido do
+  resumo sem a guarda de sessão da RN-568; agora passa por ela e soma à janela
+  ([RN-568](docs/business-rules.md#rn-568)).
 - **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
   quando era para outro agente** (AT-098). A última cláusula da rota interna
   de mensagem não olhava o agente, então o que fosse escrito para o `infra` —

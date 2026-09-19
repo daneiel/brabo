@@ -13494,10 +13494,17 @@ tabela `delegations` que o resumo lê e os eventos `delegation.*` que a janela
 lê nascem juntos em `RecordDelegationUseCase` (uma linha, um evento, os três
 desfechos), então os dois conjuntos descrevem a mesma coisa.
 
-**O que esta regra NÃO fecha:** `executionActivated`, na aba Executores,
-continua lido do resumo SEM a guarda de sessão do item 3 — com uma sessão mais
-nova que a de execução, o resumo diz `false` e os dev agents somem da aba.
-Declarado no comentário da tela, não corrigido aqui.
+**`executionActivated` (AT-130).** É o terceiro fato do mesmo molde: a aba
+Executores o lia do resumo SEM a guarda do item 3, então com uma sessão mais
+nova que a de execução o resumo (dela) dizia `false` e os dev agents sumiam —
+ou `true`, e apareciam sem prova. Agora ele vai em `agregado.executionActivated`
+só quando `latestSessionId === sessionId`, e `deriveAgentRoster` o SOMA (OU
+lógico, monótono) à janela e ao parâmetro, que também passa a olhar
+`execution.activated` nos eventos. Sem campo novo na API. Testes:
+`ProjectExecutorsTab.test.tsx` (resumo de OUTRA sessão, nos dois sentidos).
+**Segue aberto:** com a sessão de execução longa E o resumo de outra sessão, o
+evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
+da guarda, o mesmo dos outros dois fatos.
 
 - **Código:** `apps/web/src/lib/agent-status.ts:285` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
@@ -14390,7 +14397,7 @@ nova.
   (`findLatestOfTypesInSession`);
   `apps/engine/lib/engine/sessions/session_server.ex:113` (a pendência com
   instante), `:141` (`conversa_ociosa`), `:166` (`encerrar`), `:184`
-  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:142`
+  (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
   (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
@@ -14671,6 +14678,69 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
 - **Origem:** AT-099 — teste intermitente do `PoServerTest`, medido em
   2026-09-19
 
+### RN-586 — O turno que o reinício do engine interrompeu fecha com desfecho durável, e nunca é refeito {#rn-586}
+
+Desde a [RN-578](#rn-578) o `agent.status: working` é gravado ANTES do aceite, e
+o fim do turno (`agent.status: idle` e `agent.done`) só sai de `finalizar/1`,
+dentro do processo do agente ([RN-585](#rn-585)). Se o engine cai no meio do
+turno, o processo e a Task morrem juntos e ninguém grava o fim: o último
+`agent.status` do agente fica `working` **para sempre** (AT-156, reproduzido —
+subir o servidor de novo sobre esse log não gravava nada, nos seis). Os dois
+leitores desse sinal o tomam por turno em curso: a tela (`turnoTerminouNoLog`,
+[RN-578](#rn-578) item 4) mantém a faixa de atividade, e o
+`GetSessionPendingWorkUseCase` conta trabalho pendente SEM teto (o terceiro
+sinal da [RN-064](business-rules/custo.md#rn-064)), então a sessão não fecha por heartbeat. Só a
+próxima mensagem do usuário destravava, e só porque ela sobe o agente.
+
+1. **O `working` que ficou sem turno vivo é fechado por evento NOVO**, nunca
+   reescrito (evento é imutável): um `agent.error` com origem `infra` e
+   `reason: turno_interrompido_por_reinicio` — a frase diz que o engine foi
+   reiniciado, que o turno não foi concluído e que quem decide tentar de novo é
+   o usuário ([RN-059](business-rules/custo.md#rn-059): falha nunca vira
+   resposta vazia) — seguido de `agent.status: idle` persistido. O canal recebe
+   `agent.error` e `agent.done`, para a faixa de quem está com a tela aberta
+   sair sem recarregar. Vale para os SEIS que compartilham `TurnoAssincrono`.
+2. **O turno NUNCA é reexecutado.** Refazê-lo gastaria token em nome de uma
+   mensagem que o usuário talvez já tenha esquecido, sobre um histórico
+   reconstruído; nenhuma chamada ao modelo acontece no fechamento.
+3. **Só o ÚLTIMO `agent.status` de cada agente conta**, e só `working`:
+   `idle` já está fechado, e `awaiting_approval` (Dev Lead suspenso,
+   [RN-284](#rn-284)) é decisão pendente, não turno morto.
+4. **"Sem turno vivo" olha o cluster, e na dúvida não fecha.** O registro dos
+   agentes é local; num rollout o pod antigo pode estar rodando o turno, e
+   fechá-lo dali mataria um turno saudável. Nó que não responde conta como vivo.
+   O repasse de sessão do drain ([RN-588](#rn-588), `Monitor.expect_handoff/1`)
+   é do `SessionServer`, não dos conversacionais: enquanto o pod antigo está de
+   pé o agente dele segue registrado lá, e a varredura do pod novo o enxerga;
+   o `Adopter` não varre — quem chega ao `working` órfão depois que o pod antigo
+   morre é o `init/1` do agente.
+5. **Dois pontos de entrada, uma função** (`Engine.Agents.TurnoOrfao`): a
+   varredura de boot em cada sessão reidratada (`Rehydrator`, fora do caminho do
+   readiness — o boot não espera a api), que fecha o turno mesmo que ninguém
+   mande mensagem, e o `init/1` de cada servidor, rede de segurança para quando
+   o boot não conseguiu escrever (api ainda fora do ar). Falha de leitura ou de
+   escrita é logada e o agente sobe.
+
+Declarado e não fechado: o Infra Lead (`infra`) roda o turno dentro do
+`handle_call`, sem `TurnoAssincrono`, e fica de fora; a janela de leitura é a
+das 200 mais recentes `agent.status` da sessão; se a api estiver fora no boot E
+ninguém acordar o agente, o `working` fica até a próxima subida dele; e o
+fechamento não recupera o que o turno já tinha gravado antes da queda.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:71` (`varrer/2`),
+  `:81` (`fechar_ao_subir/3`), `:134` (`encerrar/3`);
+  `apps/engine/lib/engine/sessions/rehydrator.ex:75` (varredura no boot); o
+  `init/1` dos seis `*_server.ex` chama `TurnoOrfao.fechar_ao_subir/3`
+- **Teste:** `apps/engine/test/engine/agents/turno_orfao_test.exs:72` (nos seis:
+  o `working` sem turno vivo vira `agent.error` `infra` + `idle`, e o LLM não é
+  chamado), `:104` (`awaiting_approval` não é órfão; `idle` e o `working` de
+  outro agente não são fechados), `:120` (`varrer/2` pula o agente com processo
+  vivo em ESTE nó ou num nó `:peer` de verdade do cluster; leitura e escrita
+  que falham não derrubam a subida);
+  `apps/engine/test/engine/sessions/rehydration_test.exs:46` (o boot dispara a
+  varredura)
+- **Origem:** AT-156, herdada da AT-089 (RN-578) — reproduzida em 2026-09-19
+
 ### RN-587 — A mensagem que nenhum agente leu fica no fio dizendo isso: o engine grava o `agent.error` da recusa {#rn-587}
 
 A api grava o `chat.message` ANTES de perguntar ao engine (o engine reconstrói a
@@ -14721,3 +14791,45 @@ para o usuário, que já vê a mensagem e a explicação no fio.
   `scripts/ci/destinos-do-composer.spec.ts` (a recusa de `message/2` é
   `recusar_mensagem/5` e ela grava o `agent.error`; seis mutações mortas)
 - **Origem:** AT-132 — declarado aberto nas RN-578 (AT-089) e RN-584 (AT-098)
+
+### RN-588 — Repassar uma sessão não deixa o pod antigo apagar a linha do par {#rn-588}
+
+No rollout, o drain do pod antigo para o `SessionServer` e pede a um par que
+assuma a sessão (`Engine.Shutdown`); o `init` do par regrava a linha de
+`engine.session_states`. O `:DOWN` do processo parado, porém, chega ao
+`Engine.Sessions.Monitor` do pod antigo por mensagem — e o Monitor é um
+GenServer único, que serializa o `:DOWN` de cada sessão com um DELETE por ida
+ao banco, sem esperar pelo repasse seguinte. Quando o `:DOWN` era processado
+DEPOIS do upsert do par, o `DELETE ... WHERE session_id` — que não olha dono
+nem geração — levava a linha DO PAR: a sessão ficava com dono e sem linha,
+invisível ao `Adopter`, ao `Rehydrator` e ao `local_sessions/0` do drain do
+par. Se o par era OUTRO pod antigo (`.33 → .28 → novo`), ele não a via ao
+drenar, e o SIGTERM dele a matava: `active` na api e sem dono (AT-078, o
+`rollout-test` do `propriedades.yml`, ~3 órfãs em 13 rodadas).
+
+A regra: o drain marca o stop com `Monitor.expect_handoff/1` (o
+`expect_stop/1` de sempre MAIS "a linha não é minha"), e o Monitor NÃO apaga a
+linha de uma sessão repassada — registra em `Logger.info` que a manteve. Sem
+adoção, quem apaga é o próprio drain (`terminate_unadopted`), como já era; o
+Monitor continua apagando a linha de toda sessão que morre por outra causa e a
+do `expect_stop/1` do `SessionLifecycleWorker` (a api já encerrou a sessão).
+Sem migration: a linha não ganhou coluna de dono, e a marca vive no estado do
+Monitor, por sessão. Toda apagada do Monitor passou a deixar UMA linha de log
+com sessão, nó e linhas removidas — o log da drenagem nunca chega ao log do
+pod (o `preStop` o descarta), o do Monitor chega.
+
+**Inferência que fica:** o instante em que a linha sumiu nunca foi medido no
+k3d; a leitura vem do artefato da rodada `35452845830` (sem linha + segundo pod
+antigo) e do código, e a corrida foi provada em ExUnit, não observada. A
+próxima falha do k3d, se houver, traz a linha do Monitor.
+
+- **Código:** `apps/engine/lib/engine/sessions/monitor.ex:45`
+  (`expect_handoff/1`), `:119` (`apagar_linha/1`);
+  `apps/engine/lib/engine/shutdown.ex:139` (`release/1`, o drain marca o repasse)
+- **Teste:** `apps/engine/test/engine/sessions/monitor_repasse_test.exs:52`
+  (Monitor suspenso: o `:DOWN` tardio não apaga a linha regravada pelo par),
+  `:67` (cadeia antigo → antigo → novo: o segundo drain ainda vê a sessão),
+  `:87` (sem adoção a linha continua saindo pelo drain), `:100`
+  (`Shutdown.release/1` marca o repasse — trocar a chamada de volta por
+  `expect_stop/1` reprova SÓ este teste)
+- **Origem:** AT-078 — sessão órfã intermitente do rollout do engine

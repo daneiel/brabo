@@ -83,7 +83,7 @@ defmodule Engine.Agents.DevLeadServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{DevLeadTools, FalhaDeTurno, Reidratacao, TurnoAssincrono}
+  alias Engine.Agents.{DevLeadTools, FalhaDeTurno, Reidratacao, TurnoAssincrono, TurnoOrfao}
   alias Engine.Dev.Wake
   alias Engine.Sessions.EngineApiClient
 
@@ -129,6 +129,10 @@ defmodule Engine.Agents.DevLeadServer do
 
     # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
     # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     # Assina pelo próprio id — `task.action_settled` chega chaveado pelo ator
