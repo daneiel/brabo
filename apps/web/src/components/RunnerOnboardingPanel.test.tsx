@@ -497,3 +497,68 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
     cleanup();
   });
 });
+
+describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-107)', () => {
+  const chaveDeProjeto = {
+    id: 'chave-p',
+    name: 'kit-do-navegador',
+    projectId: 'proj-1',
+    especie: 'projeto' as const,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    revokedAt: null,
+    lastUsedAt: '2026-09-10T08:00:00.000Z',
+  };
+
+  it('chave de projeto ativa: anuncia, custo da espécie é ESTE projeto, parear vira segundo caminho', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeProjeto]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/este projeto já está pareado: kit-do-navegador/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/chave registrada não é agente rodando/i)).toBeInTheDocument();
+    expect(screen.getByText(/derruba o agente local aqui, não nos seus outros projetos/i)).toBeInTheDocument();
+    expect(screen.queryByText(/todos eles/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/estou em outra máquina — parear esta também/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('chave de projeto REVOGADA: avisa e o painel volta a mandar parear', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([
+      { ...chaveDeProjeto, revokedAt: '2026-09-11T00:00:00.000Z' },
+    ]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/está revogada/i)).toBeInTheDocument();
+    expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/estou em outra máquina — parear esta também/i),
+    ).not.toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('chave ativa de OUTRO projeto não reconhece este', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([{ ...chaveDeProjeto, projectId: 'proj-2' }]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    await waitFor(() => expect(listRunnerDeviceKeysMock).toHaveBeenCalled());
+    expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
+
+    cleanup();
+  });
+});

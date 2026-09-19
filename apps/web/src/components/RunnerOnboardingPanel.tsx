@@ -6,7 +6,10 @@ import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import {
   maquinaJaPareada,
   podeLerChavesDeDispositivo,
+  projetoJaPareado,
   reconhecerAgenteDeMaquina,
+  reconhecerChaveDeProjeto,
+  type ReconhecimentoDeChaveDeProjeto,
   type ReconhecimentoDeAgenteDeMaquina,
 } from '../lib/agente-de-maquina';
 import {
@@ -188,7 +191,11 @@ export function RunnerOnboardingPanel({
     falhou: chavesQuery.isError,
     statusDoErro: chavesQuery.error instanceof ApiError ? chavesQuery.error.status : null,
   });
-  const jaPareada = maquinaJaPareada(reconhecimento);
+  const reconhecimentoDeProjeto = reconhecerChaveDeProjeto({
+    projectId,
+    chaves: chavesQuery.data,
+  });
+  const jaPareada = maquinaJaPareada(reconhecimento) || projetoJaPareado(reconhecimentoDeProjeto);
 
   const [suportaFS] = useState(() => suportaEscritaDeArquivos());
   const [plataforma, setPlataforma] = useState<RunnerPlatform | null>(null);
@@ -361,6 +368,21 @@ export function RunnerOnboardingPanel({
         />
       )}
 
+      {projectId && (
+        <ReconhecimentoDeProjeto
+          reconhecimento={reconhecimentoDeProjeto}
+          projectId={projectId}
+          // A espera é UMA por tela: se a máquina já foi reconhecida, é o bloco
+          // dela que a mostra.
+          mostrarEspera={
+            mostrarEspera &&
+            !maquinaJaPareada(reconhecimento) &&
+            estado.fase !== 'sucesso' &&
+            estado.fase !== 'kitBaixado'
+          }
+        />
+      )}
+
       {/* O caminho do ADR 0118 NUNCA some — ele muda de lugar. Reconhecida a
           máquina, o primeiro plano passa a ser "o agente não está de pé", e
           parear vai para um `<details>` cujo rótulo nomeia o único caso em que
@@ -520,6 +542,55 @@ function ReconhecimentoDeMaquina({
           agente CONECTAR, e essa é exatamente a pergunta que ela responde
           sozinha. `mostrarEspera` continua sendo quem impede a segunda espera
           na mesma tela (o `FolderBrowserModal` monta a dele no topo). */}
+      {mostrarEspera && <EsperaDoRunner projectId={projectId} />}
+    </div>
+  );
+}
+
+/**
+ * O bloco da chave de PROJETO já pareada (AT-107). Mesmo vocabulário do de
+ * máquina: tom `accent` e nunca `success`, chave registrada não é agente de pé,
+ * e o custo da ESPÉCIE é dito — revogar derruba o agente NESTE projeto só.
+ */
+function ReconhecimentoDeProjeto({
+  reconhecimento,
+  projectId,
+  mostrarEspera,
+}: {
+  reconhecimento: ReconhecimentoDeChaveDeProjeto;
+  projectId: string;
+  mostrarEspera: boolean;
+}) {
+  const { t, i18n } = useTranslation('terminal');
+
+  if (reconhecimento.estado === 'nenhuma') return null;
+  const nomes = reconhecimento.nomes.join(', ');
+
+  if (reconhecimento.estado === 'revogada') {
+    return (
+      <Alert tone="warning">
+        {t('chaveDeProjeto.revogada', { nomes })} {t('chaveDeProjeto.alcance')}
+      </Alert>
+    );
+  }
+
+  return (
+    <div className={styles.reconhecimento}>
+      <Alert tone="accent">
+        {reconhecimento.estado === 'pareada'
+          ? t('chaveDeProjeto.pareada', {
+              nomes,
+              data: new Date(reconhecimento.ultimoUso).toLocaleString(i18n.language),
+            })
+          : t('chaveDeProjeto.pareadaNuncaUsada', { nomes })}
+      </Alert>
+      <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaNaoEBatimento')}</p>
+      <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaDaConta')}</p>
+      <p className={styles.detalhe}>{t('chaveDeProjeto.alcance')}</p>
+      <p className={styles.gesto}>{t('agenteDeMaquina.gesto')}</p>
+      <code className={styles.comando}>
+        {t('agenteDeMaquina.comandoDeServico', { projectId })}
+      </code>
       {mostrarEspera && <EsperaDoRunner projectId={projectId} />}
     </div>
   );

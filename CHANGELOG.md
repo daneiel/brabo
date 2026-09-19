@@ -44,6 +44,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   de `process.exit` NÃO se confirmou localmente (termina sozinho, exit 0, em
   ~2s), e o `|| true` fica, com o motivo escrito no script. A economia é a
   confirmar em CI.
+- **web**: o painel do runner **reconhece chave de PROJETO já pareada**
+  (AT-107). Quem pareou o projeto pelo navegador e voltava à tela era mandado a
+  parear de novo — o defeito irmão do de máquina, um escopo abaixo. Agora o
+  painel lê a mesma listagem de chaves, reconhece a chave ativa deste projeto
+  (nunca a de outro, nunca a revogada), diz que chave registrada não é agente
+  rodando e que revogá-la derruba o agente só neste projeto, e recolhe o
+  pareamento num `<details>`. Nenhuma rota nova
+  ([RN-548](docs/business-rules.md#rn-548)).
 
 - **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
   fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando

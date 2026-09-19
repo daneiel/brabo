@@ -158,3 +158,50 @@ export function maquinaJaPareada(
     reconhecimento.estado === 'pareadaNuncaUsada'
   );
 }
+
+/**
+ * A tela reconhece uma chave de PROJETO já pareada (AT-107) — o defeito irmão
+ * do de máquina, um escopo abaixo: quem pareou ESTE projeto pelo fluxo do
+ * navegador (ADR 0118) e volta à tela não deve ser mandado a parear de novo.
+ *
+ * Lê a MESMA listagem (`['runner-device-keys', projectId]`), sem rota nova, e
+ * valem os mesmos limites: chave registrada NÃO é agente rodando
+ * ([RN-468](../../../../docs/business-rules.md#rn-468)) e a lista é da CONTA.
+ * Só a chave desta espécie E deste projeto conta — uma de outro projeto
+ * responderia outra pergunta com o mesmo texto. Os estados de ignorância
+ * (`semPapel`/`verificando`/`naoSei`) pertencem a `reconhecerAgenteDeMaquina`,
+ * que lê o mesmo dado e já os diz; aqui, sem dado, o resultado é `nenhuma`.
+ */
+export type ReconhecimentoDeChaveDeProjeto =
+  | { estado: 'nenhuma' }
+  | { estado: 'revogada'; nomes: string[] }
+  | { estado: 'pareadaNuncaUsada'; nomes: string[] }
+  | { estado: 'pareada'; nomes: string[]; ultimoUso: string };
+
+export function reconhecerChaveDeProjeto(entrada: {
+  projectId: string | null | undefined;
+  chaves: RunnerDeviceKeyListItem[] | undefined;
+}): ReconhecimentoDeChaveDeProjeto {
+  if (!entrada.projectId || entrada.chaves === undefined) return { estado: 'nenhuma' };
+  const deProjeto = entrada.chaves.filter(
+    (chave) => chave.especie === 'projeto' && chave.projectId === entrada.projectId,
+  );
+  if (deProjeto.length === 0) return { estado: 'nenhuma' };
+
+  const ativas = deProjeto.filter((chave) => chave.revokedAt === null);
+  if (ativas.length === 0) return { estado: 'revogada', nomes: nomesDe(deProjeto) };
+
+  const usos = ativas
+    .map((chave) => chave.lastUsedAt)
+    .filter((quando): quando is string => quando !== null);
+  if (usos.length === 0) return { estado: 'pareadaNuncaUsada', nomes: nomesDe(ativas) };
+
+  const ultimoUso = usos.reduce((maior, atual) =>
+    Date.parse(atual) > Date.parse(maior) ? atual : maior,
+  );
+  return { estado: 'pareada', nomes: nomesDe(ativas), ultimoUso };
+}
+
+export function projetoJaPareado(reconhecimento: ReconhecimentoDeChaveDeProjeto): boolean {
+  return reconhecimento.estado === 'pareada' || reconhecimento.estado === 'pareadaNuncaUsada';
+}
