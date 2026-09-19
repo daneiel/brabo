@@ -71,6 +71,13 @@ config :engine,
   api_url: System.get_env("API_URL", "http://localhost:3000"),
   session_heartbeat_timeout_ms:
     String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
+  # Teto da conversa OCIOSA (RN-581): por quanto tempo um agente
+  # conversacional esperando o usuário segura a sessão depois de a aba parar
+  # de mandar heartbeat. Estourado, a sessão fecha com causa própria,
+  # `conversation_idle_timeout`. 8h por decisão do mantenedor (18/09). Não
+  # mexe no heartbeat: ele continua sendo o que detecta a aba parada.
+  session_conversation_idle_timeout_ms:
+    String.to_integer(System.get_env("SESSION_CONVERSATION_IDLE_TIMEOUT_MS", "28800000")),
   # Quanto o drain do preStop espera para que outra réplica adote as sessões
   # deste nó antes de encerrá-las com causa node_shutdown. Precisa caber
   # FOLGADAMENTE dentro do terminationGracePeriodSeconds do Deployment (90s),

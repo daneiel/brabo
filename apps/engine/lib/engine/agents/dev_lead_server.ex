@@ -177,6 +177,14 @@ defmodule Engine.Agents.DevLeadServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
   # Guarda: enquanto o plano de execução está aguardando decisão do usuário,
   # a conversa NÃO recomeça — precisa vir ANTES da cláusula genérica de
   # `{:user_message, text}` para o pattern match casar aqui primeiro. A

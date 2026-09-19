@@ -3,7 +3,7 @@ defmodule Engine.Sessions.SessionServer do
   Runtime de UMA sessão ativa, supervisionado. O event log de domínio
   vive em Postgres do lado da api (session_events), não neste processo —
   este módulo só supervisiona + detecta término (crash/kill/normal/
-  heartbeat_timeout) e persiste o próprio estado em session_states pra
+  heartbeat_timeout/conversation_idle_timeout) e persiste o próprio estado em session_states pra
   sobreviver a restart do nó (ver Engine.Sessions.Rehydrator).
   """
 
@@ -109,13 +109,11 @@ defmodule Engine.Sessions.SessionServer do
     # cadeia sem como seguir, porque não há onde aceitar handoff de sessão
     # morta.
     case EngineApiClient.session_pending_work(state.session_id) do
-      {:ok, %{pending: true, motivo: motivo}} ->
-        Logger.info(
-          "sessão #{state.session_id}: heartbeat expirou mas há trabalho pendente " <>
-            "(#{motivo}) — reagendando em vez de encerrar"
-        )
-
-        {:noreply, %{state | heartbeat_ref: schedule_heartbeat_timeout()}}
+      {:ok, %{pending: true, motivo: motivo} = pendencia} ->
+        case Map.get(pendencia, :aguardando_usuario_desde) do
+          %DateTime{} = desde -> conversa_ociosa(state, motivo, desde)
+          _sem_teto -> reagendar(state, motivo)
+        end
 
       outro ->
         # `{:error, _}` cai aqui de propósito: api fora do ar não pode impedir
@@ -128,12 +126,49 @@ defmodule Engine.Sessions.SessionServer do
           )
         end
 
-        SessionState.mark_closing!(state.session_id, "heartbeat_timeout")
-        # {:shutdown, reason} em vez do átomo cru — é um encerramento
-        # sancionado (ninguém do outro lado), não um crash; evita o log de
-        # erro padrão do OTP que um :stop com razão arbitrária geraria.
-        {:stop, {:shutdown, :heartbeat_timeout}, state}
+        encerrar(state, :heartbeat_timeout)
     end
+  end
+
+  # RN-581: a ÚNICA pendência com teto. Um agente conversacional esperando o
+  # usuário segura a sessão — no `exp001` o heartbeat a fechou 30s depois de a
+  # aba parar, com o Criativo tendo acabado de perguntar —, mas não para
+  # sempre: passado o teto (8h por padrão, contado do FIM do turno do agente, o
+  # instante que a api devolve), a sessão fecha com causa PRÓPRIA. Causa
+  # própria porque o motivo é outro: não é a aba que sumiu, é a conversa que
+  # ninguém retomou — e quem lê `termination_reason` (o Psicólogo, uma métrica
+  # por sessão) precisa conseguir separar os dois.
+  defp conversa_ociosa(state, motivo, desde) do
+    ociosa_ms = DateTime.diff(DateTime.utc_now(), desde, :millisecond)
+    teto_ms = conversation_idle_timeout_ms()
+
+    if ociosa_ms >= teto_ms do
+      Logger.info(
+        "sessão #{state.session_id}: conversa ociosa há #{ociosa_ms}ms, acima do teto " <>
+          "de #{teto_ms}ms (#{motivo}) — encerrando por conversation_idle_timeout"
+      )
+
+      encerrar(state, :conversation_idle_timeout)
+    else
+      reagendar(state, motivo)
+    end
+  end
+
+  defp reagendar(state, motivo) do
+    Logger.info(
+      "sessão #{state.session_id}: heartbeat expirou mas há trabalho pendente " <>
+        "(#{motivo}) — reagendando em vez de encerrar"
+    )
+
+    {:noreply, %{state | heartbeat_ref: schedule_heartbeat_timeout()}}
+  end
+
+  defp encerrar(state, causa) do
+    SessionState.mark_closing!(state.session_id, Atom.to_string(causa))
+    # {:shutdown, reason} em vez do átomo cru — é um encerramento
+    # sancionado (ninguém do outro lado), não um crash; evita o log de
+    # erro padrão do OTP que um :stop com razão arbitrária geraria.
+    {:stop, {:shutdown, causa}, state}
   end
 
   defp schedule_heartbeat_timeout do
@@ -142,5 +177,11 @@ defmodule Engine.Sessions.SessionServer do
 
   defp heartbeat_timeout_ms do
     Application.get_env(:engine, :session_heartbeat_timeout_ms, 30_000)
+  end
+
+  # 8h — decisão do mantenedor (18/09). O `runtime.exs` lê
+  # `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` com o MESMO default.
+  defp conversation_idle_timeout_ms do
+    Application.get_env(:engine, :session_conversation_idle_timeout_ms, 28_800_000)
   end
 end

@@ -64,7 +64,13 @@ defmodule Engine.Sessions.EngineApiClient do
   com épico e quatro histórias prontos e a cadeia sem como seguir.
   """
   @callback session_pending_work(session_id :: String.t()) ::
-              {:ok, %{pending: boolean(), motivo: String.t() | nil}} | {:error, term()}
+              {:ok,
+               %{
+                 pending: boolean(),
+                 motivo: String.t() | nil,
+                 aguardando_usuario_desde: DateTime.t() | nil
+               }}
+              | {:error, term()}
 
   @doc """
   O remoto de trabalho de um projeto (ADR 0056): `%{kind, origin, default_branch,
@@ -763,6 +769,8 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   @behaviour Engine.Sessions.EngineApiClient
   @cabecalho_service_token "x-brabo-service-token"
 
+  require Logger
+
   @impl true
   def report_termination(project_id, session_id, reason, to) do
     post("/internal/sessions/#{session_id}/termination", %{
@@ -774,11 +782,32 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def append_event(project_id, session_id, event) do
-    post(
-      "/internal/sessions/#{session_id}/events",
-      Map.put(event, :projectId, project_id)
-    )
+    "/internal/sessions/#{session_id}/events"
+    |> post(Map.put(event, :projectId, project_id))
+    |> narrar_recusa_de_sessao_encerrada(session_id, event)
   end
+
+  # RN-581: a api recusa evento de CONVERSA em sessão encerrada com 409 e
+  # `reason: "sessao_encerrada"`. Quase todo chamador de `append_event/3`
+  # descarta o retorno (`_ = ...`), então sem esta linha a recusa seria
+  # silenciosa — e é justamente o sinal de que algo ainda conversa numa
+  # sessão que fechou (RN-059: falha nunca calada). O retorno segue igual.
+  defp narrar_recusa_de_sessao_encerrada(
+         {:error, {409, %{"reason" => "sessao_encerrada"} = corpo}} = erro,
+         session_id,
+         event
+       ) do
+    tipo = Map.get(event, :type) || Map.get(event, "type")
+
+    Logger.warning(
+      "sessão #{session_id}: a api recusou o evento #{inspect(tipo)} — " <>
+        "sessão encerrada (#{Map.get(corpo, "status")}), não aceita mais conversa"
+    )
+
+    erro
+  end
+
+  defp narrar_recusa_de_sessao_encerrada(resultado, _session_id, _event), do: resultado
 
   @impl true
   def append_event_returning(project_id, session_id, event) do
@@ -1005,13 +1034,42 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     end
   end
 
+  @doc false
+  # Público só para o teste da forma: o módulo não tem harness HTTP.
+  def pendencia_da_resposta(body) do
+    with {:ok, desde} <- instante(Map.get(body, "aguardandoUsuarioDesde")) do
+      {:ok,
+       %{
+         pending: Map.get(body, "pending", false),
+         motivo: Map.get(body, "motivo"),
+         aguardando_usuario_desde: desde
+       }}
+    end
+  end
+
+  # Instante ISO-8601 da api (RN-581). `nil` é "sem espera de conversa". Um
+  # valor PRESENTE que não parseia vira erro, e não nil, de propósito: nil com
+  # `pending: true` é pendência SEM teto, e um formato quebrado viraria sessão
+  # imortal. Como erro, cai no mesmo caminho da api fora do ar — encerra por
+  # heartbeat, dizendo por quê.
+  defp instante(nil), do: {:ok, nil}
+
+  defp instante(texto) when is_binary(texto) do
+    case DateTime.from_iso8601(texto) do
+      {:ok, dt, _offset} -> {:ok, dt}
+      _ -> {:error, {:aguardando_usuario_desde_invalido, texto}}
+    end
+  end
+
+  defp instante(outro), do: {:error, {:aguardando_usuario_desde_invalido, outro}}
+
   @impl true
   def session_pending_work(session_id) do
     url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
 
     case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
-        {:ok, %{pending: Map.get(body, "pending", false), motivo: Map.get(body, "motivo")}}
+        pendencia_da_resposta(body)
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}

@@ -141,6 +141,14 @@ defmodule Engine.Agents.PoServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
   @impl true
   def handle_call({:user_message, text}, from, state) do
     work = state |> append(user_msg(text)) |> compact()
