@@ -840,6 +840,16 @@ três réplicas e, uns 75s depois do rollout, o HPA desce para uma. Nada disso
 muda o que conta como adotada ou drenada, nem o teto de 120s. A rodada
 agendada sobe o diretório como artefato `rollout-evidencia`.
 
+**Causa corrigida, sem confirmação no k3d** (AT-078, RN-588). A órfã que esta
+prova pegou (~3 em 13 rodadas: sem linha em `session_states` e um segundo pod
+ANTIGO em `donos-durante-rollout.log`) vinha do `Monitor` do pod antigo apagando
+a linha depois de o par regravá-la durante o repasse. O drain agora marca o
+repasse e o Monitor mantém a linha. Isso foi provado por um teste ExUnit
+determinístico, não por esta prova, que falha 1 em 4-6 e não prova correção. Se
+uma órfã aparecer de novo, o log do pod que repassou a sessão traz uma linha
+`Monitor: session_state <id> mantido|apagado em <nó>` por sessão: sem linha, o
+Monitor não chegou a processar o `:DOWN` (o pod morreu antes).
+
 Manualmente, a mesma pergunta:
 
 ```sql

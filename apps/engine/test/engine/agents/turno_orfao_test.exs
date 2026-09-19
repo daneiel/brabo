@@ -136,6 +136,41 @@ defmodule Engine.Agents.TurnoOrfaoTest do
     assert idle.actorId == "criativo"
   end
 
+  # O único jeito de provar a checagem ENTRE nós sem mock: um nó de verdade
+  # (`:peer`) com o próprio `Engine.Sessions.Registry`, onde o turno "vive".
+  # É o cenário do rollout — o pod antigo ainda roda o turno (ou a sessão foi
+  # repassada a um par pelo `Shutdown`) quando o pod novo faz a varredura de boot.
+  test "varrer/2 NÃO fecha o turno que está vivo em OUTRO nó do cluster (rollout/repasse)" do
+    if not Node.alive?() do
+      {:ok, _} = :net_kernel.start([:"orfao_teste@127.0.0.1", :longnames])
+    end
+
+    {:ok, peer, no} =
+      :peer.start(%{name: :orfao_par, host: ~c"127.0.0.1"})
+
+    for path <- :code.get_path(), do: :erpc.call(no, :code, :add_path, [path])
+
+    session_id = Ecto.UUID.generate()
+
+    :ok = :erpc.call(no, Engine.RegistryDePar, :subir, ["po:" <> session_id])
+
+    Process.sleep(200)
+    true = Node.connect(no)
+
+    on_exit(fn ->
+      try do
+        :peer.stop(peer)
+      catch
+        :exit, _ -> :ok
+      end
+    end)
+
+    Process.put(:fake_events, [status("po", "working"), status("criativo", "working")])
+
+    assert ["criativo"] = TurnoOrfao.varrer(Ecto.UUID.generate(), session_id)
+    assert [%{actorId: "criativo"}, %{actorId: "criativo"}] = eventos_gravados()
+  end
+
   test "leitura do log falhou: não grava nada e não derruba a subida" do
     Process.put(:fake_events_error, :econnrefused)
     assert {:ok, _} = PoServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})

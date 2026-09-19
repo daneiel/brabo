@@ -1675,6 +1675,16 @@ old pods' logs end at `SIGTERM received`. The per-session outcome of the drain
 has to be read from `donos-durante-rollout.log` (which replica each session
 went to) and `engine-estado.txt` (whether its `session_states` row survived).
 
+**Fixed cause, unconfirmed on k3d** (AT-078, RN-588). The orphan this proof
+caught (~3 in 13 runs: no `session_states` row, and a second OLD pod in
+`donos-durante-rollout.log`) came from the old pod's `Monitor` deleting the row
+after the peer re-wrote it during the handoff. The drain now marks the handoff
+and the Monitor keeps the row. That was proven by a deterministic ExUnit test,
+not by this proof, which fails 1 in 4-6 and cannot prove a fix. If an orphan
+shows up again, the pod log of the pod that handed the session over carries one
+`Monitor: session_state <id> mantido|apagado em <node>` line per session: no
+line means the Monitor never processed the `:DOWN` (the pod died first).
+
 Manually, the same question:
 
 ```sql
