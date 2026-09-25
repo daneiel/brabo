@@ -4,6 +4,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **api**: a pasta `docs/` dos artefatos dos agentes passa a ter caminho de
+  volta (AT-128, RN-590). `pnpm --filter api artefatos:reprojetar` (na imagem,
+  `node scripts/reprojetar-artefatos.js`, com `--project`/`--after-event`)
+  reescreve a pasta a partir do event log pelo MESMO tradutor do projetor vivo
+  (`ArtifactEventTranslator`, extraído do `ArtifactProjector`), idempotente, em
+  lotes por cursor, sem apagar nada e sem tocar a outbox; falha de escrita é
+  contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
+  entra em backup — é derivada.
+
 ### Correções
 
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a

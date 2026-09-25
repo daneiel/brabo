@@ -419,6 +419,20 @@ rules:
     severity: warn
     note: "O que a reprojeção reconstrói (e o que NÃO) é o que o runbook diz a quem perdeu o grafo."
 
+  # AT-128 (RN-590): a pasta `docs/` dos artefatos também não tem backup PORQUE é
+  # reprojetável (ADR 0148/0152). Mudança no tradutor ou no que a reprojeção
+  # varre muda o que o runbook promete a quem perdeu a pasta. `warn`: o spec da
+  # reprojeção já compara pasta apagada com pasta reconstruída.
+  - id: artefatos-reprojecao
+    watch:
+      - "apps/api/src/application/artifact-projection/**"
+      - "apps/api/src/scripts/reprojetar-artefatos.ts"
+    docs:
+      - "docs/runbook.md"
+      - "docs/business-rules.md"
+    severity: warn
+    note: "O que a reprojeção da pasta docs/ reconstrói (e o que NÃO) é o que o runbook diz a quem a perdeu."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"

@@ -11021,8 +11021,9 @@ esta RN não depende dele.)
 Cada evento `artifact.*` de um tipo permitido vira um Markdown em
 `docs/<agente>/` dentro do workspace do projeto. É **projeção derivada**, no
 mesmo sentido estrito que o ADR 0101 deu ao grafo Neo4j: a fonte é o evento, a
-pasta pode ser apagada inteira e reconstruída, e **nada no produto lê dela**
-para decidir coisa alguma.
+pasta pode ser apagada inteira e reconstruída — desde a [RN-590](#rn-590) por
+`artefatos:reprojetar` —, e **nada no produto lê dela** para decidir coisa
+alguma.
 
 **O mecanismo é o do `GraphProjector`, copiado peça por peça** — poller
 próprio, `drainOnce()` público, flag contra ciclos sobrepostos, lote de 50, e
@@ -14945,3 +14946,60 @@ gravaria conteúdo dele no log; o corte é a única contenção.
   `apps/engine/test/engine/agents/po_server_test.exs:252` (o evento gravado,
   cortado, com `resultadoTotal`)
 - **Origem:** AT-151 — declarado aberto na RN-580 (AT-073)
+### RN-590 — A pasta `docs/` dos artefatos é reconstruída do event log pelo MESMO tradutor do projetor vivo, sem tocar a outbox, e nunca sai como sucesso calado {#rn-590}
+
+O [ADR 0148](adr/0148-artefatos-projetados-em-arquivo.md) chamou a pasta `docs/`
+de reconstruível e declarou, no custo 3, que **não existia comando de
+reprojeção**: apagar a pasta não a reconstruía, porque as linhas de outbox já
+estavam marcadas. É a mesma lacuna que a [RN-569](#rn-569) fechou para o grafo,
+num segundo consumidor. Medido por leitura do código: um restore do Postgres, a
+perda do volume `project_workspaces` e a conversão de `execution_mode` (que não
+toca `docs/`) deixam a pasta ausente ou no lugar antigo, e nada a reescreve.
+
+**A regra:** `apps/api/src/scripts/reprojetar-artefatos.ts`
+(`pnpm --filter api artefatos:reprojetar`; `node scripts/reprojetar-artefatos.js`
+na imagem) varre `session_events` e reescreve a pasta. Como na RN-569:
+
+1. **Um tradutor só.** A tradução evento → pasta do agente, nome do arquivo e
+   Markdown SAIU do `ArtifactProjector` para `ArtifactEventTranslator`; o
+   projetor chega ao evento por uma linha de outbox, a reprojeção por cursor, e
+   os dois o chamam. A superfície do projetor (construtor, `drainOnce`) não
+   mudou. A lista do que é projetado continua sendo
+   `ARTIFACT_PROJECTABLE_EVENT_TYPES` — tipo novo entra ali e é traduzido no
+   mesmo lugar, nunca num segundo tradutor.
+2. **Idempotente e nunca apaga.** O nome é função do evento (versionado:
+   `<tipo>.md`; append-only: com o `seq`), então rodar de novo regrava os mesmos
+   arquivos; retomar é rodar de novo, ou `--after-event` a partir do cursor
+   impresso. Arquivo que o usuário pôs em `docs/` fica.
+3. **Não toca a outbox** (`aggregate_type = 'artifact_projection'`): roda com a
+   api de pé sem roubar, reabrir ou marcar linha.
+4. **Nunca sucesso calado.** Diferente do grafo, não há destino que pare tudo
+   (falha de escrita é do ITEM, ADR 0148): cada falha é contada e nomeada com o
+   id do evento, o resto é gravado, e o processo sai com 1. `--project`
+   inexistente é recusado sem gravar.
+
+**O que esta regra NÃO fecha:** (a) os versionados (`module_map`,
+`module_routing`, `project_image`, `c4_diagram`) mostram o ÚLTIMO evento em
+ordem de `id`; `--after-event` começando entre duas versões pode deixar uma
+mais antiga — só a rodada completa garante o vigente; (b) escreve na localização
+ATUAL do projeto, e precisa enxergar o mesmo disco que a api; (c) não recria
+`qa_verdict`/`secops_verdict`/`task_blocked`/`infra_delegation_files`, que nunca
+foram arquivo; (d) sem medição de tempo em event log grande; (e) NÃO entra em
+backup — é derivada, o argumento do [ADR 0152](adr/0152-backup-de-volumes-contra-compose.md).
+
+- **Código:** `apps/api/src/application/artifact-projection/artifact-event-translator.ts:21`
+  (`ArtifactEventTranslator`), `:24` (`projetarEvento`);
+  `apps/api/src/application/artifact-projection/artifact-projector.ts:64`
+  (o projetor monta o MESMO tradutor), `:131` (delega);
+  `apps/api/src/scripts/reprojetar-artefatos.ts:96` (`reprojetarArtefatos`),
+  `:115` (o tradutor), `:137` (varredura por cursor sobre `session_events`),
+  `:163` (a falha contada sem abortar), `:185` (`lerArgumentos`), `:241` (só a
+  invocação direta reprojeta); `apps/api/package.json:45` (`artefatos:reprojetar`)
+- **Teste:** `apps/api/test/scripts/reprojetar-artefatos.spec.ts:215` (projetor
+  para frente → apaga a pasta → reprojeta → mesmos caminhos e conteúdos; segunda
+  rodada idêntica; outbox intacta), `:254` (nunca apaga), `:265` (por projeto),
+  `:275` (projeto inexistente — caso de falha), `:289` (falha de escrita contada
+  sem abortar o resto — caso de falha), `:314` (argumento desconhecido);
+  `apps/api/test/application/artifact-projection/artifact-projector.spec.ts`
+  (o projetor para frente, inalterado, sobre o tradutor extraído)
+- **Origem:** AT-128 — a lacuna que o ADR 0148 declarou (custo 3)
