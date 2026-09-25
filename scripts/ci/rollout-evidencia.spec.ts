@@ -168,14 +168,23 @@ esac
 
     const saida = bash(
       `
-      evidencia_iniciar "${evid}" brabo app.kubernetes.io/name=engine
+      # Espera o EVENTO, nunca um tempo fixo (AT-174): cada passo abaixo sai
+      # assim que a condição vale, com teto de 10s que só a falha alcança.
+      # Os laços de fundo NÃO herdam o stdout/stderr deste bash: o \`sleep 2\`
+      # de dentro deles sobrevive ao \`kill\` do laço, e enquanto um processo
+      # segura o pipe o \`execFileSync\` não volta — era até 2s de relógio a
+      # mais no fim de cada rodada, o que empurrava o teste para além dos 5s
+      # com a máquina carregada. O stderr vai para arquivo e é conferido.
+      esperar() { local _; for _ in $(seq 1 200); do eval "$1" && return 0; sleep 0.05; done; echo "teto: $1" >&2; return 1; }
+      evidencia_iniciar "${evid}" brabo app.kubernetes.io/name=engine </dev/null >/dev/null 2>"${area}/iniciar.err"
       echo 'engine-novo Running' >> "${pods}"
-      for _ in $(seq 1 20); do [[ -e "${evid}/.anexado-engine-novo" ]] && break; sleep 0.5; done
-      sleep 1
+      esperar '[[ -e "${evid}/.anexado-engine-novo" ]]'
+      esperar 'grep -q "linha de engine-novo" "${evid}/engine-engine-novo.log" 2>/dev/null'
       pids="$(cat "${evid}/.pids")"
       evidencia_parar
       evidencia_parar
-      sleep 0.5
+      algum_vivo() { local p; for p in $pids; do kill -0 "$p" 2>/dev/null && return 0; done; return 1; }
+      esperar '! algum_vivo' || true
       vivos=0
       for p in $pids; do kill -0 "$p" 2>/dev/null && vivos=$((vivos + 1)); done
       echo "vivos=$vivos"
@@ -184,6 +193,8 @@ esac
     );
 
     expect(saida).toContain('vivos=0');
+    // Sem o aviso do teto de 20s: o pod de antes foi anexado a tempo.
+    expect(readFileSync(path.join(area, 'iniciar.err'), 'utf8')).toBe('');
     expect(readFileSync(path.join(evid, 'engine-engine-antigo.log'), 'utf8')).toContain('linha de engine-antigo');
     expect(readFileSync(path.join(evid, 'engine-engine-novo.log'), 'utf8')).toContain('linha de engine-novo');
     expect(existsSync(path.join(evid, 'final-engine-antigo.log'))).toBe(true);
