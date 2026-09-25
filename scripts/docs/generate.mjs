@@ -22,6 +22,7 @@ import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
 import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
+import { aferirContagens } from './contagens-do-codigo.mjs';
 import {
   arquivos,
   eventosEmitidosPor,
@@ -976,6 +977,44 @@ function verificarFrasesAncoradasNoCodigo() {
 }
 
 /**
+ * Os números em prosa DERIVADOS do código (AT-123): quantos `overrides`,
+ * quantas perguntas no golden-set, quantas operações no contrato de git,
+ * quantas abas, tabelas, tipos de ação… A tabela e os extratores moram em
+ * `contagens-do-codigo.mjs`, onde cada fonte é testada por mutação.
+ *
+ * Mesmo contrato das duas irmãs acima: DESATUAL e CEGO reprovam, e CEGO
+ * inclui a FONTE sumir — comparar contra nada é o check verde que não olhou.
+ */
+function verificarContagensDerivadasDoCodigo() {
+  const resultados = aferirContagens({
+    ler,
+    listar: arquivos,
+    rodarNode: (rel) => {
+      try {
+        return execFileSync(process.execPath, [rel], { cwd: RAIZ, encoding: 'utf8' });
+      } catch {
+        return null;
+      }
+    },
+    externas: { schemas: contarSchemasDeArtefato(), providers: descobrirProviders().size },
+  });
+
+  let problemas = 0;
+  for (const r of resultados) {
+    if (r.estado === 'ok') continue;
+    problemas++;
+    if (r.estado === 'CEGO') {
+      console.log(`  CEGO      ${r.arquivo} — ${r.motivo}. Ajuste contagens-do-codigo.mjs.`);
+    } else {
+      console.log(`  DESATUAL. ${r.arquivo} — ${r.descricao}: diz ${r.diz}, é ${r.esperado}.`);
+    }
+  }
+
+  if (problemas > 0) pendencias.push('contagens derivadas do código');
+  else console.log(`  ok        contagens derivadas do código (${resultados.length} frases)`);
+}
+
+/**
  * As refs `caminho:linha` das RNs que nomeiam o SÍMBOLO daquela linha (AT-096).
  * O padrão, a janela e o que fica de fora estão em `refs-com-simbolo.mjs`.
  *
@@ -1112,6 +1151,7 @@ gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
+verificarContagensDerivadasDoCodigo();
 verificarRefsComSimbolo();
 verificarVersaoAnunciada();
 

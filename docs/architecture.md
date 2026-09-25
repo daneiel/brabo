@@ -123,7 +123,7 @@ only once per story ([RN-539](business-rules.md#rn-539),
 
 ## Code map
 
-### `apps/api` — NestJS, 444 files
+### `apps/api` — NestJS, 906 files in `src/` (measured 2026-09-25)
 
 Four layers, and the order matters:
 
@@ -143,7 +143,7 @@ auto-instrumentation doesn't catch an already-loaded module, and a separate
 module is what guarantees that: TypeScript hoists all `require`s to the
 top, so a call written between imports would run too late).
 
-### `apps/engine` — Elixir/OTP, 155 files
+### `apps/engine` — Elixir/OTP, 219 files in `lib/` (measured 2026-09-25)
 
 | module | what it is | start with |
 |---|---|---|
@@ -159,11 +159,11 @@ top, so a call written between imports would run too late).
 **Entrypoint:** `lib/engine/application.ex` — the whole supervision tree is
 there, and it's the best file to understand what's running.
 
-### `apps/broker` — Node/TS, 8 files
+### `apps/broker` — Node/TS, 9 files in `src/` (measured 2026-09-25)
 
 The only process in the product with access to a Docker daemon
 ([ADR 0130](adr/0130-broker-de-container.md)), and the smallest service here:
-no framework, `node:http`, six routes.
+no framework, `node:http`, six routes (measured 2026-09-25 in `src/servidor.ts`).
 
 | file | what it is |
 |---|---|
@@ -175,7 +175,7 @@ no framework, `node:http`, six routes.
 **Entrypoint:** `src/index.ts`. Docker access itself is not here: it comes from
 `packages/docker-port`, the same file the runner uses.
 
-### `apps/web` — React 19, 70 files
+### `apps/web` — React 19, 487 files in `src/` (measured 2026-09-25)
 
 `src/lib/api-types.ts` and `src/lib/activity.ts` are the two files worth
 reading first: the first is the contract with the api, the second

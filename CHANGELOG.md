@@ -59,6 +59,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `merge-protegida`), provada sem stack por `scripts/ci/smoke-gates.spec.ts`.
   O token chega ao `curl` pelo stdin (`--config -`), nunca pelo argv nem pelo
   log.
+- **docs**: cinco números em prosa sobre o próprio repositório estavam errados
+  e nada os aferia (AT-123): o README dizia "nove schemas" (são onze), "dez
+  abas" (doze) e "build das três imagens" no CI (cinco); o `CONTRIBUTING.md`
+  pedia a provider novo "as doze operações" (são quinze); o glossário dava
+  "Thirteen types" de `proposed_action` (vinte e um). Corrigidos, e 27 frases
+  numéricas passam a ser DERIVADAS do código pelo `pnpm docs:check`
+  (`scripts/docs/contagens-do-codigo.mjs`, cada extrator provado por mutação):
+  overrides, golden-set do RAG, imagens de terceiro, contrato de git, porta de
+  Docker, abas, serviços do compose de dev, tipos e estados de ação, tabelas,
+  schemas e providers. As contagens de arquivos por app em `architecture.md` e
+  as "seis rotas" do broker passaram a ser DATADAS (2026-09-25).
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também

@@ -928,7 +928,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
-  framework web (são seis rotas, `node:http` puro), imagem própria em
+  framework web (são seis rotas, medido em 2026-09-25, `node:http` puro), imagem própria em
   `docker/broker/`, e o binário `docker` DENTRO da imagem (`docker-cli`, só o
   cliente) — preço declarado da decisão de usar um mecanismo só dos dois lados.
   **Ele não aceita especificação de container**: recebe um `projectId` e uma
@@ -2024,6 +2024,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `scripts/ci/images-manifest.ts`. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+  CONTAGEM em prosa cuja fonte é um lugar do código (overrides, perguntas do
+  golden-set, operações do contrato de git e da `DockerPort`, abas, tabelas,
+  tipos de ação, serviços do compose…) entra em
+  `scripts/docs/contagens-do-codigo.mjs` (AT-123) — uma linha por FRASE, um
+  extrator por fonte, cada extrator provado por MUTAÇÃO no `.spec.ts` ao lado.
+  Número que muda a cada PR (arquivos por app) é DATADO, não derivado.
   Irmã em `warn` (AT-096): `verificarRefsComSimbolo` confere, nos três arquivos
   de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
   que herda o caminho do MESMO item — contra o código, ±3 linhas. Só esse
