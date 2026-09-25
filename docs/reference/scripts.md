@@ -138,6 +138,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
 | `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
+| `make test-restore-mutacao` | Breaks the restore on purpose (dump without a table) and requires the proof to catch it |
 | `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
@@ -147,4 +148,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-102 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+103 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

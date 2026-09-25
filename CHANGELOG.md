@@ -543,6 +543,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: **a quebra proposital do restore é pega pela prova agendada,
+  e a última execução boa deixa de ser data escrita à mão** (AT-126, BRB-009).
+  `make test-restore-mutacao` (`RESTORE_MUTACAO=tabela-faltando` em
+  `test-restore.sh`) tira o backup, cria na ORIGEM uma tabela que o dump não tem
+  e roda o MESMO `brabo-restore`: passa só se ele reprovar nomeando a tabela, e
+  falha se aprovar ou se reprovar por outro motivo. É passo do
+  `propriedades.yml`, com issue própria (`make test-restore-mutacao`) quando a
+  quebra passa sem ser pega. Só numa rodada em que restore e mutação passam o
+  workflow grava o artefato `restore-ultima-execucao-boa` (`ultima-execucao-boa.json`,
+  90 dias); a seção "Last verified run" do runbook passa a apontar para ele.
+  `test-restore.sh` sem `RESTORE_MUTACAO` fica igual. Ainda aberto no BRB-009: a
+  última execução boa como MÉTRICA/`backupRuns` (exige código na api).
 - **deploy/k8s**: a **reprojeção do grafo roda no cluster local, como quarto
   alvo do `propriedades.yml`** (AT-127, BRB-018). `make test-reprojecao-k8s`
   cria pela API um projeto próprio (sessão fechada, dois eventos), roda
