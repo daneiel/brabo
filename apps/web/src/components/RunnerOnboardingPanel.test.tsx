@@ -369,10 +369,11 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
       await screen.findByText(/sua conta já tem máquina pareada: laptop/i),
     ).toBeInTheDocument();
     // O gesto é conferir o serviço na máquina pareada — nunca refazer o
-    // pareamento que ela já tem.
-    expect(
-      screen.getByText('brabo-runner service status --project proj-1'),
-    ).toBeInTheDocument();
+    // pareamento que ela já tem. E o serviço é o da ESPÉCIE (AT-106): chave de
+    // máquina é servida pela unit de MÁQUINA (RN-545), então a pergunta é
+    // `--machine`; a por projeto responderia sobre uma unit que não existe.
+    expect(screen.getByText('brabo-runner service status --machine')).toBeInTheDocument();
+    expect(screen.queryByText(/service status --project/)).not.toBeInTheDocument();
 
     // O caminho do ADR 0118 NÃO é removido: ele fica atrás de um rótulo que
     // nomeia o caso em que ainda é a resposta (BRB-031 é decisão à parte).
@@ -522,7 +523,35 @@ describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-1
     expect(screen.getByText(/chave registrada não é agente rodando/i)).toBeInTheDocument();
     expect(screen.getByText(/derruba o agente local aqui, não nos seus outros projetos/i)).toBeInTheDocument();
     expect(screen.queryByText(/todos eles/i)).not.toBeInTheDocument();
+    // Chave de PROJETO é servida pela unit do projeto: o comando continua o
+    // por projeto, e o `--machine` não aparece (AT-106).
+    expect(screen.getByText('brabo-runner service status --project proj-1')).toBeInTheDocument();
+    expect(screen.queryByText(/service status --machine/)).not.toBeInTheDocument();
     expect(screen.getByText(/estou em outra máquina — parear esta também/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('as DUAS espécies ativas: cada bloco oferece o comando da SUA unit, e a espera segue UMA', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([
+      chaveDeProjeto,
+      {
+        ...chaveDeProjeto,
+        id: 'chave-m',
+        name: 'laptop',
+        projectId: null,
+        especie: 'maquina' as const,
+      },
+    ]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/sua conta já tem máquina pareada: laptop/i)).toBeInTheDocument();
+    expect(screen.getByText('brabo-runner service status --machine')).toBeInTheDocument();
+    expect(screen.getByText('brabo-runner service status --project proj-1')).toBeInTheDocument();
     expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
 
     cleanup();

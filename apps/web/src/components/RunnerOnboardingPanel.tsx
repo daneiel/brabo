@@ -533,10 +533,13 @@ function ReconhecimentoDeMaquina({
       <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaDaConta')}</p>
       <p className={styles.detalhe}>{t('agenteDeMaquina.alcance')}</p>
 
+      {/* O comando é o da ESPÉCIE reconhecida (AT-106): a chave de máquina é
+          servida pela unit de MÁQUINA (`brabo-runner.service`, RN-545), e
+          perguntar pela de projeto responderia "não instalado" sobre uma
+          máquina que tem o agente de pé. O comando serve para a pessoa
+          PERGUNTAR; a tela continua sem afirmar a resposta (RN-468/548). */}
       <p className={styles.gesto}>{t('agenteDeMaquina.gesto')}</p>
-      <code className={styles.comando}>
-        {t('agenteDeMaquina.comandoDeServico', { projectId })}
-      </code>
+      <code className={styles.comando}>{t('agenteDeMaquina.comandoDeServico')}</code>
 
       {/* A espera da RN-474, reusada: reconhecida a máquina, o que falta é o
           agente CONECTAR, e essa é exatamente a pergunta que ela responde
@@ -589,7 +592,7 @@ function ReconhecimentoDeProjeto({
       <p className={styles.detalhe}>{t('chaveDeProjeto.alcance')}</p>
       <p className={styles.gesto}>{t('agenteDeMaquina.gesto')}</p>
       <code className={styles.comando}>
-        {t('agenteDeMaquina.comandoDeServico', { projectId })}
+        {t('chaveDeProjeto.comandoDeServico', { projectId })}
       </code>
       {mostrarEspera && <EsperaDoRunner projectId={projectId} />}
     </div>

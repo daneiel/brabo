@@ -78,13 +78,14 @@
     "ressalvaDaConta": "This list belongs to your ACCOUNT, not to this browser: if you are on another machine, that one still needs pairing.",
     "alcance": "A machine key serves every project of yours in runner mode — revoking it takes the local agent down in all of them.",
     "gesto": "On the paired machine, check the local agent's service:",
-    "comandoDeServico": "brabo-runner service status --project {{projectId}}",
+    "comandoDeServico": "brabo-runner service status --machine",
     "parearMesmoAssim": "I'm on another machine — pair this one too"
   },
   "chaveDeProjeto": {
     "pareada": "This project is already paired: {{nomes}}. A local agent last used that key on {{data}}.",
     "pareadaNuncaUsada": "This project is already paired: {{nomes}} — and no local agent has used that key yet.",
     "revogada": "This project's key ({{nomes}}) is revoked: no local agent connects with it. Pair again below.",
-    "alcance": "A project key serves only this project — revoking it takes the local agent down here, not in your other projects."
+    "alcance": "A project key serves only this project — revoking it takes the local agent down here, not in your other projects.",
+    "comandoDeServico": "brabo-runner service status --project {{projectId}}"
   }
 }

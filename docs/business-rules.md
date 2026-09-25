@@ -12312,7 +12312,15 @@ diferença não é escolha de desenho: é a forma do endpoint.
   4, sessão 6), então esta tela só era exercitável com uma chave registrada à
   mão — a mesma metade que as RN-543 e RN-544 já declaravam. O comando que o painel oferece é
   `brabo-runner service status --project <id>`, a forma que existe HOJE; a
-  forma por máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa
+  forma por máquina chega com a unit da sessão 4 — **FECHADO depois
+  (AT-106)**: reconhecida a chave de MÁQUINA, o painel oferece
+  `brabo-runner service status --machine` (a unit de máquina da
+  [RN-545](#rn-545)), e o bloco da chave de PROJETO segue oferecendo
+  `--project <id>`; as duas espécies ativas mostram cada uma o seu. O comando
+  continua sendo para a pessoa PERGUNTAR — a tela não afirma a resposta
+  (chaves `agenteDeMaquina.comandoDeServico` e
+  `chaveDeProjeto.comandoDeServico`, testes em `RunnerOnboardingPanel.test.tsx`
+  nos dois ramos e no par). Uma chave de PROJETO ativa
   NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
   à parte — **FECHADO depois (AT-107)**: o painel reconhece chave de PROJETO
   ativa DESTE projeto (`reconhecerChaveDeProjeto`, `lib/agente-de-maquina.ts`,

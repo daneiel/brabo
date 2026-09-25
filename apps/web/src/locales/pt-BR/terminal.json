@@ -78,13 +78,14 @@
     "ressalvaDaConta": "A lista é da sua CONTA, não deste navegador: se você está em outra máquina, esta ainda precisa ser pareada.",
     "alcance": "Uma chave de máquina atende todos os seus projetos em modo runner — revogá-la derruba o agente local em todos eles.",
     "gesto": "Na máquina pareada, confira o serviço do agente local:",
-    "comandoDeServico": "brabo-runner service status --project {{projectId}}",
+    "comandoDeServico": "brabo-runner service status --machine",
     "parearMesmoAssim": "Estou em outra máquina — parear esta também"
   },
   "chaveDeProjeto": {
     "pareada": "Este projeto já está pareado: {{nomes}}. Um agente local usou essa chave pela última vez em {{data}}.",
     "pareadaNuncaUsada": "Este projeto já está pareado: {{nomes}} — e nenhum agente local usou essa chave ainda.",
     "revogada": "A chave deste projeto ({{nomes}}) está revogada: nenhum agente local se conecta com ela. Parear de novo abaixo.",
-    "alcance": "Uma chave de projeto atende só este projeto — revogá-la derruba o agente local aqui, não nos seus outros projetos."
+    "alcance": "Uma chave de projeto atende só este projeto — revogá-la derruba o agente local aqui, não nos seus outros projetos.",
+    "comandoDeServico": "brabo-runner service status --project {{projectId}}"
   }
 }

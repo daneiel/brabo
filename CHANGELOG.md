@@ -17,6 +17,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o painel do runner, ao reconhecer chave de MÁQUINA pareada, passa a
+  oferecer `brabo-runner service status --machine` — a unit que serve essa
+  chave (RN-545) — em vez do `--project <id>`, que perguntava por uma unit que
+  não existe (AT-106, RN-548). Com chave de projeto, o comando segue o por
+  projeto. O comando continua sendo para PERGUNTAR; a tela não afirma que o
+  agente está de pé.
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também
