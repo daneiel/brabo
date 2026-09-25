@@ -22,6 +22,35 @@ when proven. As long as a smoke hasn't run against a real key, what exists
 about that provider is a reading of official documentation — good, verified
 line by line in Phase 11, and still not execution.
 
+## State as of 2026-09-25 — a `system` message after `user`/`tool` (AT-161)
+
+Another axis, same rule. The contract suite now proves where each adapter puts
+a `role: "system"` that arrives AFTER `user` or `tool` (end of `messages` in
+eight; hoisted into the top `system` in Anthropic — see
+[the divergences table](../reference/llm-providers.md#a-system-message-at-the-end-of-the-conversation-at-161)).
+Whether the provider ACCEPTS that body is what
+`sistema-tardio.smoke.spec.ts` asks, and only a real call answers it:
+
+```bash
+OLLAMA_SISTEMA_TARDIO_SMOKE=1 pnpm --filter api exec vitest run test/infrastructure/llm/sistema-tardio
+# cloud providers: export the same *_TEST_KEY as the acceptance smokes (ANTHROPIC_TEST_KEY for Anthropic)
+```
+
+| provider | late `system` accepted by the real provider? | how |
+|---|---|---|
+| Ollama | ✅ **yes**, after `user` and after `tool` | local daemon 0.32.15, `qwen2.5-coder:7b`; both turns ended with text and no error chunk |
+| Anthropic | ❌ not proven | `ANTHROPIC_TEST_KEY` missing — and the body it sends has no late `system` anyway (hoisted) |
+| OpenAI | ❌ not proven | `OPENAI_TEST_KEY` missing |
+| OpenRouter | ❌ not proven | `OPENROUTER_TEST_KEY` missing in this environment; in a hub the answer is per upstream, so one run proves the upstream that served it |
+| NVIDIA NIM | ❌ not proven | `NVIDIA_NIM_TEST_KEY` missing |
+| Together AI | ❌ not proven | `TOGETHER_TEST_KEY` missing |
+| DeepInfra | ❌ not proven | `DEEPINFRA_TEST_KEY` missing |
+| Bitdeer | ❌ not proven | `BITDEER_TEST_KEY` missing |
+| Vultr | ❌ not proven | `VULTR_TEST_KEY` missing |
+
+The smoke proves ACCEPTANCE only (the turn ends with text, no error chunk). If
+the model OBEYS the guidance is a quality question, and belongs to AT-082.
+
 ## State as of 2026-08-14 — the embedding capability (ADR 0075)
 
 NEW axis in this list. Until now "acceptance" meant the CHAT script; the

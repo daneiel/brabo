@@ -444,9 +444,42 @@ What diverges is normalized, not hidden:
 | tool call arguments | already deserialized | sliced string, reassembled by index | `input_json_delta`, reassembled by the SDK |
 | response without `usage` | doesn't emit a chunk | counts locally with `estimated: true` | **impossible** — `usage` is mandatory in `message_start` |
 | `tool` role | its own message | `role: "tool"` + `tool_call_id` | `tool_result` block inside a `user` turn |
+| `system` AFTER `user`/`tool` | kept in place, last item of `messages` | kept in place, last item of `messages` | **hoisted**: appended to the top-level `system` parameter (`\n\n`-joined after the prompt already there) and removed from `messages` |
 
 The Anthropic row is the costliest: results from parallel calls need to arrive in
 the **same** `user` turn, so consecutive `tool` messages are grouped.
+
+### A `system` message at the end of the conversation (AT-161)
+
+The late-`system` row exists because the language guidance of AT-081 plans to
+send **one** ephemeral `role: "system"` message at the END of the list, on
+every call of a turn — after `user` on the first call, after `tool` on the
+following ones. The contract suite answers, for each of the nine providers,
+where that message lands in the **serialized body**: each harness declares
+`posicaoDoSistemaTardio` and the contract checks it in both positions, plus
+that the text appears exactly once and the rest of the conversation keeps its
+order (`apps/api/test/contract/llm-provider.contract.ts`).
+
+| provider | adapter | where the late `system` lands |
+| --- | --- | --- |
+| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr | compatible base (`toWireMessage`) | end of `messages`, `role: "system"` |
+| Ollama | own (`messages` sent as-is) | end of `messages`, `role: "system"` |
+| Anthropic | own (official SDK) | end of the top-level `system`; position lost |
+
+No adapter drops or duplicates it. What the fake server cannot say is whether
+the REAL provider accepts that body — it accepts anything. That is a separate,
+manual smoke, `apps/api/test/infrastructure/llm/sistema-tardio.smoke.spec.ts`,
+one `describe` per provider, each gated on the same key the acceptance smokes
+use (plus `ANTHROPIC_TEST_KEY`; Ollama by `OLLAMA_SISTEMA_TARDIO_SMOKE=1`).
+Which ones have run is tracked in
+[provider acceptance](../explanation/aceite-providers.md). Without that run, a
+provider is **not proven** to accept a late `system` — the ADR 0041/0042 rule.
+
+**Observation, not measured (AT-081 gap 2):** on Anthropic the hoist means the
+guidance changes the top `system` block, which comes BEFORE the conversation —
+so every change in its text changes the request prefix, and with it whatever
+prompt caching the prefix would get. Cache is not observable in the product
+today (AT-082), so this is recorded, not quantified.
 
 ## OpenRouter — the first hub (Phase 11a)
 
