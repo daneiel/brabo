@@ -823,8 +823,34 @@ bash scripts/dev/reset-total.sh      # or: pnpm bootstrap → Docker › Reset t
 Rebuilds the images, **wipes the database**, migrates and seeds again — the
 provider credentials already in `.env` (`<PROVIDER>_TEST_KEY`) come back
 active on the owner, so you don't retype them in the UI every time. It does
-**not** remove volumes: `node_modules`, `_build` and the local bare repos
-survive.
+**not** remove or recreate any volume — `node_modules`, `_build`/`deps`,
+`pgdata` (only the schemas inside it are dropped), `neo4j`, the local bare
+repos and the project workspaces all survive — and it **says so** at the start
+and next to the success line (AT-181). That is the conservative choice on
+purpose: wiping volumes would throw away workspaces and local repositories
+nobody asked to lose.
+
+The price is that **a reset never reproduces a first clone.** A defect that
+only shows up with a volume that does not exist yet — like the `node_modules`
+volume that used to be born `root` (AT-172) — passes every reset unseen. To
+exercise that path, use a **throwaway compose project**, never this script and
+never your `brabo` project:
+
+```bash
+docker compose -p brabo-primeiro-clone -f docker/docker-compose.yml build engine
+docker compose -p brabo-primeiro-clone -f docker/docker-compose.yml \
+  run --rm --no-deps engine ls -ldn /root/.mix /root/.hex \
+  /workspace/apps/engine/_build /workspace/apps/engine/deps
+docker compose -p brabo-primeiro-clone -f docker/docker-compose.yml down -v
+```
+
+`run` creates that project's volumes from scratch and publishes no port, so it
+does not collide with your running stack. Measured this way for the engine on
+2026-09-25 (AT-182): `_build`, `deps`, `.mix` and `.hex` are born owned by
+`DEV_UID:DEV_GID`, and `mix local.hex`/`local.rebar`/`deps.get` pass as the
+non-root user. Two things it does leave behind: the empty `_build`/`deps`
+mount points it creates **inside your checkout**, owned by `root` (remove them
+with the `alpine` one-liner in the table below), and the image it built.
 
 **The order is the point, and it is not negotiable:**
 
