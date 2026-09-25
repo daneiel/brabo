@@ -9,6 +9,7 @@ import {
 } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
+import { conversaoSemBroker } from '../containers-subida';
 import type { ExecutionMode } from '../../lib/api-types';
 import { Alert } from '../../components/ui/Alert';
 import { Select } from '../../components/ui/Select';
@@ -177,6 +178,15 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   // O navegador só monta com o que ele exige para existir: o ramo `mounted`,
   // um `workspaceId` e uma base CONFIRMADA. "Não sei" nunca vira "tem"
   // (RN-513), e o botão sem base abriria um modal que listaria o nada.
+  // AT-105/RN-591: só a ausência CONFIRMADA bloqueia; carregando ou consulta
+  // falha não afirmam nada (a mesma leitura de três estados da criação).
+  const semBroker = conversaoSemBroker({
+    atual: project.executionMode,
+    alvo: modo,
+    brokerConfigurado: baseQuery.isSuccess
+      ? baseQuery.data.brokerConfigurado
+      : null,
+  });
   const podeNavegar =
     modo === 'mounted' && !!workspaceId && estadoDaBase.tipo === 'presente';
 
@@ -299,10 +309,16 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         </div>
       )}
 
+      {semBroker && (
+        <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
+          {t('executionMode.noBroker')}
+        </div>
+      )}
+
       <Button
         style={{ marginTop: 12 }}
         onClick={() => void handleSave()}
-        disabled={!podeEditar || !mudouAlgo || !valido || saving}
+        disabled={!podeEditar || !mudouAlgo || !valido || saving || semBroker}
       >
         {saving ? t('executionMode.saving') : t('executionMode.save')}
       </Button>

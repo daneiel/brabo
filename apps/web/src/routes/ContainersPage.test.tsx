@@ -544,6 +544,36 @@ describe('ContainersPage', () => {
     },
   );
 
+  // AT-105, RN-591 — parar/remover também passam pelo broker.
+  it('instalação SEM broker, container registrado: Parar/Remover inertes, com o motivo em TEXTO', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ brokerConfigurado: false })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    expect(screen.getByText(/stops and removes containers|para e remove os containers/)).toBeInTheDocument();
+    expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('com broker, Parar segue habilitado num container de pé', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item()],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).not.toBeDisabled();
+  });
+
   it('instalação SEM broker não afeta projeto runner: ele sobe pelo agente local', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,

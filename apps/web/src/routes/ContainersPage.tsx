@@ -24,6 +24,7 @@ import type {
 import {
   decidirSubida,
   podeDecidirCicloDeVida,
+  semBrokerParaCicloDeVida,
   type AcaoDeSubida,
 } from './containers-subida';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -214,12 +215,22 @@ function AcoesDoContainer({
   const semSessao = !latestSession;
   // Parar/remover exigem um container REGISTRADO: num projeto que nunca
   // provisionou não há o que parar nem o que remover.
+  const semBroker = semBrokerParaCicloDeVida(item);
   const podeParar =
     podeDecidir &&
     !semSessao &&
+    !semBroker &&
     (status === 'running' || status === 'provisioning');
   const podeRemover =
-    podeDecidir && !semSessao && status !== null && status !== 'removed';
+    podeDecidir &&
+    !semSessao &&
+    !semBroker &&
+    status !== null &&
+    status !== 'removed';
+  // Dito em TEXTO só quando havia container para parar/remover: sem registro
+  // não há o que explicar (ADR 0064).
+  const semBrokerParaParar =
+    semBroker && status !== null && status !== 'removed';
 
   const subida = decidirSubida({ item, papel, temSessao: !semSessao });
 
@@ -264,6 +275,9 @@ function AcoesDoContainer({
         </Button>
       </div>
       {motivo && <p className={styles.motivo}>{motivo}</p>}
+      {semBrokerParaParar && (
+        <p className={styles.motivo}>{t('actions.bloqueio.sem_broker_para_parar')}</p>
+      )}
       {ressalva && <p className={styles.ressalva}>{ressalva}</p>}
     </div>
   );

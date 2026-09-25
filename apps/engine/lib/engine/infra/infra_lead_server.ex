@@ -363,7 +363,7 @@ defmodule Engine.Infra.InfraLeadServer do
               "container_start proposto (status #{status}) — decisão final do usuário."
 
             {:error, reason} ->
-              "container_start recusado: #{inspect(reason)}"
+              "container_start recusado: #{motivo_da_recusa_da_api(reason)}"
           end
 
         motivo ->
@@ -378,6 +378,18 @@ defmodule Engine.Infra.InfraLeadServer do
       :pinned => false
     })
   end
+
+  # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
+  # engine não recebe essa variável, e uma segunda fonte para ela divergiria da
+  # `ContainerBrokerPort.configurado()` da api (AT-105, RN-591). Quem recusa é a
+  # api, ao propor, com 409 `sem_broker_na_instalacao`: a chamada que o laço já
+  # fazia, sem HTTP a mais. Aqui só se devolve ao modelo o TEXTO da recusa, e
+  # não o `inspect` da tupla crua.
+  defp motivo_da_recusa_da_api({status, %{"message" => mensagem}})
+       when is_integer(status) and is_binary(mensagem),
+       do: mensagem
+
+  defp motivo_da_recusa_da_api(reason), do: inspect(reason)
 
   # `container_start_via_runner` (RN-508, ADR 0145) — MESMO desenho de
   # `dispatch_container_start/2` (despacha inline, sem HALT), e desde a

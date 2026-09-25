@@ -727,7 +727,12 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       Map.get(por_tipo, action_type) ||
         Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "auto_approved"})
 
-    {:ok, resposta}
+    # `:fake_propose_action_erro` — a api RECUSANDO a proposta (ex.: 409
+    # `sem_broker_na_instalacao`, AT-105), no formato de `post_returning/3`.
+    case Process.get(:fake_propose_action_erro) do
+      nil -> {:ok, resposta}
+      erro -> {:error, erro}
+    end
   end
 
   # RN-423 (ADR 0104) — scriptável via `:fake_confirm_workspace` (padrão
