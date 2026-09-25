@@ -61,6 +61,45 @@
       "result": "result",
       "resultFailed": "result (failed)",
       "error": "error: {{error}}"
+    },
+    "label": {
+      "agentActivated": "took over the work",
+      "agentResponse": "responded",
+      "agentError": "failed",
+      "toolCall": "used a tool",
+      "toolResult": "tool responded",
+      "handoffOffered": "offered the work",
+      "handoffAccepted": "accepted the work",
+      "artifactProductBrief": "issued the brief",
+      "artifactBusinessRule": "issued a business rule",
+      "artifactModuleMap": "issued the module_map",
+      "artifactModuleRouting": "routed modules to infra",
+      "artifactInsight": "issued a hypothesis",
+      "delegationCompleted": "subagent finished",
+      "delegationFailed": "subagent failed",
+      "delegationDispensed": "dismissed the delegation",
+      "devStarted": "looking for a task",
+      "devWorking": "working",
+      "devIdle": "idle",
+      "devAwaitingApproval": "waiting for your approval",
+      "devAwaitingGate": "waiting for the gate",
+      "devBlocked": "blocked",
+      "devBlockedByContainer": "stopped: the project has no running container",
+      "devError": "error",
+      "devIdleTripped": "circuit breaker opened",
+      "prGateChanged": "gate changed"
+    },
+    "now": {
+      "notYet": "hasn't taken action yet",
+      "failed": "stopped due to a failure",
+      "failedWithDetail": "stopped due to a failure ({{detalhe}})",
+      "handedOff": "handed off",
+      "handedOffWithDetail": "handed off {{detalhe}}",
+      "turnEnded": "finished the turn",
+      "withDetail": "{{rotulo}} — {{detalhe}}"
+    },
+    "detail": {
+      "origin": "origin {{origem}}"
     }
   }
 }

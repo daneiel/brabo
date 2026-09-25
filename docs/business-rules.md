@@ -13759,25 +13759,39 @@ delas estava coberta pela comparação com o vocabulário do engine.
   `AgentTimelineTree` e a seção Atividades do `Shell` leem só `ramos`). O
   evento continua no log cronológico, a um clique, e o ramo bloqueado já diz,
   pelo `reason`, que falta subir o container.
-- **Os rótulos da árvore continuam em pt-BR fixo**, como todos os outros da
-  mesma tabela: a árvore nunca passou pelo `react-i18next`. Migrá-la é
-  mudança da tela inteira, não desta correção.
+- **Os rótulos da árvore ficaram em pt-BR fixo nesta correção** — migrá-los
+  era mudança da tela inteira. A AT-134 fez essa migração depois, e ela NÃO
+  mexeu na regra acima: a DECISÃO por tipo (se vira nó, que `MarcoTipo`, que
+  detalhe) continua em `TRADUCAO`, no código, e é ela que o spec compara com o
+  engine; só o TEXTO saiu, como CHAVE (`ChaveDeRotulo`) resolvida em
+  `executors:timelineTree.label.*`, com a frase do presente em
+  `timelineTree.now.*` e o detalhe de origem em `timelineTree.detail.origin`,
+  nos dois idiomas (`en` é o default, [RN-425](#rn-425)). `montarArvore`
+  recebe o idioma como argumento (`getFixedT`), e os dois consumidores
+  (`AgentTimelineTree` e a seção Atividades do `Shell`) o passam do
+  `useTranslation` — trocar de idioma refaz a árvore. Uma chave que a tabela
+  usa sem texto em um dos dois locales reprova em `timeline-tree.test.ts`.
 
-- **Código:** `apps/web/src/lib/timeline-tree.ts:111` (`TRADUCAO`), `:155`
-  (`dev.started`), `:156` (`dev.working` com o título), `:172`
-  (`dev.blocked_by_container`), `:177` (`dev.error`), `:196`
-  (`TRADUCAO_FORA`), `:239` (o `ativo` lido do painel);
+- **Código:** `apps/web/src/lib/timeline-tree.ts:161` (`TRADUCAO`), `:205`
+  (`dev.started`), `:206` (`dev.working` com o título), `:222`
+  (`dev.blocked_by_container`), `:227` (`dev.error`), `:246`
+  (`TRADUCAO_FORA`), `:307` (o `ativo` lido do painel), `:96`
+  (`ChaveDeRotulo`, AT-134), `:135` (`tradutorDaArvore`);
+  `apps/web/src/locales/{en,pt-BR}/executors.json` (`timelineTree.label`,
+  `timelineTree.now`, `timelineTree.detail`);
   `apps/web/src/lib/agent-status.ts:127` (`statusDoEventoDev`);
   `apps/web/src/components/AgentTimelineTree.module.css` (`.espera`)
 - **Teste:** `scripts/ci/vocabulario-de-eventos-dev.spec.ts:300` (o bloco da
   árvore: `:308` todo tipo do engine decidido, `:324` nada traduzido que o
   engine não emite, `:342` nada nos dois lados);
-  `apps/web/src/lib/timeline-tree.test.ts:111` (a sequência medida:
+  `apps/web/src/lib/timeline-tree.test.ts:130` (a sequência medida:
   `dev.started` + `dev.blocked_by_container` deixa o ramo parado com o
-  motivo — caso de falha), `:130` (`dev.started` não afirma task), `:137`
+  motivo — caso de falha), `:149` (`dev.started` não afirma task), `:156`
   (estados que o painel não chama de trabalho deixam o ramo parado; `dev.working`
-  segue ativo com o título), `:149` (`dev.error` encerra com o motivo)
-- **Origem:** AT-087 — instalação real de 14/09
+  segue ativo com o título), `:168` (`dev.error` encerra com o motivo), `:367`
+  (AT-134: toda chave usada tem texto nos dois locales, as subárvores têm as
+  mesmas chaves, e o idioma passado vence o ativo)
+- **Origem:** AT-087 — instalação real de 14/09; o i18n dos rótulos, AT-134
 
 ### RN-573 — O assistente de criação só pré-seleciona o modo que a instalação executa: sem broker, `runner` é o sugerido e `container`/`mounted` ficam inertes com o motivo em texto {#rn-573}
 

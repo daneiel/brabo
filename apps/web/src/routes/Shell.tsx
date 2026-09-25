@@ -355,7 +355,10 @@ function GrupoDeAtividade({
 }
 
 export function Shell() {
-  const { t } = useTranslation('shell');
+  const {
+    t,
+    i18n: { language },
+  } = useTranslation('shell');
   const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
@@ -428,7 +431,9 @@ export function Shell() {
   const { session: execSession } = useActiveExecutionSession(currentProject?.id);
   const { data: eventsPage } = useSessionEvents(currentProject?.id, execSession?.id);
   const events = useMemo(() => eventsPage?.items ?? [], [eventsPage]);
-  const { ramos } = useMemo(() => montarArvore(events), [events]);
+  // `language` na dependência: os rótulos da árvore saem traduzidos de
+  // `montarArvore` (AT-134), e trocar o idioma tem de refazê-los.
+  const { ramos } = useMemo(() => montarArvore(events, language), [events, language]);
   const grupos = useMemo(() => agruparPorInstancia(ramos), [ramos]);
 
   const [agentesAbertos, setAgentesAbertos] = useState(lerAgentesAbertos);
