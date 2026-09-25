@@ -32,6 +32,10 @@ defmodule EngineWeb.Router do
     pipe_through :internal
 
     post "/sessions", SessionCommandController, :create
+
+    # AT-157 (RN-579): a api avisa o canal da sessão de uma escrita que ela
+    # mesma fez (não passou pela fachada do engine).
+    post "/sessions/:sessionId/event-appended", SessionCommandController, :event_appended
     post "/actions/execute", ActionCommandController, :execute
     post "/actions/execute-git", ActionCommandController, :execute_git
 

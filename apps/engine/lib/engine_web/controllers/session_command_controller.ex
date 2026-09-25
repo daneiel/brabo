@@ -34,4 +34,25 @@ defmodule EngineWeb.SessionCommandController do
       send_resp(conn, 201, "")
     end
   end
+
+  @doc """
+  AT-157 (RN-579): a api gravou um evento por conta própria (decisão humana em
+  outra aba, transição de sessão, chat direto) e pede o MESMO aviso que a
+  fachada `EngineApiClient` emite para as escritas do engine. Só `type` e
+  `actorId` atravessam, nunca o payload; o canal é gatilho e o GET continua
+  sendo a fonte. Sem ninguém inscrito o broadcast é um no-op, então a rota não
+  precisa saber se a sessão vive neste nó.
+  """
+  def event_appended(conn, %{"sessionId" => session_id, "type" => type} = params)
+      when is_binary(session_id) and is_binary(type) and type != "" do
+    actor_id = if is_binary(params["actorId"]), do: params["actorId"], else: nil
+    Engine.Sessions.LiveBroadcast.event_appended(session_id, type, actor_id)
+    send_resp(conn, 204, "")
+  end
+
+  def event_appended(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "type é obrigatório"})
+  end
 end

@@ -27,6 +27,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `sem_broker_na_instalacao` a proposta de `container_start`/`_stop`/`_remove`
   nesses modos — o Infra Lead lê o texto da recusa como resultado da
   ferramenta, sem HTTP a mais no laço.
+- **sessão (canal)**: a escrita que a api faz por conta própria — a decisão de
+  um humano noutra aba, uma transição de sessão, o chat respondido pela api —
+  também avisa o canal da sessão (AT-157, RN-579). Antes o `event.appended` só
+  saía das escritas do engine, e essas chegavam à tela pelo fallback de 15s;
+  agora a api pede ao engine (`POST /internal/sessions/:id/event-appended`,
+  rota nova, interna) o mesmo aviso, só com tipo e ator, DEPOIS do commit e
+  nunca para escrita recusada ou desfeita. Escrita vinda do engine não é
+  avisada em dobro. O teto de 300 req/min não muda e o fallback continua.
+
 - **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
   conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
   texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam

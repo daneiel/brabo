@@ -136,6 +136,9 @@ rules:
       - "apps/engine/lib/engine/sessions/engine_api_client.ex"
       - "apps/api/src/interfaces/http/internal/**"
       - "apps/engine/lib/engine_web/router.ex"
+      # AT-157: o aviso ao canal é uma chamada api -> engine que nasce fora de
+      # `interfaces/http/internal/` (a api é o CLIENTE, não a rota).
+      - "apps/api/src/infrastructure/http-clients/session-channel-notifier.ts"
     docs: ["docs/reference/internal-api.md"]
     severity: block
 
