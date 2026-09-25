@@ -135,7 +135,9 @@ Quatro coisas que o menu faz e vale saber:
   ficar saudável e semeia; no fim **pergunta** o `/health` da api e do engine e
   o `/` do web antes de dizer qualquer coisa — se algum não responder, ele
   nomeia e sai com código 1, em vez de anunciar sucesso. É a segunda tela que
-  pede confirmação (digitando `RESET`), e não remove volumes. Detalhes em
+  pede confirmação (digitando `RESET`), e não remove volumes — e diz isso ao
+  rodar, porque o outro lado é que um reset nunca reproduz um primeiro clone
+  (defeito que só aparece com volume novo passa despercebido). Detalhes em
   [`docs/runbook.md`](docs/runbook.md#reset-total).
 
 **Opções de linha de comando:**

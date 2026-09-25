@@ -1178,7 +1178,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   esquecer não dá erro de build, dá 403 em runtime. Vale também para os
   `node_modules` de `api` e `web` (AT-172: `EACCES` no `pnpm install`), e o
   ponto de montagem DENTRO do bind-mount do host o Docker cria como root —
-  isso a imagem não alcança, e quem o cria antes é o `preflight.mjs`. Volume JÁ criado continua
+  isso a imagem não alcança, e quem o cria antes é o `preflight.mjs`. Os do
+  ENGINE (`_build`/`deps`/`.mix`/`.hex`) já nasciam com o dono certo — medido
+  do zero na AT-182, o `docker/engine/Dockerfile` os cria antes do `USER`. Volume JÁ criado continua
   com o dono antigo: a correção vale para volume novo, e destravar um ambiente
   existente exige `docker volume rm` (ou um `chown` pontual como root).
 - `docker compose up --wait` só prova o que tem `healthcheck` — para serviço
@@ -1201,7 +1203,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   banco numa derrubada do ambiente. E script que AFIRMA um estado pergunta antes
   de afirmar: `scripts/dev/reset-total.sh` bate em `/health` dos três e imprime
   `ps` antes da frase final, que nomeia o que ficou de pé — e qualquer falha no
-  meio sai com o passo nomeado, nunca com a frase de sucesso.
+  meio sai com o passo nomeado, nunca com a frase de sucesso. O reset NÃO
+  remove nem recria volume nenhum (AT-181), e DIZ isso no começo e no fim:
+  "total" é o banco e as imagens, e o preço é que ele nunca reproduz um
+  PRIMEIRO CLONE — defeito de volume inexistente (AT-172) se prova num projeto
+  compose DESCARTÁVEL (`-p <nome> run --rm --no-deps`, `down -v`), nunca nele.
+  `scripts/dev/reset-total.spec.ts` reprova linha executável que apague volume.
 - `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
   (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
   que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).

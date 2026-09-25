@@ -58,6 +58,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `packages/shared/node_modules`). Provado do zero, com volumes inexistentes e
   sem `chown` à mão. Só aparece com volume inexistente: `reset-total.sh` não
   remove esses volumes e o escondia.
+- **dev**: o `reset-total.sh` passa a DIZER, no começo e ao lado da frase de
+  sucesso, que não remove nem recria volume nenhum — e que por isso não
+  reproduz um primeiro clone (AT-181). O comportamento não muda (ele nunca
+  tocou volume); a tela de confirmação do `pnpm bootstrap` diz o mesmo, um
+  spec reprova linha executável do script que apague volume, e o runbook
+  ensina a provar o caminho de volume novo num projeto compose descartável.
+  Medido por esse caminho (AT-182): os volumes do engine (`_build`, `deps`,
+  `.mix`, `.hex`) já nascem com o dono `DEV_UID:DEV_GID` — nada a corrigir ali.
 - **sessões**: a sessão `git-bootstrap` deixa de virar a "mais recente" do
   projeto (AT-131). O resumo do workspace e a Visão Geral ordenam a sessão de
   provisionamento depois das de trabalho — ela só é a mais recente quando é a
