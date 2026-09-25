@@ -397,6 +397,7 @@ make deploy-local     # sobe cluster k3d, instala tudo e roda o smoke
 make hpa-test         # enche a fila do Oban e prova que o HPA escala
 make rollout-test     # prova que um rollout do engine não deixa sessão órfã
 make test-restore     # dispara backup real, restaura e valida
+make test-restore-mutacao  # quebra o restore de propósito e exige que a prova reprove
 make k8s-validate     # monta e valida os overlays (não precisa de cluster)
 make k8s-down         # remove o cluster
 ```

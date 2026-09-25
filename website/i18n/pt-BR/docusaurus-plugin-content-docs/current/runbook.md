@@ -1046,6 +1046,15 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 
 ### Última execução verificada
 
+> **A data desta seção deixou de ser mantida à mão** (AT-126). A rodada mais
+> recente de `propriedades.yml` que tem o artefato `restore-ultima-execucao-boa`
+> é a última vez em que o restore passou no Kubernetes **e** uma quebra
+> proposital dele (`make test-restore-mutacao`) foi pega na mesma rodada:
+> `gh run list --workflow propriedades.yml --status success --limit 1` e
+> `gh run download <run> -n restore-ultima-execucao-boa` (guardado por 90 dias).
+> É artefato de workflow, não métrica. O registro abaixo é o histórico da
+> primeira verificação.
+
 <!-- Atualize esta seção sempre que rodar o teste num ambiente novo. -->
 
 | campo | valor |

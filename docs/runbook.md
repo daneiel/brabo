@@ -2211,14 +2211,28 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
 3. runs `make smoke-k8s`, then `make hpa-test`, `make rollout-test` and
    `make test-restore`, in the `Makefile`'s order, each one even when an earlier
    one failed (a broken HPA must not hide a broken restore);
-4. runs `make test-reprojecao-k8s` (AT-127, BRB-018): the graph is not backed up
+4. runs `make test-restore-mutacao` (AT-126, BRB-009), the proof **of** the
+   proof: it takes a real backup, then creates a table (`zz_mutacao_restore`) in
+   the source that the dump does not have — exactly "a dump missing a table" —
+   and runs the same `brabo-restore`. It passes only if the restore **rejects**
+   it and names that table (the log line `faltando: zz_mutacao_restore`); if the restore
+   approves, or rejects for another reason, the step fails and opens its own
+   issue. A green `make test-restore` says the backup restores; this says the
+   proof would still notice if it did not. The table is dropped on exit, even on
+   failure. It runs even when `make test-restore` failed (a blind proof and a
+   broken restore are two defects, and both must show);
+5. runs `make test-reprojecao-k8s` (AT-127, BRB-018): the graph is not backed up
    ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)) because it is
    reprojected from the event log, so the workflow proves that too — it creates
    its own project with a closed session and two events, reprojects it, **wipes
    that subgraph** in Neo4j, reprojects, and requires the same node and edge
    counts, then reprojects again. It uses no state left by the other targets and
    is **not** coupled to `test-restore` (the graph does not depend on a backup);
-5. writes each step's duration into the run summary.
+6. only when **both** the restore and the deliberate break passed in the same
+   run, writes `ultima-execucao-boa.json` (date, run, commit, restore duration)
+   and uploads it as the `restore-ultima-execucao-boa` artifact (kept 90 days),
+   and adds the line *Última execução boa do restore* to the run summary;
+7. writes each step's duration into the run summary.
 
 | trigger | when |
 |---|---|
@@ -2242,6 +2256,7 @@ free disk on `ubuntu-latest`):
 | `make hpa-test` | 19 s |
 | `make rollout-test` | 24 s |
 | `make test-restore` | 21 s |
+| `make test-restore-mutacao` | 31 s (run `35473548113`) |
 | `make test-reprojecao-k8s` | 16 s (run `35471428634`) |
 | whole job | 12 min 56 s |
 
@@ -2323,11 +2338,16 @@ name the orphan. The fix belongs to the engine, not to this proof.
 
 ### Last verified run
 
-> **The scheduled workflow is now the source for this.** The latest run of
-> [`propriedades.yml`](#provas-de-propriedade-agendadas) — its summary table
-> and the absence of an open `Prova de propriedade falhou` issue — says when
-> the restore last passed on Kubernetes. The record below is kept as it was
-> written: it is the history of the first verification and of what it found.
+> **The scheduled workflow is now the source for this, and the date is no
+> longer edited by hand** (AT-126). The latest run of
+> [`propriedades.yml`](#provas-de-propriedade-agendadas) that has the
+> `restore-ultima-execucao-boa` artifact is the last time the restore passed on
+> Kubernetes **and** a deliberate break of it was caught in the same run:
+> `gh run list --workflow propriedades.yml --status success --limit 1`, then
+> `gh run download <run> -n restore-ultima-execucao-boa` (kept 90 days). It is
+> a workflow artifact, not a metric: a Prometheus gauge next to the backup
+> alerts would need code in `apps/api`, which this change did not touch (BRB-009 stays open on that half). The record below is kept as it was written: it is the
+> history of the first verification and of what it found.
 
 <!-- Update this section whenever you run the test on a new environment. -->
 
