@@ -301,8 +301,9 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   default `"false"` em silêncio, enquanto TRÊS lugares (os docblocks dos dois
   workers e `docs/reference/configuration.md`) prometiam que "ligar de volta é
   `X=true` e reiniciar". Medido no container: `[true] [] []`. As oito flags
-  BOOLEANAS do `runtime.exs` estão nos dois composes agora, cada uma com o
-  MESMO default do código, e `scripts/ci/flags-do-engine-no-compose.spec.ts`
+  BOOLEANAS do `runtime.exs` estão nos TRÊS composes agora (o de instalação
+  desde a AT-202), cada uma com o MESMO default do código salvo as duas chaves
+  de boot que produção e instalação desligam de propósito, DECLARADAS no spec, e `scripts/ci/flags-do-engine-no-compose.spec.ts`
   DERIVA a lista e reprova a próxima que faltar. E ligar a Anamnese periódica
   são DUAS variáveis: `START_ANAMNESE` é a chave de BOOT (decide se o tick é
   agendado) e `ANAMNESE_ENABLED` é a flag de PRODUTO (decide se uma rodada nova
