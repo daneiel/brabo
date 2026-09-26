@@ -103,9 +103,12 @@ the loader turns that second one red with the exact message the
 installation produced.
 
 And the api serving the registry is now exercised against the production
-image: `docker/smoke.sh` calls `GET /gates` and requires the registry
-back. No unit suite could have caught this — vitest and ExUnit run from a
-checkout, where the targets exist.
+image: `docker/smoke.sh` calls `GET /gates` and `GET /internal/gates`
+(service token) and requires the registry back from both. The body check
+is one shell function, `checar_registro_de_gates`, which
+`scripts/ci/smoke-gates.spec.ts` runs against the three bodies without
+bringing the stack up. No unit suite could have caught the original failure
+— vitest and ExUnit run from a checkout, where the targets exist.
 
 ## The shared-type trap
 

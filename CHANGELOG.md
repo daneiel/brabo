@@ -51,6 +51,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   fora dele, e ela acusa 528 erros em 95 arquivos além desses três (medido,
   não corrigido aqui). O script `lint` do `package.json` cobre `test/`, mas
   não é o que o CI roda.
+- **ci**: o smoke das imagens de produção passa a chamar também
+  `GET /internal/gates`, com o service token (AT-109). A rota lê o mesmo
+  loader do `GET /gates` e sofria do mesmo 500 corrigido no AT-086, mas nenhum
+  smoke a chamava. As duas rotas passam pela MESMA checagem de corpo
+  (`checar_registro_de_gates`, que reprova o 500, a lista vazia e o registro sem
+  `merge-protegida`), provada sem stack por `scripts/ci/smoke-gates.spec.ts`.
+  O token chega ao `curl` pelo stdin (`--config -`), nunca pelo argv nem pelo
+  log.
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também
