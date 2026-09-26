@@ -307,7 +307,10 @@ export function ApprovalCard({
                 : t('approvalCard.notes.alwaysAllow')}
             </span>
           )}
-          {variant === 'chat' && onActivateAutoMode && (
+          {/* A nota do modo automático vale nas DUAS variantes (RN-603): é a
+              única frase que diz, antes do clique, o que o botão libera — e
+              na fila de Aprovações o botão existe igual. */}
+          {onActivateAutoMode && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               {t('approvalCard.notes.autoMode', { actor: actorLabel })}

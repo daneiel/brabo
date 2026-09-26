@@ -477,7 +477,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:367` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:426` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -13487,15 +13487,15 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:207`
-  (`reason` no payload do evento de sessão), `:170` (o comentário do outbox
-  sem o campo), `:174` (o payload do outbox, intacto), `:285` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:210`
+  (`reason` no payload do evento de sessão), `:173` (o comentário do outbox
+  sem o campo), `:177` (o payload do outbox, intacto), `:288` (o
   `rejectionReason`, que continua só no `deny`);
-  `apps/api/src/domain/actions/decide.ts:237` (`Decision`, a fonte da string)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:673`
+  `apps/api/src/domain/actions/decide.ts:256` (`Decision`, a fonte da string)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:742`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:696` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:724` (`deny` com o mesmo texto do `rejectionReason`), `:742` (o outbox
+  `:765` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:793` (`deny` com o mesmo texto do `rejectionReason`), `:811` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,

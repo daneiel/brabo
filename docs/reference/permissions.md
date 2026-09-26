@@ -318,10 +318,29 @@ the wildcard in the same query, and returns the specific one when both
 exist — writing `terminal: deny` with `"*": auto_approve` turned on still
 denies `terminal` for that agent, while freeing up the rest.
 
-That's why the diagram didn't get a new node, and it's proof that the
-caps, right below, apply to "auto mode" with no exception declared
-anywhere: they react to `current.policy === 'auto_approve'`, never to its
-origin ([RN-154](../business-rules/autenticacao.md#rn-154)).
+That's why the diagram didn't get a new node, and the caps, right below,
+apply to "auto mode" because they react to `current.policy ===
+'auto_approve'`, never to its origin
+([RN-154](../business-rules/autenticacao.md#rn-154)).
+
+**One exception, decided by the product owner: auto mode frees the path
+scope** ([RN-603](../business-rules/autenticacao.md#rn-603),
+[ADR 0167](../adr/0167-modo-automatico-libera-o-escopo-de-caminho.md)).
+The repository also returns WHERE the autonomy came from
+(`AgentAutonomyRepository.resolve`: `especifica` or `curinga`), and
+`decide()` receives it as `ctx.autonomyOrigin`. When the wildcard resolves
+to `auto_approve`, two approval requests go away: the [path-scope
+cap](#path-scope) and the `require_approval` a compound command synthesises
+for a segment with no rule at all. So an agent in auto mode runs any
+terminal command, even outside the project folder — measured on `exp001`,
+47 of 51 requests after auto mode was on came only from the scope, because
+the dev agent runs inside the container (`/work`) and the scope compares
+against the HOST root. Everything else stays: `deny` wins, an `ask` written
+in the file asks, the external-effect/privileged cap (push, PR, deploy,
+`sudo`/`doas`) runs first and ignores the origin, and protected-branch
+merge, `instruction_patch`, parallelism and `container_remove` never
+auto-approve. A SPECIFIC rule (`terminal: auto_approve` or
+`terminal: require_approval`) is not auto mode and keeps the scope cap.
 
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
@@ -488,6 +507,10 @@ Three limits worth understanding:
   approval.
 - **Outside the scope is `require_approval`, not `deny`.** The agent may
   have a legitimate reason to look outside; who decides remains you.
+- **Auto mode skips this cap.** An agent with the `"*": auto_approve`
+  wildcard runs commands outside the scope without asking
+  ([RN-603](../business-rules/autenticacao.md#rn-603)); turning the agent
+  card back to "manual" restores it.
 - **Normalization is lexical, not `realpath`.** `<raiz>/../..` is resolved
   and rejected; a symbolic link inside the project pointing outward is
   **not** detected. Scope is policy, not isolation.

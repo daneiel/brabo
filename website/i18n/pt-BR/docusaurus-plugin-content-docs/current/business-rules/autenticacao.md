@@ -8,6 +8,21 @@ keywords: [regras de negócio, autenticação, refresh, cookie, PAT, OAuth]
 
 # Autenticação
 
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-223): a [versão em inglês](pathname://../../business-rules/autenticacao) é a fonte, tem
+> 95 RNs nesta página e esta tradução tem 91. As 4
+> abaixo **só existem lá**, e link para uma delas aponta para a versão
+> em inglês:
+>
+> [RN-595](pathname://../../business-rules/autenticacao#rn-595), [RN-597](pathname://../../business-rules/autenticacao#rn-597)–[RN-598](pathname://../../business-rules/autenticacao#rn-598), [RN-601](pathname://../../business-rules/autenticacao#rn-601).
+>
+> Das presentes, a [RN-201](pathname://../../business-rules/autenticacao#rn-201)
+> já mudou de enunciado na versão em inglês (o colapso da sidebar passou a
+> ser só do usuário): aqui ela está desatualizada.
+>
+> As RNs presentes aqui podem estar mais curtas ou mais antigas que as do
+> inglês (só os títulos foram comparados); na dúvida, o inglês vale.
+
 > Estas RNs saíram de [`business-rules.md`](../business-rules.md) sem
 > mudar uma vírgula do conteúdo: a página única passava de 640 KB e
 > estas duas seções sozinhas eram metade dela. As âncoras `#rn-NNN`

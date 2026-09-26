@@ -203,7 +203,8 @@ rules:
   # `custom.css` a trocar o mecanismo de publicação. Bloquear os dois pelo mesmo
   # motivo ensina a usar o escape hatch por reflexo, e aí ele para de significar
   # alguma coisa. Quem reprova de verdade o comportamento do site é o
-  # `api-render-check.mjs` no `docs-check.yml`, que olha o build, não a prosa.
+  # `api-render-check.mjs` e o `links-do-locale.mjs` no `docs-check.yml`, que
+  # olham o build, não a prosa.
   - id: site-e-publicacao
     watch:
       - "website/**"

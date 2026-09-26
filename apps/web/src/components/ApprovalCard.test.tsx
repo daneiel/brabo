@@ -130,8 +130,23 @@ describe('ApprovalCard', () => {
         onActivateAutoMode={vi.fn()}
       />,
     );
-    expect(screen.getByText(/libera TODA ação futura/)).toBeInTheDocument();
+    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
+    expect(screen.getByText(/git push, PR, deploy, sudo\/doas/)).toBeInTheDocument();
     expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+  });
+
+  it('mostra a nota do "Modo automático" também na variante queue (RN-603)', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        variant="queue"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
   });
 
   it('mostra a nota de permissions.json na variante chat', () => {

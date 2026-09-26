@@ -1396,6 +1396,11 @@ usa pro roster ao vivo: módulo sem chave fixa em `AGENTS` herda ícone/cor de
 
 ### RN-153 — "Auto mode": o `ApprovalCard` liga autonomia pra QUALQUER ação futura de um agente {#rn-153}
 
+> **Revista pela [RN-603](#rn-603)** (ADR 0167): `decide()` passou a receber
+> também a ORIGEM da autonomia, e o modo automático (a curinga em
+> `auto_approve`) não passa mais pelo teto de escopo de caminho. O que segue
+> abaixo sobre `decide()` "não mudar" descreve o desenho original.
+
 Antes deste RN, `agent_autonomy` só sabia conceder autonomia por
 `(projeto, agente, TIPO de ação)` — uma linha por tipo, upsert de UMA regra
 por vez (`SetAgentAutonomyUseCase`,
@@ -1466,6 +1471,10 @@ representativo — desligar é gravar a mesma curinga como
 
 ### RN-154 — Os três tetos absolutos continuam bloqueando MESMO com "auto mode" ligado {#rn-154}
 
+> **Revista pela [RN-603](#rn-603)** (ADR 0167): os tetos listados aqui
+> seguem valendo em modo automático; o que deixou de valer para ele foi o
+> teto de ESCOPO DE CAMINHO (ADR 0055), que nunca esteve nesta lista.
+
 O desenho do "auto mode" ([RN-153](#rn-153)) é deliberadamente incapaz de
 furar os três tetos que já existiam em `decide()` — eles são aplicados por
 ÚLTIMO, sobre `current.policy`, sem olhar de onde veio a permissividade
@@ -1504,6 +1513,67 @@ nova — só o suficiente pra não ter onde a curinga furar.
   gravado como `auto_approve` e o veredito continuando `require_approval`)
 - **Origem:** restrição de design confirmada pelo usuário ao pedir o "auto
   mode" — os três tetos são a garantia que não pode regredir
+
+### RN-603 — O modo automático libera o escopo de caminho, e só ele {#rn-603}
+
+Decisão do dono do produto em 2026-09-26 (AT-226,
+[ADR 0167](../adr/0167-modo-automatico-libera-o-escopo-de-caminho.md)): com o
+"Modo automático" ligado num agente — a curinga `"*"` da
+[RN-153](#rn-153) resolvida como `auto_approve` —, o agente roda QUALQUER
+comando de terminal sem pedir aprovação, INCLUSIVE fora da pasta do projeto.
+O teto de escopo de caminho do ADR 0055 deixa de valer para esse agente.
+Medido no `exp001` (modo `mounted`, container de pé): 51 comandos pediram
+aprovação com o modo ligado, 47 só por citar `/work` ou `/tmp` — o dev agent
+roda no container e o escopo compara com a raiz do HOST.
+
+`decide()` passa a receber a ORIGEM da autonomia (`ctx.autonomyOrigin`:
+`'especifica'` ou `'curinga'`), resolvida pelo MESMO repositório que já
+resolvia a precedência — `findMode` virou leitura de `resolve`, não uma
+segunda régua. Só a curinga em `auto_approve` é modo automático
+(`modoAutomaticoDoAgente`); origem ausente vale como específica. Em modo
+automático, dois pedidos deixam de existir: o teto de ESCOPO e o
+`require_approval` que o comando COMPOSTO sintetiza quando um segmento não tem
+regra nenhuma em `permissions.json` (o arquivo sem opinião, que nunca rebaixa
+um estágio anterior) — sem o segundo, `cd /work && npm test` seguiria pedindo.
+
+Continua tudo como estava, em modo automático também: `deny` (do arquivo, dos
+padrões embutidos ou de autonomia específica) vence; um `ask` ESCRITO no
+arquivo pede; o teto de efeito externo/comando privilegiado (push, PR,
+deploy, `sudo`/`doas`, [RN-418](../business-rules.md#rn-418)) roda antes e não
+olha a origem; merge em branch protegida, `instruction_patch`,
+`parallelize`/`raise_max_parallel` e `container_remove` nunca são
+auto-aprováveis ([RN-154](#rn-154)). Regra específica do tipo vence a curinga
+no repositório e chega como `'especifica'`: `terminal: require_approval` com a
+curinga ligada segue pedindo. Desligar (o toggle do card do agente grava a
+curinga como `require_approval`) restaura o teto.
+
+A tela diz, antes do clique, o que o modo libera e o que continua pedindo: a
+nota do `ApprovalCard` aparece nas DUAS variantes (chat e fila de Aprovações),
+e o card do agente mostra uma frase sob o toggle — só quando a CURINGA está
+ligada, porque o toggle sobre o tipo representativo grava regra específica,
+que não libera o escopo.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts:271` (`modoAutomaticoDoAgente`),
+  `apps/api/src/domain/actions/decide.ts:346` (o veredito sintetizado do
+  composto ignorado), `apps/api/src/domain/actions/decide.ts:409` (o teto de
+  escopo pulado),
+  `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
+  (`resolve`, com a origem),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:146`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:105`
+  (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
+  nas duas variantes)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts` ("modo automático
+  libera o escopo de caminho (RN-603)": fora do escopo e composto auto-aprovam;
+  push/`sudo`/`deny`/`ask` escrito seguem; regra específica e curinga
+  desligada não liberam; os outros tetos não mudam),
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  (ponta a ponta com o repositório real),
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts`
+  (`resolve` devolve a origem), `apps/web/src/components/AgentTeamGrid.test.tsx`,
+  `apps/web/src/components/AgentCard.test.tsx`,
+  `apps/web/src/components/ApprovalCard.test.tsx`
+- **Origem:** decisão do dono do produto (AT-226) depois do teste no `exp001`
 
 ### RN-155 — ordenação da timeline usa o vínculo `proposed_action.created`, nunca `action.seq` cru {#rn-155}
 
