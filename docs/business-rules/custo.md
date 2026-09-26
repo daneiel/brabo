@@ -2641,7 +2641,7 @@ consegue nomear.
   por que a linha só relê no sucesso), `:391` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:352` (coluna Origem), `:422`
   (`não há nível abaixo`), `:441` (`sem gasto ainda`),
-  `apps/web/src/components/ModelPicker.tsx:83` (`selected` sai do prop — o
+  `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o
   picker não guarda a escolha, e é por isso que a recusa não deixa valor
   fantasma na tela),
   `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:38`
