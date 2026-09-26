@@ -88,7 +88,10 @@
     "browseRunner": {
       "requires": "<strong>“Browse folder...” only works with <code>brabo-runner</code> running on your machine and connected to this project</strong> — in this mode the list comes from the local agent, not from the server. The click creates the project now, so the agent has something to connect to; then run:",
       "alternative": "Without the runner running, <strong>type the path in the field above</strong>: it amounts to the same, and the runner confirms the folder when it connects.",
-      "placeholderPath": "<folder>"
+      "placeholderPath": "<folder>",
+      "blockedName": "Fill in the project name (2 characters or more) before browsing: in this mode the click already creates the project.",
+      "blockedAdoptName": "Fill in the repository to adopt before browsing: in this mode the click already creates the project, named after it.",
+      "blockedPath": "The typed path is not absolute or contains \"..\" — fix it (or clear it) before browsing, or the api refuses the creation."
     }
   },
   "confirm": {

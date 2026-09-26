@@ -15275,3 +15275,58 @@ certo, gravar as DUAS variáveis juntas, decidir o que fazer com um volume
   mensagem diz sintoma, conserto e o que não migra), `:113` (o preflight
   chama o relato sem sair por ele)
 - **Origem:** AT-213 — teste do dono em 2026-09-26
+
+### RN-600 — A criação de projeto pela tela não manda o corpo que a api já se sabe que recusa, uma criação por vez, e a recusa aparece na tela {#rn-600}
+
+No teste do dono em 26/09 a api registrou 11 `POST /workspaces/:id/projects →
+400` em ~4 s, e o mesmo projeto `runner`, criado pela api com caminho, saiu 201.
+Medido por leitura e reproduzido no vitest do assistente: não há retry
+automático (`createProject` é chamada direto, sem `useMutation`), então cada
+POST foi um CLIQUE. A causa provável é o "Procurar pasta..." do modo `runner`,
+que CRIA o projeto antecipadamente ([RN-437](#rn-437)): no passo de detalhes o
+campo de caminho fica ACIMA do nome, e clicar antes de digitar o nome mandava
+`{ name: '', slug: '', executionMode: 'runner', workspacePath:
+'/workspace-a-confirmar' }` — o `CreateProjectDto` recusa `name` com menos de 2
+caracteres e `slug` fora do kebab-case —, e a falha virava só o toast "Não deu
+para preparar a navegação de pasta agora", sem motivo; clicar de novo era a
+única resposta que a tela sugeria. Um nome de UMA letra passava no `Continuar`
+e voltava 400 no "Provisionar" pelo mesmo `MinLength(2)`.
+
+Três metades, todas na tela (a api está certa em recusar):
+
+1. **Não mandar o que já se sabe recusado.** `nomeAceitoPelaApi` espelha o DTO
+   (2+ caracteres, recortado, e slug não vazio) e passa a ser o gate de nome do
+   passo de detalhes. No modo `runner`, "Procurar pasta..." fica INERTE enquanto
+   o nome não passa, ou enquanto um caminho DIGITADO não é plausível
+   (`caminhoLocalParecePlausivel`), e o motivo é dito em texto abaixo do campo
+   (`procurar-bloqueado`, ADR 0064). Caminho VAZIO continua não bloqueando — o
+   placeholder provisório da [RN-437](#rn-437) cobre. É a revisão da frase
+   "nunca bloqueando o clique" da RN-437, que falava do CAMINHO e não previu o
+   nome vazio. O nome vai recortado no corpo.
+2. **Uma criação por vez.** `criacaoEmVoo` (um `useRef`) trava os DOIS caminhos
+   que criam — "Procurar pasta..." e "Provisionar" —, porque o `disabled` só
+   chega ao botão no render seguinte. No jsdom o `disabled` já segura o segundo
+   clique; a ref é o que segura dois eventos no mesmo quadro do navegador.
+3. **A recusa na tela.** A falha 400 da criação antecipada passa a pôr a frase
+   da api (`mensagemDaApi`, lista do `class-validator` juntada) no MESMO
+   `Alert` do passo que o "Provisionar" já usava ([RN-170](business-rules/autenticacao.md#rn-170)); outros
+   erros seguem só com o toast.
+
+**O que não foi medido:** o log da api do teste do dono não sobreviveu ao
+reinício do container, então o CORPO de cada um dos 11 POSTs não foi visto — a
+causa acima é a única que a leitura do código e o vitest reproduzem, e não
+prova que foi ela. A adjacência ([RN-437](#rn-437)) segue como era: o projeto
+criado antecipadamente com o caminho provisório não recebe o caminho refinado
+depois no "Provisionar" (ele é REUSADO, não atualizado) — quem o corrige é o
+runner ao conectar (RN-423).
+
+- **Código:** `apps/web/src/lib/wizard.ts:108` (`nomeAceitoPelaApi`);
+  `apps/web/src/routes/NewProjectWizard.tsx:112` (`montarPayloadDeCriacao`),
+  `:202` (`criacaoEmVoo`), `:321` (`bloqueioDoProcurarNoRunner`), `:486`
+  (`handleProcurarPasta`), `:536` (`handleConfirm`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx:850` (describe
+  `criar projeto sem rajada de 400` — sem nome, 11 cliques e nenhum POST;
+  caminho relativo; nome de uma letra; nome recortado; três cliques no mesmo
+  quadro criam um; a recusa da api na tela); `apps/web/src/lib/wizard.test.ts:210`
+  (`nomeAceitoPelaApi`)
+- **Origem:** AT-215 (teste do dono, 26/09), irmã da AT-214

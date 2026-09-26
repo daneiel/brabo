@@ -48,6 +48,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `conversation_idle_timeout` da RN-581. O topo da página pt-BR passa a listar
   as seções que só existem em inglês. Links para RNs que a tradução de
   `business-rules.md` ainda não tem apontam para a versão em inglês.
+- **web**: criar projeto pela tela deixa de sair em rajada de 400 (AT-215,
+  RN-600). No modo **Runner local**, "Procurar pasta..." criava o projeto com
+  `name`/`slug` vazios quando o nome ainda não tinha sido digitado (o campo fica
+  abaixo do de caminho) e só dizia "Não deu para preparar a navegação de pasta
+  agora" — cada clique era um 400 novo. Agora o botão fica inerte, com o motivo
+  em texto, até o nome ter 2+ caracteres (e o caminho digitado ser absoluto); o
+  "Continuar" também exige o nome que a api aceita; as duas criações travam
+  durante o envio; e a frase da api aparece no passo.
 - **web**: no assistente de projeto, o modo **Runner local** passa a dizer
   ANTES do clique que "Procurar pasta..." só funciona com o `brabo-runner`
   rodando na máquina e conectado ao projeto (AT-214, RN-437). A lista vem do
