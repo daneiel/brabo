@@ -82,6 +82,32 @@ defmodule Engine.Agents.ConversacionaisTest do
     assert Conversacionais.parar_da_sessao(Ecto.UUID.generate()) == []
   end
 
+  test "entrada velha no Registry (pid já morto) não entra na lista de parados",
+       %{project_id: project_id} do
+    sessao = Ecto.UUID.generate()
+    {:ok, criativo} = CriativoSupervisor.start_agent(sessao, project_id)
+    {:ok, staff, _} = StaffSupervisor.start_agent(sessao, project_id)
+
+    # A limpeza do Registry fica SUSPENSA (AT-204): o Criativo morre antes do
+    # fechamento, e a chave dele ainda está lá quando `parar_da_sessao/1` lê —
+    # a janela que o Registry tem de verdade, aberta de propósito. O log do
+    # fechamento dizia "parei criativo" sobre quem já estava morto.
+    parados =
+      com_limpeza_do_registry_suspensa(Engine.Sessions.Registry, fn ->
+        ref = Process.monitor(criativo)
+        Process.exit(criativo, :kill)
+        assert_receive {:DOWN, ^ref, :process, ^criativo, :killed}
+
+        assert [{^criativo, _}] =
+                 Registry.lookup(Engine.Sessions.Registry, "criativo:" <> sessao)
+
+        Conversacionais.parar_da_sessao(sessao)
+      end)
+
+    assert parados == ["staff"]
+    refute Process.alive?(staff)
+  end
+
   test "no cluster (um nó só aqui) devolve o mesmo que o local", %{project_id: project_id} do
     sessao = Ecto.UUID.generate()
     {:ok, _} = CriativoSupervisor.start_agent(sessao, project_id)

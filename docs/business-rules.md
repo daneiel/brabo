@@ -14525,8 +14525,8 @@ fechada seguem mostrando a mensagem da api.
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:866`
   (`narrar_recusa_de_sessao_encerrada`), `:1141` (`pendencia_da_resposta`);
-  `apps/engine/lib/engine/agents/conversacionais.ex:48` (`parar_da_sessao`),
-  `:64` (`parar_da_sessao_no_cluster`);
+  `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
+  `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
@@ -14545,8 +14545,8 @@ fechada seguem mostrando a mensagem da api.
   `closed`), `:124` (o default é 8h), `:151` (pendência sem instante segue sem
   teto), `:152` e `:194` (AT-152: com a aba aberta — pings — a conversa ociosa
   além do teto fecha, e dentro do teto não fecha); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
-  (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
-  (para só os da sessão), `:100` (`session.closed` para o Criativo vivo);
+  (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:60`
+  (para só os da sessão), `:85` (AT-204: pid já morto no Registry não entra na lista de parados), `:126` (`session.closed` para o Criativo vivo);
   `apps/engine/test/engine/agents/turno_assincrono_test.exs:161` (abandonar não
   grava nem transmite, e não responde de novo), `:194` (o `terminate/2` abandona);
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
