@@ -62,14 +62,6 @@ defmodule Engine.Dev.DevRehydratorTest do
     # reidratação cobre (o nó caiu com o agente vivo).
     [{pid, _}] = Registry.lookup(Engine.Dev.Registry, {project_id, agent_id})
     :ok = DynamicSupervisor.terminate_child(DevAgentSupervisor, pid)
-    wait_unregister(project_id, agent_id)
-  end
-
-  defp wait_unregister(project_id, agent_id, tentativas \\ 100) do
-    if Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) != [] and tentativas > 0 do
-      Process.sleep(10)
-      wait_unregister(project_id, agent_id, tentativas - 1)
-    end
   end
 
   # A recuperação do `working` reidratado é assíncrona (handle_continue,
@@ -100,8 +92,17 @@ defmodule Engine.Dev.DevRehydratorTest do
     assert server_module(project_id, "dev-api") == NoopDevAgentServer
     assert DevAgentState.get(project_id, "dev-api").impl == "noop"
 
-    desliga(project_id, "dev-api")
-    :ok = DevRehydrator.run()
+    # Com a limpeza do Registry SUSPENSA (AT-204): a chave do agente morto
+    # ainda está lá quando a reidratação roda — a janela que o Registry tem de
+    # verdade, aberta de propósito em vez de esperada com `sleep`. A
+    # reidratação tem de ler "morto", não "registrado", e subir por cima.
+    com_limpeza_do_registry_suspensa(Engine.Dev.Registry, fn ->
+      desliga(project_id, "dev-api")
+      assert [{morto, _}] = Registry.lookup(Engine.Dev.Registry, {project_id, "dev-api"})
+      refute Process.alive?(morto)
+
+      :ok = DevRehydrator.run()
+    end)
 
     assert server_module(project_id, "dev-api") == NoopDevAgentServer,
            "o Noop voltou como agente REAL: um restart do nó trocaria a implementação " <>

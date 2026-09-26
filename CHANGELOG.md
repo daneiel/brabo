@@ -17,6 +17,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: reerguer um agente logo depois de ele morrer deixa de depender de
+  o Registry já ter limpado a chave (AT-204). O Registry apaga a chave de forma
+  assíncrona (medido: em ~2% das vezes ela ainda está lá logo depois de
+  `terminate_child/2`). Nessa janela, o `DevRehydrator`, o `GateRescuer` e os
+  supervisores dos dev agents, do QA Lead e do SecOps tomavam o pid morto por
+  vivo e não subiam nada. Agora os quatro só contam como existente um pid VIVO.
+  Os testes passaram a abrir essa janela de propósito, com a limpeza do
+  Registry suspensa, em vez de esperá-la com `sleep`.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16
