@@ -98,7 +98,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `BRABO_SERVICE_TOKEN_PREVIOUS` quando definido; a mensagem nomeia a
   variável. O broker já fazia isso com o atual e agora faz com o anterior. Fora
   de produção, nos dois, só o trim (e o engine passa a cair no default de dev
-  com a variável vazia, como a api, em vez de usar a string vazia).
+  com a variável vazia, como a api, em vez de usar a string vazia). Como a
+  migração do engine (`bin/engine eval`) avalia o mesmo `runtime.exs`, o
+  serviço `migrate-engine` dos composes de produção e de instalação passa a
+  receber os dois tokens.
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina

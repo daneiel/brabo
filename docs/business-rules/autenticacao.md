@@ -256,6 +256,14 @@ imagem de produção é sempre uma release `:prod`. E a régua fica inline no
 `runtime.exs`, e não num módulo de `lib/`, porque numa release esse arquivo
 roda num config provider antes de o código da aplicação estar carregado.
 
+Consequência: todo processo que avalia esse `runtime.exs` numa release
+`:prod` precisa do token, inclusive a migração (`bin/engine eval
+Engine.Release.migrate()`). Por isso o serviço `migrate-engine` dos composes de
+produção e de instalação passou a receber `BRABO_SERVICE_TOKEN` e
+`BRABO_SERVICE_TOKEN_PREVIOUS`, sem default. O smoke de CI mostrou isso: sem
+eles, a migração morria antes de migrar. O Job de migração do Kubernetes já os
+recebia pelo `envFrom` de `brabo-secrets`.
+
 - **Onde:** `apps/engine/config/runtime.exs:85`
   (`exigir_token_de_servico_de_producao`), `:105` (`service_token`), `:121`
   (`service_token_previous`); `apps/broker/src/config.ts:89` (`anterior`),
