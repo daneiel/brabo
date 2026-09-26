@@ -104,6 +104,37 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
 | `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
 
+## runner — `apps/runner/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/runner start` | `node src/index.ts` |
+| `pnpm --filter @brabo/runner build` | `tsup` |
+| `pnpm --filter @brabo/runner build:bin` | `node scripts/build-bin.mjs` |
+| `pnpm --filter @brabo/runner smoke` | `node scripts/smoke-dist.mjs` |
+| `pnpm --filter @brabo/runner smoke:bin` | `node scripts/smoke-bin.mjs` |
+| `pnpm --filter @brabo/runner test` | `vitest run` |
+| `pnpm --filter @brabo/runner typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/runner lint` | `oxlint --deny-warnings src scripts` |
+
+## broker — `apps/broker/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/broker start` | `node src/index.ts` |
+| `pnpm --filter @brabo/broker build` | `tsup` |
+| `pnpm --filter @brabo/broker test` | `vitest run` |
+| `pnpm --filter @brabo/broker typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/broker lint` | `oxlint --deny-warnings src tsup.config.ts vitest.config.ts` |
+
+## docker-port — `packages/docker-port/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/docker-port test` | `vitest run` |
+| `pnpm --filter @brabo/docker-port typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/docker-port lint` | `oxlint --deny-warnings src vitest.config.ts` |
+
 ## website — `website/package.json`
 
 | command | runs |
@@ -148,4 +179,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-103 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+119 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

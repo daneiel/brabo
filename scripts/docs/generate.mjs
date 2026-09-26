@@ -131,10 +131,18 @@ function escreverBloco(rel, id, corpo) {
 // ------------------------------------------------------- 1. scripts.md
 
 function gerarScripts() {
+  // A terceira coluna é o nome que o `--filter` recebe, e só existe quando ele
+  // difere do rótulo: `runner`, `broker` e `docker-port` são `@brabo/*`, e o
+  // comando que a tabela mostra tem de ser o que se COPIA e roda. Os três
+  // ficaram de fora da lista até a AT-218 — a referência dizia "every pnpm
+  // script" e omitia três membros do workspace.
   const pacotes = [
     ['raiz', 'package.json'],
     ['api', 'apps/api/package.json'],
     ['web', 'apps/web/package.json'],
+    ['runner', 'apps/runner/package.json', '@brabo/runner'],
+    ['broker', 'apps/broker/package.json', '@brabo/broker'],
+    ['docker-port', 'packages/docker-port/package.json', '@brabo/docker-port'],
     ['website', 'website/package.json'],
     ['scripts', 'scripts/package.json'],
   ];
@@ -156,7 +164,7 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
 `;
 
   let total = 0;
-  for (const [rotulo, caminho] of pacotes) {
+  for (const [rotulo, caminho, filtro = rotulo] of pacotes) {
     let pkg;
     try {
       pkg = JSON.parse(ler(caminho));
@@ -171,7 +179,7 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
     // membership, `--dir` não — aponta pro diretório e roda como se o pnpm
     // tivesse começado ali.
     const prefixo =
-      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --dir website ' : `pnpm --filter ${rotulo} `;
+      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --dir website ' : `pnpm --filter ${filtro} `;
 
     out += `\n## ${rotulo === 'raiz' ? 'Root' : rotulo} — \`${caminho}\`\n\n`;
     out += '| command | runs |\n|---|---|\n';

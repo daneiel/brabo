@@ -5634,9 +5634,9 @@ Reconfigurar Ollama", que apaga as chaves gravadas — nunca uma pergunta
 espontânea de novo enquanto elas existirem.
 
 - **Onde:** `scripts/dev/env-file.mjs:41` (`escreverEnv`),
-  `scripts/dev/preflight.mjs:133` (`ehOllama`),
-  `scripts/dev/preflight.mjs:178` (`perguntarUsoDoOllama`),
-  `scripts/dev/preflight.mjs:214` (`detectarOllamaNativo`),
+  `scripts/dev/preflight.mjs:138` (`ehOllama`),
+  `scripts/dev/preflight.mjs:183` (`perguntarUsoDoOllama`),
+  `scripts/dev/preflight.mjs:219` (`detectarOllamaNativo`),
   `scripts/dev/reconfigurar-ollama.sh`, `scripts/dev/perfil-ollama.sh`,
   `docker/docker-compose.yml:82,119` (`profiles: ["local-llm"]`)
 - **Teste:** `scripts/dev/bootstrap.spec.ts` (cobre a fiação do menu — o
@@ -15216,3 +15216,53 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
   (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
   `:653` e `:691` (`container_start_via_runner` com e sem runner)
 - **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)
+
+### RN-599 — No compose de dev a api encontra o broker sozinha, e a falta da pasta gerenciada é dita a cada subida {#rn-599}
+
+O broker sobe por padrão no compose de DEV desde a [RN-512](#rn-512), mas a api
+recebia `BROKER_URL` vazia (`${BROKER_URL:-}`, e a linha vinha comentada no
+`.env.example`). O resultado, medido no teste do dono em 26/09: com o broker de
+pé ao lado, `brokerConfigurado` vinha `false` e a criação de projeto só liberava
+`runner` ([RN-573](#rn-573)). Duas regras fecham isso:
+
+1. **`BROKER_URL` tem default no compose de dev, e só nele.** O default é
+   `http://broker:8090` — o serviço e a porta (`BROKER_PORT`) que o MESMO
+   arquivo declara, e o teste trava os dois juntos: um default que apontasse
+   para outro lugar trocaria "sem broker" por "broker inalcançável". O valor do
+   `.env` continua vencendo. Os composes de PRODUÇÃO e de INSTALAÇÃO seguem
+   `${BROKER_URL:-}`, de propósito: lá o broker está sob
+   `profiles: ["container-broker"]`, e quem o liga grava a URL (o `install.sh`,
+   perguntando — [RN-575](#rn-575)). Um default ali faria a api de uma
+   instalação sem broker afirmar que tem um.
+2. **O `preflight.mjs` RELATA a pasta gerenciada, no molde do `DOCKER_GID`.**
+   Sem `PROJECT_WORKSPACES_HOST_DIR`, api e engine usam o volume gerenciado
+   `project_workspaces` (sem caminho de host), o broker fica sem
+   `PROJECT_WORKSPACES_HOST_ROOT` — o compose de dev a DERIVA daquela —, o stack
+   sobe saudável e o `container_start` do modo `container`, o default, termina
+   recusado. O relato tem quatro desfechos que não colapsam: `ausente`, `ok`,
+   `nao-absoluta` (o `~`: o Compose o expande na origem do bind-mount de
+   api/engine, mas NÃO na variável que o broker recebe — medido com
+   `docker compose config`) e `divergente` (`PROJECT_WORKSPACES_HOST_ROOT`
+   explícita diferente da pasta que api e engine montam, inclusive quando elas
+   montam o volume). Cada mensagem diz o sintoma e o conserto. Ele NUNCA recusa
+   a subida e NUNCA grava o `.env`: a resposta é um caminho no disco de alguém,
+   e trocar o volume pela pasta esconde o que já está no volume (os dados ficam
+   lá, só deixam de ser vistos) — a mensagem diz isso também.
+
+**O que fica aberto:** o `pnpm bootstrap` NÃO oferece a pasta. Fazê-lo seria um
+segundo `consentir-base.mjs` (perguntar num TTY, criar a pasta com o dono
+certo, gravar as DUAS variáveis juntas, decidir o que fazer com um volume
+`project_workspaces` que já tem dados), e isso é frente própria.
+
+- **Código:** `docker/docker-compose.yml:266` (o default de `BROKER_URL`),
+  `:571` (a derivação de `PROJECT_WORKSPACES_HOST_ROOT`);
+  `scripts/dev/pasta-gerenciada.mjs:63` (`avaliarPastaGerenciada`), `:89`
+  (`mensagemDaPastaGerenciada`); `scripts/dev/preflight.mjs:359`
+  (`relatarPastaGerenciada`)
+- **Teste:** `scripts/dev/broker-url-no-dev.spec.ts:42` (o default existe),
+  `:47` (aponta para o serviço e a porta do arquivo), `:64` (produção e
+  instalação sem default); `scripts/dev/pasta-gerenciada.spec.ts:31`
+  (ausente), `:51` (o `~`), `:67` (divergente com o volume), `:75` (a
+  mensagem diz sintoma, conserto e o que não migra), `:113` (o preflight
+  chama o relato sem sair por ele)
+- **Origem:** AT-213 — teste do dono em 2026-09-26
