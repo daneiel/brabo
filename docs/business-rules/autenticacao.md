@@ -177,6 +177,37 @@ consequências acima.
 - **Origem:** [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
   AT-196
 
+### RN-595 — Toda `_PREVIOUS` que um serviço lê chega a ele pelos três composes, vazia por padrão {#rn-595}
+
+As três rotações sem downtime (`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`,
+`CREDENTIALS_MASTER_KEY`) dependem de o processo ver o valor antigo numa
+variável `_PREVIOUS` durante a janela. O Compose não repassa o ambiente do
+host, e nenhuma das três estava no `environment:` de compose nenhum: definir a
+`_PREVIOUS` no `.env` não tinha efeito, e quem seguia o runbook fazia, sem
+saber, a troca seca que a rotação existe para evitar. Agora a api recebe as
+três, e o engine e o broker recebem `BRABO_SERVICE_TOKEN_PREVIOUS`, nos composes
+de dev, de produção e de instalação, sempre com default VAZIO — definida é
+rotação em andamento, e um default preenchido deixaria a instalação
+eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
+
+- **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml` e
+  `docker/docker-compose.install.yml` (serviços `api`, `engine` e `broker`);
+  os leitores são `apps/api/src/infrastructure/security/auth-key-material.ts:131`
+  (`passphraseAnterior`), `apps/api/src/infrastructure/security/service-token.ts:70`
+  (`tokenDeServicoAnterior`), `apps/api/src/infrastructure/security/envelope-encryption.service.ts:93`,
+  `apps/engine/config/runtime.exs:70` e `apps/broker/src/config.ts:85`
+- **Teste:** `scripts/ci/previous-nos-composes.spec.ts` — DERIVA do código dos
+  três serviços a lista de `_PREVIOUS` lidas e reprova a que faltar, ou vier
+  com default não vazio, em qualquer um dos três composes
+- **Borda:** o Kubernetes fica de FORA, e não está resolvido. Os Pods leem
+  `envFrom: brabo-secrets`, e o `ExternalSecret`
+  (`deploy/k8s/base/common/externalsecrets.yaml`) só materializa as chaves que
+  lista; uma entrada de `data` cuja propriedade falta no provider reprova a
+  sincronização do Secret inteiro, e a `_PREVIOUS` ausente é o estado normal.
+  Como ela chega ao Pod é decisão sobre o secret store, em aberto — o runbook
+  diz isso nas duas rotações.
+- **Origem:** AT-201 (achado da AT-196), mesma classe da RN-540
+
 ### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
 
 `HttpApiToEngineClient` interpola estes valores em template string pra

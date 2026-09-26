@@ -173,6 +173,20 @@ issuer. Decisions in
 > outstanding verification and reset tokens. Unlike the keys, the pepper does
 > **not** have a `_PREVIOUS`. See the [runbook](../runbook.md).
 
+> **Where the `_PREVIOUS` variables reach.** `AUTH_JWT_SECRET_PREVIOUS`,
+> `CREDENTIALS_MASTER_KEY_PREVIOUS` and `BRABO_SERVICE_TOKEN_PREVIOUS` are
+> mapped in the `environment:` of all three composes (dev, production and
+> install) as `${X:-}` — the api gets the three, the engine and the broker get
+> `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/autenticacao.md#rn-595)).
+> Empty is the same as absent in every reader, so outside a rotation nothing
+> changes; during one, setting them in `.env` and recreating the service is
+> enough. Before RN-595 they were mapped nowhere and `docker compose` doesn't
+> forward the host environment, so a rotation silently became a hard swap.
+> **On Kubernetes they still don't reach the Pods**: `brabo-secrets` only
+> carries the keys its `ExternalSecret` lists, and listing an optional key
+> there would fail the whole sync outside a rotation — a secret-store
+> decision that is still open, declared in the runbook.
+
 ### Real SMTP (MailSender)
 
 `MailSender` sends real email only when `MAIL_TRANSPORT=smtp` — the default
