@@ -38,8 +38,24 @@ defmodule Engine.Agents.ConversacionaisTest do
     %{project_id: Ecto.UUID.generate()}
   end
 
-  defp vivo?(prefixo, session_id),
-    do: Registry.lookup(Engine.Sessions.Registry, prefixo <> ":" <> session_id) != []
+  # "Vivo" é haver, sob a chave da sessão, um processo VIVO — e não haver uma
+  # entrada no Registry. A limpeza do Registry é ASSÍNCRONA: quem apaga a
+  # chave é a partição dele, ao receber o `EXIT` do processo registrado, e
+  # isso pode acontecer DEPOIS de `GenServer.stop/3` voltar (o `stop` espera o
+  # `:DOWN` do monitor dele, não a partição). Medido (AT-175): em 5 de 20
+  # rodadas deste arquivo o `lookup` logo depois do `stop` devolvia o pid JÁ
+  # MORTO — com `refute Process.alive?(pid)` passando na linha de cima.
+  #
+  # Checar a vivacidade do pid encontrado é determinístico (morto não volta) e
+  # é a mesma leitura que o próprio `Registry` faz de uma entrada velha:
+  # registrar de novo a chave de um pid morto não é recusado. Esperar a
+  # partição por tempo (o `wait_unregister` de outros testes) seria sleep.
+  defp vivo?(prefixo, session_id) do
+    case Registry.lookup(Engine.Sessions.Registry, prefixo <> ":" <> session_id) do
+      [{pid, _}] -> Process.alive?(pid)
+      [] -> false
+    end
+  end
 
   test "para os conversacionais DAQUELA sessão, e só dela", %{project_id: project_id} do
     sessao = Ecto.UUID.generate()
