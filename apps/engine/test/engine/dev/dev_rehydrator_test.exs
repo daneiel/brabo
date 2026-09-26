@@ -24,14 +24,19 @@ defmodule Engine.Dev.DevRehydratorTest do
     Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
     Application.put_env(:engine, :test_pid, self())
 
+    project_id = Ecto.UUID.generate()
+
     on_exit(fn ->
+      # ANTES de soltar o env (AT-204). Cada spec termina com `desliga/2`, mas
+      # só quando chega ao fim: uma asserção que falha no meio deixava o dev
+      # agent real vivo, reivindicando task com o cliente do teste seguinte.
+      encerrar_agentes_do_projeto(project_id)
+
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :worktree_manager)
       Application.delete_env(:engine, :gate_dispatcher)
       Application.delete_env(:engine, :test_pid)
     end)
-
-    project_id = Ecto.UUID.generate()
 
     # RN-502/ADR 0143 — o caminho de reidratação PASSA por `try_claim/2`
     # (`init/1` -> `finish_restart_recovery/1`), então a guarda de container

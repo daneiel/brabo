@@ -112,6 +112,41 @@ defmodule Engine.DataCase do
   end
 
   @doc """
+  Encerra os dev agents e os agentes de gate (QA Lead, SecOps) do projeto —
+  o `on_exit` de spec que sobe agente REAL (AT-204, mesma classe da AT-180).
+
+  Esses processos são filhos dos supervisores da APLICAÇÃO, não do teste:
+  sem isto eles seguem vivos depois do fim. Um dev agent que reivindica a
+  próxima task depois do fim do teste grava no banco com o dono da sandbox
+  já morto (`owner #PID<…> exited`, em `AgentIo.claim_e_rodar`), e o que ele
+  notifica pelo `:test_pid` cai no mailbox do teste SEGUINTE — era o
+  `{:task_blocked, …, "dev-api"}` de `QaLeadServerTest`,
+  `QaAutomacaoAgentTest` e `QaPerformanceSegurancaAgentTest`.
+
+  Chame DENTRO do `on_exit` e ANTES de soltar o `Application.put_env`: com o
+  env solto, o agente que sobra passa a falar com o cliente `Live`.
+  """
+  def encerrar_agentes_do_projeto(project_id) do
+    registros = [
+      {Engine.Dev.Registry, [Engine.Dev.DevAgentSupervisor]},
+      {Engine.Gates.Registry, [Engine.Gates.QaLeadSupervisor, Engine.Gates.SecOpsAgentSupervisor]}
+    ]
+
+    for {registro, supervisores} <- registros,
+        pid <-
+          Registry.select(registro, [
+            {{{:"$1", :_}, :"$2", :_}, [{:==, :"$1", project_id}], [:"$2"]}
+          ]),
+        supervisor <- supervisores do
+      # `{:error, :not_found}` quando o pid é filho do OUTRO supervisor do
+      # mesmo registro (ou já saiu) — nos dois casos não há o que encerrar.
+      DynamicSupervisor.terminate_child(supervisor, pid)
+    end
+
+    :ok
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})
