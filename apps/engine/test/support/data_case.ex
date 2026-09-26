@@ -147,6 +147,41 @@ defmodule Engine.DataCase do
   end
 
   @doc """
+  Roda `fun` com a LIMPEZA do `registro` suspensa: um processo que morre lá
+  dentro continua com a chave no Registry até o fim de `fun`.
+
+  É a janela que o Registry tem de verdade — ele apaga a chave de forma
+  ASSÍNCRONA, quando a partição recebe o EXIT (medido: ~2% das vezes a chave
+  ainda está lá logo depois de `DynamicSupervisor.terminate_child/2`) —,
+  aberta de propósito para o teste não depender de sorte (AT-204). Esperar a
+  partição por tempo (`Process.sleep` em laço) era o que os testes faziam
+  antes, e escondia que o código de produção tomava o pid morto por vivo.
+
+  Registrar a chave por cima de um pid morto continua funcionando com a
+  partição suspensa (o Registry não recusa), e é isso que o código sob teste
+  precisa fazer.
+  """
+  def com_limpeza_do_registry_suspensa(registro, fun) do
+    particoes =
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.map(&Process.whereis(Module.concat(registro, "PIDPartition#{&1}")))
+      |> Enum.take_while(& &1)
+
+    # Nome interno do Registry: se ele mudar, o teste NÃO pode passar calado
+    # sem ter suspendido nada.
+    if particoes == [],
+      do: ExUnit.Assertions.flunk("partição de #{inspect(registro)} não encontrada")
+
+    Enum.each(particoes, &:sys.suspend/1)
+
+    try do
+      fun.()
+    after
+      Enum.each(particoes, &:sys.resume/1)
+    end
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})

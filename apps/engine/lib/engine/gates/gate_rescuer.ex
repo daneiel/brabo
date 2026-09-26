@@ -130,8 +130,16 @@ defmodule Engine.Gates.GateRescuer do
   defp dispatch_fresh("secops", project_id, task_id),
     do: :ok = Dispatcher.run_secops(project_id, task_id)
 
-  defp locally_alive?(project_id, gate),
-    do: Registry.lookup(Engine.Gates.Registry, {project_id, gate}) != []
+  # VIVO, e não só registrado (AT-204): o Registry apaga a chave de forma
+  # ASSÍNCRONA, e logo depois de o processo morrer o lookup ainda pode devolver
+  # o pid morto — a linha órfã seria tomada por "processo local vivo" e o
+  # resgate não religaria nada.
+  defp locally_alive?(project_id, gate) do
+    case Registry.lookup(Engine.Gates.Registry, {project_id, gate}) do
+      [{pid, _}] -> Process.alive?(pid)
+      [] -> false
+    end
+  end
 
   defp stale_after_seconds,
     do: Application.get_env(:engine, :gate_rescue_stale_after_seconds, 900)
