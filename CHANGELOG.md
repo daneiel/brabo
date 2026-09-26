@@ -17,6 +17,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: o runbook em inglês mostra a saída REAL do `rewrap-deks` (AT-222).
+  O exemplo vinha traduzido (`re-wrapped=`, `already on current key=`,
+  `failures=`), mas o script imprime em português (`re-embrulhados=`,
+  `já na chave atual=`, `falhas=`) — quem procurasse `failures=0` na saída não
+  acharia. O bloco passa a ser o texto de `main()` palavra por palavra, com a
+  glosa dos rótulos ao lado e os dois outros desfechos (`nada a fazer` e o de
+  falha, que sai com código 1); a prosa e a tabela de sintomas usam os rótulos
+  reais.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16
