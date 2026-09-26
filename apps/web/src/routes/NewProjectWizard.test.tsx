@@ -370,8 +370,9 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     // `FolderBrowserModal` — o comando manual (colapsado atrás de "Prefiro
     // rodar manualmente") agora inclui `--token`, o que a divergência de
     // antes não fazia.
-    expect(screen.getByText(/brabo-runner --project/)).toBeTruthy();
-    expect(screen.getByText(/--token/)).toBeTruthy();
+    // (O aviso do botão Procurar pasta, AT-214, também mostra um comando —
+    // sem `--token`, que é o que distingue o do painel.)
+    expect(screen.getByText(/brabo-runner --project .*--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
@@ -624,6 +625,54 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     await ateWorkspace();
     fireEvent.click(screen.getByText('Runner local'));
   }
+
+  /**
+   * AT-214: o pré-requisito do botão é dito ANTES do clique, em texto (ADR
+   * 0064). Neste modo o navegador só lista o disco com um `brabo-runner`
+   * rodando e conectado (RN-437/RN-533, por construção) — e o dono clicou,
+   * "não funcionou", sem a tela ter dito isso nem a alternativa.
+   */
+  it('antes do clique, diz que o botão exige o brabo-runner rodando, com o comando, e que digitar é a alternativa', async () => {
+    await ateWorkspaceRunner();
+
+    const aviso = screen.getByTestId('aviso-procurar-runner');
+    expect(aviso).toHaveTextContent(/só funciona com o brabo-runner rodando/);
+    expect(aviso).toHaveTextContent(
+      'brabo-runner --project <id do projeto> --dir <pasta>',
+    );
+    expect(aviso).toHaveTextContent(/digite o caminho no campo acima/);
+    // Texto, nunca tooltip: o botão continua clicável e sem `title`.
+    const botao = screen.getByRole('button', { name: /Procurar pasta/i });
+    expect(botao).not.toBeDisabled();
+    expect(botao).not.toHaveAttribute('title');
+    expect(createProject).not.toHaveBeenCalled();
+
+    // O caminho digitado entra no comando que o aviso mostra.
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    expect(aviso).toHaveTextContent('--dir /home/voce/projetos/loja');
+  });
+
+  it('o aviso fala a língua da tela', async () => {
+    await i18n.changeLanguage('en');
+    montar();
+    fireEvent.click(screen.getByText('Create new'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByText('Local runner'));
+
+    expect(screen.getByTestId('aviso-procurar-runner')).toHaveTextContent(
+      /only works with brabo-runner running/,
+    );
+    expect(screen.getByTestId('aviso-procurar-runner')).toHaveTextContent(
+      /type the path in the field above/,
+    );
+  });
+
+  it('fora do modo runner o aviso não aparece — Pasta montada navega pela api', async () => {
+    await ateWorkspaceComBase();
+    expect(screen.queryByTestId('aviso-procurar-runner')).not.toBeInTheDocument();
+  });
 
   it('"Procurar pasta..." cria o projeto antecipadamente e abre o modal com o id real', async () => {
     createProject.mockResolvedValue({ id: 'proj-runner-1' });
