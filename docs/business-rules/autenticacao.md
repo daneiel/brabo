@@ -137,12 +137,45 @@ verificação, para a rotação não ter janela de indisponibilidade.
 - **Onde:** `apps/api/src/interfaces/http/auth/engine-service.guard.ts:44` +
   `infrastructure/security/service-token.ts` +
   `apps/engine/lib/engine_web/plugs/verify_service_token.ex`
-- **Teste:** `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`
-  e `test/interfaces/route-surface.spec.ts`
+- **Teste:** `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`,
+  `test/interfaces/route-surface.spec.ts` e, para a rotação do lado da api
+  (anterior aceito só na verificação, quem chama manda o atual, removido o
+  anterior o velho cai), `test/infrastructure/security/service-token.spec.ts`
+  (describe "rotação do BRABO_SERVICE_TOKEN") e
+  `test/interfaces/engine-service.guard.spec.ts` ([RN-597](#rn-597))
 - **Borda:** a isenção de rate limit vem do METADADO da rota, não do guard. O
   `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer guard de controller —
   quando ele decide, o `EngineServiceGuard` ainda não rodou.
 - **Origem:** [ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
+### RN-597 — Trocar o pepper é logout global, e sem `AUTH_TOKEN_PEPPER` o pepper É o `AUTH_JWT_SECRET` {#rn-597}
+
+O pepper que chaveia o HMAC dos tokens opacos não tem `_PREVIOUS`, e trocá-lo
+tem consequência, não procedimento: todo refresh token em circulação, todo link
+de verificação de e-mail e de redefinição de senha em aberto e todo token de
+acesso pessoal (PAT) deixam de ser achados, porque o hash recalculado com o
+pepper novo não casa com o gravado. A refresh recusada registra
+`refresh_unknown` (e não `refresh_reuse_detected`), o link diz "Link inválido
+ou expirado", e os baldes de lockout mudam de chave — conta travada destrava. A
+SENHA sobrevive (argon2id com salt por registro, sem pepper): trocar o pepper
+custa um login, nunca uma conta, e a api sobe normalmente com o valor novo.
+
+O pepper sem valor próprio cai no `AUTH_JWT_SECRET` (`pepper`, o `??` sobre
+`passphraseAtual()`). Por isso a promessa do runbook de que trocar o
+`AUTH_JWT_SECRET` não desloga ninguém só vale com `AUTH_TOKEN_PEPPER`
+DEFINIDO; sem ele, a rotação do JWT é também a do pepper, com todas as
+consequências acima.
+
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:137`
+  (`pepper`), `:154` (`hashDeToken`), `:173` (`baldeDeEmail`);
+  `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:142`
+- **Teste:** `test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`,
+  contra o Postgres de teste
+- **Borda:** o `docker-compose.prod.yml` e o `docker-compose.install.yml` não
+  repassam `AUTH_TOKEN_PEPPER` à api, então nessas instalações o pepper é
+  sempre o `AUTH_JWT_SECRET`; o Kubernetes o define à parte (`brabo-secrets`).
+- **Origem:** [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
+  AT-196
 
 ### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
 
