@@ -547,11 +547,17 @@ rules:
       # degrau, destino nem versão; a doc dele é a própria RN-581 em
       # `docs/business-rules.md` e `docs/reference/configuration.md`.
       #
-      # O extglob EXCLUI os onze pelo nome e continua casando com todo o resto
+      # `previous-nos-composes.spec.ts` é o DÉCIMO SEGUNDO, da mesma família
+      # (AT-201): afere que toda `_PREVIOUS` que api, engine e broker leem chega
+      # a eles pelos três composes, vazia por padrão (RN-595). Não toca degrau,
+      # destino nem versão; a doc dele é a RN-595 em
+      # `docs/business-rules/autenticacao.md` e as rotações do runbook.
+      #
+      # O extglob EXCLUI os doze pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador|teto-ocioso-nos-composes)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador|teto-ocioso-nos-composes|previous-nos-composes)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.

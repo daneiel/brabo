@@ -2578,14 +2578,21 @@ Verification: on the api, `apps/api/test/infrastructure/security/service-token.s
 `apps/api/test/interfaces/engine-service.guard.spec.ts`; on the engine,
 `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`.
 
-> **The `_PREVIOUS` variables don't reach the containers by themselves.**
-> None of `AUTH_JWT_SECRET_PREVIOUS`, `BRABO_SERVICE_TOKEN_PREVIOUS` (or
-> `CREDENTIALS_MASTER_KEY_PREVIOUS`) is mapped in the `environment:` of
-> `docker-compose.prod.yml` or `docker-compose.install.yml`, and the
-> Compose doesn't forward the host environment; nor are they listed in the
-> Kubernetes `ExternalSecret` (`deploy/k8s/base/common/externalsecrets.yaml`),
-> which only materializes the keys it declares. Setting one in `.env` or in
-> the secret provider is inert until it's also wired there — confirm it
+> **Where the `_PREVIOUS` variables reach the process.** In the three
+> composes (`docker-compose.yml`, `docker-compose.prod.yml`,
+> `docker-compose.install.yml`) all of them are mapped in the `environment:`
+> of the service that reads them, empty by default — setting one in `.env`
+> and recreating the service is enough
+> ([RN-595](business-rules/autenticacao.md#rn-595); guarded by
+> `scripts/ci/previous-nos-composes.spec.ts`, which derives the list from the
+> code). **In Kubernetes they still don't**: the Pods read `envFrom:
+> brabo-secrets`, and the `ExternalSecret`
+> (`deploy/k8s/base/common/externalsecrets.yaml`) only materializes the keys
+> it lists. They aren't listed on purpose — a `data` entry whose property is
+> missing from the provider fails the sync of the whole Secret, and a missing
+> `_PREVIOUS` is the normal state. How they get to the Pod is an open
+> decision about the secret store; until then, a rotation in the cluster
+> needs the variable set on the Deployment by hand. Either way, confirm it
 > inside the container (`printenv`) before relying on step 2.
 
 ```bash
@@ -2687,6 +2694,13 @@ openssl rand -hex 32   # the new key
 In the local cluster the source Secret is created by the bootstrap; in
 staging/prod the value goes into the provider that External Secrets reads
 from. Then restart the api so it loads both:
+
+> Publishing `CREDENTIALS_MASTER_KEY_PREVIOUS` to the provider does **not**
+> put it in the Pod: the `ExternalSecret` doesn't list it (see the note at the
+> end of [Auth key rotation](#rotacao-das-chaves-do-auth)). Until that
+> decision is taken, set it on the api Deployment by hand for the duration of
+> the rotation and remove it in step 3. In the composes it's already mapped —
+> it's the `.env` plus recreating the api.
 
 ```bash
 kubectl -n brabo rollout restart deployment/api
