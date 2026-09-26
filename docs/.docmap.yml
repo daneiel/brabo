@@ -448,6 +448,10 @@ rules:
       - "package.json"
       - "apps/api/package.json"
       - "apps/web/package.json"
+      - "apps/runner/package.json"
+      - "apps/broker/package.json"
+      - "packages/docker-port/package.json"
+      - "website/package.json"
       - "Makefile"
       - "scripts/**"
     docs: ["docs/reference/scripts.md", "README.md"]

@@ -17,6 +17,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: a referência de scripts gerada passa a listar `apps/runner`,
+  `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
+  prometia "every pnpm script" e omitia três membros do workspace — 16
+  comandos, de 103 para 119. Os três aparecem com o nome que o `--filter`
+  aceita (`@brabo/runner`, `@brabo/broker`, `@brabo/docker-port`), e a regra
+  `scripts` do docmap passa a observar os `package.json` deles e o do
+  `website/`, que o gerador já lia.
 - **docker**: seis flags booleanas do engine passam a chegar a ele na
   **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
   `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
