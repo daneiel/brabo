@@ -87,7 +87,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   @agent "infra"
 
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao}
+  alias Engine.Agents.{FalhaDeTurno, Reidratacao, ResultadoDeFerramenta}
   @max_iterations 14
 
   # --- API pública ---
@@ -311,7 +311,11 @@ defmodule Engine.Infra.InfraLeadServer do
           args: %{title: title, paths: caminhos}
         })
 
-        emit(state, "tool.result", %{tool: "propose_infra_pr", ok: false, erro: motivo})
+        emit(
+          state,
+          "tool.result",
+          ResultadoDeFerramenta.payload("propose_infra_pr", {:error, motivo})
+        )
 
         append(state, %{
           "role" => "tool",
@@ -347,7 +351,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
 
-    text =
+    resultado =
       case recusa_local_de_subida(:container_start, state.project_id) do
         nil ->
           actor = %{kind: "agent", id: @agent}
@@ -360,23 +364,17 @@ defmodule Engine.Infra.InfraLeadServer do
                  payload
                ) do
             {:ok, %{"id" => _id, "status" => status}} ->
-              "container_start proposto (status #{status}) — decisão final do usuário."
+              {:ok, "container_start proposto (status #{status}) — decisão final do usuário."}
 
             {:error, reason} ->
-              "container_start recusado: #{motivo_da_recusa_da_api(reason)}"
+              {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
           end
 
         motivo ->
-          motivo
+          {:error, motivo}
       end
 
-    append(state, %{
-      "role" => "tool",
-      "content" => text,
-      "toolCallId" => id,
-      "name" => "propose_container_start",
-      :pinned => false
-    })
+    registrar_resultado(state, id, "propose_container_start", resultado)
   end
 
   # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
@@ -413,7 +411,7 @@ defmodule Engine.Infra.InfraLeadServer do
       args: %{rationale: rationale}
     })
 
-    text =
+    resultado =
       case recusa_local_de_subida(:container_start_via_runner, state.project_id) do
         nil ->
           actor = %{kind: "agent", id: @agent}
@@ -426,23 +424,18 @@ defmodule Engine.Infra.InfraLeadServer do
                  %{rationale: rationale}
                ) do
             {:ok, %{"id" => _id, "status" => status}} ->
-              "container_start_via_runner proposto (status #{status}) — decisão final do usuário."
+              {:ok,
+               "container_start_via_runner proposto (status #{status}) — decisão final do usuário."}
 
             {:error, reason} ->
-              "container_start_via_runner recusado: #{inspect(reason)}"
+              {:error, "container_start_via_runner recusado: #{inspect(reason)}"}
           end
 
         motivo ->
-          motivo
+          {:error, motivo}
       end
 
-    append(state, %{
-      "role" => "tool",
-      "content" => text,
-      "toolCallId" => id,
-      "name" => "container_start_via_runner",
-      :pinned => false
-    })
+    registrar_resultado(state, id, "container_start_via_runner", resultado)
   end
 
   # `nil` quando a tool PODE propor; mensagem NOMEADA quando não pode — a
@@ -523,15 +516,25 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    registrar_resultado(state, id, name, run_tool(name, args, state))
+  end
+
+  # O desfecho de uma ferramenta despachada inline, nos DOIS lugares de
+  # sempre (RN-593): o `tool.result` durável, montado pelo MESMO módulo dos
+  # seis conversacionais (RN-589) — antes o Infra Lead só gravava o de recusa
+  # de `propose_infra_pr`, com payload próprio, e o reidratado lia "o log não
+  # registra o desfecho" sobre toda chamada de `validate_infra_file` e de
+  # subida de container —, e a mensagem `role: "tool"` que o modelo lê.
+  #
+  # `propose_infra_pr` ACEITA não passa por aqui, de propósito: ela não emite
+  # `tool.call` (o rastro dela é a `proposed_action`, RN-577), e um
+  # `tool.result` sem chamada viraria nota órfã na reidratação.
+  defp registrar_resultado(state, id, name, {_sentido, texto} = resultado) do
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
 
     append(state, %{
       "role" => "tool",
-      "content" => text,
+      "content" => texto,
       "toolCallId" => id,
       "name" => name,
       :pinned => false

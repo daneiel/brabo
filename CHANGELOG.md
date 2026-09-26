@@ -64,6 +64,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nunca para escrita recusada ou desfeita. Escrita vinda do engine não é
   avisada em dobro. O teto de 300 req/min não muda e o fallback continua.
 
+- **engine**: o Dev Lead que suspende numa aprovação e o Infra Lead passam a
+  gravar o `tool.result` com o texto, pelo mesmo módulo dos seis (AT-190,
+  RN-593). O Dev Lead grava na RETOMADA (`action_settled`), com o texto que o
+  modelo lê e `ok: false` para recusa ou falha — nunca "pending" na suspensão.
+  O Infra Lead grava para `validate_infra_file`, `propose_container_start` e
+  `container_start_via_runner`, aceitas ou recusadas; antes só a recusa de
+  `propose_infra_pr` deixava resultado, e o agente reidratado não sabia o
+  desfecho das outras.
 - **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
   conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
   texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam

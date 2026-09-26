@@ -14980,11 +14980,11 @@ desfecho, e o agente reidratado sabia QUE chamou `create_epic`, não o id do
 5. `propose_adr` deixou de gravar o próprio `tool.result` de recusa: o servidor
    do Arquiteto o grava para toda ferramenta, e os dois duplicariam o evento.
 
-**O que fica aberto:** (a) o Dev Lead que SUSPENDE (`{:pending, _}`,
-`propose_execution_plan`/`assess_implementability`) não grava `tool.result` na
-suspensão nem no `action_settled` — o desfecho real chega depois, e não foi
-tocado; (b) o `InfraLeadServer` tem o próprio `tool.result` e não passa por
-este módulo (outro card); (c) o teto de 2.000 é ESCOLHA, não medida sobre o
+**O que fica aberto:** (a) e (b) fecharam na [RN-593](#rn-593) — (a) o Dev
+Lead que SUSPENDE (`{:pending, _}`,
+`propose_execution_plan`/`assess_implementability`) não gravava `tool.result` na
+suspensão nem no `action_settled`; (b) o `InfraLeadServer` tinha o próprio
+`tool.result` e não passava por este módulo; (c) o teto de 2.000 é ESCOLHA, não medida sobre o
 acervo — nenhum resultado real foi amostrado; (d) **decisão de produto
 pendente (TODO humano da AT-151):** as ferramentas dos seis devolvem ids,
 listas de regras/backlog/métricas e mensagens de erro — nenhuma lê arquivo do
@@ -15112,3 +15112,58 @@ direta.
   `apps/engine/test/engine/infra/infra_lead_server_test.exs` (o texto do 409
   chega ao modelo)
 - **Origem:** AT-105 — declarado fora do recorte pelo ADR 0161
+
+### RN-593 — O Dev Lead suspenso e o Infra Lead gravam o `tool.result` pelo módulo comum {#rn-593}
+
+A [RN-589](#rn-589) declarou dois abertos: o Dev Lead que suspende numa
+aprovação não gravava `tool.result` em momento nenhum, e o `InfraLeadServer` só
+gravava o de recusa de `propose_infra_pr`, com payload montado à mão. Nos dois
+casos o agente reidratado ([RN-580](#rn-580)) lia "o log não registra o
+desfecho desta chamada" sobre um plano que o usuário já tinha decidido, ou sobre
+toda chamada de `validate_infra_file` e de subida de container.
+
+**A regra:**
+
+1. **Dev Lead: o `tool.result` nasce na RETOMADA, nunca na suspensão.** Quando
+   `propose_execution_plan`/`assess_implementability` suspende
+   (`{:pending, _}`), o log fica só com o `tool.call`: não há desfecho, e
+   gravar "pending" ali seria a mesma mentira que seria para o modelo. Quando o
+   `{:action_settled, …}` da MESMA ação chega, o servidor grava o `tool.result`
+   com o MESMO texto que entra na mensagem `role: "tool"`. `ok` segue a
+   partição de `texto_do_desfecho/1`: `executed`/`auto_approved`/`approved`
+   são `true`; recusa, falha e status que o módulo não conhece são `false` —
+   `ok: true` sobre desfecho que ninguém classificou seria afirmar sucesso sem
+   saber. Desfecho de OUTRA ação continua ignorado e não grava nada.
+2. **Infra Lead: toda ferramenta despachada inline grava.**
+   `validate_infra_file`, `propose_container_start` e
+   `container_start_via_runner` gravam `tool.result` por
+   `Engine.Agents.ResultadoDeFerramenta.payload/2` — proposta aceita pela api é
+   `ok: true`; recusa local por modo ([RN-566](#rn-566)), recusa da api
+   ([RN-591](#rn-591)) e runner ausente são `ok: false` com o motivo. A recusa
+   de `propose_infra_pr` sem repositório ([RN-577](#rn-577)) passa pelo mesmo
+   módulo, com o payload de antes (`tool`, `ok: false`, `erro`) e o corte.
+3. **`propose_infra_pr` aceita segue SEM `tool.result`**, de propósito: ela não
+   emite `tool.call` (o rastro dela é a `proposed_action`), e um resultado sem
+   chamada viraria nota órfã na reidratação.
+
+**O que segue aberto:** a suspensão atravessada por um restart do engine
+continua perdendo a inscrição no `Wake` (ADR 0086) — ali o `tool.result` nunca
+nasce, e a reidratação diz que o log não tem o desfecho, o que é verdade; o
+teto de 2.000 caracteres continua ESCOLHA, não medida: nenhum acervo real foi
+amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
+`validate_infra_file` (hadolint/actionlint) pode citar trechos do arquivo que o
+PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
+[RN-589](#rn-589) com o primeiro caso concreto.
+
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:257`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:610`
+  (`sentido_do_desfecho/1`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:532`
+  (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
+  suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
+  `:392` (recusado é `ok: false` com o motivo);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:253`
+  (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
+  `:653` e `:691` (`container_start_via_runner` com e sem runner)
+- **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)

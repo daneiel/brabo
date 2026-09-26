@@ -61,7 +61,10 @@ defmodule Engine.Agents.DevLeadServer do
   momento — nunca antes, porque gravar "pending" ali mentiria pro modelo que
   o comando já respondeu isso (mesmo raciocínio do dev agent, ver
   `Engine.Harness.Hooks.ActionPipeline` e `Engine.Harness.ToolLoop`). O laço
-  retoma de `pendente.remaining`, que já desconta a iteração suspensa.
+  retoma de `pendente.remaining`, que já desconta a iteração suspensa. O
+  `tool.result` da chamada suspensa nasce no MESMO momento e pelo mesmo
+  motivo (RN-593): na suspensão não há desfecho para gravar, e o log fica só
+  com o `tool.call` até a decisão chegar.
 
   Enquanto `aguardando_aprovacao` está setado, uma segunda `user_message`
   NÃO inicia turno novo — vira `agent.error` (origem `politica`) explicando
@@ -255,9 +258,22 @@ defmodule Engine.Agents.DevLeadServer do
         {:action_settled, %{action_id: action_id} = desfecho},
         %{aguardando_aprovacao: %{action_id: action_id} = pendente} = state
       ) do
+    texto = texto_do_desfecho(desfecho)
+
+    # O `tool.result` que a suspensão NÃO gravou (RN-593): é aqui que o
+    # desfecho real existe, e é ele — nunca a palavra "pending" — que vai para
+    # o log, pelo MESMO módulo dos seis (RN-589). Sem isto, o Dev Lead
+    # reidratado lia "o log não registra o desfecho" sobre um plano que o
+    # usuário já tinha aprovado ou recusado.
+    emit(
+      state,
+      "tool.result",
+      ResultadoDeFerramenta.payload(pendente.tool_name, {sentido_do_desfecho(desfecho), texto})
+    )
+
     mensagem_tool = %{
       "role" => "tool",
-      "content" => texto_do_desfecho(desfecho),
+      "content" => texto,
       "toolCallId" => pendente.tool_call_id,
       "name" => pendente.tool_name,
       :pinned => false
@@ -585,6 +601,17 @@ defmodule Engine.Agents.DevLeadServer do
   end
 
   defp texto_do_desfecho(%{status: status}), do: "desfecho da ação: #{status}"
+
+  # O `ok` do `tool.result` da retomada — a MESMA partição de
+  # `texto_do_desfecho/1`: os três status de sucesso contam como sucesso, e
+  # todo o resto (recusa, falha, status que este módulo não conhece) como
+  # erro. Status desconhecido cair em `:error` é de propósito: `ok: true`
+  # sobre um desfecho que ninguém classificou seria afirmar sucesso sem saber.
+  defp sentido_do_desfecho(%{status: status})
+       when status in ["executed", "auto_approved", "approved"],
+       do: :ok
+
+  defp sentido_do_desfecho(_desfecho), do: :error
 
   # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
   # default: o único call site aqui sempre passa os 3 argumentos.
