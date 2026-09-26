@@ -1687,7 +1687,7 @@ end):
 | `engine-<pod>.log` | `kubectl logs -f` of **every** engine pod — the ones already up (whole log, from boot), which the rollout kills, and every pod created later — attached as soon as it is `Running` |
 | `final-<pod>.log` | a non-follow copy of the pods still up at the end, covering a `logs -f` that dropped |
 | `events.log` | `kubectl get events -w` for the namespace, with each event's own timestamps (`SuccessfulRescale`, `ScalingReplicaSet`, `Killing`…) |
-| `replicas.log` | every 2 s: `<epoch> <Deployment spec.replicas> <ready> <HPA current> <HPA desired>` |
+| `replicas.log` | every 2 s (`EVIDENCIA_INTERVALO`, which the spec shortens): `<epoch> <Deployment spec.replicas> <ready> <HPA current> <HPA desired>` |
 | `donos.log` | every owner read of the check: `<epoch> <session> <owner node or ->` |
 | `donos-durante-rollout.log` | the same read, looped while `rollout status` runs — which replica each handoff landed on. Kept apart because a read mid-rollout sometimes hits a pod on its way out, and must not feed the verdict |
 | `engine-estado.txt` | read-only: the test sessions' rows in `engine.session_states` (without a row, neither the drain nor the `Adopter` sees a session) and the last `SessionAdoptionWorker` jobs, taken at the end of both outcomes |
