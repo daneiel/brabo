@@ -28,6 +28,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/ci/previous-nos-composes.spec.ts` deriva a lista do código e reprova
   a que faltar. O Kubernetes segue sem elas (o `ExternalSecret` não lista chave
   opcional), declarado no runbook.
+- **docmap**: a regra `politica-de-branches` deixa de cobrar
+  `branching-policy.md` de todo spec novo de `scripts/ci/` (AT-206). O extglob
+  "tudo menos onze exclusões" virou lista de PERMITIDOS — os catorze scripts
+  que declaram `branching-policy.md` como fonte no docblock, e os specs deles
+  —, e `scripts/docs/politica-de-branches.spec.ts` deriva esse conjunto do
+  repositório e reprova se a regra divergir, então script de política novo
+  continua sendo cobrado.
+- **dev**: o `scripts/dev/reset-total.sh` deixa de morrer DEPOIS do
+  `DROP SCHEMA` por motivo do host (AT-203). Antes de qualquer efeito ele roda
+  `mix deps.get` e `mix compile` em `apps/engine` — `pnpm engine:migrate` roda
+  no HOST, e com dependência nova no `mix.lock` (mint 1.10.1, #613) o reset de
+  26/09 morreu com `lock mismatch` com o banco já apagado — e confere que
+  `drizzle-kit`/`ts-node` resolvem no `node_modules` do host. Também confere a
+  senha do Neo4j contra a do volume (o Neo4j só aplica `NEO4J_AUTH` na criação
+  de `neo4j_data`; medido: volume de 13/09, container de 26/09 com a senha
+  default, healthcheck `unauthorized`) e, se o `up --wait` reprovar por isso,
+  DIZ a causa e o conserto em vez do "RESET INCOMPLETO" genérico — sem apagar
+  volume (AT-181). Recusa antes do primeiro efeito sai como `RESET NÃO
+  COMEÇOU … Nada foi parado nem apagado`. Prova em
+  `scripts/dev/reset-total-ordem.spec.ts`, que roda o script inteiro com
+  `docker`/`mix`/`pnpm` de mentira no PATH.
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina
@@ -104,6 +125,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/` reprova com saída 1). Os dois avisos que ele acusava na `dev`
   (`no-useless-spread` em `pty.ts`, `no-unsafe-optional-chaining` num spec)
   entram corrigidos no mesmo PR.
+- **ci**: `apps/broker` e `packages/docker-port` ganham lint (AT-207) — nem
+  script nem passo de CI existiam para os dois. Mesma configuração do runner
+  (`.oxlintrc.json` com `correctness` como erro, `oxlint --deny-warnings`, sem
+  `--fix`), sobre `src/` e os `*.config.ts` da raiz de cada pacote, com um
+  passo cada no job `Lint` do `ci.yml`. Provado por mutação: um `x === NaN`
+  plantado em cada um dos quatro alvos reprova com saída 1. Na `dev` os dois
+  já passavam limpos — nenhum erro a corrigir.
 - **api**: os três `no-unsafe-assignment` de
   `projects-summary.repository.spec.ts` saem (AT-188). O passo de lint do CI
   não os via porque verifica só `src/**/*.ts`: `apps/api/test/` inteira fica

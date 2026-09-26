@@ -2209,7 +2209,7 @@ um colapso de doze mensagens é UMA entrada na tela.
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/SessionPage.tsx:284` (o corte do fio), `:1898`
+  toggle); `apps/web/src/routes/SessionPage.tsx:223` (o corte do fio), `:1459`
   (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
@@ -2318,7 +2318,7 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:325` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+  `:359` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`

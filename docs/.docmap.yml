@@ -469,95 +469,27 @@ rules:
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/backmerge-gate.yml"
-      # NÃO é `scripts/ci/**`: era, e cobrou `branching-policy.md` duas vezes
-      # de scripts que não têm nada a ver com branch — `coverage-floor.ts`
-      # (#410, que saiu pelo escape hatch) e `actions-pinadas.ts`. É o mesmo
-      # defeito que já justificou separar `checks-e-rulesets` daqui, e a mesma
-      # consequência: regra que cobra o que não faz sentido ensina a usar o
-      # escape hatch por reflexo, e aí ele para de significar alguma coisa.
+      # Os scripts de `scripts/ci/` que SÃO a política: os que declaram no
+      # docblock que a fonte deles é `branching-policy.md` (pr-police,
+      # approval-ladder, promote, promotion-check, tag-release, version,
+      # archive-branch, os quatro do gate, alarme-de-tag e os dois do
+      # Dependabot), e o spec de cada um. LISTA DE PERMITIDOS, e não mais o
+      # extglob `scripts/ci/!(…)*` que excluía caso a caso: aquele casava com
+      # todo spec novo de `scripts/ci/` — onde moram os testes que leem o
+      # repositório inteiro como texto —, e cada um que nascia sem nada a ver
+      # com degrau, destino ou versão (coverage-floor, actions-pinadas, as flags
+      # do compose, a marca da RN-558, o teto ocioso, onze até a AT-206) virava
+      # `docs-not-needed` ou mais uma exclusão. Regra que cobra o que não faz
+      # sentido ensina a usar o escape hatch por reflexo.
       #
-      # `auditoria-de-dependencias.ts` (ADR 0140) entrou pelo MESMO critério: o
-      # que ele decide é quando um timeout do endpoint de advisories do npm
-      # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
-      # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
-      #
-      # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
-      # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
-      # api consulta (RN-411), com o mapa que o painel do time consulta
-      # (`apps/web/src/lib/agent-status.ts`) e, desde a RN-572, com a tabela
-      # da árvore do time (`apps/web/src/lib/timeline-tree.ts`), e mora aqui
-      # só porque lê TRÊS apps como texto — `scripts/ci/` é onde vivem os
-      # testes que leem o repositório inteiro. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele são as RN-411 e RN-572 em
-      # `docs/business-rules.md`.
-      #
-      # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
-      # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o
-      # `environment:` do serviço `engine` dos dois composes (RN-540), e mora
-      # aqui porque lê o repositório inteiro como texto — a mesma razão do
-      # `vocabulario-de-eventos-dev.spec.ts` acima. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele é a própria RN-540 em
-      # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
-      # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
-      #
-      # `oferta-de-fonte-na-imagem.spec.ts` é o SEXTO, pelo mesmo critério: ele
-      # verifica que o `THIRD_PARTY_NOTICES.md` é copiado para dentro da imagem
-      # do engine (BRB-017) e que o documento não afirma mais que nenhuma imagem
-      # é publicada. Mora aqui porque lê `docker/`, a raiz e o `.dockerignore`
-      # como texto — a mesma razão dos dois acima. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele é `docs/runbook.md`, na seção de
-      # verificação de artefato publicado, que a regra `config-e-inferencia` já
-      # cobra em `block` pelo mesmo Dockerfile.
-      #
-      # `marca-de-credencial-do-runner.spec.ts` é o SÉTIMO, pelo mesmo critério:
-      # ele compara a MARCA da recusa da RN-558 nos dois lados em que ela vive —
-      # `apps/runner/src/index.ts` (TypeScript) e
-      # `apps/engine/lib/engine/runners/credencial_de_git.ex` (Elixir) —, e mora
-      # aqui porque nenhuma das duas suítes alcança a outra linguagem, que é a
-      # mesma razão dos três acima. Degrau, destino e versão de branch não
-      # aparecem nele; a doc dele é a própria RN-558 em `docs/business-rules.md`.
-      #
-      # `imagens-pinadas.ts` é o OITAVO, e pelo critério mais direto de todos:
-      # ele é o irmão do `actions-pinadas.ts`, que já está nesta lista pelo
-      # mesmo motivo. O que ele decide é se uma imagem de terceiro pode entrar
-      # por tag — não toca degrau, destino nem versão de branch. A doc dele é a
-      # mesma do irmão, `cadeia-de-suprimentos-do-ci.md`, e a regra
-      # `cadeia-de-suprimentos-do-ci` abaixo o vigia em `block`.
-      #
-      # `checksums-nao-espera-a-matriz.spec.ts` é o NONO: ele afere que o
-      # manifesto assinado da Release (RN-524) não depende da matriz de
-      # binários. É sobre RELEASE, e portanto o candidato mais plausível desta
-      # lista a pertencer à política — mas a política de branches é sobre
-      # DEGRAU (quem promove o quê, para onde) e sobre a VERSÃO que a função da
-      # branch decide, e nenhuma das duas aparece aqui: o que ele mede é o
-      # ARTEFATO que uma tag já cortada publica. A doc dele é a própria RN-524
-      # em `docs/business-rules.md`.
-      #
-      # `assets-do-instalador.ts` é o DÉCIMO (ADR 0160, RN-570): ele diz quais
-      # arquivos do checkout de uma tag viram asset da Release e com que nome,
-      # para o `install.sh` baixá-los e conferi-los contra o manifesto
-      # assinado. Como o nono, é sobre o ARTEFATO que uma tag já cortada
-      # publica, e não sobre degrau, destino ou a versão que a função da branch
-      # decide. A doc dele é a própria RN-570 em `docs/business-rules.md`, o
-      # ADR 0160 e `cadeia-de-suprimentos-do-ci.md`.
-      #
-      # `teto-ocioso-nos-composes.spec.ts` é o DÉCIMO PRIMEIRO, irmão do
-      # quinto (AT-153): afere que o teto da conversa ociosa (RN-581) chega ao
-      # engine nos três composes com o default do `runtime.exs`. Não toca
-      # degrau, destino nem versão; a doc dele é a própria RN-581 em
-      # `docs/business-rules.md` e `docs/reference/configuration.md`.
-      #
-      # `previous-nos-composes.spec.ts` é o DÉCIMO SEGUNDO, da mesma família
-      # (AT-201): afere que toda `_PREVIOUS` que api, engine e broker leem chega
-      # a eles pelos três composes, vazia por padrão (RN-595). Não toca degrau,
-      # destino nem versão; a doc dele é a RN-595 em
-      # `docs/business-rules/autenticacao.md` e as rotações do runbook.
-      #
-      # O extglob EXCLUI os doze pelo nome e continua casando com todo o resto
-      # — inclusive com script de política que ainda não existe. Falha fechado:
-      # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
-      # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador|teto-ocioso-nos-composes|previous-nos-composes)*"
+      # O preço de trocar exclusão por inclusão era perder o "falha fechado"
+      # (script de política NOVO passaria sem cobrar a doc), e ele NÃO é pago:
+      # `scripts/docs/politica-de-branches.spec.ts` deriva o conjunto do
+      # próprio repositório — todo arquivo de `scripts/ci/` que cita
+      # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
+      # lista divergir. Script de política novo declara a fonte no cabeçalho,
+      # como os catorze, e o spec o cobra aqui.
+      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
