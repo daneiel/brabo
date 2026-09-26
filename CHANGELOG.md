@@ -25,6 +25,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   glosa dos rótulos ao lado e os dois outros desfechos (`nada a fazer` e o de
   falha, que sai com código 1); a prosa e a tabela de sintomas usam os rótulos
   reais.
+- **docs**: as regras de negócio em pt-BR dizem o que só existe em inglês
+  (AT-223). Medido: a tradução tem 134 das 282 RNs de `business-rules.md`,
+  91 de 95 em `autenticacao.md` e 69 de 71 em `custo.md` — 154 RNs só em
+  inglês. Cada página pt-BR abre com a nota e a lista, com link para a âncora
+  na versão em inglês (o mesmo molde da AT-209 no runbook). E quatro âncoras
+  pt-BR levavam à regra ERRADA: a tradução numerava 421–424 as regras que o
+  inglês numera 428–431, então `#rn-421` em pt-BR abria outra regra; foram
+  renumeradas para a âncora apontar para a mesma regra nos dois idiomas.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16

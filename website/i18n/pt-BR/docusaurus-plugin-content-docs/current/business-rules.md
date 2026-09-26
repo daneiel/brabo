@@ -9,6 +9,22 @@ keywords: [regras de negócio, domínio, máquina de estados, aprovação, RBAC]
 
 # Regras de negócio
 
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-223): a [versão em inglês](pathname://../business-rules) é a fonte, tem
+> 282 RNs nesta página e esta tradução tem 134. As 148
+> abaixo **só existem lá**, e link para uma delas aponta para a versão
+> em inglês:
+>
+> [RN-421](pathname://../business-rules#rn-421)–[RN-427](pathname://../business-rules#rn-427), [RN-432](pathname://../business-rules#rn-432)–[RN-441](pathname://../business-rules#rn-441), [RN-443](pathname://../business-rules#rn-443), [RN-447](pathname://../business-rules#rn-447)–[RN-469](pathname://../business-rules#rn-469), [RN-471](pathname://../business-rules#rn-471)–[RN-481](pathname://../business-rules#rn-481), [RN-485](pathname://../business-rules#rn-485)–[RN-487](pathname://../business-rules#rn-487), [RN-490](pathname://../business-rules#rn-490)–[RN-505](pathname://../business-rules#rn-505), [RN-507](pathname://../business-rules#rn-507)–[RN-509](pathname://../business-rules#rn-509), [RN-511](pathname://../business-rules#rn-511)–[RN-534](pathname://../business-rules#rn-534), [RN-539](pathname://../business-rules#rn-539)–[RN-552](pathname://../business-rules#rn-552), [RN-556](pathname://../business-rules#rn-556)–[RN-563](pathname://../business-rules#rn-563), [RN-565](pathname://../business-rules#rn-565)–[RN-570](pathname://../business-rules#rn-570), [RN-572](pathname://../business-rules#rn-572)–[RN-575](pathname://../business-rules#rn-575), [RN-577](pathname://../business-rules#rn-577)–[RN-582](pathname://../business-rules#rn-582), [RN-584](pathname://../business-rules#rn-584)–[RN-593](pathname://../business-rules#rn-593), [RN-599](pathname://../business-rules#rn-599)–[RN-600](pathname://../business-rules#rn-600).
+>
+> As quatro RNs que esta tradução numerava 421–424 são as
+> RN-428–RN-431 da versão em inglês, e foram renumeradas aqui para a
+> âncora levar à MESMA regra nos dois idiomas; as RN-421–RN-424 da
+> lista acima são outras regras, que só existem em inglês.
+>
+> As RNs presentes aqui podem estar mais curtas ou mais antigas que as do
+> inglês (só os títulos foram comparados); na dúvida, o inglês vale.
+
 Cada regra tem **enunciado**, **onde vive** (`arquivo:linha`) e **o teste que a
 cobre**. Se você mudar uma regra, atualize a linha aqui na mesma mudança — é o
 que o [`.docmap.yml`](https://github.com/daneiel/brabo/blob/dev/docs/.docmap.yml)
@@ -4059,7 +4075,7 @@ e-mail sem NENHUM caractere alfanumérico degradam para o literal
 
 ---
 
-### RN-421 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-421}
+### RN-428 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-428}
 
 `promocoesPendentes`/o carrossel de promoção do PO (RN-148) não depende mais
 de scan sobre a janela dos últimos 200 eventos de `useSessionEvents`. A fonte
@@ -4083,7 +4099,7 @@ corte de leitura.
 
 ---
 
-### RN-422 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-422}
+### RN-429 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-429}
 
 O canal `terminal:<projectId>` ganha dois eventos, no MESMO desenho de relay
 do PTY: `fs_list_dir`/`fs_home_dir` (`:web` pede, engine faz relay DIRETO
@@ -4124,7 +4140,7 @@ de texto livre continua sendo o caminho manual, como antes.
 
 ---
 
-### RN-423 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-423}
+### RN-430 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-430}
 
 A aba `prs` resolve o defeito de `ProjectApprovalsTab.tsx`, que escopava a
 seção "PRs em revisão" a `usePendingActions(projectId, latestSession?.id)`
@@ -4164,7 +4180,7 @@ RN-096 já corrigiu para outros tipos).
 
 ---
 
-### RN-424 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-424}
+### RN-431 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-431}
 
 `contagens.arquiteturaPendente` (régua de abas) vem de
 `architecture.pendencies.length` (divergência de validação cruzada
