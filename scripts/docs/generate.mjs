@@ -22,6 +22,7 @@ import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
 import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
+import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
@@ -1040,6 +1041,38 @@ function verificarRefsComSimbolo() {
 }
 
 /**
+ * Todo cabeçalho de RN com `{#rn-NNN}` do MESMO número (AT-230), nos arquivos
+ * de RN de `docs/` e nas traduções pt-BR. A regra e por que o pt-BR entra
+ * estão em `ancoras-de-rn.mjs`.
+ *
+ * Em `block`: a âncora é o contrato dos links de fora, e o `docs:build` não
+ * pega a falta dela (o Docusaurus gera um id pelo texto e compila). Zero
+ * cabeçalhos também reprova — é o check cego.
+ */
+function verificarAncorasDeRn() {
+  const { cabecalhos, problemas } = aferirAncoras(arquivosDeRn(arquivos), ler);
+
+  if (cabecalhos === 0) {
+    pendencias.push('âncoras de RN');
+    console.log(
+      '  CEGO      âncoras de RN — nenhum cabeçalho `### RN-NNN` nos arquivos de RN.\n' +
+        '            Os arquivos mudaram de lugar; ajuste scripts/docs/ancoras-de-rn.mjs.',
+    );
+    return;
+  }
+
+  if (problemas.length === 0) {
+    console.log(`  ok        âncoras de RN (${cabecalhos} cabeçalhos)`);
+    return;
+  }
+
+  pendencias.push('âncoras de RN');
+  for (const p of problemas) {
+    console.log(`  ÂNCORA    ${p.arquivo}:${p.linha} — ${p.rn}: ${p.motivo}`);
+  }
+}
+
+/**
  * A versão anunciada em prosa contra a ÚLTIMA release do CHANGELOG.
  *
  * O README ficou preso em `v0.1.0` da Fase 5 até a v2.1.0 — sete releases
@@ -1133,6 +1166,7 @@ verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
 verificarContagensDerivadasDoCodigo();
 verificarRefsComSimbolo();
+verificarAncorasDeRn();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {
