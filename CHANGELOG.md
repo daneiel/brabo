@@ -17,6 +17,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docmap**: a regra `politica-de-branches` deixa de cobrar
+  `branching-policy.md` de todo spec novo de `scripts/ci/` (AT-206). O extglob
+  "tudo menos onze exclusões" virou lista de PERMITIDOS — os catorze scripts
+  que declaram `branching-policy.md` como fonte no docblock, e os specs deles
+  —, e `scripts/docs/politica-de-branches.spec.ts` deriva esse conjunto do
+  repositório e reprova se a regra divergir, então script de política novo
+  continua sendo cobrado.
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina
