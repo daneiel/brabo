@@ -3306,9 +3306,14 @@ exposed in `docker-compose.yml`.
 > does not forward the host environment — so setting them in `.env` did
 > nothing at all, silently, while three places in the code promised the pause
 > was reversible. They are mapped now, with the code's own default (`false`
-> in both files: the pause itself is unchanged), and
-> `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
-> boolean flag that isn't. On Kubernetes there was nothing to fix — a
+> in both files: the pause itself is unchanged). The **install** compose
+> (`docker/docker-compose.install.yml`) was the third file and was left out of
+> that fix; since AT-202 it maps the same flags with the same defaults, and
+> `scripts/ci/flags-do-engine-no-compose.spec.ts` checks all **three** files
+> and fails the build for the next boolean flag that isn't mapped, or that
+> carries a default other than the code's (`START_OUTBOX_DRAIN` and
+> `START_ANAMNESE` are `false` in production and install on purpose, and the
+> spec declares that divergence by name). On Kubernetes there was nothing to fix — a
 > Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
 > these variables. Both flags are read at boot: change them and
 > `docker compose up -d engine`.
