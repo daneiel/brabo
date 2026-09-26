@@ -193,7 +193,7 @@ eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
 - **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml` e
   `docker/docker-compose.install.yml` (serviços `api`, `engine` e `broker`);
   os leitores são `apps/api/src/infrastructure/security/auth-key-material.ts:131`
-  (`passphraseAnterior`), `apps/api/src/infrastructure/security/service-token.ts:70`
+  (`passphraseAnterior`), `apps/api/src/infrastructure/security/service-token.ts:92`
   (`tokenDeServicoAnterior`), `apps/api/src/infrastructure/security/envelope-encryption.service.ts:93`,
   `apps/engine/config/runtime.exs:70` e `apps/broker/src/config.ts:85`
 - **Teste:** `scripts/ci/previous-nos-composes.spec.ts` — DERIVA do código dos
@@ -207,6 +207,34 @@ eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
   Como ela chega ao Pod é decisão sobre o secret store, em aberto — o runbook
   diz isso nas duas rotações.
 - **Origem:** AT-201 (achado da AT-196), mesma classe da RN-540
+
+### RN-598 — O token de serviço ANTERIOR passa pela mesma régua do atual {#rn-598}
+
+Durante a rotação, `BRABO_SERVICE_TOKEN_PREVIOUS` abre `/internal/*` tanto
+quanto o atual. Ele passa por UMA régua, a mesma do atual (`exigirTokenDeProducao`),
+e nenhuma cópia dela. O espaço em volta é descartado, e um valor feito só de
+espaço conta como ausente. Em produção, o literal público de desenvolvimento
+(`dev-service-token-change-me`) e um valor com menos de 16 caracteres depois
+do trim DERRUBAM o boot da api, com uma mensagem que nomeia
+`BRABO_SERVICE_TOKEN_PREVIOUS`. Antes disso, a variável era comparada crua: um
+anterior com o valor de exemplo abria a porta interna a qualquer um que
+tivesse lido este repositório, e sem dar erro nenhum. A obrigatoriedade é a
+única parte da regra do atual que NÃO é copiada, porque fora da rotação o
+anterior ausente é o estado normal. Um anterior igual ao atual (depois do
+trim) continua não contando como rotação.
+
+- **Onde:** `apps/api/src/infrastructure/security/service-token.ts:63`
+  (`exigirTokenDeProducao`), `:92` (`tokenDeServicoAnterior`);
+  `apps/api/src/main.ts:43` (`tokenDeServicoAnterior`), que roda no boot ao lado do atual
+- **Teste:** `test/infrastructure/security/service-token.spec.ts` (describe
+  "tokenDeServicoAnterior (RN-598)")
+- **Borda:** só o lado da api valida. O engine (`VerifyServiceToken`, que lê
+  `:service_token_previous` cru de `runtime.exs`) não valida nem o atual:
+  não faz trim, não tem piso e aceita o default em produção, e é a api
+  recusar subir que protege a instalação ([RN-035](#rn-035)). O broker
+  (`apps/broker/src/config.ts`) faz trim no anterior, mas não aplica a régua
+  de produção a ele.
+- **Origem:** AT-205 (achado da AT-196)
 
 ### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
 
