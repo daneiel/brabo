@@ -17,6 +17,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
+  vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
+  relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de
+  `evidencia_parar`) e reprovou em 2 de 3 rodadas sob carga; agora espera o
+  EVENTO (a linha do pod novo no log, cada PID sumir) e roda em ~0,25s. Na lib,
+  o intervalo dos laços vira `EVIDENCIA_INTERVALO` (default 2s, o de sempre) e
+  `evidencia_parar` espera os dois laços saírem, com teto de 10s dito, em vez de
+  dormir 1s.
 - **web**: o painel do runner, ao reconhecer chave de MÁQUINA pareada, passa a
   oferecer `brabo-runner service status --machine` — a unit que serve essa
   chave (RN-545) — em vez do `--project <id>`, que perguntava por uma unit que
