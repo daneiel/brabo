@@ -86,6 +86,32 @@ defmodule Engine.DataCase do
   end
 
   @doc """
+  Cria uma pasta temporária PRÓPRIA e VAZIA para o teste que a chama, e a
+  apaga no `on_exit` — o `worktree_path`/`workspace_root` de spec que não
+  precisa de arquivo nenhum.
+
+  Existe porque `System.tmp_dir!()` cru como `worktree_path` fazia
+  `Engine.Harness.InstructionFiles.Live` percorrer o `/tmp` INTEIRO da
+  máquina procurando `AGENTS.md` (walk recursivo sob a raiz): o teste
+  passava a medir o `/tmp` de quem roda, e numa máquina com o `/tmp` cheio
+  o agente estourava o `assert_receive` antes de chegar ao desfecho
+  (AT-204). Fica sob `System.tmp_dir!()` e NÃO sob a pasta do checkout (o
+  `@tag :tmp_dir` do ExUnit): o agente pode rodar `git` no worktree, e
+  dentro do checkout ele acharia o repositório do Brabo.
+  """
+  def pasta_temporaria_propria!(prefixo \\ "brabo-teste") do
+    pasta =
+      Path.join(
+        System.tmp_dir!(),
+        "#{prefixo}-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(pasta)
+    ExUnit.Callbacks.on_exit(fn -> File.rm_rf!(pasta) end)
+    pasta
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})

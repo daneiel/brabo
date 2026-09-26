@@ -41,7 +41,7 @@ defmodule Engine.Gates.QaLeadServerTest do
       module: "api",
       session_id: session_id,
       task_id: "task-abc12345",
-      worktree_path: System.tmp_dir!(),
+      worktree_path: pasta_temporaria_propria!(),
       status: "working"
     })
 
