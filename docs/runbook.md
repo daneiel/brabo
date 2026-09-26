@@ -2768,27 +2768,38 @@ kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=50 \
 kubectl -n brabo exec deploy/api -- node scripts/rewrap-deks.js
 ```
 
-Expected output:
+Expected output — the script prints in Portuguese, and this is what it
+actually writes (`apps/api/src/scripts/rewrap-deks.ts`, `main`):
 
 ```
-[rewrap] result
+[rewrap] resultado
 
-  user_credentials         total=12  re-wrapped=12  already on current key=0  failures=0
-  project_git_connections  total=3   re-wrapped=3   already on current key=0  failures=0
+  user_credentials         total=12  re-embrulhados=12  já na chave atual=0  falhas=0
+  project_git_connections  total=3   re-embrulhados=3   já na chave atual=0  falhas=0
 
-[rewrap] done. Now remove CREDENTIALS_MASTER_KEY_PREVIOUS and restart the api.
+[rewrap] concluído. Agora remova CREDENTIALS_MASTER_KEY_PREVIOUS e reinicie a api.
 ```
+
+The counters read: `re-embrulhados` = re-wrapped, `já na chave atual` =
+already on the current key, `falhas` = failures. Two other endings exist.
+When nothing needed re-wrapping, the last line is `[rewrap] nada a fazer — o
+acervo já está na chave atual.` ("nothing to do — the store is already on the
+current key"). When any row failed, each one goes to `stderr` as
+`[rewrap] <table>#<id>: <reason>`, the run ends with `[rewrap] <N>
+registro(s) não abriram com nenhuma das duas chaves. NÃO remova
+CREDENTIALS_MASTER_KEY_PREVIOUS até resolver.` ("N row(s) opened with
+neither key — do NOT remove PREVIOUS until resolved"), and the exit code is 1.
 
 Properties that matter if something interrupts the script:
 
 - **Idempotent.** Running it again counts already-converted rows as
-  `already on current key` and rewrites nothing. Interrupted? Run it
+  `já na chave atual` and rewrites nothing. Interrupted? Run it
   again.
 - **Only the envelope changes.** The secret's ciphertext stays byte for
   byte the same, so stopping halfway leaves the store consistent: part on
   the new key, part on the old, and both readable as long as PREVIOUS
   exists.
-- **`failures > 0` blocks step 3.** These are rows that don't open with
+- **`falhas > 0` blocks step 3.** These are rows that don't open with
   either key — usually coming from a different environment, or from an
   earlier rotation that was interrupted with the key already discarded.
   The script identifies each one by id, and names WHY it failed — a row from
@@ -2815,8 +2826,8 @@ pending, and `<>` would silently drop them.
 
 ### 3. Discard the old key
 
-Only once `failures=0` **and** the query above answers `0` on both tables. The
-two say different things and you want both: `failures=0` means nothing refused
+Only once `falhas=0` **and** the query above answers `0` on both tables. The
+two say different things and you want both: `falhas=0` means nothing refused
 to open on this run, and the query means nothing is left behind — including
 rows that a previous, interrupted run never reached.
 
@@ -2841,7 +2852,7 @@ pnpm --filter api test -- test/scripts/rewrap-deks.spec.ts
 That spec drives the sequence of this page against a real Postgres and **both**
 tables: encrypt with K1, publish K2, re-wrap, drop K1, and still decrypt. It
 also pins the two properties this procedure leans on — idempotence (a second
-run reports `re-wrapped=0`) and the unreadable row being counted and named
+run reports `re-embrulhados=0`) and the unreadable row being counted and named
 without aborting the others.
 
 Narrower, in-memory coverage of the same primitives — including the case where
@@ -2875,8 +2886,8 @@ without the matching key doesn't recover the user's secrets.
 | symptom | cause |
 |---|---|
 | the api boots with no rotation warning, but the script requires PREVIOUS | the variable never reached the pod; ESO only resyncs every `refreshInterval` (1h) |
-| `failures` equal to the total | the published PREVIOUS isn't the key that wrapped the store |
-| `already on current key` equal to the total, without having run before | both variables have the same value — the service ignores PREVIOUS in that case |
+| `falhas` equal to the total | the published PREVIOUS isn't the key that wrapped the store |
+| `já na chave atual` equal to the total, without having run before | both variables have the same value — the service ignores PREVIOUS in that case |
 | a credential stops working AFTER step 3 | some row was left behind; republish PREVIOUS immediately and run the script again. The progress query in step 2 is what prevents this, and it is the check to run first |
 | the pending query answers the full total, on a database nobody rotated yet | expected: `key_id` is written from the next write on, so an installation that predates [RN-563](business-rules.md#rn-563) has it `NULL` everywhere until the first rotation. `NULL` counts as pending on purpose — "I don't know which key" is not "already current" |
 | `rewrap` says a row is on a key that is neither the current nor the previous one | the row came from another environment — most often a dump restored across installations. See [Interaction with restore](#rotacao-da-chave-mestra) below; the `key_id` in the row versus the one in the api's boot log tells you at a glance |
