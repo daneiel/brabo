@@ -44,6 +44,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não estão mapeadas nos composes nem no `ExternalSecret`, então defini-las
   sozinhas não faz nada. Testes novos na api cobrem a coexistência de dois
   `BRABO_SERVICE_TOKEN` e as consequências do pepper contra o Postgres.
+- **docs**: o passo 3(a) do "Cost incident" do runbook fazia
+  `update agent_autonomy set mode = 'manual'`, e `manual` não existe no enum
+  `permission_policy` (`auto_approve | require_approval | deny`) — reprovava
+  com `invalid input value for enum`, no meio do incidente de gasto (AT-194).
+  Agora é `set mode = 'require_approval' ... and mode = 'auto_approve'`: o
+  filtro impede o update de afrouxar as linhas `deny`. O passo também diz o que
+  NÃO corta (padrão em `allow` no `permissions.json` continua auto-aprovando).
+  Os blocos SQL da seção, nos dois idiomas, passam a rodar contra o schema
+  migrado em `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts`.
 - **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
   vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
   relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de

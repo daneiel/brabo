@@ -1406,8 +1406,30 @@ Em ordem de reversibilidade, do mais brando ao mais drástico.
 voltam a exigir aprovação por ação, sem perder contexto:
 
 ```sql
-update agent_autonomy set mode = 'manual' where project_id = '<projeto>';
+update agent_autonomy
+   set mode = 'require_approval', updated_at = now()
+ where project_id = '<projeto>'
+   and mode = 'auto_approve';
 ```
+
+`agent_autonomy.mode` é o enum `permission_policy`
+(`auto_approve | require_approval | deny`) — não existe valor `manual`, e uma
+versão anterior deste passo o usava e falhava na hora. O
+`and mode = 'auto_approve'` é de propósito: sem ele, o update transformaria
+toda linha `deny` do projeto em `require_approval`, afrouxando justamente o que
+alguém tinha fechado. As linhas `"*"` (modo automático, RN-153) entram no mesmo
+update.
+
+O que este passo **não** corta: um padrão em `allow` no `permissions.json` do
+projeto continua auto-aprovando o que casa — `decide()` lê o arquivo depois de
+`agent_autonomy`, e o arquivo pode subir a decisão de volta para
+`auto_approve` (`apps/api/src/domain/actions/decide.ts`, `decide`). Se o gasto
+vem de comandos que o arquivo permite, vá para o (c).
+
+Os blocos SQL desta seção são executados contra o schema migrado por
+`apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts`, que também confere
+que o (a) muda `auto_approve` e deixa `deny` como está — valor inválido ou
+coluna renomeada aqui reprova a suíte da api, não o incidente.
 
 **b) Trocar o binding de modelo para um local.** Ollama custa zero; a qualidade
 cai, o gasto para na hora:
