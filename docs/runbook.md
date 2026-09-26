@@ -350,7 +350,7 @@ so it has no way to see your real checkout. Without the preflight guard,
 cloning Brabo into `$HOME/brabo` and setting the base to the same folder
 passes every validation and has dev agents running inside the product's own
 tree — the failure
-[ADR 0055](adr/0055-escopo-de-caminho-em-comando-de-agente.md) exists to
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) exists to
 prevent.
 
 **Pick a dedicated folder.** Everything under the base is reachable from

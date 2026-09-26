@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   acharLocaleDuplicado,
+  adrExisteNoRepositorio,
   hrefsComLocaleDuplicado,
   reescreverLinkDeGap,
 } from './links-do-locale.mjs';
@@ -16,9 +17,9 @@ describe('reescreverLinkDeGap', () => {
   it('não põe prefixo de locale: quem põe é o baseUrl do build', () => {
     const rota = reescreverLinkDeGap({
       sourceFilePath: FONTE_PT,
-      url: 'adr/0104-runner-local.md#decisao',
+      url: 'adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md#decisao',
     });
-    expect(rota).toBe('pathname:///adr/0104-runner-local#decisao');
+    expect(rota).toBe('pathname:///adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner#decisao');
     expect(rota).not.toContain('pt-BR');
   });
 
@@ -35,6 +36,38 @@ describe('reescreverLinkDeGap', () => {
         url: '../reference/scripts.md',
       }),
     ).toBe('pathname:///reference/scripts');
+  });
+
+  // AT-227: a zona `adr/` olhava só a FORMA do nome, e slug errado passava.
+  it('ADR com slug inexistente lança, mesmo com a fonte dentro de uma zona de gap', () => {
+    const naoExiste = () => false;
+    for (const sourceFilePath of [
+      '../docs/adr/0154-chave-de-dispositivo-de-maquina.md',
+      '../docs/reference/configuration.md',
+      '../docs/runbook.md',
+      FONTE_PT,
+    ]) {
+      expect(() =>
+        reescreverLinkDeGap(
+          { sourceFilePath, url: '../adr/0055-politica-de-terminal.md#x' },
+          naoExiste,
+        ),
+      ).toThrow(/ADR que não existe.*0055-politica-de-terminal\.md/);
+    }
+  });
+
+  it('ADR que existe continua sendo gap de tradução', () => {
+    expect(
+      reescreverLinkDeGap(
+        { sourceFilePath: FONTE_PT, url: 'adr/0055-escopo.md' },
+        (nome) => nome === '0055-escopo.md',
+      ),
+    ).toBe('pathname:///adr/0055-escopo');
+  });
+
+  it('o predicado padrão lê docs/adr/ de verdade', () => {
+    expect(adrExisteNoRepositorio('0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md')).toBe(true);
+    expect(adrExisteNoRepositorio('0055-politica-de-terminal.md')).toBe(false);
   });
 
   it('link quebrado fora das zonas de gap continua lançando', () => {

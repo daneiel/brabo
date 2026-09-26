@@ -443,10 +443,17 @@ built HTML and fails on any `href` with a doubled locale prefix. A new
 locale goes into `LOCALES_COM_PREFIXO` too, or its duplication passes
 silently.
 
-What the guard does **not** catch: a link whose target doesn't exist
-in the repository at all. The `adr/` exemption also swallows a
-misspelled ADR filename, and the rewrite then points to a slug no
-locale has.
+The `adr/` exemption used to swallow a misspelled ADR filename too:
+it looked only at the *shape* of the name (`NNNN-*.md`), so
+`0055-politica-de-terminal.md` — an ADR that never existed under that
+name — was rewritten to a slug no locale has. Twenty-three such links
+sat in the docs, 404 (AT-227). Since then a target that looks
+like an ADR must exist in `docs/adr/` **before** any gap exemption
+applies, including a source inside `adr/`, `reference/` or
+`explanation/`; a wrong slug fails `docs:build` in every locale.
+
+What the guard still does **not** catch: a non-ADR link from inside one
+of the gap zones whose target doesn't exist in the repository at all.
 
 ### Publishing, one site per rung
 

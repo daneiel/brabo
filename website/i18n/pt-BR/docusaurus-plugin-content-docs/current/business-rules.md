@@ -4133,7 +4133,7 @@ de texto livre continua sendo o caminho manual, como antes.
   (ordenação, pasta vazia/inexistente/arquivo, permissão por entrada);
   `FolderBrowserModal.test.tsx` (projectId nulo, navegação, seleção, sem
   runner); `NewProjectWizard.test.tsx` (botão "Procurar pasta...")
-- **ADR:** [0104](adr/0104-navegacao-de-pasta-local-via-o-runner.md), revisa
+- **ADR:** [0107](adr/0107-navegacao-de-pasta-local-via-o-runner.md), revisa
   a [0072](adr/0072-projeto-local-ou-container.md) sem editá-la
 - **Origem:** pedido do dono do produto — "não consegui linkar com uma
   pasta do usuário"

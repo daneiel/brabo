@@ -2,8 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-08-29
-- **References (without editing):** [ADR 0038](0038-fase8-hierarquia-de-areas.md)
-  and [ADR 0053](0053-fase14d-dev-lead-e-areas-dinamicas.md) (the aggregate
+- **References (without editing):** [ADR 0038](0038-hierarquia-de-agentes.md)
+  and [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) (the aggregate
   boundaries this split mirrors), [ADR 0117](0117-lockfile-proprio-para-o-website.md)
   (same shape of reasoning: a boundary is worth drawing when the shared thing
   charges a price nobody chose to pay).

@@ -332,7 +332,7 @@ from a status, so a network error says "I don't know" instead of spinning in
 discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
 ACCOUNT, not to this browser, so the strongest sentence available is "your
 account has a paired machine". Both limits are stated on screen, and they are
-why the [ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md) flow is
+why the [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) flow is
 not removed: it moves into a `<details>` whose label names the case it still
 answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
 against the ENDPOINT's `developer`, and a real 403 lands in the same state —

@@ -11221,7 +11221,7 @@ pelo menos `developer` — o MESMO mínimo de `runner-ticket`, porque listar
 projeto cujo ticket seria recusado é prometer o que a rota seguinte nega. Ele
 pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter
 pasta que não é projeto nenhum, e adivinhar por nome de pasta é a classe de
-erro que o [ADR 0141](adr/0141-a-base-unica-dos-projetos-montados.md) recusou.
+erro que o [ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) recusou.
 O que viaja é o SEGMENTO (`workspaceDirName`, [RN-109](business-rules/autenticacao.md#rn-109)) e nunca um
 caminho absoluto — o mesmo invariante do broker.
 
@@ -11986,7 +11986,7 @@ chaves de máquina vivas de um usuário nunca passa de uma. A revogação vem
 ANTES do registro: revogar depois deixaria uma janela com as duas vivas, e
 falhar no meio deixaria a instalação com duas credenciais de máquina e nenhuma
 forma de saber qual é a nova. Só as de MÁQUINA caem (`project_id IS NULL`): as
-de PROJETO vieram do navegador ([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md)),
+de PROJETO vieram do navegador ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)),
 num fluxo que esta rota não conhece, e derrubá-las apagaria o pareamento de
 quem já usa o produto — o erro que a [RN-545](#rn-545) nomeou ao recusar
 converter instalação alheia em silêncio.

@@ -226,9 +226,16 @@ varre o HTML gerado e reprova qualquer `href` com o prefixo de locale
 duplicado. Locale novo entra também em `LOCALES_COM_PREFIXO`, senão a
 duplicação dele passa calada.
 
-O que a guarda **não** pega: link cujo alvo não existe no repositório. A
-exceção de `adr/` também engole nome de ADR digitado errado, e a reescrita
-aponta para um slug que locale nenhum tem.
+A exceção de `adr/` também engolia nome de ADR digitado errado: ela olhava só
+a FORMA do nome (`NNNN-*.md`), então `0055-politica-de-terminal.md` — ADR que
+nunca existiu com esse nome — era reescrito para um slug que locale nenhum tem.
+Eram 23 links assim, todos 404 (AT-227). Desde então, alvo com cara de
+ADR tem de existir em `docs/adr/` ANTES de qualquer exceção de gap valer,
+inclusive para fonte dentro de `adr/`, `reference/` ou `explanation/`; slug
+errado reprova o `docs:build` em todo locale.
+
+O que a guarda **ainda não** pega: link que não é de ADR, saindo de uma das
+zonas de gap, cujo alvo não existe no repositório.
 
 ### A publicação, um site por degrau
 
