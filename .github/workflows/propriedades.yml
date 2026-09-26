@@ -134,6 +134,42 @@ jobs:
             echo '|---|---|---|'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # AT-178: as quatro imagens saem do MESMO `docker-bake.hcl` que o `ci.yml`
+      # e o `release.yml` usam, em paralelo num builder só e com o cache
+      # `type=gha` que o bakefile já declara por imagem — e o bootstrap roda
+      # com `BRABO_SKIP_BUILD=1`, importando o que ficou no daemon. Antes eram
+      # quatro `docker build` em série e sem cache (2m32s medidos).
+      #
+      # O que o cache NÃO muda, e é por isso que ele é seguro aqui:
+      # - o pin por digest (ADR 0159) é entrada da chave de cada camada — um
+      #   `FROM` com outro digest nunca casa com a camada velha;
+      # - `no-cache-filter = ["runtime"]` (AT-110) refaz o estágio final de
+      #   toda imagem, então o `apk upgrade` é o do dia, como num build a frio;
+      # - nada é publicado: `output = type=docker` carrega no daemon do runner.
+      # O cache do Actions é escopado por ref: a rodada agendada (em `main`) lê
+      # e escreve o de `main`; um `workflow_dispatch` numa branch lê o dela e o
+      # de `main`. A primeira rodada de cada ref é fria.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+
+      - name: Início do build das imagens
+        run: echo "INICIO_DO_BUILD=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Build das quatro imagens (bake, cache do Actions)
+        id: build
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f  # v7.4.0
+        with:
+          files: docker-bake.hcl
+          targets: api,engine,web,backup
+          load: true
+
+      - name: Duração do build das imagens
+        if: ${{ !cancelled() }}
+        env:
+          DESFECHO: ${{ steps.build.outcome }}
+        run: |
+          echo "| build das imagens (bake) | $(( $(date +%s) - INICIO_DO_BUILD ))s | ${DESFECHO} |" >> "$GITHUB_STEP_SUMMARY"
+          docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep '^brabo-' || true
+
       # `bootstrap.sh`, não `make deploy-local`: o alvo encadeia o smoke e o
       # `&&` do make esconderia qual das duas metades falhou.
       #
@@ -144,8 +180,10 @@ jobs:
       # única diferença entre este cluster e o de `make deploy-local`.
       - name: Subir o cluster (bootstrap)
         id: bootstrap
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           BRABO_SKIP_OBSERVABILITY: '1'
+          BRABO_SKIP_BUILD: '1'
         run: |
           set -uo pipefail
           inicio=$SECONDS
@@ -334,6 +372,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BUILD: ${{ steps.build.outcome }}
           BOOTSTRAP: ${{ steps.bootstrap.outcome }}
           SMOKE: ${{ steps.smoke.outcome }}
           HPA: ${{ steps.hpa.outcome }}
@@ -370,6 +409,7 @@ jobs:
               echo "::notice::issue aberta para ${alvo}: ${url}"
             fi
           }
+          alarmar 'build das imagens (bake)' "${BUILD}"
           alarmar 'bootstrap (o cluster não subiu)' "${BOOTSTRAP}"
           alarmar 'make smoke-k8s' "${SMOKE}"
           alarmar 'make hpa-test' "${HPA}"
