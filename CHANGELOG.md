@@ -38,6 +38,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `.now`, `.detail`), e trocar o idioma refaz a árvore. A decisão por tipo de
   evento continua no código, e a trava da AT-087 segue comparando-a com o
   engine.
+- **ci**: o `apps/runner` ganha passo de lint no job `Lint` do `ci.yml`
+  (AT-103) — antes não havia lint nenhum na árvore do runner. É o mesmo
+  `oxlint` do web, sem `--fix`, com `correctness` como erro e
+  `--deny-warnings`, provado por mutação (erro plantado em `src/` e em
+  `scripts/` reprova com saída 1). Os dois avisos que ele acusava na `dev`
+  (`no-useless-spread` em `pty.ts`, `no-unsafe-optional-chaining` num spec)
+  entram corrigidos no mesmo PR.
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também

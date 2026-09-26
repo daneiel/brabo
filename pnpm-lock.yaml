@@ -281,6 +281,9 @@ importers:
       '@types/phoenix':
         specifier: ^1.6.7
         version: 1.6.7
+      oxlint:
+        specifier: ^1.71.0
+        version: 1.75.0
       phoenix:
         specifier: ^1.8.9
         version: 1.8.9

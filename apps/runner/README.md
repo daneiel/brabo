@@ -451,12 +451,17 @@ de aprovação de sempre (todo comando de agente continua nascendo uma ação
 proposta, sujeita à política do projeto) e o seu consentimento em rodar este
 binário na própria máquina, com os seus privilégios.
 
-## Testes e typecheck deste workspace
+## Testes, typecheck e lint deste workspace
 
 ```bash
 pnpm --filter runner test
 pnpm --filter runner typecheck
+pnpm --filter runner lint
 ```
+
+O `lint` é o mesmo `oxlint` do web, em modo verificação (sem `--fix`), sobre
+`src/` e `scripts/`, com a categoria `correctness` como erro e
+`--deny-warnings` — e é o passo "Oxlint (runner)" do job `Lint` do `ci.yml`.
 
 Construir o binário standalone (exige [Bun](https://bun.sh) instalado —
 `curl -fsSL https://bun.sh/install | bash` — só na plataforma ATUAL; nunca
