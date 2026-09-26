@@ -55,9 +55,12 @@ failure mode in production.
 > code promised the 2026-08-10 pause was reversible with `X=true` plus a
 > restart. Measured inside the running engine container, they came back empty
 > and `runtime.exs` fell back to `"false"` — no error anywhere. Every boolean
-> flag the engine reads is now mapped in both compose files, with the code's
-> own default, and `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the
-> build for the next one that isn't ([RN-540](../business-rules.md#rn-540)).
+> flag the engine reads is now mapped in all three compose files (dev,
+> production and installation — the installation one only since AT-202), with
+> the code's own default except for the two background-agent boot keys that
+> production and installation turn off on purpose, and
+> `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
+> one that isn't ([RN-540](../business-rules.md#rn-540)).
 > Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
 > intercepts nothing, so there is no broken switch to fix there.
 

@@ -17,6 +17,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker**: seis flags booleanas do engine passam a chegar a ele na
+  **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
+  `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
+  `PSYCHOLOGIST_ENABLED`, `GRAPH_TEMPLATES_ENABLED` e
+  `GRAPH_INSTRUCTION_TEMPLATES_ENABLED`, que dev e produção mapeavam. Por isso
+  virá-las no `.env` de uma instalação não tinha efeito (a classe da RN-540).
+  Elas entram com o default do `runtime.exs`. `scripts/ci/flags-do-engine-no-compose.spec.ts`
+  passa a olhar os três composes e a cobrar o default do código em todos. As
+  duas divergências de produção e instalação (`START_OUTBOX_DRAIN` e
+  `START_ANAMNESE` em `false`) ficam declaradas com o motivo.
 - **docker**: as variáveis `_PREVIOUS` passam a chegar aos containers (AT-201,
   RN-595). `AUTH_JWT_SECRET_PREVIOUS`, `BRABO_SERVICE_TOKEN_PREVIOUS` e
   `CREDENTIALS_MASTER_KEY_PREVIOUS` não estavam no `environment:` de compose
