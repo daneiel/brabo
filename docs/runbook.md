@@ -2907,8 +2907,31 @@ their own and go back to requiring per-action approval, without losing
 context:
 
 ```sql
-update agent_autonomy set mode = 'manual' where project_id = '<projeto>';
+update agent_autonomy
+   set mode = 'require_approval', updated_at = now()
+ where project_id = '<projeto>'
+   and mode = 'auto_approve';
 ```
+
+`agent_autonomy.mode` is the `permission_policy` enum
+(`auto_approve | require_approval | deny`) — there is no `manual` value,
+and an earlier version of this step used it and failed on the spot. The
+`and mode = 'auto_approve'` is deliberate: without it, the update would
+turn every `deny` row of the project into `require_approval`, loosening
+exactly what someone had closed. The `"*"` rows (auto mode, RN-153) are
+covered by the same update.
+
+What this step does **not** cut: a pattern in `allow` in the project's
+`permissions.json` still auto-approves what it matches — `decide()` reads
+the file after `agent_autonomy`, and the file can raise the decision back
+to `auto_approve` (`apps/api/src/domain/actions/decide.ts`, `decide`).
+If the spend comes from commands the file allows, go to (c).
+
+The SQL blocks of this section are run against the migrated schema by
+`apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts`, which also
+checks that (a) changes `auto_approve` and leaves `deny` alone — an
+invalid value or a renamed column here fails the api suite, not the
+incident.
 
 **b) Switch the model binding to a local one.** Ollama costs zero; quality
 drops, spending stops on the spot:
