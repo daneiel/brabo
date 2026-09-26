@@ -16,8 +16,17 @@ keywords: [regras de negócio, custo, orçamento, metering, token]
 >
 > [RN-470](pathname://../../business-rules/custo#rn-470), [RN-583](pathname://../../business-rules/custo#rn-583).
 >
-> As RNs presentes aqui podem estar mais curtas ou mais antigas que as do
-> inglês (só os títulos foram comparados); na dúvida, o inglês vale.
+> Medido em 2026-09-26 (AT-229), título E corpo: das RNs presentes, estas
+> têm aqui um enunciado mais antigo que o da versão em inglês:
+>
+> [RN-064](pathname://../../business-rules/custo#rn-064), [RN-102](pathname://../../business-rules/custo#rn-102).
+>
+> E estas, cuja fonte já está em inglês, têm aqui menos da metade do
+> texto de lá: [RN-040](pathname://../../business-rules/custo#rn-040), [RN-070](pathname://../../business-rules/custo#rn-070).
+>
+> Onde a fonte ainda está em português, a comparação é de texto; onde ela
+> já foi traduzida para o inglês, só dá para comparar o tamanho, e uma
+> diferença de até 12% passa como tradução. Na dúvida, o inglês vale.
 
 > Estas RNs saíram de [`business-rules.md`](../business-rules.md) sem
 > mudar uma vírgula do conteúdo: a página única passava de 640 KB e
@@ -1637,7 +1646,7 @@ depois de ler.
   `application/use-cases/execution/request-parallelization.use-case.ts`,
   `application/use-cases/execution/set-area-max-parallel.use-case.ts`,
   exposto em `interfaces/http/execution/execution.controller.ts` e configurado
-  em `apps/web/src/routes/ProjectSettingsTab.tsx` (`ParallelismSection`)
+  em `apps/web/src/routes/settings/ParallelismSection.tsx`
 - **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts`,
   `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
@@ -2439,7 +2448,7 @@ local. Por isso a tela usa as facetas só como filtro POSITIVO e nunca escreve
 - **Onde:** `apps/api/src/infrastructure/llm/openrouter-provider.ts`
   (`temModalidade`, `parseCatalogoOpenRouter`),
   `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`,
-  `apps/api/src/db/schema.ts` (`models`)
+  `apps/api/src/db/schema/llm.ts` (`models`)
 - **Teste:**
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
   (`modalidade não declarada OMITE o campo em vez de afirmar false`);
@@ -2470,7 +2479,7 @@ A lista de usos **substitui** a anterior, não soma: lista vazia é como se
 desmarca tudo, e é um estado legítimo — "ninguém opinou" não é "não serve".
 
 - **Onde:** `apps/api/src/domain/llm/model-uses.ts`,
-  `apps/api/src/db/schema.ts` (`workspace_models.uses`),
+  `apps/api/src/db/schema/llm.ts` (`workspace_models.uses`),
   `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts`
   (`setUses`),
   `apps/api/src/application/use-cases/llm/set-model-uses.use-case.ts`

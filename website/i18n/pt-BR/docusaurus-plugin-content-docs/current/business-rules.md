@@ -22,8 +22,14 @@ keywords: [regras de negócio, domínio, máquina de estados, aprovação, RBAC]
 > âncora levar à MESMA regra nos dois idiomas; as RN-421–RN-424 da
 > lista acima são outras regras, que só existem em inglês.
 >
-> As RNs presentes aqui podem estar mais curtas ou mais antigas que as do
-> inglês (só os títulos foram comparados); na dúvida, o inglês vale.
+> Medido em 2026-09-26 (AT-229), título E corpo: das RNs presentes, estas
+> têm aqui um enunciado mais antigo que o da versão em inglês:
+>
+> [RN-284](pathname://../business-rules#rn-284), [RN-360](pathname://../business-rules#rn-360), [RN-411](pathname://../business-rules#rn-411), [RN-417](pathname://../business-rules#rn-417), [RN-419](pathname://../business-rules#rn-419), [RN-420](pathname://../business-rules#rn-420).
+>
+> Onde a fonte ainda está em português, a comparação é de texto; onde ela
+> já foi traduzida para o inglês, só dá para comparar o tamanho, e uma
+> diferença de até 12% passa como tradução. Na dúvida, o inglês vale.
 
 Cada regra tem **enunciado**, **onde vive** (`arquivo:linha`) e **o teste que a
 cobre**. Se você mudar uma regra, atualize a linha aqui na mesma mudança — é o
@@ -2050,7 +2056,7 @@ enquanto a tabela não mentir sobre APLICAR (nenhuma tela ou resposta de
 API hoje afirma "o container está limitado a X" — só "a intenção
 registrada era X").
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projectContainers`)
+- **Onde:** `apps/api/src/db/schema/containers.ts` (`projectContainers`)
 - **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
@@ -3786,7 +3792,7 @@ serviço `ollama` só puxava `llama3.2:1b`, e o RAG degradava para
 léxico-only em SILÊNCIO em qualquer ambiente limpo, sem nenhum sinal de
 que isso estava acontecendo. Serviço novo `ollama-model-loader` (one-shot,
 `docker-compose.yml` dev e prod), lendo `OLLAMA_REQUIRED_MODELS`
-(default `gemma:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
+(default `gemma3:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
 `ollama` existente — o entrypoint dele continua intocado.
 
 A degradação deixou de ser silenciosa: `rag_search` (RN-414) e a busca
