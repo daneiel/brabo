@@ -246,7 +246,7 @@ describe('tratarExec — a credencial não atravessa o docker exec (RN-558)', ()
         'utf8',
       ),
     ) as { exitCode: number; output: string; timedOut: boolean };
-    const { ref, ...semRef } = canal.pushes[0]?.payload as { ref: string } & typeof fixture;
+    const { ref, ...semRef } = (canal.pushes[0]?.payload ?? {}) as { ref: string } & typeof fixture;
     expect(ref).toBe('r-at111');
     expect(semRef).toEqual(fixture);
     expect(fixture.output).toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);

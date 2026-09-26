@@ -109,6 +109,8 @@ export class GerenciadorDePty {
 
   /** Mata TODAS as sessões vivas — chamado no shutdown do runner. */
   fecharTodas(): void {
-    for (const sessionRef of [...this.sessoes.keys()]) this.fechar(sessionRef);
+    // Apagar do Map durante a iteração é seguro por especificação: a entrada
+    // apagada ainda não visitada é pulada, e as demais continuam a ser vistas.
+    for (const sessionRef of this.sessoes.keys()) this.fechar(sessionRef);
   }
 }

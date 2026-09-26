@@ -153,6 +153,14 @@ jobs:
       - name: Oxlint (web)
         run: pnpm --filter web lint
 
+      # O runner não tinha lint nenhum no CI (AT-103). Mesmo oxlint do web,
+      # sem `--fix`, com a categoria `correctness` como erro e
+      # `--deny-warnings`: provado por mutação que reprova um erro plantado em
+      # `src/` e em `scripts/`. `apps/broker` e `packages/docker-port` seguem
+      # sem passo de lint — frente à parte.
+      - name: Oxlint (runner)
+        run: pnpm --filter @brabo/runner lint
+
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
