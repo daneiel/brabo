@@ -541,11 +541,17 @@ rules:
       # decide. A doc dele é a própria RN-570 em `docs/business-rules.md`, o
       # ADR 0160 e `cadeia-de-suprimentos-do-ci.md`.
       #
-      # O extglob EXCLUI os dez pelo nome e continua casando com todo o resto
+      # `teto-ocioso-nos-composes.spec.ts` é o DÉCIMO PRIMEIRO, irmão do
+      # quinto (AT-153): afere que o teto da conversa ociosa (RN-581) chega ao
+      # engine nos três composes com o default do `runtime.exs`. Não toca
+      # degrau, destino nem versão; a doc dele é a própria RN-581 em
+      # `docs/business-rules.md` e `docs/reference/configuration.md`.
+      #
+      # O extglob EXCLUI os onze pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador|teto-ocioso-nos-composes)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
