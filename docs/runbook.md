@@ -2572,7 +2572,12 @@ current one and accepts both:
 
 1. `BRABO_SERVICE_TOKEN_PREVIOUS` gets the old value on **both api and
    engine**; `BRABO_SERVICE_TOKEN` gets the new one on both. Restart
-   both.
+   both. In production the api checks the old value with the same rule as
+   the new one, so if the old value is the public default or shorter than 16
+   characters, the api refuses to boot at this step and names the variable
+   ([RN-598](business-rules/autenticacao.md#rn-598)). Rotating away from a
+   weak token therefore means skipping `_PREVIOUS`, and paying for it with
+   the `403`/`401` window described below.
 2. While both are up with the new variable, traffic works in any
    combination of old and new pods — that's what makes the rollout safe
    mid-way through.

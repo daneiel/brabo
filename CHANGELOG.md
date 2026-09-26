@@ -49,6 +49,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   COMEÇOU … Nada foi parado nem apagado`. Prova em
   `scripts/dev/reset-total-ordem.spec.ts`, que roda o script inteiro com
   `docker`/`mix`/`pnpm` de mentira no PATH.
+- **api**: `BRABO_SERVICE_TOKEN_PREVIOUS` passa pela mesma régua do token
+  atual (AT-205, RN-598). Antes, ele era comparado sem nenhuma validação.
+  Agora o espaço em volta é descartado, e em produção a api recusa subir se o
+  anterior for o default público de desenvolvimento ou tiver menos de 16
+  caracteres. A mensagem nomeia a variável. Continua opcional: fora da
+  rotação, ausente é o normal. O engine e o broker não mudaram (o engine não
+  valida nem o atual; ver a borda da RN-598).
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina

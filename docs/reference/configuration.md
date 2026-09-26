@@ -248,7 +248,7 @@ makes rotation possible without downtime ([RN-035](../business-rules/autenticaca
 | variable | default | what it does |
 |---|---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** | goes in the `X-Brabo-Service-Token` header and is what `EngineServiceGuard` compares in constant time. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | accepted **only for verification**, during rotation |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | accepted **only for verification**, during rotation. When set, it goes through the **same** rule as the current token: surrounding whitespace is trimmed, and in production the api refuses to boot if it's the public default or shorter than 16 characters. Unlike the current token, it's never required ([RN-598](../business-rules/autenticacao.md#rn-598)) |
 
 > Setting only the NEW value on one side (without going through the
 > `_PREVIOUS` dance) doesn't break anyone's boot: the symptom is `403` on
