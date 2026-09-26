@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
+  comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
+  ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de
+  caminho (ADR 0055) e o `require_approval` que o comando composto sintetiza
+  por segmento sem regra deixam de pedir aprovação — no `exp001`, 47 de 51
+  pedidos vinham só de citar `/work` ou `/tmp`. Continuam pedindo: push, PR,
+  deploy, `sudo`/`doas`, merge em branch protegida, patch de instrução,
+  paralelismo e remover container; `deny` e `ask` escritos no
+  `permissions.json` seguem valendo, e regra específica do tipo vence a
+  curinga. A nota do `ApprovalCard` (agora também na fila de Aprovações) e o
+  card do agente dizem, antes do clique, o que o modo libera e o que continua
+  pedindo; o toggle "manual" restaura o teto.
+
 - **api**: a pasta `docs/` dos artefatos dos agentes passa a ter caminho de
   volta (AT-128, RN-590). `pnpm --filter api artefatos:reprojetar` (na imagem,
   `node scripts/reprojetar-artefatos.js`, com `--project`/`--after-event`)

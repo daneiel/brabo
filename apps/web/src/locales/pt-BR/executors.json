@@ -32,7 +32,8 @@
     },
     "autonomy": {
       "manual": "manual",
-      "auto": "auto"
+      "auto": "auto",
+      "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. Push, PR, deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
     },
     "rearm": "rearmar"
   },

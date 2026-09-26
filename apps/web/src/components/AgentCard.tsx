@@ -36,6 +36,13 @@ interface AgentCardProps {
   model?: { name: string; provider: string };
   autonomy?: AutonomyMode;
   onAutonomyChange?: (mode: AutonomyMode) => void;
+  /**
+   * Uma frase sob o toggle dizendo o que o "auto" LIBERA e o que continua
+   * pedindo aprovação (RN-603). Quem decide se cabe é o chamador: só a
+   * curinga `"*"` ligada é modo automático — o toggle sobre o tipo
+   * representativo grava uma regra específica, que não libera o escopo.
+   */
+  autonomyHint?: string;
   /** Task/atividade corrente — o que o agente está fazendo AGORA. */
   activity?: { label: string; branch?: string };
   /** Custo acumulado do agente NESTA sessão, em micro-USD. */
@@ -63,6 +70,7 @@ export function AgentCard({
   model,
   autonomy,
   onAutonomyChange,
+  autonomyHint,
   activity,
   tokensMicros,
   badge,
@@ -140,6 +148,9 @@ export function AgentCard({
             {t('agentCard.autonomy.auto')}
           </button>
         </div>
+      )}
+      {autonomy && onAutonomyChange && autonomyHint && (
+        <p className={styles.autonomyHint}>{autonomyHint}</p>
       )}
 
       {status === 'travado' && onRearm && (

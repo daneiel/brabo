@@ -166,6 +166,7 @@ estado lido do repositório e não da conversa.
 | A mensagem ao `infra` era lida pelo Criativo; o chat deixa de ter destinatário padrão (AT-098) | RN-584 |
 | A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
+| O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 
 ## Estado atual e aberto
 
@@ -1354,9 +1355,18 @@ o RACIOCÍNIO da triagem, que continua valendo.
   autonomia pra QUALQUER tipo de ação do agente, ligada pelo `ApprovalCard`
   ("Modo automático") e desligada pelo mesmo toggle manual/auto do card do
   agente na Visão Geral/Executores. Regra específica sempre vence a
-  curinga; a resolução mora no repositório (`findMode`), nunca em
-  `decide()`. Tetos continuam absolutos MESMO com auto mode ligado, e não
-  têm exceção configurável em lugar nenhum — merge em branch protegida,
+  curinga; a resolução mora no repositório (`resolve`, com `findMode` como
+  leitura dele), nunca em `decide()`, que recebe o modo E a ORIGEM
+  (`autonomyOrigin`). O teto de ESCOPO DE CAMINHO (ADR 0055) NÃO vale em auto
+  mode (RN-603, ADR 0167, decisão do dono): ligar o modo automático é o
+  usuário decidindo de uma vez que aquele agente roda qualquer comando,
+  inclusive fora da pasta — medido no `exp001`, 47 de 51 pedidos vinham só do
+  escopo, porque o dev agent roda no container (`/work`) e o escopo compara
+  com a raiz do HOST. Só a curinga em `auto_approve` tem esse poder; regra
+  ESPECÍFICA (`terminal: auto_approve`) segue com o escopo, e o toggle
+  "manual" o restaura. Os DEMAIS tetos continuam absolutos MESMO com auto
+  mode ligado, e não têm exceção configurável em lugar nenhum — merge em
+  branch protegida,
   `instruction_patch`, `parallelize`/`raise_max_parallel` (RN-154), e o
   teto de efeito externo/comando privilegiado — git push/PR/deploy e
   sudo/doas — que revisou a RN-106 (RN-418, ADR 0102): antes era `deny`

@@ -99,6 +99,12 @@ export function AgentTeamGrid({
         // é o que torna a autonomia AJUSTÁVEL daqui.
         autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
         onAutonomyChange={(mode) => onAutonomyChange(r.id, autonomyTypeParaMudar, mode)}
+        // RN-603: só a curinga LIGADA é modo automático — é ela que dispensa o
+        // escopo de caminho. Com o toggle sobre o tipo representativo a regra
+        // é específica e a frase mentiria.
+        autonomyHint={
+          curinga?.mode === 'auto_approve' ? t('agentCard.autonomy.autoModeHint') : undefined
+        }
         onRearm={r.status === 'travado' ? () => onRearm(r.id) : undefined}
         activity={
           r.status === 'travado'
