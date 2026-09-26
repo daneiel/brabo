@@ -287,7 +287,11 @@ Two output modes:
 
 **Whole file** — `docs/reference/scripts.md`. There's no prose to
 preserve: the list of commands is the content. It comes from each
-package's `package.json` and the `Makefile`'s annotated targets.
+package's `package.json` and the `Makefile`'s annotated targets. The
+package list is declared in `gerarScripts`, including the two packages
+outside the workspace (`website/`, `e2e/`, run with `--dir`), and a
+`package.json` that is missing or doesn't parse fails generation by
+name — it used to drop the package silently (AT-224).
 
 **Marked block** — the stretch between `<!-- BEGIN:GENERATED:<id> -->`
 and `<!-- END:GENERATED:<id> -->` inside a hand-written file. That's
