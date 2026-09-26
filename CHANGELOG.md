@@ -45,6 +45,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/` reprova com saída 1). Os dois avisos que ele acusava na `dev`
   (`no-useless-spread` em `pty.ts`, `no-unsafe-optional-chaining` num spec)
   entram corrigidos no mesmo PR.
+- **api**: os três `no-unsafe-assignment` de
+  `projects-summary.repository.spec.ts` saem (AT-188). O passo de lint do CI
+  não os via porque verifica só `src/**/*.ts`: `apps/api/test/` inteira fica
+  fora dele, e ela acusa 528 erros em 95 arquivos além desses três (medido,
+  não corrigido aqui). O script `lint` do `package.json` cobre `test/`, mas
+  não é o que o CI roda.
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também
