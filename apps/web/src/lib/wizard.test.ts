@@ -7,6 +7,7 @@ import {
   canAdvanceFromDetails,
   canAdvanceFromMode,
   canAdvanceFromWorkspace,
+  nomeAceitoPelaApi,
   providerNeedsCredential,
   slugify,
 } from './wizard';
@@ -109,6 +110,13 @@ describe('canAdvanceFromDetails', () => {
     ).toBe(false);
   });
 
+  /** AT-215: nome de uma letra passava aqui e voltava 400 da api (MinLength 2). */
+  it('criar exige o nome que a api aceita — uma letra, ou só símbolos, não avança', () => {
+    expect(canAdvanceFromDetails('create', { name: 'a', externalId: '' })).toBe(false);
+    expect(canAdvanceFromDetails('create', { name: '!!', externalId: '' })).toBe(false);
+    expect(canAdvanceFromDetails('create', { name: 'ab', externalId: '' })).toBe(true);
+  });
+
   it('adotar exige o identificador; o nome vem do provider', () => {
     expect(
       canAdvanceFromDetails('adopt', { name: '', externalId: 'acme/checkout' }),
@@ -195,5 +203,19 @@ describe('caminhoDentroDaBase', () => {
   it('caminho vazio não está dentro de base nenhuma', () => {
     expect(caminhoDentroDaBase('', base)).toBe(false);
     expect(caminhoDentroDaBase('   ', base)).toBe(false);
+  });
+});
+
+/** O espelho local do `CreateProjectDto` (AT-215, RN-600). */
+describe('nomeAceitoPelaApi', () => {
+  it('aceita 2+ caracteres que produzem slug', () => {
+    expect(nomeAceitoPelaApi('Loja')).toBe(true);
+    expect(nomeAceitoPelaApi('  Ação  ')).toBe(true);
+  });
+
+  it('recusa vazio, uma letra (mesmo com espaços em volta) e nome sem slug', () => {
+    expect(nomeAceitoPelaApi('')).toBe(false);
+    expect(nomeAceitoPelaApi(' a ')).toBe(false);
+    expect(nomeAceitoPelaApi('!!!')).toBe(false);
   });
 });
