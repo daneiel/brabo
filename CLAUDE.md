@@ -206,7 +206,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   ele aceita — as cinco camadas de contenção seguem intactas. Consequência:
   `DOCKER_GID` passa a importar para toda máquina de desenvolvimento, e
   `preflight.mjs` RELATA o estado dele a cada subida (errar não quebra o boot,
-  quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
+  quebra o uso, e o sintoma aparece só no `container_start`). Desde a RN-599
+  o compose de DEV também dá default a `BROKER_URL` (`http://broker:8090`, o
+  serviço do mesmo arquivo) — produção e instalação seguem `${BROKER_URL:-}`,
+  e essa divergência também é a decisão, não uniformize —, e o preflight
+  RELATA a pasta gerenciada no mesmo molde do `DOCKER_GID`: sem
+  `PROJECT_WORKSPACES_HOST_DIR` o broker fica sem
+  `PROJECT_WORKSPACES_HOST_ROOT` e o modo `container` não sobe container; o
+  `~` é acusado porque o Compose o expande no bind-mount e NÃO na variável do
+  broker. Relata, nunca recusa nem grava o `.env`. Em PRODUÇÃO, sem
   o profile ligado, `container_start` continua terminando `failed` com
   `BrokerIndisponivelError`. Na INSTALAÇÃO por Release
   (`docker-compose.install.yml`) o serviço `broker` EXISTE desde o ADR 0162

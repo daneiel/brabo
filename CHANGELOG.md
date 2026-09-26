@@ -24,6 +24,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   aceita (`@brabo/runner`, `@brabo/broker`, `@brabo/docker-port`), e a regra
   `scripts` do docmap passa a observar os `package.json` deles e o do
   `website/`, que o gerador já lia.
+- **docker**: no compose de dev a api passa a encontrar o broker sem
+  configuração (AT-213, RN-599). `BROKER_URL` ganha o default
+  `http://broker:8090`, o serviço que o próprio compose sobe desde a RN-512 —
+  antes a api respondia `brokerConfigurado: false` com o broker de pé e a
+  criação de projeto só oferecia `runner`. O valor do `.env` continua vencendo,
+  e os composes de produção e de instalação seguem sem default, de propósito.
+- **dev**: `pnpm dev` passa a relatar a pasta gerenciada a cada subida (AT-213,
+  RN-599), no molde do `DOCKER_GID`. Sem `PROJECT_WORKSPACES_HOST_DIR` o broker
+  fica sem `PROJECT_WORKSPACES_HOST_ROOT` e o `container_start` do modo
+  `container` termina recusado com o stack saudável; o relato diz isso, o
+  conserto e que trocar o volume pela pasta não migra o que está nele. Também
+  acusa o `~` (o Compose o expande no bind-mount, não na variável do broker) e
+  uma `PROJECT_WORKSPACES_HOST_ROOT` que diverge da pasta de api/engine. Nunca
+  recusa a subida nem grava o `.env`. O `.env.example` e o getting-started
+  deixam de sugerir `~` no caminho.
+
 - **docker**: seis flags booleanas do engine passam a chegar a ele na
   **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
   `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,

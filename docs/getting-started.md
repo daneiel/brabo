@@ -74,9 +74,16 @@ folder you can open in Finder/Explorer. To swap it for a real folder on
 your disk, set in `.env`:
 
 ```bash
-PROJECT_WORKSPACES_HOST_DIR=~/brabo-projetos
-GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
+PROJECT_WORKSPACES_HOST_DIR=/home/you/brabo-projetos
+GIT_LOCAL_REPOS_HOST_DIR=/home/you/brabo-projetos-bare
 ```
+
+Write the path ALREADY EXPANDED, never with `~`: Compose expands `~` in the
+bind mount that `api` and `engine` use, but not in the variable the broker
+derives from it, and **Container** mode would then fail to bring its container
+up. Without this folder at all, **Container** mode has no container either —
+`pnpm dev` reports both cases on every run
+([RN-599](business-rules.md#rn-599)).
 
 Both together, always — `api` and `engine` read the same path, and
 different values would make the two see different trees of the same
