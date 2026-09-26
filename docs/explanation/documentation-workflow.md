@@ -216,6 +216,22 @@ Promote it earlier and it charges each PR for someone else's debt. If
 the pattern shows a real false positive before then, narrow the
 pattern. Don't widen the window.
 
+**The list went empty on 2026-09-26** (AT-122). In the eight days after
+the check landed, the 63 known-wrong references had grown to **75**. That
+growth is the drift the check exists to show. All 75 were re-read by
+symbol against the code of that day, and none was a false positive of
+the pattern. Most had drifted by dozens of lines. One was a rename:
+`modo_de_execucao/1` became `exigencias_do_projeto/1` in RN-516. One had
+moved to another file: `escreverEnv` went from `preflight.mjs` to
+`env-file.mjs`. Two pointed at the right test, but at the `it(` line,
+while the symbol (`types`) only shows up a few lines below, in the body.
+Those two now point at the body line. The window stayed at ±3. The
+bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
+their unchecked neighbouring references re-read in the same pass. After
+that, **273 references match the pattern, 273 are correct, and 0 are
+wrong**. The four weeks start when that change reaches `dev`. The
+severity stays `warn` until then.
+
 ## The pieces
 
 ```mermaid

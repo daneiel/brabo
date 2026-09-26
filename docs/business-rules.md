@@ -152,7 +152,7 @@ through, and the name is a navigation label, changed as many times as
 desired — N renaming events would push exactly what matters out of the
 200-event tail.
 
-- **Where:** `apps/web/src/lib/session-label.ts:50` (`rotuloDaSessao`),
+- **Where:** `apps/web/src/lib/session-label.ts:61` (`rotuloDaSessao`),
   `apps/api/src/application/ports/session-repository.port.ts:52` (`rename`).
   Reachable both from inside the session
   (`apps/web/src/routes/SessionPage.tsx:445`, `handleRename`) and from the
@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:553` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:1994` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:627` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:1839` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -268,9 +268,9 @@ to "infra" today would silently fall through to the Creative agent; treating
 it as the composer's active agent would reopen that trap instead of closing
 one.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:273` (`activeAgent`),
-  `apps/web/src/lib/api-client.ts:773` (`getSessionModelBinding`, the
-  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:147`
+- **Where:** `apps/web/src/routes/SessionPage.tsx:462` (`activeAgent`),
+  `apps/web/src/lib/api-client.ts:1062` (`getSessionModelBinding`, the
+  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
@@ -295,8 +295,8 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
-- **Where:** `apps/web/src/lib/hooks.ts:135` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:208` (`eventsQuery`)
+- **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:374` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -460,7 +460,7 @@ previous one. `deny` at any stage returns immediately.
 Before any policy, IAM: each `ActionType` requires a minimum effective
 role. Without it, `deny` with an explicit reason.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:37` (`MIN_ROLE_FOR_ACTION_TYPE`)
+- **Where:** `apps/api/src/domain/actions/decide.ts:100` (`MIN_ROLE_FOR_ACTION_TYPE`)
 - **Test:** `test/domain/actions/decide.spec.ts`
 
 ### RN-006 — Ceiling: merge into a protected branch is never auto-approvable {#rn-006}
@@ -477,7 +477,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:149` + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:367` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -5605,8 +5605,8 @@ si não muda.
   `apps/web/src/lib/atividade-do-turno.ts` (reducer);
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
-  `apps/web/src/routes/SessionPage.tsx:281` (`agruparNarracoesDoTurno`),
-  `SessionPage.tsx:854` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:154` (`agruparNarracoesDoTurno`),
+  `SessionPage.tsx:351` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -5633,10 +5633,10 @@ retorna cedo. `ollama`/`ollama-model-loader` entram em `profiles:
 Reconfigurar Ollama", que apaga as chaves gravadas — nunca uma pergunta
 espontânea de novo enquanto elas existirem.
 
-- **Onde:** `scripts/dev/preflight.mjs:118` (`escreverEnv`),
-  `scripts/dev/preflight.mjs:159` (`ehOllama`),
-  `scripts/dev/preflight.mjs:198` (`perguntarUsoDoOllama`),
-  `scripts/dev/preflight.mjs:234` (`detectarOllamaNativo`),
+- **Onde:** `scripts/dev/env-file.mjs:41` (`escreverEnv`),
+  `scripts/dev/preflight.mjs:133` (`ehOllama`),
+  `scripts/dev/preflight.mjs:178` (`perguntarUsoDoOllama`),
+  `scripts/dev/preflight.mjs:214` (`detectarOllamaNativo`),
   `scripts/dev/reconfigurar-ollama.sh`, `scripts/dev/perfil-ollama.sh`,
   `docker/docker-compose.yml:82,119` (`profiles: ["local-llm"]`)
 - **Teste:** `scripts/dev/bootstrap.spec.ts` (cobre a fiação do menu — o
@@ -5734,7 +5734,7 @@ explicitamente como corte desta rodada, não esquecimento: estender o mesmo
 padrão da RN-427 para chaves de dispositivo é trabalho futuro direto, se
 vier a ser pedido.
 
-- **Onde:** `apps/api/src/db/schema/auth.ts:318` (`runnerDeviceKeys`),
+- **Onde:** `apps/api/src/db/schema/auth.ts:338` (`runnerDeviceKeys`),
   `apps/api/src/application/use-cases/auth/register-runner-device-key.use-case.ts`,
   `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts`,
   `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts`
@@ -5928,7 +5928,7 @@ campo é nulo por definição (a conversão de modo o zera, RN-450) e uma linha
 - **Onde:** `apps/web/src/components/SinaisDoAmbiente.tsx:72` (`useSaude` — a
   sonda com teto e o `.catch` da rejeição de conexão), `:133`
   (`SinaisDoAmbiente`, o bloco pré-login);
-  `apps/web/src/components/AmbienteDoProjeto.tsx:67` (`AmbienteDoProjeto`),
+  `apps/web/src/components/AmbienteDoProjeto.tsx:92` (`AmbienteDoProjeto`),
   `:102` (linha do runner, só no modo `runner`, com tom `neutro` e ressalva);
   `apps/web/src/routes/AuthLayout.tsx:46` (`colunaDeIdentidade` — nada focável
   ali, ou a primeira parada de `Tab` deixa de ser o campo de e-mail);
@@ -6177,7 +6177,7 @@ Uniformizar a forma pioraria o conteúdo no caminho mais provável da caixa.
   `:135`, `:147` (os três papéis — estas linhas NÃO mudaram),
   `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts:14`
   (`projectRole ?? workspaceRole`, a sobreposição nos dois sentidos),
-  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:116`
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:167`
   (`listMembers` — o `innerJoin` que faz a tabela ser recorte),
   `apps/web/src/routes/settings/MembersSection.tsx:62` (o papel efetivo e por
   que `maintainer`), `:109` (por que convidar não usa `mensagemDaApi`), `:142` e
@@ -6636,15 +6636,15 @@ caminho que a execução em container substitui; o que muda agora é só a
 **mensagem**, que nomeia a causa em vez de repassar "permissão negada" cru.
 
 - **Onde:**
-  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:114`
-  (`projectScopeRoot`, inalterada) e `:202` (`permissionsFilePath`, a segunda
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:231`
+  (`projectScopeRoot`, inalterada) e `:319` (`permissionsFilePath`, a segunda
   derivação), com `LocalizacaoDeProjetoInvalidaError` em `:219`,
   `apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts:77`
   (o único chamador do caminho do arquivo),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:394`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:415`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -8044,10 +8044,10 @@ nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espel
 
 - **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:211` (a consulta),
   `:229` (`podeOferecerMounted`/`baseDeProjetos`), `:240` (o modo vigente),
-  `:251` (`caminhoForaDaBase`), `:278` (a sugestão);
+  `:303` (`caminhoForaDaBase`), `:278` (a sugestão);
   `apps/web/src/lib/wizard.ts:130` (`caminhoSugeridoNaBase`) e `:158`
   (`caminhoDentroDaBase`) — as funções puras;
-  `apps/web/src/lib/api-client.ts:287` (`getProjectsBase`)
+  `apps/web/src/lib/api-client.ts:292` (`getProjectsBase`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
   (`describe('NewProjectWizard — a base de projetos decide o que é
   oferecido')` — base presente, base `null`, consulta recusada com 403, a
@@ -8139,10 +8139,10 @@ tela afirmando o que não sabe.
 
 - **Onde:** `apps/api/src/application/services/workspace-location.ts:93`
   (léxico) e `:108` (base);
-  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:486`
-  (`motivoDeForaDaBaseDeProjetos`), `:535`
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:575`
+  (`motivoDeForaDaBaseDeProjetos`), `:624`
   (`validarWorkspaceMontadoEmDisco`, o antigo `validarCaminhoDeWorkspaceLocal`)
-  e `:616` (`materializarWorkspaceMontado`);
+  e `:705` (`materializarWorkspaceMontado`);
   `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts:139`;
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:133`
   e `:334`
@@ -8757,11 +8757,11 @@ tipo lhe sejam **entregues**, nunca permissão para nada.
 
 - **Onde:** `apps/engine/lib/engine/runners/capacidades.ex` (novo — o
   vocabulário, o legado, o que cada modo exige e as duas mensagens);
-  `apps/engine/lib/engine_web/channels/terminal_channel.ex:133`
-  (`join/3` passa a receber `params`), `:144` (`autorizar_por_papel/3`),
-  `:176` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:200`
-  (`modo_de_execucao/1`), `:445` (o gate de `exec` em
-  `handle_info({:dispatch_exec, ...})`) e `:517` (o de `pty` em
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:204`
+  (`join/3` passa a receber `params`), `:215` (`autorizar_por_papel/3`),
+  `:247` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:301`
+  (`exigencias_do_projeto/1`, que era `modo_de_execucao/1` até a RN-516 fazer a mesma consulta responder também o destino do espelho), `:595` (o gate de `exec` em
+  `handle_info({:dispatch_exec, ...})`) e `:762` (o de `pty` em
   `handle_info({:relay, "pty_" <> _, ...})`);
   `apps/runner/src/channel.ts` (`CAPACIDADES_DO_RUNNER` e os params do
   `socket.channel/2`)
@@ -9461,7 +9461,7 @@ ALCANCE ([RN-520](#rn-520)), não amplitude.
 - **Onde:** `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts:99`
   (`@Get()`, `listDeviceKeys`, `developer`);
   `apps/api/src/application/use-cases/auth/list-runner-device-keys.use-case.ts:24`;
-  `apps/api/src/application/ports/runner-device-key-repository.port.ts:53`
+  `apps/api/src/application/ports/runner-device-key-repository.port.ts:90`
   (`listarDoUsuarioNoProjeto`);
   `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:69`;
   `apps/api/src/interfaces/http/runner/dto/runner-device-key-list.response.dto.ts:19`
@@ -9548,13 +9548,13 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:283`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:334`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
-  `apps/engine/lib/engine/runners/revogacao.ex:75` (`derrubar/3`);
+  `apps/engine/lib/engine/runners/revogacao.ex:66` (`derrubar/3`);
   `apps/engine/lib/engine_web/channels/terminal_channel.ex:697`
   (`handle_info({:derrubar_por_revogacao, …})`);
-  `apps/engine/lib/engine_web/channels/runner_socket.ex:66` (`id/1`, que deixou
+  `apps/engine/lib/engine_web/channels/runner_socket.ex:79` (`id/1`, que deixou
   de ser `nil`);
   `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:27`;
   `apps/engine/lib/engine_web/router.ex:86`
@@ -9672,11 +9672,11 @@ reparável (termina em toast), não o invisível.
   (o LEFT JOIN, o `ORDER BY` e `temImagemDecidida`);
   `apps/api/src/application/ports/containers-overview-repository.port.ts:20`
   (`executionMode`/`lifecycle` nulo/`temImagemDecidida`/`workspaceVerifiedAt`);
-  `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:29`
-  (`sem_container_registrado`) e `:86` (`elegivelParaVerificacao`, que é o que
+  `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:33`
+  (`sem_container_registrado`) e `:101` (`elegivelParaVerificacao`, que é o que
   mantém o orçamento intacto);
   `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
-  `apps/web/src/routes/containers-subida.ts:88` (`decidirSubida`, a regra
+  `apps/web/src/routes/containers-subida.ts:107` (`decidirSubida`, a regra
   inteira, pura);
   `apps/web/src/routes/ContainersPage.tsx:115` (os dois payloads)
 - **Teste:**
@@ -9748,7 +9748,7 @@ reabriria a rechamada por outra porta. A cláusula de args inválidos também n�
 dispara — ela não sabe qual é a story.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:254`
-  (`run_assessment/2`, a leitura única do histórico) e `:333`
+  (`run_assessment/2`, a leitura única do histórico) e `:340`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:43` (o callback) e `:110`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -9948,11 +9948,11 @@ só o léxico é conhecível impediria consentir uma base antes de ela existir).
 é pasta nunca virará uma.
 
 - **Onde:** `apps/runner/src/base.ts:69` (`caminhoDoArquivoDeBase`, a
-  precedência XDG de `servico.ts`), `:90` (`lerBaseConsentida`, os quatro
-  desfechos) e `:165` (`resolverBaseConsentida`, a ordem das fontes e a origem
-  da recusa); `apps/runner/src/base-guard.ts:119`
-  (`validarBaseDeProjetos`), `:200` (`recusarLacoComARaiz`, o laço assimétrico)
-  e `:278` (`resolverPastaDoProjetoNaBase`, a subpasta e a dupla passada);
+  precedência XDG de `servico.ts`), `:106` (`lerBaseConsentida`, os quatro
+  desfechos) e `:181` (`resolverBaseConsentida`, a ordem das fontes e a origem
+  da recusa); `apps/runner/src/base-guard.ts:128`
+  (`validarBaseDeProjetos`), `:209` (`recusarLacoComARaiz`, o laço assimétrico)
+  e `:296` (`resolverPastaDoProjetoNaBase`, a subpasta e a dupla passada);
   `apps/runner/src/index.ts:321` (a resolução no `lerArgumentos`, DEPOIS de
   `garantirDiretorio` e sem tocar na validação de `--dir`) e `:452`
   (`EstadoDoRunner.base`)
@@ -10086,9 +10086,9 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
 
 - **Onde:** `apps/runner/src/pasta-do-projeto.ts:132` (`criarPastaDoProjeto` —
   a ordem guarda→disco→versionamento e os cinco motivos);
-  `apps/runner/src/channel.ts:142` (`WorkspaceCreateMessage`), `:163`
-  (`WorkspaceCreateResultMessage`), `:425` (`CAPACIDADE_DE_WORKSPACE` e
-  `capacidadesDoRunner`); `apps/runner/src/index.ts:763`
+  `apps/runner/src/channel.ts:164` (`WorkspaceCreateMessage`), `:185`
+  (`WorkspaceCreateResultMessage`), `:467` (`CAPACIDADE_DE_WORKSPACE` e
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:1000`
   (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
   `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
   `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:128`
@@ -10208,8 +10208,8 @@ duas devem.
   (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
   origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
   `:119` (o `ref` que a dispara uma vez);
-  `apps/web/src/components/RunnerOnboardingPanel.tsx:113` (`mostrarEspera`);
-  `apps/web/src/routes/NewProjectWizard.tsx:260` (`origemDoNavegador`, o
+  `apps/web/src/components/RunnerOnboardingPanel.tsx:150` (`mostrarEspera`);
+  `apps/web/src/routes/NewProjectWizard.tsx:293` (`origemDoNavegador`, o
   transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
 - **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` (a lista
   declarando o disco da máquina do usuário; `sem-agente` caindo no painel de
@@ -10922,7 +10922,7 @@ branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
 ficado **inalcançável**: a condição era `provider === 'github'`, e ao criar não
 há mais provider escolhido.
 
-- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:170` (`stepKeys`, agora
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:349` (`stepKeys`, agora
   dependente de `adotando`), `:285` (a guarda de `provider` restrita à adoção) e
   `:323` (a navegação para `/projects/$projectId`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`, `describe('NewProjectWizard — o git é adiado')`
@@ -12293,8 +12293,8 @@ diferença não é escolha de desenho: é a forma do endpoint.
   `maquinaJaPareada`), `apps/web/src/components/RunnerOnboardingPanel.tsx:173`
   (as duas consultas e o `ReconhecimentoDeMaquina`),
   `apps/web/src/components/RunnerOnboardingPanel.module.css`
-  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:421`
-  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:644`
+  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:434`
+  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:706`
   (`RunnerDeviceKeyListItem`, `RunnerDeviceKeyEspecie`),
   `apps/web/src/locales/{en,pt-BR}/terminal.json` (`agenteDeMaquina.*`)
 - **Teste:** `apps/web/src/lib/agente-de-maquina.test.ts` — o caminho feliz
@@ -13337,12 +13337,12 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 `maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:351` (o
-  dispatch de `container_start` consultando antes de propor), `:453`
-  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:469` (a
-  cláusula de `container_start`: lista de permitidos), `:472` (a recusa
-  nomeando `container_start_via_runner`), `:487` (a cláusula da irmã, com a
-  segunda pergunta — runner conectado), `:394` (o `emit` do `tool.call`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
+  dispatch de `container_start` consultando antes de propor), `:458`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
+  cláusula de `container_start`: lista de permitidos), `:477` (a recusa
+  nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:409` (o `emit` do `tool.call`
   movido para antes da recusa);
   `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
   (moduledoc — a tool deixou de propor às cegas)
@@ -13409,7 +13409,7 @@ pode depender dela — é justamente por depender dela que ele não saía.
 
 - **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
   sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
-  `:309` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:326` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
   `:369` (o passo que espera), `:373`/`:374` (os dois tetos), `:382` (a Release
   ausente, que é erro), `:405` (o teto dos binários, que é `notice`), `:455` (o
   manifesto nomeando o que não cobre)
@@ -13476,15 +13476,15 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:188`
-  (`reason` no payload do evento de sessão), `:151` (o comentário do outbox
-  sem o campo), `:159` (o payload do outbox, intacto), `:259` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:207`
+  (`reason` no payload do evento de sessão), `:170` (o comentário do outbox
+  sem o campo), `:174` (o payload do outbox, intacto), `:285` (o
   `rejectionReason`, que continua só no `deny`);
   `apps/api/src/domain/actions/decide.ts:237` (`Decision`, a fonte da string)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:617`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:673`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:640` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:668` (`deny` com o mesmo texto do `rejectionReason`), `:686` (o outbox
+  `:696` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:724` (`deny` com o mesmo texto do `rejectionReason`), `:742` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -13547,7 +13547,7 @@ lógico, monótono) à janela e ao parâmetro, que também passa a olhar
 evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
 da guarda, o mesmo dos outros dois fatos.
 
-- **Código:** `apps/web/src/lib/agent-status.ts:285` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:299` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:96` e
@@ -13684,13 +13684,13 @@ caminhos relativos) e o compose de instalação declara o volume `backup_local`
 que o serviço `backup` referencia, cuja falta recusava o arquivo inteiro com o
 profile ligado. Coberto por `scripts/dev/prova-de-restauracao-env.spec.ts`.
 
-- **Código:** `install.sh:95` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
-  `:497` (`ASSETS_DO_INSTALADOR`), `:499` (`destino_do_asset_do_instalador`, a
-  tabela do lado que baixa), `:524` (`baixar_e_verificar_os_arquivos_da_instalacao`),
-  `:531`/`:539`/`:541` (as três recusas), `:558`
-  (`materializar_os_arquivos_da_instalacao`), `:1207` (a migração materializa
-  antes do backup), `:1307` (a verificação logo depois da própria origem),
-  `:1473` (a subida materializa antes do `up`);
+- **Código:** `install.sh:128` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
+  `:573` (`ASSETS_DO_INSTALADOR`), `:575` (`destino_do_asset_do_instalador`, a
+  tabela do lado que baixa), `:600` (`baixar_e_verificar_os_arquivos_da_instalacao`),
+  `:607`/`:615`/`:617` (as três recusas), `:634`
+  (`materializar_os_arquivos_da_instalacao`), `:1502` (a migração materializa
+  antes do backup), `:1606` (a verificação logo depois da própria origem),
+  `:1755` (a subida materializa antes do `up`);
   `scripts/ci/assets-do-instalador.ts:55` (a tabela do lado que publica), `:93`
   (`problemasDoMapeamento`), `:135` (`prepararAssets`);
   `.github/workflows/build-runner-binaries.yml:468` (os assets preparados do
@@ -13897,7 +13897,7 @@ instalação sem broker continua possível pelo agente.
   `mounted` recusam antes da imagem), `:70` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:522` (botão inerte e o motivo
-  em texto, nunca propõe), `:547` (`runner` segue subindo)
+  em texto, nunca propõe), `:577` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -14135,7 +14135,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:835`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:911`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14159,8 +14159,8 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (o resumo gravado), `:101` (fallback do sumarizador);
   `apps/api/test/interfaces/http/internal/leitura-interna-de-eventos.spec.ts:13`
   (sem os parâmetros, as opções de antes), `:40` (tipo malformado é 400);
-  `apps/api/test/infrastructure/persistence/session-event-latest.repository.spec.ts:123`
-  (`types` filtra e o `limit` conta só eles), `:135` (`types` com `latest`)
+  `apps/api/test/infrastructure/persistence/session-event-latest.repository.spec.ts:129`
+  (`types` filtra e o `limit` conta só eles), `:143` (`types` com `latest`)
 - **Origem:** AT-073, levantada em 2026-09-13
 
 ### RN-578 — O clique que dispara turno de agente responde ao ACEITAR, e a recusa deixa de ser calada {#rn-578}
@@ -14221,7 +14221,7 @@ depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
   `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
-  `:292` (`acompanharTurnoPeloLog`), `:316`;
+  `:318` (`acompanharTurnoPeloLog`), `:316`;
   `apps/web/src/routes/SessionPage.tsx:1496`, `:1521`, `:1770`, `:1830`;
   `apps/web/src/lib/recusa-do-agente.ts:17`
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:66`
@@ -14512,8 +14512,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:819`
-  (`narrar_recusa_de_sessao_encerrada`), `:1094` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:866`
+  (`narrar_recusa_de_sessao_encerrada`), `:1141` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:48` (`parar_da_sessao`),
   `:64` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
@@ -14535,7 +14535,7 @@ fechada seguem mostrando a mensagem da api.
   teto), `:152` e `:194` (AT-152: com a aba aberta — pings — a conversa ociosa
   além do teto fecha, e dentro do teto não fecha); `apps/engine/test/engine/sessions/pendencia_de_conversa_test.exs:28`
   (instante inválido vira erro); `apps/engine/test/engine/agents/conversacionais_test.exs:44`
-  (para só os da sessão), `:84` (`session.closed` para o Criativo vivo);
+  (para só os da sessão), `:100` (`session.closed` para o Criativo vivo);
   `apps/engine/test/engine/agents/turno_assincrono_test.exs:161` (abandonar não
   grava nem transmite, e não responde de novo), `:194` (o `terminate/2` abandona);
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
@@ -14953,7 +14953,7 @@ próxima falha do k3d, se houver, traz a linha do Monitor.
 
 - **Código:** `apps/engine/lib/engine/sessions/monitor.ex:45`
   (`expect_handoff/1`), `:119` (`apagar_linha/1`);
-  `apps/engine/lib/engine/shutdown.ex:139` (`release/1`, o drain marca o repasse)
+  `apps/engine/lib/engine/shutdown.ex:130` (`release/1`, o drain marca o repasse)
 - **Teste:** `apps/engine/test/engine/sessions/monitor_repasse_test.exs:52`
   (Monitor suspenso: o `:DOWN` tardio não apaga a linha regravada pelo par),
   `:67` (cadeia antigo → antigo → novo: o segundo drain ainda vê a sessão),
