@@ -102,6 +102,39 @@ the source of truth is the ADR directory, `verificarVersaoAnunciada`
 when it's the CHANGELOG's latest release — or a function of its own
 next to them, when it's neither.
 
+**Counts derived from code (AT-123).** A sweep on 2026-09-25 of
+`docs/`, `README.md`, `CONTRIBUTING.md`, `THIRD_PARTY_NOTICES.md` and
+`CLAUDE.md` found five numbers already wrong — "nove schemas" (eleven),
+"doze operações" of the git contract (fifteen), "dez abas" (twelve),
+"três imagens" built by CI (five), "Thirteen types" of
+`proposed_action` (twenty-one) — none with a check behind it. The
+counts whose source is a place in the code now live in
+`scripts/docs/contagens-do-codigo.mjs`, called by
+`verificarContagensDerivadasDoCodigo`: one table row per SENTENCE
+(the same count said in two files is two sentences that age apart),
+each pointing at an extractor that counts the artifact — the
+`overrides` blocks of the two `pnpm-workspace.yaml`, the golden-set's
+`CASOS` and `ARQUIVOS_CURADOS` and its `floor.json`, the total that
+`scripts/ci/imagens-pinadas.ts` prints, `ALVOS`, the smoke's non-root
+loop, the methods of `GitProviderContract` and of `DockerPort`, the
+tab `REGISTRO`, the dev compose services without `profiles:` (which
+must ALL have a healthcheck, or the expected value becomes a sentence
+the prose doesn't have), `ACTION_TYPES`, the `action_status` enum and
+the `pgTable(` calls. Comparison ignores case and follows the
+sentence's form (Portuguese masculine/feminine words, English words,
+or digits). Because the extractors are many, each is proven by
+MUTATION in `contagens-do-codigo.spec.ts`: change the artifact and not
+the prose, and it must fail `DESATUAL`; remove the sentence or the
+source, and it must fail `CEGO`.
+
+What was **dated instead of derived**, and why: the per-app file counts
+in `architecture.md` and the broker's "six routes" change with almost
+every PR or are read off a `switch`, so a check would only add noise —
+they carry "measured 2026-09-25". Numbers that describe a design
+invariant ("two layers", "three states") or a past measurement already
+dated in place (`THIRD_PARTY_NOTICES.md`, the runbook's restore
+transcripts) were left as they are.
+
 ### Line references with a symbol
 
 An RN cites code by `path:line`, and a line number goes stale every

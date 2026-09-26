@@ -194,7 +194,7 @@ which is durable, never the status.
 
 **`proposed_action`** — every action with an external effect (a terminal
 command, commit, push, PR, merge, spend) is **born** here, it never
-executes directly. Thirteen types. Six states
+executes directly. Twenty-one types. Six states
 ([RN-003](business-rules.md#rn-003)).
 
 **`permissions.json`** — the project's policy file. Matches a command
