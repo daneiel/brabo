@@ -1184,7 +1184,11 @@ Two checks before blaming the address, if `ENGINE_URL` is correct:
   (`SESSION_HEARTBEAT_TIMEOUT_MS`). `conversation_idle_timeout` is the
   other one: a conversational agent was waiting for the user for longer
   than `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` (8h), counted from the end of
-  its turn ([RN-581](business-rules.md#rn-581)). A `409` with
+  its turn ([RN-581](business-rules.md#rn-581)). To change that ceiling,
+  set the variable in the `.env` (all three composes map it to the engine)
+  or, on Kubernetes, add an `env:` item to the engine patch of the overlay:
+  `deploy/k8s/` does not write it on purpose, because an absent variable
+  there already is the code's 8h default (AT-153). A `409` with
   `reason: "sessao_encerrada"` afterwards is the closed session refusing
   conversation — open a new session.
 

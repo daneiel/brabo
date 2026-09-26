@@ -17,6 +17,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker**: o teto da conversa ociosa (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`,
+  RN-581) passa a chegar ao engine na **instalação** (AT-153). O
+  `docker-compose.install.yml` não o mapeava — só os composes de dev e de
+  produção —, e como o Compose não repassa o ambiente do host, mudá-lo no `.env`
+  de uma instalação não tinha efeito. Entra com o mesmo default do código (8h),
+  vai para o `.env.example`, e `scripts/ci/teto-ocioso-nos-composes.spec.ts`
+  cobra a linha nos três composes. O `deploy/k8s/` segue sem ela por decisão,
+  escrita no Deployment do engine: ali a ausência já é o default.
 - **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
   vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
   relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de

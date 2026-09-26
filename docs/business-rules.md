@@ -14480,8 +14480,13 @@ com a aba aberta e mandando heartbeat, a sessão continua viva sem teto, como
 sempre (quem está olhando não é conversa ociosa). A resposta do chat humano
 stateless a um turno que COMEÇOU com a sessão aberta entra mesmo que ela feche
 no meio (o ator é o modelo, e o gasto já foi medido). `deploy/k8s/` não carrega
-`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`: vale o default do `runtime.exs`, e mudar
-o teto ali é acrescentar a variável ao ConfigMap. Desde a AT-154 a tela trata o
+`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, e desde a AT-153 isso é DECISÃO escrita
+no Deployment do engine, não pendência: lá nada intercepta o ambiente, a
+ausência é o default do `runtime.exs`, e escrever o número faria uma segunda
+cópia sem guarda contra divergir — mudar o teto ali é um item `env:` no patch do
+engine do overlay. Os TRÊS composes o mapeiam com o default do código (o de
+instalação só desde a AT-153, e até ali a linha no `.env` de uma instalação era
+inerte), guardados por `scripts/ci/teto-ocioso-nos-composes.spec.ts`. Desde a AT-154 a tela trata o
 409 com frase própria (item 11); as demais ações da tela que gravam em sessão
 fechada seguem mostrando a mensagem da api.
 

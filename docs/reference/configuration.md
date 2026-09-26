@@ -378,7 +378,7 @@ preflight because it runs on the host, and the api can only compare against
 | `DNS_CLUSTER_QUERY` | — | the headless Service that forms the Erlang cluster. **Without it each replica is an island** and every rollout drains everything |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | `preStop` window. Goes up **together** with `terminationGracePeriodSeconds`, never alone |
 | `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | how long the session waits for the tab's heartbeat before asking the api whether there is pending work |
-| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | ceiling of an **idle conversation**: a conversational agent waiting for the user holds the session past the heartbeat for this long, counted from the end of its turn; past it the session closes as `closed` with cause `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)) |
+| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | ceiling of an **idle conversation**: a conversational agent waiting for the user holds the session past the heartbeat for this long, counted from the end of its turn; past it the session closes as `closed` with cause `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)). Mapped to the engine in all three composes (dev, production, installation) with this same default; **not** written in `deploy/k8s/`, on purpose — nothing there intercepts the environment, so absence is the default, and changing it is an `env:` item in the overlay's engine patch |
 | `RELEASE_NAME` / `RELEASE_NODE` | — | node identity in the distribution |
 
 ### Harness
