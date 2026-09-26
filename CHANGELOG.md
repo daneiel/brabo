@@ -39,7 +39,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   uma `PROJECT_WORKSPACES_HOST_ROOT` que diverge da pasta de api/engine. Nunca
   recusa a subida nem grava o `.env`. O `.env.example` e o getting-started
   deixam de sugerir `~` no caminho.
-
+- **docs**: a tradução pt-BR do runbook volta a cobrir as seções de maior
+  risco operacional (AT-209). *Instalando* (com o broker numa instalação) e
+  *Provas de propriedade agendadas* não existiam; as rotações das chaves do auth
+  e da chave mestra estavam atrás do inglês (sem o `key_id` da RN-563, a
+  consulta de progresso, a condição do pepper da RN-597, a RN-598 e as
+  `_PREVIOUS` nos composes); e a *sessão que não sai de `created`* não tinha o
+  `conversation_idle_timeout` da RN-581. O topo da página pt-BR passa a listar
+  as seções que só existem em inglês. Links para RNs que a tradução de
+  `business-rules.md` ainda não tem apontam para a versão em inglês.
+- **web**: criar projeto pela tela deixa de sair em rajada de 400 (AT-215,
+  RN-600). No modo **Runner local**, "Procurar pasta..." criava o projeto com
+  `name`/`slug` vazios quando o nome ainda não tinha sido digitado (o campo fica
+  abaixo do de caminho) e só dizia "Não deu para preparar a navegação de pasta
+  agora" — cada clique era um 400 novo. Agora o botão fica inerte, com o motivo
+  em texto, até o nome ter 2+ caracteres (e o caminho digitado ser absoluto); o
+  "Continuar" também exige o nome que a api aceita; as duas criações travam
+  durante o envio; e a frase da api aparece no passo.
+- **web**: no assistente de projeto, o modo **Runner local** passa a dizer
+  ANTES do clique que "Procurar pasta..." só funciona com o `brabo-runner`
+  rodando na máquina e conectado ao projeto (AT-214, RN-437). A lista vem do
+  agente local por construção (ADR 0108, RN-533), e a tela não dizia isso: quem
+  clicava sem runner via o botão "não funcionar". O aviso, em texto e nos dois
+  idiomas, mostra o comando (`brabo-runner --project <id> --dir <pasta>`) e diz
+  que digitar o caminho no campo é a alternativa.
 - **docker**: seis flags booleanas do engine passam a chegar a ele na
   **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
   `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
@@ -89,6 +112,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   caracteres. A mensagem nomeia a variável. Continua opcional: fora da
   rotação, ausente é o normal. O engine e o broker não mudaram (o engine não
   valida nem o atual; ver a borda da RN-598).
+- **engine**, **broker**: os dois tokens de serviço passam pela MESMA régua da
+  api no engine e no broker (AT-216, RN-601). O engine lia os dois crus no
+  `runtime.exs`: sem trim, sem piso, e em produção subia com o default público
+  de dev quando a variável faltava. Agora, com a release `:prod`, ele recusa
+  subir se `BRABO_SERVICE_TOKEN` faltar, for o literal público ou tiver menos
+  de 16 caracteres depois do trim, e aplica as duas últimas ao
+  `BRABO_SERVICE_TOKEN_PREVIOUS` quando definido; a mensagem nomeia a
+  variável. O broker já fazia isso com o atual e agora faz com o anterior. Fora
+  de produção, nos dois, só o trim (e o engine passa a cair no default de dev
+  com a variável vazia, como a api, em vez de usar a string vazia). Como a
+  migração do engine (`bin/engine eval`) avalia o mesmo `runtime.exs`, o
+  serviço `migrate-engine` dos composes de produção e de instalação passa a
+  receber os dois tokens.
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina

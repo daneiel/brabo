@@ -84,6 +84,14 @@
       "command": "brabo-runner --project {{id}} --dir {{caminho}}",
       "placeholderId": "<id do projeto>",
       "note": "O runner confirma o caminho ao conectar — nenhum comando roda antes disso."
+    },
+    "browseRunner": {
+      "requires": "<strong>“Procurar pasta...” só funciona com o <code>brabo-runner</code> rodando na sua máquina e conectado a este projeto</strong> — neste modo a lista vem do agente local, não do servidor. O clique cria o projeto agora, para o agente ter a que se conectar; depois rode:",
+      "alternative": "Sem o runner rodando, <strong>digite o caminho no campo acima</strong>: dá no mesmo, e o runner confirma a pasta quando conectar.",
+      "placeholderPath": "<pasta>",
+      "blockedName": "Preencha o nome do projeto (2 caracteres ou mais) antes de procurar a pasta: neste modo o clique já cria o projeto.",
+      "blockedAdoptName": "Preencha o repositório a adotar antes de procurar a pasta: neste modo o clique já cria o projeto, com o nome tirado dele.",
+      "blockedPath": "O caminho digitado não é absoluto ou tem \"..\" — corrija-o (ou apague-o) antes de procurar a pasta, senão a api recusa a criação."
     }
   },
   "confirm": {
