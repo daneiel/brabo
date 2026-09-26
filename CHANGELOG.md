@@ -53,6 +53,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   NÃO corta (padrão em `allow` no `permissions.json` continua auto-aprovando).
   Os blocos SQL da seção, nos dois idiomas, passam a rodar contra o schema
   migrado em `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts`.
+- **sessões**: a web deixa de identificar a sessão técnica do provisionamento
+  pelo NOME (AT-183, RN-592). `GET /projects/:projectId/sessions` devolve
+  `technical` em cada item, pelo vínculo em `repo_bootstraps` — o mesmo critério
+  do resumo do workspace —, e a Visão Geral o lê para escolher a sessão mais
+  recente. Renomear a sessão `git-bootstrap` não faz mais a tela e a api
+  discordarem de qual é a sessão de trabalho.
 - **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
   vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
   relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de

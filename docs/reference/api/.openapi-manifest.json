@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "fe79004709a9aad0a1ef7db0ac0d40749c03294cac33911f58561be889267b91",
+  "openapiSha256": "08544958dbbe127ab1398ffeeedcfde37207345202b7eb97ecfc751a77b2abb0",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -801,8 +801,8 @@
     "sessions-controller-list-events.api.mdx": "ec1bc49fca6f8130022cac747da17f324d85e47056948a34f782259df1dba9e5",
     "sessions-controller-list.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "sessions-controller-list.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "sessions-controller-list.StatusCodes.json": "6f2ea97e59f45190930843ed9eb0fcd71c7c4cc8eb89d26e3dde42fca0b1d079",
-    "sessions-controller-list.api.mdx": "98f22ca0232ad51311cd0f801a2873f23cdb635e35ba867046d8a22f11f7aacf",
+    "sessions-controller-list.StatusCodes.json": "3e52d32856c38ce73b490c7c742ad8a454d91bf842bc1881197993192756b420",
+    "sessions-controller-list.api.mdx": "5ff638e27941a02bc968c41c9e7176597069afd23192aaa7265782cd572c1a4f",
     "sessions-controller-rename.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "sessions-controller-rename.RequestSchema.json": "7b753822e0966c0946b305c22971ed2ceadfef5bc1bdcf3d181f76d8395fca43",
     "sessions-controller-rename.StatusCodes.json": "430982fc377aa113129152c3e900d71536bd0eec1c0a0fd683aef3a1aff8cd04",

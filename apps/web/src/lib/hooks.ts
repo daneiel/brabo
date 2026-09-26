@@ -115,21 +115,17 @@ export function useProjectSessions(projectId: string | undefined) {
   });
 }
 
-// A sessão técnica do provisionamento (nome fixo que a api dá em
-// `ProvisionRepositoryUseCase`) nasce no meio da fase do Arquiteto (RN-582) e
-// não desloca a sessão de trabalho (AT-131): só é a mais recente quando é a
-// ÚNICA. Mesma régua do resumo do workspace na api, que aqui a lê pelo NOME —
-// a api a lê por `repo_bootstraps`, e renomear a sessão só faz as duas
-// divergirem (a Visão Geral então trata o resumo como de outra sessão).
-export const NOME_DA_SESSAO_DE_BOOTSTRAP = 'git-bootstrap';
-
-export function sessaoMaisRecente<T extends { createdAt: string; name: string | null }>(
+// A sessão técnica do provisionamento nasce no meio da fase do Arquiteto
+// (RN-582) e não desloca a sessão de trabalho (AT-131): só é a mais recente
+// quando é a ÚNICA. Quem diz qual é a técnica é a API, pelo marcador
+// `technical` da listagem (RN-592) — o MESMO vínculo em `repo_bootstraps` que o
+// resumo do workspace usa. Antes a tela a lia pelo NOME (`git-bootstrap`), e
+// renomear a sessão fazia as duas divergirem (AT-183).
+export function sessaoMaisRecente<T extends { createdAt: string; technical: boolean }>(
   sessoes: readonly T[],
 ): T | undefined {
   const ordenadas = [...sessoes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return (
-    ordenadas.find((s) => s.name !== NOME_DA_SESSAO_DE_BOOTSTRAP) ?? ordenadas[0]
-  );
+  return ordenadas.find((s) => !s.technical) ?? ordenadas[0];
 }
 
 // Sessão mais recente do projeto — usada pra alimentar o feed de
