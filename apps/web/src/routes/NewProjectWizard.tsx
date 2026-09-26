@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
@@ -17,6 +17,8 @@ import {
   canAdvanceFromDetails,
   canAdvanceFromMode,
   canAdvanceFromWorkspace,
+  caminhoLocalParecePlausivel,
+  nomeAceitoPelaApi,
   providerNeedsCredential,
   slugify,
   type ModoDeRepositorio,
@@ -114,7 +116,11 @@ function montarPayloadDeCriacao(input: {
   modoDeWorkspace: ModoDeWorkspace;
   workspacePath: string;
 }): { name: string; slug: string; executionMode: ModoDeWorkspace; workspacePath?: string } {
-  const nomeDoProjeto = input.adotando ? nomeDoExternalId(input.externalId) : input.name;
+  // Recortado: o DTO mede `name` como veio, e " a" passaria no MinLength(2)
+  // com um projeto de nome de uma letra (AT-215).
+  const nomeDoProjeto = (
+    input.adotando ? nomeDoExternalId(input.externalId) : input.name
+  ).trim();
   return {
     name: nomeDoProjeto,
     slug: slugify(nomeDoProjeto),
@@ -189,6 +195,11 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [credError, setCredError] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // A trava que o `disabled` não dá (AT-215, RN-600): o estado de envio só
+  // chega ao botão no próximo render, e dois cliques no mesmo quadro passam
+  // os dois. Uma criação por vez, pelos DOIS caminhos que criam — o
+  // "Procurar pasta..." do modo runner e o "Provisionar".
+  const criacaoEmVoo = useRef(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -296,6 +307,25 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         ? { tipo: 'runner', projectId: projetoParaNavegar.id }
         : undefined
       : { tipo: 'api', workspaceId };
+
+  /**
+   * Por que "Procurar pasta..." do modo `runner` ainda não pode criar o
+   * projeto (AT-215, RN-600). O clique CRIA (RN-437), e com o nome vazio —
+   * o campo do nome fica ABAIXO do de caminho neste passo — o corpo saía com
+   * `name: ''` e `slug: ''`: 400 garantido, a cada clique, com um toast que
+   * não dizia por quê. Com o motivo conhecido de antemão, o botão fica inerte
+   * e a tela diz o que falta, em texto (ADR 0064). Caminho VAZIO não bloqueia
+   * (o placeholder provisório da RN-437 cobre); caminho digitado e implausível
+   * bloqueia, porque seria a outra recusa certa.
+   */
+  const bloqueioDoProcurarNoRunner: 'nome' | 'caminho' | null =
+    modoDeWorkspace !== 'runner'
+      ? null
+      : !nomeAceitoPelaApi(adotando ? nomeDoExternalId(externalId) : name)
+        ? 'nome'
+        : caminhoLocal.trim() !== '' && !caminhoLocalParecePlausivel(caminhoLocal)
+          ? 'caminho'
+          : null;
 
   // Campo VAZIO não é "fora da base": não há caminho para a api recusar
   // ainda, e alarmar antes de a pessoa digitar seria a tela afirmando sobre
@@ -458,6 +488,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       setNavegadorDePastaAberto(true);
       return;
     }
+    if (bloqueioDoProcurarNoRunner !== null) return;
 
     const snapshotAtual = snapshotDeIdentidade({ adotando, name, externalId });
     if (projetoParaNavegar && mesmaIdentidade(projetoParaNavegar.snapshot, snapshotAtual)) {
@@ -465,7 +496,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       return;
     }
 
+    if (criacaoEmVoo.current) return;
+    criacaoEmVoo.current = true;
     setCriandoParaNavegar(true);
+    setErroDeCriacao(null);
     try {
       const project = await createProject(
         workspaceId,
@@ -480,12 +514,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       setProjetoParaNavegar({ id: project.id, snapshot: snapshotAtual });
       setNavegadorDePastaAberto(true);
-    } catch {
+    } catch (error) {
+      // A recusa da api é o que ensina (o nome curto demais, o caminho fora
+      // da régua) — o toast genérico sozinho era o que fazia o dono clicar de
+      // novo, e de novo (AT-215). O motivo fica NA TELA, como no Provisionar.
+      const motivo =
+        error instanceof ApiError && error.status === 400
+          ? mensagemDaApi(error)
+          : null;
+      setErroDeCriacao(motivo);
       showToast({
         title: t('toasts.folderNavigationPrepareFailed'),
         tone: 'danger',
       });
     } finally {
+      criacaoEmVoo.current = false;
       setCriandoParaNavegar(false);
     }
   }
@@ -495,6 +538,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     // tela de plano. Ao criar ele é `undefined` no caso normal, e o `return`
     // incondicional que existia aqui faria o botão não fazer NADA, em silêncio.
     if (adotando && !provider) return;
+    if (criacaoEmVoo.current) return;
+    criacaoEmVoo.current = true;
     setSubmitting(true);
     setErroDeCriacao(null);
     try {
@@ -561,6 +606,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         tone: 'danger',
       });
       setSubmitting(false);
+    } finally {
+      criacaoEmVoo.current = false;
     }
   }
 
@@ -708,7 +755,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   type="button"
                   variant="secondary"
                   onClick={() => void handleProcurarPasta()}
-                  disabled={criandoParaNavegar}
+                  disabled={criandoParaNavegar || bloqueioDoProcurarNoRunner !== null}
                 >
                   <FolderIcon size={14} />
                   {criandoParaNavegar ? t('workspace.preparing') : t('workspace.browseButton')}
@@ -719,6 +766,44 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   ? t('workspace.hintMounted')
                   : t('workspace.hintRunner')}
               </div>
+              {bloqueioDoProcurarNoRunner !== null && (
+                <div className={styles.slugPreview} data-testid="procurar-bloqueado">
+                  {bloqueioDoProcurarNoRunner === 'nome'
+                    ? adotando
+                      ? t('workspace.browseRunner.blockedAdoptName')
+                      : t('workspace.browseRunner.blockedName')
+                    : t('workspace.browseRunner.blockedPath')}
+                </div>
+              )}
+              {modoDeWorkspace === 'runner' && (
+                // O pré-requisito do botão, dito ANTES do clique (AT-214, ADR
+                // 0064: motivo em texto, nunca tooltip). No modo `runner` o
+                // navegador lê o disco da máquina pelo agente local, ancorado
+                // no projeto criado antecipadamente (RN-437, ADR 0108, RN-533)
+                // — sem `brabo-runner` rodando e conectado não há quem responda,
+                // e isso é POR CONSTRUÇÃO. O que faltava era a tela dizer isso
+                // a quem ainda não clicou, e dizer que digitar o caminho é a
+                // alternativa que não depende de nada.
+                <div className={styles.baseNote} data-testid="aviso-procurar-runner">
+                  <Trans
+                    i18nKey="workspace.browseRunner.requires"
+                    ns="newProject"
+                    components={{ strong: <strong />, code: <code /> }}
+                  />{' '}
+                  <code>
+                    {t('workspace.runnerHint.command', {
+                      id: projetoParaNavegar?.id ?? t('workspace.runnerHint.placeholderId'),
+                      caminho:
+                        caminhoLocal.trim() || t('workspace.browseRunner.placeholderPath'),
+                    })}
+                  </code>{' '}
+                  <Trans
+                    i18nKey="workspace.browseRunner.alternative"
+                    ns="newProject"
+                    components={{ strong: <strong /> }}
+                  />
+                </div>
+              )}
               {modoDeWorkspace === 'mounted' ? (
                 // DOIS estados, e são os dois que o backend realmente tem
                 // (RN-500/RN-501): dentro da base consentida a criação passa,

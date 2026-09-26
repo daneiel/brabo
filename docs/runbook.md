@@ -1375,8 +1375,10 @@ App or new client id/secret needed.
 
 ### The four sibling secrets also refuse the default {#segredos-irmaos-no-boot}
 
-Symptom: with `NODE_ENV=production`, the api (or, for `SECRET_KEY_BASE`,
-the engine) dies at start with a message about `AUTH_JWT_SECRET`,
+Symptom: with `NODE_ENV=production`, the api (or, for `SECRET_KEY_BASE`
+and `BRABO_SERVICE_TOKEN`, the engine's `:prod` release, which refuses the
+same token values since [RN-601](business-rules/autenticacao.md#rn-601)) dies
+at start with a message about `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY`, or `SECRET_KEY_BASE` —
 missing, set to the repository's example value, or too short.
 
@@ -2589,10 +2591,12 @@ current one and accepts both:
 
 1. `BRABO_SERVICE_TOKEN_PREVIOUS` gets the old value on **both api and
    engine**; `BRABO_SERVICE_TOKEN` gets the new one on both. Restart
-   both. In production the api checks the old value with the same rule as
-   the new one, so if the old value is the public default or shorter than 16
-   characters, the api refuses to boot at this step and names the variable
-   ([RN-598](business-rules/autenticacao.md#rn-598)). Rotating away from a
+   both. In production the api, the engine and the broker check the old
+   value with the same rule as the new one, so if the old value is the public
+   default or shorter than 16 characters, each of them refuses to boot at
+   this step and names the variable
+   ([RN-598](business-rules/autenticacao.md#rn-598),
+   [RN-601](business-rules/autenticacao.md#rn-601)). Rotating away from a
    weak token therefore means skipping `_PREVIOUS`, and paying for it with
    the `403`/`401` window described below.
 2. While both are up with the new variable, traffic works in any
@@ -2609,7 +2613,9 @@ symptom in the
 Verification: on the api, `apps/api/test/infrastructure/security/service-token.spec.ts`
 (describe "rotação do BRABO_SERVICE_TOKEN") and
 `apps/api/test/interfaces/engine-service.guard.spec.ts`; on the engine,
-`apps/engine/test/engine_web/plugs/verify_service_token_test.exs`.
+`apps/engine/test/engine_web/plugs/verify_service_token_test.exs` and
+`apps/engine/test/engine/runtime_service_token_test.exs` (the boot rule); on
+the broker, `apps/broker/src/config.spec.ts`.
 
 > **Where the `_PREVIOUS` variables reach the process.** In the three
 > composes (`docker-compose.yml`, `docker-compose.prod.yml`,
