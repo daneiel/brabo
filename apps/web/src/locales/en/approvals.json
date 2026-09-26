@@ -136,7 +136,7 @@
     "notes": {
       "alwaysAllow": "\"Always allow\" records the rule in .brabo/permissions.json",
       "alwaysAllowScoped": "\"Always allow\" releases this action type only for {{agent}} — not for the project's other agents",
-      "autoMode": "\"Auto mode\" releases EVERY future action from {{actor}} without asking — except merges into a protected branch, instruction patches and parallelism, which keep always asking for your decision. You can turn it off later from the agent's card."
+      "autoMode": "\"Auto mode\" lets {{actor}} run any command without asking, even outside the project folder — git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision, and anything in deny stays denied. You can turn it off later from the agent's card."
     },
     "decided": {
       "denied": "Denied",
