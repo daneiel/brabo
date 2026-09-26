@@ -23,6 +23,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não existe (AT-106, RN-548). Com chave de projeto, o comando segue o por
   projeto. O comando continua sendo para PERGUNTAR; a tela não afirma que o
   agente está de pé.
+- **web**: a árvore do time (tela de Sessão e seção Atividades da sidebar)
+  deixa de aparecer em português para quem usa o app em inglês (AT-134,
+  RN-572). Os rótulos dos marcos, a frase do "agora" e o detalhe de origem
+  passam pelo `react-i18next` nos dois idiomas (`executors:timelineTree.label`,
+  `.now`, `.detail`), e trocar o idioma refaz a árvore. A decisão por tipo de
+  evento continua no código, e a trava da AT-087 segue comparando-a com o
+  engine.
 - **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
   contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
 - **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também

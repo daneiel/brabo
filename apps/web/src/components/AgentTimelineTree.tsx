@@ -52,8 +52,14 @@ export function AgentTimelineTree({
   events: SessionEvent[];
   projectId: string;
 }) {
-  const { t } = useTranslation('executors');
-  const { ramos } = useMemo(() => montarArvore(events), [events]);
+  const {
+    t,
+    i18n: { language },
+  } = useTranslation('executors');
+  // O rótulo e a frase do presente saem de `montarArvore` já no idioma
+  // corrente (AT-134): trocar o idioma tem de refazer a árvore, não só o resto
+  // da tela.
+  const { ramos } = useMemo(() => montarArvore(events, language), [events, language]);
   const abertosPadrao = useMemo(() => ramosAbertosPorPadrao(ramos), [ramos]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());

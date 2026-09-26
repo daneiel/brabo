@@ -61,6 +61,45 @@
       "result": "resultado",
       "resultFailed": "resultado (falhou)",
       "error": "erro: {{error}}"
+    },
+    "label": {
+      "agentActivated": "assumiu o trabalho",
+      "agentResponse": "respondeu",
+      "agentError": "falhou",
+      "toolCall": "usou ferramenta",
+      "toolResult": "ferramenta respondeu",
+      "handoffOffered": "ofereceu o trabalho",
+      "handoffAccepted": "aceitou o trabalho",
+      "artifactProductBrief": "emitiu o brief",
+      "artifactBusinessRule": "emitiu regra de negócio",
+      "artifactModuleMap": "emitiu o module_map",
+      "artifactModuleRouting": "roteou módulos para infra",
+      "artifactInsight": "emitiu hipótese",
+      "delegationCompleted": "subagente concluiu",
+      "delegationFailed": "subagente falhou",
+      "delegationDispensed": "dispensou a delegação",
+      "devStarted": "procurando task",
+      "devWorking": "trabalhando",
+      "devIdle": "ocioso",
+      "devAwaitingApproval": "esperando sua aprovação",
+      "devAwaitingGate": "esperando o gate",
+      "devBlocked": "bloqueado",
+      "devBlockedByContainer": "parado: o projeto não tem container de pé",
+      "devError": "erro",
+      "devIdleTripped": "circuit breaker abriu",
+      "prGateChanged": "gate mudou"
+    },
+    "now": {
+      "notYet": "ainda não entrou em ação",
+      "failed": "parou por falha",
+      "failedWithDetail": "parou por falha ({{detalhe}})",
+      "handedOff": "passou adiante",
+      "handedOffWithDetail": "passou adiante {{detalhe}}",
+      "turnEnded": "terminou o turno",
+      "withDetail": "{{rotulo}} — {{detalhe}}"
+    },
+    "detail": {
+      "origin": "origem {{origem}}"
     }
   }
 }

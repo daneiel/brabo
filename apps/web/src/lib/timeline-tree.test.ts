@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest';
-import { agruparPorInstancia, marcoExpansivel, montarArvore, ramosAbertosPorPadrao } from './timeline-tree';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  agruparPorInstancia,
+  CHAVES_DE_ROTULO_USADAS,
+  marcoExpansivel,
+  montarArvore,
+  ramosAbertosPorPadrao,
+} from './timeline-tree';
 import type { SessionEvent } from './api-types';
+import i18n from './i18n';
+import executorsEn from '../locales/en/executors.json';
+import executorsPtBR from '../locales/pt-BR/executors.json';
+
+// Os rótulos saem de `i18n.t()` (AT-134). As asserções de frase abaixo foram
+// escritas em pt-BR (a árvore nasceu nele), então a suíte roda em pt-BR e o
+// bloco de `en` no fim troca de idioma só para si — `en` é o default do app.
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+afterAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 let seq = 0;
 function evento(
@@ -335,5 +354,89 @@ describe('agruparPorInstancia', () => {
     expect(grupos.map((g) => g.agenteBase).sort()).toEqual(['dev-backend', 'po']);
     const devBackend = grupos.find((g) => g.agenteBase === 'dev-backend')!;
     expect(devBackend.instancias).toHaveLength(2);
+  });
+});
+
+/**
+ * AT-134: os rótulos da árvore passam pelo i18n, nos dois idiomas. A DECISÃO
+ * por tipo continua em `TRADUCAO` (e é ela que
+ * `scripts/ci/vocabulario-de-eventos-dev.spec.ts` cobra); o que se prova aqui
+ * é a outra metade — que toda chave que a tabela usa tem TEXTO em `en` e em
+ * `pt-BR`, e que o idioma trocado troca a frase.
+ */
+describe('rótulos da árvore no i18n (AT-134)', () => {
+  type Subarvore = {
+    label: Record<string, string>;
+    now: Record<string, string>;
+    detail: Record<string, string>;
+  };
+  const en = executorsEn.timelineTree as unknown as Subarvore;
+  const ptBR = executorsPtBR.timelineTree as unknown as Subarvore;
+
+  it('toda chave de rótulo que `TRADUCAO` usa tem texto nos dois idiomas', () => {
+    expect(CHAVES_DE_ROTULO_USADAS.length).toBeGreaterThanOrEqual(25);
+    const semEn = CHAVES_DE_ROTULO_USADAS.filter((c) => !en.label[c]?.trim());
+    const semPt = CHAVES_DE_ROTULO_USADAS.filter((c) => !ptBR.label[c]?.trim());
+    expect({ semEn, semPt }).toEqual({ semEn: [], semPt: [] });
+  });
+
+  it('`label`, `now` e `detail` têm as MESMAS chaves em `en` e `pt-BR`', () => {
+    for (const bloco of ['label', 'now', 'detail'] as const) {
+      expect({ bloco, chaves: Object.keys(ptBR[bloco]).sort() }).toEqual({
+        bloco,
+        chaves: Object.keys(en[bloco]).sort(),
+      });
+    }
+  });
+
+  it('nenhum rótulo sobra nos locales sem ser usado pela tabela', () => {
+    const usadas = CHAVES_DE_ROTULO_USADAS as readonly string[];
+    expect(Object.keys(en.label).filter((c) => !usadas.includes(c))).toEqual([]);
+  });
+
+  it('o idioma passado como argumento vence o ativo — é ele que o `useMemo` observa', () => {
+    // A suíte está em pt-BR aqui; o argumento pede `en`.
+    const { ramos } = montarArvore([evento('dev.started', agente('dev-x'))], 'en');
+    expect(ramos[0].agora).toBe('looking for a task');
+    const { ramos: emPt } = montarArvore([evento('dev.started', agente('dev-x'))]);
+    expect(emPt[0].agora).toBe('procurando task');
+  });
+
+  describe('em `en` (o idioma default, RN-425)', () => {
+    beforeAll(async () => {
+      await i18n.changeLanguage('en');
+    });
+    afterAll(async () => {
+      await i18n.changeLanguage('pt-BR');
+    });
+
+    it('rótulo e frase do presente saem em inglês', () => {
+      const { ramos } = montarArvore([
+        evento('agent.activated', agente('po')),
+        evento('tool.call', agente('po'), { tool: 'create_story' }),
+      ]);
+      expect(ramos[0].marcos.map((m) => m.rotulo)).toEqual(['took over the work', 'used a tool']);
+      expect(ramos[0].agora).toBe('used a tool — create_story');
+    });
+
+    it('desfechos e o detalhe de origem também', () => {
+      const falha = montarArvore([evento('agent.error', agente('b'), { origem: 'infra' })]);
+      const handoff = montarArvore([evento('handoff.offered', agente('c'), { toAgent: 'po' })]);
+      const fim = montarArvore([evento('agent.response', agente('a'), {})]);
+
+      expect(falha.ramos[0].agora).toBe('stopped due to a failure (origin infra)');
+      expect(handoff.ramos[0].agora).toBe('handed off → po');
+      expect(fim.ramos[0].agora).toBe('finished the turn');
+    });
+
+    it('dev bloqueado por container não fala português', () => {
+      const { ramos } = montarArvore([
+        evento('dev.blocked_by_container', agente('dev-backend'), { reason: 'no container' }),
+      ]);
+      expect(ramos[0].marcos[0].rotulo).toBe('stopped: the project has no running container');
+      expect(ramos[0].agora).toBe(
+        'stopped: the project has no running container — no container',
+      );
+    });
   });
 });
