@@ -17,6 +17,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
+  (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
+  "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina
+  `curl -fsSLO … && bash install.sh`; o "Local deploy" dizia que o seed não é
+  idempotente, e ele é (`seed.ts` reaproveita workspace, projeto e sessão); a
+  órfã do rollout nas provas agendadas dizia "NOT fixed", e a causa provável foi
+  corrigida na RN-588; o "What it does not do" do instalador dizia que ele não
+  pareia o agente local, e desde a RN-547 ele pareia; a tabela de alertas tinha
+  quatro das cinco regras de `brabo-alerts.yaml` (faltava *Backup do Postgres
+  atrasado*) e agora traz o título real, a severidade e o `for` de cada uma.
 - **docker**: o teto da conversa ociosa (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`,
   RN-581) passa a chegar ao engine na **instalação** (AT-153). O
   `docker-compose.install.yml` não o mapeava — só os composes de dev e de

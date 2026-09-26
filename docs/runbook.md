@@ -660,8 +660,11 @@ own. What failed is printed at the end with the exact command to repeat.
   **e-mail** goes into the marker (`ownerEmail`, `schemaVersion: 3`).
 
 - **No TTY.** The installer reports and exits **0** before writing anything.
-  Run it from a terminal — and with `sh -c "$(curl …)"`, never `curl … | sh`,
-  which makes the download itself the process's stdin and kills every prompt.
+  Run it from a terminal, as a downloaded file —
+  `curl -fsSLO …/install.sh && bash install.sh` — never `curl … | sh` (the
+  download becomes the process's stdin and kills every prompt) and never
+  `sh -c "$(curl …)"`, which cannot verify its own hash. Both are refused by
+  name; see [Installing](#instalando).
 
 - **The agent is up but serving nothing.** That is the normal state of a fresh
   install: it waits and re-queries until the first `runner`-mode project exists
@@ -931,11 +934,13 @@ process-based, and exists because the previous one wasn't:
 run, and because of that the bootstrap used to announce "smoke user ready"
 while login was returning 401.
 
-> **The seed isn't idempotent.** `createWorkspace` doesn't upsert, so on a
-> second run (`BRABO_KEEP_CLUSTER=1`) the pod ends in an error on
-> `workspaces_slug_unique` — and that's correct: the user already exists
-> since the first run, login is verified the same way, and the pod is
-> removed at the end so it doesn't fail step 1 of `smoke.sh`, which
+> **The seed is idempotent.** Running it again over a seeded database is the
+> normal case (`BRABO_KEEP_CLUSTER=1`): the workspace, project and session of
+> the demo are found and reused, never duplicated, and the reused session does
+> not get its five events appended again (`apps/api/src/db/seed.ts`, the
+> top docblock). A second run no longer dies on `workspaces_slug_unique`. The
+> bootstrap still decides by the **login**, not by the pod's phase, and still
+> removes the pod at the end so it doesn't fail step 1 of `smoke.sh`, which
 > requires every pod healthy.
 
 > **This uses up `pnpm dev`'s ports.** Keeping the ports the same is what
@@ -2349,8 +2354,12 @@ anyone running it:
     rollout, which replica each session lived on — the old pods take their logs
     with them.
 
-**Measured and NOT fixed: the rollout proof has failed once out of four
-runs that reached it** (two out of ten by run `35448353884`, 2026-09-19, where
+**Measured, and the likely cause since fixed** (AT-078,
+[RN-588](business-rules.md#rn-588)) — the old pod's `Monitor` deleting the
+`session_states` row its peer had just re-written; see
+[Proving nothing was left orphaned](#rollout-do-engine) for what a new orphan
+would log. What follows is the record from before the fix. **The rollout proof
+had failed once out of four runs that reached it** (two out of ten by run `35448353884`, 2026-09-19, where
 all five sessions lived on the same old pod, four were adopted and one ended
 with no owner and no drain; the only logs that named it died with that pod —
 which is why the proof now keeps them, see
@@ -3098,14 +3107,17 @@ curl -sS -G http://localhost:3100/loki/api/v1/query_range \
 
 ### Alerts
 
-Provisioned and visible under **Alerting → Alert rules** (Brabo folder):
+Provisioned and visible under **Alerting → Alert rules** (Brabo folder), from
+`deploy/k8s/observability/alerts/brabo-alerts.yaml`. The rules carry their
+titles in Portuguese — that is what you search for in Grafana:
 
-| alert | what to investigate |
-|---|---|
-| Oban queue growing with no consumption | no engine replica Ready; Postgres pool exhausted; a worker stuck on a job |
-| Session stuck in `closing` | [the drain didn't complete](#quando-a-sessao-escapa), or the transition to `closed` failed |
-| Cost per hour above the limit | [which project and which agent](#incidente-de-custo); the domain's budget remains the hard control |
-| Last backup run failed | [the backup exists but is old](#restore) — the dangerous case |
+| alert (title in Grafana) | severity | fires after | what to investigate |
+|---|---|---|---|
+| *Fila do Oban crescendo sem consumo* — Oban queue growing with no consumption | `critical` | 10 min | no engine replica Ready; Postgres pool exhausted; a worker stuck on a job |
+| *Sessão presa em closing* — session stuck in `closing` | `warning` | 15 min | [the drain didn't complete](#quando-a-sessao-escapa), or the transition to `closed` failed |
+| *Custo por hora acima do limite* — cost per hour above the limit | `warning` | 5 min | [which project and which agent](#incidente-de-custo); the domain's budget remains the hard control |
+| *Backup do Postgres atrasado* — last good backup older than 26 h | `critical` | at once | the CronJob didn't run, or ran and failed — `brabo_backup_last_status` tells the two apart; see [Restore](#restore). "Never had a backup" (`-1`) does **not** fire it |
+| *Última execução do backup falhou* — last backup run failed | `warning` | at once | a good backup from yesterday may still exist, which is why this one goes unnoticed for days; the cause is in `backup_runs.error_message` |
 
 These are **Grafana** rules, not Prometheus (deviation recorded in ADR
 0026): they stop being evaluated if Grafana goes down. There's no
@@ -3405,15 +3417,16 @@ terminal, and this installer is built to *ask*. The note on the item carries
 the one-line command that installs for real.
 
 > **What it does not do:** turn the container **broker** on without asking —
-> see [the broker in an installation](#broker-na-instalacao) right below. It
-> also does not **pair** the local agent: the binary and the base are ready, and the key
-> material can now be made right there
-> (`brabo-runner device-key create`, [RN-551](business-rules.md#rn-551)), but
-> `install.sh` does not yet chain the three commands — registering the public
-> half and installing the machine unit are a later session of the phase
-> ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4). For a
-> project-bound pairing, the device key and `brabo-runner.config.json` still
-> come from the project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> see [the broker in an installation](#broker-na-instalacao) right below. The
+> local agent it **does** pair, since [RN-547](business-rules.md#rn-547): it
+> creates the first account, generates the machine device key on the machine,
+> registers the public half, stamps the `kid` and installs the **machine** unit
+> ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) — and when a
+> link fails it names the command to repeat, see
+> [When the installer does not close the installation](#instalador-nao-fecha).
+> What stays on the project screen is a **project-bound** pairing: that device
+> key and `brabo-runner.config.json` still come from there
+> ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
 > Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
 
 ### The container broker in an installation {#broker-na-instalacao}
