@@ -638,16 +638,28 @@ docker compose -f docker/docker-compose.prod.yml \
 
 | variable | default | when it fails |
 |---|---|---|
-| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` — locally the broker is up by default, so this is what connects the api to it |
+| `BROKER_URL` | `http://broker:8090` in the **dev** compose; empty in production and installation (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)), and the api answers `brokerConfigurado: false`, so project creation only offers `runner` ([RN-573](../business-rules.md#rn-573)). Locally the broker is up by default, so the dev compose defaults it to the service it brings up ([RN-599](../business-rules.md#rn-599)) — a value in `.env` still wins. The production and installation composes keep no default on purpose: there the broker is under a profile, and whoever turns it on writes the URL |
 | `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker |
 | `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
 | `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
 
-`PROJECT_WORKSPACES_HOST_ROOT` has no default and cannot be derived from a
-managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and
-repeat the same path here, ALREADY EXPANDED (`~` is not expanded by Compose).
+`PROJECT_WORKSPACES_HOST_ROOT` cannot be derived from a managed Docker volume.
+In the **dev** compose it derives from `PROJECT_WORKSPACES_HOST_DIR` (above) —
+so leaving that one unset, the state of a freshly copied `.env.example`, leaves
+the broker with no root and `container` mode with no container: the stack comes
+up healthy and `container_start` ends refused. `pnpm dev` reports that on every
+run, in the same mould as `DOCKER_GID`, and never refuses to start
+([RN-599](../business-rules.md#rn-599)). It also reports the `~` case: Compose
+expands `~` in the bind-mount source that `api`/`engine` use, but NOT in the
+variable the broker receives (measured with `docker compose config`), so write
+the path ALREADY EXPANDED. And an explicit `PROJECT_WORKSPACES_HOST_ROOT` that
+differs from the folder `api`/`engine` mount is reported as divergent — the
+container would get a folder the agents never wrote to. Switching from the
+managed volume to a host folder does not migrate what is already in the
+`project_workspaces` volume: the data stays there, it just stops being what
+`api` and `engine` see.
 
 `BRABO_PROJECTS_HOST_BASE` is the broker's SECOND root — the base of **Mounted**
 projects, also on the host

@@ -99,12 +99,29 @@ getent group docker | cut -d: -f3
 
 # in .env
 #    DOCKER_GID=<the number above>
-#    BROKER_URL=http://broker:8090
-#    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
+#    PROJECT_WORKSPACES_HOST_DIR=/home/you/brabo-projects    # ALREADY EXPANDED; derives HOST_ROOT
+#    GIT_LOCAL_REPOS_HOST_DIR=/home/you/brabo-projects-bare
 #    BRABO_PROJECTS_BASE=/home/you/projetos-brabo            # derives HOST_BASE
 
-docker compose -f docker/docker-compose.yml --env-file .env up -d broker
+docker compose -f docker/docker-compose.yml --env-file .env up -d api engine broker
 ```
+
+`BROKER_URL` is **not** on that list any more: the dev compose defaults it to
+`http://broker:8090`, the service it brings up
+([RN-599](business-rules.md#rn-599)). Before that default, the api answered
+`brokerConfigurado: false` next to a healthy broker and project creation only
+offered `runner`. A value in `.env` still wins; the production and installation
+composes keep no default, on purpose.
+
+`pnpm dev` also **reports** the managed folder on every run (RN-599): with
+`PROJECT_WORKSPACES_HOST_DIR` unset, `api`/`engine` use the managed volume, the
+broker gets no `PROJECT_WORKSPACES_HOST_ROOT`, and `container_start` ends
+refused — with the stack healthy. It also reports a `~` in the path (Compose
+expands it in the bind mount, not in the broker's variable) and an explicit
+`PROJECT_WORKSPACES_HOST_ROOT` that differs from the folder the api mounts.
+Like the gid report, it never blocks and never writes `.env`; switching from the
+volume to a folder does not migrate the volume's content — see
+[migrating workspaces](#migrar-workspaces-pasta-local).
 
 `pnpm dev` **reports** the state of `DOCKER_GID` on every run
 ([RN-512](business-rules.md#rn-512)), comparing it against your machine's real
