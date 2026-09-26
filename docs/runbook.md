@@ -3167,9 +3167,14 @@ repository is where to fix it.
 
 The screen does not show this failure: `PrGateTimeline` falls back to the
 full pipeline when `GET /gates` fails ([RN-084](business-rules/custo.md#rn-084)),
-so the only signal was the api's log. `docker/smoke.sh` now calls
-`GET /gates` against the production image, which is what keeps it from
-coming back silently.
+so the only signal was the api's log. `docker/smoke.sh` now calls both
+routes that serve the registry against the production image, `GET /gates`
+with the user's bearer and `GET /internal/gates` with the service token.
+One function checks the body of both, and it fails on the `500`, on an
+empty list and on a registry without `merge-protegida`. That is what keeps
+the failure from coming back silently. The token reaches `curl` through
+stdin (`--config -`), never through argv, so it does not show in `ps` or in
+the CI log.
 
 To see the registry the way the api sees it, already validated:
 
