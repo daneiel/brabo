@@ -200,6 +200,32 @@ sobra. Se outra escapar, é aí que essa conversa começa.
 Do mesmo episódio saiu a regra `site-e-publicacao` do mapa: `website/**` não
 aparecia em regra nenhuma, e mexer no config do site não cobrava documentação.
 
+### `links-do-locale.mjs` — link reescrito pula o checador de link quebrado
+
+O hook `markdown.hooks.onBrokenMarkdownLinks` de `website/docusaurus.config.ts`
+reescreve para `pathname://` o link que só quebra por gap CONHECIDO de tradução
+(`reference/`, `adr/`, `explanation/`). É o escape hatch oficial do Docusaurus,
+e escapar é o ponto: **link `pathname://` nunca mais é conferido**, então uma
+reescrita errada não reprova o build.
+
+Uma reescrita errada houve, no site pt-BR inteiro (AT-221). Ela devolvia
+`pathname:///pt-BR/<slug>`, mas `pathname://` não é caminho absoluto do
+domínio — o `<Link>` o passa por `useBaseUrl`, e o baseUrl do build pt-BR já é
+`/brabo/prd/pt-BR/`. Todo link reescrito saía `/brabo/prd/pt-BR/pt-BR/...`: 441
+hrefs em 56 páginas, todos 404, com o `docs:build` verde.
+
+A reescrita mora agora em `scripts/docs/links-do-locale.mjs`, função pura com
+spec, e devolve o slug puro — o locale vem do baseUrl do locale que está
+compilando, e a página alvo existe ali (traduzida, ou servida por fallback no
+mesmo slug). O mesmo módulo, rodado depois do `docs:build` no `docs-check.yml`,
+varre o HTML gerado e reprova qualquer `href` com o prefixo de locale
+duplicado. Locale novo entra também em `LOCALES_COM_PREFIXO`, senão a
+duplicação dele passa calada.
+
+O que a guarda **não** pega: link cujo alvo não existe no repositório. A
+exceção de `adr/` também engole nome de ADR digitado errado, e a reescrita
+aponta para um slug que locale nenhum tem.
+
 ### A publicação, um site por degrau
 
 Cada branch permanente publica no seu próprio lugar do mesmo GitHub Pages:
@@ -305,6 +331,7 @@ pnpm docs:start      # servidor local, com hot reload
 # a referência de API renderiza? precisa do build acima, e não entra no
 # docs:check porque aquele não constrói o site
 node scripts/docs/api-render-check.mjs
+node scripts/docs/links-do-locale.mjs   # nenhum href com o prefixo de locale duplicado (AT-221)
 ```
 
 Ou, se estiver no Claude Code, `/sync-docs` faz o ciclo completo e entrega um

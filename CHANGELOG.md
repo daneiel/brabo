@@ -33,6 +33,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   pt-BR levavam à regra ERRADA: a tradução numerava 421–424 as regras que o
   inglês numera 428–431, então `#rn-421` em pt-BR abria outra regra; foram
   renumeradas para a âncora apontar para a mesma regra nos dois idiomas.
+- **docs**: os links que o site pt-BR reescreve por gap de tradução deixam de
+  dar 404 (AT-221). O hook `onBrokenMarkdownLinks` devolvia
+  `pathname:///pt-BR/<slug>` e o baseUrl do locale acrescentava `/pt-BR` de
+  novo — `href=/brabo/prd/pt-BR/pt-BR/...`, 441 hrefs em 56 páginas, com o
+  `docs:build` verde (`pathname://` pula o checador de link quebrado). A
+  reescrita virou função pura em `scripts/docs/links-do-locale.mjs`, devolve o
+  slug sem prefixo de locale, e o mesmo módulo roda depois do build no
+  `docs-check.yml`, reprovando qualquer `href` com o locale duplicado.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16

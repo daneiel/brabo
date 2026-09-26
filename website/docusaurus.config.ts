@@ -1,7 +1,7 @@
-import path from 'node:path';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import { themes as prismThemes } from 'prism-react-renderer';
+import { reescreverLinkDeGap } from '../scripts/docs/links-do-locale.mjs';
 
 // A branch que o botão "editar esta página" aponta. PRs de doc miram `dev`;
 // o site publicado sai de `main` (ver CLAUDE.md).
@@ -141,85 +141,23 @@ const config: Config = {
       // A correção é reescrever para `pathname://`, a saída que o próprio
       // Docusaurus recomenda no texto do erro original — ela pula o checador
       // de link quebrado (é o escape hatch OFICIAL, não um jeito de
-      // esconder o problema) e aponta pro locale onde o alvo REALMENTE
-      // existe: `reference/**` só existe no DEFAULT (`en`, sem prefixo);
-      // tudo que não é `reference/**` só tem tradução em `pt-BR` (com
-      // prefixo). Com só DOIS locales, "não é en" implica pt-BR — quando um
-      // terceiro locale existir, esta suposição para de valer e precisa
-      // virar parâmetro de verdade. Qualquer OUTRO link quebrado (fora
-      // desta troca com `reference/**`) continua reprovando o build.
+      // esconder o problema). A PÁGINA alvo existe no site do locale que
+      // está compilando — traduzida, ou servida por fallback no mesmo slug
+      // —, então a rota é o slug puro, e o locale vem do baseUrl do build.
+      // (Até a AT-221 a reescrita punha `/pt-BR` por conta própria, supondo
+      // "não é en, então é pt-BR", e o baseUrl do locale o repetia.)
+      // Qualquer OUTRO link quebrado (fora das zonas de gap conhecidas)
+      // continua reprovando o build.
       onBrokenMarkdownLinks: ({ sourceFilePath, url }) => {
-        // `sourceFilePath` chega relativo ao CWD do processo (`website/`),
-        // por isso `../docs/reference/...` — nunca comparar com `startsWith`
-        // supondo raiz do repo. Calculado uma vez, ANTES do throw, porque a
-        // detecção de gap (abaixo) e a reescrita (mais abaixo) precisam da
-        // MESMA noção de "caminho lógico dentro da árvore de docs" — uma
-        // fonte em `website/i18n/pt-BR/.../current/adr/x.md` e uma em
-        // `docs/adr/x.md` são o MESMO tipo de arquivo, só em locales
-        // diferentes, e comparar por `sourceFilePath.includes('docs/adr/')`
-        // isolado (como a Onda 6b tinha feito) não enxerga a primeira.
-        const MARCA_I18N = 'docusaurus-plugin-content-docs/current/';
-        const origemRelativaARaiz = sourceFilePath.includes(MARCA_I18N)
-          ? sourceFilePath.slice(sourceFilePath.indexOf(MARCA_I18N) + MARCA_I18N.length)
-          : sourceFilePath.slice(sourceFilePath.indexOf('docs/') + 'docs/'.length);
-
-        const fonteEhReferencia = origemRelativaARaiz.startsWith('reference/');
-        const alvoEhReferencia = url.includes('/reference/');
-        // Mesma classe de gap, achada pela Onda 6b: `docs/adr/` (e seu
-        // espelho em `website/i18n/pt-BR/.../adr/`) é a zona que sabidamente
-        // atrasa tradução — ADR novo nasce toda semana, override em
-        // `i18n/pt-BR/` não acompanha no mesmo commit. O fallback do
-        // Docusaurus pro locale default monta o conteúdo sob a rota `pt-BR`,
-        // mas a resolução de link relativo tropeça do mesmo jeito que o gap
-        // de `reference/` — o alvo existe no repositório, só não bate com a
-        // árvore do locale sendo compilado agora. Os DOIS lados importam:
-        // fonte-é-ADR fecha `docs/adr/*.md` → `../business-rules.md` (o ADR
-        // atrasado arrasta o que ele linka); alvo-é-ADR fecha
-        // `business-rules.md` → `adr/0104-*.md` (um arquivo já traduzido
-        // linkando um ADR que atrasou ou foi renumerado depois do snapshot).
-        const fonteEhAdr = origemRelativaARaiz.startsWith('adr/');
-        const alvoEhAdr = /(^|\/)\d{4}-[^/]+\.md$/.test(url.split('#')[0]);
-        // Mesmo gap, achado ao mover a narrativa histórica do CLAUDE.md para
-        // `docs/explanation/historico-de-fases.md`: arquivo novo em
-        // `explanation/` nasce sem override em `website/i18n/pt-BR/...`, e um
-        // link com ÂNCORA para outro arquivo de `explanation/` (aqui,
-        // `backlog.md#...`) tropeça na compilação `pt-BR` do mesmo jeito que
-        // `adr/`/`reference/` — nenhum link ANCORADO entre dois arquivos de
-        // `explanation/` existia antes deste, e por isso o gap nunca tinha
-        // sido exercitado.
-        const fonteEhExplicacao = origemRelativaARaiz.startsWith('explanation/');
-        if (
-          !fonteEhReferencia &&
-          !alvoEhReferencia &&
-          !fonteEhAdr &&
-          !alvoEhAdr &&
-          !fonteEhExplicacao
-        ) {
-          throw new Error(
-            `Markdown link quebrado: "${url}" em ${sourceFilePath}. Corrija o link ou aplique o protocolo pathname://.`,
-          );
-        }
-
-        // Separa fragmento (#rn-004) do caminho — nenhum link local do
-        // repositório usa query string, só fragmento.
-        const [caminhoRelativo, ...resto] = url.split('#');
-        const fragmento = resto.length > 0 ? `#${resto.join('#')}` : '';
-
-        const slug = path
-          .join(path.dirname(origemRelativaARaiz), caminhoRelativo)
-          .replace(/\.mdx?$/, '')
-          .split(path.sep)
-          .join('/');
-
-        // `reference/**` só existe traduzido no locale default (sem
-        // prefixo); tudo mais só existe traduzido em pt-BR (com prefixo). O
-        // slug RESOLVIDO decide, não a fonte: rulesets.md linkando pra si
-        // mesmo por engano continuaria correto.
-        const prefixoLocale = slug.startsWith('reference/') ? '' : '/pt-BR';
-        const rota = `pathname://${prefixoLocale}/${slug}${fragmento}`;
-
+        // O corpo mora em `scripts/docs/links-do-locale.mjs` para ser função
+        // PURA com spec. A rota sai SEM prefixo de locale: `pathname://`
+        // passa pelo baseUrl do locale que está compilando, e o `/pt-BR` que
+        // esta reescrita punha por conta própria virava `/pt-BR/pt-BR/` (404
+        // no site pt-BR inteiro, AT-221). A guarda do HTML é o mesmo módulo,
+        // rodado depois do build no `docs-check.yml`.
+        const rota = reescreverLinkDeGap({ sourceFilePath, url });
         console.warn(
-          `[i18n] link reescrito por gap conhecido (docs/reference/ sem tradução pt-BR): "${url}" em ${sourceFilePath} -> "${rota}"`,
+          `[i18n] link reescrito por gap conhecido de tradução: "${url}" em ${sourceFilePath} -> "${rota}"`,
         );
         return rota;
       },
