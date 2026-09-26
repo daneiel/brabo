@@ -1210,6 +1210,17 @@ o RACIOCÍNIO da triagem, que continua valendo.
   PRIMEIRO CLONE — defeito de volume inexistente (AT-172) se prova num projeto
   compose DESCARTÁVEL (`-p <nome> run --rm --no-deps`, `down -v`), nunca nele.
   `scripts/dev/reset-total.spec.ts` reprova linha executável que apague volume.
+  E o que o faria morrer DEPOIS do `DROP SCHEMA` por motivo do HOST ou de um
+  VOLUME é perguntado ANTES do primeiro efeito (AT-203): as migrations e o seed
+  rodam no host, com o `deps`/`_build`/`node_modules` do CHECKOUT, então o
+  script roda `mix deps.get` + `mix compile` em `apps/engine` (um `mix.lock`
+  novo o derrubava com `lock mismatch` e o banco apagado), confere
+  `drizzle-kit`/`ts-node`, e confere a senha do Neo4j contra a do volume (o
+  Neo4j só aplica `NEO4J_AUTH` na CRIAÇÃO de `neo4j_data`) — recusando com
+  `RESET NÃO COMEÇOU`, e nomeando a senha também se o `up --wait` reprovar por
+  ela. Pré-requisito novo de host entra em `scripts/dev/reset-total-lib.sh`,
+  antes do `stop`; `reset-total-ordem.spec.ts` roda o script inteiro com
+  binários de mentira no PATH e reprova a ordem invertida.
 - `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
   (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
   que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).
