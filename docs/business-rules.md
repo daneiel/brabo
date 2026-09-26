@@ -10447,7 +10447,9 @@ assina **antes** de instalar. Sessão 2, [ADR 0149](adr/0149-assinatura-dos-arte
 Toda tag final assina o que publica, e **verifica o que assinou antes de
 publicar a Release**:
 
-- as **quatro imagens** são assinadas **por DIGEST**, lido de
+- as **cinco imagens** são assinadas **por DIGEST** (eram quatro quando esta
+  regra foi escrita; a quinta, o broker, entrou com o
+  [ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)), lido de
   `.release/images.json` — nunca por tag. Tag é ponteiro móvel: assinar
   `:5.0.0` atestaria o que aquela tag apontava no instante da assinatura, e não
   o que ela aponta quando alguém baixa. O digest é o que o manifesto já registra
@@ -10582,7 +10584,7 @@ terminar em silêncio.
 ele **não é** o `docker-compose.prod.yml`. Três diferenças, cada uma com um
 motivo:
 
-- as quatro imagens vêm de **variável obrigatória** (`${BRABO_API_IMAGE:?…}`),
+- as cinco imagens vêm de **variável obrigatória** (`${BRABO_API_IMAGE:?…}`),
   sem default. Com default, uma variável ausente subiria metade da stack com
   uma imagem que ninguém escolheu, e o erro apareceria como comportamento
   estranho em vez de recusa;
