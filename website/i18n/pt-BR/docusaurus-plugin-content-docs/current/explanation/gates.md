@@ -97,9 +97,12 @@ carrega. Devolver a checagem ao loader deixa o segundo vermelho com a mensagem
 exata que a instalação produziu.
 
 E a api servindo o registro passou a ser exercitada contra a imagem de
-produção: `docker/smoke.sh` chama `GET /gates` e exige o registro de volta.
-Nenhuma suíte unitária pegaria isto — vitest e ExUnit rodam de um checkout,
-onde os alvos existem.
+produção: `docker/smoke.sh` chama `GET /gates` e `GET /internal/gates`
+(service token) e exige o registro de volta das duas. A checagem do corpo é uma
+função de shell, `checar_registro_de_gates`, que
+`scripts/ci/smoke-gates.spec.ts` roda contra os três corpos sem subir o stack.
+Nenhuma suíte unitária pegaria a falha original — vitest e ExUnit rodam de um
+checkout, onde os alvos existem.
 
 ## A armadilha do tipo compartilhado
 

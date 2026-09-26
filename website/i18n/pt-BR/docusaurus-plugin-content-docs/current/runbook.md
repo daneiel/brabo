@@ -1694,8 +1694,13 @@ evidência), o registro é que está errado e o conserto é no repositório.
 
 A tela não mostra essa falha: o `PrGateTimeline` cai na esteira completa
 quando `GET /gates` falha ([RN-084](business-rules/custo.md#rn-084)), então o
-único sinal era o log da api. O `docker/smoke.sh` passou a chamar `GET /gates`
-contra a imagem de produção, e é isso que impede a volta silenciosa.
+único sinal era o log da api. O `docker/smoke.sh` passou a chamar as duas rotas
+que servem o registro contra a imagem de produção, `GET /gates` com o bearer do
+usuário e `GET /internal/gates` com o service token. Uma função confere o corpo
+das duas, e reprova no `500`, na lista vazia e no registro sem
+`merge-protegida`. É isso que impede a volta silenciosa. O token chega ao `curl`
+pelo stdin (`--config -`), nunca pelo argv, então não aparece no `ps` nem no log
+do CI.
 
 Para ver o registro como a api o enxerga, já validado:
 
