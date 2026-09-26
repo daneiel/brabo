@@ -25,6 +25,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vivo e não subiam nada. Agora os quatro só contam como existente um pid VIVO.
   Os testes passaram a abrir essa janela de propósito, com a limpeza do
   Registry suspensa, em vez de esperá-la com `sleep`.
+- **engine**: fechar a sessão deixa de registrar como "parado" um agente
+  conversacional que já tinha morrido (AT-204). `Conversacionais.parar_da_sessao/1`
+  listava quem tinha chave no Registry, que pode guardar o pid morto por um
+  instante. Agora a lista só inclui quem essa chamada efetivamente parou.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16
