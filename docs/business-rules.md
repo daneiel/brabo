@@ -4929,6 +4929,15 @@ quando não há nada pra reusar. `montarPayloadDeCriacao`, função pura extraí
 do que antes vivia só dentro de `handleConfirm`, é reaproveitada pelos dois
 caminhos.
 
+O pré-requisito do botão é dito ANTES do clique (AT-214): neste modo a lista
+vem do agente local, então sem um `brabo-runner` rodando e conectado ao
+projeto recém-criado o modal só consegue mostrar a espera e o onboarding. A
+tela passou a dizer isso em TEXTO abaixo do campo (`aviso-procurar-runner`,
+ADR 0064 — nunca tooltip), com o comando
+`brabo-runner --project <id> --dir <pasta>` e a alternativa que não depende
+de nada: digitar o caminho no campo, que o runner confirma ao conectar. O
+mecanismo (a criação antecipada, o transporte pelo agente local) não mudou.
+
 - **Onde:** `apps/web/src/routes/NewProjectWizard.tsx`
   (`handleProcurarPasta`, `handleConfirm`, `montarPayloadDeCriacao`,
   `snapshotDeIdentidade`/`mesmaIdentidade`)
@@ -5634,9 +5643,9 @@ Reconfigurar Ollama", que apaga as chaves gravadas — nunca uma pergunta
 espontânea de novo enquanto elas existirem.
 
 - **Onde:** `scripts/dev/env-file.mjs:41` (`escreverEnv`),
-  `scripts/dev/preflight.mjs:133` (`ehOllama`),
-  `scripts/dev/preflight.mjs:178` (`perguntarUsoDoOllama`),
-  `scripts/dev/preflight.mjs:214` (`detectarOllamaNativo`),
+  `scripts/dev/preflight.mjs:138` (`ehOllama`),
+  `scripts/dev/preflight.mjs:183` (`perguntarUsoDoOllama`),
+  `scripts/dev/preflight.mjs:219` (`detectarOllamaNativo`),
   `scripts/dev/reconfigurar-ollama.sh`, `scripts/dev/perfil-ollama.sh`,
   `docker/docker-compose.yml:82,119` (`profiles: ["local-llm"]`)
 - **Teste:** `scripts/dev/bootstrap.spec.ts` (cobre a fiação do menu — o
@@ -15216,3 +15225,108 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
   (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
   `:653` e `:691` (`container_start_via_runner` com e sem runner)
 - **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)
+
+### RN-599 — No compose de dev a api encontra o broker sozinha, e a falta da pasta gerenciada é dita a cada subida {#rn-599}
+
+O broker sobe por padrão no compose de DEV desde a [RN-512](#rn-512), mas a api
+recebia `BROKER_URL` vazia (`${BROKER_URL:-}`, e a linha vinha comentada no
+`.env.example`). O resultado, medido no teste do dono em 26/09: com o broker de
+pé ao lado, `brokerConfigurado` vinha `false` e a criação de projeto só liberava
+`runner` ([RN-573](#rn-573)). Duas regras fecham isso:
+
+1. **`BROKER_URL` tem default no compose de dev, e só nele.** O default é
+   `http://broker:8090` — o serviço e a porta (`BROKER_PORT`) que o MESMO
+   arquivo declara, e o teste trava os dois juntos: um default que apontasse
+   para outro lugar trocaria "sem broker" por "broker inalcançável". O valor do
+   `.env` continua vencendo. Os composes de PRODUÇÃO e de INSTALAÇÃO seguem
+   `${BROKER_URL:-}`, de propósito: lá o broker está sob
+   `profiles: ["container-broker"]`, e quem o liga grava a URL (o `install.sh`,
+   perguntando — [RN-575](#rn-575)). Um default ali faria a api de uma
+   instalação sem broker afirmar que tem um.
+2. **O `preflight.mjs` RELATA a pasta gerenciada, no molde do `DOCKER_GID`.**
+   Sem `PROJECT_WORKSPACES_HOST_DIR`, api e engine usam o volume gerenciado
+   `project_workspaces` (sem caminho de host), o broker fica sem
+   `PROJECT_WORKSPACES_HOST_ROOT` — o compose de dev a DERIVA daquela —, o stack
+   sobe saudável e o `container_start` do modo `container`, o default, termina
+   recusado. O relato tem quatro desfechos que não colapsam: `ausente`, `ok`,
+   `nao-absoluta` (o `~`: o Compose o expande na origem do bind-mount de
+   api/engine, mas NÃO na variável que o broker recebe — medido com
+   `docker compose config`) e `divergente` (`PROJECT_WORKSPACES_HOST_ROOT`
+   explícita diferente da pasta que api e engine montam, inclusive quando elas
+   montam o volume). Cada mensagem diz o sintoma e o conserto. Ele NUNCA recusa
+   a subida e NUNCA grava o `.env`: a resposta é um caminho no disco de alguém,
+   e trocar o volume pela pasta esconde o que já está no volume (os dados ficam
+   lá, só deixam de ser vistos) — a mensagem diz isso também.
+
+**O que fica aberto:** o `pnpm bootstrap` NÃO oferece a pasta. Fazê-lo seria um
+segundo `consentir-base.mjs` (perguntar num TTY, criar a pasta com o dono
+certo, gravar as DUAS variáveis juntas, decidir o que fazer com um volume
+`project_workspaces` que já tem dados), e isso é frente própria.
+
+- **Código:** `docker/docker-compose.yml:266` (o default de `BROKER_URL`),
+  `:571` (a derivação de `PROJECT_WORKSPACES_HOST_ROOT`);
+  `scripts/dev/pasta-gerenciada.mjs:63` (`avaliarPastaGerenciada`), `:89`
+  (`mensagemDaPastaGerenciada`); `scripts/dev/preflight.mjs:359`
+  (`relatarPastaGerenciada`)
+- **Teste:** `scripts/dev/broker-url-no-dev.spec.ts:42` (o default existe),
+  `:47` (aponta para o serviço e a porta do arquivo), `:64` (produção e
+  instalação sem default); `scripts/dev/pasta-gerenciada.spec.ts:31`
+  (ausente), `:51` (o `~`), `:67` (divergente com o volume), `:75` (a
+  mensagem diz sintoma, conserto e o que não migra), `:113` (o preflight
+  chama o relato sem sair por ele)
+- **Origem:** AT-213 — teste do dono em 2026-09-26
+
+### RN-600 — A criação de projeto pela tela não manda o corpo que a api já se sabe que recusa, uma criação por vez, e a recusa aparece na tela {#rn-600}
+
+No teste do dono em 26/09 a api registrou 11 `POST /workspaces/:id/projects →
+400` em ~4 s, e o mesmo projeto `runner`, criado pela api com caminho, saiu 201.
+Medido por leitura e reproduzido no vitest do assistente: não há retry
+automático (`createProject` é chamada direto, sem `useMutation`), então cada
+POST foi um CLIQUE. A causa provável é o "Procurar pasta..." do modo `runner`,
+que CRIA o projeto antecipadamente ([RN-437](#rn-437)): no passo de detalhes o
+campo de caminho fica ACIMA do nome, e clicar antes de digitar o nome mandava
+`{ name: '', slug: '', executionMode: 'runner', workspacePath:
+'/workspace-a-confirmar' }` — o `CreateProjectDto` recusa `name` com menos de 2
+caracteres e `slug` fora do kebab-case —, e a falha virava só o toast "Não deu
+para preparar a navegação de pasta agora", sem motivo; clicar de novo era a
+única resposta que a tela sugeria. Um nome de UMA letra passava no `Continuar`
+e voltava 400 no "Provisionar" pelo mesmo `MinLength(2)`.
+
+Três metades, todas na tela (a api está certa em recusar):
+
+1. **Não mandar o que já se sabe recusado.** `nomeAceitoPelaApi` espelha o DTO
+   (2+ caracteres, recortado, e slug não vazio) e passa a ser o gate de nome do
+   passo de detalhes. No modo `runner`, "Procurar pasta..." fica INERTE enquanto
+   o nome não passa, ou enquanto um caminho DIGITADO não é plausível
+   (`caminhoLocalParecePlausivel`), e o motivo é dito em texto abaixo do campo
+   (`procurar-bloqueado`, ADR 0064). Caminho VAZIO continua não bloqueando — o
+   placeholder provisório da [RN-437](#rn-437) cobre. É a revisão da frase
+   "nunca bloqueando o clique" da RN-437, que falava do CAMINHO e não previu o
+   nome vazio. O nome vai recortado no corpo.
+2. **Uma criação por vez.** `criacaoEmVoo` (um `useRef`) trava os DOIS caminhos
+   que criam — "Procurar pasta..." e "Provisionar" —, porque o `disabled` só
+   chega ao botão no render seguinte. No jsdom o `disabled` já segura o segundo
+   clique; a ref é o que segura dois eventos no mesmo quadro do navegador.
+3. **A recusa na tela.** A falha 400 da criação antecipada passa a pôr a frase
+   da api (`mensagemDaApi`, lista do `class-validator` juntada) no MESMO
+   `Alert` do passo que o "Provisionar" já usava ([RN-170](business-rules/autenticacao.md#rn-170)); outros
+   erros seguem só com o toast.
+
+**O que não foi medido:** o log da api do teste do dono não sobreviveu ao
+reinício do container, então o CORPO de cada um dos 11 POSTs não foi visto — a
+causa acima é a única que a leitura do código e o vitest reproduzem, e não
+prova que foi ela. A adjacência ([RN-437](#rn-437)) segue como era: o projeto
+criado antecipadamente com o caminho provisório não recebe o caminho refinado
+depois no "Provisionar" (ele é REUSADO, não atualizado) — quem o corrige é o
+runner ao conectar (RN-423).
+
+- **Código:** `apps/web/src/lib/wizard.ts:108` (`nomeAceitoPelaApi`);
+  `apps/web/src/routes/NewProjectWizard.tsx:112` (`montarPayloadDeCriacao`),
+  `:202` (`criacaoEmVoo`), `:321` (`bloqueioDoProcurarNoRunner`), `:486`
+  (`handleProcurarPasta`), `:536` (`handleConfirm`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx:850` (describe
+  `criar projeto sem rajada de 400` — sem nome, 11 cliques e nenhum POST;
+  caminho relativo; nome de uma letra; nome recortado; três cliques no mesmo
+  quadro criam um; a recusa da api na tela); `apps/web/src/lib/wizard.test.ts:210`
+  (`nomeAceitoPelaApi`)
+- **Origem:** AT-215 (teste do dono, 26/09), irmã da AT-214

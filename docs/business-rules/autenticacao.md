@@ -228,13 +228,55 @@ trim) continua não contando como rotação.
   `apps/api/src/main.ts:43` (`tokenDeServicoAnterior`), que roda no boot ao lado do atual
 - **Teste:** `test/infrastructure/security/service-token.spec.ts` (describe
   "tokenDeServicoAnterior (RN-598)")
-- **Borda:** só o lado da api valida. O engine (`VerifyServiceToken`, que lê
-  `:service_token_previous` cru de `runtime.exs`) não valida nem o atual:
-  não faz trim, não tem piso e aceita o default em produção, e é a api
-  recusar subir que protege a instalação ([RN-035](#rn-035)). O broker
-  (`apps/broker/src/config.ts`) faz trim no anterior, mas não aplica a régua
-  de produção a ele.
+- **Borda:** esta RN é o lado da api. O engine e o broker aplicam a mesma
+  régua desde a [RN-601](#rn-601).
 - **Origem:** AT-205 (achado da AT-196)
+
+### RN-601 — O engine e o broker aplicam aos dois tokens de serviço a régua da api {#rn-601}
+
+Os três processos que comparam o token de serviço usam a mesma régua da
+[RN-598](#rn-598), cada um na sua linguagem. O espaço em volta é descartado, e
+um valor feito só de espaço conta como ausente. Em produção,
+`BRABO_SERVICE_TOKEN` ausente, o literal público de desenvolvimento
+(`dev-service-token-change-me`) ou um valor com menos de 16 caracteres depois
+do trim DERRUBAM o boot, com uma mensagem que nomeia a variável. As duas
+últimas recusas valem também para `BRABO_SERVICE_TOKEN_PREVIOUS` quando ele
+está definido. Um anterior igual ao atual não conta como rotação. Fora de
+produção só o trim se aplica, e o atual vazio cai no default de dev.
+
+Antes, o engine lia os dois crus em `config/runtime.exs`: sem trim, sem piso,
+e em produção subia com o default público quando a variável faltava (e com a
+string vazia quando o compose a passava vazia). Só a api recusar subir
+protegia a instalação. O broker já aplicava a régua ao atual, mas ao anterior
+só o trim.
+
+Duas divergências de forma, declaradas. No engine, "produção" é
+`config_env() == :prod` (a release), e não `NODE_ENV`, que ele não lê; a
+imagem de produção é sempre uma release `:prod`. E a régua fica inline no
+`runtime.exs`, e não num módulo de `lib/`, porque numa release esse arquivo
+roda num config provider antes de o código da aplicação estar carregado.
+
+Consequência: todo processo que avalia esse `runtime.exs` numa release
+`:prod` precisa do token, inclusive a migração (`bin/engine eval
+Engine.Release.migrate()`). Por isso o serviço `migrate-engine` dos composes de
+produção e de instalação passou a receber `BRABO_SERVICE_TOKEN` e
+`BRABO_SERVICE_TOKEN_PREVIOUS`, sem default. O smoke de CI mostrou isso: sem
+eles, a migração morria antes de migrar. O Job de migração do Kubernetes já os
+recebia pelo `envFrom` de `brabo-secrets`.
+
+- **Onde:** `apps/engine/config/runtime.exs:85`
+  (`exigir_token_de_servico_de_producao`), `:105` (`service_token`), `:121`
+  (`service_token_previous`); `apps/broker/src/config.ts:89` (`anterior`),
+  `:125` (`exigirTokenDeProducao`)
+- **Teste:** `apps/engine/test/engine/runtime_service_token_test.exs` (avalia o
+  `runtime.exs` de verdade por `Config.Reader.read!/2`, com `env: :prod` e
+  `:dev`); `apps/broker/src/config.spec.ts` (describe "lerConfiguracao —
+  produção, o token ANTERIOR (RN-601)")
+- **Borda:** a régua é copiada nos três processos, não compartilhada: são três
+  linguagens ou runtimes, e nenhum teste confere que as três cópias continuam
+  iguais. O piso conta caracteres (`String.length` no Elixir, `.length` no TS),
+  o que só difere para token fora do ASCII.
+- **Origem:** AT-216 (achado da AT-205)
 
 ### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
 

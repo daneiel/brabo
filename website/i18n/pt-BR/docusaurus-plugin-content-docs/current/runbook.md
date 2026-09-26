@@ -12,6 +12,40 @@ keywords: [runbook, operação, incidente, restore, rollout, kubernetes]
 Um documento só, porque numa madrugada ninguém abre um diretório para escolher
 arquivo. Comece pela triagem.
 
+<!--
+  Os links `pathname://../<página>` desta página apontam para a versão em
+  INGLÊS (o locale default, um nível acima de `/pt-BR/`): as RNs que eles citam
+  não existem na tradução pt-BR de `business-rules.md`, e o checador de links do
+  build de um locale não enxerga as rotas do outro. `pathname://` pula o
+  checador e, com caminho relativo, não ganha o baseUrl do locale — medido no
+  HTML gerado (AT-209). Quando a RN chegar à tradução, volte ao link `.md`.
+-->
+
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-209): a [versão em inglês](pathname://../runbook) é a fonte, e as seções
+> abaixo **só existem nela** — numa madrugada, vá direto para lá:
+>
+> - na triagem: *The container broker*, *The runner's base of projects*, *The
+>   machine agent*, *The unit is `bad-setting` and never starts*, *Device key
+>   from the terminal*, *When the installer does not close the installation*,
+>   *The project folder never appears on the user's machine*, *Authenticated
+>   clone in Runner mode is refused while the container is up*, *Dev containers
+>   write as your user, not root* e *Total reset of the dev environment*;
+> - no deploy local: *Deploying a release's images* e *The Terminal tab is
+>   stuck on "Opening terminal..." forever*;
+> - no restore: *What is backed up, and what deliberately is not*, *What the
+>   bare-repo archive guarantees*, *Recovering the bare repos*, *Losing the
+>   graph (Neo4j)*, *Losing the artifact folder (`docs/`)* e *Last verified run
+>   — compose, disk destination*;
+> - *Verifying a published artifact* e *Bumping a third-party image*.
+>
+> Estão alinhadas ao inglês de 2026-09-26: [Instalando](#instalando),
+> [Provas de propriedade agendadas](#provas-de-propriedade-agendadas), a
+> [rotação das chaves do auth](#rotacao-das-chaves-do-auth), a
+> [rotação da chave mestra](#rotacao-da-chave-mestra) e o
+> [incidente de custo](#incidente-de-custo). As demais seções existem aqui, mas
+> podem estar mais curtas que as do inglês; na dúvida, o inglês vale.
+
 ## Triagem — do sintoma ao procedimento
 
 | o que você está vendo | vá para |
@@ -422,7 +456,15 @@ Duas checagens antes de culpar o endereço, se o `ENGINE_URL` estiver correto:
 - **Sessão que ativa e fecha sozinha ~30s depois** não é este problema. Olhe
   `termination_reason`: `heartbeat_timeout` significa que a ativação funcionou e
   ninguém entrou no canal Phoenix — comportamento esperado quando se ativa por
-  fora da interface (`SESSION_HEARTBEAT_TIMEOUT_MS`).
+  fora da interface (`SESSION_HEARTBEAT_TIMEOUT_MS`). `conversation_idle_timeout`
+  é o outro: um agente conversacional esperou o usuário por mais tempo que
+  `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` (8h), contado do fim do turno dele
+  ([RN-581](pathname://../business-rules#rn-581)). Para mudar esse teto, defina a variável
+  no `.env` (os três composes a mapeiam para o engine) ou, no Kubernetes,
+  acrescente um item `env:` ao patch do engine no overlay: `deploy/k8s/` não a
+  escreve de propósito, porque ali a variável ausente já é o default de 8h do
+  código (AT-153). Um `409` com `reason: "sessao_encerrada"` depois disso é a
+  sessão fechada recusando conversa — abra uma sessão nova.
 
 ### O runner inunda a api com um ticket morto {#runner-com-ticket-morto}
 
@@ -1046,6 +1088,155 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 | `server version mismatch` | o `pg_dump` do Job é 16; um cluster em major diferente recusa a conexão |
 | timeout no Job | banco grande demais para `activeDeadlineSeconds`; suba o valor no Job, não no CronJob |
 
+### Provas de propriedade agendadas {#provas-de-propriedade-agendadas}
+
+`make test-restore`, `make rollout-test` e `make hpa-test` provam
+**propriedades**, não configuração — um backup que roda toda noite e não
+restaura passa nos cinco alertas de `brabo-alerts.yaml`. Até o BRB-009 elas só
+rodavam quando alguém as digitava. `.github/workflows/propriedades.yml` agora
+as roda por agendamento, num cluster k3d num runner hospedado pelo GitHub:
+
+1. instala `k3d`, `helm` e `kubectl` por checksum pinado;
+2. roda `deploy/k8s/bootstrap.sh` — o mesmo bootstrap que o
+   `make deploy-local` roda, construindo as quatro imagens de produção a partir
+   da árvore do checkout (sem registry, sem segredo);
+3. roda `make smoke-k8s`, depois `make hpa-test`, `make rollout-test` e
+   `make test-restore`, na ordem do `Makefile`, cada um mesmo quando um
+   anterior falhou (um HPA quebrado não pode esconder um restore quebrado);
+4. roda `make test-restore-mutacao` (AT-126, BRB-009), a prova **da** prova:
+   ele tira um backup de verdade, depois cria na origem uma tabela
+   (`zz_mutacao_restore`) que o dump não tem — exatamente "um dump sem uma
+   tabela" — e roda o mesmo `brabo-restore`. Só passa se o restore o
+   **recusar** nomeando essa tabela (a linha de log
+   `faltando: zz_mutacao_restore`); se o restore aprovar, ou recusar por outro
+   motivo, o passo falha e abre issue própria. Um `make test-restore` verde diz
+   que o backup restaura; este diz que a prova ainda perceberia se não
+   restaurasse. A tabela é apagada na saída, mesmo em falha. Roda mesmo quando
+   o `make test-restore` falhou (uma prova cega e um restore quebrado são dois
+   defeitos, e os dois precisam aparecer);
+5. roda `make test-reprojecao-k8s` (AT-127, BRB-018): o grafo não entra no
+   backup ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)) porque é
+   reprojetado a partir do event log, então o workflow prova isso também — ele
+   cria um projeto próprio com uma sessão fechada e dois eventos, o reprojeta,
+   **apaga esse subgrafo** no Neo4j, reprojeta e exige as mesmas contagens de
+   nós e arestas, e então reprojeta mais uma vez. Não usa estado deixado pelos
+   outros alvos e **não** está acoplado ao `test-restore` (o grafo não depende
+   de backup);
+6. só quando **ambos**, o restore e a quebra proposital, passaram na mesma
+   rodada, escreve `ultima-execucao-boa.json` (data, rodada, commit, duração do
+   restore), o sobe como o artefato `restore-ultima-execucao-boa` (guardado 90
+   dias) e acrescenta a linha *Última execução boa do restore* ao resumo da
+   rodada;
+7. escreve a duração de cada passo no resumo da rodada.
+
+| gatilho | quando |
+|---|---|
+| `schedule` | semanal, domingo 04:00 UTC |
+| `workflow_dispatch` | sob demanda, pela aba Actions (`gh workflow run propriedades.yml`) |
+
+**Uma falha abre issue** com o título `Prova de propriedade falhou: <alvo>`,
+uma por alvo, e a falha repetida do mesmo alvo **comenta na issue aberta** em
+vez de abrir outra. O bootstrap tem título próprio: com o cluster fora do ar,
+os três alvos ficam `skipped`, e uma rodada agendada pulada é justamente o
+silêncio que isto existe para quebrar. Feche a issue quando a prova voltar a
+passar. **Não** é gate nem check obrigatório — nada espera por ela.
+
+Medido nas rodadas que construíram o workflow (4 vCPUs, 15 GiB de RAM, 87 GB de
+disco livre no `ubuntu-latest`):
+
+| passo | duração |
+|---|---|
+| bootstrap (build das imagens + cluster + operadores + app) | 705 s |
+| `make smoke-k8s` | 1 s |
+| `make hpa-test` | 19 s |
+| `make rollout-test` | 24 s |
+| `make test-restore` | 21 s |
+| `make test-restore-mutacao` | 31 s (rodada `35473548113`) |
+| `make test-reprojecao-k8s` | 16 s (rodada `35471428634`) |
+| job inteiro | 12 min 56 s |
+
+(Primeira rodada toda verde, `34784563928`, em 2026-09-13.)
+
+A cadência acompanha esse custo. Quase tudo é o bootstrap, que uma rodada
+noturna pagaria sete vezes por semana para reprovar propriedades cujo código
+muda bem menos que isso; semanal mantém o alarme dentro de uma sprint, e o
+`workflow_dispatch` cobre o "acabei de mexer no backup". O timeout do job é de
+90 minutos e só o passo do restore tem teto de 20 — ver o comentário naquele
+passo para o porquê de o teto ser do passo e não do script.
+
+**O que as primeiras rodadas encontraram**, cada coisa invisível ao
+`kubeconform` e a todo check de PR, e cada uma corrigida na mesma mudança que
+criou o workflow — o `make deploy-local` estava quebrado na `dev` havia semanas
+sem ninguém rodá-lo:
+
+1. O `imageName` do cluster CNPG pinado só por digest
+   ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md)) é recusado pelo
+   webhook do operador — *"Can't use just the image sha as we can't detect
+   upgrades"*. Agora ele leva `:16.10@sha256:…`.
+2. O Secret-fonte do bootstrap não tinha `NEO4J_PASSWORD`, que o
+   `ExternalSecret` da base lê desde o grafo
+   ([ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)): o
+   `brabo-secrets` nunca materializou e todo pod ficou em
+   `CreateContainerConfigError`.
+3. A api não recebia nem `NEO4J_URI` nem `NEO4J_USER` no cluster, e em modo de
+   produção ela recusa subir sem os três.
+4. O StatefulSet do Neo4j exportava `NEO4J_USER`/`NEO4J_PASSWORD`, que o
+   entrypoint da imagem transforma em chaves de configuração e recusa
+   (*"Unrecognized setting"*) — o próprio defeito de que um comentário duas
+   linhas abaixo avisava. Esses manifests nunca tinham rodado num cluster.
+5. O `migrate-api` não conseguia `CREATE EXTENSION vector` (o papel da
+   aplicação não é superusuário), então a api subia sem tabelas. O cluster CNPG
+   local agora a cria como superusuário, na database da aplicação e no
+   `template1`.
+6. `deploy/k8s/smoke.sh` e `rollout-test.sh` nunca mandavam o `kind` da sessão,
+   que virou obrigatório na FASE 20 (o `docker/smoke.sh` o ganhou então), então
+   os dois falhavam com 400 antes de provar qualquer coisa.
+7. O `make test-restore` morria no `pg_restore` com *"permission denied to
+   create extension vector"* — o caso que a tabela acima já nomeia — porque
+   nada no cluster local fornecia a extensão à database que o restore cria.
+8. Com a extensão fornecida, o `pg_restore` ainda morria — agora com *"must be
+   owner of extension vector"*, no `COMMENT ON EXTENSION` do dump: só o dono da
+   extensão pode comentá-la, e onde o papel da aplicação não é superusuário
+   (CNPG, qualquer Postgres gerenciado) a extensão pertence a outro papel.
+   **Este não é local ao cluster**: o mesmo `brabo-restore` é o procedimento de
+   incidente, então um restore real num Postgres assim teria falhado igual. O
+   `restore.sh` agora restaura a partir do índice do dump menos o comentário da
+   extensão — uma string de descrição que a extensão instala, da qual nenhum
+   dado e nenhuma validação dependem. Reproduzido contra um container
+   `pgvector` simples com papel não-superusuário antes e depois da mudança.
+9. `deploy/k8s/test-restore.sh` esperava com `kubectl wait
+   --for=condition=complete`, que nunca vê um Job que **falhou**, então o
+   restore quebrado acima gastou o teto inteiro de 20 minutos do passo para
+   relatar o que o log do Job dizia em segundos (o teto do próprio script era
+   30). Agora ele sonda as duas condições e falha assim que o Job fica
+   `Failed`.
+10. `rollout-test.sh` procurava órfãs depois de um `sleep 15` fixo, que não
+    distingue *ainda assentando* de *órfã de vez*. Agora sonda até um teto
+    (`ROLLOUT_CONVERGENCE_SECONDS`, default 120) e registra, antes do rollout,
+    em que réplica cada sessão morava — os pods antigos levam os logs com eles.
+
+**Medido, e a causa provável já corrigida** (AT-078,
+[RN-588](pathname://../business-rules#rn-588)) — o `Monitor` do pod antigo apagando a
+linha de `session_states` que o par acabara de regravar; ver
+[Provar que não sobrou órfã](#rollout-do-engine) para o que uma órfã nova
+registraria no log. O que segue é o registro de antes da correção. **A prova de
+rollout tinha falhado uma vez em quatro rodadas que chegaram a ela** (duas em
+dez até a rodada `35448353884`, 2026-09-19, em que as cinco sessões moravam no
+mesmo pod antigo, quatro foram adotadas e uma terminou sem dono e sem drenagem;
+os únicos logs que a nomeavam morreram com esse pod — é por isso que a prova
+agora os guarda, ver [Provar que não sobrou órfã](#rollout-do-engine)). Com o
+mesmo script e a mesma espera fixa, a rodada `34773908653` passou e a
+`34775712706` relatou uma órfã — uma sessão `active` na api sem dono em nenhuma
+das três réplicas do engine, 15 s depois de o `rollout status` retornar. As
+duas rodadas com a espera limitada passaram, e as duas convergiram em **3 s**,
+as cinco sessões adotadas. Uma convergência normal de 3 s torna "a órfã só
+precisava de mais que 15 s" a leitura menos provável; a mais provável é uma
+corrida intermitente na adoção ou na drenagem que a espera fixa por acaso
+pegou. Fica como está de propósito: o workflow existe para pegar exatamente
+isso, e a próxima ocorrência agora vai falhar com o teto que esperou, onde cada
+sessão morava antes do rollout e as linhas do engine que nomeiam a órfã. A
+correção é do engine, não desta prova.
+
 ### Última execução verificada
 
 > **A data desta seção deixou de ser mantida à mão** (AT-126). A rodada mais
@@ -1121,11 +1312,23 @@ dança em três etapas da chave mestra (abaixo):
 1. `AUTH_JWT_SECRET_PREVIOUS` recebe o valor antigo; `AUTH_JWT_SECRET` recebe o
    novo. Reinicie a api.
 2. As duas chaves aparecem no `/.well-known/jwks.json` e as duas verificam;
-   só a nova **assina**. A api emite um `WARN` no boot enquanto isso durar.
+   só a nova **assina**. A api emite um `WARN` uma vez por processo, na
+   primeira verificação ou leitura do JWKS depois do boot (a chave anterior é
+   derivada sob demanda, não na subida), enquanto isso durar.
 3. Passados 15 minutos (o TTL do access token), nenhum token da chave antiga
    sobrevive. **Remova `AUTH_JWT_SECRET_PREVIOUS`** e reinicie.
 
-Ninguém é deslogado: os refresh tokens não dependem desta chave.
+Ninguém é deslogado — **desde que `AUTH_TOKEN_PEPPER` esteja definido**. Os
+refresh tokens são hasheados com o pepper, não com esta chave; mas um pepper
+ausente cai no `AUTH_JWT_SECRET`, e aí rotacionar esta chave é também rotacionar
+o pepper, com o logout global descrito abaixo
+([RN-597](pathname://../business-rules/autenticacao#rn-597)). O Kubernetes define o pepper
+à parte; o `docker-compose.prod.yml` e o `docker-compose.install.yml` não o
+repassam à api.
+
+Verificação: `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts`
+(describe "rotação de chave") e, para a condição do pepper,
+`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`.
 
 ### `AUTH_TOKEN_PEPPER` — logout global, sem meio-termo
 
@@ -1133,7 +1336,14 @@ Ninguém é deslogado: os refresh tokens não dependem desta chave.
 invalida, de uma vez:
 
 - **todos** os refresh tokens em circulação — todo mundo é deslogado;
-- **todos** os links de verificação de e-mail e de reset de senha em aberto.
+- **todos** os links de verificação de e-mail e de reset de senha em aberto;
+- **todos** os personal access tokens (PAT) — um runner iniciado com `--token`
+  para de autenticar (chaves de dispositivo não são afetadas);
+- os contadores de lockout: toda conta travada é destravada.
+
+As senhas sobrevivem (argon2id, sem pepper): as pessoas entram de novo
+normalmente. Um refresh recusado assim aparece como `refresh_unknown` em
+`auth_events`, não como `refresh_reuse_detected`.
 
 Não existe `AUTH_TOKEN_PEPPER_PREVIOUS`, e é decisão consciente: aceitar dupla
 verificação em todo refresh, para sempre, por um cenário que roda uma vez a
@@ -1143,7 +1353,11 @@ aparente e ver o link de reset "expirado".
 
 > A api **não** falha ao subir com um pepper novo. Ela simplesmente não
 > reconhece nenhum token antigo. Se o suporte relatar "todo mundo deslogado ao
-> mesmo tempo", esta variável é o primeiro lugar a olhar.
+> mesmo tempo", esta variável é o primeiro lugar a olhar — e, se ela nunca foi
+> definida, o `AUTH_JWT_SECRET`.
+
+Verificação: `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
+([RN-597](pathname://../business-rules/autenticacao#rn-597)).
 
 ### `BRABO_SERVICE_TOKEN` — rotação sem downtime, nos dois lados
 
@@ -1156,7 +1370,13 @@ A dança é a mesma do `AUTH_JWT_SECRET`, com a diferença de que ela roda nas
 ambos:
 
 1. `BRABO_SERVICE_TOKEN_PREVIOUS` recebe o valor antigo em **api e engine**;
-   `BRABO_SERVICE_TOKEN` recebe o novo nos dois. Reinicie os dois.
+   `BRABO_SERVICE_TOKEN` recebe o novo nos dois. Reinicie os dois. Em produção
+   a api confere o valor antigo com a mesma régua do novo, então se o antigo
+   for o default público ou tiver menos de 16 caracteres, a api recusa subir
+   nesta etapa e nomeia a variável
+   ([RN-598](pathname://../business-rules/autenticacao#rn-598)). Sair de um token fraco,
+   portanto, significa pular o `_PREVIOUS` e pagar com a janela de `403`/`401`
+   descrita abaixo.
 2. Enquanto os dois estiverem de pé com a variável nova, o tráfego funciona em
    qualquer combinação de pods velhos e novos — é isso que torna o rollout
    seguro no meio do caminho.
@@ -1166,6 +1386,27 @@ ambos:
 Pular a etapa 1 e trocar só o valor atual produz `403`/`401` durante toda a
 janela em que sobrar um pod antigo de qualquer lado — o sintoma do
 [diagnóstico acima](#diagnostico-do-deploy).
+
+Verificação: na api, `apps/api/test/infrastructure/security/service-token.spec.ts`
+(describe "rotação do BRABO_SERVICE_TOKEN") e
+`apps/api/test/interfaces/engine-service.guard.spec.ts`; no engine,
+`apps/engine/test/engine_web/plugs/verify_service_token_test.exs`.
+
+> **Onde as variáveis `_PREVIOUS` chegam ao processo.** Nos três composes
+> (`docker-compose.yml`, `docker-compose.prod.yml`,
+> `docker-compose.install.yml`) todas estão mapeadas no `environment:` do
+> serviço que as lê, vazias por padrão — definir uma no `.env` e recriar o
+> serviço basta ([RN-595](pathname://../business-rules/autenticacao#rn-595); guardado por
+> `scripts/ci/previous-nos-composes.spec.ts`, que deriva a lista do código).
+> **No Kubernetes ainda não**: os Pods leem `envFrom: brabo-secrets`, e o
+> `ExternalSecret` (`deploy/k8s/base/common/externalsecrets.yaml`) só
+> materializa as chaves que lista. Elas não estão listadas de propósito — uma
+> entrada de `data` cuja propriedade falta no provider reprova a
+> sincronização do Secret inteiro, e `_PREVIOUS` ausente é o estado normal.
+> Como elas chegam ao Pod é decisão aberta sobre o cofre de segredos; até lá,
+> uma rotação no cluster exige a variável definida à mão no Deployment. Nos
+> dois casos, confirme dentro do container (`printenv`) antes de contar com a
+> etapa 2.
 
 ```bash
 # gere um valor com entropia suficiente; ele nunca precisa ser digitado
@@ -1205,8 +1446,7 @@ obrigatoriamente, depois de qualquer suspeita de vazamento.
 
 ### O que está em jogo
 
-O `wrapped_dek` gravado no banco **não identifica qual chave o embrulhou**.
-Consequência direta: trocar a variável e reiniciar a api torna ilegível toda
+Trocar a variável e reiniciar a api com uma chave só torna ilegível toda
 credencial existente, de uma vez, sem erro no boot — a falha só aparece no
 primeiro uso, como "não foi possível decriptar", e não há caminho de volta a não
 ser restaurar a chave antiga.
@@ -1220,6 +1460,30 @@ coexistem:
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | chave anterior — tentada só quando a atual falha |
 
 Duas tabelas guardam envelopes: `user_credentials` e `project_git_connections`.
+
+Desde a [RN-563](pathname://../business-rules#rn-563) cada envelope carrega também um
+**`key_id`** — a impressão digital da chave que o embrulhou. É ele que torna o
+progresso da etapa 2 respondível em SQL. Duas coisas sobre ele importam às 3h
+da manhã:
+
+- **Ele nunca decide se uma linha abre.** A leitura continua tentando a chave
+  atual e caindo para a anterior; o AES-GCM autentica, e é ele a autoridade. O
+  rótulo é metadado, e uma linha cujo rótulo discorda do envelope continua
+  sendo re-embrulhada corretamente
+  ([ADR 0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)).
+- **`key_id IS NULL` quer dizer "gravada antes de a coluna existir", nunca "na
+  chave atual".** Numa instalação anterior a ela, tudo é `NULL` até a primeira
+  rotação, e as consultas abaixo contam isso como pendente — que é a resposta
+  honesta.
+
+Pegue a impressão digital atual do próprio log da api; ela imprime uma linha no
+boot:
+
+```bash
+kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=200 \
+  | grep 'chave mestra corrente'
+# chave mestra corrente: key_id=4f2b91c0a77e13d5
+```
 
 ### Antes: dimensione
 
@@ -1245,16 +1509,25 @@ No cluster local o Secret-fonte é criado pelo bootstrap; em staging/prod o valo
 vai no provider que o External Secrets lê. Depois, reinicie a api para que ela
 carregue as duas:
 
+> Publicar `CREDENTIALS_MASTER_KEY_PREVIOUS` no provider **não** a coloca no
+> Pod: o `ExternalSecret` não a lista (ver a nota no fim de
+> [Rotação das chaves do auth](#rotacao-das-chaves-do-auth)). Até essa decisão
+> ser tomada, defina-a à mão no Deployment da api durante a rotação e remova-a
+> na etapa 3. Nos composes ela já está mapeada — é o `.env` mais recriar a api.
+
 ```bash
 kubectl -n brabo rollout restart deployment/api
 kubectl -n brabo rollout status  deployment/api
 ```
 
-Confirme que a api está no modo de rotação — ela avisa no log, de propósito:
+Confirme que a api está no modo de rotação — ela avisa no log, de propósito, e o
+aviso nomeia **as duas** impressões digitais, que é contra o que as consultas
+abaixo comparam:
 
 ```bash
 kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=50 \
   | grep CREDENTIALS_MASTER_KEY_PREVIOUS
+# ... rotação em andamento (atual key_id=<NOVA>, anterior key_id=<ANTIGA>). ...
 ```
 
 > A partir daqui **nada quebra**: segredo novo já nasce na chave nova, segredo
@@ -1281,19 +1554,42 @@ Saída esperada:
 
 Propriedades que importam se algo interromper o script:
 
-- **Idempotente.** Rodar de novo conta os já convertidos em `já na chave atual`
-  e não reescreve nada. Interrompeu? Rode outra vez.
+- **Idempotente.** Rodar de novo conta os já convertidos em
+  `já na chave atual` e não reescreve nada. Interrompeu? Rode outra vez.
 - **Só o envelope muda.** O texto cifrado do segredo permanece byte a byte o
   mesmo, então parar no meio deixa o acervo consistente: parte na chave nova,
   parte na antiga, e as duas legíveis enquanto a PREVIOUS existir.
 - **`falhas > 0` bloqueia a etapa 3.** São registros que não abrem com nenhuma
   das duas chaves — normalmente vindos de outro ambiente, ou de uma rotação
   anterior interrompida com a chave já descartada. O script identifica cada um
-  por id. Não remova a PREVIOUS: sem ela você perde também o que ainda abria.
+  por id, e nomeia POR QUE falhou — uma linha de outro ambiente ("embrulhado
+  pela chave `<kid>`"), uma linha cujo rótulo discorda do envelope ("rótulo
+  incoerente ou registro adulterado") e uma linha sem rótulo nenhum são três
+  diagnósticos diferentes com três respostas diferentes. Não remova a
+  PREVIOUS: sem ela você perde também o que ainda abria.
+
+**Interrompeu e quer saber onde parou?** Pergunte ao banco em vez de rodar o
+script de novo pelo contador — com `<NOVA>` sendo a impressão digital atual do
+log acima:
+
+```sql
+select 'user_credentials' as tabela, count(*) as pendentes
+  from user_credentials       where key_id is distinct from '<NOVA>'
+union all
+select 'project_git_connections', count(*)
+  from project_git_connections where key_id is distinct from '<NOVA>';
+```
+
+`is distinct from`, nunca `<>`: linhas com `key_id IS NULL` precisam contar
+como pendentes, e o `<>` as descartaria em silêncio.
 
 ### 3. Descartar a chave antiga
 
-Só depois de `falhas=0`:
+Só depois de `falhas=0` **e** de a consulta acima responder `0` nas duas
+tabelas. As duas dizem coisas diferentes e você quer as duas: `falhas=0`
+significa que nada recusou abrir nesta rodada, e a consulta significa que nada
+ficou para trás — inclusive linhas que uma rodada anterior, interrompida, nunca
+alcançou.
 
 ```bash
 # remova CREDENTIALS_MASTER_KEY_PREVIOUS do provider e então
@@ -1306,17 +1602,39 @@ qualquer turno de agente que use chave de LLM).
 
 ### Verificar sem esperar um incidente
 
-O `rewrap` roda em qualquer ambiente. Num de teste, o ciclo completo cabe em
-poucos minutos e é o que valida o procedimento — a mesma lógica está coberta em
-`test/infrastructure/security/envelope-encryption.service.spec.ts`, inclusive o
-caso em que nenhuma das duas chaves serve.
+**O ciclo inteiro tem verificação nomeada, e ela roda no CI**
+([RN-562](pathname://../business-rules#rn-562)):
+
+```bash
+pnpm --filter api test -- test/scripts/rewrap-deks.spec.ts
+```
+
+Esse spec percorre a sequência desta página contra um Postgres de verdade e
+**as duas** tabelas: cifra com K1, publica K2, re-embrulha, descarta K1 e ainda
+decifra. Ele também fixa as duas propriedades em que este procedimento se
+apoia — idempotência (uma segunda rodada relata `re-embrulhados=0`) e a linha
+ilegível contada e nomeada sem abortar as outras.
+
+Cobertura mais estreita, em memória, das mesmas primitivas — inclusive o caso
+em que nenhuma das duas chaves serve, e o caso em que o rótulo `key_id` mente —
+mora em `test/infrastructure/security/envelope-encryption.service.spec.ts`.
+
+O `rewrap` também roda em qualquer ambiente: num de teste, o ciclo completo à
+mão cabe em poucos minutos.
+
+> **TODO(humano):** esta rotação já foi executada de verdade, em algum
+> ambiente? Nenhuma fonte registra uma execução com data, e isso muda se o spec
+> acima é rede de segurança ou a primeira prova.
 
 ### Interação com o restore
 
 **Restaurar um dump num ambiente com master key diferente devolve o banco
 íntegro e as credenciais inúteis.** O dump carrega os DEKs embrulhados, não a
 chave. Se você restaurou um backup de produção num ambiente de teste e as
-credenciais não abrem, não há corrupção: é a chave errada. Ver
+credenciais não abrem, não há corrupção: é a chave errada — e desde a
+[RN-563](pathname://../business-rules#rn-563) dá para confirmar isso numa comparação em vez
+de por eliminação, lendo o `key_id` de qualquer linha e pondo-o ao lado da
+linha `chave mestra corrente` do log de boot da api. Ver
 [Restore](#restore).
 
 Por isso a chave mestra faz parte do plano de recuperação: um backup do banco
@@ -1329,7 +1647,9 @@ sem a chave correspondente não recupera os segredos do usuário.
 | api sobe sem aviso de rotação, mas o script exige a PREVIOUS | a variável não chegou ao pod; o ESO só ressincroniza a cada `refreshInterval` (1 h) |
 | `falhas` igual ao total | a PREVIOUS publicada não é a chave que embrulhou o acervo |
 | `já na chave atual` igual ao total, sem ter rodado antes | as duas variáveis têm o mesmo valor — o serviço ignora a PREVIOUS nesse caso |
-| credencial para de funcionar DEPOIS da etapa 3 | algum registro ficou para trás; republique a PREVIOUS imediatamente e rode o script de novo |
+| credencial para de funcionar DEPOIS da etapa 3 | algum registro ficou para trás; republique a PREVIOUS imediatamente e rode o script de novo. A consulta de progresso da etapa 2 é o que evita isso, e é a primeira checagem a fazer |
+| a consulta de pendentes responde o total inteiro, num banco que ninguém rotacionou ainda | esperado: o `key_id` é gravado da próxima escrita em diante, então uma instalação anterior à [RN-563](pathname://../business-rules#rn-563) o tem `NULL` em tudo até a primeira rotação. `NULL` conta como pendente de propósito — "não sei qual chave" não é "já na atual" |
+| o `rewrap` diz que uma linha está numa chave que não é nem a atual nem a anterior | a linha veio de outro ambiente — quase sempre um dump restaurado entre instalações. Ver [Interação com o restore](#rotacao-da-chave-mestra) acima; o `key_id` da linha contra o do log de boot da api diz de relance |
 
 ---
 
@@ -1779,6 +2099,268 @@ A máquina de gates em si não varia: ordem imutável, devolução na mesma bran
 teto de correções, pareceres como artefato e `awaiting_user` terminal são
 verificados por ExUnit ([RN-014](business-rules.md#rn-014),
 [RN-015](business-rules.md#rn-015)).
+
+---
+
+## Instalando {#instalando}
+
+```sh
+curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
+```
+
+**Baixe um arquivo e depois rode-o com `bash`.** As duas formas mais curtas que
+parecem equivalentes não são, e o script recusa as duas **pelo nome**, antes de
+baixar qualquer coisa, imprimindo a linha acima:
+
+- **Nunca `curl … | sh`.** O motivo é mecânico, não de estilo: com o script
+  chegando pelo pipe, o `stdin` do processo **é** o download, então qualquer
+  `read` lê bytes do próprio script ou bate em EOF. Um instalador que não pode
+  perguntar teria de escolher sozinho onde ficam as pastas na máquina de outra
+  pessoa ([RN-526](pathname://../business-rules#rn-526)).
+- **Nem `sh -c "$(curl …)"`** — essa foi a forma documentada até a AT-083, e ela
+  nunca funcionou. O script confere **o próprio hash** contra o manifesto
+  assinado, e sob `X -c "…"` não há arquivo para calcular hash: `$0` é o nome
+  do shell. Com `dash` como `sh` (Debian, Ubuntu) ele morria ainda antes, no
+  `set -o pipefail`. Não existe chave para pular essa autoverificação, e não vai
+  existir ([ADR 0150](adr/0150-instalador-de-uma-linha.md)) — o conserto é
+  existir um arquivo. Rodá-lo sob um shell que não é bash também é recusa
+  nomeada própria.
+
+O script verifica **a própria origem** antes de fazer qualquer coisa — a
+assinatura do `checksums.txt` da Release, e depois o próprio hash dentro desse
+manifesto verificado. Falhar em qualquer das duas etapas é **recusa nomeada**,
+nunca aviso.
+
+Ele precisa de **uma** entre `sha256sum` (coreutils, Linux) ou `shasum -a 256`
+(vem com o macOS) para fazer qualquer disso, e resolve qual **antes do primeiro
+download** — não no meio de uma verificação. Faltar as duas é recusa **própria**,
+que nomeia as duas ferramentas e diz que nada foi baixado; é uma dependência
+ausente do sistema operacional, e de propósito *não* tem a redação das recusas
+de hash abaixo. As duas são desfechos diferentes pedindo coisas diferentes — um
+se resolve instalando, o outro **parando** — e foi a medição da AT-091 que pôs a
+linha entre eles: `sha256sum: command not found` no macOS aparecia como *"o
+cosign baixado NÃO bate com o hash pinado neste script. Isso não é um aviso:
+pare e investigue."*, o que bloqueava toda instalação no macOS e ensinava quem
+lê a ignorar essa frase. O `--print-plan` não precisa de nenhuma das duas e
+declara quais o script aceita (`conferir-hash`).
+
+A detecção tem **teto de 5 s** na chamada ao Docker que faz (`docker compose ls`
+fala com o daemon, e um daemon lento ou parado atrás de um socket vivo travaria
+tudo *antes da primeira pergunta*). Bater no teto não é erro — é o mesmo
+desfecho de não haver Docker nenhum, e os demais sinais continuam sendo lidos.
+
+Sem TTY ele **relata e sai com 0**: imprime o que encontrou e o comando para
+rodar num terminal. É de propósito, e é a mesma forma que o
+`consentir-base.mjs` já tem.
+
+**O que ele nunca apaga:** sua base de projetos e sua pasta de espelho. Volumes
+nomeados só saem com confirmação, listados um a um antes.
+
+Ele sobe a stack a partir do **próprio compose**
+(`docker/docker-compose.install.yml`), que pega as imagens de variáveis e não
+constrói nada — e ele **baixa esse compose da Release**
+([RN-570](pathname://../business-rules#rn-570),
+[ADR 0160](adr/0160-o-compose-do-instalador-viaja-assinado.md)). Quatro arquivos
+viajam com o instalador como assets `brabo-install-*`, no **mesmo**
+`checksums.txt` assinado que cobre o binário do runner: o compose, o
+`postgres/init.sql` e o `ollama/pull-models.sh` que ele monta por bind-mount, e
+o `backup/test-restore-compose.sh` que a migração roda. Logo depois de se
+verificar — antes de qualquer pergunta, antes de gravar qualquer coisa — o
+script baixa os quatro e confere cada hash contra esse manifesto. Três recusas
+nomeadas, todas numa máquina intocada:
+
+| a mensagem começa com | significa | faça |
+|---|---|---|
+| *"a Release não publica …"* | a Release é anterior ao ADR 0160, ou o passo de publicação falhou no meio | instale a partir de um checkout do repositório naquela tag, ou espere a próxima release |
+| *"o manifesto assinado não cobre …"* | o manifesto existe mas não tem linha para aquele asset | o mesmo de cima — a Release está incompleta |
+| *"… NÃO bate com o manifesto assinado"* | o arquivo baixado não é o que o manifesto assinado descreve | **pare e trate como incidente**; não tente contornar repetindo |
+
+As cópias verificadas são gravadas sob `docker/` na pasta de onde você rodou o
+script — a mesma pasta do `.env` — só quando são necessárias pela primeira vez.
+O que já estava lá (o compose da versão anterior, numa atualização) é
+**substituído, nunca lido**, e o script nomeia o que substituiu; de dentro de um
+checkout git em outro commit, isso deixa o `git status` sujo.
+
+> **Releases publicadas antes do ADR 0160 não carregam esses assets.** O
+> instalador delas ainda usa o caminho relativo, e a linha acima falha numa
+> pasta vazia com *"no such file or directory"* depois de gravar o `.env` (a
+> lacuna que a [RN-549](pathname://../business-rules#rn-549) mediu). Para essas tags, rode
+> o instalador a partir de um checkout do repositório na tag que você está
+> instalando.
+
+> No caminho de *migração* a prova de restauração (`test-restore-compose.sh`)
+> recebe o `.env` da instalação por `BRABO_ENV_FILE` (repassado ao Compose como
+> `--env-file`), porque o Compose procura o `.env` ao lado do arquivo de compose
+> — não na pasta de onde você roda. Se você rodar a prova à mão contra uma
+> instalação, exporte `BRABO_ENV_FILE=/caminho/do/.env` antes; um caminho que não
+> existe é recusado, nunca trocado por outro arquivo. Uma prova que falha
+> continua sem apagar nada ([RN-530](pathname://../business-rules#rn-530)).
+
+Duas fontes:
+
+```sh
+install.sh                  # --source=ghcr (padrão): por digest, assinatura verificada
+install.sh --source=local   # buildx bake; exige árvore limpa numa tag
+```
+
+Os segredos são gerados uma vez e persistidos no `.env` com modo **600** — o
+arquivo é criado vazio e travado *antes* de receber conteúdo, porque uma janela
+em que os segredos ficam legíveis por todos é exatamente o que este arquivo não
+pode ter.
+
+**Não há passo de migração**, e não deve haver: o compose encadeia `api` →
+`migrate-api` com `service_completed_successfully`, então o `up --wait` espera
+as migrations. Um segundo lugar ordenando migrations seria uma segunda fonte da
+mesma verdade.
+
+Depois de a stack subir ele **pergunta antes de afirmar**: `/health` na api e no
+engine, e só então diz que instalou.
+
+Ele **instala o agente local** — o binário é verificado contra o manifesto
+assinado e posto com `install -m 0755`, então não há `chmod` manual
+([RN-531](pathname://../business-rules#rn-531)) — e pergunta UMA base, gravando-a nos dois
+lados: `BRABO_PROJECTS_BASE` no `.env` e `base` no `runner.json` do runner. Uma
+Release sem binário para esta plataforma não interrompe a instalação: ele diz
+isso e aponta para `npm install -g @brabo/runner`.
+
+Sobre uma instalação existente ele **migra ou para** — um `up` sobre volumes de
+outra versão é dano que não avisa. A ordem é backup → **PROVAR** que restaura →
+perguntar → apagar → instalar → restaurar, e a prova no meio é o que dá ao
+instalador o direito de apagar ([RN-530](pathname://../business-rules#rn-530)).
+
+E ele sabe **qual** versão está substituindo ([RN-542](pathname://../business-rules#rn-542)).
+As imagens são resolvidas **antes** de a detecção rodar, então a pergunta nunca
+é cega: o marcador registra a `versao` instalada, o manifesto traz a que está
+para ser instalada, e a oferta é específica da relação entre as duas.
+
+| relação | o que ele oferece | padrão |
+|---|---|---|
+| mais nova | *"Atualizar 5.0.0 → 5.1.0?"* | **sim** — é o que você veio fazer, e o backup provado a torna reversível |
+| a mesma | *"Já é a 5.0.0. Reinstalar do zero mesmo assim?"* | não — não há ganho a oferecer |
+| mais antiga | a chama de **downgrade**, avisando que migrations do banco não rodam de trás para a frente | não — pode não ter volta |
+| desconhecida | um marcador do schema 1 não tem versão; ele diz isso, e não adivinha | não |
+
+Seja qual for o ramo, a instalação é **apagada e recriada do zero** em vez de
+subir por cima dos volumes antigos. Meia migração é pior que nenhuma.
+
+Um `install.sh` chamado pelo menu do `pnpm bootstrap` (*Docker › Instalar*) só
+**relata** o plano. Isso é mecânico, não preferência: um item de menu roda com
+o stdin em `/dev/null` para que o menu continue lendo teclas do mesmo terminal,
+e este instalador foi feito para *perguntar*. A nota do item traz o comando de
+uma linha que instala de verdade.
+
+> **O que ele não faz:** ligar o **broker** de container sem perguntar — ver
+> [o broker numa instalação](#broker-na-instalacao) logo abaixo. O agente local
+> ele **pareia**, desde a [RN-547](pathname://../business-rules#rn-547): cria a primeira
+> conta, gera a chave de dispositivo de máquina na máquina, registra a metade
+> pública, carimba o `kid` e instala a unit de **máquina**
+> ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) — e quando um
+> elo falha ele nomeia o comando a repetir, ver a seção *When the installer
+> does not close the installation* (`#instalador-nao-fecha`), que só existe na
+> versão em inglês desta página. O que continua na tela do projeto é um
+> pareamento **preso ao projeto**: essa chave de dispositivo e o
+> `brabo-runner.config.json` continuam vindo de lá
+> ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> Inspecione tudo com `install.sh --print-plan`, que não toca em nada.
+
+### O broker de container numa instalação {#broker-na-instalacao}
+
+Projetos nos modos **Container** e **Pasta montada** rodam dentro de um
+container, e quem sobe esse container é o **broker**
+([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)). Sem ele nenhum dos dois modos
+chega a executar: o `container_start` termina `failed` com
+`BrokerIndisponivelError` e os dev agents ficam em `dev.blocked_by_container`. O
+modo **Runner** não depende dele — ali o agente local usa o Docker da sua
+máquina.
+
+Desde o [ADR 0162](adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) o
+broker é a **quinta imagem publicada** (`ghcr.io/daneiel/brabo-broker`, por
+digest, assinada como as outras quatro) e o compose de instalação tem o
+serviço — **desligado por padrão**, sob o mesmo profile `container-broker` do
+compose de validação. O instalador **pergunta** (*"Ligar o broker de container?
+[s/N]"*), logo depois da base de projetos, e diz em texto o que ligá-lo
+concede: o broker recebe **o socket do Docker desta máquina**, e quem comanda o
+broker comanda o seu Docker. O que o contém são as cinco camadas do
+[ADR 0130](adr/0130-broker-de-container.md): nenhuma porta publicada, uma rede
+(`internal: true`, sem internet) que só a api alcança, o service token, cinco
+operações sobre o container de UM projeto, e uma spec que o broker compõe a
+partir do que o Arquiteto decidiu — não existe pedido que ligue `privileged`,
+rede do host ou um `-v` livre.
+
+| resposta | o que acontece |
+|---|---|
+| **`s`** / **`sim`** | ele mede o grupo do socket **de dentro de um container** (a própria imagem do broker, sem rede, somente leitura, o socket montado com `--mount` para que um socket ausente seja erro em vez de uma pasta vazia criada no seu host), calcula onde o Docker guarda o volume da pasta gerenciada, e grava `COMPOSE_PROFILES=container-broker`, `BROKER_URL=http://broker:8090`, `DOCKER_GID` e `PROJECT_WORKSPACES_HOST_ROOT` no `.env` — as quatro juntas |
+| Enter, `n`, qualquer outra coisa | desligado. O `.env` não recebe nenhuma das quatro linhas, e o resumo final diz *"Broker de container: DESLIGADO"* |
+| sem terminal | desligado, e ele diz isso — nenhuma pergunta é feita onde ninguém pode responder |
+
+**Duas recusas e duas pendências, todas nomeadas:**
+
+- *"não consegui medir o grupo do socket do Docker…"* — a medição falhou
+  (Docker rootless ou remoto: o socket não está em `/var/run/docker.sock`, que
+  é o caminho que o compose monta). Nada foi gravado. Rode de novo e responda
+  **não**, ou conserte o que a mensagem cita do Docker. Ele nunca grava um
+  `999` de palpite no lugar.
+- *"… não é um socket …"* — mesmo desfecho, mesmo conserto.
+- pendência *"a raiz da pasta gerenciada…"* — o
+  `<DockerRootDir>/volumes/brabo_project_workspaces/_data` calculado não bateu
+  com o `Mountpoint` real do volume depois de a stack subir (ou o `docker info`
+  não disse onde os volumes moram). Projetos em **Pasta montada** funcionam;
+  projetos em **Container** não, até você corrigir
+  `PROJECT_WORKSPACES_HOST_ROOT` — a mensagem traz o valor que o daemon
+  informou e o comando para recriar o broker.
+- pendência *"o broker de container: a api NÃO o alcançou…"* — o serviço subiu
+  healthy, mas a api não conseguiu alcançá-lo pela rede interna.
+  `docker compose -f docker/docker-compose.install.yml logs broker` diz por quê.
+
+O `COMPOSE_PROFILES` no `--env-file` é o que faz o `up -d --wait` subir o broker
+sem flag nenhuma na linha de comando — medido no Compose v5.5.1. A variável da
+imagem, `BRABO_BROKER_IMAGE`, é gravada **ligado ou não**: o Compose interpola o
+arquivo inteiro antes de filtrar por profile, então uma variável obrigatória
+num serviço desligado ainda recusa o arquivo.
+
+**Ligar depois** (na mesma pasta do `.env`):
+
+```bash
+# 1. o grupo do socket COMO UM CONTAINER O VÊ — com a própria imagem do broker,
+#    sem rede; é esse o número de que o compose precisa
+docker run --rm --network none --read-only --entrypoint stat \
+  --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+  "$(grep '^BRABO_BROKER_IMAGE=' .env | cut -d= -f2)" -c '%F %g' /var/run/docker.sock
+# esperado: socket <gid>
+
+# 2. onde o Docker guarda o volume da pasta gerenciada
+docker volume inspect --format '{{.Mountpoint}}' brabo_project_workspaces
+
+# 3. acrescente ao .env (as quatro — nunca uma sem as outras)
+#    COMPOSE_PROFILES=container-broker
+#    BROKER_URL=http://broker:8090
+#    DOCKER_GID=<gid do passo 1>
+#    PROJECT_WORKSPACES_HOST_ROOT=<caminho do passo 2>
+
+# 4. recrie — a api também, para ela pegar o BROKER_URL
+docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait
+
+# 5. pergunte antes de afirmar
+docker compose -f docker/docker-compose.install.yml --env-file .env exec -T api \
+  node -e "fetch('http://broker:8090/health').then(r=>r.text()).then(console.log)"
+# esperado: {"status":"ok","servico":"broker"}
+```
+
+**Desligar:** tire as quatro linhas do `.env`, depois remova o container do
+broker e recrie a api sem `BROKER_URL`:
+
+```bash
+docker compose -f docker/docker-compose.install.yml --env-file .env \
+  --profile container-broker rm -sf broker
+docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait
+```
+
+O `up --remove-orphans` **não** faz o primeiro passo — medido: um serviço sob
+profile desligado continua *definido* no arquivo, então o container dele não é
+órfão e continua rodando. Nada nos seus projetos é apagado; projetos em
+Container e Pasta montada param de executar, e a tela do projeto para de
+oferecê-los
+([ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
 
 ---
 

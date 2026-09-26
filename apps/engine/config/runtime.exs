@@ -65,9 +65,76 @@ config :engine, :web_origins, web_origins
 # ver Engine.Sessions.Monitor/EngineApiClient), e engine <- api (comando
 # síncrono de criar sessão, ver EngineWeb.Plugs.VerifyServiceToken). Desde a
 # Fase 7a os dois sentidos usam o MESMO segredo compartilhado.
+#
+# Os DOIS valores que a verificação aceita passam pela régua da api
+# (`exigirTokenDeProducao`, RN-114/RN-598), transposta para cá (RN-601): o
+# espaço em volta é descartado e um valor feito só de espaço conta como
+# ausente; em produção o literal público de dev e um valor com menos de 16
+# caracteres derrubam o boot, com mensagem que nomeia a variável. O atual é
+# obrigatório em produção; o anterior não (fora da rotação, ausente é o estado
+# normal), e um anterior igual ao atual não é rotação e vira `nil`.
+#
+# Inline, e não num módulo de `lib/`, de propósito: numa release este arquivo
+# roda num config provider ANTES de o código da aplicação estar carregado
+# (modo embedded), e chamar `Engine.*` daqui pode não achar o módulo.
+# "Produção" aqui é `config_env() == :prod` — o engine não lê `NODE_ENV`, e a
+# imagem de produção é sempre uma release `:prod`.
+token_de_servico_padrao_dev = "dev-service-token-change-me"
+token_de_servico_tamanho_minimo = 16
+
+exigir_token_de_servico_de_producao = fn nome, bruto ->
+  cond do
+    bruto == token_de_servico_padrao_dev ->
+      raise "#{nome} está com o valor de exemplo do repositório, que é " <>
+              "público — em produção isso equivale a não ter autenticação " <>
+              "nenhuma entre api e engine. Gere um próprio (ex.: " <>
+              "`openssl rand -base64 32`)."
+
+    String.length(bruto) < token_de_servico_tamanho_minimo ->
+      raise "#{nome} tem #{String.length(bruto)} caracteres; o mínimo em " <>
+              "produção é #{token_de_servico_tamanho_minimo}. Gere um " <>
+              "aleatório (ex.: `openssl rand -base64 32`)."
+
+    true ->
+      bruto
+  end
+end
+
+token_de_servico_bruto = String.trim(System.get_env("BRABO_SERVICE_TOKEN") || "")
+
+service_token =
+  cond do
+    config_env() != :prod ->
+      if token_de_servico_bruto == "",
+        do: token_de_servico_padrao_dev,
+        else: token_de_servico_bruto
+
+    token_de_servico_bruto == "" ->
+      raise "BRABO_SERVICE_TOKEN é obrigatória em produção — é o que " <>
+              "autentica o tráfego interno api <-> engine, e o default de " <>
+              "desenvolvimento é público neste repositório."
+
+    true ->
+      exigir_token_de_servico_de_producao.("BRABO_SERVICE_TOKEN", token_de_servico_bruto)
+  end
+
+service_token_previous =
+  case String.trim(System.get_env("BRABO_SERVICE_TOKEN_PREVIOUS") || "") do
+    "" ->
+      nil
+
+    bruto ->
+      anterior =
+        if config_env() == :prod,
+          do: exigir_token_de_servico_de_producao.("BRABO_SERVICE_TOKEN_PREVIOUS", bruto),
+          else: bruto
+
+      if anterior == service_token, do: nil, else: anterior
+  end
+
 config :engine,
-  service_token: System.get_env("BRABO_SERVICE_TOKEN", "dev-service-token-change-me"),
-  service_token_previous: System.get_env("BRABO_SERVICE_TOKEN_PREVIOUS"),
+  service_token: service_token,
+  service_token_previous: service_token_previous,
   api_url: System.get_env("API_URL", "http://localhost:3000"),
   session_heartbeat_timeout_ms:
     String.to_integer(System.get_env("SESSION_HEARTBEAT_TIMEOUT_MS", "30000")),
