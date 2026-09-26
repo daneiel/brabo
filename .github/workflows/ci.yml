@@ -156,10 +156,20 @@ jobs:
       # O runner não tinha lint nenhum no CI (AT-103). Mesmo oxlint do web,
       # sem `--fix`, com a categoria `correctness` como erro e
       # `--deny-warnings`: provado por mutação que reprova um erro plantado em
-      # `src/` e em `scripts/`. `apps/broker` e `packages/docker-port` seguem
-      # sem passo de lint — frente à parte.
+      # `src/` e em `scripts/`.
       - name: Oxlint (runner)
         run: pnpm --filter @brabo/runner lint
+
+      # `apps/broker` e `packages/docker-port` também não tinham lint (AT-207).
+      # A MESMA configuração do runner (`.oxlintrc.json` com `correctness`
+      # como erro, `--deny-warnings`, sem `--fix`), sobre `src/` e os
+      # `*.config.ts` da raiz de cada um: provado por mutação que um erro
+      # plantado em cada alvo reprova com saída 1.
+      - name: Oxlint (broker)
+        run: pnpm --filter @brabo/broker lint
+
+      - name: Oxlint (docker-port)
+        run: pnpm --filter @brabo/docker-port lint
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:

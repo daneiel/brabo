@@ -93,6 +93,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `scripts/` reprova com saída 1). Os dois avisos que ele acusava na `dev`
   (`no-useless-spread` em `pty.ts`, `no-unsafe-optional-chaining` num spec)
   entram corrigidos no mesmo PR.
+- **ci**: `apps/broker` e `packages/docker-port` ganham lint (AT-207) — nem
+  script nem passo de CI existiam para os dois. Mesma configuração do runner
+  (`.oxlintrc.json` com `correctness` como erro, `oxlint --deny-warnings`, sem
+  `--fix`), sobre `src/` e os `*.config.ts` da raiz de cada pacote, com um
+  passo cada no job `Lint` do `ci.yml`. Provado por mutação: um `x === NaN`
+  plantado em cada um dos quatro alvos reprova com saída 1. Na `dev` os dois
+  já passavam limpos — nenhum erro a corrigir.
 - **api**: os três `no-unsafe-assignment` de
   `projects-summary.repository.spec.ts` saem (AT-188). O passo de lint do CI
   não os via porque verifica só `src/**/*.ts`: `apps/api/test/` inteira fica
