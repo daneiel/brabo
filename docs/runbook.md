@@ -2491,12 +2491,23 @@ is the same three-step dance as the master key (below):
 1. `AUTH_JWT_SECRET_PREVIOUS` gets the old value; `AUTH_JWT_SECRET` gets
    the new one. Restart the api.
 2. Both keys appear at `/.well-known/jwks.json` and both verify; only the
-   new one **signs**. The api emits a `WARN` on boot for as long as that
-   lasts.
+   new one **signs**. The api emits a `WARN` once per process, on the first
+   verification or JWKS read after boot (the previous key is derived on
+   demand, not at startup), for as long as that lasts.
 3. After 15 minutes (the access token's TTL), no token from the old key
    survives. **Remove `AUTH_JWT_SECRET_PREVIOUS`** and restart.
 
-Nobody gets logged out: refresh tokens don't depend on this key.
+Nobody gets logged out — **provided `AUTH_TOKEN_PEPPER` is set**. Refresh
+tokens are hashed with the pepper, not with this key; but an unset pepper
+falls back to `AUTH_JWT_SECRET`, and then rotating this key is also a pepper
+rotation, with the global logout described below
+([RN-597](business-rules/autenticacao.md#rn-597)). Kubernetes sets the pepper
+separately; the `docker-compose.prod.yml` and `docker-compose.install.yml`
+don't pass it to the api at all.
+
+Verification: `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts`
+(describe "rotação de chave") and, for the pepper condition,
+`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`.
 
 ### `AUTH_TOKEN_PEPPER` — global logout, no middle ground
 
@@ -2504,7 +2515,14 @@ This is the HMAC key for hashing refresh tokens and account tokens.
 Changing it invalidates, all at once:
 
 - **every** refresh token in circulation — everyone gets logged out;
-- **every** open email-verification and password-reset link.
+- **every** open email-verification and password-reset link;
+- **every** personal access token (PAT) — a runner started with `--token`
+  stops authenticating (device keys are not affected);
+- the lockout counters: every locked account unlocks.
+
+Passwords survive (argon2id, no pepper): people log back in normally. A
+refresh rejected this way shows up as `refresh_unknown` in `auth_events`,
+not as `refresh_reuse_detected`.
 
 There's no `AUTH_TOKEN_PEPPER_PREVIOUS`, and that's a conscious decision:
 accepting double verification on every refresh, forever, for a scenario
@@ -2515,7 +2533,11 @@ reset link say "expired".
 
 > The api does **not** fail to boot with a new pepper. It simply stops
 > recognizing any old token. If support reports "everyone got logged out
-> at the same time", this variable is the first place to look.
+> at the same time", this variable is the first place to look — and, if it
+> was never set, `AUTH_JWT_SECRET`.
+
+Verification: `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
+([RN-597](business-rules/autenticacao.md#rn-597)).
 
 ### `BRABO_SERVICE_TOKEN` — zero-downtime rotation, on both sides
 
@@ -2541,6 +2563,21 @@ Skipping step 1 and just swapping the current value produces `403`/`401`
 for the entire window where an old pod remains on either side — the
 symptom in the
 [diagnosis above](#diagnostico-do-deploy).
+
+Verification: on the api, `apps/api/test/infrastructure/security/service-token.spec.ts`
+(describe "rotação do BRABO_SERVICE_TOKEN") and
+`apps/api/test/interfaces/engine-service.guard.spec.ts`; on the engine,
+`apps/engine/test/engine_web/plugs/verify_service_token_test.exs`.
+
+> **The `_PREVIOUS` variables don't reach the containers by themselves.**
+> None of `AUTH_JWT_SECRET_PREVIOUS`, `BRABO_SERVICE_TOKEN_PREVIOUS` (or
+> `CREDENTIALS_MASTER_KEY_PREVIOUS`) is mapped in the `environment:` of
+> `docker-compose.prod.yml` or `docker-compose.install.yml`, and the
+> Compose doesn't forward the host environment; nor are they listed in the
+> Kubernetes `ExternalSecret` (`deploy/k8s/base/common/externalsecrets.yaml`),
+> which only materializes the keys it declares. Setting one in `.env` or in
+> the secret provider is inert until it's also wired there — confirm it
+> inside the container (`printenv`) before relying on step 2.
 
 ```bash
 # generate a value with enough entropy; it never needs to be typed

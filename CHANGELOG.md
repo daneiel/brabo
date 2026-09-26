@@ -25,6 +25,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vai para o `.env.example`, e `scripts/ci/teto-ocioso-nos-composes.spec.ts`
   cobra a linha nos três composes. O `deploy/k8s/` segue sem ela por decisão,
   escrita no Deployment do engine: ali a ausência já é o default.
+- **docs**: a rotação dos segredos do auth no runbook passa a dizer como se
+  verifica e o que ela não cobria (AT-196, RN-597). "Trocar o `AUTH_JWT_SECRET`
+  não desloga ninguém" só vale com `AUTH_TOKEN_PEPPER` definido — sem ele o
+  pepper É o `AUTH_JWT_SECRET`, e os dois composes de produção não o repassam à
+  api; trocar o pepper também derruba todo PAT e zera o lockout; o aviso de
+  rotação do JWT sai no primeiro uso, não no boot; e as variáveis `_PREVIOUS`
+  não estão mapeadas nos composes nem no `ExternalSecret`, então defini-las
+  sozinhas não faz nada. Testes novos na api cobrem a coexistência de dois
+  `BRABO_SERVICE_TOKEN` e as consequências do pepper contra o Postgres.
 - **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
   vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
   relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de
