@@ -241,6 +241,18 @@ Two severities: `block` fails the PR, `warn` only comments. And a
 `generated: true` attribute, which marks the documents that come out
 of the generator.
 
+A rule that charges for what makes no sense teaches people to reach for
+the escape hatch by reflex. That is why `politica-de-branches` watches an
+**allow-list** in `scripts/ci/` — the scripts that *are* the branch policy
+and their specs — instead of `scripts/ci/**` minus a hand-kept list of
+exclusions, which every new repository-wide spec in that folder had to join
+(eleven by AT-206). The allow-list does not give up failing closed:
+`scripts/docs/politica-de-branches.spec.ts` derives the set from the
+repository — every `scripts/ci/` file whose opening docblock cites
+`branching-policy.md`, plus its spec — and fails if the rule diverges. A new
+policy script declares its source in its header, like the others, and the
+spec does the rest.
+
 ### `docmap.mjs` — validates the map
 
 Runs before everything else, because a broken map makes the rest lie.
