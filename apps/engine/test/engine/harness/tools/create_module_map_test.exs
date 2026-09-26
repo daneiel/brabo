@@ -14,13 +14,24 @@ defmodule Engine.Harness.Tools.CreateModuleMapTest do
   afirmando que estava tudo certo.
   """
 
-  use ExUnit.Case, async: true
+  # async: false (AT-133). O cliente da api é escolhido por
+  # `Application.get_env(:engine, :engine_api_client)` — env GLOBAL da VM, não
+  # do processo. Com `async: true` este módulo rodava junto de outro módulo
+  # async que, no `on_exit`, APAGA a chave (`AppSecContextBuilderTest`), e a
+  # chamada caía no `Live` em `localhost:3000` (`:econnrefused`): 4 falhas em
+  # 80 rodadas do par. Quem troca env global não roda em paralelo.
+  use ExUnit.Case, async: false
 
   alias Engine.Harness.Tools.CreateModuleMap
 
   setup do
     Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
-    on_exit(fn -> Process.delete(:fake_module_map_error) end)
+
+    on_exit(fn ->
+      Process.delete(:fake_module_map_error)
+      Application.delete_env(:engine, :engine_api_client)
+    end)
+
     %{ctx: %{project_id: "p1", session_id: "s1"}}
   end
 
