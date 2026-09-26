@@ -2045,7 +2045,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de
   DOIS globs: `**/` no pathspec do git exige pelo menos um nível de diretório,
-  e um inventário que nasce vazio não avisa, passa verde.
+  e um inventário que nasce vazio não avisa, passa verde. As fontes moram em
+  `scripts/docs/fontes-de-env.mjs`, provadas contra a árvore real pelo spec ao
+  lado, e em `e2e/` o `.spec.ts` NÃO é filtrado: ali o spec É o código que lê
+  o ambiente (AT-124). O que reprova é o bloco DESATUALIZADO; regenerado, o ⚠️
+  fica commitado e o check passa — é lacuna visível, não portão.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use

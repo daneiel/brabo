@@ -273,6 +273,25 @@ The inventory marks with ⚠️ whatever shows up in the code and has
 `agent.response` — two real event types — showed up after being left
 out of the first draft.
 
+**What the environment inventory catches, measured (AT-124,
+2026-09-25).** The sources and their globs live in
+`scripts/docs/fontes-de-env.mjs`, proven against the real tree by
+`fontes-de-env.spec.ts`. A mutation per source — a new
+`process.env.X` in a file straight under `e2e/`, nested in
+`e2e/suporte/`, straight under `apps/api/scripts/` and nested one level
+below it, each `git add`ed — made `--check` fail with `DESATUAL` on
+`configuration.md` in all four. One hole was found and closed: the
+`.spec.` filter, right for sources where a spec is a unit test sitting
+next to the code, was also dropping `e2e/testes/*.spec.ts` — the
+Playwright tests themselves, where a new `e2e/` variable is most likely
+to be born — and that mutation passed green. Two limits stay declared:
+the inventory reads only **versioned** files (`git ls-files`), so an
+untracked file is invisible until `git add`; and what fails is the
+**stale block**, not the gap itself — once `docs:generate` rewrites the
+block, the variable sits there with ⚠️ and `--check` passes (two
+product variables are in that state today). The ⚠️ is a visible gap to
+fill in the prose, never a gate.
+
 `--check` writes nothing and fails if anything would be different.
 That's CI's mode.
 

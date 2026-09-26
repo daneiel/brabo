@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
 import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
+import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
   arquivos,
   eventosEmitidosPor,
@@ -203,51 +204,7 @@ function gerarEnv() {
   // distinção `E2E_PASSWORD` aparece ao lado de `SMTP_HOST` numa lista que um
   // operador lê para configurar a máquina dele, e a lista fica PIOR do que
   // estava incompleta.
-  const fontes = [
-    // DOIS globs para a api pelo mesmo motivo do broker, logo abaixo: o `**/`
-    // do pathspec do git exige pelo menos um nível de diretório, então os
-    // arquivos que moram direto em `apps/api/src/` escapavam. O preço estava
-    // medido e pago: `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`) é
-    // variável de PRODUTO — o teto do corpo JSON que a api aceita — e não
-    // aparecia em inventário nenhum.
-    ['api',
-      [...arquivos('apps/api/src/*.ts'), ...arquivos('apps/api/src/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'produto'],
-    ['engine', [...arquivos('apps/engine/lib/**/*.ex'), ...arquivos('apps/engine/config/*.exs')],
-      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g, 'produto'],
-    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g, 'produto'],
-    // O broker (ADR 0130) entra porque é SERVIÇO da instalação: o que ele lê
-    // do ambiente é configuração de quem opera, igual à da api e à do engine.
-    // `apps/runner` continua de FORA de propósito — ele roda na máquina do
-    // usuário e é configurado por flag e por arquivo na pasta do projeto, não
-    // pelo `.env` do deploy.
-    // DOIS globs, e não um: o `**/` do pathspec do git exige PELO MENOS um
-    // nível de diretório, então `apps/broker/src/**/*.ts` devolve VAZIO
-    // enquanto todos os arquivos do broker moram direto em `src/`. Um
-    // inventário que nasce vazio não avisa: ele passa verde.
-    ['broker',
-      [...arquivos('apps/broker/src/*.ts'), ...arquivos('apps/broker/src/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /env\.([A-Z_0-9]{3,})/g, 'produto'],
-    // As duas fontes de FERRAMENTA. Ficaram de fora até 2026-09-12 e o
-    // inventário passou verde o tempo todo — cinco variáveis lidas de verdade,
-    // nenhuma citada em `configuration.md`. Caem na MESMA armadilha do `**/`:
-    // `seed-golden-set-qa.ts` mora direto em `apps/api/scripts/` e
-    // `playwright.config.ts` direto em `e2e/`, então são dois globs cada.
-    //
-    // `e2e/` não é membro do workspace (ADR 0120, mesmo desenho do
-    // `website/`), e foi por isso que escapou da varredura — mas o gerador
-    // LÊ arquivo, não pacote, e membership não muda nada aqui.
-    ['api/scripts',
-      [...arquivos('apps/api/scripts/*.ts'), ...arquivos('apps/api/scripts/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
-    ['e2e',
-      [...arquivos('e2e/*.ts'), ...arquivos('e2e/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
-  ];
+  const fontes = fontesDoInventarioDeEnv(arquivos);
 
   // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
   // inventário com a marca de lacuna, e na execução SEGUINTE o próprio nome
