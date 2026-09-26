@@ -27,6 +27,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   passa a olhar os três composes e a cobrar o default do código em todos. As
   duas divergências de produção e instalação (`START_OUTBOX_DRAIN` e
   `START_ANAMNESE` em `false`) ficam declaradas com o motivo.
+- **docker**: as variáveis `_PREVIOUS` passam a chegar aos containers (AT-201,
+  RN-595). `AUTH_JWT_SECRET_PREVIOUS`, `BRABO_SERVICE_TOKEN_PREVIOUS` e
+  `CREDENTIALS_MASTER_KEY_PREVIOUS` não estavam no `environment:` de compose
+  nenhum — nem no de dev —, e como o Compose não repassa o ambiente do host,
+  as três rotações sem downtime do runbook viravam troca seca do segredo. Agora
+  a api recebe as três e o engine e o broker recebem a do token de serviço, nos
+  composes de dev, de produção e de instalação, com default vazio;
+  `CREDENTIALS_MASTER_KEY_PREVIOUS` entra no `.env.example`, e
+  `scripts/ci/previous-nos-composes.spec.ts` deriva a lista do código e reprova
+  a que faltar. O Kubernetes segue sem elas (o `ExternalSecret` não lista chave
+  opcional), declarado no runbook.
 - **docmap**: a regra `politica-de-branches` deixa de cobrar
   `branching-policy.md` de todo spec novo de `scripts/ci/` (AT-206). O extglob
   "tudo menos onze exclusões" virou lista de PERMITIDOS — os catorze scripts
