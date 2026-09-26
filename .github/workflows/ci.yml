@@ -146,9 +146,11 @@ jobs:
 
       # `eslint` direto, SEM o script `lint` do package.json: ele roda com
       # `--fix`, que num CI "conserta" o arquivo e sai verde sem ninguém ver o
-      # problema. Aqui o modo é verificação.
+      # problema. Aqui o modo é verificação. `test/` entrou no glob na AT-208,
+      # depois de zerado por pasta: fora dele, o passivo cresceu calado até
+      # 528 erros.
       - name: ESLint (api, modo verificação)
-        run: pnpm --filter api exec eslint "src/**/*.ts" --max-warnings 0
+        run: pnpm --filter api exec eslint "src/**/*.ts" "test/**/*.ts" --max-warnings 0
 
       - name: Oxlint (web)
         run: pnpm --filter web lint
