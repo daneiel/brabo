@@ -719,6 +719,35 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   ? t('workspace.hintMounted')
                   : t('workspace.hintRunner')}
               </div>
+              {modoDeWorkspace === 'runner' && (
+                // O pré-requisito do botão, dito ANTES do clique (AT-214, ADR
+                // 0064: motivo em texto, nunca tooltip). No modo `runner` o
+                // navegador lê o disco da máquina pelo agente local, ancorado
+                // no projeto criado antecipadamente (RN-437, ADR 0108, RN-533)
+                // — sem `brabo-runner` rodando e conectado não há quem responda,
+                // e isso é POR CONSTRUÇÃO. O que faltava era a tela dizer isso
+                // a quem ainda não clicou, e dizer que digitar o caminho é a
+                // alternativa que não depende de nada.
+                <div className={styles.baseNote} data-testid="aviso-procurar-runner">
+                  <Trans
+                    i18nKey="workspace.browseRunner.requires"
+                    ns="newProject"
+                    components={{ strong: <strong />, code: <code /> }}
+                  />{' '}
+                  <code>
+                    {t('workspace.runnerHint.command', {
+                      id: projetoParaNavegar?.id ?? t('workspace.runnerHint.placeholderId'),
+                      caminho:
+                        caminhoLocal.trim() || t('workspace.browseRunner.placeholderPath'),
+                    })}
+                  </code>{' '}
+                  <Trans
+                    i18nKey="workspace.browseRunner.alternative"
+                    ns="newProject"
+                    components={{ strong: <strong /> }}
+                  />
+                </div>
+              )}
               {modoDeWorkspace === 'mounted' ? (
                 // DOIS estados, e são os dois que o backend realmente tem
                 // (RN-500/RN-501): dentro da base consentida a criação passa,

@@ -84,6 +84,11 @@
       "command": "brabo-runner --project {{id}} --dir {{caminho}}",
       "placeholderId": "<project id>",
       "note": "The runner confirms the path when it connects — no command runs before that."
+    },
+    "browseRunner": {
+      "requires": "<strong>“Browse folder...” only works with <code>brabo-runner</code> running on your machine and connected to this project</strong> — in this mode the list comes from the local agent, not from the server. The click creates the project now, so the agent has something to connect to; then run:",
+      "alternative": "Without the runner running, <strong>type the path in the field above</strong>: it amounts to the same, and the runner confirms the folder when it connects.",
+      "placeholderPath": "<folder>"
     }
   },
   "confirm": {

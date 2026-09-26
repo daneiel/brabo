@@ -4929,6 +4929,15 @@ quando não há nada pra reusar. `montarPayloadDeCriacao`, função pura extraí
 do que antes vivia só dentro de `handleConfirm`, é reaproveitada pelos dois
 caminhos.
 
+O pré-requisito do botão é dito ANTES do clique (AT-214): neste modo a lista
+vem do agente local, então sem um `brabo-runner` rodando e conectado ao
+projeto recém-criado o modal só consegue mostrar a espera e o onboarding. A
+tela passou a dizer isso em TEXTO abaixo do campo (`aviso-procurar-runner`,
+ADR 0064 — nunca tooltip), com o comando
+`brabo-runner --project <id> --dir <pasta>` e a alternativa que não depende
+de nada: digitar o caminho no campo, que o runner confirma ao conectar. O
+mecanismo (a criação antecipada, o transporte pelo agente local) não mudou.
+
 - **Onde:** `apps/web/src/routes/NewProjectWizard.tsx`
   (`handleProcurarPasta`, `handleConfirm`, `montarPayloadDeCriacao`,
   `snapshotDeIdentidade`/`mesmaIdentidade`)

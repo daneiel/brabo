@@ -48,6 +48,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `conversation_idle_timeout` da RN-581. O topo da página pt-BR passa a listar
   as seções que só existem em inglês. Links para RNs que a tradução de
   `business-rules.md` ainda não tem apontam para a versão em inglês.
+- **web**: no assistente de projeto, o modo **Runner local** passa a dizer
+  ANTES do clique que "Procurar pasta..." só funciona com o `brabo-runner`
+  rodando na máquina e conectado ao projeto (AT-214, RN-437). A lista vem do
+  agente local por construção (ADR 0108, RN-533), e a tela não dizia isso: quem
+  clicava sem runner via o botão "não funcionar". O aviso, em texto e nos dois
+  idiomas, mostra o comando (`brabo-runner --project <id> --dir <pasta>`) e diz
+  que digitar o caminho no campo é a alternativa.
 - **docker**: seis flags booleanas do engine passam a chegar a ele na
   **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
   `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
