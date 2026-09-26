@@ -14616,6 +14616,10 @@ NOME da sessão, e renomeá-la faz as duas divergirem (a Visão Geral então tra
 resumo como de outra sessão e não o usa). O critério não muda o que o ADR 0165
 decidiu (onde o repositório nasce), por isso não há ADR novo.
 
+> **Revista pela [RN-592](#rn-592) (AT-183):** a web deixou de ler o NOME — a
+> listagem de sessões devolve o marcador `technical`, pelo mesmo vínculo em
+> `repo_bootstraps`, e renomear a sessão não faz mais as duas divergirem.
+
 **A recusa da ativação não manda aceitar handoff de sessão encerrada
 ([RN-581](#rn-581), AT-131).** Aceitar handoff numa sessão terminal é 409
 `sessao_encerrada`, checado ANTES de o handoff virar `accepted` — então nada é
@@ -15117,6 +15121,44 @@ direta.
   `apps/engine/test/engine/infra/infra_lead_server_test.exs` (o texto do 409
   chega ao modelo)
 - **Origem:** AT-105 — declarado fora do recorte pelo ADR 0161
+
+### RN-592 — A listagem de sessões diz qual é a técnica, pelo vínculo em `repo_bootstraps`, e a tela lê o marcador em vez do nome {#rn-592}
+
+A [RN-582](#rn-582) (AT-131) fez a sessão técnica do provisionamento — a de
+`repo_bootstraps.session_id` — deixar de deslocar a sessão de trabalho como "a
+mais recente", mas com DOIS critérios: a api a reconhecia pelo vínculo em
+`repo_bootstraps`, e a web pelo NOME (`git-bootstrap`). O nome é rótulo que o
+usuário renomeia ([RN-098](#rn-098)), então renomear a sessão fazia a Visão Geral
+e o resumo do workspace discordarem de qual era a sessão de trabalho.
+
+1. **A api devolve o marcador.** Cada item de `GET /projects/:projectId/sessions`
+   carrega `technical: boolean` (`SessionListItemResponseDto`), `true` só para a
+   sessão de `repo_bootstraps.session_id` DAQUELE projeto (uma por projeto,
+   `unique(project_id)`). É o MESMO critério do resumo do workspace
+   (`sessaoTecnicaDeBootstrap`), nunca o nome: renomear não muda o marcador, e
+   uma sessão de trabalho chamada `git-bootstrap` não vira técnica.
+2. **Só a listagem o carrega.** O marcador não é coluna de `sessions` nem campo
+   da entidade `Session`: o GET de uma sessão e as respostas de
+   criar/renomear/transicionar seguem com `SessionResponseDto`, sem ele. É a
+   listagem que a tela ordena para achar "a mais recente".
+3. **A tela lê o marcador.** `sessaoMaisRecente` (`useLatestSession`) pula a
+   sessão com `technical: true` e só a devolve quando é a ÚNICA — a regra da
+   RN-582 inalterada, com a fonte trocada. O tipo `SessaoListada` do web tira o
+   campo do tipo GERADO do OpenAPI.
+
+**O que NÃO fecha:** a Visão Geral e o card do handoff na sessão continuam sem
+consultar o estado da sessão de cada handoff (a lacuna que a RN-582 declarou);
+decidir se passam a consultá-lo é decisão à parte, fora desta regra.
+
+- **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
+  (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:124`
+  (`sessaoMaisRecente`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
+  (vínculo e não nome; técnica de outro projeto não marca),
+  `apps/web/src/lib/sessao-mais-recente.test.ts:28` (renomeada continua fora) e
+  `:36` (trabalho chamada `git-bootstrap` não é técnica)
+- **Origem:** AT-183 — achado da AT-131
 
 ### RN-593 — O Dev Lead suspenso e o Infra Lead gravam o `tool.result` pelo módulo comum {#rn-593}
 

@@ -7668,6 +7668,7 @@
     },
     "/projects/{projectId}/sessions": {
       "get": {
+        "description": "Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).",
         "operationId": "SessionsController_list",
         "parameters": [
           {
@@ -7687,7 +7688,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SessionResponseDto"
+                    "$ref": "#/components/schemas/SessionListItemResponseDto"
                   }
                 }
               }
@@ -21092,6 +21093,106 @@
           "actor",
           "payload",
           "createdAt"
+        ]
+      },
+      "SessionListItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA",
+            "description": "The session's ULID."
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000001",
+            "description": "Who opened the session."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "closing",
+              "closed",
+              "closed_abnormally"
+            ],
+            "example": "active",
+            "description": "Explicit state machine: created → active → closing → closed | closed_abnormally. An invalid transition responds 409."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "consultiva",
+              "criativa"
+            ],
+            "example": "criativa",
+            "description": "The INTENT with which the session was opened, chosen at creation and immutable. `consultiva` (consultative) is conversation only; `criativa` (creative) produces and is the only one that enters execution. Not to be confused with execution state, which remains the `execution.activated` event in the log."
+          },
+          "name": {
+            "type": "object",
+            "example": "Cart checkout",
+            "nullable": true,
+            "description": "Friendly name, or `null`. Screens compose it with the id's hashtag; it never replaces it."
+          },
+          "nextSeq": {
+            "type": "number",
+            "example": 42,
+            "description": "Next `seq` of the event log. Serves as a cursor: `?afterSeq=41` fetches everything after 41."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-27T14:03:22.187Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-27T14:31:09.004Z",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "object",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "description": "Only filled in terminal states."
+          },
+          "terminationReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session."
+          },
+          "traceParent": {
+            "type": "object",
+            "example": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            "nullable": true,
+            "description": "W3C `traceparent` of the root span. This is how the whole session is recovered in Tempo."
+          },
+          "technical": {
+            "type": "boolean",
+            "example": false,
+            "description": "Whether this is the TECHNICAL session opened by repository provisioning (the one linked from `repo_bootstraps`), as opposed to a work session. It is the link, never the name: renaming the session does not change it. Screens that pick \"the most recent session\" skip it unless it is the only one."
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "createdBy",
+          "status",
+          "kind",
+          "name",
+          "nextSeq",
+          "createdAt",
+          "updatedAt",
+          "closedAt",
+          "terminationReason",
+          "traceParent",
+          "technical"
         ]
       },
       "SessionPendingWorkResponseDto": {

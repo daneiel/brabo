@@ -66,6 +66,7 @@ import type {
   ProviderCapabilities,
   PromoteStoriesResult,
   Role,
+  SessaoListada,
   Session,
   SessionEvent,
   SessionKind,
@@ -596,7 +597,7 @@ export const renameSession = (
   name: string | null,
 ) => patch<Session>(`/projects/${projectId}/sessions/${sessionId}`, { name });
 export const listSessions = (projectId: string) =>
-  get<Session[]>(`/projects/${projectId}/sessions`);
+  get<SessaoListada[]>(`/projects/${projectId}/sessions`);
 export const getSession = (projectId: string, sessionId: string) =>
   get<Session>(`/projects/${projectId}/sessions/${sessionId}`);
 export const transitionSession = (

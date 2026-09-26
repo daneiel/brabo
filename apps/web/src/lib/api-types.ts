@@ -361,6 +361,15 @@ export interface Session {
   closedAt: string | null;
 }
 
+/**
+ * A sessão como `GET /projects/:projectId/sessions` a devolve: a `Session`
+ * mais o marcador `technical` (RN-592), que sai do tipo GERADO do OpenAPI —
+ * `true` só para a sessão que o provisionamento abriu (o vínculo em
+ * `repo_bootstraps`, nunca o nome). O GET de uma sessão não o carrega.
+ */
+export type SessaoListada = Session &
+  Pick<components['schemas']['SessionListItemResponseDto'], 'technical'>;
+
 export type ActorKind = 'user' | 'agent' | 'system';
 
 export interface Actor {

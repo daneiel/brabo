@@ -2643,7 +2643,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists the project's sessions */
+        /**
+         * Lists the project's sessions
+         * @description Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).
+         */
         get: operations["SessionsController_list"];
         put?: never;
         /**
@@ -8473,6 +8476,73 @@ export interface components {
              * @example 2026-07-27T14:30:58.512Z
              */
             createdAt: string;
+        };
+        SessionListItemResponseDto: {
+            /**
+             * @description The session's ULID.
+             * @example 01JC4Z8QK3M7YV2N5T9B0PXHRA
+             */
+            id: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Who opened the session.
+             * @example 01JC4Z0000USUARIO0000000001
+             */
+            createdBy: string;
+            /**
+             * @description Explicit state machine: created → active → closing → closed | closed_abnormally. An invalid transition responds 409.
+             * @example active
+             * @enum {string}
+             */
+            status: "created" | "active" | "closing" | "closed" | "closed_abnormally";
+            /**
+             * @description The INTENT with which the session was opened, chosen at creation and immutable. `consultiva` (consultative) is conversation only; `criativa` (creative) produces and is the only one that enters execution. Not to be confused with execution state, which remains the `execution.activated` event in the log.
+             * @example criativa
+             * @enum {string}
+             */
+            kind: "consultiva" | "criativa";
+            /**
+             * @description Friendly name, or `null`. Screens compose it with the id's hashtag; it never replaces it.
+             * @example Cart checkout
+             */
+            name: Record<string, never> | null;
+            /**
+             * @description Next `seq` of the event log. Serves as a cursor: `?afterSeq=41` fetches everything after 41.
+             * @example 42
+             */
+            nextSeq: number;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:03:22.187Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:31:09.004Z
+             */
+            updatedAt: string;
+            /**
+             * Format: date-time
+             * @description Only filled in terminal states.
+             * @example null
+             */
+            closedAt: Record<string, never> | null;
+            /**
+             * @description Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.
+             * @example null
+             */
+            terminationReason: Record<string, never> | null;
+            /**
+             * @description W3C `traceparent` of the root span. This is how the whole session is recovered in Tempo.
+             * @example 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+             */
+            traceParent: Record<string, never> | null;
+            /**
+             * @description Whether this is the TECHNICAL session opened by repository provisioning (the one linked from `repo_bootstraps`), as opposed to a work session. It is the link, never the name: renaming the session does not change it. Screens that pick "the most recent session" skip it unless it is the only one.
+             * @example false
+             */
+            technical: boolean;
         };
         SessionPendingWorkResponseDto: {
             /**
@@ -16166,7 +16236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionResponseDto"][];
+                    "application/json": components["schemas"]["SessionListItemResponseDto"][];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
