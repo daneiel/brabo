@@ -72,6 +72,8 @@ interface Rodada {
   codigo: number;
 }
 
+let entradasEscritas = 0;
+
 /**
  * Roda comandos de shell com o `install.sh` já carregado.
  *
@@ -79,15 +81,34 @@ interface Rodada {
  * abaixo roda NESTE processo, e `spawnSync` bloqueia o event loop — o servidor
  * nunca chegaria a aceitar a conexão, e o `curl` do script morreria no
  * `max-time` de 30s. Foi assim que a primeira versão destes testes travou.
+ *
+ * O `stdin` do filho NUNCA é um pipe escrito por este processo (AT-228, a
+ * mesma forma da AT-217): sem `entrada` ele é `/dev/null` (`'ignore'`), e com
+ * `entrada` é um ARQUIVO já escrito, aberto só para leitura. O pipe fechado
+ * com `stdin.end(...)` tinha uma corrida — com o laço de eventos atrasado pela
+ * carga, o filho saía antes de o `end` ser processado, a escrita no pipe sem
+ * leitor dava `EPIPE`, e o erro sem handler reprovava a rodada com todos os
+ * testes verdes. Para o script o efeito é o mesmo (EOF depois da entrada, sem
+ * TTY), e não sobra escrita que possa falhar.
  */
 function rodar(
   comandos: string,
   opcoes: { env?: NodeJS.ProcessEnv; entrada?: string } = {},
 ): Promise<Rodada> {
   return new Promise((resolver) => {
-    const processo = spawn('bash', ['-c', `source "${caminhoCarregavel()}"\n${comandos}`], {
+    const carregavelAgora = caminhoCarregavel();
+    let entrada: number | 'ignore' = 'ignore';
+    if (opcoes.entrada !== undefined) {
+      const arquivo = path.join(path.dirname(carregavelAgora), `entrada-${++entradasEscritas}`);
+      fs.writeFileSync(arquivo, opcoes.entrada);
+      entrada = fs.openSync(arquivo, 'r');
+    }
+    const processo = spawn('bash', ['-c', `source "${carregavelAgora}"\n${comandos}`], {
       env: { ...process.env, NO_COLOR: '1', ...opcoes.env },
+      stdio: [entrada, 'pipe', 'pipe'],
     });
+    // O filho herdou uma cópia do descritor; a deste processo já não serve.
+    if (typeof entrada === 'number') fs.closeSync(entrada);
     let stdout = '';
     let stderr = '';
     processo.stdout.setEncoding('utf8');
@@ -99,7 +120,6 @@ function rodar(
       stderr += pedaco;
     });
     processo.on('close', (codigo) => resolver({ stdout, stderr, codigo: codigo ?? -1 }));
-    processo.stdin.end(opcoes.entrada ?? '');
   });
 }
 
