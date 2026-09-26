@@ -150,6 +150,16 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
 | `pnpm --dir website typecheck` | `tsc` |
 
+## e2e — `e2e/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --dir e2e test` | `playwright test` |
+| `pnpm --dir e2e test:headed` | `playwright test --headed` |
+| `pnpm --dir e2e relatorio` | `playwright show-report` |
+| `pnpm --dir e2e navegadores` | `playwright install --with-deps chromium` |
+| `pnpm --dir e2e typecheck` | `tsc --noEmit` |
+
 ## scripts — `scripts/package.json`
 
 | command | runs |
@@ -179,4 +189,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-119 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+124 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

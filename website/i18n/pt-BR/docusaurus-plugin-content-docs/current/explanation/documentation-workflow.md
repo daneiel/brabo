@@ -115,7 +115,11 @@ Dois modos de saída:
 
 **Arquivo inteiro** — `docs/reference/scripts.md`. Não há prosa a preservar: a
 lista de comandos é o conteúdo. Sai do `package.json` de cada pacote e dos
-alvos anotados do `Makefile`.
+alvos anotados do `Makefile`. A lista de pacotes é declarada em
+`gerarScripts`, inclusive os dois fora do workspace (`website/`, `e2e/`,
+rodados com `--dir`), e um `package.json` que falta ou não parseia reprova a
+geração NOMEANDO o arquivo — antes ele tirava o pacote da página em silêncio
+(AT-224).
 
 **Bloco marcado** — o trecho entre `<!-- BEGIN:GENERATED:<id> -->` e
 `<!-- END:GENERATED:<id> -->` dentro de um arquivo escrito à mão. É o caso de

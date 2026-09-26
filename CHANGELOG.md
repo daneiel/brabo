@@ -41,6 +41,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   reescrita virou função pura em `scripts/docs/links-do-locale.mjs`, devolve o
   slug sem prefixo de locale, e o mesmo módulo roda depois do build no
   `docs-check.yml`, reprovando qualquer `href` com o locale duplicado.
+- **docs**: a referência de scripts gerada passa a listar o `e2e/` (AT-224) —
+  cinco comandos, como `pnpm --dir e2e test`, porque ele é pacote fora do
+  workspace como o `website/` (119 → 124). E um `package.json` que falta ou não
+  parseia deixa de sumir da página em silêncio: `gerarScripts` fazia
+  `catch { continue }`, e agora a geração reprova nomeando o arquivo.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16

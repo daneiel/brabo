@@ -144,8 +144,15 @@ function gerarScripts() {
     ['broker', 'apps/broker/package.json', '@brabo/broker'],
     ['docker-port', 'packages/docker-port/package.json', '@brabo/docker-port'],
     ['website', 'website/package.json'],
+    // `e2e/` é pacote FORA do workspace, como `website/` (ADR 0120): lockfile
+    // próprio, e por isso `--dir` e não `--filter` (AT-224).
+    ['e2e', 'e2e/package.json'],
     ['scripts', 'scripts/package.json'],
   ];
+
+  // Pacote fora do workspace da raiz: `--filter` exige membership, `--dir`
+  // não — aponta pro diretório e roda como se o pnpm tivesse começado ali.
+  const foraDoWorkspace = new Set(['website', 'e2e']);
 
   let out = `---
 id: scripts
@@ -165,21 +172,29 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
 
   let total = 0;
   for (const [rotulo, caminho, filtro = rotulo] of pacotes) {
+    // Falha NOMEADA, nunca `continue`: um `package.json` que some ou não
+    // parseia tirava o pacote inteiro da referência em silêncio, e a página
+    // continuava prometendo "every pnpm script" (AT-224). A lista acima é
+    // declarada — pacote que sai do repositório sai dela também.
     let pkg;
     try {
       pkg = JSON.parse(ler(caminho));
-    } catch {
-      continue;
+    } catch (erro) {
+      throw new Error(
+        `scripts.md: não consegui ler \`${caminho}\` (${erro.message}). ` +
+          'Corrija o arquivo, ou tire o pacote da lista em gerarScripts se ele saiu do repositório.',
+      );
     }
     const scripts = Object.entries(pkg.scripts ?? {});
     if (scripts.length === 0) continue;
     total += scripts.length;
 
-    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
-    // membership, `--dir` não — aponta pro diretório e roda como se o pnpm
-    // tivesse começado ali.
     const prefixo =
-      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --dir website ' : `pnpm --filter ${filtro} `;
+      rotulo === 'raiz'
+        ? 'pnpm '
+        : foraDoWorkspace.has(rotulo)
+          ? `pnpm --dir ${rotulo} `
+          : `pnpm --filter ${filtro} `;
 
     out += `\n## ${rotulo === 'raiz' ? 'Root' : rotulo} — \`${caminho}\`\n\n`;
     out += '| command | runs |\n|---|---|\n';
