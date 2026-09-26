@@ -226,12 +226,14 @@ processo, e existe porque a anterior não era: `wait --for=condition=Ready=false
 é satisfeito por um pod que nunca chegou a rodar, e por isso o bootstrap
 anunciava "usuário do smoke pronto" enquanto o login devolvia 401.
 
-> **O seed não é idempotente.** `createWorkspace` não faz upsert, então numa
-> segunda execução (`BRABO_KEEP_CLUSTER=1`) o pod termina em erro por
-> `workspaces_slug_unique` — e está certo assim: o usuário já existe desde a
-> primeira vez, o login é verificado do mesmo jeito, e o pod é removido ao
-> final para não reprovar o passo 1 do `smoke.sh`, que exige todos os pods
-> saudáveis.
+> **O seed é idempotente.** Rodá-lo de novo sobre um banco já semeado é o
+> caso normal (`BRABO_KEEP_CLUSTER=1`): o workspace, o projeto e a sessão de
+> demonstração são reencontrados e reaproveitados, nunca duplicados, e a sessão
+> reencontrada não ganha os cinco eventos de novo (`apps/api/src/db/seed.ts`, o
+> docblock do topo). A segunda execução não morre mais em
+> `workspaces_slug_unique`. O bootstrap continua decidindo pelo **login**, não
+> pela fase do pod, e continua removendo o pod ao final para não reprovar o
+> passo 1 do `smoke.sh`, que exige todos os pods saudáveis.
 
 > **Isto ocupa as portas do `pnpm dev`.** Manter as portas iguais é o que faz o
 > `smoke.sh` valer nos dois modos, e o preço é que eles não
@@ -1626,14 +1628,16 @@ curl -sS -G http://localhost:3100/loki/api/v1/query_range \
 
 ### Alertas
 
-Provisionados e visíveis em **Alerting → Alert rules** (pasta Brabo):
+Provisionados e visíveis em **Alerting → Alert rules** (pasta Brabo), a partir
+de `deploy/k8s/observability/alerts/brabo-alerts.yaml`:
 
-| alerta | o que investigar |
-|---|---|
-| Fila do Oban crescendo sem consumo | nenhuma réplica do engine Ready; pool do Postgres esgotado; worker travado num job |
-| Sessão presa em `closing` | [o drain não completou](#quando-a-sessao-escapa), ou a transição para `closed` falhou |
-| Custo por hora acima do limite | [qual projeto e qual agente](#incidente-de-custo); o orçamento do domínio continua sendo o controle rígido |
-| Última execução do backup falhou | [o backup existe mas é velho](#restore) — o caso perigoso |
+| alerta | severidade | dispara após | o que investigar |
+|---|---|---|---|
+| Fila do Oban crescendo sem consumo | `critical` | 10 min | nenhuma réplica do engine Ready; pool do Postgres esgotado; worker travado num job |
+| Sessão presa em closing | `warning` | 15 min | [o drain não completou](#quando-a-sessao-escapa), ou a transição para `closed` falhou |
+| Custo por hora acima do limite | `warning` | 5 min | [qual projeto e qual agente](#incidente-de-custo); o orçamento do domínio continua sendo o controle rígido |
+| Backup do Postgres atrasado | `critical` | na hora | o último backup bom tem mais de 26 h: o CronJob não rodou, ou rodou e falhou — `brabo_backup_last_status` separa os dois; ver [Restore](#restore). "Nunca houve backup" (`-1`) **não** o dispara |
+| Última execução do backup falhou | `warning` | na hora | ainda pode existir um backup bom de ontem, e é por isso que esta falha passaria despercebida por dias; a causa fica em `backup_runs.error_message` |
 
 São regras do **Grafana**, não do Prometheus (desvio registrado no ADR 0026):
 deixam de ser avaliadas se o Grafana cair. Não há Alertmanager nem destino de
