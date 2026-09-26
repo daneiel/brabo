@@ -39,7 +39,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   uma `PROJECT_WORKSPACES_HOST_ROOT` que diverge da pasta de api/engine. Nunca
   recusa a subida nem grava o `.env`. O `.env.example` e o getting-started
   deixam de sugerir `~` no caminho.
-
+- **docs**: a tradução pt-BR do runbook volta a cobrir as seções de maior
+  risco operacional (AT-209). *Instalando* (com o broker numa instalação) e
+  *Provas de propriedade agendadas* não existiam; as rotações das chaves do auth
+  e da chave mestra estavam atrás do inglês (sem o `key_id` da RN-563, a
+  consulta de progresso, a condição do pepper da RN-597, a RN-598 e as
+  `_PREVIOUS` nos composes); e a *sessão que não sai de `created`* não tinha o
+  `conversation_idle_timeout` da RN-581. O topo da página pt-BR passa a listar
+  as seções que só existem em inglês. Links para RNs que a tradução de
+  `business-rules.md` ainda não tem apontam para a versão em inglês.
 - **docker**: seis flags booleanas do engine passam a chegar a ele na
   **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
   `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
