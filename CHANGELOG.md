@@ -208,6 +208,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   passo cada no job `Lint` do `ci.yml`. Provado por mutação: um `x === NaN`
   plantado em cada um dos quatro alvos reprova com saída 1. Na `dev` os dois
   já passavam limpos — nenhum erro a corrigir.
+- **ci**: o ESLint da api passa a verificar também `apps/api/test/` (AT-208)
+  — o passo do job `Lint` rodava só `src/**/*.ts`, e fora dele o passivo
+  chegou a 528 erros e 14 avisos em 98 dos 361 arquivos (medido em 26/09).
+  Zerado por pasta em quatro PRs antes deste (`require-await`, `prettier`,
+  `unbound-method`, `no-unsafe-*`…), só com mudança de tipo e de formato —
+  nenhuma asserção mudou. O passo continua sem `--fix` e com
+  `--max-warnings 0`; provado por mutação (um `require-await` plantado num
+  spec reprova com saída 1).
 - **api**: os três `no-unsafe-assignment` de
   `projects-summary.repository.spec.ts` saem (AT-188). O passo de lint do CI
   não os via porque verifica só `src/**/*.ts`: `apps/api/test/` inteira fica
