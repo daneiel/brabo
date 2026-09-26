@@ -83,7 +83,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -142,7 +142,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -206,7 +206,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -265,7 +265,7 @@ defmodule Engine.Gates.GateRescuerTest do
           %{
             status: "awaiting_gate",
             task_id: task_id,
-            worktree_path: System.tmp_dir!(),
+            worktree_path: pasta_temporaria_propria!(),
             consecutive_blocked: 0
           }
         )

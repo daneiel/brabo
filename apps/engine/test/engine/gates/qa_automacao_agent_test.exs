@@ -25,7 +25,7 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
       agent_id: "dev-api",
       session_id: Ecto.UUID.generate(),
       task_id: "task-abc12345",
-      worktree_path: System.tmp_dir!(),
+      worktree_path: pasta_temporaria_propria!(),
       task_budget_micros: 1_000_000,
       max_gate_corrections: 3
     }
