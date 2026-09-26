@@ -248,6 +248,9 @@ export const AFERICOES = [
   // imagens que o produto publica / que o smoke confere
   { arquivo: 'CLAUDE.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   { arquivo: 'README.md', padrao: /build das (\S+) imagens com/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  // RN-524 e RN-527 (AT-192): ficaram em "quatro" depois do ADR 0162
+  { arquivo: 'docs/business-rules.md', padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  { arquivo: 'docs/business-rules.md', padrao: /- as (\S+) imagens vêm de \*\*variável obrigatória\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   { arquivo: 'README.md', padrao: /confere que as (\S+) imagens rodam non-root/, fonte: 'imagensNonRootNoSmoke', forma: 'pt_f' },
 
   // contrato de git

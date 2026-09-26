@@ -216,6 +216,22 @@ Promote it earlier and it charges each PR for someone else's debt. If
 the pattern shows a real false positive before then, narrow the
 pattern. Don't widen the window.
 
+**The list went empty on 2026-09-26** (AT-122). In the eight days after
+the check landed, the 63 known-wrong references had grown to **75**. That
+growth is the drift the check exists to show. All 75 were re-read by
+symbol against the code of that day, and none was a false positive of
+the pattern. Most had drifted by dozens of lines. One was a rename:
+`modo_de_execucao/1` became `exigencias_do_projeto/1` in RN-516. One had
+moved to another file: `escreverEnv` went from `preflight.mjs` to
+`env-file.mjs`. Two pointed at the right test, but at the `it(` line,
+while the symbol (`types`) only shows up a few lines below, in the body.
+Those two now point at the body line. The window stayed at ±3. The
+bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
+their unchecked neighbouring references re-read in the same pass. After
+that, **273 references match the pattern, 273 are correct, and 0 are
+wrong**. The four weeks start when that change reaches `dev`. The
+severity stays `warn` until then.
+
 ## The pieces
 
 ```mermaid
@@ -240,6 +256,18 @@ source that says "whoever touches this needs to review that."
 Two severities: `block` fails the PR, `warn` only comments. And a
 `generated: true` attribute, which marks the documents that come out
 of the generator.
+
+A rule that charges for what makes no sense teaches people to reach for
+the escape hatch by reflex. That is why `politica-de-branches` watches an
+**allow-list** in `scripts/ci/` — the scripts that *are* the branch policy
+and their specs — instead of `scripts/ci/**` minus a hand-kept list of
+exclusions, which every new repository-wide spec in that folder had to join
+(eleven by AT-206). The allow-list does not give up failing closed:
+`scripts/docs/politica-de-branches.spec.ts` derives the set from the
+repository — every `scripts/ci/` file whose opening docblock cites
+`branching-policy.md`, plus its spec — and fails if the rule diverges. A new
+policy script declares its source in its header, like the others, and the
+spec does the rest.
 
 ### `docmap.mjs` — validates the map
 

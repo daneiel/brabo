@@ -857,8 +857,17 @@ with the `alpine` one-liner in the table below), and the image it built.
 
 **The order is the point, and it is not negotiable:**
 
-1. `preflight` and `build` — the slow part, done while your environment is
-   still up.
+1. `preflight`, then the **host prerequisites** (AT-203), then `build` — the
+   slow part, done while your environment is still up. The migrations and the
+   seed run on the HOST, with the checkout's `apps/engine/deps`/`_build` and
+   `node_modules` — not the containers' volumes, and nothing the image build
+   refreshes. So before any effect the script runs `mix deps.get` and
+   `mix compile` in `apps/engine`, checks that `drizzle-kit` and `ts-node`
+   resolve, and checks the Neo4j password against the volume's. Measured on
+   2026-09-26: with a new dependency in `mix.lock` (mint 1.10.1, #613),
+   `pnpm engine:migrate` died with `lock mismatch` **after** the
+   `DROP SCHEMA`, and "run it again" failed the same way. A refusal here says
+   `RESET NÃO COMEÇOU … Nada foi parado nem apagado`: the database is intact.
 2. **`stop api engine`.** These two, and no others: they are the ones holding
    a live connection to the compose Postgres (the api's Drizzle pool over
    `public`/`drizzle`, the engine's Ecto/Oban over `engine`). `web` is a Vite
@@ -891,6 +900,8 @@ re-append the session's 5 events).
 |---|---|
 | `RESET INCOMPLETO — parou em: migrations (api + engine)` with `permission denied` under `apps/engine/_build` | `pnpm engine:migrate` runs on the HOST, and Docker creates a missing bind-mount point as `root`. Fix it in place: `docker run --rm -v "$PWD/apps/engine:/x" alpine chown -R "$(id -u):$(id -g)" /x/_build` |
 | `RESET INCOMPLETO … banco apagado, migrado e semeado, mas estes serviços não responderam: <lista>` | the database is fine; a process didn't come back. `docker compose -f docker/docker-compose.yml --env-file .env logs <serviço>` says why. Nothing here needs the reset to run again |
+| `RESET NÃO COMEÇOU — recusado em: pré-requisitos de host das migrations` | nothing was touched. `mix deps.get`/`mix compile` failed in `apps/engine` on the host (read the output above it), or `drizzle-kit`/`ts-node` don't resolve — `pnpm install --frozen-lockfile` |
+| `O NEO4J RECUSA A SENHA DO .env`, before any effect or after `container brabo-neo4j-1 is unhealthy` | Neo4j stores the password in the `neo4j_data` volume when it is **created** and ignores `NEO4J_AUTH` afterwards, while the healthcheck uses the one in `.env`. Measured on 2026-09-26: a volume from 09/13, the container recreated with the default password, healthcheck `The client is unauthorized due to authentication failure`. Put the old password back in `NEO4J_PASSWORD`, or change it inside Neo4j (`ALTER CURRENT USER SET PASSWORD FROM … TO …`, the command is printed), or — the graph is derived, `pnpm --filter api grafo:reprojetar` rebuilds it — remove the volume yourself. The script never removes it (AT-181) |
 | the `up --wait` times out | `BRABO_RESET_WAIT_TIMEOUT` (seconds, default 600). A first boot with empty `node_modules`/`_build` volumes runs `pnpm install`/`mix deps.get` before the process listens |
 
 ---
