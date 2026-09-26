@@ -89,6 +89,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   caracteres. A mensagem nomeia a variável. Continua opcional: fora da
   rotação, ausente é o normal. O engine e o broker não mudaram (o engine não
   valida nem o atual; ver a borda da RN-598).
+- **engine**, **broker**: os dois tokens de serviço passam pela MESMA régua da
+  api no engine e no broker (AT-216, RN-601). O engine lia os dois crus no
+  `runtime.exs`: sem trim, sem piso, e em produção subia com o default público
+  de dev quando a variável faltava. Agora, com a release `:prod`, ele recusa
+  subir se `BRABO_SERVICE_TOKEN` faltar, for o literal público ou tiver menos
+  de 16 caracteres depois do trim, e aplica as duas últimas ao
+  `BRABO_SERVICE_TOKEN_PREVIOUS` quando definido; a mensagem nomeia a
+  variável. O broker já fazia isso com o atual e agora faz com o anterior. Fora
+  de produção, nos dois, só o trim (e o engine passa a cair no default de dev
+  com a variável vazia, como a api, em vez de usar a string vazia).
 - **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
   (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
   "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina

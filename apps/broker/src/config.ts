@@ -82,7 +82,14 @@ export function lerConfiguracao(
     ? tokenDeProducao(bruto)
     : bruto || TOKEN_PADRAO_DEV;
 
-  const anterior = (env.BRABO_SERVICE_TOKEN_PREVIOUS ?? '').trim();
+  const anteriorBruto = (env.BRABO_SERVICE_TOKEN_PREVIOUS ?? '').trim();
+  // O anterior passa pela MESMA régua do atual em produção (RN-598 na api,
+  // RN-601 aqui): durante a rotação ele abre este broker tanto quanto o atual.
+  // A obrigatoriedade NÃO é compartilhada — fora da rotação, ausente é normal.
+  const anterior =
+    producao && anteriorBruto.length > 0
+      ? exigirTokenDeProducao('BRABO_SERVICE_TOKEN_PREVIOUS', anteriorBruto)
+      : anteriorBruto;
 
   const raiz = (env.PROJECT_WORKSPACES_HOST_ROOT ?? '').trim();
   const base = (env.BRABO_PROJECTS_HOST_BASE ?? '').trim();
@@ -106,9 +113,19 @@ function tokenDeProducao(bruto: string): string {
         'deste broker, e este broker fala com o Docker do host.',
     );
   }
+  return exigirTokenDeProducao('BRABO_SERVICE_TOKEN', bruto);
+}
+
+/**
+ * A régua de produção de QUALQUER valor que a verificação aceita — o atual e o
+ * anterior —, a mesma de `exigirTokenDeProducao` da api (RN-598/RN-601). Uma
+ * só de propósito: um anterior com o literal público, ou curto, abre o mesmo
+ * buraco que o atual, por uma variável que ninguém conferia.
+ */
+function exigirTokenDeProducao(nome: string, bruto: string): string {
   if (bruto === TOKEN_PADRAO_DEV) {
     throw new ConfiguracaoInvalidaError(
-      'BRABO_SERVICE_TOKEN está com o valor de exemplo do repositório, que é ' +
+      `${nome} está com o valor de exemplo do repositório, que é ` +
         'público. Num broker que fala com o Docker do host isso equivale a ' +
         'não ter autenticação nenhuma. Gere um próprio (ex.: ' +
         '`openssl rand -base64 32`).',
@@ -116,7 +133,7 @@ function tokenDeProducao(bruto: string): string {
   }
   if (bruto.length < TAMANHO_MINIMO_DO_TOKEN) {
     throw new ConfiguracaoInvalidaError(
-      `BRABO_SERVICE_TOKEN tem ${bruto.length} caracteres; o mínimo em ` +
+      `${nome} tem ${bruto.length} caracteres; o mínimo em ` +
         `produção é ${TAMANHO_MINIMO_DO_TOKEN}. É o MESMO piso da api — os ` +
         'dois lados comparam o mesmo segredo.',
     );
