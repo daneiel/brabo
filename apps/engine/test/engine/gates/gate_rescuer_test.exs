@@ -28,7 +28,16 @@ defmodule Engine.Gates.GateRescuerTest do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
 
+    project_id = Ecto.UUID.generate()
+
     on_exit(fn ->
+      # ANTES de soltar o env (AT-204). O resgate religa QaLeadServer e
+      # DevAgentServer REAIS; o dev agent do "correct perdido" segue sozinho
+      # para a próxima task, e sem isto ele vivia além do teste — o claim
+      # tardio gravava com o dono da sandbox morto e o `{:task_blocked, …,
+      # "dev-api"}` dele caía no mailbox do teste SEGUINTE.
+      encerrar_agentes_do_projeto(project_id)
+
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :gate_dispatcher)
       Application.delete_env(:engine, :test_pid)
@@ -38,8 +47,6 @@ defmodule Engine.Gates.GateRescuerTest do
       Application.delete_env(:engine, :semgrep_fake_available)
       Application.delete_env(:engine, :gitleaks_fake_available)
     end)
-
-    project_id = Ecto.UUID.generate()
 
     # RN-502/ADR 0143 — o resgate solta o agente para o próximo claim, e todo
     # claim exige container REGISTRADO `running`.
