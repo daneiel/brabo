@@ -99,12 +99,29 @@ getent group docker | cut -d: -f3
 
 # in .env
 #    DOCKER_GID=<the number above>
-#    BROKER_URL=http://broker:8090
-#    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
+#    PROJECT_WORKSPACES_HOST_DIR=/home/you/brabo-projects    # ALREADY EXPANDED; derives HOST_ROOT
+#    GIT_LOCAL_REPOS_HOST_DIR=/home/you/brabo-projects-bare
 #    BRABO_PROJECTS_BASE=/home/you/projetos-brabo            # derives HOST_BASE
 
-docker compose -f docker/docker-compose.yml --env-file .env up -d broker
+docker compose -f docker/docker-compose.yml --env-file .env up -d api engine broker
 ```
+
+`BROKER_URL` is **not** on that list any more: the dev compose defaults it to
+`http://broker:8090`, the service it brings up
+([RN-599](business-rules.md#rn-599)). Before that default, the api answered
+`brokerConfigurado: false` next to a healthy broker and project creation only
+offered `runner`. A value in `.env` still wins; the production and installation
+composes keep no default, on purpose.
+
+`pnpm dev` also **reports** the managed folder on every run (RN-599): with
+`PROJECT_WORKSPACES_HOST_DIR` unset, `api`/`engine` use the managed volume, the
+broker gets no `PROJECT_WORKSPACES_HOST_ROOT`, and `container_start` ends
+refused — with the stack healthy. It also reports a `~` in the path (Compose
+expands it in the bind mount, not in the broker's variable) and an explicit
+`PROJECT_WORKSPACES_HOST_ROOT` that differs from the folder the api mounts.
+Like the gid report, it never blocks and never writes `.env`; switching from the
+volume to a folder does not migrate the volume's content — see
+[migrating workspaces](#migrar-workspaces-pasta-local).
 
 `pnpm dev` **reports** the state of `DOCKER_GID` on every run
 ([RN-512](business-rules.md#rn-512)), comparing it against your machine's real
@@ -1358,8 +1375,10 @@ App or new client id/secret needed.
 
 ### The four sibling secrets also refuse the default {#segredos-irmaos-no-boot}
 
-Symptom: with `NODE_ENV=production`, the api (or, for `SECRET_KEY_BASE`,
-the engine) dies at start with a message about `AUTH_JWT_SECRET`,
+Symptom: with `NODE_ENV=production`, the api (or, for `SECRET_KEY_BASE`
+and `BRABO_SERVICE_TOKEN`, the engine's `:prod` release, which refuses the
+same token values since [RN-601](business-rules/autenticacao.md#rn-601)) dies
+at start with a message about `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY`, or `SECRET_KEY_BASE` —
 missing, set to the repository's example value, or too short.
 
@@ -2572,10 +2591,12 @@ current one and accepts both:
 
 1. `BRABO_SERVICE_TOKEN_PREVIOUS` gets the old value on **both api and
    engine**; `BRABO_SERVICE_TOKEN` gets the new one on both. Restart
-   both. In production the api checks the old value with the same rule as
-   the new one, so if the old value is the public default or shorter than 16
-   characters, the api refuses to boot at this step and names the variable
-   ([RN-598](business-rules/autenticacao.md#rn-598)). Rotating away from a
+   both. In production the api, the engine and the broker check the old
+   value with the same rule as the new one, so if the old value is the public
+   default or shorter than 16 characters, each of them refuses to boot at
+   this step and names the variable
+   ([RN-598](business-rules/autenticacao.md#rn-598),
+   [RN-601](business-rules/autenticacao.md#rn-601)). Rotating away from a
    weak token therefore means skipping `_PREVIOUS`, and paying for it with
    the `403`/`401` window described below.
 2. While both are up with the new variable, traffic works in any
@@ -2592,7 +2613,9 @@ symptom in the
 Verification: on the api, `apps/api/test/infrastructure/security/service-token.spec.ts`
 (describe "rotação do BRABO_SERVICE_TOKEN") and
 `apps/api/test/interfaces/engine-service.guard.spec.ts`; on the engine,
-`apps/engine/test/engine_web/plugs/verify_service_token_test.exs`.
+`apps/engine/test/engine_web/plugs/verify_service_token_test.exs` and
+`apps/engine/test/engine/runtime_service_token_test.exs` (the boot rule); on
+the broker, `apps/broker/src/config.spec.ts`.
 
 > **Where the `_PREVIOUS` variables reach the process.** In the three
 > composes (`docker-compose.yml`, `docker-compose.prod.yml`,

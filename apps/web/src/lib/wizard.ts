@@ -94,7 +94,20 @@ export function canAdvanceFromDetails(
 ): boolean {
   return modo === 'adopt'
     ? campos.externalId.trim().length > 0
-    : campos.name.trim().length > 0;
+    : nomeAceitoPelaApi(campos.name);
+}
+
+/**
+ * O nome que `POST /workspaces/:id/projects` aceita, julgado ANTES de mandar
+ * (AT-215, RN-600): o `CreateProjectDto` exige `name` com 2+ caracteres e um
+ * `slug` kebab-case, e o slug sai de `slugify(name)` — então nome de UMA letra,
+ * ou só de símbolos (`!!`, slug vazio), é 400 garantido. É a mesma checagem
+ * BARATA de `caminhoLocalParecePlausivel`: evita mandar ao servidor o que já
+ * se sabe errado; o veredito que vale continua sendo o da api.
+ */
+export function nomeAceitoPelaApi(nome: string): boolean {
+  const limpo = nome.trim();
+  return limpo.length >= 2 && slugify(limpo).length > 0;
 }
 
 // --- A base dos projetos montados (ADR 0141/0142, RN-500/501, RN-513) ---

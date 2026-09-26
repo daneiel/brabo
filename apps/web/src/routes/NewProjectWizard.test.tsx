@@ -370,8 +370,9 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     // `FolderBrowserModal` — o comando manual (colapsado atrás de "Prefiro
     // rodar manualmente") agora inclui `--token`, o que a divergência de
     // antes não fazia.
-    expect(screen.getByText(/brabo-runner --project/)).toBeTruthy();
-    expect(screen.getByText(/--token/)).toBeTruthy();
+    // (O aviso do botão Procurar pasta, AT-214, também mostra um comando —
+    // sem `--token`, que é o que distingue o do painel.)
+    expect(screen.getByText(/brabo-runner --project .*--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
@@ -625,6 +626,54 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     fireEvent.click(screen.getByText('Runner local'));
   }
 
+  /**
+   * AT-214: o pré-requisito do botão é dito ANTES do clique, em texto (ADR
+   * 0064). Neste modo o navegador só lista o disco com um `brabo-runner`
+   * rodando e conectado (RN-437/RN-533, por construção) — e o dono clicou,
+   * "não funcionou", sem a tela ter dito isso nem a alternativa.
+   */
+  it('antes do clique, diz que o botão exige o brabo-runner rodando, com o comando, e que digitar é a alternativa', async () => {
+    await ateWorkspaceRunner();
+
+    const aviso = screen.getByTestId('aviso-procurar-runner');
+    expect(aviso).toHaveTextContent(/só funciona com o brabo-runner rodando/);
+    expect(aviso).toHaveTextContent(
+      'brabo-runner --project <id do projeto> --dir <pasta>',
+    );
+    expect(aviso).toHaveTextContent(/digite o caminho no campo acima/);
+    // Texto, nunca tooltip: o botão continua clicável e sem `title`.
+    const botao = screen.getByRole('button', { name: /Procurar pasta/i });
+    expect(botao).not.toBeDisabled();
+    expect(botao).not.toHaveAttribute('title');
+    expect(createProject).not.toHaveBeenCalled();
+
+    // O caminho digitado entra no comando que o aviso mostra.
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    expect(aviso).toHaveTextContent('--dir /home/voce/projetos/loja');
+  });
+
+  it('o aviso fala a língua da tela', async () => {
+    await i18n.changeLanguage('en');
+    montar();
+    fireEvent.click(screen.getByText('Create new'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByText('Local runner'));
+
+    expect(screen.getByTestId('aviso-procurar-runner')).toHaveTextContent(
+      /only works with brabo-runner running/,
+    );
+    expect(screen.getByTestId('aviso-procurar-runner')).toHaveTextContent(
+      /type the path in the field above/,
+    );
+  });
+
+  it('fora do modo runner o aviso não aparece — Pasta montada navega pela api', async () => {
+    await ateWorkspaceComBase();
+    expect(screen.queryByTestId('aviso-procurar-runner')).not.toBeInTheDocument();
+  });
+
   it('"Procurar pasta..." cria o projeto antecipadamente e abre o modal com o id real', async () => {
     createProject.mockResolvedValue({ id: 'proj-runner-1' });
     await ateWorkspaceRunner();
@@ -783,5 +832,129 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     // este teste existe pra provar que NÃO acontece) só apareceria depois.
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(createProject).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A rajada de 400 do teste do dono (AT-215, RN-600): 11
+ * `POST /workspaces/:id/projects → 400` em ~4s.
+ *
+ * Nenhum retry automático existe aqui — `createProject` é chamada direto,
+ * sem `useMutation` —, então cada POST era um CLIQUE. O corpo que sai no
+ * modo `runner` antes de o nome ser digitado (o campo do nome fica ABAIXO do
+ * de caminho no passo) é `name: ''`, `slug: ''`: o DTO recusa os dois, e o
+ * toast genérico não dizia por quê, então clicar de novo era a única
+ * resposta. Os testes fixam as três metades: não mandar o que se sabe
+ * recusado, uma criação por vez, e a frase da api na tela.
+ */
+describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
+  async function ateRunnerSemNome() {
+    await ateVisibilidade('Local');
+    fireEvent.click(screen.getByText('Runner local'));
+  }
+
+  it('Runner sem nome: "Procurar pasta..." fica inerte, diz o que falta, e nenhum POST sai', async () => {
+    await ateRunnerSemNome();
+
+    const botao = screen.getByRole('button', { name: /Procurar pasta/i });
+    expect(botao).toBeDisabled();
+    expect(screen.getByTestId('procurar-bloqueado')).toHaveTextContent(
+      /Preencha o nome do projeto \(2 caracteres ou mais\)/,
+    );
+    for (let i = 0; i < 11; i++) fireEvent.click(botao);
+    expect(createProject).not.toHaveBeenCalled();
+
+    // Nome de UMA letra também seria 400 (MinLength 2).
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'a' } });
+    expect(botao).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    expect(botao).not.toBeDisabled();
+    expect(screen.queryByTestId('procurar-bloqueado')).not.toBeInTheDocument();
+  });
+
+  it('Runner com caminho relativo digitado: inerte, com o motivo — seria a outra recusa certa', async () => {
+    await ateRunnerSemNome();
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: 'projetos/loja' },
+    });
+
+    expect(screen.getByRole('button', { name: /Procurar pasta/i })).toBeDisabled();
+    expect(screen.getByTestId('procurar-bloqueado')).toHaveTextContent(/não é absoluto/);
+  });
+
+  it('nome de uma letra não chega ao Provisionar', async () => {
+    await ateVisibilidade('Local');
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'a' } });
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+  });
+
+  it('o nome vai recortado no corpo', async () => {
+    createProject.mockResolvedValue({ id: 'proj-1' });
+    await ateVisibilidade('Local');
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+      target: { value: '  Loja  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+    expect(createProject.mock.calls[0][1]).toEqual({
+      name: 'Loja',
+      slug: 'loja',
+      executionMode: 'container',
+    });
+  });
+
+  it('três cliques no MESMO quadro em "Procurar pasta..." criam UM projeto', async () => {
+    let resolver!: (v: { id: string }) => void;
+    createProject.mockReturnValue(new Promise((r) => (resolver = r)));
+    await ateRunnerSemNome();
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+
+    const botao = screen.getByRole('button', { name: /Procurar pasta/i });
+    fireEvent.click(botao);
+    fireEvent.click(botao);
+    fireEvent.click(botao);
+
+    expect(createProject).toHaveBeenCalledTimes(1);
+    resolver({ id: 'proj-runner-1' });
+    await waitFor(() =>
+      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
+    );
+    expect(createProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('dois cliques no MESMO quadro em "Provisionar" criam UM projeto', async () => {
+    createProject.mockReturnValue(new Promise(() => {}));
+    await ateWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const provisionar = screen.getByRole('button', { name: 'Provisionar' });
+    fireEvent.click(provisionar);
+    fireEvent.click(provisionar);
+
+    expect(createProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('a recusa da api na criação antecipada aparece NA TELA, não só num toast genérico', async () => {
+    const { ApiError } = await import('../lib/api-client');
+    createProject.mockRejectedValue(
+      new (ApiError as new (s: number, b: unknown) => Error)(400, {
+        message: ['slug deve ser kebab-case (ex.: meu-projeto)'],
+      }),
+    );
+    await ateRunnerSemNome();
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+
+    expect(await screen.findByText('slug deve ser kebab-case (ex.: meu-projeto)')).toBeTruthy();
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+    // E o botão volta a responder: a trava é do envio, não da tela.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Procurar pasta/i })).not.toBeDisabled(),
+    );
   });
 });
