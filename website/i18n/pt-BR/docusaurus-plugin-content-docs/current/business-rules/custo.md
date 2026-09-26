@@ -8,6 +8,17 @@ keywords: [regras de negócio, custo, orçamento, metering, token]
 
 # Custo
 
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-223): a [versão em inglês](pathname://../../business-rules/custo) é a fonte, tem
+> 71 RNs nesta página e esta tradução tem 69. As 2
+> abaixo **só existem lá**, e link para uma delas aponta para a versão
+> em inglês:
+>
+> [RN-470](pathname://../../business-rules/custo#rn-470), [RN-583](pathname://../../business-rules/custo#rn-583).
+>
+> As RNs presentes aqui podem estar mais curtas ou mais antigas que as do
+> inglês (só os títulos foram comparados); na dúvida, o inglês vale.
+
 > Estas RNs saíram de [`business-rules.md`](../business-rules.md) sem
 > mudar uma vírgula do conteúdo: a página única passava de 640 KB e
 > estas duas seções sozinhas eram metade dela. As âncoras `#rn-NNN`
