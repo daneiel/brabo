@@ -719,7 +719,9 @@ name-by-name ignore list is a second place to keep in sync.
 `e2e/` isn't a workspace member ([ADR 0120](../adr/0120-e2e-de-navegador-com-playwright.md)) and runs against the
 **production compose**, which is why its addresses are the published ports and
 not the dev ones. The credentials are the seed account's — the same ones
-`docker/smoke.sh` creates.
+`docker/smoke.sh` creates. The inventory scans every `.ts` under `e2e/`,
+**the Playwright specs included** — there the spec is the code that reads the
+environment, not a unit test beside it (AT-124).
 
 | variable | default | what it changes |
 |---|---|---|

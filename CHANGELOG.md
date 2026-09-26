@@ -42,6 +42,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   o intervalo dos laços vira `EVIDENCIA_INTERVALO` (default 2s, o de sempre) e
   `evidencia_parar` espera os dois laços saírem, com teto de 10s dito, em vez de
   dormir 1s.
+- **docs**: o inventário de variáveis de `configuration.md` deixava de fora os
+  testes do Playwright (`e2e/testes/*.spec.ts`), e uma `process.env.X` nova
+  num deles passava pelo `pnpm docs:check` verde (AT-124, medido por
+  mutação). As fontes do inventário saem de `generate.mjs` para
+  `scripts/docs/fontes-de-env.mjs`, com spec que as prova contra a árvore
+  real; em `e2e/` o filtro de `.spec.` deixa de valer.
 - **web**: o painel do runner, ao reconhecer chave de MÁQUINA pareada, passa a
   oferecer `brabo-runner service status --machine` — a unit que serve essa
   chave (RN-545) — em vez do `--project <id>`, que perguntava por uma unit que
