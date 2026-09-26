@@ -280,6 +280,13 @@ defmodule Engine.Agents.DevLeadServerTest do
       refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
       refute_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
 
+      # RN-593: a suspensão NÃO grava `tool.result` — não há desfecho ainda, e
+      # "pending" no log seria a mesma mentira que ele seria para o modelo.
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.call", payload: %{tool: "propose_execution_plan"}}}
+
+      refute_received {:event_appended, _, _, %{type: "tool.result"}}
+
       assert_received %Phoenix.Socket.Broadcast{
         event: "agent.status",
         payload: %{status: "awaiting_approval"}
@@ -369,9 +376,49 @@ defmodule Engine.Agents.DevLeadServerTest do
       assert tool_msg["content"] =~ "aprovado"
       refute tool_msg["content"] =~ "pending"
 
+      # RN-593: o desfecho REAL entra no event log na retomada, pelo módulo
+      # comum (RN-589), com o MESMO texto que o modelo leu.
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "propose_execution_plan"} = r}}
+
+      assert r.ok == true
+      assert r.resultado == tool_msg["content"]
+
       # O turno RETOMOU de verdade: uma segunda chamada ao modelo aconteceu
       # (a que produziu a resposta final, depois do resultado real).
       assert_received {:llm_turn_stream, "dev-lead", _messages, _tools}
+    end
+
+    test "action_settled RECUSADO grava tool.result com ok: false e o motivo (RN-593)", %{
+      state: state
+    } do
+      Process.put(:fake_propose_action, %{"id" => "pa-3b", "status" => "pending"})
+      Process.put(:fake_llm_turns, [plano_turn("um agente na api")])
+
+      {:noreply, suspenso} = sync_cast(DevLeadServer, :kickoff, state)
+
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou propor outro")])
+
+      desfecho = %{
+        action_id: "pa-3b",
+        status: "denied",
+        execution_result: nil,
+        rejection_reason: "dois agentes na api, não um"
+      }
+
+      assert {:noreply, retomando} =
+               DevLeadServer.handle_info({:action_settled, desfecho}, suspenso)
+
+      %{turno_assincrono: %{task: %Task{ref: ref}}} = retomando
+      assert_receive {^ref, resultado}, 5_000
+      DevLeadServer.handle_info({ref, resultado}, retomando)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "propose_execution_plan"} = r}}
+
+      assert r.ok == false
+      assert r.erro == "recusado pelo usuário: dois agentes na api, não um"
+      refute Map.has_key?(r, :resultado)
     end
 
     test "action_settled de OUTRA ação (id que não bate) é ignorado, sem derrubar o processo", %{
@@ -393,6 +440,9 @@ defmodule Engine.Agents.DevLeadServerTest do
                DevLeadServer.handle_info({:action_settled, desfecho_de_outra_acao}, suspenso)
 
       assert ainda_suspenso == suspenso
+
+      # Nenhum `tool.result` para a ação que este Dev Lead não esperava.
+      refute_received {:event_appended, _, _, %{type: "tool.result"}}
     end
 
     test "cancel durante a suspensão é NO-OP (turno_assincrono já é nil nesse momento)", %{

@@ -274,6 +274,15 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "indisponível"))
+
+    # RN-593: o desfecho de `validate_infra_file` vai para o event log pelo
+    # módulo comum dos conversacionais (RN-589) — antes só o `tool.call` ia,
+    # e o Infra Lead reidratado lia "o log não registra o desfecho".
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "validate_infra_file"} = r}}
+
+    assert r.resultado =~ "indisponível"
+    assert Map.has_key?(r, :ok)
   end
 
   test "gate reprovado: :correct reroda os DOIS delegados e propõe de novo", %{state: state} do
@@ -434,6 +443,14 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # Diferente de propose_infra_pr, nenhuma PR consolidada foi aberta.
     refute_received {:propose_action, "open_infra_pr", _, _}
 
+    # RN-593: a proposta aceita pela api deixa `tool.result` com `ok: true` e
+    # o texto que o modelo leu.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "propose_container_start"} = r}}
+
+    assert r.ok == true
+    assert r.resultado =~ "container_start proposto (status pending)"
+
     # A segunda resposta scriptada só é alcançada se o loop CONTINUOU.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "agent.response", payload: %{content: "pronto-cs"}}}
@@ -504,6 +521,14 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # modelo fez continua narrada, mesmo tendo sido recusada localmente.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "tool.call", payload: %{tool: "propose_container_start"}}}
+
+    # E o MOTIVO também (RN-593): recusa local é `ok: false` com o texto.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "propose_container_start"} = r}}
+
+    assert r.ok == false
+    assert r.erro =~ "container_start_via_runner"
+    refute Map.has_key?(r, :resultado)
   end
 
   test "propose_container_start sem broker na instalação: a recusa 409 da api chega ao modelo como TEXTO, não como tupla crua (AT-105)",
@@ -655,6 +680,12 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # Mesmo desenho de `propose_container_start`: sem HALT, o loop continua.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "agent.response", payload: %{content: "pronto-csvr"}}}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "container_start_via_runner"} = r}}
+
+    assert r.ok == true
+    assert r.resultado =~ "container_start_via_runner proposto"
   end
 
   test "projeto runner SEM runner conectado: recusa nomeada, NUNCA chama propose_action", %{
@@ -689,6 +720,12 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # `dispatch_tool/2` genérico.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "tool.call", payload: %{tool: "container_start_via_runner"}}}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "container_start_via_runner"} = r}}
+
+    assert r.ok == false
+    assert r.erro =~ "nenhum runner está conectado"
   end
 
   test "projeto NÃO runner (container): recusa nomeada apontando pra propose_container_start", %{

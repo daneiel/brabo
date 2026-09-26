@@ -1733,7 +1733,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   memória sobre a leitura geral. O `tool.result` dos seis leva o TEXTO que a
   ferramenta devolveu (`resultado`, 2.000 caracteres, `resultadoTotal` quando
   corta — RN-589), montado por `Engine.Agents.ResultadoDeFerramenta`; não grave
-  o evento à mão num servidor.
+  o evento à mão num servidor. O Infra Lead passa pelo mesmo módulo, e o Dev
+  Lead suspenso grava na RETOMADA (`action_settled`), nunca na suspensão
+  (RN-593).
   que o turno termina (RN-460).
 - O clique que dispara turno de agente conversacional responde ao ACEITAR,
   nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
