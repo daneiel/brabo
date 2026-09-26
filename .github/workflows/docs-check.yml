@@ -265,6 +265,16 @@ jobs:
       - name: A referência de API renderiza
         run: node scripts/docs/api-render-check.mjs
 
+      # Mesma classe de buraco, outra página: o link que o hook
+      # `onBrokenMarkdownLinks` reescreve para `pathname://` PULA o checador de
+      # link quebrado, então um prefixo de locale duplicado
+      # (`/pt-BR/pt-BR/...`, 404) passa com o build verde. Foram 441 hrefs em
+      # 56 páginas do site pt-BR até a AT-221. Só o HTML gerado mostra isso.
+      #
+      # Localmente: `pnpm docs:build && node scripts/docs/links-do-locale.mjs`.
+      - name: Nenhum link com o locale duplicado
+        run: node scripts/docs/links-do-locale.mjs
+
   # Links EXTERNOS não entram no PR: site de terceiro fora do ar não pode
   # reprovar o trabalho de ninguém. Vira relatório semanal.
   links-externos:

@@ -100,18 +100,27 @@ interface Rodada {
   codigo: number;
 }
 
-/** Assíncrona: o servidor roda NESTE processo, e `spawnSync` o travaria. */
+/**
+ * Assíncrona: o servidor roda NESTE processo, e `spawnSync` o travaria.
+ *
+ * O `stdin` do filho é `/dev/null` (`'ignore'`), e não um pipe fechado com
+ * `stdin.end('')` (AT-217). O efeito para o script é o mesmo — EOF na primeira
+ * leitura, sem TTY —, mas o pipe tinha uma corrida: com o laço de eventos
+ * atrasado pela carga, o filho saía antes de o `end` ser processado, a escrita
+ * no pipe sem leitor dava `EPIPE`, e o erro sem handler reprovava a rodada com
+ * todos os testes verdes. Sem pipe, não há escrita que possa falhar.
+ */
 function rodar(comandos: string): Promise<Rodada> {
   return new Promise((resolver) => {
     const processo = spawn('bash', ['-c', `source "${carregavel}"\n${comandos}`], {
       env: { ...process.env, NO_COLOR: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
     let stderr = '';
     processo.stdout.setEncoding('utf8').on('data', (p: string) => (stdout += p));
     processo.stderr.setEncoding('utf8').on('data', (p: string) => (stderr += p));
     processo.on('close', (codigo) => resolver({ stdout, stderr, codigo: codigo ?? -1 }));
-    processo.stdin.end('');
   });
 }
 

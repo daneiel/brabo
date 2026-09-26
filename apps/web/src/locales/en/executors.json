@@ -32,7 +32,8 @@
     },
     "autonomy": {
       "manual": "manual",
-      "auto": "auto"
+      "auto": "auto",
+      "autoModeHint": "Auto mode: runs any command, even outside the project folder. Push, PR, deploy, sudo/doas and merges into a protected branch still ask for your approval."
     },
     "rearm": "rearm"
   },

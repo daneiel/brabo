@@ -287,7 +287,11 @@ Two output modes:
 
 **Whole file** — `docs/reference/scripts.md`. There's no prose to
 preserve: the list of commands is the content. It comes from each
-package's `package.json` and the `Makefile`'s annotated targets.
+package's `package.json` and the `Makefile`'s annotated targets. The
+package list is declared in `gerarScripts`, including the two packages
+outside the workspace (`website/`, `e2e/`, run with `--dir`), and a
+`package.json` that is missing or doesn't parse fails generation by
+name — it used to drop the package silently (AT-224).
 
 **Marked block** — the stretch between `<!-- BEGIN:GENERATED:<id> -->`
 and `<!-- END:GENERATED:<id> -->` inside a hand-written file. That's
@@ -414,6 +418,36 @@ The same episode produced the map's `site-e-publicacao` rule:
 `website/**` wasn't covered by any rule, and changing the site config
 didn't demand documentation.
 
+### `links-do-locale.mjs` — a rewritten link skips the broken-link check
+
+The `markdown.hooks.onBrokenMarkdownLinks` hook in
+`website/docusaurus.config.ts` rewrites links that break only because
+of a known translation gap (`reference/`, `adr/`, `explanation/`) to
+`pathname://`. That's Docusaurus's official escape hatch, and escaping
+is the point: **a `pathname://` link is never checked again**, so a
+wrong rewrite can't fail the build.
+
+One did, for the whole pt-BR site (AT-221). The rewrite returned
+`pathname:///pt-BR/<slug>`, but `pathname://` isn't a domain-absolute
+path — `<Link>` passes it through `useBaseUrl`, and the pt-BR build's
+baseUrl already is `/brabo/prd/pt-BR/`. Every rewritten link came out
+as `/brabo/prd/pt-BR/pt-BR/...`: 441 hrefs on 56 pages, all 404, with
+`docs:build` green.
+
+The rewrite now lives in `scripts/docs/links-do-locale.mjs` as a pure
+function with a spec, and returns the bare slug — the locale comes from
+the baseUrl of whichever locale is compiling, and the target page
+exists there (translated, or served by fallback at the same slug). The
+same module, run after `docs:build` in `docs-check.yml`, scans the
+built HTML and fails on any `href` with a doubled locale prefix. A new
+locale goes into `LOCALES_COM_PREFIXO` too, or its duplication passes
+silently.
+
+What the guard does **not** catch: a link whose target doesn't exist
+in the repository at all. The `adr/` exemption also swallows a
+misspelled ADR filename, and the rewrite then points to a slug no
+locale has.
+
 ### Publishing, one site per rung
 
 Each permanent branch publishes to its own spot on the same GitHub
@@ -538,6 +572,7 @@ pnpm docs:start      # local server, with hot reload
 # does the API reference render? needs the build above, and isn't part
 # of docs:check because that one doesn't build the site
 node scripts/docs/api-render-check.mjs
+node scripts/docs/links-do-locale.mjs   # no href with a doubled locale prefix (AT-221)
 ```
 
 Or, if you're in Claude Code, `/sync-docs` runs the whole cycle and

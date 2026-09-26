@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
+  comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
+  ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de
+  caminho (ADR 0055) e o `require_approval` que o comando composto sintetiza
+  por segmento sem regra deixam de pedir aprovação — no `exp001`, 47 de 51
+  pedidos vinham só de citar `/work` ou `/tmp`. Continuam pedindo: push, PR,
+  deploy, `sudo`/`doas`, merge em branch protegida, patch de instrução,
+  paralelismo e remover container; `deny` e `ask` escritos no
+  `permissions.json` seguem valendo, e regra específica do tipo vence a
+  curinga. A nota do `ApprovalCard` (agora também na fila de Aprovações) e o
+  card do agente dizem, antes do clique, o que o modo libera e o que continua
+  pedindo; o toggle "manual" restaura o teto.
+
 - **api**: a pasta `docs/` dos artefatos dos agentes passa a ter caminho de
   volta (AT-128, RN-590). `pnpm --filter api artefatos:reprojetar` (na imagem,
   `node scripts/reprojetar-artefatos.js`, com `--project`/`--after-event`)
@@ -25,6 +38,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vivo e não subiam nada. Agora os quatro só contam como existente um pid VIVO.
   Os testes passaram a abrir essa janela de propósito, com a limpeza do
   Registry suspensa, em vez de esperá-la com `sleep`.
+- **docs**: o runbook em inglês mostra a saída REAL do `rewrap-deks` (AT-222).
+  O exemplo vinha traduzido (`re-wrapped=`, `already on current key=`,
+  `failures=`), mas o script imprime em português (`re-embrulhados=`,
+  `já na chave atual=`, `falhas=`) — quem procurasse `failures=0` na saída não
+  acharia. O bloco passa a ser o texto de `main()` palavra por palavra, com a
+  glosa dos rótulos ao lado e os dois outros desfechos (`nada a fazer` e o de
+  falha, que sai com código 1); a prosa e a tabela de sintomas usam os rótulos
+  reais.
+- **docs**: as regras de negócio em pt-BR dizem o que só existe em inglês
+  (AT-223). Medido: a tradução tem 134 das 282 RNs de `business-rules.md`,
+  91 de 95 em `autenticacao.md` e 69 de 71 em `custo.md` — 154 RNs só em
+  inglês. Cada página pt-BR abre com a nota e a lista, com link para a âncora
+  na versão em inglês (o mesmo molde da AT-209 no runbook). E quatro âncoras
+  pt-BR levavam à regra ERRADA: a tradução numerava 421–424 as regras que o
+  inglês numera 428–431, então `#rn-421` em pt-BR abria outra regra; foram
+  renumeradas para a âncora apontar para a mesma regra nos dois idiomas.
+- **docs**: os links que o site pt-BR reescreve por gap de tradução deixam de
+  dar 404 (AT-221). O hook `onBrokenMarkdownLinks` devolvia
+  `pathname:///pt-BR/<slug>` e o baseUrl do locale acrescentava `/pt-BR` de
+  novo — `href=/brabo/prd/pt-BR/pt-BR/...`, 441 hrefs em 56 páginas, com o
+  `docs:build` verde (`pathname://` pula o checador de link quebrado). A
+  reescrita virou função pura em `scripts/docs/links-do-locale.mjs`, devolve o
+  slug sem prefixo de locale, e o mesmo módulo roda depois do build no
+  `docs-check.yml`, reprovando qualquer `href` com o locale duplicado.
+- **docs**: a referência de scripts gerada passa a listar o `e2e/` (AT-224) —
+  cinco comandos, como `pnpm --dir e2e test`, porque ele é pacote fora do
+  workspace como o `website/` (119 → 124). E um `package.json` que falta ou não
+  parseia deixa de sumir da página em silêncio: `gerarScripts` fazia
+  `catch { continue }`, e agora a geração reprova nomeando o arquivo.
 - **docs**: a referência de scripts gerada passa a listar `apps/runner`,
   `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
   prometia "every pnpm script" e omitia três membros do workspace — 16
