@@ -37,7 +37,8 @@ defmodule Engine.Agents.Conversacionais do
 
   @doc """
   Para, NESTE nó, todo conversacional vivo da sessão. Devolve os prefixos dos
-  que estavam vivos (e foram parados), para o log dizer quem.
+  que ESTA chamada parou — nunca o de uma entrada velha do Registry —, para o
+  log dizer quem.
 
   O turno em curso morre junto: os servidores que usam `TurnoAssincrono`
   abandonam a task no `terminate/2` (sem gravar nada — a sessão já não
@@ -46,9 +47,13 @@ defmodule Engine.Agents.Conversacionais do
   """
   @spec parar_da_sessao(String.t()) :: [String.t()]
   def parar_da_sessao(session_id) do
+    # A lista é de quem ESTE `stop` parou, e não de quem tinha chave no
+    # Registry (AT-204). A limpeza do Registry é ASSÍNCRONA — a partição apaga a
+    # chave quando recebe o EXIT —, então o lookup pode devolver um pid que já
+    # tinha morto, e o log do fechamento diria que parou quem já não estava lá.
     for prefixo <- @prefixos,
-        [{pid, _}] <- [Registry.lookup(Engine.Sessions.Registry, prefixo <> ":" <> session_id)] do
-      parar(pid)
+        [{pid, _}] <- [Registry.lookup(Engine.Sessions.Registry, prefixo <> ":" <> session_id)],
+        parar(pid) == :parado do
       prefixo
     end
   end
@@ -81,18 +86,22 @@ defmodule Engine.Agents.Conversacionais do
     end)
   end
 
+  # `:parado` quando FOI este `stop` que o encerrou (ou o `kill` depois do
+  # teto); `:ja_tinha_saido` quando o processo já não estava lá — uma entrada
+  # velha do Registry, ou uma saída entre o lookup e o stop. As duas deixam a
+  # sessão sem o agente, que é o desfecho pedido; só a primeira entra na lista.
   defp parar(pid) do
     GenServer.stop(pid, {:shutdown, :sessao_encerrada}, @espera_ms)
+    :parado
   catch
-    # Já tinha saído entre o lookup e o stop: é o desfecho pedido.
     :exit, {:noproc, _} ->
-      :ok
+      :ja_tinha_saido
 
     :exit, {:normal, _} ->
-      :ok
+      :ja_tinha_saido
 
     :exit, {:timeout, _} ->
       Process.exit(pid, :kill)
-      :ok
+      :parado
   end
 end
