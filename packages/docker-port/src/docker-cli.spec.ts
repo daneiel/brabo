@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHAMADAS_DE_CONTROLE_NO_START,
   ComandoDeDockerFalhouError,
   DockerCliAusenteError,
   DockerViaCli,
+  PullExcedeuTetoError,
+  TIMEOUT_DE_CONTROLE_MS,
   rodarDockerDeVerdade,
   type ResultadoDoCli,
   type RodarDocker,
@@ -402,26 +405,32 @@ describe('DockerViaCli — falha classificada, nunca stack trace cru', () => {
 });
 
 /**
- * AT-234 — REPRODUÇÃO, vermelha na base `73ba0b2bca` e sem conserto neste
- * commit: o conserto parou no portão da tarefa (o teto de pull que faz
- * sentido prende a requisição de aprovação por mais de ~2 min), e virou
- * decisão do mantenedor.
+ * AT-234 — nasceu como REPRODUÇÃO, vermelha na base `73ba0b2bca`: o pull de
+ * uma imagem ausente acontecia DENTRO do `docker run`, sob o teto de controle
+ * de 30 s, e o estouro saía como "código -1, sem saída de erro" — sem nome, e
+ * com `origem: null` do broker até a api.
+ *
+ * A asserção MUDOU com a decisão do mantenedor (opção D, RN-605): só dar nome.
+ * O pull passa a ser um passo explícito (`image inspect` → `pull`) sob o MESMO
+ * teto de controle; imagem cujo pull passa dele NÃO sobe, e o desfecho é
+ * `PullExcedeuTetoError`, com `origem: 'infra'`. O caso em que o pull cabe no
+ * teto continua subindo.
  *
  * O duplo modela o DAEMON, não a implementação: ele lembra se a imagem está
  * presente, e um `docker run` de imagem AUSENTE faz o pull dentro dele (como o
  * CLI de verdade faz). O tempo é simulado — `rodar` recebe o teto que o
  * adaptador aplicou e responde `timedOut` quando a operação levaria mais que
- * ele —, então o teste não dorme e não depende de rede. Qualquer desenho que
- * suba a imagem (pull explícito com teto próprio, ou outro) o deixa verde; o
- * que ele reprova é o comportamento: uma imagem cujo pull leva 45 s não sobe
- * na primeira tentativa, porque o `run` roda sob o teto de controle de 30 s.
+ * ele —, então o teste não dorme e não depende de rede.
  */
 describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de controle (AT-234)', () => {
-  const PULL_SIMULADO_MS = 45_000;
-
-  function daemonComImagemAusente(): RodarDocker {
+  function daemonComImagemAusente(pullSimuladoMs: number): {
+    rodar: RodarDocker;
+    chamadas: Array<{ args: string[]; timeoutMs: number }>;
+  } {
     let imagemPresente = false;
-    return async (args, timeoutMs) => {
+    const chamadas: Array<{ args: string[]; timeoutMs: number }> = [];
+    const rodar: RodarDocker = async (args, timeoutMs) => {
+      chamadas.push({ args: [...args], timeoutMs });
       const [verbo, sub] = args;
       if (verbo === 'image' && sub === 'inspect') {
         return imagemPresente
@@ -429,12 +438,12 @@ describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de contr
           : { ...OK, exitCode: 1, stderr: `Error: No such image: ${SPEC.imagem}` };
       }
       if (verbo === 'pull') {
-        if (timeoutMs < PULL_SIMULADO_MS) return { ...OK, exitCode: -1, timedOut: true };
+        if (timeoutMs < pullSimuladoMs) return { ...OK, exitCode: -1, timedOut: true };
         imagemPresente = true;
         return OK;
       }
       if (verbo === 'run') {
-        const duracao = imagemPresente ? 1_000 : PULL_SIMULADO_MS;
+        const duracao = imagemPresente ? 1_000 : pullSimuladoMs;
         if (timeoutMs < duracao) return { ...OK, exitCode: -1, timedOut: true };
         imagemPresente = true;
         return comSaida('c0ffeebabe\n');
@@ -442,15 +451,76 @@ describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de contr
       // `ps` vazio (nenhum container) e `version` respondendo (daemon vivo).
       return OK;
     };
+    return { rodar, chamadas };
   }
 
-  it('sobe na PRIMEIRA tentativa, sem que o `run` precise de mais que o teto de controle', async () => {
-    const iniciado = await new DockerViaCli(daemonComImagemAusente()).start(SPEC);
+  it('pull de 45 s NÃO sobe, e o desfecho é NOMEADO — nunca "código -1, sem saída de erro"', async () => {
+    const { rodar, chamadas } = daemonComImagemAusente(45_000);
+
+    const erro = await new DockerViaCli(rodar).start(SPEC).catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(PullExcedeuTetoError);
+    const pull = erro as PullExcedeuTetoError;
+    expect(pull.name).toBe('PullExcedeuTetoError');
+    expect(pull.origem).toBe('infra');
+    expect(pull.imagem).toBe(SPEC.imagem);
+    expect(pull.tetoMs).toBe(TIMEOUT_DE_CONTROLE_MS);
+    // A mensagem diz a imagem, o teto e a CONSEQUÊNCIA inteira.
+    expect(pull.message).toContain(SPEC.imagem);
+    expect(pull.message).toContain(`${TIMEOUT_DE_CONTROLE_MS}ms`);
+    expect(pull.message).toContain('foi cancelado');
+    expect(pull.message).toContain('Imagem grande não sobe por este caminho');
+    expect(pull.message).toContain('Nenhum container foi criado');
+    // O pull rodou sob o MESMO teto de controle (opção D: nada de teto maior),
+    // e nenhum `run` foi tentado depois dele.
+    const doPull = chamadas.find((c) => c.args[0] === 'pull');
+    expect(doPull?.timeoutMs).toBe(TIMEOUT_DE_CONTROLE_MS);
+    expect(chamadas.some((c) => c.args[0] === 'run')).toBe(false);
+  });
+
+  it('pull que estoura com o daemon FORA é daemon fora, não pull longo', async () => {
+    const { rodar: base } = daemonComImagemAusente(45_000);
+    const rodar: RodarDocker = async (args, timeoutMs) =>
+      args[0] === 'version'
+        ? { ...OK, exitCode: 1, stderr: 'Cannot connect to the Docker daemon' }
+        : base(args, timeoutMs);
+
+    await expect(new DockerViaCli(rodar).start(SPEC)).rejects.toThrowError(
+      DockerIndisponivelError,
+    );
+  });
+
+  it('pull que CABE no teto sobe na primeira tentativa, com o pull antes do `run`', async () => {
+    const { rodar, chamadas } = daemonComImagemAusente(20_000);
+
+    const iniciado = await new DockerViaCli(rodar).start(SPEC);
 
     expect(iniciado).toEqual({
       containerId: 'c0ffeebabe',
       nome: 'brabo-exp002-f52be111',
       jaEstavaDePe: false,
     });
+    const verbos = chamadas.map((c) => c.args[0]);
+    expect(verbos.indexOf('pull')).toBeGreaterThan(-1);
+    expect(verbos.indexOf('pull')).toBeLessThan(verbos.indexOf('run'));
+  });
+
+  it('imagem já presente não é baixada de novo', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['image', 'inspect'], entao: comSaida('sha256:abc\n') },
+      { quando: ['run'], entao: comSaida('c0ffeebabe\n') },
+    ]);
+
+    await new DockerViaCli(rodar).start(SPEC);
+
+    expect(chamadas.some((c) => c[0] === 'pull')).toBe(false);
+  });
+
+  it('o pior caso do `start` tem SEIS chamadas de controle em série', () => {
+    // ps gerenciado + ps homônimo + image inspect + pull + run + version. É o
+    // número de que a api (`TETO_DE_MUTACAO_MS`) e o engine derivam os tetos
+    // deles (RN-605); mudou aqui, muda lá.
+    expect(CHAMADAS_DE_CONTROLE_NO_START).toBe(6);
   });
 });

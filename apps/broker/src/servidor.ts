@@ -20,7 +20,10 @@
  * `ComandoDeDockerFalhouError` é o único que NÃO declara origem, e isso é
  * deliberado no ADR 0128: imagem inexistente, disco cheio e nome em uso chegam
  * pelo mesmo canal, e escolher uma origem ali seria adivinhar. A resposta
- * repassa `origem: null` em vez de inventar uma.
+ * repassa `origem: null` em vez de inventar uma. O pull de imagem que estoura
+ * o teto de controle NÃO cai mais nesse resto desde a AT-234 (RN-605): a porta
+ * o faz explícito e o nomeia (`PullExcedeuTetoError`), e aqui ele vira 504 com
+ * origem `infra` — antes chegava como "código -1" com `origem: null`.
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -31,6 +34,7 @@ import {
   DockerCliAusenteError,
   DockerIndisponivelError,
   EspecificacaoInvalidaError,
+  PullExcedeuTetoError,
 } from '@brabo/docker-port';
 import {
   ApiIndisponivelError,
@@ -191,6 +195,12 @@ export function respostaDeErro(erro: unknown): RespostaDoBroker {
   }
   if (erro instanceof ApiIndisponivelError) {
     return { status: 502, corpo: corpo(erro, 'infra') };
+  }
+  if (erro instanceof PullExcedeuTetoError) {
+    // 504: o daemon estava vivo e o download não coube no teto de controle
+    // (AT-234, opção D). A mensagem diz a imagem, o teto e que o pull foi
+    // CANCELADO — imagem grande não sobe por este caminho, declarado.
+    return { status: 504, corpo: corpo(erro, 'infra') };
   }
   if (
     erro instanceof RaizDeWorkspacesNaoConfiguradaError ||
