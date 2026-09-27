@@ -30,6 +30,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api/engine**: comando de terminal com mais de 5 s num projeto
+  `container`/`mounted` com container de pé deixa de falhar como "o broker de
+  container não respondeu" (AT-233, RN-604). O cliente do broker aplicava o
+  teto de 5 s da leitura de tela às cinco operações; agora cada uma tem o
+  dela — `inspect` segue em 5 s, `exec` espera o `timeoutMs` do comando mais
+  a folga do broker, `start`/`stop`/`remove` esperam o pior caso do próprio
+  broker (105 s) —, e o engine, que também cortava aos 15 s do default do
+  Req, espera `timeoutMs` + 90 s. Teto estourado passa a dizer que foi o teto
+  daquela operação (`teto-excedido`), e não que o broker caiu. Continua
+  aberto: pull de imagem de mais de 30 s ainda é cortado pelo broker, e
+  `timeoutMs` acima de ~255 s esbarra nos 300 s do cliente HTTP do Node.
 - **docs**: RN-305 e RN-306 ganham a âncora `{#rn-305}`/`{#rn-306}` que
   faltava, em inglês e na tradução pt-BR, e o `pnpm docs:check` passa a
   reprovar cabeçalho de RN sem âncora ou com âncora de outro número, nos três

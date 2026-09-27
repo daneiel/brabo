@@ -15330,3 +15330,92 @@ runner ao conectar (RN-423).
   quadro criam um; a recusa da api na tela); `apps/web/src/lib/wizard.test.ts:210`
   (`nomeAceitoPelaApi`)
 - **Origem:** AT-215 (teste do dono, 26/09), irmã da AT-214
+
+### RN-604 — A chamada ao broker tem um teto POR OPERAÇÃO, e o teto estourado diz que foi o teto {#rn-604}
+
+O cliente HTTP do broker aplicava UM teto, 5 s, às cinco operações. O
+docblock o justificava pelo caminho de LEITURA de tela ([RN-486](#rn-486)), e
+ele valia também para `exec` — cujo pedido CARREGA o próprio `timeoutMs` — e
+para `start`, que espera o `docker run` e o pull de imagem que ele faz.
+Reproduzido na AT-233: um broker falso que responde um `exec` em 6 s, com
+`timeoutMs` de 8 s, voltava como `BrokerIndisponivelError('sem-resposta')` —
+"o broker de container não respondeu … The operation was aborted due to
+timeout". Ou seja, todo comando de terminal com mais de 5 s num projeto
+`container`/`mounted` com container `running` ([RN-492](#rn-492)) falhava
+dizendo que o broker estava fora do ar, enquanto o comando seguia rodando.
+
+E o engine cortava também: a chamada `container-exec` não passava
+`receive_timeout` e caía no default do Req, 15 s — o MESMO default de
+`TERMINAL_ACTION_TIMEOUT_MS`. Reproduzido com uma api falsa (Bandit) que
+responde em 16 s: `{:error, %Req.TransportError{reason: :timeout}}`. Subir o
+teto só na api não consertaria nada.
+
+A regra:
+
+1. **`inspect` segue curto (5 s)** — é a leitura da `/containers` e da rota
+   de ciclo de vida, e uma tela que espera o pior caso do broker é pior do que
+   uma que declara "não observado".
+2. **`exec` DERIVA do `timeoutMs`** (ou do default de 15 s do broker, quando
+   vem sem ele): contexto do broker (10 s) + `ps` (30 s) + o maior entre o
+   comando e o `docker version` de diagnóstico (30 s) + 5 s de margem. O
+   broker corta o comando em `timeoutMs` e RESPONDE `timedOut: true`; a api
+   tem de estar esperando quando a resposta chega.
+3. **`start`/`stop`/`remove` esperam o pior caso do PRÓPRIO broker**: contexto
+   \+ `ps` + a operação (o `run` com o pull; o `stop` com os 10 s de graça;
+   `rm --force`) + o `docker version` que ele roda quando ela falha, mais a
+   margem — 105 s. Esperar isso é esperar a RESPOSTA do broker, inclusive a
+   recusa nomeada dele.
+4. **O engine espera mais que a api**: `timeoutMs` + 90 s. A cadeia é broker <
+   api < engine, e os testes dos dois lados a conferem (a api espelha a folga
+   do engine como `FOLGA_DO_EXEC_NO_ENGINE_MS`, e o teste do engine lê esse
+   número do fonte da api).
+5. **Teto estourado tem motivo próprio**: `BrokerIndisponivelError` ganha
+   `teto-excedido`, distinto de `sem-resposta` (conexão recusada, DNS), e a
+   mensagem nomeia a operação e o número — e, nas longas, a consequência: o
+   comando pode seguir rodando no container; o `run`/pull pode ter acontecido,
+   então confira `/containers` antes de repetir. Na leitura da tela
+   `teto-excedido` cai no MESMO `naoObservado: 'broker-sem-resposta'` de
+   sempre, com o texto no `detalhe` — nenhum valor novo no DTO.
+
+Os números do outro lado (`TIMEOUT_DE_CONTROLE_MS`,
+`TIMEOUT_DE_EXEC_PADRAO_MS`, o `TIMEOUT_MS` do cliente de contexto do broker)
+são ESPELHADOS em constantes nomeadas, não importados: a api não consome o
+pacote da porta de Docker. Nada muda na contenção do broker ([ADR
+0130](adr/0130-broker-de-container.md)), na `DockerPort` nem na
+[RN-502](#rn-502).
+
+**Declarado, não fechado:**
+
+- **Pull de mais de 30 s continua falhando — no broker.** O `docker run` que
+  faz o pull roda sob o `TIMEOUT_DE_CONTROLE_MS` (30 s) da porta de Docker;
+  a api agora espera a recusa do broker em vez de desistir antes, mas uma
+  imagem grande ainda não sobe na primeira tentativa. Subir esse teto é
+  mudança no pacote da porta de Docker, fora desta regra.
+- **O `fetch` do Node espera cabeçalhos por no máximo 300 s.** Um `exec` com
+  `timeoutMs` acima de ~255 s é cortado pelo undici antes do teto desta regra;
+  o erro sai `teto-excedido` nomeando os 300 s. O salto de fora
+  (`/internal/actions/execute`, api → engine) também não tem teto explícito e
+  cai nos mesmos 300 s, então `TERMINAL_ACTION_TIMEOUT_MS` acima de ~210 s
+  não chega inteiro.
+- **Broker doente no `ps`** (o `docker ps` levando os 30 s inteiros e o
+  diagnóstico outros 30) pode exceder o teto do `exec` com comando curto;
+  sai `teto-excedido`, com o nome certo.
+
+- **Código:**
+  `apps/api/src/infrastructure/http-clients/container-broker.client.ts:215` (`tetoDaOperacao`),
+  `:193` (`TETO_DE_MUTACAO_MS`), `:203` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
+  `:245` (`erroDeTransporte`);
+  `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1572` (`teto_do_container_exec_ms`)
+- **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:258`
+  (a reprodução, contra um broker `node:http` que demora 6 s), `:154` (o
+  teto de cada operação no `AbortSignal`), `:176` e `:201` (`teto-excedido`
+  nomeando operação e número), `:217` (o teto do undici), `:302` (describe
+  `tetoDaOperacao`, incluindo a ordem broker < api < engine);
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts:298`
+  (a tela continua dizendo `broker-sem-resposta`);
+  `apps/api/test/application/use-cases/containers/executar-comando-no-container.use-case.spec.ts:98`;
+  `apps/engine/test/engine/sessions/engine_api_client_container_exec_test.exs:72`
+  (a reprodução do lado do engine, HTTP real com Bandit), `:91` (a folga
+  espelhada na api)
+- **Origem:** AT-233

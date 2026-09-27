@@ -795,6 +795,20 @@ motivo }` is the NORMAL shape for that; the engine turns it into an
 ordinary `failed_result`, same as any other failed command — never a
 crash, never a silent fallback back to `System.cmd` outside the container.
 
+**Each hop waits longer than the one below it**
+([RN-604](../business-rules.md#rn-604)). The broker cuts the command at
+`timeoutMs` and answers `timedOut: true`; the api's call to the broker waits
+`timeoutMs` plus the broker's own overhead (`tetoDaOperacao` in
+`container-broker.client.ts` — at most `timeoutMs` + 45s, 5s for the screen's
+`inspect`, 105s for `start`/`stop`/`remove`); and the engine's call to this
+route passes `receive_timeout: timeoutMs + 90s`
+(`teto_do_container_exec_ms/1`). Before AT-233 the engine fell back to Req's
+15s default — the same number as `TERMINAL_ACTION_TIMEOUT_MS` — and the api
+used 5s for everything, so any command over 5s came back as "the broker did
+not respond". A ceiling that runs out now says so: `motivo` names the
+operation and the number (`teto-excedido`), distinct from an unreachable
+broker.
+
 ### Per-agent context
 
 | method | path |
