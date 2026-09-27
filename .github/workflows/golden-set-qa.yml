@@ -1,0 +1,282 @@
+name: Golden-set do QA (agendado)
+
+# Liga `mix golden_set.qa` (ADR 0123) em CI, AGENDADO e SEMANAL, nunca por PR
+# (ADR 0168, AT-149). Molde: `golden-set-rag.yml` (ADR 0138), mais o que a
+# AT-067 e a AT-076 mediram que este precisa a mais que aquele:
+#
+# - o ENGINE de pé como servidor — é ele quem roda o `npm test` que o QA pede,
+#   chamado pela api em `POST /internal/actions/execute`;
+# - o BROKER de pé, nativo no runner — desde a RN-502 um projeto `container`
+#   sem container `running` não roda comando nenhum, e o seed
+#   (`apps/api/scripts/golden-set-qa-container.ts`) sobe o container de cada
+#   caso pelo caminho de produção. O broker é o ÚNICO processo deste job que
+#   fala com o Docker do runner; api e engine não o tocam;
+# - a MESMA pasta gerenciada nos três lados: api e engine rodam no host, então
+#   `PROJECT_WORKSPACES_ROOT` (api, engine) e `PROJECT_WORKSPACES_HOST_ROOT`
+#   (broker) são o mesmo caminho;
+# - a imagem dos casos puxada ANTES do seed: o `docker run` do broker roda sob
+#   o teto de controle de 30 s da porta de Docker (RN-604, declarado), e um
+#   pull dentro dele é o que não pode acontecer aqui.
+#
+# SEMANAL e não noturno como o do RAG: aquele leva ~20 min e é determinístico
+# (só embedding); este leva 52–86 min medidos (um modelo de chat de 7B em CPU,
+# julgando seis casos) e VARIA entre rodadas — mesmo placar, casos diferentes
+# (docs/explanation/gates.md). Uma rodada por semana mostra a tendência que o
+# piso existe para guardar sem gastar seis horas de runner por semana a mais.
+#
+# `workflow_dispatch` existe para rodar sob demanda depois de mexer no prompt
+# do QA, no seed ou no `floor.json` (que só humano escreve).
+on:
+  schedule:
+    # Sábado, 01:17 UTC (sexta 22:17 em Brasília). Fora das outras janelas:
+    # o RAG roda todo dia às 06:00 e, mesmo no teto de 150 min, este termina
+    # antes; as provas de propriedade são domingo 04:00 e o check de links
+    # externos é segunda 06:00 — dias diferentes, sem disputar a leitura do
+    # resultado. Sábado porque o vermelho fica esperando a semana começar,
+    # e não no meio dela. O minuto 17, e não o 00, porque o `schedule` do
+    # Actions atrasa (e pode descartar) disparos no topo da hora, quando a
+    # fila global enche.
+    - cron: '17 1 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Mesmas versões do ci.yml — arquivo separado, sem `env:` compartilhado
+  # entre workflows.
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+  ELIXIR_VERSION: '1.17.3'
+  OTP_VERSION: '27.1.2'
+
+jobs:
+  golden-set-qa:
+    name: Golden-set do QA (ExUnit, contra Ollama real, container pelo broker)
+    runs-on: ubuntu-latest
+    # 150: as duas rodadas medidas da AT-076 levaram 52 e 86 min, com o mesmo
+    # modelo e o mesmo placar — a variância é do modelo (um caso repetiu
+    # `npm test` 30 vezes antes de terminar `blocked(modelo)`). 86 min + ~75%
+    # de folga cobre uma rodada em que mais de um caso esbarra no teto de 60
+    # iterações do laço sem virar vermelho por relógio, que não é o que este
+    # job mede. O teto só custa quando algo TRAVA; o runner é cobrado pelo que
+    # roda.
+    timeout-minutes: 150
+    services:
+      postgres:
+        # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
+        # ci.yml: as migrations criam a extensão.
+        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+        env:
+          POSTGRES_USER: brabo
+          POSTGRES_PASSWORD: brabo
+          POSTGRES_DB: brabo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brabo -d brabo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      ollama:
+        # MESMA versão pinada de docker/docker-compose.yml — o piso de
+        # `floor.json` é chaveado por MODELO, não por ambiente.
+        image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+        ports:
+          - 11434:11434
+        # Os mesmos do compose de dev: o modelo fica carregado entre os
+        # turnos, e o contexto cabe o prompt do QA com os arquivos lidos.
+        env:
+          OLLAMA_KEEP_ALIVE: 1h
+          OLLAMA_CONTEXT_LENGTH: '16384'
+        options: >-
+          --health-cmd "ollama list || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 15s
+    env:
+      DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
+      OLLAMA_HOST: http://localhost:11434
+      GOLDEN_SET_QA_MODEL: 'qwen2.5-coder:latest'
+      API_URL: http://localhost:3000
+      # Literal de CI, não segredo: api, engine e broker só escutam no
+      # localhost de um runner efêmero.
+      BRABO_SERVICE_TOKEN: golden-set-qa-ci-token-nao-e-segredo
+      PROJECT_WORKSPACES_ROOT: /tmp/brabo-project-workspaces
+      BROKER_URL: http://localhost:8090
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      # SÓ RESTAURA, nunca grava — quem grava esta key é o `test-engine` do
+      # ci.yml (cache do Actions é por repositório, não por workflow).
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Puxar qwen2.5-coder:latest no Ollama do job
+        run: |
+          set -euo pipefail
+          inicio=$(date +%s)
+          curl -fsS --max-time 1200 -X POST http://localhost:11434/api/pull \
+            -d '{"name":"qwen2.5-coder:latest","stream":false}'
+          echo
+          curl -fsS http://localhost:11434/api/tags | grep -q 'qwen2.5-coder:latest' \
+            || { echo "::error::qwen2.5-coder:latest não apareceu em /api/tags depois do pull"; exit 1; }
+          echo "TEMPO pull do modelo: $(( $(date +%s) - inicio ))s"
+
+      # A referência vem do SEED, e não de um literal aqui: ela é a que o seed
+      # propõe ao `container_start`, e um segundo literal que divergisse faria
+      # o job puxar uma imagem e o broker pedir outra — com o pull caindo
+      # dentro do teto de 30 s. Presa por digest do ÍNDICE, com a tag no
+      # próprio nome (`node:<tag>@sha256:…`, ADR 0159).
+      - name: Puxar a imagem do container do golden-set
+        run: |
+          set -euo pipefail
+          imagem=$(sed -nE "s/^[[:space:]]*'(node:[^']+@sha256:[0-9a-f]{64})';$/\1/p" \
+            apps/api/scripts/golden-set-qa-container.ts)
+          [ -n "$imagem" ] \
+            || { echo "::error::IMAGEM_DO_GOLDEN_SET_QA não encontrada (ou sem digest) em apps/api/scripts/golden-set-qa-container.ts"; exit 1; }
+          echo "imagem: $imagem"
+          inicio=$(date +%s)
+          docker pull "$imagem"
+          echo "TEMPO pull da imagem: $(( $(date +%s) - inicio ))s"
+          mkdir -p "$PROJECT_WORKSPACES_ROOT"
+
+      - name: Migrations da api
+        run: pnpm --filter api db:migrate
+
+      - name: Build da api
+        run: pnpm --filter api build
+
+      - name: Subir a api e esperar o /health
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          node dist/main.js > /tmp/api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+              echo "api de pé"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::a api não respondeu em /health depois de 120s"
+          tail -50 /tmp/api.log
+          exit 1
+
+      # Nativo, com o Docker do runner: é o único passo do job que recebe o
+      # daemon. Sem porta publicada nem rede `internal` aqui — as camadas de
+      # contenção do compose não existem num runner efêmero, e o que sobra é
+      # o que o broker aceita (cinco operações, spec computada pela api).
+      - name: Subir o broker (nativo, com o Docker do runner) e esperar o /health
+        working-directory: apps/broker
+        env:
+          PROJECT_WORKSPACES_HOST_ROOT: /tmp/brabo-project-workspaces
+          BROKER_PORT: '8090'
+        run: |
+          set -euo pipefail
+          node src/index.ts > /tmp/broker.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8090/health >/dev/null 2>&1; then
+              echo "broker de pé"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::o broker não respondeu em /health"
+          cat /tmp/broker.log
+          exit 1
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      - name: Compilar com --warnings-as-errors
+        working-directory: apps/engine
+        run: mix compile --warnings-as-errors
+
+      - name: Subir o engine (servidor) e esperar o /health
+        working-directory: apps/engine
+        run: |
+          set -euo pipefail
+          mix ecto.migrate
+          mix phx.server > /tmp/engine.log 2>&1 &
+          for _ in $(seq 1 90); do
+            if curl -fsS http://localhost:4000/health >/dev/null 2>&1; then
+              echo "engine de pé"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::o engine não respondeu em /health depois de 180s"
+          tail -50 /tmp/engine.log
+          exit 1
+
+      # O veredito é o do próprio teste: ele reprova quando os casos que
+      # bateram ficam abaixo do `passRate` de `floor.json` para o modelo
+      # (ratchet, só humano escreve), e reprova quando a api está de pé mas o
+      # seed falha (`ContainerDoGoldenSetNaoSubiuError`, AT-076).
+      - name: mix golden_set.qa
+        working-directory: apps/engine
+        run: |
+          set -o pipefail
+          inicio=$(date +%s)
+          mix golden_set.qa 2>&1 | tee /tmp/golden-qa.log
+          status=$?
+          echo "TEMPO mix golden_set.qa: $(( $(date +%s) - inicio ))s"
+          exit $status
+
+      # Guarda do falso-verde, a mesma do golden-set do RAG: o teste PULA por
+      # desenho quando a api não responde, e numa rodada agendada, que ninguém
+      # está olhando, pular é um verde que não mediu nada. A linha de placar
+      # só é impressa depois de os seis casos rodarem.
+      - name: O golden-set precisa ter RODADO, não pulado
+        run: |
+          set -euo pipefail
+          if ! grep -qE '[0-9]+/[0-9]+ casos bateram o veredito esperado' /tmp/golden-qa.log; then
+            echo "::error::o golden-set NÃO mediu:"
+            grep -E 'NÃO mediu|seed do golden-set|ContainerDoGoldenSet' /tmp/golden-qa.log || true
+            exit 1
+          fi
+          grep -E '✓|✗|casos bateram' /tmp/golden-qa.log
+
+      # O instrumento que não mede tem uma assinatura conhecida (AT-067): todo
+      # `npm test` recusado pela RN-502 e o placar caindo por isso, não pelo
+      # julgamento. Se ela voltar, o vermelho tem de dizer que foi ela.
+      - name: Nenhuma recusa da RN-502 no event log
+        run: |
+          set -euo pipefail
+          n=$(psql "$DATABASE_URL" -tAc "select count(*) from proposed_actions where action_type = 'terminal' and execution_result::text like '%RN-502%'")
+          e=$(psql "$DATABASE_URL" -tAc "select count(*) from session_events where payload::text like '%RN-502%'")
+          echo "terminal recusados pela RN-502: $n; eventos de sessão citando RN-502: $e"
+          [ "$n" = "0" ] && [ "$e" = "0" ] \
+            || { echo "::error::houve recusa da RN-502 — o placar não mede o julgamento do QA"; exit 1; }
+
+      # Os logs só interessam quando algo acima falhou — e aí "api fora",
+      # "broker recusou a subida" e "engine não executou" têm causas
+      # diferentes.
+      - name: Logs da api, do broker e do engine (só em falha)
+        if: failure()
+        run: |
+          echo "--- broker ---"; tail -100 /tmp/broker.log || true
+          echo "--- api ---"; grep -E 'ERROR|WARN|broker|container' /tmp/api.log | grep -v Neo4j | tail -100 || true
+          echo "--- engine ---"; grep -iE 'error|recus|actions/execute|container' /tmp/engine.log | grep -v SELECT | tail -100 || true
+          psql "$DATABASE_URL" -c "select p.name as caso, pa.action_type, pa.status, left(pa.payload->>'command', 40) as cmd, pa.execution_result->>'exitCode' as exit from proposed_actions pa join projects p on p.id = pa.project_id order by p.name, pa.seq;" || true
