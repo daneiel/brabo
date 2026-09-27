@@ -19,7 +19,7 @@ name: Golden-set do QA (agendado)
 #   pull dentro dele é o que não pode acontecer aqui.
 #
 # SEMANAL e não noturno como o do RAG: aquele leva ~20 min e é determinístico
-# (só embedding); este leva 52–86 min medidos (um modelo de chat de 7B em CPU,
+# (só embedding); este leva 14–86 min medidos (um modelo de chat de 7B em CPU,
 # julgando seis casos) e VARIA entre rodadas — mesmo placar, casos diferentes
 # (docs/explanation/gates.md). Uma rodada por semana mostra a tendência que o
 # piso existe para guardar sem gastar seis horas de runner por semana a mais.
@@ -27,9 +27,6 @@ name: Golden-set do QA (agendado)
 # `workflow_dispatch` existe para rodar sob demanda depois de mexer no prompt
 # do QA, no seed ou no `floor.json` (que só humano escreve).
 on:
-  # TEMPORÁRIO (AT-149): prova no branch; sai antes do PR.
-  push:
-    branches: [chore/golden-set-qa-semanal]
   schedule:
     # Sábado, 01:17 UTC (sexta 22:17 em Brasília). Fora das outras janelas:
     # o RAG roda todo dia às 06:00 e, mesmo no teto de 150 min, este termina
