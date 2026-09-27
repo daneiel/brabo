@@ -176,7 +176,7 @@ worse than a `docker compose pull` going stale.
   installed the product, beside their Postgres. In that same file our
   **own** images already arrive by digest, through a variable the
   installer fills — the third-party ones arrived by tag, next to them.
-- `ci.yml` and `golden-set-rag.yml` run third-party images as job
+- `ci.yml`, `golden-set-rag.yml` and `golden-set-qa.yml` run third-party images as job
   `services:`. That is literally the runner the action rule exists to
   protect, reached by the other door.
 
@@ -320,7 +320,7 @@ Declared, not fixed:
   Authenticode), which needs a paid signing identity and stays in
   [the backlog](backlog.md).
 - ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
-  (above): all 37 third-party references — composes, kustomize manifests,
+  (above): all 39 third-party references — composes, kustomize manifests,
   Dockerfile `FROM` lines and the workflow `services:` — are pinned by
   digest with the tag in a comment, and `scripts/ci/imagens-pinadas.ts`
   fails the `lint` job on the next regression. What is **not** closed, and

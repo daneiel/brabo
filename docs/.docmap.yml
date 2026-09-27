@@ -592,6 +592,19 @@ rules:
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no
   # repositório procura isso no getting-started, não num README de pasta.
   #
+  # Os dois golden-sets agendados (ADR 0138, ADR 0168). A cadência, o teto de
+  # tempo e o que faz o job ficar vermelho são decisões escritas em
+  # `gates.md`; um workflow que muda qualquer uma delas sem a página faz a
+  # explicação descrever outro job. `warn`: trocar um SHA de action não muda
+  # nada do que está escrito lá.
+  - id: golden-sets-agendados
+    watch:
+      - ".github/workflows/golden-set-rag.yml"
+      - ".github/workflows/golden-set-qa.yml"
+    docs: ["docs/explanation/gates.md"]
+    severity: warn
+    note: "Mudou a cadência, o teto ou o critério de vermelho de um golden-set agendado? gates.md explica o porquê."
+
   # `warn`, não `block`: spec novo dentro da mesma mecânica (mesmo jeito de
   # subir, mesmo jeito de rodar) não muda nada do que está escrito lá, e
   # cobrar a doc a cada spec ensinaria a usar o escape hatch. O que MUDA a

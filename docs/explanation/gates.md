@@ -288,7 +288,7 @@ reason moved from "no CI can run this" to "this CI doesn't sit on the merge
 path" — `warn` keeps describing exactly what's true, just not the same
 truth it described before.
 
-## The QA golden-set in CI: the clock fits, and since AT-076 the instrument measures
+## The QA golden-set in CI: the clock fits, the instrument measures, and it runs weekly
 
 The golden-set of the QA Automation agent's semantic judgment
 ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) is what
@@ -425,8 +425,59 @@ continues (the job pulls the image first; not measured without it); and the
 engine's heartbeat closed the idle sessions (`heartbeat_timeout`) about
 30 s after the seed, while the QA kept proposing and running commands in
 them (the QA runs in the `mix` process, outside any session process), with
-no visible effect on the round. A scheduled workflow is still not committed: that is
-AT-149, waiting on the owner's cadence.
+no visible effect on the round.
+
+### Scheduled, weekly (AT-149)
+
+On 2026-09-27 the maintainer chose the cadence: **weekly**
+([ADR 0168](../adr/0168-golden-set-do-qa-em-ci-semanal.md)).
+`.github/workflows/golden-set-qa.yml` is the AT-076 design made permanent —
+api, engine and broker native on the runner, only the broker talking to
+Docker, the same managed folder on the three sides — on `schedule` plus
+`workflow_dispatch`, never `pull_request`, the same posture as
+`golden-set-rag.yml`.
+
+Weekly and not nightly like the RAG job, for two measured reasons. The RAG
+run costs ~20 minutes and is deterministic, so yesterday's drop is a real
+drop. This one costs 52 to 86 minutes and **varies**: the two AT-076 runs
+reached the same 3/6 through different cases. A nightly run would spend hours
+of runner a week to read the same trend with more noise; one run a week is
+what the ratchet floor needs to show a fall, and `workflow_dispatch` answers
+right away after a change to the QA prompt or the seed. It runs on Saturday
+at 01:17 UTC: away from the RAG's daily 06:00, the property proofs' Sunday
+04:00 and the external-link check's Monday 06:00; on Saturday so that a red
+run waits for the week to start; at minute 17 because Actions delays, and may
+drop, schedules at the top of the hour. `timeout-minutes` is 150: the 86 min
+measured plus room for a run in which more than one case hits the iteration
+ceiling. That is the model's variance, and the job does not measure the clock.
+
+The verdict is the test's own: below the `passRate` that `floor.json` records
+for the model, ExUnit fails. The workflow only adds two instrument guards —
+the score line must exist (the test skips when the api is down, and a skip in
+an unattended run is a green that measured nothing) and the event log must
+hold no RN-502 refusal (the AT-067 signature) — and on failure it prints the
+logs, as the RAG job does. The image to pre-pull is read from the seed's own
+constant (`IMAGEM_DO_GOLDEN_SET_QA`), not from a second literal: the
+broker's `docker run` runs under the Docker port's 30 s control ceiling
+([RN-604](../business-rules.md#rn-604)), and a job that pulled one image
+while the seed asked for another would put the pull inside that ceiling.
+
+The proof run, with a temporary `push` trigger on the branch removed before
+the PR:
+
+| run | model pull | image pull | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|
+| [36327281774](https://github.com/daneiel/brabo/actions/runs/36327281774) | 15 s | 5 s | 10 min 13 s | 13 min 41 s | 3/6 |
+
+Zero RN-502 refusals in the event log, all six containers `running` before
+the first case. The same 3/6 once more, through yet another set of cases —
+`rf-covered`, `rf-uncovered` and `rf-skipped-test` hit; `rf-single-clean` and
+`rf-mismatched-filename` got `changes_requested` where `approved` was
+expected, and `rf-partial-coverage` was approved with partial coverage. The
+run took a sixth of the AT-076 ones (10 against 48–83 minutes of
+`mix golden_set.qa`): no case this time repeated itself until the iteration
+ceiling. The timeout stays sized by the slowest run measured, not the
+fastest.
 
 ## A gate can be missing from the registry while `fluxo.yml` already assigns it
 

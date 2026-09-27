@@ -3145,3 +3145,32 @@ lacuna ficou MAIOR, de propósito; um processo por máquina é ponto único de
 falha, preço do desenho; e `install --machine` continua sem saber se a chave
 daquela pasta é mesmo de máquina, porque em disco as duas espécies são o mesmo
 arquivo e quem sabe é o servidor
+
+### O golden-set do QA volta a medir e roda agendado, semanal (AT-076/AT-149, ADR 0168)
+
+Duas entregas, uma decisão humana entre elas. A AT-067 tinha medido que o
+relógio cabia num `ubuntu-latest` sem GPU e que o instrumento não media: desde a
+RN-502 o `npm test` de um projeto `container` sem container `running` é
+recusado, e o seed nunca subia um — 0/6 por construção. O mantenedor escolheu o
+"caminho 1" e a AT-076 o entregou: o seed sobe o container de cada caso pelo
+caminho de PRODUÇÃO (`module_map` → roteamento → `container_start` proposto pela
+Infra e aprovado pelo dono → `ExecuteContainerStartUseCase` → broker → `running`
+pela máquina de estados), com `node:24.11.1-bookworm-slim` preso por digest, a
+RN-502 intacta, e container que não sobe virando erro NOMEADO que reprova o
+ExUnit (antes o `{:skip, _}` do corpo passava verde calado). Duas rodadas em CI
+deram 3/6 e 3/6 contra o piso de 1/6, com casos diferentes, em 52 e 86 min de
+job. A AT-149 fechou a cadência: SEMANAL (sábado 01:17 UTC, mais
+`workflow_dispatch`, nunca `pull_request`), em `golden-set-qa.yml`, no molde do
+`golden-set-rag.yml`. Semanal e não noturno porque a rodada custa até 86 min e
+VARIA — o mesmo total por casos diferentes —, e uma por semana basta para o piso
+acusar uma queda. `timeout-minutes: 150` pelo pior caso medido. O veredito é o
+do próprio teste; o workflow acrescenta só duas guardas de INSTRUMENTO (a linha
+de placar tem de existir, e o event log não pode ter recusa da RN-502) e, em
+falha, imprime os logs como o do RAG — sem issue. A imagem a puxar antes do seed
+é LIDA da constante do seed, nunca de um segundo literal, porque o `docker run`
+do broker roda sob o teto de controle de 30 s (RN-604). A rodada de prova, com
+gatilho temporário de `push` removido antes do PR, foi a 36327281774: 3/6 de
+novo, zero recusas da RN-502, 10 min de `mix golden_set.qa` e 13 min 41 s de
+job. Declarado: o broker do CI não tem as cinco camadas do compose, o heartbeat
+fecha as sessões do seed enquanto o QA ainda trabalha nelas (sem efeito
+visível), e PR que mexe no workflow não o executa.
