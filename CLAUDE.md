@@ -168,6 +168,7 @@ estado lido do repositório e não da conversa.
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
+| O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
 
 ## Estado atual e aberto
 
@@ -654,28 +655,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
-- Golden-set de regressão do julgamento semântico do QA de Automação (ADR
-  0123) — o INSTRUMENTO voltou a medir (AT-076, decisão do mantenedor de
-  2026-09-27, "caminho 1"). Desde a RN-502 (ADR 0143) o `npm test` era
-  RECUSADO pelo engine (projeto `container` sem container `running`; o seed,
-  de 2026-08-30, nunca registrava um) e o placar era 0/6 por construção
-  (AT-067, runs 34769447405 e 34770869429). Agora o seed sobe o container de
-  VERDADE pelo caminho de produção (`apps/api/scripts/golden-set-qa-container.ts`:
-  module_map → roteamento → `container_start` proposto pela Infra e APROVADO
-  pelo dono → `ExecuteContainerStartUseCase` → broker → `running` pela máquina
-  de estados), com `node:24.11.1-bookworm-slim` preso por digest, e o
-  `npm test` roda DENTRO dele. A RN-502 ficou intacta — não a afrouxe para
-  "ajudar" o harness. Container que não sobe é erro NOMEADO do seed, e o teste
-  ExUnit REPROVA (antes o `{:skip, _}` do corpo passava verde calado). Medido
-  em CI (runs 36291440108 e 36294037297; a narrativa e os números em
-  `docs/explanation/gates.md`): zero recusas da RN-502, `npm test` `exit 0`
-  no container em 5 e em 6 dos 6 casos, placar 3/6 nas duas (casos
-  diferentes) contra o piso 1/6 — o piso e o modelo NÃO mudaram —, e
-  `mix golden_set.qa` em 48 e 83min (job até 86min). O que segue com dono
-  humano é só a CADÊNCIA de um workflow agendado (AT-149) — o desenho medido
-  fica no histórico do PR, e ele exige broker de pé com o socket, a MESMA
-  pasta gerenciada nos três lados e a imagem puxada antes (a chamada
-  api→broker tem teto de 5s, `start` incluso — declarado, não corrigido)
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
@@ -1152,7 +1131,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é `scripts/dev/install-e2e.spec.ts`, e ele guarda as duas formas de o E2E
   apodrecer calado — o gatilho afrouxado, e uma frase do `install.sh` reescrita
   (que não faz as asserções falharem: faz elas SUMIREM). Mesma decisão, mesmo
-  motivo, do golden-set do RAG (ADR 0138). E ele guarda uma TERCEIRA, medida na
+  motivo, do golden-set do RAG (ADR 0138) e do golden-set do QA
+  (`golden-set-qa.yml`, SEMANAL, ADR 0168 — api, engine e broker nativos no
+  runner, o socket do Docker só no broker, e a imagem dos casos lida do
+  próprio seed, nunca de um segundo literal no workflow). E ele guarda uma TERCEIRA, medida na
   AT-083: o instrumento que não mede. O passo "com TTY" rodava
   `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o
   instalador nunca viu terminal — o comentário afirmava o contrário. Quem roda o
