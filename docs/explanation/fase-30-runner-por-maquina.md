@@ -482,7 +482,7 @@ Declarado nos dois ADRs, e repetido aqui porque é o que dá sentido ao resto:
 - o espelho (RN-515/516/517) e `workspace_create` (RN-532): os dois são por
   projeto e viajam na concessão do `join` daquela conexão
 - o registro normal com verificação de e-mail, e o default `MAIL_TRANSPORT=log`
-- o fluxo de configuração pelo navegador ([ADR 0118](../adr/0118-configuracao-do-runner-pelo-navegador.md))
+- o fluxo de configuração pelo navegador ([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
 
 ## Lacunas que a fase encosta e não resolve
 

@@ -5,10 +5,15 @@
 
 export declare const LOCALES_COM_PREFIXO: string[];
 
-export declare function reescreverLinkDeGap(args: {
-  sourceFilePath: string;
-  url: string;
-}): string;
+export declare function adrExisteNoRepositorio(nomeDoArquivo: string): boolean;
+
+export declare function reescreverLinkDeGap(
+  args: {
+    sourceFilePath: string;
+    url: string;
+  },
+  adrExiste?: (nomeDoArquivo: string) => boolean,
+): string;
 
 export declare function hrefsComLocaleDuplicado(html: string): string[];
 

@@ -7,9 +7,9 @@
   already written there: "when an agent OUTSIDE the fixed handoff pipeline
   needs to be reached by human decision — today that's exactly the Staff's
   case (ADR 0088), reachable only via the internal route"
-- **Direct precedent:** [ADR 0038](0038-hierarquia-de-agentes-por-area.md)
+- **Direct precedent:** [ADR 0038](0038-hierarquia-de-agentes.md)
   (handoff target rule — `assertHandoffTargetAllowed`), [ADR 0088](0088-staff-agente-dormente-para-disparo-automatico.md)
-  (the Staff, the real case that motivated this ADR), [ADR 0087](0087-ux-designer-quinto-agente-conversacional.md)
+  (the Staff, the real case that motivated this ADR), [ADR 0087](0087-ux-designer-agente.md)
   (UX Designer, found addressable by the same investigation)
 
 ## Context

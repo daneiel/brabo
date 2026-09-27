@@ -39,7 +39,7 @@ para poder perguntar. O passo humano é inevitável na tela e evitável ali.
 ### O que trava não é o binário: é a identidade
 
 `brabo-runner service install` existe desde a RN-518
-([ADR 0147](0147-o-agente-local-declara-o-que-sabe-fazer.md) ponto 5) e
+([ADR 0147](0147-agente-local-com-capacidades.md) ponto 5) e
 instala o agente como serviço de usuário (`systemd --user`/`LaunchAgent`).
 Ninguém o chama do `install.sh`, e não é esquecimento: ele precisa de um
 `projectId` e de uma chave de dispositivo, e **na hora da instalação não
@@ -78,7 +78,7 @@ dois que este ADR move.
 
 `runner_device_keys.project_id` é `NOT NULL` (`auth.ts:325-326`), e a chave é
 gerada pelo navegador **dentro da tela de um projeto**
-([ADR 0118](0118-configuracao-do-runner-pelo-navegador.md), RN-464..466,
+([ADR 0118](0118-configuracao-automatica-do-runner-pelo-navegador.md), RN-464..466,
 RN-475). Uma máquina com três projetos em modo `runner` tem três chaves, três
 pastas com `brabo-runner-device-key.jwk.json`, três units de serviço e três
 processos — e a pessoa passou três vezes pelo mesmo fluxo de navegador para
@@ -125,7 +125,7 @@ no start e abre uma conexão por projeto que ela listar.
 
 Ele **pergunta** em vez de varrer a base: a base é do usuário e pode ter pasta
 que não é projeto nenhum, e adivinhar por nome de pasta é a classe de erro que
-o [ADR 0141](0141-a-base-unica-dos-projetos-montados.md) recusou ao proibir
+o [ADR 0141](0141-base-unica-dos-projetos-montados.md) recusou ao proibir
 `PROJECT_WORKSPACES_HOST_DIR` como base.
 
 ### 4. A unit de serviço passa a ser UMA por máquina
@@ -171,7 +171,7 @@ silêncio.
   construção, e este ADR não a muda — só torna o custo dela maior, o que está
   em Consequences.
 - **Qualquer exceção em `decide.ts`.** Os cinco tetos absolutos, o escopo
-  léxico do [ADR 0055](0055-politica-de-terminal.md) e o piso de auto-aprovação
+  léxico do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) e o piso de auto-aprovação
   da RN-493 ficam como estão. Este ADR move identidade, nunca autoridade.
 - **`RunnerReadiness` com flag.** As três pré-condições da RN-507 ficam byte a
   byte, pelo motivo já registrado no ADR 0147 ponto 4: é por uma flag assim

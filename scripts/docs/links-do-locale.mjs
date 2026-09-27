@@ -35,6 +35,22 @@ import { fileURLToPath } from 'node:url';
  */
 export const LOCALES_COM_PREFIXO = ['pt-BR'];
 
+/** Pasta dos ADRs na árvore DEFAULT (`en`), a fonte de verdade dos slugs. */
+const DIR_DE_ADRS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/adr');
+
+/** Nome de arquivo com cara de ADR (`0118-algum-slug.md`). */
+const PADRAO_DE_ADR = /^\d{4}-[^/]+\.md$/;
+
+/**
+ * O ADR com esse nome de arquivo existe na árvore default?
+ *
+ * @param {string} nomeDoArquivo ex.: `0118-configuracao-automatica-do-runner-pelo-navegador.md`
+ * @returns {boolean}
+ */
+export function adrExisteNoRepositorio(nomeDoArquivo) {
+  return existsSync(path.join(DIR_DE_ADRS, nomeDoArquivo));
+}
+
 /**
  * Reescreve um link markdown quebrado por gap CONHECIDO de tradução, ou lança.
  *
@@ -47,10 +63,20 @@ export const LOCALES_COM_PREFIXO = ['pt-BR'];
  * era o defeito da AT-221. Isso também torna a reescrita correta em QUALQUER
  * locale, sem a suposição antiga de "não é en, então é pt-BR".
  *
+ * ALVO COM CARA DE ADR É CONFERIDO ANTES DE TUDO (AT-227). As zonas `adr/` (fonte
+ * ou alvo) cobrem a tradução que atrasa — o ADR existe, só não no locale que
+ * está compilando. Mas a zona olhava só a FORMA do nome (`NNNN-*.md`), e um slug
+ * ERRADO (`0055-politica-de-terminal.md`, que nunca existiu) passava igual: 21
+ * links 404 com o build verde. Agora o nome do arquivo tem de existir em
+ * `docs/adr/`; se não existe em locale nenhum, não é gap, é link quebrado — e
+ * isso vale até para fonte em `adr/`/`reference/`/`explanation/`, porque essas
+ * zonas também engoliriam o mesmo slug errado.
+ *
  * @param {{ sourceFilePath: string, url: string }} args
+ * @param {(nomeDoArquivo: string) => boolean} [adrExiste] injetável para o spec
  * @returns {string} a rota `pathname://` que substitui o link
  */
-export function reescreverLinkDeGap({ sourceFilePath, url }) {
+export function reescreverLinkDeGap({ sourceFilePath, url }, adrExiste = adrExisteNoRepositorio) {
   // `sourceFilePath` chega relativo ao CWD do processo (`website/`), por isso
   // `../docs/reference/...` — nunca comparar com `startsWith` supondo raiz do
   // repo. Uma fonte em `website/i18n/pt-BR/.../current/adr/x.md` e uma em
@@ -66,7 +92,13 @@ export function reescreverLinkDeGap({ sourceFilePath, url }) {
   const fonteEhReferencia = origemRelativaARaiz.startsWith('reference/');
   const alvoEhReferencia = url.includes('/reference/');
   const fonteEhAdr = origemRelativaARaiz.startsWith('adr/');
-  const alvoEhAdr = /(^|\/)\d{4}-[^/]+\.md$/.test(url.split('#')[0]);
+  const nomeDoAlvo = path.posix.basename(url.split('#')[0]);
+  const alvoEhAdr = PADRAO_DE_ADR.test(nomeDoAlvo);
+  if (alvoEhAdr && !adrExiste(nomeDoAlvo)) {
+    throw new Error(
+      `Markdown link quebrado: "${url}" em ${sourceFilePath} aponta para um ADR que não existe em docs/adr/ ("${nomeDoAlvo}"). Corrija o slug do link.`,
+    );
+  }
   const fonteEhExplicacao = origemRelativaARaiz.startsWith('explanation/');
   if (
     !fonteEhReferencia &&

@@ -1142,7 +1142,7 @@ The installer does not stop at the account. Its next step
 ([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) is to
 pair the local agent, and pairing needs a credential — the only one that
 existed was bound to a PROJECT
-([ADR 0118](../adr/0118-configuracao-do-runner-pelo-navegador.md)), in an
+([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)), in an
 installation that has no project yet. Since
 [RN-543](../business-rules.md#rn-543) a machine key is just a device key with
 `project_id NULL`; what was missing was a route that creates one, and

@@ -734,7 +734,7 @@ required.
 | `DEMO_TIMEOUT_MS` | `1800000` (30 min); `900000` in the dev-agent demo | how long the script waits for the run to finish before giving up |
 | `DEMO_ANAMNESE_TIMEOUT_MS` | `900000` (15 min) | the same deadline, for the Anamnesis demo |
 | `DEMO_PSICOLOGO_TIMEOUT_MS` | `600000` (10 min) | the same deadline, for the Psychologist demo |
-| `GOLDEN_SET_QA_MODEL` | `qwen2.5-coder:latest` | the model that `seed-golden-set-qa.ts` records as the judge of the QA golden set ([ADR 0123](../adr/0123-julgamento-semantico-do-qa-de-automacao.md)) |
+| `GOLDEN_SET_QA_MODEL` | `qwen2.5-coder:latest` | the model that `seed-golden-set-qa.ts` records as the judge of the QA golden set ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) |
 
 `NOME`, which the inventory below lists under this source, **is not a
 variable**: it's the literal `process.env.NOME` inside a prompt string in
@@ -745,7 +745,7 @@ name-by-name ignore list is a second place to keep in sync.
 
 ### Browser E2E — `e2e/`
 
-`e2e/` isn't a workspace member ([ADR 0120](../adr/0120-e2e-de-navegador-com-playwright.md)) and runs against the
+`e2e/` isn't a workspace member ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)) and runs against the
 **production compose**, which is why its addresses are the published ports and
 not the dev ones. The credentials are the seed account's — the same ones
 `docker/smoke.sh` creates. The inventory scans every `.ts` under `e2e/`,

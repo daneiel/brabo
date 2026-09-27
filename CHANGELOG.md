@@ -50,6 +50,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   glosa dos rótulos ao lado e os dois outros desfechos (`nada a fazer` e o de
   falha, que sai com código 1); a prosa e a tabela de sintomas usam os rótulos
   reais.
+- **docs**: 23 links para ADR com o nome de arquivo errado deixam de dar 404
+  (AT-227) — ex.: `0055-politica-de-terminal.md`, que nunca existiu (o ADR é
+  `0055-escopo-de-caminho-na-politica-de-terminal.md`). Estavam em seis ADRs,
+  no índice de ADRs, em `architecture.md`, `business-rules.md`, no runbook (os
+  dois idiomas), em `configuration.md`, `internal-api.md` e no recorte da
+  FASE 30, e dois no site pt-BR (índice de ADRs e regras de negócio) que
+  apontavam para `0104-navegacao-de-pasta-local-via-o-runner.md`, tradução
+  órfã do que hoje é o ADR 0107; nos ADRs só o ALVO do link mudou, nunca o
+  texto. A exceção `adr/`
+  do hook `onBrokenMarkdownLinks` olhava só a FORMA do nome (`NNNN-*.md`) e
+  engolia o slug errado com o build verde; agora o alvo com cara de ADR tem de
+  existir em `docs/adr/`, senão o `docs:build` reprova.
 - **docs**: as regras de negócio em pt-BR dizem o que só existe em inglês
   (AT-223). Medido: a tradução tem 134 das 282 RNs de `business-rules.md`,
   91 de 95 em `autenticacao.md` e 69 de 71 em `custo.md` — 154 RNs só em

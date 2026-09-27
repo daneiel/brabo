@@ -185,7 +185,7 @@ projeto contra `process.cwd()`, que dentro do container dela é `/workspace`, e
 não tem como enxergar o seu checkout de verdade. Sem a guarda, clonar o Brabo
 em `$HOME/brabo` e apontar a base para a mesma pasta passa por toda validação e
 faz os agentes de dev rodarem dentro da árvore do próprio produto — a falha que
-o [ADR 0055](adr/0055-escopo-de-caminho-em-comando-de-agente.md) existe para
+o [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) existe para
 impedir.
 
 **Escolha uma pasta dedicada.** Tudo que estiver sob a base é alcançável de

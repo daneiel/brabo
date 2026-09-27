@@ -147,7 +147,9 @@ const config: Config = {
       // (Até a AT-221 a reescrita punha `/pt-BR` por conta própria, supondo
       // "não é en, então é pt-BR", e o baseUrl do locale o repetia.)
       // Qualquer OUTRO link quebrado (fora das zonas de gap conhecidas)
-      // continua reprovando o build.
+      // continua reprovando o build — e, desde a AT-227, também o link cujo
+      // alvo tem cara de ADR mas cujo arquivo não existe em `docs/adr/`
+      // (slug errado não é gap de tradução, é 404 em todo locale).
       onBrokenMarkdownLinks: ({ sourceFilePath, url }) => {
         // O corpo mora em `scripts/docs/links-do-locale.mjs` para ser função
         // PURA com spec. A rota sai SEM prefixo de locale: `pathname://`
