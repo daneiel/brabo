@@ -68,6 +68,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   do hook `onBrokenMarkdownLinks` olhava só a FORMA do nome (`NNNN-*.md`) e
   engolia o slug errado com o build verde; agora o alvo com cara de ADR tem de
   existir em `docs/adr/`, senão o `docs:build` reprova.
+- **docs**: a RN-201 em pt-BR volta a dizer o que vale (AT-229): o colapso da
+  sidebar é só do usuário desde o ADR 0126, e a tradução ainda descrevia o
+  auto-colapso da aba Código — a RN-195, que dizia o mesmo, acompanhou. As
+  RNs pt-BR foram comparadas com a versão em inglês por título E corpo:
+  dezessete só tinham referência velha (`schema.ts` antes da divisão por
+  agregado, componentes antes de `routes/settings/`, linhas de
+  `SessionPage.tsx`, o default `gemma:1b` que virou `gemma3:1b`) e foram
+  corrigidas; as que mudaram de enunciado (seis em `business-rules.md`, nove
+  em `autenticacao.md`, quatro em `custo.md`) passam a ser listadas na nota do topo de cada página, com link
+  para a versão em inglês. A nota de `autenticacao.md` ganhou a RN-603, que
+  só existe em inglês.
 - **docs**: as regras de negócio em pt-BR dizem o que só existe em inglês
   (AT-223). Medido: a tradução tem 134 das 282 RNs de `business-rules.md`,
   91 de 95 em `autenticacao.md` e 69 de 71 em `custo.md` — 154 RNs só em
