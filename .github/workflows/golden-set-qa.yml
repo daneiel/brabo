@@ -27,6 +27,9 @@ name: Golden-set do QA (agendado)
 # `workflow_dispatch` existe para rodar sob demanda depois de mexer no prompt
 # do QA, no seed ou no `floor.json` (que só humano escreve).
 on:
+  # TEMPORÁRIO (AT-149): prova no branch; sai antes do PR.
+  push:
+    branches: [chore/golden-set-qa-semanal]
   schedule:
     # Sábado, 01:17 UTC (sexta 22:17 em Brasília). Fora das outras janelas:
     # o RAG roda todo dia às 06:00 e, mesmo no teto de 150 min, este termina
