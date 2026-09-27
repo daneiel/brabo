@@ -400,3 +400,57 @@ describe('DockerViaCli — falha classificada, nunca stack trace cru', () => {
     }
   });
 });
+
+/**
+ * AT-234 — REPRODUÇÃO, vermelha na base `73ba0b2bca` e sem conserto neste
+ * commit: o conserto parou no portão da tarefa (o teto de pull que faz
+ * sentido prende a requisição de aprovação por mais de ~2 min), e virou
+ * decisão do mantenedor.
+ *
+ * O duplo modela o DAEMON, não a implementação: ele lembra se a imagem está
+ * presente, e um `docker run` de imagem AUSENTE faz o pull dentro dele (como o
+ * CLI de verdade faz). O tempo é simulado — `rodar` recebe o teto que o
+ * adaptador aplicou e responde `timedOut` quando a operação levaria mais que
+ * ele —, então o teste não dorme e não depende de rede. Qualquer desenho que
+ * suba a imagem (pull explícito com teto próprio, ou outro) o deixa verde; o
+ * que ele reprova é o comportamento: uma imagem cujo pull leva 45 s não sobe
+ * na primeira tentativa, porque o `run` roda sob o teto de controle de 30 s.
+ */
+describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de controle (AT-234)', () => {
+  const PULL_SIMULADO_MS = 45_000;
+
+  function daemonComImagemAusente(): RodarDocker {
+    let imagemPresente = false;
+    return async (args, timeoutMs) => {
+      const [verbo, sub] = args;
+      if (verbo === 'image' && sub === 'inspect') {
+        return imagemPresente
+          ? OK
+          : { ...OK, exitCode: 1, stderr: `Error: No such image: ${SPEC.imagem}` };
+      }
+      if (verbo === 'pull') {
+        if (timeoutMs < PULL_SIMULADO_MS) return { ...OK, exitCode: -1, timedOut: true };
+        imagemPresente = true;
+        return OK;
+      }
+      if (verbo === 'run') {
+        const duracao = imagemPresente ? 1_000 : PULL_SIMULADO_MS;
+        if (timeoutMs < duracao) return { ...OK, exitCode: -1, timedOut: true };
+        imagemPresente = true;
+        return comSaida('c0ffeebabe\n');
+      }
+      // `ps` vazio (nenhum container) e `version` respondendo (daemon vivo).
+      return OK;
+    };
+  }
+
+  it('sobe na PRIMEIRA tentativa, sem que o `run` precise de mais que o teto de controle', async () => {
+    const iniciado = await new DockerViaCli(daemonComImagemAusente()).start(SPEC);
+
+    expect(iniciado).toEqual({
+      containerId: 'c0ffeebabe',
+      nome: 'brabo-exp002-f52be111',
+      jaEstavaDePe: false,
+    });
+  });
+});
