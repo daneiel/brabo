@@ -10100,7 +10100,7 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
   `capacidadesDoRunner`); `apps/runner/src/index.ts:1000`
   (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
   `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
-  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:128`
+  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:161`
   (`create_workspace/3`); `apps/engine/lib/engine/runners/capacidades.ex:95`
   (`workspace` no vocabulário, e fora do legado);
   `apps/engine/lib/engine_web/channels/terminal_channel.ex:666`
@@ -15363,8 +15363,11 @@ A regra:
 3. **`start`/`stop`/`remove` esperam o pior caso do PRÓPRIO broker**: contexto
    \+ `ps` + a operação (o `run` com o pull; o `stop` com os 10 s de graça;
    `rm --force`) + o `docker version` que ele roda quando ela falha, mais a
-   margem — 105 s. Esperar isso é esperar a RESPOSTA do broker, inclusive a
-   recusa nomeada dele.
+   margem. Esperar isso é esperar a RESPOSTA do broker, inclusive a recusa
+   nomeada dele. A conta nasceu com 105 s e esquecia o SEGUNDO `ps` do
+   `resolver` (o gerenciado e o homônimo): o pior caso real era 130 s. Desde a
+   [RN-605](#rn-605) ela conta as seis chamadas de controle do `start` e dá
+   195 s.
 4. **O engine espera mais que a api**: `timeoutMs` + 90 s. A cadeia é broker <
    api < engine, e os testes dos dois lados a conferem (a api espelha a folga
    do engine como `FOLGA_DO_EXEC_NO_ENGINE_MS`, e o teste do engine lê esse
@@ -15386,11 +15389,11 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
 
 **Declarado, não fechado:**
 
-- **Pull de mais de 30 s continua falhando — no broker.** O `docker run` que
-  faz o pull roda sob o `TIMEOUT_DE_CONTROLE_MS` (30 s) da porta de Docker;
-  a api agora espera a recusa do broker em vez de desistir antes, mas uma
-  imagem grande ainda não sobe na primeira tentativa. Subir esse teto é
-  mudança no pacote da porta de Docker, fora desta regra.
+- **Pull de mais de 30 s continua falhando — no broker.** O pull roda sob o
+  `TIMEOUT_DE_CONTROLE_MS` (30 s) da porta de Docker, e uma imagem grande não
+  sobe na primeira tentativa. Desde a [RN-605](#rn-605) o estouro tem NOME
+  (`PullExcedeuTetoError`, origem `infra`) em vez de "código -1" com
+  `origem: null`; o teto em si não subiu, por decisão do mantenedor.
 - **O `fetch` do Node espera cabeçalhos por no máximo 300 s.** Um `exec` com
   `timeoutMs` acima de ~255 s é cortado pelo undici antes do teto desta regra;
   o erro sai `teto-excedido` nomeando os 300 s. O salto de fora
@@ -15402,15 +15405,15 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   sai `teto-excedido`, com o nome certo.
 
 - **Código:**
-  `apps/api/src/infrastructure/http-clients/container-broker.client.ts:215` (`tetoDaOperacao`),
-  `:193` (`TETO_DE_MUTACAO_MS`), `:203` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
-  `:245` (`erroDeTransporte`);
+  `apps/api/src/infrastructure/http-clients/container-broker.client.ts:240` (`tetoDaOperacao`),
+  `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
+  `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1572` (`teto_do_container_exec_ms`)
-- **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:258`
-  (a reprodução, contra um broker `node:http` que demora 6 s), `:154` (o
-  teto de cada operação no `AbortSignal`), `:176` e `:201` (`teto-excedido`
-  nomeando operação e número), `:217` (o teto do undici), `:302` (describe
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1606` (`teto_do_container_exec_ms`)
+- **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
+  (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
+  teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
+  nomeando operação e número), `:245` (o teto do undici), `:330` (describe
   `tetoDaOperacao`, incluindo a ordem broker < api < engine);
   `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts:298`
   (a tela continua dizendo `broker-sem-resposta`);
@@ -15419,3 +15422,91 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   (a reprodução do lado do engine, HTTP real com Bandit), `:91` (a folga
   espelhada na api)
 - **Origem:** AT-233
+
+### RN-605 — O pull de imagem é um passo NOMEADO do `start`, sob o teto de controle, e o estouro diz que imagem grande não sobe {#rn-605}
+
+O `start` da porta de Docker não fazia pull: o `docker run` fazia, por dentro,
+sob o `TIMEOUT_DE_CONTROLE_MS` (30 s). Reproduzido na AT-234 com um duplo do
+daemon (imagem ausente, pull de 45 s, sem dormir e sem rede): o estouro saía
+como `ComandoDeDockerFalhouError` — "`docker run …` terminou com código -1:
+(sem saída de erro)" —, virava 502 com `origem: null` no broker e chegava à api
+sem nome. E matar o CLI CANCELA o pull (medido no Docker 29.8.0, containerd):
+a imagem continuou ausente nos 60 s seguintes, então a frase "o pull pode
+seguir no daemon" não valia.
+
+Das quatro saídas medidas (teto próprio de ~300 s, `start` assíncrono, pull
+antecipado na decisão de imagem, só dar nome), o mantenedor decidiu a **D —
+só dar nome** (2026-09-27). A regra:
+
+1. **O pull é explícito.** Antes do `run`, `image inspect`; imagem presente
+   não é baixada de novo (o mesmo `--pull missing` do `run`). Ausente, `docker
+   pull` sob o MESMO teto de controle de 30 s — nenhum teto maior.
+2. **O estouro tem nome.** `PullExcedeuTetoError`, origem `infra`, com a
+   imagem, o teto e a consequência inteira: o pull foi cancelado, a imagem
+   continua ausente, imagem grande não sobe por este caminho, e o conserto é
+   baixá-la antes no host. Antes de afirmar isso, o adaptador confere o daemon
+   (`docker version`): daemon fora continua sendo `DockerIndisponivelError`.
+   Pull que falha por outro motivo segue o caminho de sempre
+   (`ComandoDeDockerFalhouError`, sem origem, ADR 0128).
+3. **O nome atravessa.** O broker responde 504 com `origem: 'infra'`, e a api
+   o repassa em `BrokerRecusouError` — `origem` preenchida, nunca `null`. No
+   modo `runner` o mesmo adaptador roda na máquina do usuário e a mensagem
+   chega no `container_start_result`.
+4. **Os tetos de quem espera o `start` contam o pior caso inteiro**: os dois
+   `ps` de `resolver`, `image inspect`, `pull`, `run` e o `docker version` de
+   diagnóstico — seis chamadas de controle (`CHAMADAS_DE_CONTROLE_NO_START`).
+   A api espera 10 + 6 × 30 + 5 = **195 s** (`TETO_DE_MUTACAO_MS`); o engine,
+   no `RunnerRouter`, 6 × 30 + 5 = **185 s** no `start` e 4 × 30 + 5 =
+   **125 s** no `stop`/`remove` (eram 60 s, menos que o `resolver` mais a
+   operação).
+5. **O `propose_action` do engine espera a execução que a api faz dentro
+   dele.** `container_start`, `container_start_via_runner` e `container_stop`
+   auto-aprovados são EXECUTADOS na mesma requisição
+   (`ProposeActionUseCase`), e a chamada caía no default de 15 s do Req — um
+   `start` longo voltava como timeout de transporte mesmo sem pull. Agora ela
+   leva `receive_timeout` de **225 s** (o teto da api + 30 s), espelhado na api
+   como `TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`; os testes dos dois
+   lados conferem broker < api < engine e runner < engine. `container_remove`
+   fica fora: nunca nasce auto-aprovado.
+
+Nenhuma dependência nova ([ADR 0128](adr/0128-porta-de-docker-e-a-prova-de-empacotamento.md)), nenhum campo
+que o chamador escreva ([ADR 0130](adr/0130-broker-de-container.md)): a imagem
+continua vindo da decisão do Arquiteto, e `pull` não é operação nova do broker
+— é um passo do `start`.
+
+**Declarado, não fechado:**
+
+- **Imagem grande não sobe na primeira tentativa**, pelo broker nem pelo
+  runner — decisão D do mantenedor. O desfecho agora é nomeado; o conserto é
+  baixar a imagem antes no host.
+- **No pior caso de falha, a aprovação fica presa por até ~195 s**:
+  `ExecuteContainerStartUseCase` roda dentro do `POST` de aprovação, e nem a
+  web nem o servidor HTTP têm teto próprio.
+- Não foi medido se as camadas baixadas antes do cancelamento são
+  reaproveitadas na tentativa seguinte.
+
+- **Código:**
+  `packages/docker-port/src/docker-cli.ts:192` (`PullExcedeuTetoError`),
+  `:482` (`garantirImagem`), `:115` (`CHAMADAS_DE_CONTROLE_NO_START`),
+  `:106` (`TIMEOUT_DE_CONTROLE_MS`);
+  `apps/broker/src/servidor.ts:199` (`PullExcedeuTetoError`);
+  `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
+  `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
+  `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1555` (`opcoes_do_propose_action`),
+  `:1543` (`@teto_do_propose_action_de_container_ms`);
+  `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
+  reprodução, "(AT-234)": o pull de 45 s termina NOMEADO, `:457`; daemon fora
+  continua daemon fora, `:481`; o pull que cabe sobe, `:493`; imagem presente
+  não é baixada, `:508`; as seis chamadas, `:520`);
+  `apps/broker/src/servidor.spec.ts:317` (504 com origem `infra`);
+  `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:144`
+  (chega com `origem`), `:362` e `:377` (a conta e a ordem);
+  `apps/runner/src/index-handlers.spec.ts:420` (o nome no
+  `container_start_result`);
+  `apps/engine/test/engine/sessions/engine_api_client_propose_action_test.exs:67`
+  (HTTP real: a api que demora 16 s é esperada), `:82` e `:95` (as ações e a
+  ordem, lendo o espelho da api);
+  `apps/engine/test/engine/runners/runner_router_test.exs:183`
+- **Origem:** AT-234

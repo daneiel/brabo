@@ -30,13 +30,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **broker/runner/api/engine**: o pull de imagem que passa do teto de controle
+  deixa de falhar calado (AT-234, RN-605). O `start` da porta de Docker faz o
+  pull como passo explícito (`image inspect`, depois `docker pull` sob o mesmo
+  teto de 30 s) em vez de deixá-lo dentro do `docker run`, e o estouro vira
+  `PullExcedeuTetoError`: diz a imagem, o teto, que o pull foi cancelado e que
+  imagem grande não sobe por este caminho. O broker responde 504 com
+  `origem: 'infra'` (antes: 502, "código -1, sem saída de erro",
+  `origem: null`), e no modo `runner` a mesma mensagem chega no resultado do
+  `container_start`. A imagem grande continua sem subir na primeira tentativa,
+  por decisão declarada: o conserto é baixá-la antes no host. Junto, os tetos
+  de quem espera o `start` passam a contar o pior caso inteiro (os dois `ps`,
+  `image inspect`, `pull`, `run` e o `docker version` de diagnóstico): a api
+  espera 195 s (eram 105 s, e a conta esquecia um `ps`), o `RunnerRouter` do
+  engine 185 s no `start` e 125 s no `stop`/`remove` (eram 60 s), e o
+  `propose_action` do engine, que caía nos 15 s do Req, espera 225 s quando a
+  api executa ali mesmo um `container_start`, `container_start_via_runner` ou
+  `container_stop` auto-aprovado.
 - **api/engine**: comando de terminal com mais de 5 s num projeto
   `container`/`mounted` com container de pé deixa de falhar como "o broker de
   container não respondeu" (AT-233, RN-604). O cliente do broker aplicava o
   teto de 5 s da leitura de tela às cinco operações; agora cada uma tem o
   dela — `inspect` segue em 5 s, `exec` espera o `timeoutMs` do comando mais
   a folga do broker, `start`/`stop`/`remove` esperam o pior caso do próprio
-  broker (105 s) —, e o engine, que também cortava aos 15 s do default do
+  broker (105 s; 195 s desde a AT-234) —, e o engine, que também cortava aos 15 s do default do
   Req, espera `timeoutMs` + 90 s. Teto estourado passa a dizer que foi o teto
   daquela operação (`teto-excedido`), e não que o broker caiu. Continua
   aberto: pull de imagem de mais de 30 s ainda é cortado pelo broker, e

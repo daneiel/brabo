@@ -168,6 +168,7 @@ estado lido do repositório e não da conversa.
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
+| O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |
 | O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
 
 ## Estado atual e aberto
@@ -607,10 +608,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - A chamada ao broker tem teto POR OPERAÇÃO desde a RN-604 (`tetoDaOperacao`,
   `container-broker.client.ts`), e a cadeia do `exec` é broker < api <
   engine — mexer no teto de um salto sem o de cima reabre o defeito, e os
-  testes dos dois lados conferem a ordem. Segue aberto: o pull de imagem no
-  `start` é cortado aos 30s pelo `TIMEOUT_DE_CONTROLE_MS` da porta de Docker
-  (o broker recusa nomeando; a api não desiste mais antes), e `timeoutMs`
-  acima de ~255s esbarra nos 300s de cabeçalhos do `fetch` do Node
+  testes dos dois lados conferem a ordem. Segue aberto, por DECISÃO do
+  mantenedor (AT-234, opção D, RN-605): imagem grande não sobe na primeira
+  tentativa. O pull é passo explícito do `start` (`image inspect` → `pull`)
+  sob o MESMO `TIMEOUT_DE_CONTROLE_MS` de 30s, e o estouro é
+  `PullExcedeuTetoError` (504, origem `infra`) — antes saía "código -1" com
+  `origem: null`. Matar o CLI CANCELA o pull (medido): a imagem NÃO segue
+  baixando por trás. Não suba o teto de passagem: as outras três saídas
+  (teto próprio, `start` assíncrono, pull antecipado) foram medidas e
+  recusadas. Os tetos de quem espera o `start` contam as SEIS chamadas de
+  controle (`CHAMADAS_DE_CONTROLE_NO_START`): 195s na api, 185s no
+  `RunnerRouter`, 225s no `propose_action` do engine para as ações de
+  container que a api executa auto-aprovadas. E `timeoutMs` acima de ~255s
+  esbarra nos 300s de cabeçalhos do `fetch` do Node
 
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter

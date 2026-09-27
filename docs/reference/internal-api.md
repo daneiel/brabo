@@ -800,7 +800,7 @@ crash, never a silent fallback back to `System.cmd` outside the container.
 `timeoutMs` and answers `timedOut: true`; the api's call to the broker waits
 `timeoutMs` plus the broker's own overhead (`tetoDaOperacao` in
 `container-broker.client.ts` — at most `timeoutMs` + 45s, 5s for the screen's
-`inspect`, 105s for `start`/`stop`/`remove`); and the engine's call to this
+`inspect`, 195s for `start`/`stop`/`remove` — [RN-605](../business-rules.md#rn-605)); and the engine's call to this
 route passes `receive_timeout: timeoutMs + 90s`
 (`teto_do_container_exec_ms/1`). Before AT-233 the engine fell back to Req's
 15s default — the same number as `TERMINAL_ACTION_TIMEOUT_MS` — and the api
