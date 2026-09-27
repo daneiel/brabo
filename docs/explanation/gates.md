@@ -288,7 +288,7 @@ reason moved from "no CI can run this" to "this CI doesn't sit on the merge
 path" — `warn` keeps describing exactly what's true, just not the same
 truth it described before.
 
-## The QA golden-set in CI: the clock fits, the instrument doesn't measure
+## The QA golden-set in CI: the clock fits, and since AT-076 the instrument measures
 
 The golden-set of the QA Automation agent's semantic judgment
 ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) is what
@@ -338,13 +338,95 @@ That is why no `golden-set-qa.yml` was committed. A scheduled workflow
 that is red on every run for a reason unrelated to what it measures is
 worse than none — background red teaches people to ignore red. The design
 that was measured stays in the repository history (the workflow as of
-commit `e7d7d1b16`, including a temporary diagnostic step), ready for when
-the harness can measure again. Making it measure again means deciding how
-the golden-set runs the suite under RN-502 — a real container brought up
-through the broker by the seed, or something else — and that is a
-decision for a human. Relaxing the refusal so the harness passes is not
-one of the options: it would weaken the isolation RN-502 exists for, to
-make a test pass.
+commit `e7d7d1b16`, including a temporary diagnostic step). Making it
+measure again meant deciding how the golden-set runs the suite under
+RN-502, and that was a decision for a human. Relaxing the refusal so the
+harness passes was never one of the options: it would weaken the
+isolation RN-502 exists for, to make a test pass.
+
+### The decision, and the second measurement (AT-076)
+
+On 2026-09-27 the maintainer chose the first path: **the seed brings up a
+real container through the broker and registers it `running`, by the
+production path.** RN-502 is untouched; what changed is that the seed now
+satisfies its precondition. For each case, after cloning the skeleton into
+the project's managed folder, `apps/api/scripts/golden-set-qa-container.ts`
+walks the same use cases a real project walks, in its own `consultiva`
+session: `CreateModuleMapUseCase` (one module), `RouteModulesToInfraUseCase`
+(one candidate image), `ProposeActionUseCase` for `container_start` with
+actor `agent/infra`, and `ApproveActionUseCase` as the project owner. The
+approval runs `ExecuteContainerStartUseCase`, which records the election as
+a new `artifact.project_image` through `DecidirImagemDoProjetoUseCase` (so
+`validarDecisaoDeImagem` judges the image), calls `ContainerBrokerPort.start`
+and registers `provisioning → running` through the state machine. The seed
+proposes and approves instead of calling the execution use case directly
+because two rules live on the proposal side — the named 409
+`sem_broker_na_instalacao` ([RN-591](../business-rules.md#rn-591)) and
+`decide()`'s policy for `container_start` — and a harness that skipped them
+would stop following production the day either changed.
+
+The image is `node:24.11.1-bookworm-slim`, pinned by the multi-platform
+index digest in the seed (the ADR 0159 rule, although that file sits outside
+the trees `imagens-pinadas.ts` scans). Debian rather than Alpine because the
+broker keeps the container alive with `sleep infinity`. The geometry that
+makes the three sides see the same code: the worktree **is** the managed
+project folder (`projectScopeRoot`), the broker mounts
+`<PROJECT_WORKSPACES_HOST_ROOT>/<workspace_dir_name>` at `/work`, and the
+engine translates the QA's `cwd` into `/work` before the `exec`. In the CI
+job the api, the engine and the broker all run natively on the runner, so
+`PROJECT_WORKSPACES_ROOT` (api, engine) and `PROJECT_WORKSPACES_HOST_ROOT`
+(broker) are the same path; the broker is the only process that talks to
+Docker.
+
+A case whose container does not come up now fails the seed with
+`ContainerDoGoldenSetNaoSubiuError`, naming the step and the reason the
+product gave, and the ExUnit module **fails** when the api is up but the
+seed fails. Before, it returned `{:skip, _}` from the test body — which
+ExUnit does not treat as a skip: the test passed, green, having measured
+nothing.
+
+Measured with a temporary `push`-triggered workflow on the branch (removed
+before the PR, as AT-067 did):
+
+| run | model pull | image pull | container up (proposal → executed) | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|---|
+| [36291440108](https://github.com/daneiel/brabo/actions/runs/36291440108) | 15 s | 6 s | 0.20–0.28 s per case | 48 min 29 s | 52 min 38 s | 3/6 |
+| [36294037297](https://github.com/daneiel/brabo/actions/runs/36294037297) | 15 s | 6 s | 0.22–0.30 s per case | 83 min 16 s | 86 min 16 s | 3/6 |
+
+Against the three criteria, in both runs: the event log has **zero** RN-502
+refusals (no terminal action and no session event mentions it); `npm test`
+ran inside the container with `exit 0` in five of the six cases in the first
+run and in all six in the second (the gaps are empty `command`s the broker
+refused by name — the model unreliability ADR 0123 already recorded); and
+the score is reported as it came, 3/6 twice, against the floor of 1/6.
+
+| case | expected | 36291440108 | 36294037297 |
+|---|---|---|---|
+| `rf-covered` | approved | ✓ approved | ✓ approved |
+| `rf-uncovered` | changes_requested | ✓ changes_requested | ✓ changes_requested |
+| `rf-single-clean` | approved | ✗ changes_requested | ✗ `blocked(modelo)` |
+| `rf-mismatched-filename` | approved | ✗ changes_requested | ✓ approved |
+| `rf-partial-coverage` | changes_requested | ✗ `blocked(modelo)` | ✗ `blocked(modelo)` |
+| `rf-skipped-test` | changes_requested | ✓ changes_requested | ✗ approved |
+
+Same total, different cases: the misses are now the model's judgment and its
+variance, which is what the golden-set exists to measure — `rf-skipped-test`
+approved once, counting a `test.skip` as coverage, and `rf-single-clean` ran
+`npm test` 30 times in the second run before ending `blocked(modelo)`.
+
+The runs got longer (48 and 83 min against 19–23 min) because the cases now
+do the work: they read files and reason about coverage instead of stopping
+at the refusal, and a case that repeats itself now repeats real
+executions. A scheduled job needs a `timeout-minutes` above the 86 min seen
+here. Two things were seen and not changed here: the api→broker call has
+a 5 s ceiling for every operation, `start` included, so a `container_start`
+whose image is not yet in the daemon would time out while the pull
+continues (the job pulls the image first; not measured without it); and the
+engine's heartbeat closed the idle sessions (`heartbeat_timeout`) about
+30 s after the seed, while the QA kept proposing and running commands in
+them (the QA runs in the `mix` process, outside any session process), with
+no visible effect on the round. A scheduled workflow is still not committed: that is
+AT-149, waiting on the owner's cadence.
 
 ## A gate can be missing from the registry while `fluxo.yml` already assigns it
 
