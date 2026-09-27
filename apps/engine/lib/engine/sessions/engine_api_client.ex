@@ -1545,8 +1545,32 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       |> por_se_presente(:cwd, cwd)
       |> por_se_presente(:timeoutMs, timeout_ms)
 
-    post_returning("/internal/projects/#{project_id}/container-exec", corpo)
+    post_returning("/internal/projects/#{project_id}/container-exec", corpo,
+      receive_timeout: teto_do_container_exec_ms(timeout_ms)
+    )
   end
+
+  # AT-233 (RN-604). O comando atravessa engine -> api -> broker, e cada salto
+  # tem de esperar MAIS que o de baixo: o broker corta em `timeout_ms`, a api
+  # espera `timeout_ms` + contexto + `ps` + margem (`tetoDaOperacao` em
+  # `container-broker.client.ts`, no máximo `timeout_ms` + 45s), e este lado
+  # espera `timeout_ms` + 90s. Sem isso a chamada caía no default do Req (15s)
+  # — o MESMO número de `TERMINAL_ACTION_TIMEOUT_MS` —, e o desfecho honesto
+  # (`timedOut: true` do broker, ou a recusa nomeada da api) chegava a ninguém.
+  # A api espelha este número como `FOLGA_DO_EXEC_NO_ENGINE_MS`, e os testes
+  # dos dois lados conferem a ordem.
+  @folga_do_exec_no_container_ms 90_000
+
+  # O broker usa 15s quando o pedido vem sem `timeoutMs`
+  # (`TIMEOUT_DE_EXEC_PADRAO_MS`, `packages/docker-port/src/docker-cli.ts`).
+  @exec_padrao_do_broker_ms 15_000
+
+  @doc false
+  def teto_do_container_exec_ms(nil),
+    do: teto_do_container_exec_ms(@exec_padrao_do_broker_ms)
+
+  def teto_do_container_exec_ms(timeout_ms) when is_integer(timeout_ms),
+    do: timeout_ms + @folga_do_exec_no_container_ms
 
   @impl true
   def rag_search(project_id, query, top_k, opts \\ []) do

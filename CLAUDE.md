@@ -167,6 +167,7 @@ estado lido do repositório e não da conversa.
 | A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
+| O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
 
 ## Estado atual e aberto
 
@@ -602,6 +603,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
   dentro do request HTTP — a api não tem fila própria; corte declarado,
   candidato a ADR quando o volume de pulls justificar (ADR 0115)
+- A chamada ao broker tem teto POR OPERAÇÃO desde a RN-604 (`tetoDaOperacao`,
+  `container-broker.client.ts`), e a cadeia do `exec` é broker < api <
+  engine — mexer no teto de um salto sem o de cima reabre o defeito, e os
+  testes dos dois lados conferem a ordem. Segue aberto: o pull de imagem no
+  `start` é cortado aos 30s pelo `TIMEOUT_DE_CONTROLE_MS` da porta de Docker
+  (o broker recusa nomeando; a api não desiste mais antes), e `timeoutMs`
+  acima de ~255s esbarra nos 300s de cabeçalhos do `fetch` do Node
 
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
