@@ -30,6 +30,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: RN-305 e RN-306 ganham a âncora `{#rn-305}`/`{#rn-306}` que
+  faltava, em inglês e na tradução pt-BR, e o `pnpm docs:check` passa a
+  reprovar cabeçalho de RN sem âncora ou com âncora de outro número, nos três
+  arquivos de RN e nas traduções pt-BR deles (AT-230). Havia 451 cabeçalhos e 449
+  âncoras, e nada reprovava: sem a âncora o site compila com um id tirado do
+  título, e quem quebra é o link `#rn-305` escrito depois.
 - **engine**: reerguer um agente logo depois de ele morrer deixa de depender de
   o Registry já ter limpado a chave (AT-204). O Registry apaga a chave de forma
   assíncrona (medido: em ~2% das vezes ela ainda está lá logo depois de

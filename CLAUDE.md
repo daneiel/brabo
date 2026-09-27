@@ -2023,7 +2023,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (nunca reinicie por arquivo) e para a mesma contagem, que o docs:check afere
   somando os três por glob. Âncora `{#rn-NNN}` é o contrato: ela não muda
   quando uma RN muda de arquivo, e link de fora aponta para o arquivo que a
-  hospeda hoje.
+  hospeda hoje. Cabeçalho de RN sem ela, ou com outro número, REPROVA o
+  `docs:check` — nos três arquivos e nas traduções pt-BR deles
+  (`scripts/docs/ancoras-de-rn.mjs`, AT-230): o `docs:build` não pega, porque
+  sem âncora o Docusaurus gera um id pelo título e compila.
 - TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
   "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
   O gatilho é o mesmo do docmap, e o motivo é que este arquivo é o único

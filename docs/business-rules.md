@@ -2666,7 +2666,7 @@ pendência já documentada em RN-086: o mesmo sinal que faria a Anamnese
 propor subir o teto de paralelismo é o que faria ela propor um handoff ao
 Staff, e nenhum dos dois dispara enquanto ela estiver pausada.
 
-### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1`
+### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1` {#rn-305}
 
 `USER_STARTED_AGENTS` (`apps/api/src/domain/sessions/agent-activation.ts`) é
 a exceção do Criativo (inicia SEM handoff, por comando do usuário) — o Staff
@@ -2712,7 +2712,7 @@ existe), ao contrário de po/arquiteto/dev-lead/infra.
   `user_message`)
 - **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
 
-### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action`
+### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action` {#rn-306}
 
 `Engine.Agents.StaffTools.propose_rfc`
 (`apps/engine/lib/engine/agents/staff_tools.ex:41`) é a única ferramenta do

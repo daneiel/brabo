@@ -232,6 +232,39 @@ that, **273 references match the pattern, 273 are correct, and 0 are
 wrong**. The four weeks start when that change reaches `dev`. The
 severity stays `warn` until then.
 
+### Every RN heading carries its anchor
+
+The `{#rn-NNN}` anchor on an RN heading is the contract for links from
+outside: it survives a retitled RN and an RN moved to another file. On
+2026-09-26 (AT-230) `dev` had **451** `### RN-` headings and **449**
+anchors. RN-305 and RN-306 had been written without one, in
+`business-rules.md` and in its pt-BR translation, and nothing failed.
+The site build doesn't catch it: without an explicit anchor Docusaurus
+derives the id from the heading text and the page compiles. What breaks
+is a `#rn-305` link someone writes later. The RN count doesn't catch it
+either, because it counts headings, not anchors.
+
+`generate.mjs` now checks it (`verificarAncorasDeRn`, with its logic in
+`scripts/docs/ancoras-de-rn.mjs`, proven by mutation in
+`ancoras-de-rn.spec.ts`). Every heading, at any level, that **starts**
+with `RN-<digits>` has to **end** in `{#rn-<same digits>}`, leading
+zeros included (`RN-001` → `rn-001`). A missing anchor and an anchor
+with another number or name both fail, one line per heading, with the
+file and line. Zero headings found is `CEGO` and also fails.
+
+**Severity: `block`**, unlike the line references above: there is no
+inherited debt (the two missing anchors were added in the same change),
+and each new heading is written by the PR that adds it.
+
+**The pt-BR translation is covered too.** The files are found by glob:
+`docs/business-rules.md`, `docs/business-rules/*.md`, and the same two
+paths under `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`.
+The pt-BR site serves `business-rules#rn-305` from the translated file,
+and the translation had copied the heading without its anchor. The rule
+is per heading, so a partial translation isn't a problem: an RN that
+wasn't translated falls back to the English page, which is checked
+anyway.
+
 ## The pieces
 
 ```mermaid
