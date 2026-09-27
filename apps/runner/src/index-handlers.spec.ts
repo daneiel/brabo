@@ -10,7 +10,12 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DockerPort, EspecificacaoDeContainer, PedidoDeExec } from '@brabo/docker-port';
+import {
+  PullExcedeuTetoError,
+  type DockerPort,
+  type EspecificacaoDeContainer,
+  type PedidoDeExec,
+} from '@brabo/docker-port';
 import {
   MARCA_DE_CREDENCIAL_NAO_ENTREGUE,
   tratarContainerRemove,
@@ -410,6 +415,39 @@ describe('tratarContainerStart (ADR 0137)', () => {
     const payload = canal.pushes[0]?.payload as { sucesso: boolean; erro?: string };
     expect(payload.sucesso).toBe(false);
     expect(payload.erro).toBeTruthy();
+  });
+
+  it('pull que estoura o teto de controle chega NOMEADO no resultado (AT-234, RN-605)', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso({
+      start: vi.fn(async () => {
+        throw new PullExcedeuTetoError('node:22-bookworm-slim', 30_000);
+      }),
+    });
+    const estado = estadoFalso({ canal, docker });
+
+    await tratarContainerStart(estado, {
+      ref: 'r-pull',
+      spec: {
+        workspaceDirName: 'proj-abc12345',
+        projectId: 'proj-1',
+        projectSlug: 'proj-1',
+        workspaceId: 'ws-1',
+        imagem: 'node:22-bookworm-slim',
+        imagemVersao: 1,
+        rede: 'none',
+        cpus: 1,
+        memoriaMb: 512,
+        pidsLimit: 256,
+      },
+    });
+
+    expect(estado.containerAtivo).toBeNull();
+    const payload = canal.pushes[0]?.payload as { sucesso: boolean; erro?: string };
+    expect(payload.sucesso).toBe(false);
+    expect(payload.erro).toContain('node:22-bookworm-slim');
+    expect(payload.erro).toContain('foi cancelado');
+    expect(payload.erro).toContain('Imagem grande não sobe por este caminho');
   });
 
   it('Docker indisponível na máquina do usuário: responde sucesso: false, nunca lança', async () => {

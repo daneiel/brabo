@@ -179,4 +179,32 @@ defmodule Engine.Runners.RunnerRouterTest do
                RunnerRouter.create_workspace(project_id, %{segmento: "loja"}, 50)
     end
   end
+
+  describe "tetos das operações de container (AT-234, RN-605)" do
+    # O runner usa a MESMA porta de Docker do broker: cada chamada de
+    # controle tem 30s (`TIMEOUT_DE_CONTROLE_MS`), e o teto daqui é a soma do
+    # pior caso em série. Os 60s de antes não cobriam nem o `resolver` (dois
+    # `ps`) mais a operação e o `docker version` de diagnóstico.
+    @controle_ms 30_000
+
+    test "`start` cobre dois `ps`, `image inspect`, `pull`, `run` e `docker version`" do
+      assert RunnerRouter.timeout_do_start_ms() > 6 * @controle_ms
+    end
+
+    test "`stop`/`remove` cobrem dois `ps`, a operação e `docker version`" do
+      assert RunnerRouter.timeout_do_stop_ou_remove_ms() > 4 * @controle_ms
+    end
+
+    test "o espelho de CHAMADAS_DE_CONTROLE_NO_START bate com a porta de Docker" do
+      fonte =
+        File.read!(Path.join(File.cwd!(), "../../packages/docker-port/src/docker-cli.ts"))
+
+      [_, chamadas] = Regex.run(~r/CHAMADAS_DE_CONTROLE_NO_START = (\d+);/, fonte)
+      [_, controle] = Regex.run(~r/TIMEOUT_DE_CONTROLE_MS = ([\d_]+);/, fonte)
+      chamadas = String.to_integer(chamadas)
+      controle = controle |> String.replace("_", "") |> String.to_integer()
+
+      assert RunnerRouter.timeout_do_start_ms() > chamadas * controle
+    end
+  end
 end

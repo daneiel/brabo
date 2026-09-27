@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DockerIndisponivelError,
   DockerPort,
+  PullExcedeuTetoError,
   PONTO_DE_MONTAGEM,
   type ContainerIniciado,
   type EspecificacaoDeContainer,
@@ -311,6 +312,20 @@ describe('classificação de falha', () => {
 
     expect(r.status).toBe(503);
     expect((r.corpo as { origem: string }).origem).toBe('infra');
+  });
+
+  it('pull que estoura o teto de controle é 504 NOMEADO, com origem infra — nunca `origem: null` (AT-234)', async () => {
+    const { deps, docker } = montar();
+    docker.erroAoIniciar = new PullExcedeuTetoError('node:24-bookworm', 30_000);
+
+    const r = await tratar(deps, pedido('POST', '/containers/p/start', {}));
+
+    expect(r.status).toBe(504);
+    const corpo = r.corpo as { erro: string; origem: string | null };
+    expect(corpo.origem).toBe('infra');
+    expect(corpo.erro).toContain('node:24-bookworm');
+    expect(corpo.erro).toContain('30000ms');
+    expect(corpo.erro).toContain('foi cancelado');
   });
 
   it('projeto `runner` é 409 — quem sobe container lá é o runner, na máquina do usuário', async () => {

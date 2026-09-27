@@ -1516,13 +1516,47 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def propose_action(project_id, session_id, action_type, actor, payload) do
-    post_returning("/internal/sessions/#{session_id}/actions", %{
-      projectId: project_id,
-      actionType: action_type,
-      actor: actor,
-      payload: payload
-    })
+    post_returning(
+      "/internal/sessions/#{session_id}/actions",
+      %{
+        projectId: project_id,
+        actionType: action_type,
+        actor: actor,
+        payload: payload
+      },
+      opcoes_do_propose_action(action_type)
+    )
   end
+
+  # AT-234 (RN-605). Quando a ação nasce AUTO-APROVADA, a api a EXECUTA na
+  # mesma requisição (`ProposeActionUseCase`), e as de ciclo de vida de
+  # container esperam o broker (`TETO_DE_MUTACAO_MS`, 195s: contexto + seis
+  # chamadas de controle de 30s + margem) ou o runner
+  # (`Engine.Runners.RunnerRouter`, 185s no `start`). No default de 15s do Req
+  # um `start` longo — mesmo sem pull — voltava como timeout de transporte
+  # aqui, e o desfecho nomeado da api (inclusive o `PullExcedeuTetoError` do
+  # broker) chegava a ninguém. 225s = o teto da api + 30s de folga. A api
+  # espelha este número como `TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`,
+  # e os testes dos dois lados conferem a ordem broker < api < engine.
+  # `container_remove` fica de fora de propósito: ele nunca nasce auto-aprovado
+  # (teto absoluto de `decide.ts`), então a api nunca o executa aqui dentro.
+  @teto_do_propose_action_de_container_ms 225_000
+
+  @acoes_de_container_executadas_no_propose ~w(
+    container_start
+    container_start_via_runner
+    container_stop
+  )
+
+  @doc false
+  def teto_do_propose_action_de_container_ms, do: @teto_do_propose_action_de_container_ms
+
+  @doc false
+  def opcoes_do_propose_action(action_type)
+      when action_type in @acoes_de_container_executadas_no_propose,
+      do: [receive_timeout: @teto_do_propose_action_de_container_ms]
+
+  def opcoes_do_propose_action(_action_type), do: []
 
   @impl true
   def confirm_workspace(project_id, session_id, path, user_id) do
