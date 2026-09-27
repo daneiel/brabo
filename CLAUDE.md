@@ -647,25 +647,27 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
 - Golden-set de regressão do julgamento semântico do QA de Automação (ADR
-  0123) — a frase "ligar em CI exige segredo de LLM de API OU infra nova"
-  foi MEDIDA (AT-067, 2026-09-13) e a metade de INFRA caiu: num
-  `ubuntu-latest` sem GPU, no molde do `golden-set-rag.yml` (mais o ENGINE de
-  pé como servidor, porque é ele quem roda o `npm test`), o pull de
-  `qwen2.5-coder:latest` leva 13–15s, um turno de LLM ~20s de mediana, e
-  `mix golden_set.qa` roda de ponta a ponta em 19m15s e 22m53s (job inteiro
-  22–26min, runs 34769447405 e 34770869429). O RELÓGIO cabe; o INSTRUMENTO
-  não mede: desde a RN-502 (ADR 0143, 2026-09-04) o `npm test` é
-  auto-aprovado e RECUSADO pelo engine (projeto `container` sem container
-  `running` — o seed, de 2026-08-30, nunca registra um), nenhum caso vê
-  `exit 0`, `approved` fica impossível, e o modelo, lendo a recusa, pede
-  `container_start`/`docker-compose up` (ficam `pending`) ou repete
-  `npm test` até o teto de 60 — 0/6 nas duas rodadas, abaixo do piso 1/6.
-  Vale igual na máquina local. Por isso NÃO nasceu `golden-set-qa.yml`
-  (vermelho toda noite por motivo alheio ao que mede); o desenho medido fica
-  no histórico (`e7d7d1b16`) e a narrativa em `docs/explanation/gates.md`.
-  O que segue com dono humano é decidir COMO o golden-set executa a suíte
-  sob a RN-502 (container de verdade pelo broker no seed, ou outra coisa) —
-  afrouxar a recusa para o harness passar NÃO é opção
+  0123) — o INSTRUMENTO voltou a medir (AT-076, decisão do mantenedor de
+  2026-09-27, "caminho 1"). Desde a RN-502 (ADR 0143) o `npm test` era
+  RECUSADO pelo engine (projeto `container` sem container `running`; o seed,
+  de 2026-08-30, nunca registrava um) e o placar era 0/6 por construção
+  (AT-067, runs 34769447405 e 34770869429). Agora o seed sobe o container de
+  VERDADE pelo caminho de produção (`apps/api/scripts/golden-set-qa-container.ts`:
+  module_map → roteamento → `container_start` proposto pela Infra e APROVADO
+  pelo dono → `ExecuteContainerStartUseCase` → broker → `running` pela máquina
+  de estados), com `node:24.11.1-bookworm-slim` preso por digest, e o
+  `npm test` roda DENTRO dele. A RN-502 ficou intacta — não a afrouxe para
+  "ajudar" o harness. Container que não sobe é erro NOMEADO do seed, e o teste
+  ExUnit REPROVA (antes o `{:skip, _}` do corpo passava verde calado). Medido
+  em CI (runs 36291440108 e 36294037297; a narrativa e os números em
+  `docs/explanation/gates.md`): zero recusas da RN-502, `npm test` `exit 0`
+  no container em 5 e em 6 dos 6 casos, placar 3/6 nas duas (casos
+  diferentes) contra o piso 1/6 — o piso e o modelo NÃO mudaram —, e
+  `mix golden_set.qa` em 48 e 83min (job até 86min). O que segue com dono
+  humano é só a CADÊNCIA de um workflow agendado (AT-149) — o desenho medido
+  fica no histórico do PR, e ele exige broker de pé com o socket, a MESMA
+  pasta gerenciada nos três lados e a imagem puxada antes (a chamada
+  api→broker tem teto de 5s, `start` incluso — declarado, não corrigido)
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
