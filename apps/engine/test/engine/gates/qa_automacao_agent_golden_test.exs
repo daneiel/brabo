@@ -17,8 +17,13 @@ defmodule Engine.Gates.QaAutomacaoAgentGoldenTest do
       Ollama de pé o tempo todo, e inclusão automática faria este módulo
       disparar dentro de QUALQUER `mix test`, gastando tokens sem aviso e
       introduzindo flake real numa suíte que hoje é 100% determinística.
-    * Pula (não falha) quando a api não está alcançável em `API_URL` — é
-      pré-requisito de AMBIENTE, não defeito de código.
+    * Não mede (e não falha) quando a api não está alcançável em
+      `API_URL` — é pré-requisito de AMBIENTE, não defeito de código. O
+      motivo é IMPRESSO, porque o ExUnit não tem pulo em tempo de execução e
+      o teste sai verde sem avaliar nada.
+    * REPROVA quando a api responde mas o seed falha (AT-076): aí o
+      instrumento não tem condição de medir — o caso típico é o container
+      do projeto não subir, e sem ele a RN-502 recusa todo `npm test`.
     * NÃO é determinístico — o que ele mede é justamente o quão
       confiável é o julgamento do modelo, não uma verdade fixa. Por isso a
       asserção final é contra um PISO (`floor.json`, ratchet — ver o
@@ -35,7 +40,9 @@ defmodule Engine.Gates.QaAutomacaoAgentGoldenTest do
   roda DENTRO do processo da api (mesmo banco, mesmos casos de uso reais) e
   devolve, pronto, tudo que este teste precisa — inclusive o CAMINHO do
   worktree já materializado em disco (o script faz o próprio `git clone` do
-  bare repo; ver o comentário no topo dele). Este teste só consome o JSON.
+  bare repo; ver o comentário no topo dele) e o container do projeto já
+  `running` pelo broker (AT-076: sem ele, a RN-502 recusa o `npm test`). Este
+  teste só consome o JSON.
 
   ## Um teste só, não seis
 
@@ -82,17 +89,30 @@ defmodule Engine.Gates.QaAutomacaoAgentGoldenTest do
           {:ok, %{"model" => model, "cases" => cases}} ->
             %{model: model, cases: cases}
 
+          # Seed que falha com a api de pé NÃO é ambiente ausente: é o
+          # instrumento sem condição de medir (AT-076 — sem container
+          # `running`, todo `npm test` seria recusado pela RN-502 e o placar
+          # mediria a recusa). Reprova NOMEANDO o motivo que o seed escreveu,
+          # em vez de "pular" — e `{:skip, _}` devolvido do corpo de um teste
+          # não pula nada no ExUnit: o teste PASSA calado.
           {:error, motivo} ->
-            %{skip_reason: "seed do golden-set falhou: #{motivo}"}
+            %{seed_failure: "seed do golden-set falhou: #{motivo}"}
         end
     end
   end
 
   test "julgamento semântico do QA de Automação sobre os seis casos do golden-set",
        context do
-    case context[:skip_reason] do
-      reason when is_binary(reason) -> {:skip, reason}
-      _ -> avaliar_golden_set(context)
+    cond do
+      is_binary(context[:seed_failure]) ->
+        flunk(context[:seed_failure])
+
+      is_binary(context[:skip_reason]) ->
+        IO.puts("\n--- golden-set QA NÃO mediu: #{context[:skip_reason]} ---\n")
+        {:skip, context[:skip_reason]}
+
+      true ->
+        avaliar_golden_set(context)
     end
   end
 
