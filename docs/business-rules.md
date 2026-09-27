@@ -8051,10 +8051,10 @@ seria a tela afirmando sobre o que não tem. A comparação é por **segmento**,
 nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espelhando
 `dentroDoEscopo` da api.
 
-- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:211` (a consulta),
-  `:229` (`podeOferecerMounted`/`baseDeProjetos`), `:240` (o modo vigente),
-  `:303` (`caminhoForaDaBase`), `:278` (a sugestão);
-  `apps/web/src/lib/wizard.ts:130` (`caminhoSugeridoNaBase`) e `:158`
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:220` (a consulta),
+  `:238` (`podeOferecerMounted`/`baseDeProjetos`), `:283` (o modo vigente),
+  `:333` (`caminhoForaDaBase`), `:360` (a sugestão);
+  `apps/web/src/lib/wizard.ts:143` (`caminhoSugeridoNaBase`) e `:171`
   (`caminhoDentroDaBase`) — as funções puras;
   `apps/web/src/lib/api-client.ts:292` (`getProjectsBase`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
@@ -10218,7 +10218,7 @@ duas devem.
   origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
   `:119` (o `ref` que a dispara uma vez);
   `apps/web/src/components/RunnerOnboardingPanel.tsx:150` (`mostrarEspera`);
-  `apps/web/src/routes/NewProjectWizard.tsx:293` (`origemDoNavegador`, o
+  `apps/web/src/routes/NewProjectWizard.tsx:304` (`origemDoNavegador`, o
   transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
 - **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` (a lista
   declarando o disco da máquina do usuário; `sem-agente` caindo no painel de
@@ -10933,9 +10933,9 @@ branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
 ficado **inalcançável**: a condição era `provider === 'github'`, e ao criar não
 há mais provider escolhido.
 
-- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:349` (`stepKeys`, agora
-  dependente de `adotando`), `:285` (a guarda de `provider` restrita à adoção) e
-  `:323` (a navegação para `/projects/$projectId`)
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:379` (`stepKeys`, agora
+  dependente de `adotando`), `:540` (a guarda de `provider` restrita à adoção) e
+  `:590` (a navegação para `/projects/$projectId`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`, `describe('NewProjectWizard — o git é adiado')`
   — "criar não passa mais pela página de provisionamento — vai direto ao
   projeto", "criar tem TRÊS passos: provider e credencial saíram", "adotar
@@ -13849,9 +13849,9 @@ certo, porque sem a variável a api nunca chama o broker.
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
   importado só pela pergunta `configurado()`);
-  `apps/web/src/routes/NewProjectWizard.tsx:246` (`brokerConfirmado`), `:249`
-  (`semBrokerConfirmado`), `:259` (`modoExecutavel`), `:272` (o modo vigente),
-  `:668` (o card inerte), `:681` (o motivo em texto);
+  `apps/web/src/routes/NewProjectWizard.tsx:257` (`brokerConfirmado`), `:260`
+  (`semBrokerConfirmado`), `:270` (`modoExecutavel`), `:283` (o modo vigente),
+  `:716` (o card inerte), `:728` (o motivo em texto);
   `apps/web/src/locales/{pt-BR,en}/newProject.json` (`workspace.noBroker`)
 - **Teste:** `apps/api/test/interfaces/http/iam/workspaces-projects-base.controller.spec.ts:59`
   (com `BROKER_URL`, `true`), `:69` (sem, `false` mesmo com base — caso de
