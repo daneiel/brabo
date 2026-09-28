@@ -186,6 +186,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine (segurança)**: `mint` sobe de 1.10.1 para 1.11.0, que fecha três
+  advisories: EEF-CVE-2026-91043 (GHSA-9x8p-qrf4-jq7g — campos `cookie`
+  indexados por HPACK numa resposta HTTP/2 escapavam de `max_header_list_size`
+  e esgotavam a memória do cliente), EEF-CVE-2026-92103 (GHSA-q95c-ccq6-j5j6 —
+  o cliente HTTP/2 bufferizava frames de até 16 MiB antes de aplicar
+  `max_frame_size`) e EEF-CVE-2026-94194 (GHSA-gvrc-75rc-7gj9 — o cliente
+  HTTP/1 aplicava framing chunked quando `chunked` não era a última
+  transfer-coding, permitindo *response smuggling*). Os advisories reprovavam o
+  job "Auditoria de dependências" (`mix hex.audit`) em todo PR. `hpax` sobe
+  junto de 1.0.4 para 1.1.0 porque o `mint` 1.11.0 exige `~> 1.1`; nenhuma
+  outra dependência muda no `mix.lock`.
 - **ci/k8s**: o `produtor | grep -q x` sob `pipefail` deixa de reprovar sobre
   um resultado verdadeiro nos outros cinco lugares onde a corrida da AT-241
   existia (AT-242). O `grep -q` sai na linha que casa, o produtor que ainda
