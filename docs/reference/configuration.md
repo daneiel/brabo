@@ -185,10 +185,13 @@ issuer. Decisions in
 > changes; during one, setting them in `.env` and recreating the service is
 > enough. Before RN-595 they were mapped nowhere and `docker compose` doesn't
 > forward the host environment, so a rotation silently became a hard swap.
-> **On Kubernetes they still don't reach the Pods**: `brabo-secrets` only
-> carries the keys its `ExternalSecret` lists, and listing an optional key
-> there would fail the whole sync outside a rotation — a secret-store
-> decision that is still open, declared in the runbook.
+> **On Kubernetes they reach the Pods through the secret store** (AT-220): the
+> `ExternalSecret` pulls the whole `brabo` object with `dataFrom.extract`, so
+> a `_PREVIOUS` present there lands in `brabo-secrets` and an absent one is
+> simply not there. The price is that every key of that object becomes an
+> environment variable of api, engine, migrations and backup — the store
+> object must hold nothing else. The procedure is in the
+> [runbook](../runbook.md#rotacao-no-kubernetes).
 
 ### Real SMTP (MailSender)
 

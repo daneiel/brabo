@@ -244,15 +244,22 @@ eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
   `apps/engine/config/runtime.exs:70` e `apps/broker/src/config.ts:85`
 - **Teste:** `scripts/ci/previous-nos-composes.spec.ts` — DERIVA do código dos
   três serviços a lista de `_PREVIOUS` lidas e reprova a que faltar, ou vier
-  com default não vazio, em qualquer um dos três composes
-- **Borda:** o Kubernetes fica de FORA, e não está resolvido. Os Pods leem
+  com default não vazio, em qualquer um dos três composes; o bloco "ExternalSecret
+  do k8s" reprova o `ExternalSecret` sem `dataFrom.extract`, uma `_PREVIOUS` em
+  `data:` e o Deployment de api/engine sem `envFrom: brabo-secrets`
+- **Kubernetes (AT-220, decisão do mantenedor):** os Pods leem
   `envFrom: brabo-secrets`, e o `ExternalSecret`
-  (`deploy/k8s/base/common/externalsecrets.yaml`) só materializa as chaves que
-  lista; uma entrada de `data` cuja propriedade falta no provider reprova a
-  sincronização do Secret inteiro, e a `_PREVIOUS` ausente é o estado normal.
-  Como ela chega ao Pod é decisão sobre o secret store, em aberto — o runbook
-  diz isso nas duas rotações.
-- **Origem:** AT-201 (achado da AT-196), mesma classe da RN-540
+  (`deploy/k8s/base/common/externalsecrets.yaml`) puxa o objeto `brabo`
+  INTEIRO do store por `dataFrom.extract` — a `_PREVIOUS` entra quando existe
+  e sai quando é retirada, na sincronização seguinte. Não pode ser listada em
+  `data:`: o ESO não tem chave opcional, e propriedade ausente (o estado
+  normal) reprova a sincronização do Secret inteiro. Custo declarado: TODA
+  chave do objeto vira variável de api, engine, migrações e backup, e a chave
+  OBRIGATÓRIA ausente deixou de reprovar a sincronização — quem acusa é o
+  consumidor. A sincronização por um ESO real foi exercitada à mão num k3d
+  descartável, não em CI
+- **Origem:** AT-201 (achado da AT-196), mesma classe da RN-540; metade
+  Kubernetes na AT-220
 
 ### RN-598 — O token de serviço ANTERIOR passa pela mesma régua do atual {#rn-598}
 

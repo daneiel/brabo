@@ -1460,8 +1460,8 @@ export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
 ```
 
 In Kubernetes the value comes from `brabo-secrets`, under the same-named
-key already declared in
-`deploy/k8s/base/common/externalsecrets.yaml` — if the error showed up
+key of the `brabo` object in the secret store, which
+`deploy/k8s/base/common/externalsecrets.yaml` pulls whole — if the error showed up
 there, the problem is the vault not delivering the key, and the path is
 [Deploy diagnosis](#diagnostico-do-deploy).
 
@@ -1529,8 +1529,8 @@ export SECRET_KEY_BASE="$(openssl rand -base64 64)"
 
 Nothing changes in Kubernetes, for the same reason as
 `GIT_OAUTH_STATE_SECRET`: all four already came from `brabo-secrets`,
-under the same-named key, in
-`deploy/k8s/base/common/externalsecrets.yaml`.
+under the same-named key of the `brabo` object that
+`deploy/k8s/base/common/externalsecrets.yaml` pulls whole.
 
 **The knowledge graph (`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`,
 [ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)) follows
@@ -1617,9 +1617,10 @@ export SMTP_FROM="Brabo <nao-responda@seu-dominio.com>"
 `AUTH_JWT_SECRET`), not a USER secret — it doesn't go through envelope
 encryption, and has no rotation procedure of its own beyond changing the
 variable and restarting (the SMTP provider decides that credential's
-rotation policy). In Kubernetes, the key goes into `brabo-secrets` like
-any other, referenced in
-`deploy/k8s/base/common/externalsecrets.yaml`.
+rotation policy). In Kubernetes, the key goes into the `brabo` object of the
+secret store like any other, and reaches `brabo-secrets` with no manifest
+change — `deploy/k8s/base/common/externalsecrets.yaml` pulls the whole
+object.
 
 If email doesn't arrive even with no boot error: check the api's log for
 `falha ao enviar e-mail via SMTP` (`type`/recipient show up, the body and
@@ -1699,6 +1700,32 @@ the bootstrap. Confirm it exists and that RBAC is in place:
 kubectl -n brabo get secret brabo
 kubectl -n brabo describe secretstore brabo-secret-store
 ```
+
+Since AT-220 the `ExternalSecret` pulls the **whole** `brabo` object from the
+store (`dataFrom.extract`) instead of listing each key. Two consequences for
+diagnosis:
+
+- **A missing key no longer keeps it from becoming Ready.** `brabo-secrets` is
+  created without it, and the failure shows up in whoever needs the key: a Pod
+  with a `secretKeyRef` (`NEO4J_PASSWORD` in Neo4j, `BACKUP_S3_ACCESS_KEY`/
+  `BACKUP_S3_SECRET_KEY` in the local S3) stays in
+  `CreateContainerConfigError`, and the api or the engine refuses to boot in
+  production naming the variable. The object in the store must carry
+  `DATABASE_URL`, `SECRET_KEY_BASE`, `CREDENTIALS_MASTER_KEY`,
+  `GIT_OAUTH_STATE_SECRET`, `AUTH_JWT_SECRET`, `AUTH_TOKEN_PEPPER`,
+  `BRABO_SERVICE_TOKEN`, `RELEASE_COOKIE`, `BACKUP_S3_ENDPOINT`,
+  `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY` and
+  `NEO4J_PASSWORD` — the list `deploy/k8s/bootstrap.sh` creates locally.
+  Compare what arrived:
+
+  ```bash
+  kubectl -n brabo get secret brabo-secrets -o go-template='{{range $k, $v := .data}}{{$k}}{{"\n"}}{{end}}'
+  ```
+
+- **Everything in that object reaches the Pods.** Every key becomes an
+  environment variable of api, engine, the two migration Jobs and the backup
+  CronJob (`envFrom: brabo-secrets`). Don't store in `brabo` anything those
+  processes shouldn't see; another consumer's secret goes in another object.
 
 #### Engine HPA at `<unknown>`
 
@@ -2945,15 +2972,69 @@ the broker, `apps/broker/src/config.spec.ts`.
 > and recreating the service is enough
 > ([RN-595](business-rules/autenticacao.md#rn-595); guarded by
 > `scripts/ci/previous-nos-composes.spec.ts`, which derives the list from the
-> code). **In Kubernetes they still don't**: the Pods read `envFrom:
-> brabo-secrets`, and the `ExternalSecret`
-> (`deploy/k8s/base/common/externalsecrets.yaml`) only materializes the keys
-> it lists. They aren't listed on purpose — a `data` entry whose property is
-> missing from the provider fails the sync of the whole Secret, and a missing
-> `_PREVIOUS` is the normal state. How they get to the Pod is an open
-> decision about the secret store; until then, a rotation in the cluster
-> needs the variable set on the Deployment by hand. Either way, confirm it
-> inside the container (`printenv`) before relying on step 2.
+> code). **In Kubernetes they reach the Pods through the secret store**
+> (AT-220): the `ExternalSecret`
+> (`deploy/k8s/base/common/externalsecrets.yaml`) pulls the whole `brabo`
+> object with `dataFrom.extract`, so a `_PREVIOUS` that exists there lands in
+> `brabo-secrets` and one that doesn't simply isn't there — no sync failure
+> outside a rotation. They are never listed one by one: a `data` entry whose
+> property is missing fails the sync of the whole Secret, and a missing
+> `_PREVIOUS` is the normal state. Either way, confirm it inside the
+> container (`printenv`) before relying on step 2.
+
+#### Doing it in Kubernetes {#rotacao-no-kubernetes}
+
+The same dance, with the `brabo` object in the secrets provider standing in for
+`.env`. In the local cluster that object is the Secret `brabo` the bootstrap
+created; in staging/prod it is the provider entry the `SecretStore` points at.
+
+1. **Add** the `_PREVIOUS` key (old value) and **replace** the current key (new
+   value) in the `brabo` object — both in the same change. Locally:
+
+   ```bash
+   kubectl -n brabo patch secret brabo --type merge -p \
+     '{"stringData":{"AUTH_JWT_SECRET_PREVIOUS":"<old>","AUTH_JWT_SECRET":"<new>"}}'
+   ```
+
+2. **Make the operator sync now** instead of waiting for the `refreshInterval`
+   (1h), and check the key arrived:
+
+   ```bash
+   kubectl -n brabo annotate externalsecret brabo-secrets force-sync="$(date +%s)" --overwrite
+   kubectl -n brabo get secret brabo-secrets -o go-template='{{range $k, $v := .data}}{{$k}}{{"\n"}}{{end}}' | grep _PREVIOUS
+   ```
+
+3. **Restart** whoever reads it. `envFrom` is read when the container starts:
+   the Secret changing does not change a running Pod. `api` for
+   `AUTH_JWT_SECRET` and `CREDENTIALS_MASTER_KEY`, `api` **and** `engine` for
+   `BRABO_SERVICE_TOKEN`:
+
+   ```bash
+   kubectl -n brabo rollout restart deployment/api deployment/engine
+   kubectl -n brabo exec deploy/api -- printenv AUTH_JWT_SECRET_PREVIOUS
+   ```
+
+4. **Retire it** when the rotation's own condition is met (15 min for
+   `AUTH_JWT_SECRET`, both rollouts done for `BRABO_SERVICE_TOKEN`,
+   `falhas=0` and zero pending for the master key): **remove** the `_PREVIOUS`
+   key from the `brabo` object, force the sync again (step 2 — the key
+   disappears from `brabo-secrets`, it isn't left behind) and restart again
+   (step 3). Until the restart the Pods keep the old value in memory, and the
+   api keeps warning that a rotation is in progress.
+
+   ```bash
+   kubectl -n brabo patch secret brabo --type json -p \
+     '[{"op":"remove","path":"/data/AUTH_JWT_SECRET_PREVIOUS"}]'
+   ```
+
+Verification: the four steps were exercised against the External Secrets
+Operator chart pinned in `deploy/k8s/helm/charts.env` (0.19.2) in a throwaway
+k3d cluster, with the local `SecretStore`: the key appeared in
+`brabo-secrets` after the `force-sync` and disappeared after removal, with the
+`ExternalSecret` staying `SecretSynced`. That run is not automated; what runs on
+every PR is `scripts/ci/previous-nos-composes.spec.ts`, which fails if the
+`ExternalSecret` stops using `dataFrom.extract` or lists a `_PREVIOUS` in
+`data:`.
 
 ```bash
 # generate a value with enough entropy; it never needs to be typed
@@ -3060,12 +3141,11 @@ In the local cluster the source Secret is created by the bootstrap; in
 staging/prod the value goes into the provider that External Secrets reads
 from. Then restart the api so it loads both:
 
-> Publishing `CREDENTIALS_MASTER_KEY_PREVIOUS` to the provider does **not**
-> put it in the Pod: the `ExternalSecret` doesn't list it (see the note at the
-> end of [Auth key rotation](#rotacao-das-chaves-do-auth)). Until that
-> decision is taken, set it on the api Deployment by hand for the duration of
-> the rotation and remove it in step 3. In the composes it's already mapped —
-> it's the `.env` plus recreating the api.
+> Publishing `CREDENTIALS_MASTER_KEY_PREVIOUS` in the `brabo` object of the
+> provider puts it in `brabo-secrets` on the next sync (the `ExternalSecret`
+> pulls the whole object) — force the sync and confirm it arrived as in
+> [Doing it in Kubernetes](#rotacao-no-kubernetes), then restart. In the
+> composes it's the `.env` plus recreating the api.
 
 ```bash
 kubectl -n brabo rollout restart deployment/api
@@ -3159,6 +3239,7 @@ rows that a previous, interrupted run never reached.
 
 ```bash
 # remove CREDENTIALS_MASTER_KEY_PREVIOUS from the provider, then
+kubectl -n brabo annotate externalsecret brabo-secrets force-sync="$(date +%s)" --overwrite
 kubectl -n brabo rollout restart deployment/api
 ```
 
@@ -4333,6 +4414,7 @@ workflow in **schedule** does not have the trigger the cell claims
 | Rotate `AUTH_JWT_SECRET` | [`AUTH_JWT_SECRET`](#rotacao-do-auth-jwt-secret) | `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts` and `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Change `AUTH_TOKEN_PEPPER` | [`AUTH_TOKEN_PEPPER`](#troca-do-auth-token-pepper) | `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Rotate `BRABO_SERVICE_TOKEN` | [`BRABO_SERVICE_TOKEN`](#rotacao-do-brabo-service-token) | `apps/api/test/infrastructure/security/service-token.spec.ts`, `apps/api/test/interfaces/engine-service.guard.spec.ts`, `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`, `apps/engine/test/engine/runtime_service_token_test.exs`, `apps/broker/src/config.spec.ts` and `scripts/ci/previous-nos-composes.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Put and retire a `_PREVIOUS` in Kubernetes | [Doing it in Kubernetes](#rotacao-no-kubernetes) | `scripts/ci/previous-nos-composes.spec.ts` keeps the `ExternalSecret` on `dataFrom.extract` with no `_PREVIOUS` in `data:`; the sync through a real External Secrets Operator: none automated, exercised once by hand in a throwaway k3d | every PR `.github/workflows/ci.yml` (the spec); manual (the operator) |
 | Unlock an account by SQL | [Account locked by lockout](#conta-travada-por-lockout) | **None.** The two queries were checked against the schema by reading; `apps/api/test/application/use-cases/auth/lockout.spec.ts` covers the lockout, not them | manual |
 | Rotate the master key | [Master key rotation](#rotacao-da-chave-mestra) | `apps/api/test/scripts/rewrap-deks.spec.ts` and `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Cut the spend in a cost incident | [Cost incident](#incidente-de-custo) | `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts` runs the section's SQL, in both languages, against the migrated schema; steps (b) and (d), on the screen: none | every PR `.github/workflows/ci.yml` |

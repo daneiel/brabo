@@ -253,6 +253,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (saída 255, stderr vazio) e a pipeline falha — medido em 12 de 480 rodadas
   sob carga, e visto no CI. A lista agora é lida inteira antes do `grep`, e o
   Compose que falha de verdade ganha mensagem própria.
+- **k8s**: as variáveis `_PREVIOUS` passam a chegar aos Pods, e a rotação sem
+  janela de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN` e `CREDENTIALS_MASTER_KEY`
+  passa a funcionar no cluster (AT-220, metade Kubernetes da RN-595). O
+  `ExternalSecret` de `brabo-secrets` troca as treze entradas de `data:` por
+  `dataFrom.extract` do objeto `brabo`: o ESO não tem chave opcional em
+  `data:`, e listar uma `_PREVIOUS` ali derrubaria a sincronização fora de
+  rotação. Agora ela entra quando existe no store e sai quando é retirada. O
+  custo é declarado no manifesto e no runbook: TODA chave do objeto `brabo`
+  vira variável de api, engine, migrações e backup, e uma chave obrigatória
+  ausente deixou de reprovar a sincronização (quem acusa é o consumidor). O
+  runbook ganhou "Doing it in Kubernetes" (pôr, forçar a sincronização,
+  reiniciar, retirar), e `previous-nos-composes.spec.ts` reprova o
+  `ExternalSecret` sem o `extract` ou com `_PREVIOUS` em `data:`. O overlay
+  local não muda: o `SecretStore` do provider `kubernetes` lê o Secret `brabo`
+  que o bootstrap cria, e o `extract` o traz inteiro.
 - **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
   [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
   `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552
