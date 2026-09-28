@@ -167,6 +167,8 @@ estado lido do repositório e não da conversa.
 | A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O Infra Lead recusa a subida por estado, na ordem da `/containers` (AT-142) | RN-610 |
+
+| O pepper do auth deixa de cair no `AUTH_JWT_SECRET`, e quem migra o define com o valor atual (AT-210, BREAKING) | RN-613 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
 | O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |

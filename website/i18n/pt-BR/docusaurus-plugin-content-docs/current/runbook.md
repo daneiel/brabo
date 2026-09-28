@@ -1320,17 +1320,46 @@ dança em três etapas da chave mestra (abaixo):
 3. Passados 15 minutos (o TTL do access token), nenhum token da chave antiga
    sobrevive. **Remova `AUTH_JWT_SECRET_PREVIOUS`** e reinicie.
 
-Ninguém é deslogado — **desde que `AUTH_TOKEN_PEPPER` esteja definido**. Os
-refresh tokens são hasheados com o pepper, não com esta chave; mas um pepper
-ausente cai no `AUTH_JWT_SECRET`, e aí rotacionar esta chave é também rotacionar
-o pepper, com o logout global descrito abaixo
-([RN-597](pathname://../business-rules/autenticacao#rn-597)). O Kubernetes define o pepper
-à parte; o `docker-compose.prod.yml` e o `docker-compose.install.yml` não o
-repassam à api.
+Ninguém é deslogado: os refresh tokens são hasheados com o
+`AUTH_TOKEN_PEPPER`, não com esta chave, e desde a
+[RN-613](pathname://../business-rules/autenticacao#rn-613) o pepper é
+obrigatório e nunca emprestado desta chave.
+
+**A ordem, se a instalação é anterior à RN-613: pepper ANTES, JWT depois.**
+Antes da RN-613 um pepper ausente caía em silêncio no `AUTH_JWT_SECRET` — e os
+composes de produção e de instalação nem repassavam o `AUTH_TOKEN_PEPPER` à
+api, então era toda instalação por compose. Agora a api **recusa subir** sem o
+pepper, com uma mensagem que diz o que fazer. A migração que não desloga
+ninguém:
+
+1. Defina `AUTH_TOKEN_PEPPER` com o valor **atual** de `AUTH_JWT_SECRET`
+   (copie; não gere um novo). Reinicie a api. Os hashes dos tokens ficam byte a
+   byte como estavam, e todo refresh token e PAT segue valendo. O `install.sh`
+   faz este passo sozinho quando acha o `.env` anterior na pasta em que roda, e
+   diz isso no terminal sem imprimir o valor; o Kubernetes já tinha o
+   `AUTH_TOKEN_PEPPER` no `ExternalSecret`.
+2. Só então rotacione o `AUTH_JWT_SECRET` pelos três passos acima. Daí em
+   diante os dois segredos são independentes, e o pepper igual ao JWT
+   *antigo* é o estado esperado, não um resto.
+
+**Se alguém rotacionar o JWT antes de separar**, numa versão anterior à RN-613
+essa rotação *era* uma troca do pepper: todo mundo deslogado, todo link de
+e-mail/reset em aberto morto e todo PAT sem autenticar — o logout global da
+próxima seção. Não há desfazer além de pôr o valor antigo de volta como
+`AUTH_TOKEN_PEPPER` (o que revive os tokens antigos ainda não expirados e
+invalida o que foi emitido no meio). Da RN-613 em diante o erro não acontece
+calado: sem pepper a api não sobe. O único jeito de ainda cair nele é gerar um
+pepper **novo** na migração em vez de copiar o JWT atual — mesmo logout global.
 
 Verificação: `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts`
-(describe "rotação de chave") e, para a condição do pepper,
-`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`.
+(describe "rotação de chave"); para o pepper,
+`apps/api/test/infrastructure/security/auth-key-material.spec.ts` (describe
+"pepperAtual (RN-613)": a recusa no boot e a mensagem),
+`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
+(describe "a migração do RN-613": um refresh hasheado pelo fallback antigo
+segue válido com o pepper igual ao JWT antigo, e sobrevive à rotação do JWT) e
+`scripts/dev/install-env.spec.ts` (o `.env` que o instalador grava nos dois
+casos, pelo `docker compose config`).
 
 ### `AUTH_TOKEN_PEPPER` — logout global, sem meio-termo
 
@@ -1355,8 +1384,10 @@ aparente e ver o link de reset "expirado".
 
 > A api **não** falha ao subir com um pepper novo. Ela simplesmente não
 > reconhece nenhum token antigo. Se o suporte relatar "todo mundo deslogado ao
-> mesmo tempo", esta variável é o primeiro lugar a olhar — e, se ela nunca foi
-> definida, o `AUTH_JWT_SECRET`.
+> mesmo tempo", esta variável é o primeiro lugar a olhar — e, numa versão
+> anterior à [RN-613](pathname://../business-rules/autenticacao#rn-613) em que
+> ela nunca foi definida, o `AUTH_JWT_SECRET`. Sem pepper, em produção, ela
+> **falha** ao subir: ver a ordem da migração acima.
 
 Verificação: `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
 ([RN-597](pathname://../business-rules/autenticacao#rn-597)).
