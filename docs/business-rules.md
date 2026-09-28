@@ -13516,9 +13516,9 @@ pode depender dela — é justamente por depender dela que ele não saía.
 > A decisão pendente deixou de ser de runner e passou a ser esperar o Bun ou
 > tirar a plataforma. A regra acima não muda com isso.
 
-- **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
-  sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
-  `:326` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+- **Código:** `.github/workflows/build-runner-binaries.yml:288` (o job, agora
+  sem `needs:`), `:321` (`timeout-minutes: 40`, que cabe as duas esperas),
+  `:331` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
   `:369` (o passo que espera), `:373`/`:374` (os dois tetos), `:382` (a Release
   ausente, que é erro), `:405` (o teto dos binários, que é `notice`), `:455` (o
   manifesto nomeando o que não cobre)
