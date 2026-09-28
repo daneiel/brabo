@@ -93,6 +93,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   constrói outro. Medido contra os digests da `v6.1.0`: `api` e `web`
   reprovariam hoje por `CVE-2026-45447` (openssl, corrigido em `3.3.7-r1`).
 
+- **web**: a tela passa a dizer QUAL regra de política decidiu uma ação e, em
+  comando de terminal, contra qual raiz do escopo (AT-148, RN-614). A linha do
+  `proposed_action.created` no painel de log da sessão diz o desfecho da
+  política e o motivo; o `ApprovalCard` do chat da sessão e da aba Aprovações
+  ganha a MESMA frase, logo abaixo do que acontece se você aprovar. A raiz é
+  sempre relativa (pasta gerenciada, segmento dentro da base de projetos, nome
+  da pasta na máquina do runner, ou "sem forma relativa"), nunca o caminho
+  absoluto. Ação proposta antes de o motivo ou a raiz irem para o log diz
+  "não registrado", e o card diz quando o evento está fora dos eventos
+  carregados. Em inglês e português.
+
 - **docs**: o runbook ganha a tabela *Procedures and how each is verified*
   (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
   o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou
