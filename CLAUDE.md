@@ -2077,6 +2077,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   nova, cite `caminho:N` (`símbolo`) — é o que a torna conferível — e releia
   pelo símbolo, nunca por um número antigo. NÃO alargue a janela para o aviso
   sumir; o critério para `block` está em `documentation-workflow.md`.
+- O runbook termina com a tabela `procedure | anchor | verification |
+  schedule` dos procedimentos de OPERAÇÃO (AT-193, EP-015), e o `docs:check` a
+  confere em `block` (`scripts/docs/procedimentos-do-runbook.mjs`, provado por
+  mutação no spec ao lado): arquivo citado em `verification` que não está no
+  git, `make <alvo>` que o `Makefile` não tem, célula vazia ou "see below",
+  âncora que não é `{#id}` explícito de cabeçalho, e workflow cujo `on:` não
+  tem o gatilho que a classe do segmento afirma (`weekly` → `schedule:`,
+  `every PR` → `pull_request`, `every tag` → `push: tags`; `manual` não cita
+  workflow). Sem prova, a célula começa com `**None**` — DECLARA, nunca fica
+  vazia. Procedimento de operação novo no runbook ganha linha ali; renomear um
+  spec ou tirar o `schedule:` de um workflow citado reprova o PR que o fez. Só
+  o runbook em inglês tem a tabela: a tradução pt-BR está atrás (AT-209) e uma
+  segunda cópia sem conferência seria a cópia que a tabela existe para
+  substituir.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de

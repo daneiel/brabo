@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: o runbook ganha a tabela *Procedures and how each is verified*
+  (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
+  o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou
+  manual). 24 nomeiam a verificação — várias só em parte, e a célula diz qual
+  parte — e 4 declaram que não há nenhuma (validar uma tag, aumentar a janela
+  de drain, o fallback de sealed-secrets, destravar conta por SQL). Treze
+  procedimentos passam a dizer isso também na prosa. O `pnpm docs:check`
+  confere a tabela e reprova arquivo inexistente, alvo do `make` que sumiu,
+  célula vazia ou "see below", âncora que não é de cabeçalho e workflow que não
+  tem o gatilho que a célula afirma.
+
 - **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
   comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
   ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de
