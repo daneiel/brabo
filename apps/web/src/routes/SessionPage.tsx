@@ -68,6 +68,7 @@ import { SessionTopbar } from './SessionTopbar';
 import { SessionFio } from './SessionFio';
 import { SessionComposer } from './SessionComposer';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
+import { useRolagemDoFio } from '../lib/session-rolagem';
 
 interface SessionPageProps {
   projectId: string;
@@ -95,16 +96,6 @@ export {
   ordemDaAcaoNaTimeline,
   turnoDoSeq,
 };
-
-/**
- * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
- * teste) não implementa o método; chamá-lo direto quebra qualquer teste que
- * monte a tela com eventos na lista. Nos navegadores de verdade o método
- * sempre existe, então a guarda nunca muda o comportamento visível.
- */
-function rolarParaOFim(el: HTMLElement | null) {
-  el?.scrollIntoView?.({ block: 'end' });
-}
 
 export function SessionPage({
   projectId,
@@ -175,16 +166,6 @@ export function SessionPage({
   const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
-  // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
-  // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
-  // sem NENHUM scroll automático.
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
-  // não é ele que cresce; observar o container não veria nada.
-  const messagesInnerRef = useRef<HTMLDivElement | null>(null);
-  const abriuNoFimRef = useRef(false);
-
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   // RN-579: com o canal da sessão VIVO, os polls desta tela viram fallback
   // longo e quem diz quando buscar é o aviso do canal (`canal-vivo.ts`). A
@@ -255,66 +236,16 @@ export function SessionPage({
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
 
-  // Navegação de evidência (Fase 4b): rola até o evento assim que ele
-  // existir no DOM — depende do log estar aberto E dos eventos já terem
-  // chegado pelo poll, daí a dependência em `events.length`.
-  useEffect(() => {
-    if (!highlightEvent || !logOpen) return;
-    document
-      .getElementById(`event-${highlightEvent}`)
-      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [highlightEvent, logOpen, events.length]);
-
-  // Achado 10: a sessão abre sempre na ÚLTIMA mensagem. Roda uma vez, assim
-  // que a primeira leva de eventos chega — a navegação de evidência do
-  // Psicólogo (efeito acima) tem prioridade quando existe `highlightEvent`,
-  // e por isso este nem tenta rolar nesse caso.
-  useEffect(() => {
-    if (highlightEvent || abriuNoFimRef.current || events.length === 0) return;
-    rolarParaOFim(messagesEndRef.current);
-    abriuNoFimRef.current = true;
-  }, [highlightEvent, events.length]);
-
-  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
-  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
-  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
-  // e "o chat me arrasta".
-  const acompanharOFim = useCallback(() => {
-    if (!abriuNoFimRef.current) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const pertoDoFim =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
-  }, []);
-
-  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
-  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
-  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
-  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
-  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
-  // timeline.
-  useEffect(() => {
-    acompanharOFim();
-  }, [events.length, actions.length, streamingText, acompanharOFim]);
-
-  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
-  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
-  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
-  // card de aprovação), o Markdown reflowando, um diagrama renderizando
-  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
-  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
-  //
-  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
-  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
-  // — a guarda nunca muda o comportamento visível.
-  useEffect(() => {
-    const alvo = messagesInnerRef.current;
-    if (!alvo || typeof ResizeObserver === 'undefined') return;
-    const observador = new ResizeObserver(() => acompanharOFim());
-    observador.observe(alvo);
-    return () => observador.disconnect();
-  }, [acompanharOFim]);
+  // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
+  // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
+  // efeitos, chamados neste mesmo ponto.
+  const { messagesEndRef, scrollContainerRef, messagesInnerRef } = useRolagemDoFio({
+    highlightEvent,
+    logOpen,
+    events,
+    actions,
+    streamingText,
+  });
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
