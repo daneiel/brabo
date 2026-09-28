@@ -171,6 +171,7 @@ estado lido do repositório e não da conversa.
 | O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |
 | O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
 | O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação (AT-173) | ADR 0170 |
+| A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
 
 ## Estado atual e aberto
 

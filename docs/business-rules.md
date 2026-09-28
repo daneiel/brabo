@@ -13481,15 +13481,16 @@ mostrá-lo é outra entrega.
 **O que o motivo NÃO diz, declarado:** ele nomeia a regra, não a RAIZ do
 escopo — o ponto 7 do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
 pedia *qual raiz* autorizou, e `escopo: cd dentro da pasta do projeto` não
-carrega o caminho. No comando composto, a razão diz que todos os segmentos
+carrega o caminho. (A raiz passou a ir no evento em campo PRÓPRIO desde a
+[RN-609](#rn-609), relativa e nunca absoluta.) No comando composto, a razão diz que todos os segmentos
 bateram em `allow`, sem dizer qual padrão casou qual segmento. E as linhas
 do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:210`
-  (`reason` no payload do evento de sessão), `:173` (o comentário do outbox
-  sem o campo), `:177` (o payload do outbox, intacto), `:288` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:213`
+  (`reason` no payload do evento de sessão), `:176` (o comentário do outbox
+  sem o campo), `:184` (o payload do outbox, intacto), `:300` (o
   `rejectionReason`, que continua só no `deny`);
   `apps/api/src/domain/actions/decide.ts:256` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:742`
@@ -15510,3 +15511,69 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   ordem, lendo o espelho da api);
   `apps/engine/test/engine/runners/runner_router_test.exs:183`
 - **Origem:** AT-234
+
+### RN-609 — `proposed_action.created` diz QUAL raiz o escopo comparou, relativa e nunca absoluta {#rn-609}
+
+A [RN-567](#rn-567) pôs no evento a REGRA que decidiu (`reason`) e declarou o
+que ficava de fora: o ponto 7 do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) pede *qual
+escopo* autorizou, e `escopo: cd dentro da pasta do projeto` não diz qual
+pasta era o escopo naquele dia. A raiz muda — conversão de modo, base
+nova —, e o evento é o único lugar que guarda o que valia no instante da
+decisão.
+
+**A regra:** o payload do evento de SESSÃO `proposed_action.created` de uma
+ação `terminal` ganha `scopeRoot`, com três campos — `executionMode`,
+`ancora` e `segmento`:
+
+| modo | `ancora` | `segmento` |
+|---|---|---|
+| `container` | `raiz_gerenciada` | o `workspace_dir_name` — a raiz É `<PROJECT_WORKSPACES_ROOT>/<segmento>` |
+| `mounted` | `base_de_projetos` | o pedaço sob `BRABO_PROJECTS_BASE`, pela MESMA `segmentoSobABaseDeProjetos` que o broker usa |
+| `mounted` (sem base, fora dela, ou a própria base) | `indisponivel` | `null` |
+| `runner` | `nome_da_pasta` | o `workspace_dir_name` — identifica a pasta sem ser relativo a nada que o servidor conheça |
+
+**Nunca o caminho absoluto, e isso é a decisão (AT-147, do mantenedor).** O
+event log é lido por todo membro do projeto e evento não se reescreve; em
+`mounted`/`runner` a raiz é uma pasta da máquina do usuário, com o `$HOME`
+dele no caminho. Por isso `indisponivel` existe: cair no caminho absoluto
+"para não perder informação" seria exatamente o vazamento. No `runner` a base
+local do agente nunca atravessa a rede, então não há segmento relativo que o
+servidor possa calcular — a `ancora` diz que o valor é um NOME e não um
+caminho.
+
+**Só em `terminal`.** É o único tipo em que `decide()` consulta o escopo
+(`terminalNoEscopo`); nos outros o campo não existe, em vez de existir
+dizendo algo que a decisão não usou. A derivação é a de `projectScopeRoot` —
+`raizDoEscopoNoEvento` mora ao lado dela, no mesmo arquivo, e não é segunda
+régua: o que ela faz é EXPRIMIR a mesma raiz sem a parte absoluta.
+
+**Aditivo, e ausente não é "sem raiz".** Evento gravado antes desta regra, ou
+de outro tipo, não tem o campo; não há reprocessamento nem coluna nova. O
+outbox não o carrega, pelo mesmo motivo da [RN-567](#rn-567) (sem
+consumidor no engine). Nada em `decide()` muda, nenhum teto, e a tela não
+muda — onde ele aparece é outra entrega (AT-148). A web lê o payload como
+registro genérico, então evento antigo e novo passam pela mesma leitura.
+
+**Declarado:** em `mounted`, o segmento é relativo à base configurada NO
+INSTANTE da decisão — se a base mudar depois, o segmento antigo continua
+dizendo o que era verdade então, que é o ponto. E a separação entre escopo e
+`permissions.json` ([RN-478](#rn-478)) não entra no campo: ele descreve a
+raiz do ESCOPO, nunca onde o arquivo de política mora.
+
+- **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
+  (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
+  (`segmentoSobABaseDeProjetos`, reusada);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
+  (`scopeRoot` só em `terminal`);
+  `apps/api/src/domain/actions/decide.ts:532` (`terminalNoEscopo`, o único
+  consumidor do escopo)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:889`
+  (`container`), `:904` (`mounted`), `:920` (`runner`), `:935` (o caminho
+  absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
+  da base), `:959` (`indisponivel`), `:975` (outro tipo e o outbox sem o
+  campo), `:995` (evento anterior, sem o campo, pela mesma leitura);
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
+  (a função pura, nos três modos e nos três casos de `indisponivel`)
+- **ADR:** [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7)
+- **Origem:** AT-147 (EP-025/HS-043)

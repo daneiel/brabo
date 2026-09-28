@@ -54,6 +54,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   card do agente dizem, antes do clique, o que o modo libera e o que continua
   pedindo; o toggle "manual" restaura o teto.
 
+- **api**: o evento de sessão `proposed_action.created` de uma ação de
+  `terminal` passa a dizer **qual raiz** o escopo de caminho comparou
+  (AT-147, [RN-609](docs/business-rules.md#rn-609)) — o campo `scopeRoot`,
+  com o modo de execução e um identificador RELATIVO: o `workspace_dir_name`
+  em `container` e `runner`, o segmento sob `BRABO_PROJECTS_BASE` em
+  `mounted` (e `segmento: null` quando a pasta não é exprimível sob a base).
+  **Nunca o caminho absoluto**: o log é lido por todo membro, e em
+  `mounted`/`runner` o caminho traz o `$HOME` do usuário. Aditivo e opcional:
+  eventos antigos e ações de outros tipos seguem sem o campo, o outbox não o
+  carrega, nenhum veredito muda e a tela não muda.
+
 - **api**: a pasta `docs/` dos artefatos dos agentes passa a ter caminho de
   volta (AT-128, RN-590). `pnpm --filter api artefatos:reprojetar` (na imagem,
   `node scripts/reprojetar-artefatos.js`, com `--project`/`--after-event`)
