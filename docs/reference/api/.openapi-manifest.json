@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "b85a1bda481f81a5f0ac2467bc7d3fba81546617a10aa68bbddbb89798421058",
+  "openapiSha256": "e230d512a9c2de1a86d3971fe54dd532dab1b6928d38a0e6a0db8c952ba43544",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -774,7 +774,7 @@
     "runner-releases-controller-binary.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
     "runner-releases-controller-binary.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "runner-releases-controller-binary.StatusCodes.json": "1f0d4cba2b642badb843cb08e40b360ffc0cd1da15caeee2c19a69933e9ef288",
-    "runner-releases-controller-binary.api.mdx": "9f84b207f6f0418fd3e600a68472b61d29bff03b55a261a1393bf181d09cf489",
+    "runner-releases-controller-binary.api.mdx": "c975599fecd1884633abd4a04d5c356651e757370b4228776f84fe402765d23a",
     "runner-tickets-controller-runner-ticket.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "runner-tickets-controller-runner-ticket.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "runner-tickets-controller-runner-ticket.StatusCodes.json": "d0879b360fd23961f9a7ee2202ac3de8e58c4644e8d355290bfaf1405668aadc",
