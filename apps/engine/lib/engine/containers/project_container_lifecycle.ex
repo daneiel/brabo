@@ -67,4 +67,29 @@ defmodule Engine.Containers.ProjectContainerLifecycle do
   catch
     :exit, _ -> false
   end
+
+  @doc """
+  O `status` REGISTRADO do container do projeto, ou `nil` quando não há linha
+  (RN-610). Segunda pergunta deste módulo, com UM chamador: a recusa local de
+  subida do Infra Lead (`Engine.Infra.InfraLeadServer`), que não propõe subir
+  o que já está registrado como `running`/`provisioning` — a mesma régua
+  `ja_esta_de_pe` da página `/containers` (`decidirSubida`).
+
+  Erro de consulta também devolve `nil`, e aqui o sentido é o INVERSO do de
+  `running?/1`: quem pergunta vai RECUSAR com base na resposta, então "não
+  consegui olhar" não pode virar recusa — cai no caminho de sempre, e quem
+  decide é a execução, que continua recusando como antes.
+  """
+  def status_registrado(project_id) do
+    Repo.one(
+      from(c in __MODULE__,
+        where: c.project_id == ^project_id,
+        select: c.status
+      )
+    )
+  rescue
+    _ -> nil
+  catch
+    :exit, _ -> nil
+  end
 end

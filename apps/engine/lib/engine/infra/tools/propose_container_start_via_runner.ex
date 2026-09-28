@@ -22,8 +22,11 @@ defmodule Engine.Infra.Tools.ProposeContainerStartViaRunner do
   recusando com motivo NOMEADO em vez de propor às cegas. A lacuna que a
   RN-494 deixou declarada para `propose_container_start` FECHOU na RN-566:
   as duas passam pela MESMA `recusa_local_de_subida/2`, cada uma com a sua
-  cláusula. O que segue exclusivo desta tool é a segunda pergunta — há
-  runner conectado agora? —, que só faz sentido no modo `runner`.
+  cláusula. O que segue exclusivo desta tool é a pergunta — há runner
+  conectado agora? —, que só faz sentido no modo `runner`, e desde a RN-610
+  mais duas lidas do mesmo Postgres: imagem JÁ decidida (esta tool não elege)
+  e pasta alguma vez confirmada (`workspace_verified_at`). As duas tools
+  recusam também container já registrado `running`/`provisioning`.
 
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado

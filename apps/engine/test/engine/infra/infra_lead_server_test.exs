@@ -650,12 +650,222 @@ defmodule Engine.Infra.InfraLeadServerTest do
     )
   end
 
+  # RN-610: o que a `/containers` exige de um projeto `runner` antes de
+  # oferecer a subida — pasta confirmada por um agente local e imagem decidida
+  # (um `artifact.project_image` em QUALQUER sessão do projeto).
+  defp confirmar_pasta!(project_id) do
+    Repo.query!("UPDATE public.projects SET workspace_verified_at = now() WHERE id = $1", [
+      Ecto.UUID.dump!(project_id)
+    ])
+  end
+
+  defp decidir_imagem!(project_id) do
+    # Numa sessão DIFERENTE da do Infra Lead, de propósito: o artefato do
+    # Arquiteto vive na sessão dele, e a leitura é por projeto.
+    sessao = Ecto.UUID.generate()
+
+    Repo.query!("INSERT INTO public.sessions (id, project_id) VALUES ($1, $2)", [
+      Ecto.UUID.dump!(sessao),
+      Ecto.UUID.dump!(project_id)
+    ])
+
+    Repo.query!(
+      "INSERT INTO public.session_events (id, session_id, seq, type, actor_kind, actor_id, payload) " <>
+        "VALUES ($1, $2, 1, 'artifact.project_image', 'agent', 'arquiteto', $3)",
+      [
+        "evt-img-#{System.unique_integer([:positive])}",
+        Ecto.UUID.dump!(sessao),
+        %{"image" => "node:22-bookworm-slim", "version" => 1}
+      ]
+    )
+  end
+
+  defp registrar_container!(project_id, status) do
+    Repo.query!(
+      "INSERT INTO public.project_containers " <>
+        "(id, project_id, status, image_version, cpus, memory_mb, pids_limit) " <>
+        "VALUES ($1, $2, $3, 1, 1.0, 512, 128)",
+      [Ecto.UUID.dump!(Ecto.UUID.generate()), Ecto.UUID.dump!(project_id), status]
+    )
+  end
+
+  # O projeto `runner` que passa por TODAS as cláusulas de estado, menos as
+  # que o teste desliga.
+  defp runner_pronto!(project_id, opts \\ []) do
+    insert_project!(project_id, "runner")
+    if Keyword.get(opts, :pasta, true), do: confirmar_pasta!(project_id)
+    if Keyword.get(opts, :imagem, true), do: decidir_imagem!(project_id)
+
+    if Keyword.get(opts, :runner, true) do
+      :ok = Engine.Runners.Registry.register(project_id, self())
+      on_exit(fn -> Engine.Runners.Registry.unregister(project_id) end)
+    end
+  end
+
+  # Roda um turno com UMA chamada de `container_start_via_runner` e devolve o
+  # `tool.result` gravado e a mensagem `role: "tool"` que o modelo leu.
+  defp turno_via_runner(state) do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-csvr", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("container_start_via_runner", %{"rationale" => "subir agora"}),
+      FakeEngineApiClient.final_response("depois-do-via-runner")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.call", payload: %{tool: "container_start_via_runner"}}}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "container_start_via_runner"} = r}}
+
+    # A recusa é ENTRADA do laço (RN-163): o modelo a lê como resultado de
+    # ferramenta e o turno segue até a resposta final, sem `agent.error`.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "depois-do-via-runner"}}}
+
+    refute_received {:event_appended, _pid, _sid, %{type: "agent.error"}}
+
+    mensagem = Enum.find(new_state.messages, &(&1["name"] == "container_start_via_runner"))
+    {r, mensagem}
+  end
+
+  # --- RN-610: recusas locais por ESTADO, uma cláusula por teste ---
+
+  test "RN-610 via_runner: container já registrado `running` — recusa, NUNCA propõe", %{
+    state: state
+  } do
+    runner_pronto!(state.project_id)
+    registrar_container!(state.project_id, "running")
+
+    {r, mensagem} = turno_via_runner(state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+    assert r.ok == false
+    assert r.erro =~ "já está REGISTRADO como `running`"
+    assert mensagem["role"] == "tool"
+    assert mensagem["content"] =~ "página `/containers`"
+  end
+
+  test "RN-610 via_runner: container `provisioning` também recusa", %{state: state} do
+    runner_pronto!(state.project_id)
+    registrar_container!(state.project_id, "provisioning")
+
+    {r, _} = turno_via_runner(state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+    assert r.erro =~ "`provisioning`"
+  end
+
+  test "RN-610 via_runner: container `stopped` NÃO recusa — subir é a próxima ação", %{
+    state: state
+  } do
+    runner_pronto!(state.project_id)
+    registrar_container!(state.project_id, "stopped")
+
+    {r, _} = turno_via_runner(state)
+
+    assert_received {:propose_action, "container_start_via_runner", _, _}
+    assert r.ok == true
+  end
+
+  test "RN-610 via_runner: sem imagem decidida — recusa nomeando o Arquiteto", %{state: state} do
+    runner_pronto!(state.project_id, imagem: false)
+
+    {r, _} = turno_via_runner(state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+    assert r.ok == false
+    assert r.erro =~ "nenhuma imagem de container foi decidida"
+    assert r.erro =~ "choose_project_image"
+  end
+
+  test "RN-610 via_runner: pasta nunca confirmada — recusa mesmo com runner conectado", %{
+    state: state
+  } do
+    runner_pronto!(state.project_id, pasta: false)
+
+    {r, _} = turno_via_runner(state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+    assert r.ok == false
+    assert r.erro =~ "nunca foi confirmada por um agente local"
+    assert r.erro =~ "brabo-runner --project #{state.project_id}"
+  end
+
+  test "RN-610 propose_container_start: container já `running` — recusa, NUNCA propõe", %{
+    state: state
+  } do
+    insert_project!(state.project_id, "container")
+    registrar_container!(state.project_id, "running")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      FakeEngineApiClient.final_response("depois-de-recusar-de-pe")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    refute_received {:propose_action, "container_start", _, _}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.result", payload: %{tool: "propose_container_start"} = r}}
+
+    assert r.ok == false
+    assert r.erro =~ "`propose_container_start` não foi proposta"
+
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+    assert recusa["content"] =~ "já está REGISTRADO como `running`"
+  end
+
+  test "RN-610 propose_container_start SEM imagem decidida: PROPÕE — eleger é o que ela faz (RN-491)",
+       %{state: state} do
+    # Nenhum `artifact.project_image` no projeto, de propósito.
+    insert_project!(state.project_id, "container")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-cs-sem-img", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      FakeEngineApiClient.final_response("pronto-sem-img")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:propose_action, "container_start", _, _}
+  end
+
   test "projeto runner COM runner conectado: propõe container_start_via_runner, sem halt", %{
     state: state
   } do
-    insert_project!(state.project_id, "runner")
-    :ok = Engine.Runners.Registry.register(state.project_id, self())
-    on_exit(fn -> Engine.Runners.Registry.unregister(state.project_id) end)
+    # RN-610: pasta confirmada e imagem decidida — o projeto que a
+    # `/containers` também deixaria subir.
+    runner_pronto!(state.project_id)
 
     Process.put(:fake_infra_context, %{
       "moduleMap" => nil,
@@ -691,8 +901,9 @@ defmodule Engine.Infra.InfraLeadServerTest do
   test "projeto runner SEM runner conectado: recusa nomeada, NUNCA chama propose_action", %{
     state: state
   } do
-    insert_project!(state.project_id, "runner")
-    # SEM Engine.Runners.Registry.register/2 — nenhum runner conectado.
+    # Pasta confirmada e imagem decidida (RN-610), mas SEM
+    # Engine.Runners.Registry.register/2 — nenhum runner conectado.
+    runner_pronto!(state.project_id, runner: false)
 
     Process.put(:fake_infra_context, %{
       "moduleMap" => nil,
