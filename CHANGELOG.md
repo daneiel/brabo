@@ -1093,6 +1093,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: o **bootstrap das provas agendadas deixa de subir a
+  observabilidade que nenhuma prova lê, e os operadores do helm sobem em
+  paralelo** (AT-177). `BRABO_SKIP_OBSERVABILITY=1` (opt-out explícito, só o
+  `propriedades.yml` o liga) pula Tempo, Loki, Collector, Alloy e Grafana; o
+  Prometheus e o prometheus-adapter ficam, porque o HPA do engine escala por
+  `oban_queue_depth` pela External Metrics API deles. ESO, CNPG,
+  metrics-server e Prometheus — releases que não se conhecem — rodam o
+  `helm --wait` lado a lado, cada um com log próprio despejado só em falha. O
+  padrão de `make deploy-local` não muda (a stack inteira sobe, e os pares
+  Tempo/Loki e Collector/Alloy também em paralelo). Medido contra a `dev`
+  (rodada `36362479629`): helm de 253 s para 90 s, bootstrap de 710 s para
+  547–555 s, job de 13 min 43 s para 10 min 59 s (rodadas `36367504128` e
+  `36368334920`).
 - **deploy/k8s**: **a quebra proposital do restore é pega pela prova agendada,
   e a última execução boa deixa de ser data escrita à mão** (AT-126, BRB-009).
   `make test-restore-mutacao` (`RESTORE_MUTACAO=tabela-faltando` em
