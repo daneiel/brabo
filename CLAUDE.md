@@ -166,6 +166,7 @@ estado lido do repositório e não da conversa.
 | A mensagem ao `infra` era lida pelo Criativo; o chat deixa de ter destinatário padrão (AT-098) | RN-584 |
 | A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
+| O Infra Lead recusa a subida por estado, na ordem da `/containers` (AT-142) | RN-610 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
 | O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |
@@ -346,7 +347,8 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 
 **Lacunas aceitas e declaradas:**
 - **O Infra Lead propunha `container_start` às cegas; desde a RN-566 ele
-  recusa por MODO, e o que sobra da lacuna é a IMAGEM.** A metade fechada:
+  recusa por MODO, desde a RN-610 por ESTADO, e o que sobra da lacuna é a
+  IMAGEM em `container`/`mounted`, de propósito.** A metade fechada:
   `dispatch_container_start/2` consulta LOCALMENTE o `execution_mode`
   (`Project.get/1`, mesmo processo BEAM, sem HTTP — rede no laço do agente
   era o que a correção não podia custar) antes de chamar `propose_action`, e
@@ -359,14 +361,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   tocar o prompt/instrução do Infra Lead"* — foi MEDIDO e não se confirmou:
   nenhuma linha de prompt mudou, e o texto da recusa é o que o modelo lê como
   resultado de ferramenta (entrada do laço, RN-163, nunca `agent.error`).
-  **A metade que SEGUE ABERTA:** nem as duas tools nem
-  `GetInfraContextUseCase` sabem de IMAGEM DECIDIDA, então propor sem imagem
-  continua possível em `container`/`mounted` — e ali a recusa por imagem
-  inverteria a ordem, porque eleger a imagem é o que essa proposta FAZ
-  (RN-491). A `/containers` checa as TRÊS coisas (imagem, modo, pasta
-  confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
-  contexto do Infra Lead com modo e presença de runner é frente à parte, mais
-  cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
+  Desde a RN-610 (AT-142) o agente recusa também por ESTADO, na ordem da
+  `/containers` e com as mesmas leituras locais (Postgres direto e o registro
+  de runners, nunca HTTP): as DUAS tools recusam container já REGISTRADO
+  `running`/`provisioning`, e `container_start_via_runner` recusa sem imagem
+  decidida (ela não elege, sobe a decidida) e com pasta nunca confirmada
+  (`workspace_verified_at` nulo), antes da checagem de runner conectado que já
+  fazia. `GetInfraContextUseCase` NÃO mudou — a decisão foi recusa no
+  despacho, não contexto. **O que SEGUE ABERTO, de propósito:** propor
+  `container_start` SEM imagem decidida continua possível em
+  `container`/`mounted`, porque ali a recusa por imagem inverteria a ordem —
+  eleger a imagem é o que essa proposta FAZ (RN-491); não "complete" a régua
+  da tela ali. Broker ausente na instalação e papel/sessão também não são
+  checados pelo agente (o primeiro a api recusa ao propor, RN-591). O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
   `mounted` pode dar certo de verdade, pelo broker. Desde a RN-591 a instalação SEM
   broker também é dita: a api recusa a proposta com 409
   `sem_broker_na_instalacao` (a fonte é `ContainerBrokerPort.configurado()`; o
@@ -1591,8 +1598,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `roleAtLeast`. Desde a RN-566 o AGENTE também ramifica por modo antes de
   propor: as duas tools do Infra Lead passam por `recusa_local_de_subida/2`
   (`infra_lead_server.ex`), que lê o projeto UMA vez e recusa com motivo
-  NOMEADO — a MESMA ramificação por DESTINO, nunca uma segunda régua. O que
-  ele NÃO checa, e a tela checa, é imagem decidida e pasta confirmada.
+  NOMEADO — a MESMA ramificação por DESTINO, nunca uma segunda régua. Desde
+  a RN-610 ele recusa também container já de pé (as duas tools) e, em
+  `runner`, imagem não decidida e pasta nunca confirmada; o que ele NÃO
+  checa, e a tela checa, é imagem decidida em `container`/`mounted` (eleger
+  é o que a proposta faz) e broker/papel/sessão.
   A política de terminal do ADR 0055 (escopo de caminho, allowlist
   estreito) segue valendo como está — mas ela não decide mais ONDE o comando
   roda quando NÃO há container: desde o ADR 0143 (RN-502), `container` e
