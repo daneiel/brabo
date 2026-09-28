@@ -128,6 +128,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   citava `0118-configuracao-do-runner-pelo-navegador.md` aponta para o nome
   real do ADR 0118.
 
+- **k8s**: o cluster local volta a subir, e as provas de propriedade voltam a
+  rodar (AT-200, issue #633, ADR 0169). O destino S3 do backup no overlay
+  local era o MinIO, e a MinIO deixou de publicar a imagem comunitária (o
+  digest preso responde 401 no quay.io; o Docker Hub, 404): o `bootstrap.sh`
+  morria no `rollout status deployment/minio`. O servidor passa a ser o
+  SeaweedFS 4.47 (Apache-2.0), preso pelo digest do índice, na mesma porta
+  9000; os recursos passam a se chamar `s3-local` (o endpoint do backup vira
+  `http://s3-local.brabo.svc.cluster.local:9000`). O cliente (`aws-cli` da
+  imagem `brabo-backup`) e o que `make test-restore` afere não mudam.
+
 - **broker/runner/api/engine**: o pull de imagem que passa do teto de controle
   deixa de falhar calado (AT-234, RN-605). O `start` da porta de Docker faz o
   pull como passo explícito (`image inspect`, depois `docker pull` sob o mesmo
