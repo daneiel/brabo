@@ -6186,7 +6186,7 @@ Uniformizar a forma pioraria o conteúdo no caminho mais provável da caixa.
   `:135`, `:147` (os três papéis — estas linhas NÃO mudaram),
   `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts:14`
   (`projectRole ?? workspaceRole`, a sobreposição nos dois sentidos),
-  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:167`
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:194`
   (`listMembers` — o `innerJoin` que faz a tabela ser recorte),
   `apps/web/src/routes/settings/MembersSection.tsx:62` (o papel efetivo e por
   que `maintainer`), `:109` (por que convidar não usa `mensagemDaApi`), `:142` e
@@ -11505,6 +11505,11 @@ cliente — mas calcular só ele produziria o meio-gate que o ADR 0127 recusou.
 
 ### RN-557 — Mudar o PRÓPRIO papel é recusado com 403 nas duas rotas de associação, nos dois sentidos {#rn-557}
 
+> **Estendida pela [RN-615](#rn-615) (ADR 0173):** a rota de remoção de membro de
+> workspace que abaixo se diz inexistente passou a existir, com o MESMO teto
+> (remover a si mesmo é 403) — e é essa cláusula que segura o último owner, sem
+> contar. O raciocínio abaixo sobre o teto 1 continua valendo.
+
 Terceira e última porta da linha aberta pela [RN-472](#rn-472) e continuada pela
 [RN-556](#rn-556). O [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md)
 declarou esta por escrito — *"`POST workspaces/:workspaceId/members` continua um
@@ -13944,7 +13949,7 @@ compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) ma
 deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
 certo, porque sem a variável a api nunca chama o broker.
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:253`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:349`
   (`getProjectsBase`, `:256` o campo novo),
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
@@ -15941,6 +15946,153 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
   usa a mesma função, e os três estados)
 - **Origem:** AT-148 (EP-025/HS-043)
+
+---
+
+### RN-615 — A remoção de membro de WORKSPACE nasce com o teto 2 herdado: remover a si mesmo é 403, e é essa cláusula que segura o último owner, sem contar {#rn-615}
+
+A quinta porta da linha dos tetos ([RN-472](#rn-472), [RN-556](#rn-556),
+[RN-557](#rn-557)), e a rota que o
+[ADR 0157](adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md) recusou
+abrir de passagem. Até aqui `WorkspacesController` não tinha `@Delete` de
+membro, e offboarding era escrita no banco. Decisão do mantenedor
+(AT-115/HS-006): **a rota nasce, protegida por CLÁUSULA.**
+
+**A rota.** `DELETE /workspaces/:workspaceId/members/:userId`, `owner` (o MESMO
+mínimo do upsert), 204, idempotente.
+
+**O teto é herdado, sem régua nova.** `remocaoEhAutoRebaixamento` recebe o papel
+do ator no WORKSPACE como o efetivo de hoje e `null` como o papel de DEPOIS — no
+workspace não há nível acima para segurar a queda, então remover a própria
+linha é sempre queda para "nenhum acesso", o ramo que a função já enunciava
+para o projeto sem linha de workspace. Remover a SI MESMO é **sempre 403**, com
+frase própria: *"Você não pode remover a si mesmo deste workspace: aqui não há
+papel acima para segurar a queda, e sem a linha você perde o workspace e todos
+os projetos dele. Voltar exige o owner que você estaria abandonando. Peça a
+outro owner."*
+
+**O último owner, pela MESMA cláusula.** Só `owner` chama a rota; ninguém remove
+a si mesmo; logo toda remoção bem-sucedida deixa ao menos o CHAMADOR como
+`owner`. Tirar o último exigiria que ele se removesse — o movimento recusado. A
+contagem segue recusada (ADR 0157, ponto 2). O mínimo `owner` da rota é METADE
+da prova, e por isso é asserido em teste.
+
+| movimento | desfecho |
+|---|---|
+| remover a SI MESMO do workspace, havendo ou não outro owner | **403** |
+| remover OUTRO `owner` | passa — é como se revoga propriedade por inteiro |
+| remover o TITULAR (`created_by`), por outro owner | **409** `criador_do_workspace` — [RN-616](#rn-616) |
+| remover qualquer outra pessoa | passa |
+| remover quem não tem linha de workspace | 204 — as linhas de projeto dele no workspace saem igual |
+
+**A cascata, numa transação.** A linha de `workspace_members`; as linhas de
+`project_members` do removido nos projetos DESTE workspace (sem elas a
+sobreposição `projectRole ?? workspaceRole` da [RN-471](#rn-471) o manteria
+dentro de todo projeto em que tivesse linha própria); e as credenciais dele
+presas a esses projetos — chaves de dispositivo de PROJETO e PATs —, revogadas
+com o motivo `workspace_member_removed`. Depois do commit, a conexão viva do
+runner dele cai em CADA projeto do workspace pelo caminho da
+[RN-520](#rn-520), em `try/catch` que só loga: engine fora do ar não derruba a
+remoção.
+
+**Declarado e NÃO feito:** a chave de MÁQUINA (é da conta e serve outros
+workspaces; aqui ela deixa de alcançar porque o papel resolve para nenhum); o
+socket de SESSÃO já conectado e o terminal `:web` do removido (seguem até cair;
+o ticket novo é recusado); tela (não existe seção de membros de workspace no
+`apps/web`). O TITULAR (`workspaces.created_by`) não sai por esta rota — é a
+[RN-616](#rn-616).
+
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:234`
+  (`removeMember`);
+  `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:79`
+  (`RemoveWorkspaceMemberUseCase`);
+  `apps/api/src/domain/iam/tetos-de-rebaixamento.ts:88`
+  (`MENSAGEM_TETO_AUTO_REMOCAO_DO_WORKSPACE`), `:248`
+  (`remocaoEhAutoRebaixamento`);
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:84`
+  (`removeMember`);
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:167`
+  (`removeMemberFromWorkspaceProjects`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:169`
+  (`revogarChavesDeProjetoNoWorkspace`);
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts:187`
+  (`revogarDoUsuarioNoWorkspace`)
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
+  (contra o Postgres: remove outro membro com a cascata inteira e nada fora do
+  workspace; remove outro owner; engine fora do ar não derruba; idempotente;
+  recusa a si mesmo sem escrever nada; frase própria; o owner único não sai; com
+  dois owners, quem remove fica);
+  `apps/api/test/interfaces/http/iam/workspaces-members.controller.spec.ts`
+  (`owner` nas duas rotas de membro, 204, a ordem ator/alvo, o 403 propagado);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada em
+  `docs/security-surface.md`)
+- **ADR:** [0173](adr/0173-remocao-de-membro-de-workspace.md)
+- **Origem:** AT-115 (EP-002/HS-006)
+
+---
+
+### RN-616 — O TITULAR do workspace não sai pela remoção de membro: 409 `criador_do_workspace` até transferir, e a titularidade só vai para outro `owner` {#rn-616}
+
+Decisão do mantenedor sobre a questão que a [RN-615](#rn-615) deixou aberta
+(AT-115, [ADR 0173](adr/0173-remocao-de-membro-de-workspace.md), ponto 7).
+`workspaces.created_by` não autoriza nada — quem autoriza é o papel
+([RN-472](#rn-472)) —, mas é por ele que se resolve a credencial de LLM que os
+agentes gastam e a de git das ações de agente
+([RN-058](business-rules/custo.md#rn-058)) e o dono do relatório de gasto
+([RN-060](business-rules/custo.md#rn-060)). Remover o criador deixaria os
+agentes gastando a credencial de quem já não está no workspace. A coluna passa a
+ser chamada, na regra, de **titular**.
+
+**A recusa.** `DELETE /workspaces/:workspaceId/members/:userId` com alvo = titular
+é **409** com `code: "criador_do_workspace"`: *"Não é possível remover o titular
+do workspace: a credencial de LLM que os agentes gastam, a de git das ações de
+agente e o relatório de gasto são dele (RN-058/RN-060). Transfira antes a
+titularidade para outro owner (PUT /workspaces/:workspaceId/owner-of-record) e
+remova depois."* O teto da RN-615 vem antes: o titular tentando se remover
+recebe o 403 de auto-remoção.
+
+**A transferência.** `PUT /workspaces/:workspaceId/owner-of-record`, `owner`,
+corpo `{ userId }`, responde o workspace (200). O destino precisa JÁ ser `owner`
+do workspace, senão **409** `titular_precisa_ser_owner` (*"A titularidade só vai
+para quem já é owner deste workspace: o titular paga o que os agentes gastam
+(RN-058). Promova a pessoa a owner antes, ou escolha outro owner."*). Grava
+`created_by` numa transação com a leitura do papel; transferir para o titular
+atual é idempotente. Qualquer `owner` pode transferir, inclusive para OUTRO
+owner que não pediu — declarado, é a mesma autoridade que remove donos.
+
+**O gasto, a partir do commit.** `ResolveCredentialOwnerUseCase` devolve o novo
+titular: o turno de agente procura a credencial DELE para o provider do modelo,
+e as ações de git a credencial de git dele. Sem credencial, o desfecho é o que
+já existia — o turno termina com *"Nenhuma credencial cadastrada para
+<provider>"* e a leitura do remoto git falha nomeando de quem é a credencial que
+falta. A transferência NÃO confere isso antes (declarado no ADR). O gasto
+registrado não se move: `token_usage` não guarda titular, e o relatório inteiro,
+histórico incluído, passa a ser do novo titular. Sem evento de domínio: fica
+uma linha de log com de/para/quem.
+
+- **Código:** `apps/api/src/domain/iam/titularidade-do-workspace.ts:22`
+  (`CODIGO_CRIADOR_DO_WORKSPACE`), `:38` (`removeOTitular`);
+  `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:120`
+  (`removeOTitular`);
+  `apps/api/src/application/use-cases/iam/transfer-workspace-ownership.use-case.ts:39`
+  (`TransferWorkspaceOwnershipUseCase`);
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:98`
+  (`transferirTitularidade`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:269`
+  (`transferOwnership`)
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
+  (`describe` "o TITULAR não sai": o 409 com código e nada escrito; o titular
+  removendo a si mesmo recebe o 403; depois de transferir, remover o antigo
+  criador passa e o novo titular vira o protegido — e `describe`
+  "TransferWorkspaceOwnershipUseCase": para owner grava `created_by`; para
+  `maintainer` e para não-membro é 409 `titular_precisa_ser_owner`; para o
+  titular atual é idempotente);
+  `apps/api/test/interfaces/http/iam/workspaces-members.controller.spec.ts`
+  (`owner` e a delegação da transferência)
+- **ADR:** [0173](adr/0173-remocao-de-membro-de-workspace.md), ponto 7
+- **Origem:** AT-115 (EP-002/HS-006)
 
 ---
 

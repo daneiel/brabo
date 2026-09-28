@@ -3639,10 +3639,32 @@ export interface paths {
         put?: never;
         /**
          * Associates a user with the workspace
-         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall and no route that removes a member, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.
+         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.
          */
         post: operations["WorkspacesController_addMember"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disassociates a user from the workspace
+         * @description Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none.
+         *
+         *     Removing YOURSELF is refused with 403 and cannot be enabled anywhere: there is no level above to catch the fall. That same clause is what protects the last `owner` — only an `owner` can call this route and nobody removes themselves, so every successful call leaves at least the caller as `owner`. Removing ANOTHER `owner` is allowed — it is how ownership is revoked — except the OWNER OF RECORD (`createdBy`), refused with 409 `criador_do_workspace` until `PUT :workspaceId/owner-of-record` moves it to another owner: the LLM key agents spend and the spend report are theirs. Idempotent: a target without a workspace row still has this workspace's project rows cleared, and gets `204`.
+         */
+        delete: operations["WorkspacesController_removeMember"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3786,6 +3808,26 @@ export interface paths {
          * @description The axis no catalog publishes: "good for code" is not a capability declared by any provider, it is the operator's opinion — and applies ONLY to this workspace (ADR 0049). Axis independent of activation: marking a use does not turn the model on in the selector, and changing the use does not turn off what was on. The uses list REPLACES the previous one.
          */
         post: operations["ModelsController_uses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/owner-of-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Transfers the workspace's owner of record
+         * @description The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing "no credential registered" outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op.
+         */
+        put: operations["WorkspacesController_transferOwnership"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9107,6 +9149,14 @@ export interface components {
             arguments: {
                 [key: string]: unknown;
             };
+        };
+        TransferOwnershipDto: {
+            /**
+             * Format: uuid
+             * @description Id of the user who becomes the owner of record. Must already be an `owner` of this workspace.
+             * @example 3f1b2c8e-5a4d-4b7e-9c10-2d6f8a1b4c33
+             */
+            userId: string;
         };
         TransitionSessionDto: {
             /**
@@ -19504,6 +19554,62 @@ export interface operations {
             };
         };
     };
+    WorkspacesController_removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Association removed. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not `owner` of the workspace, OR the target is the caller (self-removal cap). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `criador_do_workspace`: the target is the owner of record; transfer it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelBindingsController_getWorkspaceBinding: {
         parameters: {
             query?: never;
@@ -19910,6 +20016,73 @@ export interface operations {
             };
             /** @description Some id in the batch doesn't exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_transferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `titular_precisa_ser_owner`: the target is not an `owner` of the workspace. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

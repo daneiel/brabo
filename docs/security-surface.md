@@ -953,6 +953,33 @@ reason in the URL.
   over HTTP, which is the class of state ADR 0127 was born to eliminate.
   Demoting **another** owner therefore stays allowed — the only way ownership
   gets revoked, and reversible through the same route by any remaining owner.
+- **`DELETE /workspaces/:workspaceId/members/:userId` is `role:owner`, and it
+  is the fifth door of the same family**
+  ([ADR 0173](adr/0173-remocao-de-membro-de-workspace.md),
+  [RN-615](business-rules.md#rn-615)). It did not exist when ADR 0157 was
+  written — the sentence above about "no member `@Delete`" describes that
+  moment. It carries the same cap with no new rule: `remocaoEhAutoRebaixamento`
+  with the workspace role as today's effective role and *none* as the role
+  after, since no level above catches the fall — so **removing YOURSELF is
+  always 403**. That same clause is what protects the **last owner**, without
+  counting: only an `owner` calls the route, nobody removes themselves, so
+  every successful call leaves at least the caller as `owner`. Removing
+  **another** owner is allowed (it is how ownership is revoked entirely), and
+  cap 1 still has no counterpart here — `@RequireRole('owner')` keeps
+  preventing hierarchy inversion. The removal also **cascades**, in one
+  transaction: the target's `project_members` rows in this workspace (without
+  it the project-overrides-workspace rule would keep them inside every project
+  where they had their own row), their PROJECT device keys and their PATs
+  here (every PAT belongs to one project); after commit their live runner
+  connection in each project is dropped, best effort, through the RN-520
+  path. Declared and not done: machine keys (account-wide; they stop reaching
+  this workspace because the role resolves to none), already-connected
+  session sockets. The **owner of record** (`workspaces.created_by`, whose
+  LLM and git credentials agents spend, RN-058) cannot be removed: 409
+  `criador_do_workspace` until `PUT /workspaces/:workspaceId/owner-of-record`
+  (`role:owner`, target must already be `owner`, else 409
+  `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
+  Any owner may transfer it, including to another owner who did not ask.
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -1279,6 +1306,8 @@ reason in the URL.
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
+| DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
+| PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |

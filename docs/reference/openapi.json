@@ -11216,7 +11216,7 @@
     },
     "/workspaces/{workspaceId}/members": {
       "post": {
-        "description": "Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall and no route that removes a member, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.",
+        "description": "Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.",
         "operationId": "WorkspacesController_addMember",
         "parameters": [
           {
@@ -11271,6 +11271,59 @@
           }
         ],
         "summary": "Associates a user with the workspace",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/members/{userId}": {
+      "delete": {
+        "description": "Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none.\n\nRemoving YOURSELF is refused with 403 and cannot be enabled anywhere: there is no level above to catch the fall. That same clause is what protects the last `owner` — only an `owner` can call this route and nobody removes themselves, so every successful call leaves at least the caller as `owner`. Removing ANOTHER `owner` is allowed — it is how ownership is revoked — except the OWNER OF RECORD (`createdBy`), refused with 409 `criador_do_workspace` until `PUT :workspaceId/owner-of-record` moves it to another owner: the LLM key agents spend and the spend report are theirs. Idempotent: a target without a workspace row still has this workspace's project rows cleared, and gets `204`.",
+        "operationId": "WorkspacesController_removeMember",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Association removed. No body."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Not `owner` of the workspace, OR the target is the caller (self-removal cap)."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "409": {
+            "description": "`criador_do_workspace`: the target is the owner of record; transfer it first."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disassociates a user from the workspace",
         "tags": [
           "workspaces"
         ]
@@ -11735,6 +11788,71 @@
         "summary": "Marks what the workspace uses each model for (batch)",
         "tags": [
           "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/owner-of-record": {
+      "put": {
+        "description": "The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing \"no credential registered\" outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op.",
+        "operationId": "WorkspacesController_transferOwnership",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "409": {
+            "description": "`titular_precisa_ser_owner`: the target is not an `owner` of the workspace."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transfers the workspace's owner of record",
+        "tags": [
+          "workspaces"
         ]
       }
     },
@@ -22240,6 +22358,20 @@
           "id",
           "name",
           "arguments"
+        ]
+      },
+      "TransferOwnershipDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "3f1b2c8e-5a4d-4b7e-9c10-2d6f8a1b4c33",
+            "description": "Id of the user who becomes the owner of record. Must already be an `owner` of this workspace."
+          }
+        },
+        "required": [
+          "userId"
         ]
       },
       "TransitionSessionDto": {

@@ -178,6 +178,7 @@ estado lido do repositório e não da conversa.
 | A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
 
 | A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
+| A remoção de membro de workspace nasce, protegida pela mesma cláusula, e a titularidade se transfere (AT-115) | ADR 0173, RN-615, RN-616 |
 
 | O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
 
@@ -1474,7 +1475,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   restrição que o teto 1 impede de criar. Desde o ADR 0157 (RN-557) o teto 2
   vale por QUATRO portas e nos DOIS SENTIDOS: `POST workspaces/:id/members`
   deixou de ser upsert sem teto (era passa-adiante sem ator, num escopo onde
-  não há nível acima para segurar a queda nem rota que remova membro), e a
+  não há nível acima para segurar a queda — e, até o ADR 0173, nem rota que
+  removesse membro), e a
   auto-PROMOÇÃO — que o ADR 0127 declarou como capacidade que ficava — é
   BRECHA e fecha, nas duas rotas de associação: é a única metade do movimento
   que ESCALA privilégio. A comparação virou UM classificador
@@ -1487,7 +1489,30 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `@RequireRole('owner')` da rota já a impede — pô-lo faria de `owner` um
   estado absorvente, do qual ninguém sai por HTTP. E o teto NÃO conta owners:
   a cláusula já garante que um workspace nunca chega a zero, porque tirar o
-  último exigiria que ele mesmo o fizesse. Segue possível e declarado:
+  último exigiria que ele mesmo o fizesse. Desde o ADR 0173 (RN-615) há a
+  QUINTA porta, `DELETE workspaces/:id/members/:userId` (`owner`, 204), e ela
+  também não tem régua nova: é `remocaoEhAutoRebaixamento` com o papel de
+  WORKSPACE como o efetivo de hoje e `null` como o de depois — no workspace
+  não há nível acima, então remover a SI MESMO é sempre 403 (frase própria,
+  `MENSAGEM_TETO_AUTO_REMOCAO_DO_WORKSPACE`). O ÚLTIMO owner fica protegido
+  por essa MESMA cláusula, sem contagem: só `owner` chama a rota e ninguém se
+  remove, então toda remoção deixa ao menos o chamador — o mínimo `owner` da
+  rota é METADE da prova, e está asserido em teste; não o baixe. Remover OUTRO
+  `owner` passa (é como se revoga propriedade), e o teto 1 segue sem par. A
+  remoção CASCATEIA numa transação — as linhas de `project_members` do
+  removido nos projetos do workspace (sem isso a sobreposição o manteria
+  dentro), as chaves de dispositivo de PROJETO e os PATs dele ali — e depois
+  derruba o runner vivo dele em cada projeto pelo caminho da RN-520, sem
+  derrubar a remoção se o engine falhar. Fica de fora, declarado: chave de
+  MÁQUINA, socket de sessão já conectado, terminal `:web`. O TITULAR
+  (`workspaces.created_by`, de quem é a credencial que os agentes gastam,
+  RN-058, e o relatório de gasto, RN-060) NÃO sai: 409 `criador_do_workspace`
+  até `PUT workspaces/:id/owner-of-record` (`owner`, destino JÁ `owner`, senão
+  409 `titular_precisa_ser_owner`) passar a titularidade (RN-616). Titular não
+  é autorização — quem autoriza continua sendo o papel —, e a transferência
+  não confere se o novo titular tem credencial: sem ela, o turno termina com o
+  desfecho de sempre ("Nenhuma credencial cadastrada"). Não há tela de membros
+  de workspace; as rotas são de API. Segue possível e declarado:
   rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
   workspace (única forma de revogar propriedade, reversível pela mesma rota);
   reescrever o próprio papel com o MESMO valor (upsert idempotente não é

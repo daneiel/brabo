@@ -118,6 +118,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   "não registrado", e o card diz quando o evento está fora dos eventos
   carregados. Em inglês e português.
 
+- **api**: nasce `DELETE /workspaces/:workspaceId/members/:userId` (`owner`,
+  204) — offboarding de membro de workspace deixa de ser escrita no banco
+  (AT-115, [ADR 0173](docs/adr/0173-remocao-de-membro-de-workspace.md),
+  [RN-615](docs/business-rules.md#rn-615)). Remover a SI MESMO é 403, sempre
+  (no workspace não há nível acima para segurar a queda), e é essa mesma
+  cláusula que impede tirar o último owner, sem contar owners. Remover OUTRO
+  owner passa. A remoção leva junto, na mesma transação, as linhas de projeto
+  da pessoa nos projetos do workspace, as chaves de dispositivo de projeto e
+  os PATs dela ali, e depois derruba o runner dela em cada projeto. A frase do
+  403 de auto-rebaixamento no workspace deixou de dizer que não existe rota
+  que remova membro. O TITULAR do workspace (quem o criou, de quem é a
+  credencial que os agentes gastam) não pode ser removido: 409
+  `criador_do_workspace` até a titularidade passar para outro owner pela rota
+  nova `PUT /workspaces/:workspaceId/owner-of-record` (`owner`; destino que não
+  é owner é 409 `titular_precisa_ser_owner`) — [RN-616](docs/business-rules.md#rn-616).
+  A partir da transferência, os agentes gastam a credencial do novo titular;
+  sem credencial para o provider, o turno termina como já terminava
+  ("Nenhuma credencial cadastrada").
 - **docs**: o runbook ganha a tabela *Procedures and how each is verified*
   (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
   o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou
