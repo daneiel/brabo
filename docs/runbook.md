@@ -2296,14 +2296,10 @@ What it does **not** rebuild, and the one ordering caveat:
   project wrote a newer one. The full run (no `--project`) walks the whole log in
   order and restores the global latest — use it after losing the graph; keep
   `--project` for a targeted repair.
-- **No time measurement on a large event log.** The only real run so far is the
-  development compose (98 events in `session_events`, 2.5 s end to end). How
-  long a full reprojection takes on a production-size log is unmeasured; the
-  command is safe to interrupt and run again.
-
-> **TODO(humano):** is there an acceptable ceiling for a full reprojection, or
-> may it run for hours in a maintenance window? Nothing read answers it, and it
-> decides whether batches by cursor are enough or the run needs scheduling.
+- **A full run takes a maintenance window, with no time ceiling**, and how
+  long it takes on a large log is unmeasured — see
+  [Running a full reprojection](#reprojecao-em-janela) for the window, the
+  progress line and how to tell how far along it is.
 
 The proof is `make test-reprojecao`
 (`apps/api/test/scripts/reprojetar-grafo.spec.ts`): it builds a scenario with
@@ -2322,6 +2318,81 @@ against the cluster's Postgres and Neo4j, on a project it creates itself.
 The graph being empty until you run this has a named effect: reads that depend
 on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
 is inside the dump.
+
+#### Running a full reprojection: a maintenance window, no time ceiling {#reprojecao-em-janela}
+
+A full reprojection (graph or [artifact folder](#perda-da-pasta-de-artefatos))
+is a rare **recovery** operation, and it runs in a **maintenance window, with no
+time ceiling** — maintainer's decision (2026-09-27). Nothing in the product
+times it out, warns when it takes long, or schedules it: it runs for as long as
+the event log takes, and you plan the window for that.
+
+How long that is on a production-size log is **unmeasured**. The only real run
+so far is the development compose (98 events in `session_events`, 2.5 s end to
+end); a proportional extrapolation from it is not a measurement, so time the
+first full run of your installation and keep that number for the next window.
+
+**Following the progress.** The command prints one line per batch — every 200
+events of the types it reads — before the final result, so a run that is
+still printing is still walking the log:
+
+```
+[reprojetar] eventos: 200 projetados, cursor 01M2DTREY0TBKHCHG9NWXYF0A4
+[reprojetar] eventos: 400 projetados, cursor 01M2DV3K8Q2S7ZB1CXN4W6Y9HR
+...
+[reprojetar] sessões fechadas: 200 projetadas
+[reprojetar-artefatos] artefatos: 200 projetados, cursor 01M2DTREY0TBKHCHG9NWXYF0A4
+```
+
+The number is how many were **projected** (items that failed are printed on
+their own line and counted in `falhas=` at the end). The line does not carry a
+total. To know how far along the run is, ask Postgres, with the cursor from the
+last line — reading only, so it is safe while the run goes on:
+
+```sql
+-- graph, event phase: how many in total, and how many still after the cursor
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE id > '<cursor>') AS remaining
+  FROM session_events
+ WHERE type IN ('handoff.offered', 'psychologist.hypothesis_proposed',
+                'anamnese.profile_updated');
+
+-- graph, second phase (the Interacao of each closed session)
+SELECT count(*) FROM sessions WHERE status IN ('closed', 'closed_abnormally');
+
+-- artifact folder
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE id > '<cursor>') AS remaining
+  FROM session_events
+ WHERE type IN ('artifact.note', 'artifact.business_rule',
+                'artifact.decision_record', 'artifact.product_brief',
+                'artifact.module_map', 'artifact.module_routing',
+                'artifact.project_image', 'artifact.c4_diagram',
+                'artifact.prototipo_navegavel', 'artifact.plano_de_teste',
+                'artifact.threat_model', 'artifact.insight',
+                'artifact.rfc_staff');
+
+-- when the cursor event was written (ids are ULIDs, ordered by time)
+SELECT created_at FROM session_events WHERE id = '<cursor>';
+```
+
+Add `AND session_id IN (SELECT id FROM sessions WHERE project_id = '<project-uuid>')`
+to a count when the run has `--project`. The type lists are the ones the
+commands read (`EVENTOS_DO_LOG_PROJETAVEIS` in
+`apps/api/src/application/graph-projection/graph-event-translator.ts`,
+`ARTIFACT_PROJECTABLE_EVENT_TYPES` in
+`apps/api/src/domain/artifacts/artifact-projection-events.ts`); if either file
+gained a type, the count here is short by it.
+
+**What this decision does not add.** No ceiling, no warning, no reprojection
+split into windows or scheduled by the product. `--project` and
+`--after-event` stay exactly what they already were — a targeted repair and a
+resume after an interruption — and are **not** the way to fit a full recovery
+into a shorter window: a `--project` run cannot restore the global
+`PerfilAnamnese` snapshot (above), and resuming in the middle of a versioned
+artifact type can leave an older version ([below](#perda-da-pasta-de-artefatos)).
+The full run is the recovery. Interrupting it is safe — the idempotence above
+holds — and running it again from the start is always correct, just slower.
 
 ### Losing the artifact folder (`docs/`) {#perda-da-pasta-de-artefatos}
 
@@ -2391,8 +2462,11 @@ Where it writes, and what it does **not** cover:
 - **What it does not read:** types outside the projectable list (`qa_verdict`,
   `secops_verdict`, `task_blocked`, `infra_delegation_files`) were never files
   and are not recreated.
-- **No time measurement on a large event log** — unmeasured; the command is
-  safe to interrupt and run again.
+- **It runs in a maintenance window, with no time ceiling**, the same as the
+  graph: the progress line and the queries to follow it are in
+  [Running a full reprojection](#reprojecao-em-janela). How long it takes on a
+  large event log is unmeasured; the command is safe to interrupt and run
+  again.
 
 The proof is `apps/api/test/scripts/reprojetar-artefatos.spec.ts`: it builds a
 scenario with the forward projector on a real Postgres and a real disk, **wipes**
