@@ -404,13 +404,32 @@ below it, each `git add`ed — made `--check` fail with `DESATUAL` on
 `.spec.` filter, right for sources where a spec is a unit test sitting
 next to the code, was also dropping `e2e/testes/*.spec.ts` — the
 Playwright tests themselves, where a new `e2e/` variable is most likely
-to be born — and that mutation passed green. Two limits stay declared:
+to be born — and that mutation passed green. One limit stays declared:
 the inventory reads only **versioned** files (`git ls-files`), so an
-untracked file is invisible until `git add`; and what fails is the
-**stale block**, not the gap itself — once `docs:generate` rewrites the
-block, the variable sits there with ⚠️ and `--check` passes (two
-product variables are in that state today). The ⚠️ is a visible gap to
-fill in the prose, never a gate.
+untracked file is invisible until `git add`.
+
+**The environment ⚠️ is a gate (AT-211, 2026-09-27).** Until then what
+failed was only the **stale block**: once `docs:generate` rewrote it,
+the variable sat there with ⚠️ and `--check` passed —
+`HUGGINGFACE_API_TOKEN` and `HUGGINGFACE_HUB_URL` stayed that way for
+months. By the maintainer's decision, `--check` now fails on **any**
+⚠️ in the environment inventory, for **both** kinds of source
+(`produto` and `ferramenta`), even with the block up to date. The
+failure names the variable, the file that reads it and the section of
+`configuration.md` where the description goes (`SEM DESC.` lines). The
+rule lives in `scripts/docs/inventario-de-env.mjs` and is proven by
+mutation in `inventario-de-env.spec.ts`: a new variable without a
+description fails, the same one with a description passes.
+
+A `**TODO(humano):**` on the line that cites the variable **counts as a
+description** and doesn't fail: the docs rule is "never invent; without
+information, TODO(humano)", and a gate that failed the TODO would push
+whoever doesn't know what the variable does into inventing a sentence
+to get green. The TODO is a **declared** gap, with the question written
+where the answer goes; the ⚠️ is a **silent** one. `--check` still lists
+variables described only by a TODO, on a `TODO` line, without failing.
+The event inventory in `events.md` keeps its ⚠️ as a visible gap — the
+decision covered the environment inventory only.
 
 `--check` writes nothing and fails if anything would be different.
 That's CI's mode.

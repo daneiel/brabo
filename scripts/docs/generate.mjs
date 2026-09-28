@@ -27,6 +27,12 @@ import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
+  DESTINO as DESTINO_DO_INVENTARIO,
+  ID_DO_BLOCO as ID_DO_INVENTARIO,
+  inventariar,
+  mensagemDaLacuna,
+} from './inventario-de-env.mjs';
+import {
   arquivos,
   eventosEmitidosPor,
   grepTodos,
@@ -48,28 +54,6 @@ const AVISO_BLOCO =
  */
 function celulaDeTabela(texto) {
   return texto.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-}
-
-/**
- * Nomes citados na prosa, incluindo a abreviação `PREFIXO_A` / `_B`, que é
- * idioma legítimo de tabela ("`POSTGRES_HOST` / `_USER` / `_PASSWORD`").
- * Sem expandir isso o checker acusa falso-positivo, e falso-positivo treina
- * quem lê a ignorar o aviso — que é o pior resultado possível pra um check.
- */
-function nomesCitados(doc) {
-  const citados = new Set();
-  for (const m of doc.matchAll(/`([A-Z][A-Z_0-9]{2,})`((?:\s*\/\s*`_[A-Z_0-9]+`)+)/g)) {
-    const base = m[1];
-    citados.add(base);
-    for (const s of m[2].matchAll(/`(_[A-Z_0-9]+)`/g)) {
-      // `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` → troca o último trecho.
-      citados.add(base.replace(/_[A-Z0-9]+$/, s[1]));
-      // `POSTGRES_HOST` / `_USER` → também vale como prefixo + sufixo.
-      citados.add(base.split('_')[0] + s[1]);
-    }
-  }
-  for (const m of doc.matchAll(/`([A-Z][A-Z_0-9]{2,})`/g)) citados.add(m[1]);
-  return citados;
 }
 
 const pendencias = [];
@@ -235,23 +219,17 @@ function gerarEnv() {
   // inventário com a marca de lacuna, e na execução SEGUINTE o próprio nome
   // dentro do bloco conta como citação — a lacuna some sem ninguém escrever
   // uma linha de prosa.
-  const citados = nomesCitados(
-    semBlocoGerado(ler('docs/reference/configuration.md'), 'env-inventario'),
-  );
+  const prosa = semBlocoGerado(ler(DESTINO_DO_INVENTARIO), ID_DO_INVENTARIO);
+  const { porFonte, total, lacunas, comTodo } = inventariar(fontes, grepTodos, prosa);
+  const naoDocumentadas = lacunas.length;
   let corpo = '';
-  let total = 0;
-  let naoDocumentadas = 0;
 
-  for (const [app, caminhos, padrao, escopo] of fontes) {
-    const achados = [...grepTodos(padrao, caminhos).entries()].sort(([a], [b]) => a.localeCompare(b));
-    total += achados.length;
-    corpo += `\n**${app}** — ${achados.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
-    for (const [nome, arqs] of achados) {
-      // Does the prose above document it? If not, the gap shows up here
-      // instead of passing silently.
-      const documentada = citados.has(nome);
-      if (!documentada) naoDocumentadas++;
-      corpo += `- \`${nome}\`${documentada ? '' : ' — ⚠️ **no description above**'} <sub>(${[...arqs][0]})</sub>\n`;
+  for (const { app, escopo, variaveis } of porFonte) {
+    corpo += `\n**${app}** — ${variaveis.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
+    for (const { nome, arquivo, documentada } of variaveis) {
+      // Does the prose above document it? If not, the gap shows up here —
+      // and, since AT-211, the check fails on it (see below).
+      corpo += `- \`${nome}\`${documentada ? '' : ' — ⚠️ **no description above**'} <sub>(${arquivo})</sub>\n`;
     }
   }
 
@@ -265,7 +243,20 @@ function gerarEnv() {
     ' whoever develops the product. A tooling variable never belongs in an' +
     " operator's `.env`.\n";
 
-  escreverBloco('docs/reference/configuration.md', 'env-inventario', cabecalho + corpo);
+  escreverBloco(DESTINO_DO_INVENTARIO, ID_DO_INVENTARIO, cabecalho + corpo);
+
+  // O PORTÃO (AT-211): o ⚠️ deixou de ser "lacuna visível" e reprova, nas
+  // duas espécies de fonte, mesmo com o bloco em dia. A regra — inclusive por
+  // que TODO(humano) NÃO reprova — mora em `inventario-de-env.mjs`.
+  for (const nome of comTodo) {
+    console.log(`  TODO      ${nome} — descrita só por TODO(humano) em ${DESTINO_DO_INVENTARIO} (lacuna declarada, não reprova)`);
+  }
+  if (lacunas.length === 0) {
+    console.log(`  ok        inventário de variáveis (${total}, todas descritas)`);
+    return;
+  }
+  pendencias.push('variáveis sem descrição');
+  for (const lacuna of lacunas) console.log(mensagemDaLacuna(lacuna));
 }
 
 // ------------------------------------------- 3. inventário de tipos de evento
@@ -1208,8 +1199,9 @@ verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {
   console.error(
-    `\n[docs:generate] ${pendencias.length} arquivo(s) fora de dia.\n` +
-      'Rode `pnpm docs:generate` e commite o resultado.',
+    `\n[docs:generate] ${pendencias.length} pendência(s): ${pendencias.join(', ')}.\n` +
+      'Arquivo fora de dia se resolve com `pnpm docs:generate` e commit; o resto\n' +
+      '(variável sem descrição, contagem, frase, ref) pede a PROSA — as linhas acima dizem onde.',
   );
   process.exit(1);
 }

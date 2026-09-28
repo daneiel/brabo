@@ -131,6 +131,17 @@ O inventário marca com ⚠️ o que aparece no código e **não** tem descriç�
 prosa. Foi assim que `tool.result` e `agent.response` — dois tipos de evento
 reais — apareceram depois de terem ficado de fora na primeira escrita.
 
+No inventário de **variáveis de ambiente** o ⚠️ é PORTÃO desde a AT-211
+(2026-09-27): `--check` reprova qualquer variável sem descrição, nas fontes
+`produto` e `ferramenta`, mesmo com o bloco em dia — antes, depois de
+`docs:generate`, a marca ficava commitada e o check passava. A mensagem
+(`SEM DESC.`) nomeia a variável, o arquivo que a lê e a seção de
+`configuration.md` onde escrever. Um `**TODO(humano):**` na linha que cita a
+variável conta como descrição e não reprova: é lacuna DECLARADA, e reprová-lo
+empurraria quem não sabe a resposta a inventar uma. A regra mora em
+`scripts/docs/inventario-de-env.mjs`, provada por mutação no spec ao lado. O
+inventário de eventos (`events.md`) segue com o ⚠️ como lacuna visível.
+
 `--check` não escreve nada e falha se algo estaria diferente. É o modo do CI.
 
 ### `drift.mjs` — cobra no PR
