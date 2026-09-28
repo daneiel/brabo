@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { API_URL, ApiError, getProject, listRunnerDeviceKeys } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
+import { chavesDoProjetoQueryKey } from '../lib/chaves-de-dispositivo-queries';
 import {
   maquinaJaPareada,
   podeLerChavesDeDispositivo,
@@ -175,7 +176,7 @@ export function RunnerOnboardingPanel({
    */
   const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
   const chavesQuery = useQuery({
-    queryKey: ['runner-device-keys', projectId],
+    queryKey: chavesDoProjetoQueryKey(projectId),
     queryFn: () => listRunnerDeviceKeys(projectId!),
     enabled: Boolean(projectId) && podeLerChavesDeDispositivo(workspaceComPapel?.role),
     // Credencial registrada não muda sozinha enquanto esta tela está aberta, e

@@ -6,6 +6,7 @@ import { definirIdioma, IDIOMAS, type Idioma } from '../lib/idioma';
 import { useToast } from '../components/ui/ToastProvider';
 import { Select } from '../components/ui/Select';
 import styles from './AccountPage.module.css';
+import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
 
 const ROTULO: Record<Idioma, (t: (chave: string) => string) => string> = {
   'pt-BR': (t) => t('account.language.ptBR'),
@@ -24,6 +25,10 @@ const ROTULO: Record<Idioma, (t: (chave: string) => string) => string> = {
  * de texto (via `react-i18next`) — não é só grava-e-esquece. O resto da
  * interface segue em pt-BR hardcoded até a extração em massa (etapa
  * separada, em paralelo).
+ *
+ * Desde a RN-611 a página tem uma segunda seção, pelo MESMO motivo de escopo:
+ * as chaves de MÁQUINA do agente local (`MachineDeviceKeysSection`), que não
+ * são de projeto nenhum e nascem antes do primeiro projeto existir.
  */
 export function AccountPage() {
   const { t, i18n } = useTranslation();
@@ -92,6 +97,8 @@ export function AccountPage() {
           </div>
         </div>
       </div>
+
+      <MachineDeviceKeysSection />
     </div>
   );
 }

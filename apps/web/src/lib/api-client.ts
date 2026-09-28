@@ -427,14 +427,27 @@ export const registerRunnerDeviceKey = (
  * inclusive as de MÁQUINA (`especie: 'maquina'`), que servem todo projeto do
  * dono sem pertencer a nenhum (ADR 0154, RN-543).
  *
- * Quem consome hoje é o reconhecimento de agente de máquina do
- * `RunnerOnboardingPanel` (`lib/agente-de-maquina.ts`, RN-548). A TELA de
- * listar e revogar chave continua não existindo — é frente própria.
+ * Quem consome é o reconhecimento de agente de máquina do
+ * `RunnerOnboardingPanel` (`lib/agente-de-maquina.ts`, RN-548) e a seção de
+ * chaves de dispositivo das Configurações do projeto (RN-561).
  */
 export const listRunnerDeviceKeys = (projectId: string) =>
   get<RunnerDeviceKeyListItem[]>(`/projects/${projectId}/runner-device-keys`);
 export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
   del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
+
+/**
+ * As chaves de MÁQUINA do PRÓPRIO usuário, por CONTA — sem projeto no caminho
+ * (RN-611). Existe porque a instalação de uma linha cria a conta e a chave de
+ * máquina ANTES de qualquer projeto, e as duas rotas acima exigem um. Devolve
+ * só `especie: 'maquina'`, revogadas incluídas; a revogação é a MESMA da rota
+ * por projeto (derruba o agente local em todos os projetos do dono em modo
+ * runner), e responde 404 para chave de projeto ou de outra pessoa.
+ */
+export const listMachineDeviceKeys = () =>
+  get<RunnerDeviceKeyListItem[]>('/users/me/machine-device-keys');
+export const revokeMachineDeviceKey = (deviceKeyId: string) =>
+  del<void>(`/users/me/machine-device-keys/${deviceKeyId}`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);
