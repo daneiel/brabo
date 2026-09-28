@@ -1157,6 +1157,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: a **reprojeção da pasta `docs/` dos artefatos roda no
+  cluster, pela imagem, como a do grafo** (AT-198, RN-590).
+  `make test-reprojecao-artefatos-k8s` cria pela API um projeto próprio com um
+  `artifact.note`, espera o `ArtifactProjector` vivo escrever o arquivo, APAGA
+  a pasta `docs/<agente>/` dentro do pod da api, roda
+  `node scripts/reprojetar-artefatos.js --project` da própria imagem e exige o
+  MESMO sha256 do que o projetor vivo escreveu; reprojeta de novo e exige o
+  mesmo hash. Passo do `propriedades.yml`, com issue própria quando falha; não
+  depende de outro alvo. Até aqui o caminho que o runbook manda rodar num
+  incidente não tinha prova nenhuma.
 - **ci**: a **restauração da instalação por compose e o arquivo dos bare repos
   passam a rodar por agenda** (AT-195). O `propriedades.yml` ganha um segundo
   job, `restore-compose`, noutro runner (o compose de produção publica as
