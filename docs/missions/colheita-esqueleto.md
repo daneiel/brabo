@@ -15,7 +15,7 @@ name is the corresponding block in `docs/missions/colheita-queries.sql`. Run:
 
 ```bash
 pnpm --filter api db:migrate     # required: the cost queries use Phase 9 columns
-docker exec -i brabo-postgres-1 psql -U brabo -d brabo \
+docker exec -i brabo-dev-postgres-1 psql -U brabo -d brabo \
   -f - < docs/missions/colheita-queries.sql
 ```
 

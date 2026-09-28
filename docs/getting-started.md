@@ -67,6 +67,30 @@ make k8s-down && pnpm dev     # from validation mode to development mode
 
 To know which one you're in without guessing: `pnpm dev:preflight`.
 
+### An installation and a checkout on the same machine
+
+The dev compose is the Docker project **`brabo-dev`** (containers
+`brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…); an installation made with
+`install.sh` is **`brabo`**. Until [ADR 0170](adr/0170-compose-de-dev-brabo-dev.md)
+both were `brabo`, so the two shared containers, network and volumes, and
+`reset-total.sh` would have wiped the installation's database.
+
+Even with the names apart, `pnpm dev` (through the preflight) and
+`reset-total.sh` **refuse** while this machine has any container of the
+installation compose, and list them. To develop, bring the installation down
+**without** `-v` — its volumes and data stay, and `up -d` brings it back:
+
+```bash
+docker compose -f <installation folder>/docker/docker-compose.install.yml \
+  --env-file <installation folder>/.env down   # the preflight prints the exact paths
+```
+
+**Developed here before ADR 0170?** Your data is still in the old `brabo_*`
+volumes and the next `pnpm dev` starts with empty `brabo-dev_*` ones; the
+preflight warns about it. Copying the data over, starting from scratch, and
+telling your old dev volumes from an installation's are in the runbook,
+[Moving a dev environment to brabo-dev](runbook.md#dev-para-brabo-dev).
+
 ### Local folder for workspaces
 
 By default, the files agents write live in a managed Docker volume — not a

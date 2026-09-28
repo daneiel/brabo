@@ -62,7 +62,7 @@ NEW axis in this list. Until now "acceptance" meant the CHAT script; the
 (0.32.1), with the model pulled on the spot:
 
 ```bash
-docker exec brabo-ollama-1 ollama pull nomic-embed-text
+docker exec brabo-dev-ollama-1 ollama pull nomic-embed-text
 OLLAMA_EMBEDDING_SMOKE=1 pnpm --filter api test ollama-provider.embeddings
 ```
 

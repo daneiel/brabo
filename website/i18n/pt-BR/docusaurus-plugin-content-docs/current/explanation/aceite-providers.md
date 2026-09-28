@@ -33,7 +33,7 @@ de execução**.
 (0.32.1), com o modelo puxado na hora:
 
 ```bash
-docker exec brabo-ollama-1 ollama pull nomic-embed-text
+docker exec brabo-dev-ollama-1 ollama pull nomic-embed-text
 OLLAMA_EMBEDDING_SMOKE=1 pnpm --filter api test ollama-provider.embeddings
 ```
 

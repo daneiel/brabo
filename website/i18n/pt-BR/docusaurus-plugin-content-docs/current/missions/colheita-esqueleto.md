@@ -15,7 +15,7 @@ bloco correspondente em `docs/missions/colheita-queries.sql`. Rode:
 
 ```bash
 pnpm --filter api db:migrate     # obrigatório: as queries de custo usam colunas da Fase 9
-docker exec -i brabo-postgres-1 psql -U brabo -d brabo \
+docker exec -i brabo-dev-postgres-1 psql -U brabo -d brabo \
   -f - < docs/missions/colheita-queries.sql
 ```
 
