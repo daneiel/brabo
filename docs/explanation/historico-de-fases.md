@@ -3174,3 +3174,23 @@ novo, zero recusas da RN-502, 10 min de `mix golden_set.qa` e 13 min 41 s de
 job. Declarado: o broker do CI não tem as cinco camadas do compose, o heartbeat
 fecha as sessões do seed enquanto o QA ainda trabalha nelas (sem efeito
 visível), e PR que mexe no workflow não o executa.
+
+### O Infra Lead conversa pelo composer (AT-141, ADR 0175, RN-617)
+
+A RN-584 (AT-098) tirou o destinatário padrão do chat e deixou a pergunta de
+produto por escrito: o Infra Lead conversa? O mantenedor disse sim em
+2026-09-27, com a condição que a própria RN-584 tinha posto — o turno primeiro.
+O turno do Infra Lead rodava INTEIRO dentro do `handle_call`/`handle_cast`: sem
+aceite, sem "Parar", fora do `TurnoOrfao`, com o 14º passo do laço terminando
+calado e um teto de 180 s menor que os 225 s do `propose_action` de container
+(RN-605). O kickoff, sendo `cast`, não prendia clique, mas prendia o processo —
+8,4 min medidos na AT-089 —, e uma mensagem nesse meio tempo esperaria na fila.
+A etapa 1 pôs os três turnos (kickoff, correção de gate, mensagem) no
+`TurnoAssincrono`, com a consolidação do Workflows dentro da Task; a correção de
+gate que chega com turno em curso ganhou uma fila, porque o `TurnoAssincrono`
+sem `from` a descartaria. A etapa 2 deu ao `infra` a cláusula de `message/2`
+(saiu a recusa `agente_sem_conversa`), o `via_for` do "Parar" e o lugar em
+`AGENTES_DE_CHAT`; o aceite do handoff dele ficou no card próprio da RN-499, e
+o card do fio o exclui por nome. `SOLO_CONVERSATIONAL_AGENTS` não mudou: o Infra
+Lead é lead de área. Declarado: ele não ganhou perguntas estruturadas nem
+leitura de backlog.

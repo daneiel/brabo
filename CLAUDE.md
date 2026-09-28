@@ -167,6 +167,7 @@ estado lido do repositório e não da conversa.
 | A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O Infra Lead recusa a subida por estado, na ordem da `/containers` (AT-142) | RN-610 |
+| O Infra Lead conversa pelo composer, e o turno dele passa pelo `TurnoAssincrono` (AT-141) | ADR 0175, RN-617 |
 
 | O pepper do auth deixa de cair no `AUTH_JWT_SECRET`, e quem migra o define com o valor atual (AT-210, BREAKING) | RN-613 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
@@ -199,11 +200,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Botão "Ativar execução" mudar de dono continua fora de escopo, por decisão
   declarada (ADR 0053 item 5) — só a metade da delegação Dev Lead →
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
-- Se o Infra Lead passa a CONVERSAR pelo composer (RN-584): hoje a mensagem a
-  ele é 422 nomeado no engine e a tela não o oferece. Dar-lhe cláusula de
-  `message/2` exige antes migrar o turno dele para o `TurnoAssincrono` (o
-  `user_message/2` que ele exporta roda o turno inteiro no `handle_call`, sem
-  aceite nem "Parar") — não religue esse `user_message/2` de passagem
 
 **Cortes e pausas vigentes:**
 - FASE 25b DEIXOU de ser corte no compose LOCAL (RN-512, ADR 0146 ponto 3): o
@@ -1688,8 +1684,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
   `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —
   uma decisão é log append-only, nunca um "vigente" que se substitui
-  (RN-505). Os SEIS conversacionais (Criativo, PO, Arquiteto, Dev Lead,
-  UX Designer, Staff) podem emitir; distinto de `open_adr_pr` (só o
+  (RN-505). Seis dos SETE conversacionais (Criativo, PO, Arquiteto, Dev
+  Lead, UX Designer, Staff — o Infra Lead não tem `emit_artifact`) podem
+  emitir; distinto de `open_adr_pr` (só o
   Arquiteto, commit real em `docs/adr/*.md` + PR + aprovação humana) —
   os dois COEXISTEM, para escalas diferentes de decisão, nunca um
   substituindo o outro.
@@ -1823,21 +1820,25 @@ o RACIOCÍNIO da triagem, que continua valendo.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
-- Os seis agentes conversacionais rodam laço bounded de tool use, com
+- Os SETE agentes conversacionais rodam laço bounded de tool use, com
   teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
-  Lead, UX Designer e Staff 14 — raciocínio, não conversa leve) — não o
-  teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de
-  execução e de gate. Erro de ferramenta é ENTRADA do laço, não fim de
-  linha; teto esgotado é narrado, nunca silêncio, nos SEIS (RN-163;
+  Lead, UX Designer, Staff e Infra Lead 14 — raciocínio, não conversa
+  leve) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos
+  agentes de execução e de gate. O Infra Lead é o sétimo desde a RN-617
+  (ADR 0175): conversa pelo composer, com os mesmos `TurnoAssincrono`,
+  `Reidratacao` e `TurnoOrfao` dos outros, e a correção de gate que chega com
+  turno em curso entra numa FILA (`correcoes_pendentes`) em vez de se perder.
+  Erro de ferramenta é ENTRADA do laço, não fim de
+  linha; teto esgotado é narrado, nunca silêncio, nos SETE (RN-163;
   RN-459 fechou os quatro que ainda terminavam calados — só PO e
-  Criativo tinham corrigido antes); e o agente não anuncia ação que o
+  Criativo tinham corrigido antes; o Infra Lead, na RN-617); e o agente não anuncia ação que o
   código não vá executar — o que se promete é decidido pelo teto, nunca
   por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e
   fica ocioso até a primeira `user_message`, porque não há artefato de
   sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
   tela de Sessão narra em tempo real o que o agente está fazendo numa
   faixa acima do composer — o fio só recebe a bolha de resposta depois
-  que o turno termina (RN-460). Os seis reconstroem o histórico por UM
+  que o turno termina (RN-460). Os sete reconstroem o histórico por UM
   caminho, `Engine.Agents.Reidratacao` (RN-580) — não reintroduza
   `rehydrate/2` por servidor: lê a CAUDA (`latest`, teto 200 do ADR 0060),
   traz pergunta estruturada e as PRÓPRIAS ferramentas como texto (nunca
@@ -1845,7 +1846,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `chat.structured_question_answered` (a resposta já vem no `chat.message`) e,
   quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
   `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
-  memória sobre a leitura geral. O `tool.result` dos seis leva o TEXTO que a
+  memória sobre a leitura geral. O `tool.result` dos sete leva o TEXTO que a
   ferramenta devolveu (`resultado`, 2.000 caracteres, `resultadoTotal` quando
   corta — RN-589), montado por `Engine.Agents.ResultadoDeFerramenta`; não grave
   o evento à mão num servidor. O Infra Lead passa pelo mesmo módulo, e o Dev
@@ -1858,7 +1859,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `agent.status: working`, e essa ordem é contrato (é ela que deixa a tela,
   lendo a cauda do log depois do aceite, saber que o `agent.status` mais
   recente é do turno novo). O desfecho vai pelo canal e pelo `agent.error`
-  durável, NUNCA pelo HTTP; a recusa ANTES de o turno subir é síncrona e
+  durável, NUNCA pelo HTTP (nos SETE conversacionais — o Infra Lead desde a
+  RN-617, que tirou o turno dele de dentro do `handle_call`); a recusa ANTES de o turno subir é síncrona e
   NOMEADA (409 `turno_em_andamento`/`aguardando_aprovacao`, 422
   `sem_regra_de_negocio`) e o controller do engine não descarta mais o
   retorno — era esse descarte que fazia mensagem recusada virar 202 calado.
@@ -1867,11 +1869,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Não volte a segurar o request pelo turno.
   O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
   processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
-  + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos seis
-  (`Engine.Agents.TurnoOrfao`, RN-586); NUNCA reexecuta o turno, e só fecha o
-  que não tem processo vivo em nenhum nó. Sem isso a faixa da tela e o sinal de
-  trabalho pendente da RN-064 ficavam presos para sempre. O Infra Lead segue de
-  fora (roda no `handle_call`).
+  + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos sete
+  (`Engine.Agents.TurnoOrfao`, RN-586; o Infra Lead desde a RN-617); NUNCA
+  reexecuta o turno, e só fecha o que não tem processo vivo em nenhum nó. Sem
+  isso a faixa da tela e o sinal de trabalho pendente da RN-064 ficavam presos
+  para sempre.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   Desde o ADR 0163 o `from` já foi respondido no aceite (como em todo turno);

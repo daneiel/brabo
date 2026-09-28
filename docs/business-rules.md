@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:1994` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:2000` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:1839` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:1845` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -14155,7 +14155,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:307`
+  `propose_infra_pr` perguntando antes do HALT), `:423`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14825,6 +14825,13 @@ nada quebrava, e ninguém via. Achado como adjacência da
    alguém o puser lá, o engine recusa com nome em vez de entregar a outro, e a
    guarda do CI reprova antes.
 
+> **Desde a [RN-617](#rn-617) (ADR 0175), os itens 3 e 5 não valem mais:** o
+> turno do Infra Lead migrou para o `TurnoAssincrono`, e só então ele ganhou
+> cláusula própria de `message/2`, o `via_for/2` do "Parar" e o lugar em
+> `AGENTES_DE_CHAT`. A recusa `agente_sem_conversa` dele saiu; a regra de
+> fundo desta RN — nenhum destinatário padrão, todo nome sem cláusula recusado
+> com nome — é a mesma.
+
 **A guarda que fecha a classe** mora em
 `scripts/ci/destinos-do-composer.spec.ts`, porque o destino nasce em
 TypeScript e a cláusula mora em Elixir — nenhuma das duas suítes lê a outra
@@ -14840,8 +14847,8 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
 
 **O que esta regra NÃO fecha, declarado:**
 
-- **Se o Infra Lead passa a conversar pelo composer é decisão de produto, sem
-  dono.** Dar a ele uma cláusula exige, antes, migrar o turno dele para o
+- **Se o Infra Lead passa a conversar pelo composer era decisão de produto, sem
+  dono** — tomada na [RN-617](#rn-617) (AT-141): sim. Dar a ele uma cláusula exige, antes, migrar o turno dele para o
   `TurnoAssincrono` (o aceite e a recusa `turno_em_andamento` da
   [RN-578](#rn-578)) e registrá-lo no "Parar"; e exige decidir o que uma
   conversa faz com um agente cujo contrato é propor. O `user_message/2` dele
@@ -14860,7 +14867,7 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
   do `infra`), `:207` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
   `:239` (`agente_ausente`), `:310` (o "Parar" sem agente);
   `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
-  (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:29`
+  (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:37`
   (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
 - **Teste:** `scripts/ci/destinos-do-composer.spec.ts` (a guarda da classe);
   `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
@@ -14938,7 +14945,8 @@ próxima mensagem do usuário destravava, e só porque ela sobe o agente.
    o usuário ([RN-059](business-rules/custo.md#rn-059): falha nunca vira
    resposta vazia) — seguido de `agent.status: idle` persistido. O canal recebe
    `agent.error` e `agent.done`, para a faixa de quem está com a tela aberta
-   sair sem recarregar. Vale para os SEIS que compartilham `TurnoAssincrono`.
+   sair sem recarregar. Vale para os que compartilham `TurnoAssincrono` — seis
+   na origem, sete desde a [RN-617](#rn-617).
 2. **O turno NUNCA é reexecutado.** Refazê-lo gastaria token em nome de uma
    mensagem que o usuário talvez já tenha esquecido, sobre um histórico
    reconstruído; nenhuma chamada ao modelo acontece no fechamento.
@@ -14960,8 +14968,9 @@ próxima mensagem do usuário destravava, e só porque ela sobe o agente.
    o boot não conseguiu escrever (api ainda fora do ar). Falha de leitura ou de
    escrita é logada e o agente sobe.
 
-Declarado e não fechado: o Infra Lead (`infra`) roda o turno dentro do
-`handle_call`, sem `TurnoAssincrono`, e fica de fora; a janela de leitura é a
+Declarado e não fechado: ~~o Infra Lead (`infra`) roda o turno dentro do
+`handle_call`, sem `TurnoAssincrono`, e fica de fora~~ — fechado na
+[RN-617](#rn-617), que o pôs no `TurnoAssincrono` e em `TurnoOrfao`; a janela de leitura é a
 das 200 mais recentes `agent.status` da sessão; se a api estiver fora no boot E
 ninguém acordar o agente, o `working` fica até a próxima subida dele; e o
 fechamento não recupera o que o turno já tinha gravado antes da queda.
@@ -14972,8 +14981,8 @@ fechamento não recupera o que o turno já tinha gravado antes da queda.
   `init/1` dos seis `*_server.ex` chama `TurnoOrfao.fechar_ao_subir/3`
 - **Teste:** `apps/engine/test/engine/agents/turno_orfao_test.exs:72` (nos seis:
   o `working` sem turno vivo vira `agent.error` `infra` + `idle`, e o LLM não é
-  chamado), `:104` (`awaiting_approval` não é órfão; `idle` e o `working` de
-  outro agente não são fechados), `:120` (`varrer/2` pula o agente com processo
+  chamado), `:108` (`awaiting_approval` não é órfão; `idle` e o `working` de
+  outro agente não são fechados), `:124` (`varrer/2` pula o agente com processo
   vivo em ESTE nó ou num nó `:peer` de verdade do cluster; leitura e escrita
   que falham não derrubam a subida);
   `apps/engine/test/engine/sessions/rehydration_test.exs:46` (o boot dispara a
@@ -15222,7 +15231,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:392`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:508`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15316,7 +15325,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:257`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:610`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:615`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:744`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15755,10 +15764,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:475`
-  (`recusa_local_de_subida`), `:528` (`recusa_por_estado`), `:552`
-  (`recusa_ja_de_pe`), `:570` (`recusa_sem_imagem_decidida`), `:587`
-  (`recusa_pasta_nunca_confirmada`), `:598` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:591`
+  (`recusa_local_de_subida`), `:644` (`recusa_por_estado`), `:668`
+  (`recusa_ja_de_pe`), `:686` (`recusa_sem_imagem_decidida`), `:703`
+  (`recusa_pasta_nunca_confirmada`), `:714` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -15932,3 +15941,105 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
   usa a mesma função, e os três estados)
 - **Origem:** AT-148 (EP-025/HS-043)
+
+---
+
+### RN-617 — O Infra Lead conversa pelo composer, e o turno dele passa pelo `TurnoAssincrono`: aceite imediato, "Parar", turno órfão fechado {#rn-617}
+
+A decisão que a [RN-584](#rn-584) deixou aberta — *"se o Infra Lead passa a
+conversar pelo composer"* — foi tomada pelo mantenedor (AT-141, 2026-09-27):
+**sim**, e ele vira o SÉTIMO conversacional
+([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)). A condição que a
+RN-584 escreveu veio primeiro: o turno dele deixou de rodar DENTRO do
+`handle_call`/`handle_cast` e passou pelo MESMO `Engine.Agents.TurnoAssincrono`
+dos outros seis; só depois a cláusula de `message/2` nasceu.
+
+**Etapa 1 — o turno.**
+
+1. **Os três turnos do Infra Lead sobem numa Task** — o kickoff (ainda `cast`,
+   só no start FRESCO do handoff aceito), a correção de gate (`{:correct, _}`)
+   e a mensagem do composer. A mensagem responde ao ACEITE, com o
+   `agent.status: working` gravado ANTES ([RN-578](#rn-578)); o desfecho vai
+   pelo canal e, quando é falha, pelo `agent.error` durável. O
+   `user_message/2` que rodava o turno inline SAIU: o nome ficou e é o aceite.
+2. **Segunda mensagem com turno em curso é `409 turno_em_andamento`**, com o
+   `agent.error` de origem `politica` no fio — inclusive durante o kickoff,
+   que antes prendia a mensagem na fila do processo pelo turno inteiro.
+3. **"Parar" alcança o Infra Lead** (`via_for("infra")` no `cancel/2`): mata
+   a Task — e com ela o `WorkflowsAgent`, que roda dentro da consolidação —,
+   grava `agent.error` `cancelado_pelo_usuario` e devolve `idle`.
+4. **A consolidação com o Workflows é parte da função de turno** e devolve o
+   `state`; os sinais de fim (`agent.done`, `agent.status: idle`) saem só de
+   `TurnoAssincrono`, no processo do servidor ([RN-585](#rn-585)).
+5. **A correção de gate que chega com turno em curso entra numa FILA**
+   (`correcoes_pendentes`) e sobe no fecho do turno, na ordem de chegada — o
+   `TurnoAssincrono` sem `from` DESCARTA o pedido que encontra turno em
+   curso, e o gate pediria mudança a ninguém.
+6. **O turno órfão do reinício fecha** pela [RN-586](#rn-586): `infra` entrou
+   em `TurnoOrfao` (`@agentes`), no boot e no `init/1`.
+7. **O histórico vem de `Engine.Agents.Reidratacao`** ([RN-580](#rn-580)),
+   como já vinha, e o `tool.result` de `ResultadoDeFerramenta`
+   ([RN-593](#rn-593)).
+8. **O teto de iterações é o dele, 14** (o mesmo de Arquiteto, Dev Lead, UX
+   Designer e Staff), e esgotá-lo passa a emitir `toolloop.limit_reached`
+   ([RN-166](business-rules/autenticacao.md#rn-166)) — antes o 14º passo
+   terminava calado.
+
+**Etapa 2 — o composer.**
+
+9. **`message/2` tem cláusula PRÓPRIA para `infra`**, e a recusa
+   `agente_sem_conversa` dele saiu — um nome, um caminho.
+   `@agentes_de_conversa` o inclui; a mensagem a um Infra Lead que não está de
+   pé (engine reiniciado) o reergue SEM kickoff, e ele reidrata no `init/1`.
+10. **A tela o oferece pela regra de sempre**: `infra` entrou em
+    `AGENTES_DE_CHAT`, então ele é o destinatário quando é o `agent.activated`
+    mais recente — sem destinatário padrão (RN-584). O aceite do handoff DELE
+    continua no card próprio da [RN-499](#rn-499); o card do fio o exclui por
+    NOME (`offeredHandoff`), senão o convite aparecia duas vezes e, sendo o
+    mais antigo, voltava a esconder o do Dev Lead ([RN-136](#rn-136)). A faixa
+    de atividade ganhou frase para as quatro ferramentas dele.
+11. **Conversar não abre efeito externo.** As ferramentas são as mesmas
+    quatro; a PR de infra e as duas subidas de container continuam nascendo
+    `proposed_action`, com as recusas locais das [RN-566](#rn-566),
+    [RN-577](#rn-577) e [RN-610](#rn-610) intactas.
+
+**O teto de 180 s deixou de importar para o turno.** Ele era menor que os
+225 s do `propose_action` de container ([RN-605](#rn-605)), e uma mensagem que
+levasse o modelo a propor `container_start` podia estourar o `GenServer.call`
+com a proposta de pé. Com o aceite imediato, o `GenServer.call` só espera o
+aceite; o `propose_action` corre dentro da Task, sem ninguém esperando
+síncrono. O 180 000 ficou, igual ao dos outros seis, como teto do ACEITE.
+
+**Não muda, declarado:** `SOLO_CONVERSATIONAL_AGENTS` (gerada por
+`pnpm --filter api gerar:areas`) é a lista dos agentes SEM área que o handoff
+manual endereça; o Infra Lead é lead de área e continua fora dela, e
+`AGENTES_DE_CHAT` não é gerada. O Infra Lead não ganhou perguntas estruturadas
+nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
+deu e com as quatro ferramentas.
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:145`
+  (`user_message`), `:165` (`TurnoOrfao.fechar_ao_subir`), `:201`
+  (`handle_cast(:kickoff`), `:218` (`handle_cast({:correct`, a fila), `:228`
+  (`handle_cast(:cancel`), `:241` (`handle_call({:user_message`), `:250`
+  (`handle_info`), `:269` (`drenar_correcao_pendente`), `:316`
+  (`toolloop.limit_reached`), `:767` (`concluir`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:415`
+  (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
+  `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
+  `apps/web/src/routes/SessionPage.tsx:497` (`offeredHandoff`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
+  (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
+  de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
+  correção de gate na fila), `:1135` (`toolloop.limit_reached`);
+  `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
+  sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
+  reidratação, nos sete);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:236`
+  (202, 409 e "Parar" pela rota), `:283` (reergue sem kickoff);
+  `apps/web/src/routes/SessionPage.cancelar-turno.test.tsx:256` (o composer
+  envia ao Infra Lead e o "Parar" é dele);
+  `apps/web/src/lib/session-readiness.test.ts:123`;
+  `scripts/ci/destinos-do-composer.spec.ts:174` (a guarda: `infra` é destino,
+  com UMA cláusula que conversa)
+- **Origem:** AT-141 (decisão do mantenedor), aberta pela AT-098

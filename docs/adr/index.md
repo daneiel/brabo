@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 169 architectural decision records, grouped by phase, with what each one decided.
+description: Brabo's 170 architectural decision records, grouped by phase, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -298,12 +298,13 @@ The loop that makes the team improve.
 | [0169](0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md) | The local overlay's S3 backup destination stops being MinIO and becomes SeaweedFS (`docker.io/chrislusf/seaweedfs` 4.47, pinned by INDEX digest, `server -s3 -s3.port=9000`). MinIO stopped publishing its community image — the pinned digest answers 401 on quay.io and the Docker Hub repository 404 — so the bootstrap died at `rollout status` and no property proof ran (issue #633). Measured against the maintainer's criteria in order: SeaweedFS passes all four (official, anonymous, amd64+arm64 index; the real `lib.sh` flow through `aws-cli` — auth, `mb`, 30 MiB multipart stdin upload, `head-object`, download by sha256, server-side copy, `list-objects-v2`, `rm`; only the server changes; Apache-2.0); Garage is discarded on the third (config file plus post-boot layout and key import); Bitnami, its frozen legacy mirror and Chainguard's `:latest`-only MinIO on the first. Resources get a neutral name (`s3-local`); the client, the backup scripts, the Secret and the port are unchanged. Declared: a digest guarantees immutability, not availability; S3 compatibility is per operation, so a new operation in `lib.sh` is measured against it first |
 
 | [0172](0172-trivy-no-release-antes-de-assinar.md) | The release runs Trivy on what it PUBLISHES, **by digest and before signing** (AT-179): until then only `ci.yml` scanned, and it scans a LOCAL PR build, while a tag builds cold in another run (AT-110) — the image the installer downloads was the one nobody scanned. The gate sits between recording `.release/images.json` and `cosign sign`, so a failing image is never signed; it uses the `ci.yml` flags byte for byte (`--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1`, the same `.trivyignore.yaml`, no new allowlist) and Trivy's exit code is the verdict. HIGH/CRITICAL with no fix is REPORTED — job summary and a `trivy-sem-correcao.md` Release asset built by `scripts/ci/trivy-do-release.ts` — and does not block. Declared price: the push already happened, so a failed tag leaves unsigned images in the GHCR with no Release; and version, hash and flags live in two workflows, guarded by a spec. Measured against `v6.1.0`'s digests: `api` and `web` would fail today on `CVE-2026-45447` (openssl, fixed in `3.3.7-r1`). |
+| [0175](0175-infra-lead-conversa-pelo-composer.md) | The Infra Lead **converses through the composer** and becomes the SEVENTH conversational agent (AT-141, maintainer's decision). RN-584 had left the question open and priced a "yes": the Infra Lead's whole turn ran INSIDE `handle_call`/`handle_cast` — no acceptance reply, no "Stop", no orphan-turn closing, a 180 s call ceiling below the 225 s of a container `propose_action` (RN-605), and a message sent during the kickoff waited in the process queue for the whole turn. So the turn moved FIRST: kickoff, gate correction and message all start through `Engine.Agents.TurnoAssincrono`, the same module as the other six — acceptance with `working` persisted before it, 409 `turno_em_andamento`, `via_for("infra")` for "Stop", `TurnoOrfao`, and `toolloop.limit_reached` at its own ceiling of 14. The Workflows consolidation runs inside the Task; a gate correction that arrives mid-turn is QUEUED and started when the turn closes, because `TurnoAssincrono` without `from` drops it. Only then `message/2` gained its own `infra` clause (the named refusal left) and the web put `infra` in `AGENTES_DE_CHAT`, so it is the recipient when it is the most recently activated agent; its handoff keeps its own card (RN-499) and is excluded from the thread card by name. No new external effect: the same four tools, everything with effect still a `proposed_action`. `SOLO_CONVERSATIONAL_AGENTS` does not change — the Infra Lead is an area lead |
 
 ## The convention
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0173**.
+  is superseded — the next one is **0176**.
 
   is superseded — the next one is **0170**.
 - **Three sections, only those:** **Context** (the problem or force that motivated it),
