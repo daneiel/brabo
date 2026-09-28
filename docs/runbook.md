@@ -2093,12 +2093,12 @@ ask for: it verifies the bare-repo archive, because on Kubernetes the
 legitimately skipped, while under compose it is mounted and skipping would be a
 false green.
 
-The two are **not** proven on the same cadence: `make test-restore` (and its
-deliberate break, `make test-restore-mutacao`) runs every week in
-[`propriedades.yml`](#provas-de-propriedade-agendadas);
-`make test-restore-compose` runs in no workflow — only when someone types it,
-or when the installer migrates. So the bare-repo verification, which only the compose
-path performs, has no schedule either.
+Both are proven every week in
+[`propriedades.yml`](#provas-de-propriedade-agendadas): `make test-restore` (and
+its deliberate break, `make test-restore-mutacao`) in the cluster job, and
+`make test-restore-compose` — with the bare-repo verification that only the
+compose path performs — in a second job, `restore-compose`, on another runner
+(AT-195). The installer's migration also runs the compose one.
 
 ### Restoring for real, during an incident {#restore-de-verdade}
 
@@ -2194,8 +2194,9 @@ points a running api at it.
 
 ### Recovering the bare repos {#restore-dos-bare-repos}
 
-Verifying costs nothing and writes nothing — it is the weekly gesture, and a
-gesture is all it is: no workflow runs it (see
+Verifying costs nothing and writes nothing — it is the weekly gesture, and
+since AT-195 the scheduled `restore-compose` job of `propriedades.yml` makes it
+(through `make test-restore-compose`, see
 [the automated path](#restore-automatizado)):
 
 ```bash
@@ -2231,8 +2232,12 @@ Verification: the shell functions behind both gestures are proven on every PR by
 `scripts/ci/backup-lib.spec.ts` — archive and restore round-trip identical, no
 `*.lock` copied, a truncated archive refused on reading, a destination it cannot
 write refused before `tar`. The commands themselves, in the backup image against
-the real volume, run only through `make test-restore-compose` (the verifying
-half, never `--restaurar`), which no workflow schedules.
+the real volume, run through `make test-restore-compose` (the verifying
+half, never `--restaurar`), weekly in `propriedades.yml`. That job first
+creates a bare repo in the volume (`git init --bare`, as the
+`LocalGitProvider` does) and fails if the verdict does not name it: with the
+volume empty, `brabo-restore-git` answers "nothing to restore" and exits 0,
+which would be a green that read no archive.
 
 ### Losing the graph (Neo4j) {#perda-do-grafo}
 
@@ -2543,6 +2548,20 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
    and uploads it as the `restore-ultima-execucao-boa` artifact (kept 90 days),
    and adds the line *Última execução boa do restore* to the run summary;
 7. writes each step's duration into the run summary.
+
+A **second job**, `restore-compose` (AT-195), runs next to it on another
+runner — the production compose publishes 3000/4000/8088, the same ports the
+k3d cluster maps, so the two cannot share one. It builds the four images with
+`docker-bake.hcl` (as `ci.yml` does), brings the production compose up through
+`docker/smoke.sh` (which leaves the seed's user and session in the database),
+creates a bare repo in `git_local_repos` as a fixture, and runs
+`make test-restore-compose`: a real backup, the restore with the three
+validations, and the verification of the bare-repo archive. A green without the
+line naming the verified bare repos fails the step. Its failures open issues
+the same way, with titles of their own.
+Measured on run `36371633435`: image build 190 s, compose up (smoke) 43 s,
+`make test-restore-compose` 4 s — 4 min 31 s for the job, in parallel with the
+11 min of the cluster job, so the workflow's clock does not move.
 
 | trigger | when |
 |---|---|
@@ -4306,9 +4325,9 @@ workflow in **schedule** does not have the trigger the cell claims
 | Increase the drain window | [Increasing the drain window](#aumentar-a-janela-de-drain) | **None of its own.** `make rollout-test` proves only the local overlay's pair (20 s drain, 90 s grace); rerun it with the raised values | manual |
 | Fall back to sealed-secrets | [Secrets: fallback to sealed-secrets](#fallback-sealed-secrets) | **None.** Nothing runs `kubeseal`; the scheduled cluster uses External Secrets | manual |
 | Verify a backup on Kubernetes | [The automated path](#restore-automatizado) | `make test-restore` (`deploy/k8s/test-restore.sh`) and the deliberate break `make test-restore-mutacao` | weekly `.github/workflows/propriedades.yml` |
-| Verify a backup on a compose installation | [The automated path](#restore-automatizado) | `make test-restore-compose` (`docker/backup/test-restore-compose.sh`); its `.env` hand-off by `scripts/dev/prova-de-restauracao-env.spec.ts` | manual (the proof — no workflow runs it); every PR `.github/workflows/ci.yml` (the spec) |
+| Verify a backup on a compose installation | [The automated path](#restore-automatizado) | `make test-restore-compose` (`docker/backup/test-restore-compose.sh`); its `.env` hand-off by `scripts/dev/prova-de-restauracao-env.spec.ts` | weekly `.github/workflows/propriedades.yml`, job `restore-compose` (the proof); every PR `.github/workflows/ci.yml` (the spec) |
 | Restore for real during an incident | [Restoring for real](#restore-de-verdade) | steps 1–2: `make test-restore` (the same `brabo-restore`, the same queries as `docker/backup/restore.sh`); step 3, promoting `DATABASE_URL`: none, never exercised | weekly `.github/workflows/propriedades.yml` (steps 1–2); manual (step 3) |
-| Verify and recover the bare repos | [Recovering the bare repos](#restore-dos-bare-repos) | `scripts/ci/backup-lib.spec.ts` (the functions); `make test-restore-compose` (the verifying command, in the image); `--restaurar` in the image: none | every PR `.github/workflows/ci.yml` (the spec); manual (the commands) |
+| Verify and recover the bare repos | [Recovering the bare repos](#restore-dos-bare-repos) | `scripts/ci/backup-lib.spec.ts` (the functions); `make test-restore-compose` (the verifying command, in the image); `--restaurar` in the image: none | every PR `.github/workflows/ci.yml` (the spec); weekly `.github/workflows/propriedades.yml`, job `restore-compose` (the verifying command); manual (`--restaurar`) |
 | Reproject the graph | [Losing the graph](#perda-do-grafo) | `make test-reprojecao` (`apps/api/test/scripts/reprojetar-grafo.spec.ts`, skipped on PRs, which have no Neo4j) and `make test-reprojecao-k8s` (`deploy/k8s/test-reprojecao.sh`) | weekly `.github/workflows/propriedades.yml` |
 | Reproject the artifact folder | [Losing the artifact folder](#perda-da-pasta-de-artefatos) | `apps/api/test/scripts/reprojetar-artefatos.spec.ts`; the command inside the api image: none | every PR `.github/workflows/ci.yml`; manual (the image path) |
 | Rotate `AUTH_JWT_SECRET` | [`AUTH_JWT_SECRET`](#rotacao-do-auth-jwt-secret) | `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts` and `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |

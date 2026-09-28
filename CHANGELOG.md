@@ -1093,6 +1093,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **ci**: a **restauração da instalação por compose e o arquivo dos bare repos
+  passam a rodar por agenda** (AT-195). O `propriedades.yml` ganha um segundo
+  job, `restore-compose`, noutro runner (o compose de produção publica as
+  mesmas portas que o k3d mapeia): constrói as imagens pelo `docker-bake.hcl`,
+  sobe o compose de produção pelo `docker/smoke.sh`, cria um bare repo no
+  volume como fixture e roda `make test-restore-compose` — backup real,
+  restore com as três validações e a verificação do arquivo dos bare repos,
+  que só o caminho compose faz. Verde sem a linha que nomeia os bare repos
+  verificados reprova o passo. Falha abre issue por alvo, como no job do
+  cluster; o alarme saiu para `scripts/ci/alarmar-prova.sh`, compartilhado
+  pelos dois jobs. Verde na rodada `36371633435` (job de 4 min 31 s, em
+  paralelo ao do cluster).
 - **deploy/k8s**: o **bootstrap das provas agendadas deixa de subir a
   observabilidade que nenhuma prova lê, e os operadores do helm sobem em
   paralelo** (AT-177). `BRABO_SKIP_OBSERVABILITY=1` (opt-out explícito, só o
