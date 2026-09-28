@@ -1166,7 +1166,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   MESMO sha256 do que o projetor vivo escreveu; reprojeta de novo e exige o
   mesmo hash. Passo do `propriedades.yml`, com issue própria quando falha; não
   depende de outro alvo. Até aqui o caminho que o runbook manda rodar num
-  incidente não tinha prova nenhuma.
+  incidente não tinha prova nenhuma. Verde na rodada `36498695123` (4 s).
 - **ci**: a **restauração da instalação por compose e o arquivo dos bare repos
   passam a rodar por agenda** (AT-195). O `propriedades.yml` ganha um segundo
   job, `restore-compose`, noutro runner (o compose de produção publica as

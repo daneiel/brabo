@@ -2577,11 +2577,18 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
    that subgraph** in Neo4j, reprojects, and requires the same node and edge
    counts, then reprojects again. It uses no state left by the other targets and
    is **not** coupled to `test-restore` (the graph does not depend on a backup);
-6. only when **both** the restore and the deliberate break passed in the same
+6. runs `make test-reprojecao-artefatos-k8s` (AT-198, RN-590), the same proof
+   for the other derived projection — the `docs/` folder of the artifacts. It
+   creates its own project with an `artifact.note`, waits for the live
+   projector to write the file, **deletes the agent's folder inside the api
+   pod**, runs the image's `node scripts/reprojetar-artefatos.js --project`,
+   and requires the **same sha256**; then reprojects again and requires it
+   once more. It depends on no other target;
+7. only when **both** the restore and the deliberate break passed in the same
    run, writes `ultima-execucao-boa.json` (date, run, commit, restore duration)
    and uploads it as the `restore-ultima-execucao-boa` artifact (kept 90 days),
    and adds the line *Última execução boa do restore* to the run summary;
-7. writes each step's duration into the run summary.
+8. writes each step's duration into the run summary.
 
 A **second job**, `restore-compose` (AT-195), runs next to it on another
 runner — the production compose publishes 3000/4000/8088, the same ports the
@@ -2621,6 +2628,7 @@ free disk on `ubuntu-latest`):
 | `make test-restore` | 21 s |
 | `make test-restore-mutacao` | 31 s (run `35473548113`) |
 | `make test-reprojecao-k8s` | 16 s (run `35471428634`) |
+| `make test-reprojecao-artefatos-k8s` | 4 s (run `36498695123`, whole job 10 min 28 s) |
 | whole job | 12 min 56 s |
 
 (First fully green run, `34784563928`, on 2026-09-13.)
