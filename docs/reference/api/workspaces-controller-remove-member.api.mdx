@@ -1,0 +1,71 @@
+---
+id: workspaces-controller-remove-member
+title: "Disassociates a user from the workspace"
+description: "Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none."
+sidebar_label: "Disassociates a user from the workspace"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "delete api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Disassociates a user from the workspace"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/workspaces/{workspaceId}/members/{userId}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none.
+
+Removing YOURSELF is refused with 403 and cannot be enabled anywhere: there is no level above to catch the fall. That same clause is what protects the last `owner` — only an `owner` can call this route and nobody removes themselves, so every successful call leaves at least the caller as `owner`. Removing ANOTHER `owner` is allowed — it is how ownership is revoked. Idempotent: a target without a workspace row still has this workspace's project rows cleared, and gets `204`.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./workspaces-controller-remove-member.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./workspaces-controller-remove-member.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./workspaces-controller-remove-member.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

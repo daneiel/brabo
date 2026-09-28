@@ -1,0 +1,1 @@
+{"responses":{"204":{"description":"Association removed. No body."},"401":{"description":"No token, expired token, or invalid signature."},"403":{"description":"Not `owner` of the workspace, OR the target is the caller (self-removal cap)."},"404":{"description":"Workspace doesn't exist or is invisible to the caller."},"429":{"description":"Rate limit per user or per IP."}}}

@@ -1404,6 +1404,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-remove-member",
+          label: "Disassociates a user from the workspace",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-list-project-folders",
           label: "Lists the subfolders of a folder inside the projects base",
           className: "api-method get",
