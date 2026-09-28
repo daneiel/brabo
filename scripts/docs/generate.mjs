@@ -24,6 +24,7 @@ import { RAIZ } from './docmap.mjs';
 import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
 import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
+import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
   arquivos,
@@ -1073,6 +1074,41 @@ function verificarAncorasDeRn() {
 }
 
 /**
+ * A tabela de procedimentos do runbook (AT-193, EP-015): cada procedimento de
+ * operação nomeia o arquivo que o prova e o gatilho que roda a prova. A regra
+ * inteira está em `procedimentos-do-runbook.mjs`.
+ *
+ * Em `block`, pela régua de `documentation-workflow.md`: a tabela nasceu com
+ * todas as linhas conferidas, então não há dívida herdada, e o que a quebra
+ * depois (um spec renomeado, um workflow que perdeu o `schedule:`) é culpa do
+ * PR que a quebrou — que é quem pode consertá-la. Seção ou tabela ausente, ou
+ * zero linhas, é `CEGO` e também reprova.
+ */
+function verificarProcedimentosDoRunbook() {
+  const r = conferirTabela(ler(RUNBOOK), repositorio(arquivos, ler));
+
+  if (r.cego) {
+    pendencias.push('procedimentos do runbook');
+    console.log(
+      `  CEGO      ${RUNBOOK} — tabela de procedimentos: ${r.cego}.\n` +
+        '            Ajuste a seção ou scripts/docs/procedimentos-do-runbook.mjs.',
+    );
+    return;
+  }
+
+  const resumo = `${r.linhas} procedimentos, ${r.comVerificacao} com verificação nomeada, ${r.declaradasSem} declarados sem`;
+  if (r.problemas.length === 0) {
+    console.log(`  ok        procedimentos do runbook (${resumo})`);
+    return;
+  }
+
+  pendencias.push('procedimentos do runbook');
+  for (const p of r.problemas) {
+    console.log(`  PROCED.   ${RUNBOOK}:${p.linha} — ${p.procedimento} [${p.coluna}]: ${p.motivo}`);
+  }
+}
+
+/**
  * A versão anunciada em prosa contra a ÚLTIMA release do CHANGELOG.
  *
  * O README ficou preso em `v0.1.0` da Fase 5 até a v2.1.0 — sete releases
@@ -1167,6 +1203,7 @@ verificarFrasesAncoradasNoCodigo();
 verificarContagensDerivadasDoCodigo();
 verificarRefsComSimbolo();
 verificarAncorasDeRn();
+verificarProcedimentosDoRunbook();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {
