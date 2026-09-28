@@ -13549,11 +13549,11 @@ pode depender dela — é justamente por depender dela que ele não saía.
 > `scripts/ci/alvos-do-runner.spec.ts` reprova quando a matriz, a lista da api,
 > o `case` do instalador e a do navegador divergem.
 
-- **Código:** `.github/workflows/build-runner-binaries.yml:278` (o job, agora
-  sem `needs:`), `:313` (`timeout-minutes: 40`, que cabe as duas esperas),
-  `:323` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
-  `:392` (o passo que espera), `:396`/`:397` (os dois tetos), `:405` (a Release
-  ausente, que é erro), `:428` (o teto dos binários, que é `notice`), `:494` (o
+- **Código:** `.github/workflows/build-runner-binaries.yml:283` (o job, agora
+  sem `needs:`), `:318` (`timeout-minutes: 40`, que cabe as duas esperas),
+  `:328` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:397` (o passo que espera), `:401`/`:402` (os dois tetos), `:410` (a Release
+  ausente, que é erro), `:433` (o teto dos binários, que é `notice`), `:499` (o
   manifesto nomeando o que não cobre)
 - **Teste:** `scripts/ci/checksums-nao-espera-a-matriz.spec.ts` — que o job não
   tem `needs:`, que os dois tetos existem, que o teto dos binários é derivado
