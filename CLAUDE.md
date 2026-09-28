@@ -174,6 +174,8 @@ estado lido do repositório e não da conversa.
 | O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação (AT-173) | ADR 0170 |
 | A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
 
+| A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
+
 ## Estado atual e aberto
 
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
@@ -484,13 +486,23 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   existem: o MATERIAL nasce no terminal (RN-551, `brabo-runner device-key
   create`, par gerado na máquina) e quem REGISTRA a pública é a RN-552
   (`POST /internal/machine-device-keys`, pelo service token).
-  **O que segue aberto, e agora é só isto:** (1) numa instalação que ainda não
-  tem PROJETO, a listagem e a revogação — as duas por
-  `/projects/:projectId/runner-device-keys` — não têm projeto contra o que
-  responder, então nem a seção nova alcança uma chave de máquina recém-criada;
-  fazer a tela ser de CONTA exigiria rota nova, e não é o que a RN-561 fez. É por
-  isso que registrar SUBSTITUI a anterior em vez de deixar órfãs: uma órfã ali
-  seria viva e inalcançável. E a rota só serve instalação de UMA pessoa (409 com
+  **O que segue aberto, e agora é só isto:** (1) a instalação SEM PROJETO
+  deixou de ser lacuna na RN-611 (AT-118): a chave de MÁQUINA tem listagem e
+  revogação por CONTA — `GET`/`DELETE /users/me/machine-device-keys`, sem
+  `@RequireRole` (escopo é a própria pessoa, como `users/me/*`), SÓ a espécie de
+  máquina (chave de projeto é 404, a mesma resposta de alheia ou inexistente) e
+  SÓ as do chamador — e a seção "Chaves de máquina" na Conta (`/account`). A
+  revogação por conta DELEGA a `RevokeRunnerDeviceKeyUseCase` e o alvo NÃO muda.
+  Registrar SUBSTITUI a anterior CONTINUA, pela razão que não dependia de tela
+  (o token de serviço não fabrica credencial em série; a máquina reinstalada não
+  deixa chave viva esquecida) — a Conta passa a MOSTRAR a substituída, revogada,
+  e diz por quê. As listas de chave têm DUAS `queryKey`s
+  (`['runner-device-keys', projectId]` e `['machine-device-keys']`), e toda
+  revogação passa por `invalidarChavesDeDispositivo`
+  (`apps/web/src/lib/chaves-de-dispositivo-queries.ts`), que invalida a de
+  projeto por PREFIXO e a da Conta sempre: a de máquina aparece nas duas, e
+  invalidar só a própria deixa o painel anunciando a revogada. Segue aberto: a
+  rota que CRIA chave de máquina só serve instalação de UMA pessoa (409 com
   duas ou mais), então instalação com time não tem por onde criar chave de
   máquina — declarado, não acaso. (2) O ALVO da revogação continua sendo
   `{projeto, usuário}` e NUNCA `{chave}` (RN-520): a tela DIZ isso na

@@ -269,7 +269,7 @@ it as the composer's active agent would reopen that trap instead of closing
 one.
 
 - **Where:** `apps/web/src/routes/SessionPage.tsx:462` (`activeAgent`),
-  `apps/web/src/lib/api-client.ts:1062` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
@@ -12044,7 +12044,7 @@ ponto 1) — e **nenhuma migration**, porque a coluna já é nullable desde a
   (a recusa da privada),
   `apps/api/src/infrastructure/persistence/drizzle/user.repository.ts:31`
   (`usuarioUnicoDaInstalacao`, `LIMIT 2`),
-  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:129`
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:148`
   (`revogarChavesDeMaquina`, os dois `IS NULL`),
   `apps/api/src/domain/auth/auth-event.ts` (`machine_device_key_registered`),
   `apps/api/src/interfaces/http/internal/dto/machine-device-key-internal.dto.ts`
@@ -13285,7 +13285,8 @@ revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
   mudar exige coluna nova em `runner_socket_tickets` e contrato novo de auth
   (RN-520), frente própria com ADR; (2) numa instalação **sem PROJETO**, a
   chave de máquina recém-criada pela [RN-552](#rn-552) segue **inalcançável**:
-  as duas rotas são de projeto, e sem projeto não há a quem perguntar; (3) a
+  as duas rotas são de projeto, e sem projeto não há a quem perguntar — FECHOU
+  na [RN-611](#rn-611), com rota e seção por CONTA; (3) a
   visão de `maintainer` (listar/revogar de qualquer usuário) continua FORA por
   decisão da RN-519, não por omissão desta tela; (4) sem E2E de navegador — o
   que se prova aqui é o que a tela AFIRMA, e isso a suíte de componente prova
@@ -15667,3 +15668,117 @@ quem clica). A cláusula de pasta usa o carimbo, que não é batimento
   `:837` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
   do via runner), `:901` (sem runner conectado)
 - **Origem:** AT-142
+
+---
+
+### RN-611 — A chave de MÁQUINA ganha listagem e revogação por CONTA, sem `:projectId`: só as de máquina, só as do próprio usuário, e a revogação é a MESMA de sempre {#rn-611}
+
+A lacuna que a [RN-552](#rn-552) e a [RN-561](#rn-561) declararam por escrito:
+*"numa instalação que ainda não tem PROJETO, a listagem e a revogação — as duas
+por `/projects/:projectId/runner-device-keys` — não têm projeto contra o que
+responder"*. A instalação de uma linha ([RN-547](#rn-547)) cria EXATAMENTE essa
+situação: a conta e a chave de máquina nascem **antes** de qualquer projeto, e a
+chave ficava viva e inalcançável. Decisão do mantenedor (AT-118): **sim, na
+Conta**.
+
+**Duas rotas novas, e só duas.** `GET /users/me/machine-device-keys` lista e
+`DELETE /users/me/machine-device-keys/:deviceKeyId` revoga (204, idempotente).
+Sem `@RequireRole`, como `users/me/credentials` e `users/me/preferences`: o
+escopo é a PRÓPRIA pessoa, e não há projeto nem workspace contra o que resolver
+um papel. O `userId` vem do JWT de sessão e vai para o `WHERE`; nenhum
+parâmetro nomeia outra pessoa, e a visão de `maintainer` sobre a chave alheia
+continua **fora** por decisão da [RN-519](#rn-519) — esta rota não a reabre por
+outra porta.
+
+**Só a espécie de MÁQUINA.** A listagem devolve SÓ `project_id IS NULL`
+(`especie: "maquina"`), revogadas INCLUÍDAS (a régua da RN-519: sumir com a
+linha faria a tela afirmar que a chave nunca existiu). As de PROJETO têm casa —
+a seção `device-keys` do projeto delas, onde o alcance de revogá-las é dito — e
+trazê-las para a Conta faria a Conta derrubar pareamento de projeto sem nomear
+o projeto. Pela mesma razão, a revogação por conta recusa chave de PROJETO com
+**404**, a MESMA resposta de chave que não existe ou que é de outra pessoa: a
+pergunta vai à MESMA listagem da tela, filtrada por `userId`, então não há como
+perguntar pela chave alheia e aprender que ela existe.
+
+**O que revogar derruba de fato, e o alvo NÃO muda.** A revogação por conta não
+é uma revogação nova: `RevokeMachineDeviceKeyUseCase` confere que a chave está
+entre as de máquina do chamador e DELEGA a `RevokeRunnerDeviceKeyUseCase`, byte
+a byte. Ele grava a linha e, para a chave de máquina, pede ao engine um
+`disconnectRunnerOfUser` por projeto em modo `runner` que o dono alcança
+([RN-520](#rn-520)/[RN-543](#rn-543)). O alvo continua `{projeto, usuário}` e
+**nunca** `{chave}`: outro runner do mesmo usuário nesses projetos cai junto,
+mesmo com PAT ou outra chave, e reconecta se a credencial dele ainda valer.
+Numa instalação **sem projeto**, a lista de projetos é vazia e a revogação só
+grava a linha — e é o que basta: o agente de máquina que espera o primeiro
+projeto ([RN-550](#rn-550)) não tem conexão nenhuma a derrubar, e o próximo
+ticket que ele pedir é recusado. Mudar o alvo continua sendo frente própria,
+com ADR (AT-013).
+
+**"Registrar substitui a anterior" FICA.** A [RN-552](#rn-552) tinha duas razões
+para revogar a chave de máquina anterior a cada registro: (a) o token de serviço
+não pode fabricar credenciais duradouras em série, e a máquina reinstalada não
+pode deixar para trás uma chave viva que ninguém lembra de revogar; (b) a
+órfã seria INALCANÇÁVEL. Esta RN derruba a (b) e deixa a (a) intacta — ela não
+depende de tela. O que muda é que a substituída passa a APARECER, revogada, na
+Conta; e como ninguém a revogou pela tela, a seção diz em TEXTO que reinstalar
+revoga a anterior, para a linha não ser lida como incidente.
+
+**A tela mora na Conta** (`/account`), a página que já existia para o que segue a
+pessoa entre projetos. Ela lista nome, data de criação, último uso e status, e
+herda o vocabulário INTEIRO da [RN-561](#rn-561)/[RN-548](#rn-548):
+`lastUsedAt` é uso REGISTRADO, nunca conexão, e nulo tem texto próprio ("nunca
+usada"); "ativa"/"revogada" fala da LINHA e nunca de agente de pé — e "ativa"
+**não** é verde, porque a espécie de máquina nunca ganha verde e ali só há
+dela. Não há coluna de espécie: com uma espécie só ela repetiria a mesma
+palavra em toda linha, e o que ela carregava na seção de projeto — o ALCANCE — é
+dito na legenda e na confirmação ("derruba o agente local em TODOS os seus
+projetos em modo runner; sem projeto nenhum, só impede a chave de ser usada de
+novo"), junto com o custo colateral da RN-520. Carregando, falhou, vazio,
+revogada e nunca usada são cinco estados com cinco textos
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)). Sem papel mínimo
+no endpoint, a tela não inventa um: `roleAtLeast` aqui trancaria quem pode, o
+defeito pior dos dois.
+
+**Revogar por uma lista invalida TODAS.** A chave de máquina aparece na lista
+da Conta (`['machine-device-keys']`) e na de TODO projeto do dono
+(`['runner-device-keys', projectId]`, lida pelo `RunnerOnboardingPanel` e pela
+seção `device-keys`). `invalidarChavesDeDispositivo` invalida a por projeto por
+PREFIXO (todo projeto no cache) e a da Conta sempre, e as DUAS telas de
+revogação a chamam — antes, revogar pela seção do projeto invalidava só a do
+projeto aberto, e as outras listas seguiam anunciando a revogada.
+
+- **Código:** `apps/api/src/interfaces/http/runner/machine-device-keys.controller.ts:48`
+  (`MachineDeviceKeysController`), `:69` (`listMachineDeviceKeys`), `:93`
+  (`revokeMachineDeviceKey`);
+  `apps/api/src/application/use-cases/auth/list-machine-device-keys.use-case.ts:33`
+  (`ListMachineDeviceKeysUseCase`);
+  `apps/api/src/application/use-cases/auth/revoke-machine-device-key.use-case.ts:33`
+  (`RevokeMachineDeviceKeyUseCase`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:97`
+  (`listarDeMaquinaDoUsuario`);
+  `apps/web/src/routes/MachineDeviceKeysSection.tsx:69`
+  (`MachineDeviceKeysSection`);
+  `apps/web/src/lib/chaves-de-dispositivo-queries.ts:31`
+  (`invalidarChavesDeDispositivo`);
+  `apps/web/src/lib/api-client.ts:447` (`listMachineDeviceKeys`);
+  `apps/web/src/locales/{en,pt-BR}/machineKeys.json`
+- **Teste:** `apps/api/test/application/use-cases/auth/machine-device-keys.use-case.spec.ts`
+  (a lista só pelo usuário, a revogada incluída; a revogação REAL derrubando
+  `{projeto, usuário}` em cada projeto; sem projeto, só grava; a chave fora das
+  do chamador é 404 sem revogar nada);
+  `apps/api/test/interfaces/http/runner/machine-device-keys.controller.spec.ts`
+  (sem `@RequireRole`, 204, `userId` do JWT, o 404 propagado);
+  `apps/api/test/infrastructure/persistence/drizzle/runner-device-key.repository.spec.ts`
+  (contra o Postgres: só as de máquina do usuário, a substituída revogada na
+  lista, a de outro usuário fora, instalação sem projeto);
+  `apps/web/src/routes/MachineDeviceKeysSection.test.tsx` (lista, os cinco
+  estados, a confirmação com o alcance, a invalidação da Conta E de todo
+  projeto — provada também sobre uma entrada de projeto no cache —, a falha com
+  a frase da api, e os dois idiomas);
+  `apps/api/test/interfaces/route-surface.spec.ts` (as duas rotas classificadas
+  `jwt` em `docs/security-surface.md`)
+- **Fica declarado e NÃO fecha:** (1) o alvo da revogação continua
+  `{projeto, usuário}` (RN-520, AT-013); (2) a visão de `maintainer` continua
+  fora (RN-519); (3) a rota que CRIA chave de máquina continua servindo só
+  instalação de UMA pessoa (RN-552) — a Conta lista e revoga, não cria.
+- **Origem:** AT-118 (EP-003/HS-007)

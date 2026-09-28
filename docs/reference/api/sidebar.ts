@@ -1338,6 +1338,18 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/machine-device-keys-controller-list-machine-device-keys",
+          label: "Lists the authenticated user's own MACHINE device keys",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/machine-device-keys-controller-revoke-machine-device-key",
+          label: "Revokes one of the authenticated user’s own MACHINE device keys",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/user-preferences-controller-get",
           label: "Reads the authenticated user's language preference",
           className: "api-method get",

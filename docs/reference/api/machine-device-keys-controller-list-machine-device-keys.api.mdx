@@ -1,0 +1,69 @@
+---
+id: machine-device-keys-controller-list-machine-device-keys
+title: "Lists the authenticated user's own MACHINE device keys"
+description: "Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: 'maquina'`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used."
+sidebar_label: "Lists the authenticated user's own MACHINE device keys"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lists the authenticated user's own MACHINE device keys"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/users/me/machine-device-keys"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: "maquina"`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./machine-device-keys-controller-list-machine-device-keys.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./machine-device-keys-controller-list-machine-device-keys.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./machine-device-keys-controller-list-machine-device-keys.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

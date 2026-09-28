@@ -51,6 +51,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   registro do engine, sem HTTP no laço). `propose_container_start` continua
   propondo sem imagem decidida — eleger a imagem é o que ela faz (RN-491).
 
+- **api/web**: a chave de MÁQUINA do agente local ganha listagem e revogação
+  pela CONTA (AT-118, RN-611). `GET /users/me/machine-device-keys` lista só as
+  chaves de máquina do próprio usuário, revogadas incluídas, e
+  `DELETE /users/me/machine-device-keys/:deviceKeyId` revoga (204) com o mesmo
+  efeito da rota por projeto — derruba o agente local em todos os projetos do
+  dono em modo runner; chave de projeto ou de outra pessoa é 404. A tela da
+  Conta (`/account`) ganha a seção "Chaves de máquina", que funciona numa
+  instalação ainda sem projeto — antes, a chave criada pelo instalador era
+  viva e inalcançável ali. Revogar por qualquer uma das telas passa a
+  atualizar todas as listas em que a chave aparece. Registrar uma chave de
+  máquina nova continua revogando a anterior, e a Conta agora mostra isso.
+
 - **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
   comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
   ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de
