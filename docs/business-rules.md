@@ -13349,7 +13349,7 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:458`
+  dispatch de `container_start` consultando antes de propor), `:475`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14056,7 +14056,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:301`
+  `propose_infra_pr` perguntando antes do HALT), `:307`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15123,7 +15123,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:388`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:392`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15217,14 +15217,14 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:257`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:610`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:532`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:615`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
   `:392` (recusado é `ok: false` com o motivo);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:253`
   (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
-  `:653` e `:691` (`container_start_via_runner` com e sem runner)
+  `:863` e `:901` (`container_start_via_runner` com e sem runner)
 - **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)
 
 ### RN-599 — No compose de dev a api encontra o broker sozinha, e a falta da pasta gerenciada é dita a cada subida {#rn-599}
@@ -15577,3 +15577,93 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
   (a função pura, nos três modos e nos três casos de `indisponivel`)
 - **ADR:** [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7)
 - **Origem:** AT-147 (EP-025/HS-043)
+
+### RN-610 — O Infra Lead recusa a subida por ESTADO, na ordem da `/containers`: já de pé, sem imagem, pasta nunca confirmada {#rn-610}
+
+A [RN-566](#rn-566) deu às duas tools de subida do Infra Lead a recusa por
+MODO e declarou o resto: a `/containers` checa três coisas antes de oferecer o
+botão (imagem decidida, modo, pasta confirmada) e o agente checava uma. A
+decisão do mantenedor (AT-142, 2026-09-27) foi fechar essa distância por
+**recusas locais no despacho**, no molde da RN-566/[RN-577](#rn-577), e NÃO por
+contexto enriquecido — `GetInfraContextUseCase` não muda.
+
+`recusa_local_de_subida/2` continua lendo o projeto UMA vez. Primeiro o MODO
+(`recusa_por_modo/2`, a régua da RN-566 sem mudança de texto) — é ele que diz
+qual tool usar, e responder "falta imagem" a quem chamou a tool errada
+apontaria a porta errada. Depois o ESTADO (`recusa_por_estado/3`), uma
+cláusula por motivo, na MESMA ordem de `decidirSubida`
+(`apps/web/src/routes/containers-subida.ts`), avaliadas só até a primeira
+recusa:
+
+| Cláusula | `propose_container_start` | `container_start_via_runner` | Leitura local |
+|---|---|---|---|
+| container já REGISTRADO `running`/`provisioning` (`ja_esta_de_pe`) | recusa | recusa | `project_containers.status` |
+| nenhuma imagem decidida (`sem_imagem_decidida`) | **não** recusa | recusa | existe `artifact.project_image` em alguma sessão do projeto |
+| pasta nunca confirmada (`runner_nunca_confirmou`) | — | recusa | `projects.workspace_verified_at` nulo |
+| nenhum runner conectado agora | — | recusa (já existia, RN-508) | `Engine.Runners.Registry` |
+
+**Por que `propose_container_start` não recusa por imagem.** Eleger a imagem é
+o que essa proposta FAZ ([RN-491](#rn-491)): exigir decisão antes inverteria a
+ordem. A tela checa imagem nos dois modos porque o botão dela não elege nada.
+`container_start_via_runner` não elege — sobe a imagem JÁ decidida, e
+`ExecuteContainerStartViaRunnerUseCase` falha sem ela —, então ali a cláusula
+vale. O predicado é o MESMO da api (`ObterContainerDoProjetoUseCase`):
+EXISTÊNCIA do evento, nunca validade do payload, porque a api degrada payload
+ilegível para o default em vez de tratá-lo como ausência.
+
+**Por que "já de pé" recusa, se a execução não falharia.**
+`SubirCicloDeVidaDoContainerUseCase` é idempotente sobre `provisioning`/
+`running`, então a proposta aprovada seria um nada que gastou uma decisão
+humana — e em `container`/`mounted` pior que nada: elegeria uma versão nova de
+`artifact.project_image` que o container de pé, com a versão congelada na
+linha ([RN-245](#rn-245)), não usaria. Registrado não é observado
+([RN-486](#rn-486)): o texto não afirma que o container está vivo, diz o que
+fazer quando ele morreu por fora. `stopped`, `failed` e `removed` não recusam.
+Erro de consulta devolve `nil` e cai no caminho de sempre — "não consegui
+olhar" nunca vira recusa.
+
+**Os textos, que são o resultado de ferramenta que o modelo lê**
+([RN-163](business-rules/autenticacao.md#rn-163)) — nunca `agent.error`, nunca
+fim de turno, com `tool.call`/`tool.result` (`ok: false`) no event log pelo
+mesmo `registrar_resultado/4` da [RN-593](#rn-593):
+
+- já de pé: *"o container deste projeto já está REGISTRADO como `<status>` —
+  subir não é a próxima ação, e `<tool>` não foi proposta. O registro não é
+  observação (RN-486): se o container morreu por fora, ou se a imagem precisa
+  mudar, diga ao usuário que parar ou remover é pela página `/containers`; só
+  depois disso uma nova subida faz sentido. Não repita a chamada agora."*
+- sem imagem: *"nenhuma imagem de container foi decidida para este projeto
+  (`artifact.project_image`, RN-105) — `container_start_via_runner` sobe a
+  imagem JÁ decidida e não elege nenhuma, então aprovada ela só poderia falhar,
+  e não foi proposta. Quem decide a imagem é o Arquiteto
+  (`choose_project_image`): diga isso ao usuário e não repita a chamada até
+  haver decisão."*
+- pasta nunca confirmada: *"a pasta deste projeto nunca foi confirmada por um
+  agente local (`workspace_verified_at` vazio, RN-423) — nenhum `brabo-runner`
+  jamais conectou a ele, e `container_start_via_runner` não foi proposta. Peça
+  ao usuário para rodar `brabo-runner --project <id> --dir <pasta>` na máquina
+  dele: a confirmação acontece quando o runner conecta."*
+
+Nenhuma linha de prompt mudou, e nenhuma medição com modelo real foi feita
+nesta regra: a premissa de que o modelo entende a recusa é a da RN-566.
+
+**O que NENHUMA cláusula checa, declarado:** instalação sem broker (o engine
+não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
+`sem_broker_na_instalacao`, [RN-591](#rn-591)) e papel/sessão (o agente não é
+quem clica). A cláusula de pasta usa o carimbo, que não é batimento
+([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:475`
+  (`recusa_local_de_subida`), `:528` (`recusa_por_estado`), `:552`
+  (`recusa_ja_de_pe`), `:570` (`recusa_sem_imagem_decidida`), `:587`
+  (`recusa_pasta_nunca_confirmada`), `:598` (`recusa_runner_desconectado`);
+  `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
+  (`status_registrado`);
+  `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:742`
+  (via runner, `running` recusa), `:757` (`provisioning` recusa), `:767`
+  (`stopped` não recusa), `:779` (sem imagem), `:790` (pasta nunca
+  confirmada), `:803` (`propose_container_start` com container `running`),
+  `:837` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
+  do via runner), `:901` (sem runner conectado)
+- **Origem:** AT-142

@@ -41,6 +41,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   célula vazia ou "see below", âncora que não é de cabeçalho e workflow que não
   tem o gatilho que a célula afirma.
 
+- **engine**: o Infra Lead para de propor subida de container que a página
+  `/containers` recusaria (AT-142, RN-610). As duas tools de subida recusam,
+  antes de propor e com o motivo como resultado de ferramenta, quando o
+  container já está registrado `running`/`provisioning`; e
+  `container_start_via_runner` recusa também sem imagem decidida e com a
+  pasta do projeto nunca confirmada por um agente local, além de sem runner
+  conectado (como já fazia). As leituras são locais (mesmo Postgres e
+  registro do engine, sem HTTP no laço). `propose_container_start` continua
+  propondo sem imagem decidida — eleger a imagem é o que ela faz (RN-491).
+
 - **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
   comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
   ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de

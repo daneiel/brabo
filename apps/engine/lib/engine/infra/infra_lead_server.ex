@@ -33,8 +33,12 @@ defmodule Engine.Infra.InfraLeadServer do
   `recusa_local_de_subida/2` lê o projeto UMA vez e cada tool tem a sua
   CLÁUSULA — a ramificação por DESTINO do ADR 0144/RN-503, a mesma que a
   página `/containers` aplica (RN-521): `container`/`mounted` pelo BROKER,
-  `runner` pelo agente local. O que o agente NÃO checa, e a tela checa, é
-  imagem decidida e pasta confirmada — declarado no CLAUDE.md.
+  `runner` pelo agente local. Desde a RN-610 elas também recusam por
+  ESTADO, na ordem da tela: as duas quando o container já está REGISTRADO
+  `running`/`provisioning`; `container_start_via_runner` também sem imagem
+  decidida, com pasta nunca confirmada e sem runner conectado.
+  `propose_container_start` NÃO recusa por imagem: eleger a imagem é o que
+  ela faz (RN-491).
 
   Desde a RN-577, `propose_infra_pr` também recusa localmente, antes do HALT,
   quando o projeto não tem repositório (`recusa_de_infra_pr/4`) — o mesmo
@@ -78,6 +82,8 @@ defmodule Engine.Infra.InfraLeadServer do
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Projects.{Project, ProjectRepository}
+  alias Engine.Containers.ProjectContainerLifecycle
+  alias Engine.SessionEvents.Event
   # `as: RunnerRegistry`, nunca `Registry` puro: este módulo já usa o
   # `Registry` NATIVO do Elixir/OTP em `via/1` (`{:via, Registry, ...}`) — um
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
@@ -443,53 +449,153 @@ defmodule Engine.Infra.InfraLeadServer do
   # RN-163), nunca `agent.error` nem fim de turno.
   #
   # A leitura do projeto é UMA, comum às duas tools; o que diverge é a
-  # CLÁUSULA de cada uma (`recusa_por_modo/3`). Duas réguas paralelas
-  # divergiriam no primeiro modo novo do enum — e a régua aqui é a MESMA
-  # ramificação por DESTINO do ADR 0144/RN-503 que a página `/containers`
-  # aplica em `acaoDeSubidaDoModo` (RN-521): `container` e `mounted` sobem
-  # pelo BROKER (`container_start`), `runner` sobe pelo agente local
-  # (`container_start_via_runner`).
+  # CLÁUSULA de cada uma. Primeiro o MODO (`recusa_por_modo/2`, RN-566) — é
+  # ele que diz qual das duas tools usar, e responder "falta imagem" a quem
+  # chamou a tool errada apontaria a porta errada —, depois o ESTADO
+  # (`recusa_por_estado/3`, RN-610), na MESMA ordem em que a página
+  # `/containers` recusa em `decidirSubida`: já de pé, sem imagem, pasta
+  # nunca confirmada. A régua de modo é a ramificação por DESTINO do ADR
+  # 0144/RN-503 que a tela aplica em `acaoDeSubidaDoModo` (RN-521):
+  # `container` e `mounted` sobem pelo BROKER (`container_start`), `runner`
+  # sobe pelo agente local (`container_start_via_runner`).
   #
   # As leituras são locais — `Project.get/1` (mesmo padrão de
-  # `Engine.Actions.TerminalExecutor`) e `RunnerRegistry.connected?/1`
-  # (`:global`, alcança runner conectado em QUALQUER nó do cluster) — e
-  # nenhuma bate na api: um HTTP aqui poria uma chamada de rede dentro do
-  # laço do agente.
+  # `Engine.Actions.TerminalExecutor`), `ProjectContainerLifecycle` e
+  # `Event.imagem_decidida?/1` (o mesmo Postgres, direto, como a RN-577 faz
+  # com `project_repositories`) e `RunnerRegistry.connected?/1` (`:global`,
+  # alcança runner conectado em QUALQUER nó do cluster) — e nenhuma bate na
+  # api: um HTTP aqui poria uma chamada de rede dentro do laço do agente. Cada
+  # cláusula é uma função avaliada SÓ se a anterior passou: a primeira recusa
+  # encerra, e as leituras seguintes nem acontecem.
+  #
+  # O que NENHUMA cláusula checa, e por quê: broker ausente na instalação (o
+  # engine não lê `BROKER_URL`; quem recusa é a api, ao propor, com 409
+  # `sem_broker_na_instalacao`, RN-591), e papel/sessão (o agente não é quem
+  # clica; a sessão é a dele).
   defp recusa_local_de_subida(tool, project_id) do
     case Project.get(project_id) do
-      nil -> "projeto não encontrado."
-      %{execution_mode: modo} -> recusa_por_modo(tool, modo, project_id)
+      nil ->
+        "projeto não encontrado."
+
+      projeto ->
+        recusa_por_modo(tool, projeto.execution_mode) ||
+          recusa_por_estado(tool, projeto, project_id)
     end
   end
 
   # `propose_container_start` — o caminho do BROKER. Lista de PERMITIDOS,
   # como a do próprio broker: modo novo no enum nasce RECUSADO com mensagem,
   # nunca proposto por omissão.
-  #
-  # O que esta cláusula NÃO checa, de propósito: imagem decidida. A eleição
-  # de imagem é justamente o que esta proposta FAZ (ADR 0131/RN-491), então
-  # exigi-la antes inverteria a ordem. A `/containers` checa as TRÊS coisas
-  # (imagem, modo, pasta confirmada) porque tem um humano clicando; o agente
-  # checa o MODO — a diferença está declarada no CLAUDE.md.
-  defp recusa_por_modo(:container_start, modo, _project_id) when modo in ~w(container mounted),
-    do: nil
+  defp recusa_por_modo(:container_start, modo) when modo in ~w(container mounted), do: nil
 
-  defp recusa_por_modo(:container_start, "runner", _project_id),
+  defp recusa_por_modo(:container_start, "runner"),
     do:
       "projeto no modo `runner` — o broker nunca alcança a pasta dele (ela " <>
         "mora na máquina do usuário), e o payload desta tool elege uma " <>
         "candidata do roteamento do Arquiteto, que não existe nesse modo. " <>
         "Use `container_start_via_runner`, não esta tool."
 
-  defp recusa_por_modo(:container_start, outro, _project_id),
+  defp recusa_por_modo(:container_start, outro),
     do:
       "projeto no modo `#{outro}` — `propose_container_start` sobe pelo " <>
         "BROKER, que atende só `container` e `mounted` (ADR 0144)."
 
   # `container_start_via_runner` — o caminho do AGENTE LOCAL (RN-508).
-  # Exclusiva de `runner`, e a única das duas que também pergunta pela
-  # presença de um runner conectado: é a metade que só o engine sabe.
-  defp recusa_por_modo(:container_start_via_runner, "runner", project_id) do
+  defp recusa_por_modo(:container_start_via_runner, "runner"), do: nil
+
+  defp recusa_por_modo(:container_start_via_runner, "mounted"),
+    do:
+      "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
+        "como `container`. Use `propose_container_start`, não esta tool."
+
+  defp recusa_por_modo(:container_start_via_runner, outro),
+    do:
+      "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
+        "de `runner`. Use `propose_container_start` (o broker)."
+
+  # As cláusulas de ESTADO de cada tool (RN-610), na ordem da `/containers`.
+  #
+  # `propose_container_start` tem UMA, de propósito: NÃO checa imagem
+  # decidida. A eleição de imagem é justamente o que esta proposta FAZ (ADR
+  # 0131/RN-491), então exigi-la antes inverteria a ordem — a tela checa
+  # imagem para os dois modos porque o botão dela não elege nada.
+  #
+  # `container_start_via_runner` tem QUATRO: ela sobe a imagem JÁ decidida e
+  # não elege nenhuma (`ExecuteContainerStartViaRunnerUseCase` falha sem
+  # ela), precisa de uma pasta que um runner já confirmou, e de um runner
+  # conectado AGORA — a metade que só o engine sabe, e a tela não (ela só
+  # ressalva `runner_pode_estar_desconectado`).
+  defp recusa_por_estado(:container_start, _projeto, project_id) do
+    recusa_ja_de_pe("propose_container_start", project_id)
+  end
+
+  defp recusa_por_estado(:container_start_via_runner, projeto, project_id) do
+    tool = "container_start_via_runner"
+
+    [
+      fn -> recusa_ja_de_pe(tool, project_id) end,
+      fn -> recusa_sem_imagem_decidida(project_id) end,
+      fn -> recusa_pasta_nunca_confirmada(projeto, project_id) end,
+      fn -> recusa_runner_desconectado(project_id) end
+    ]
+    |> Enum.find_value(& &1.())
+  end
+
+  # `ja_esta_de_pe` da `/containers`. A execução não FALHARIA aqui
+  # (`SubirCicloDeVidaDoContainerUseCase` é idempotente sobre
+  # `provisioning`/`running`), mas a proposta gastaria uma decisão humana num
+  # nada — e em `container`/`mounted` pior que nada: elegeria uma imagem nova
+  # (nova versão de `artifact.project_image`) que o container de pé, com a
+  # versão CONGELADA na linha (RN-245), não usaria. Registrado não é
+  # observado (RN-486): o texto diz o que fazer quando o container morreu por
+  # fora, em vez de afirmar que ele está vivo.
+  defp recusa_ja_de_pe(tool, project_id) do
+    case ProjectContainerLifecycle.status_registrado(project_id) do
+      status when status in ~w(running provisioning) ->
+        "o container deste projeto já está REGISTRADO como `#{status}` — " <>
+          "subir não é a próxima ação, e `#{tool}` não foi proposta. O " <>
+          "registro não é observação (RN-486): se o container morreu por " <>
+          "fora, ou se a imagem precisa mudar, diga ao usuário que parar ou " <>
+          "remover é pela página `/containers`; só depois disso uma nova " <>
+          "subida faz sentido. Não repita a chamada agora."
+
+      _ ->
+        nil
+    end
+  end
+
+  # `sem_imagem_decidida` da `/containers` — só para `runner`, pelo motivo
+  # escrito acima de `recusa_por_estado/3`. O predicado é o da api
+  # (`Event.imagem_decidida?/1`).
+  defp recusa_sem_imagem_decidida(project_id) do
+    if Event.imagem_decidida?(project_id) do
+      nil
+    else
+      "nenhuma imagem de container foi decidida para este projeto " <>
+        "(`artifact.project_image`, RN-105) — `container_start_via_runner` " <>
+        "sobe a imagem JÁ decidida e não elege nenhuma, então aprovada ela " <>
+        "só poderia falhar, e não foi proposta. Quem decide a imagem é o " <>
+        "Arquiteto (`choose_project_image`): diga isso ao usuário e não " <>
+        "repita a chamada até haver decisão."
+    end
+  end
+
+  # `runner_nunca_confirmou` da `/containers`: `workspace_verified_at` nulo
+  # quer dizer que nenhum agente local jamais confirmou a pasta (RN-423).
+  # Carimbo não é batimento (RN-468) — por isso esta cláusula não substitui a
+  # seguinte, que pergunta pelo AGORA.
+  defp recusa_pasta_nunca_confirmada(%{workspace_verified_at: nil}, project_id),
+    do:
+      "a pasta deste projeto nunca foi confirmada por um agente local " <>
+        "(`workspace_verified_at` vazio, RN-423) — nenhum `brabo-runner` " <>
+        "jamais conectou a ele, e `container_start_via_runner` não foi " <>
+        "proposta. Peça ao usuário para rodar `brabo-runner --project " <>
+        "#{project_id} --dir <pasta>` na máquina dele: a confirmação " <>
+        "acontece quando o runner conecta."
+
+  defp recusa_pasta_nunca_confirmada(_projeto, _project_id), do: nil
+
+  defp recusa_runner_desconectado(project_id) do
     if RunnerRegistry.connected?(project_id) do
       nil
     else
@@ -498,16 +604,6 @@ defmodule Engine.Infra.InfraLeadServer do
         "<pasta>` na máquina dele antes de propor de novo."
     end
   end
-
-  defp recusa_por_modo(:container_start_via_runner, "mounted", _project_id),
-    do:
-      "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
-        "como `container`. Use `propose_container_start`, não esta tool."
-
-  defp recusa_por_modo(:container_start_via_runner, outro, _project_id),
-    do:
-      "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
-        "de `runner`. Use `propose_container_start` (o broker)."
 
   defp dispatch_tool(call, state) do
     name = Map.get(call, "name")

@@ -107,6 +107,28 @@ defmodule Engine.SessionEvents.Event do
   end
 
   @doc """
+  O projeto tem imagem de container DECIDIDA? (RN-610)
+
+  O predicado é o MESMO da api (`ObterContainerDoProjetoUseCase`, que
+  `ObterSpecDeContainerUseCase` consome): existe ao menos um evento
+  `artifact.project_image` em QUALQUER sessão do projeto. A api degrada um
+  payload ilegível para o default em vez de tratá-lo como ausência, então a
+  pergunta aqui é só EXISTÊNCIA — nunca validade do payload —, senão a recusa
+  local e a execução divergiriam. Join por `sessions.project_id` explícito,
+  como em `titulos_de_regras/1`: o evento não carrega o projeto.
+  """
+  def imagem_decidida?(project_id) do
+    Repo.exists?(
+      from(e in __MODULE__,
+        join: s in Engine.Sessions.ProjectSession,
+        on: e.session_id == s.id,
+        where: s.project_id == type(^project_id, :binary_id),
+        where: e.type == "artifact.project_image"
+      )
+    )
+  end
+
+  @doc """
   Os `limit` eventos mais recentes da sessão, devolvidos em ordem de seq
   CRESCENTE (a query desce por seq pra pegar a cauda, o resultado volta
   cronológico pra ser lido como log).
