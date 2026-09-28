@@ -12954,11 +12954,11 @@ O valor escolhido no navegador é tratado como valor DIGITADO: ele preenche o
 campo e só vai à api quando alguém confirma no botão da seção. Esta seção **não
 vira autosave** ([RN-469](#rn-469)).
 
-- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:65` (os
-  quatro estados da base, como união), `:134` (o mínimo por `roleAtLeast`),
-  `:143` (a consulta que não sai para quem não alcança `maintainer`), `:169` (a
-  derivação dos quatro), `:180` (o que o navegador exige para existir), `:284`
-  (o botão, apagado e não escondido), `:290` (o texto do ramo `runner`), `:315`
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:68` (os
+  quatro estados da base, como união), `:211` (o mínimo por `roleAtLeast`),
+  `:220` (a consulta que não sai para quem não alcança `maintainer`), `:260` (a
+  derivação dos quatro), `:280` (o que o navegador exige para existir), `:414`
+  (o botão, apagado e não escondido), `:423` (o texto do ramo `runner`), `:475`
   (o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }`);
   `apps/web/src/locales/pt-BR/settings.json:231` e
   `apps/web/src/locales/en/settings.json:231` (`executionMode.path.*`, os cinco
@@ -12974,7 +12974,9 @@ vira autosave** ([RN-469](#rn-469)).
 - **Lacuna DECLARADA:** o ramo `runner` desta seção **continua digitado no
   escuro** — a lacuna do `CLAUDE.md` encolheu para ele e não fechou. Fechá-la
   exige decidir a ordem "converte, depois onboarda", que é decisão de produto à
-  parte e segue sem dono
+  parte e segue sem dono. *Atualização:* a ordem foi decidida e medida na
+  [RN-612](#rn-612) — o ramo `runner` ganha o onboarding DEPOIS de salvar, e o
+  navegador segue fora por outro motivo, dito lá
 - **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md),
   [0141](adr/0141-base-unica-dos-projetos-montados.md)
 - **Origem:** AT-049 (EP-021/HS-033)
@@ -13026,8 +13028,8 @@ PERDA de alcance e não uma informação neutra. Segue sem `role="alert"`: é te
 que já estava na tela quando ela abriu, e uma live region assertiva ali viraria
 interrupção sem causa.
 
-- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:225` (os
-  três fatos, um por linha), `:229` (a variante que nomeia o caminho antigo × a
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:333` (os
+  três fatos, um por linha), `:337` (a variante que nomeia o caminho antigo × a
   da pasta gerenciada);
   `apps/web/src/locales/pt-BR/settings.json:220` e
   `apps/web/src/locales/en/settings.json:220` (`executionMode.warning.*`, os
@@ -13040,15 +13042,110 @@ interrupção sem causa.
   pasta gerenciada, e a variante com caminho NÃO renderizada), e a prova
   negativa nos DOIS bundles de idioma: a promessa de migração não sobrevive em
   nenhum deles, e as quatro chaves existem em ambos
-- **Lacuna DECLARADA:** o aviso lista o que ENGANAVA, não **todas** as
-  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e o container
-  removido continuam ditos só no caso de uso e nas RNs, nunca na tela.
-  > **TODO(humano):** o aviso deve listar TODAS as consequências (espelho
-  > zerado, container removido, confirmação de pasta perdida) ou só a que
-  > contradizia o texto anterior? Listar tudo é mais honesto e mais longo — e um
-  > aviso que ninguém lê é o mesmo que aviso nenhum.
+- **As consequências CONDICIONAIS (AT-144).** A pergunta que esta regra deixou
+  em aberto — listar TODAS as consequências ou só a que enganava — foi decidida
+  pelo mantenedor: **só as que valem para ESTE projeto**. O aviso acrescenta,
+  depois dos três fatos, uma linha por consequência que se aplica, e NENHUMA
+  para o que não se aplica:
+
+  | linha | quando aparece | a mesma condição do caso de uso |
+  |---|---|---|
+  | o destino de espelho é zerado, NOMEADO | `mirrorPath` preenchido | toda conversão zera ([RN-515](#rn-515)) |
+  | o container registrado é parado e removido | o projeto é `container` HOJE e o ciclo de vida existe fora de `removed` | `removerContainerSeExistir` só roda ao SAIR de `container` ([RN-449](#rn-449)) |
+  | "não consegui ler se há container" | o projeto é `container` e a leitura do ciclo de vida FALHOU | — ("não sei" nunca vira "não tem", [RN-468](#rn-468)) |
+  | a pasta confirmada em `<data>` deixa de valer | `workspaceVerifiedAt` preenchido | toda conversão zera ([RN-450](#rn-450)) |
+
+  A linha do container **não** aparece em `mounted`/`runner` mesmo com container
+  registrado, porque o caso de uso não o remove ali — o aviso diria o contrário
+  do servidor, que é o defeito que esta regra existe para fechar. Os dados são
+  os que a seção já tem (`Project`: `mirrorPath`, `workspaceVerifiedAt`,
+  `executionMode`) mais o ciclo de vida do container, que a seção NÃO carregava:
+  ele vem da rota que JÁ existe, `GET projects/:projectId/container/lifecycle`
+  (`viewer`), consultada só quando o projeto é `container` — nenhum endpoint
+  novo. Enquanto a leitura está em voo, a linha simplesmente não aparece.
+  - **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:102`
+    (`consequenciasCondicionais`), `:118` (`containerParaOAviso`, os três
+    estados), `:236` (`cicloQuery`, só em `container`), `:344` (as quatro
+    linhas no `Alert`)
+  - **Teste:** o describe `AT-144` em
+    `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — nenhuma
+    condição (nenhuma linha a mais), container registrado, linha `removed` que
+    não conta, leitura FALHANDO com texto próprio, `mounted` com espelho (a
+    linha do espelho sim, a do container não, e a consulta nem sai), `runner`
+    com pasta confirmada (com a data), e as três condicionais em `en`
 - **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
-- **Origem:** AT-050 (EP-021/HS-034)
+- **Origem:** AT-050 (EP-021/HS-034); as condicionais, AT-144 (EP-021/HS-034)
+
+### RN-612 — Converter para `runner` é converte, DEPOIS onboarda: salvar monta o painel de onboarding do projeto agora `runner`, e o navegador de pastas fica fora por construção {#rn-612}
+
+O ramo `runner` da conversão era digitado no escuro ([RN-559](#rn-559)) porque a
+ordem estava indecidida: onboardar ANTES de salvar registra chave num projeto
+que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a
+confirmação com 400. A decisão do mantenedor foi **medir** a outra ordem com a
+chave de MÁQUINA ([RN-543](#rn-543)/[RN-548](#rn-548)) e implementar se o
+atrito fosse aceitável. A medição foi feita no CÓDIGO (sem subir o ambiente) e
+deu isto:
+
+| quem vai atender o projeto | o que acontece depois de salvar | gestos |
+|---|---|---|
+| agente de MÁQUINA esperando (zero projetos `runner`, [RN-550](#rn-550)) | a próxima consulta de `GET /runner/projects` o lista e o agente conecta sozinho — cadência 15/30/60 s de `espera-de-projetos.ts` | **zero**, em até 60 s |
+| agente de MÁQUINA já atendendo OUTRO projeto | a lista é lida UMA vez, no start, com conexão viva (RN-550) — o projeto novo **não** entra | **um**: reiniciar o serviço |
+| nenhuma chave de máquina | o mesmo pareamento da criação de projeto ([RN-473](#rn-473)) | parear + um comando |
+
+Nos três casos o atrito é o da criação de projeto ou menor, então a conversão
+passa a ser **dois passos na mesma seção**: salvar para `runner` monta, logo
+abaixo, o MESMO `RunnerOnboardingPanel` da aba Código e do wizard, com o
+`projectId` de um projeto que agora É `runner` — o reconhecimento da máquina
+pareada, a `EsperaDoRunner` e o pareamento do ADR 0118 vêm junto, sem régua
+nova. Acima do painel a seção DIZ a assimetria do agente de máquina (espera
+sozinho × reinício), com o comando de reinício das duas plataformas
+(`systemctl --user restart brabo-runner.service`,
+`launchctl kickstart -k gui/$(id -u)/dev.brabo.runner`): a tela não sabe se o
+agente tem outra conexão viva, então nomeia os dois casos em vez de afirmar um.
+
+O painel aparece quando o projeto SALVO é `runner`, sem troca de modo pendente
+no seletor, e com a pasta ainda não confirmada — ou até o fim da visita em que
+a conversão salvou, para a `EsperaDoRunner` mostrar a confirmação em vez de
+sumir no instante em que ela chega. Um projeto `runner` já confirmado não o
+ganha.
+
+**O caminho digitado é PROVISÓRIO, e a tela diz isso.** Quem decide a pasta de
+um projeto `runner` é o runner: a confirmação SOBRESCREVE `workspacePath`
+([RN-423](#rn-423)), e o agente de máquina nem olha o valor digitado — ele usa
+`<base>/<workspaceDirName>` ([RN-544](#rn-544)). O campo continua obrigatório
+porque o CHECK do banco pede caminho não-nulo fora de `container`; a seção não
+inventa placeholder.
+
+**O navegador de pastas continua FORA do ramo `runner`, e agora pelo motivo
+certo.** Não é mais a ordem: é que o transporte `{ tipo: 'runner', projectId }`
+exige um runner conectado a ESTE projeto, e um runner conectado já confirmou a
+PRÓPRIA pasta (`--dir`, ou a derivada da base). Escolher outra ali seria uma
+segunda conversão `runner → runner` que a próxima reconexão desfaria. Oferecer o
+botão seria um controle que não controla nada; a seção diz isso em texto
+([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:285`
+  (`mostrarProximoPasso`), `:298` (`setConvertidoParaRunner`, a visita em que a
+  conversão salvou), `:452` (o bloco do próximo passo), `:466`
+  (`RunnerOnboardingPanel`, o mesmo da aba Código);
+  `apps/web/src/locales/pt-BR/settings.json:249` e
+  `apps/web/src/locales/en/settings.json:249` (`executionMode.nextStep.*`) e
+  `:241` (`executionMode.path.runnerTyped`, reescrito); a cadência medida em
+  `apps/runner/src/espera-de-projetos.ts:60` (`CADENCIA_DA_ESPERA_MS`) e a
+  lista lida uma vez em `apps/runner/src/index.ts` (`rodarComoAgenteDeMaquina`)
+- **Teste:** o describe `RN-612` em
+  `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o caminho feliz
+  (antes de salvar não há painel; salvar monta o próximo passo, com o comando de
+  reinício, e o painel pergunta pelas chaves DESTE projeto), a chave de máquina
+  reconhecida, o caso de falha (projeto `runner` já confirmado não ganha o
+  passo), o rascunho de outro modo escondendo o passo, e o texto em `en`
+- **Lacuna DECLARADA:** o reinício do agente de máquina que já atende outro
+  projeto continua sendo um gesto no terminal — repesquisar a lista com conexão
+  viva foi recusado pela RN-550, e esta regra não reabre isso. E a medição é de
+  CÓDIGO, não de tela: o ambiente não foi subido
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md),
+  [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** AT-143 (EP-021/HS-033)
 
 ---
 

@@ -30,6 +30,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: converter um projeto para o modo Runner deixa de terminar no escuro
+  (AT-143, RN-612). Salvar a conversão monta, na mesma seção de Configurações,
+  o painel de onboarding do runner (o mesmo da aba Código), já para o projeto
+  agora `runner` — reconhecendo a máquina pareada, esperando o runner conectar
+  e dizendo o que o agente de máquina faz: se ele não atende projeto Runner
+  nenhum, pega este sozinho em até 60 s; se já atende outro, só depois de
+  reiniciar o serviço (o comando está na tela). O caminho digitado passa a ser
+  dito provisório — o runner o sobrescreve ao confirmar — e o navegador de
+  pastas segue fora desse ramo, com o motivo em texto.
+- **web**: o aviso da conversão de modo diz as consequências que valem para
+  ESTE projeto, e só elas (AT-144, RN-560): o destino de espelho que será
+  zerado, o container registrado que será removido (só quando o projeto é
+  Container, que é quando a conversão o remove — e "não consegui ler" quando a
+  leitura falha) e a pasta confirmada que deixa de valer, com a data.
 - **docs**: o runbook ganha a tabela *Procedures and how each is verified*
   (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
   o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou

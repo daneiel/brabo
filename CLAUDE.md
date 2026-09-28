@@ -439,24 +439,33 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fatos separados (o que a conversão RECUSA, o que ela LEVA — a política do
   `permissions.json` —, e o que ela NÃO leva), NOMEANDO o caminho antigo, que
   some da tela assim que a conversão salva. Ele não promete detecção de diff
-  (I/O por modo, impossível para `runner` do lado da api) e não lista TODAS as
-  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e container
-  removido seguem ditos só no caso de uso e nas RNs. Migrar conteúdo entre
-  modos continua fora, sem dono
-- `ExecutionModeSection` ENCOLHEU para o ramo `runner` (RN-559): converter para
-  `mounted` abre o MESMO `FolderBrowserModal` da criação, com
-  `origem: { tipo: 'api', workspaceId }` — mesmo componente, mesmo endpoint,
-  nenhuma régua nova (quem valida o caminho continua sendo a api). O que segue
-  aberto é converter para `runner`, que continua sem `RunnerOnboardingPanel` e
-  sem navegador, digitado no escuro. Ficou fora da RN-473 de propósito, e a
-  RN-559 NÃO reabriu: onboardar ANTES de a conversão salvar registra chave num
-  projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a
-  confirmação com 400; o transporte de navegador daquele ramo
-  (`{ tipo: 'runner', projectId }`) exige um runner conectado a ESSE projeto,
-  que só passa a existir depois da conversão, e a espera terminaria num erro
-  com cara de bug. A ordem "converte, depois onboarda" é decisão de produto à
-  parte, sem dono. O que a RN-559 acrescentou ali é a tela DIZER isso em texto,
-  em vez de só não oferecer botão nenhum (ADR 0064)
+  (I/O por modo, impossível para `runner` do lado da api). Desde a AT-144 ele
+  diz também as consequências CONDICIONAIS, e só quando valem para ESTE
+  projeto: o espelho zerado (`mirrorPath` preenchido), o container removido (o
+  projeto é `container` HOJE e o ciclo de vida existe fora de `removed` — a
+  MESMA condição de `removerContainerSeExistir`, que só roda ao SAIR de
+  `container`; em `mounted`/`runner` o caso de uso não toca o container e o
+  aviso não diz o contrário) e a pasta confirmada que deixa de valer
+  (`workspaceVerifiedAt` preenchido). Nada de listar o que não se aplica, e a
+  leitura do ciclo de vida que falha vira texto próprio, nunca "não há
+  container". Migrar conteúdo entre modos continua fora, sem dono
+- `ExecutionModeSection` fechou os DOIS ramos: `mounted` abre o MESMO
+  `FolderBrowserModal` da criação (RN-559, `origem: { tipo: 'api', workspaceId
+  }`), e `runner` é converte, DEPOIS onboarda (RN-612, AT-143): salvar a
+  conversão monta, na mesma seção, o `RunnerOnboardingPanel` do projeto agora
+  `runner`. A ordem inversa segue impossível (onboardar antes registra chave
+  num projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase`
+  recusa com 400) — não a reabra mexendo nessa recusa. A medição que decidiu
+  foi de CÓDIGO: o agente de máquina que ESPERA (zero projetos, RN-550) pega o
+  projeto sozinho em até 60 s; o que já atende OUTRO projeto só depois de
+  reiniciar o serviço, porque a lista é lida uma vez com conexão viva — a tela
+  DIZ os dois casos, com o comando, sem afirmar qual é o da pessoa. O caminho
+  digitado é PROVISÓRIO (a confirmação do runner o sobrescreve, RN-423, e o
+  agente de máquina usa `<base>/<workspaceDirName>`), e o navegador de pastas
+  segue FORA do ramo `runner` por construção, não por ordem: o transporte
+  `{ tipo: 'runner', projectId }` exige runner conectado, e um runner conectado
+  já confirmou a própria pasta — escolher outra seria uma conversão que a
+  próxima reconexão desfaz
 - **A chave de dispositivo TEM tela desde a RN-561, e o que sobra da lacuna
   mudou de assunto.** A metade de api existe desde a RN-519
   (`RunnerDeviceKeysController` com `GET`, a revogada NA lista e `lastUsedAt`

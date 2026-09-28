@@ -221,7 +221,11 @@
       "refuses": "If any dev agent is working or stuck right now, the conversion is refused — wait for it to finish (or unblock the stuck task) and try again.",
       "carries": "The conversion carries the project's POLICY: permissions.json moves to the new scope with allow/deny/ask intact.",
       "leavesPath": "It does NOT copy or move the folder contents. Whatever sits in {{caminho}} — uncommitted work included — stays there, and nothing will fetch it later.",
-      "leavesManaged": "It does NOT copy or move the folder contents. Whatever sits in this project's managed folder, on the server — uncommitted work included — stays there, and nothing will fetch it later."
+      "leavesManaged": "It does NOT copy or move the folder contents. Whatever sits in this project's managed folder, on the server — uncommitted work included — stays there, and nothing will fetch it later.",
+      "mirrorCleared": "The mirror destination ({{destino}}) is cleared: every conversion resets it, and it has to be declared again afterwards if the new mode takes a mirror.",
+      "containerRemoved": "This project's registered container is stopped and removed: leaving Container mode tears it down, and nothing brings it back on its own.",
+      "containerUnknown": "Could not read whether this project has a registered container. If it has one, leaving Container mode stops and removes it.",
+      "verifiedLost": "The folder confirmed on {{data}} stops counting as confirmed: every conversion resets that record, and a Runner project needs its runner to confirm the folder again on connect."
     },
     "card": {
       "title": "Execution mode"
@@ -234,13 +238,20 @@
       "noBase": "This installation declared no mounted-projects base: there is nothing to browse, and the Mounted folder mode has nowhere to exist here.",
       "baseUnknown": "Could not query this installation's projects base — there is no way to tell whether it exists, so the folder browser stays unavailable. Reload the page to try again.",
       "baseLoading": "Querying this installation's projects base…",
-      "runnerTyped": "The path is typed here. The Runner folder browser needs a runner already connected to THIS project, and that only exists after the conversion saves: convert first, then connect the runner — it is the runner that confirms the path on connect."
+      "runnerTyped": "The path typed here is provisional: for a Runner project, the folder is decided by the runner when it connects, and its confirmation overwrites this value (a machine agent uses <base>/<project folder>). That is also why there is no folder browser here: browsing would need a runner already connected to THIS project, and a connected runner has already confirmed its own folder. Convert; the next step — connecting the runner — shows up right below."
     },
     "save": "Convert",
     "saving": "Converting…",
     "toast": {
       "success": "Execution mode converted",
       "error": "Could not convert"
+    },
+    "nextStep": {
+      "title": "Next step: connect the runner",
+      "intro": "The project is now in Runner mode and its folder is not confirmed yet. The conversion is saved; what is missing is a runner connecting to this project — it is the runner that confirms the folder.",
+      "machineAgent": "If a machine agent is already running on your machine: when it is serving no Runner project, it picks this one up on its own within 60 s. When it already serves another Runner project, it does NOT — the project list is read once, when the agent starts — so restart its service:",
+      "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
     }
   },
   "parallelism": {
