@@ -56,6 +56,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não enxerga), e um `TODO(humano)` registra que nenhum compose as repassa ao
   serviço `api`.
 
+- **ci**: o `release.yml` passa a escanear com Trivy as imagens que PUBLICA,
+  por digest e antes de assiná-las (AT-179, ADR 0172). HIGH ou CRITICAL com
+  correção disponível reprova o release e a imagem não recebe assinatura — com
+  as mesmas flags e o mesmo `.trivyignore.yaml` do `ci.yml`, sem allowlist
+  nova. O que não tem correção é relatado no resumo do job e anexado à Release
+  (`trivy-sem-correcao.md`), sem bloquear. Até aqui a imagem que o instalador
+  baixa era a única que nenhum scan via: o PR escaneia um build local, e a tag
+  constrói outro. Medido contra os digests da `v6.1.0`: `api` e `web`
+  reprovariam hoje por `CVE-2026-45447` (openssl, corrigido em `3.3.7-r1`).
+
 - **docs**: o runbook ganha a tabela *Procedures and how each is verified*
   (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
   o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou

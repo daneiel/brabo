@@ -250,8 +250,47 @@ and what follows it are rebuilt every time, the build stages keep their cache
 (that is where the time is), and the scan looks at what the tag would publish.
 It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.
 
-What this does **not** fix: `release.yml` has no Trivy step, so the image a tag
-publishes is still never scanned (AT-179).
+That fixed what the **PR** scans. It could not fix what the **tag** publishes:
+a tag builds cold, from a different run, and until
+[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) nothing scanned it.
+
+## The release scans what it publishes, before signing it
+
+`release.yml` runs Trivy on each image **by digest**, straight from the
+registry (`--image-src remote`), after the bake pushes and records
+`.release/images.json` and **before** `cosign sign`. The order is the
+mechanism: an image that fails is never signed, and `install.sh` does not
+install an unsigned image. The push has already happened by then (it is what
+creates the digest), so a failed tag leaves its tags in the GHCR unsigned and
+without a Release — the correct state, since nothing installs them.
+
+The gate is the **same** rule as the `ci.yml` job, flag for flag:
+`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` and
+the same `.trivyignore.yaml`, whose every entry carries an `expired_at`. A HIGH
+or CRITICAL **with a fix available** fails the release. What has **no** fix is
+reported, not blocking: a second scan without `--ignore-unfixed` and with
+`--exit-code 0` feeds `scripts/ci/trivy-do-release.ts`, which writes the job
+summary and the `trivy-sem-correcao.md` Release asset. That script never
+decides the verdict — Trivy's exit code does —, because a second rule for
+"has a fix" would drift from Trivy's own the first time it added a status.
+There is **no new allowlist**: the step accepts no ignore file but the one the
+PR already uses.
+
+The binary is the same `v0.70.0` with the same `sha256` as `ci.yml`, declared
+twice because a workflow's `env:` cannot be imported. The duplication is
+guarded: `scripts/ci/trivy-do-release.spec.ts` fails when version, hash or the
+gate's flags diverge between the two workflows, when the gate moves after the
+signing, or when a second ignore file appears. Like `install-e2e.yml`, the
+release only runs on a final tag, so that spec is the proof a PR can give.
+
+Measured on 2026-09-27 against the digests of the last release (`v6.1.0`,
+four images, published 2026-09-14), with the same flags: `api` and `web` would
+**fail** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3` `3.3.7-r0`, fixed in
+`3.3.7-r1`), a CVE published after that tag —, `engine` and `backup` pass, and
+nothing HIGH/CRITICAL without a fix appears once `.trivyignore.yaml` is
+applied. Without it, `engine` would carry 56 fixable findings in the
+third-party scanner binaries that file documents. The four scans plus the
+database download took about 30 s.
 
 ## What is still trusted on faith
 
