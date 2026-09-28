@@ -42,13 +42,12 @@ import {
   useCanalDaSessaoVivo,
 } from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
-import { AGENTS, addressableAgents, nomeDoAgente } from '../lib/agents';
+import { AGENTS } from '../lib/agents';
 import { AGENT_AUTONOMY_ALL_ACTIONS } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStrip } from '../components/TurnActivityStrip';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
@@ -60,13 +59,14 @@ import {
   turnoDoSeq,
   type TimelineEntry,
 } from '../lib/session-timeline';
-import { ehRecusaDeSessaoEncerrada, sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import { ContextAside } from './ContextAside';
 import { AGENTES_DE_CHAT, useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
 import { SessionTopbar } from './SessionTopbar';
 import { SessionFio } from './SessionFio';
+import { SessionComposer } from './SessionComposer';
 
 interface SessionPageProps {
   projectId: string;
@@ -1140,201 +1140,36 @@ export function SessionPage({
             />
           )}
 
-          {/*
-            O card ACIONÁVEL do handoff da Infra (RN-499). Ele mora AQUI, na
-            faixa entre o fio e o composer, e não dentro da timeline, por
-            três razões:
-
-            1. Esta faixa já é o lugar declarado das ações de handoff que
-               NÃO são conversa — o seletor logo abaixo (ADR 0109/RN-440)
-               fica "FORA do `.composer` de propósito — não é uma ação de
-               conversa, é redirecionamento". Aceitar a Infra é exatamente
-               isso: não abre fio nenhum, ativa um agente propositivo.
-            2. O card do fio pertence a um EVENTO (`handoff.offered`), e o
-               evento da Infra continua sendo NARRADO lá como divisor mudo,
-               sem mudança — o filtro `AGENTES_DE_CHAT` da RN-136 fica
-               intacto, e nenhum handoff conversacional muda de forma.
-            3. A faixa não rola. A oferta da Infra sai da janela de 200
-               eventos numa sessão longa, e um botão que só existe enquanto
-               o evento estiver visível é um botão que some sozinho.
-
-            O que o texto tem de dizer é a CONSEQUÊNCIA do clique, porque
-            ela não é óbvia: o Infra Lead assume e vai PROPOR a subida do
-            container — proposta que ainda passa pelo pipeline de aprovação
-            de sempre (`container_start`, `maintainer`, RN-491). Aceitar não
-            sobe container nenhum.
-          */}
-          {isActive && handoffDaInfraOferecido && (
-            <div className={styles.infraHandoffRow}>
-              <div className={styles.infraHandoffTexto}>
-                <span className={styles.infraHandoffTitulo}>
-                  {t('handoff.infraTitulo', {
-                    de: nomeDoAgente(handoffDaInfraOferecido.fromAgent),
-                  })}
-                </span>
-                <span className={styles.infraHandoffDetalhe}>
-                  {t('handoff.infraDetalhe')}
-                </span>
-              </div>
-              <Button
-                variant="success"
-                onClick={() =>
-                  handleAcceptHandoff(
-                    handoffDaInfraOferecido.id,
-                    handoffDaInfraOferecido.toAgent,
-                  )
-                }
-              >
-                {t('handoff.infraBotao')}
-              </Button>
-            </div>
-          )}
-
-          {/*
-            Handoff manual a agente à escolha (ADR 0109/RN-440): a cadeia
-            fixa (Criativo→PO→Arquiteto→Dev Lead…) continua sendo o caminho
-            normal — este seletor existe para o caso que ela não cobre, o
-            Staff (ADR 0088) e agora também `ux-designer` sendo o exemplo
-            real: agentes com código pronto no engine, sem NENHUM jeito de
-            um humano chegar até eles pela tela. Fica FORA do `.composer`
-            de propósito — não é uma ação de conversa, é redirecionamento.
-            `activeFor` (não `AGENTES_DE_CHAT`) filtra quem já entrou nesta
-            sessão alguma vez, pro mesmo agente não ser oferecido duas
-            vezes.
-          */}
-          {isActive && (
-            <div className={styles.manualHandoffRow}>
-              <Select
-                aria-label={t('handoff.manualLabel')}
-                value={manualHandoffTarget}
-                disabled={enviandoHandoffManual}
-                onChange={(e) => setManualHandoffTarget(e.target.value)}
-              >
-                <option value="">{t('handoff.manualPlaceholder')}</option>
-                {addressableAgents()
-                  .filter((agente) => !activeFor(agente))
-                  .map((agente) => (
-                    <option key={agente} value={agente}>
-                      {nomeDoAgente(agente)}
-                    </option>
-                  ))}
-              </Select>
-              <Button
-                variant="secondary"
-                loading={enviandoHandoffManual}
-                disabled={!manualHandoffTarget}
-                onClick={handleRequestManualHandoff}
-              >
-                {t('handoff.manualBotao')}
-              </Button>
-            </div>
-          )}
-
-          {session?.status === 'active' ? (
-            <div className={styles.composer}>
-              <textarea
-                className={styles.textarea}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                placeholder={t('composer.placeholder')}
-                disabled={streaming}
-              />
-              <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
-                {t('composer.enviar')}
-              </Button>
-              {/* RN-122: só existe (habilitado) enquanto há turno em curso —
-                  fora disso não há o que parar. */}
-              {streaming && (
-                <Button variant="danger" onClick={handleCancel}>
-                  {t('composer.parar')}
-                </Button>
-              )}
-              {/*
-                Some depois que o Criativo passou a bola (achado L). O botão
-                dependia só de o Criativo estar ativo, e continuava oferecendo
-                "Estou pronto para produzir" DEPOIS do handoff — convidando a
-                declarar de novo uma prontidão que já foi declarada, e cuja
-                consequência (o handoff para o PO) já está na tela.
-              */}
-              {criativoActive && !prontidaoJaDeclarada && (
-                <Button
-                  variant="success"
-                  onClick={handleReadiness}
-                  disabled={streaming || !hasBusinessRule}
-                  title={
-                    !hasBusinessRule
-                      ? t('composer.prontoParaProduzirDesabilitado')
-                      : undefined
-                  }
-                >
-                  {t('composer.prontoParaProduzir')}
-                </Button>
-              )}
-              {/*
-                Mirror do botão acima, para o Arquiteto (achado do problema 1)
-                — some depois que ele já ofereceu o handoff, pelo mesmo motivo
-                que o do Criativo some depois de `prontidaoJaDeclarada`.
-              */}
-              {arquitetoActive && !arquiteturaJaDeclarada && (
-                <Button
-                  variant="success"
-                  onClick={handleArchitectureReadiness}
-                  disabled={streaming || !hasPromotedStory}
-                  title={
-                    !hasPromotedStory
-                      ? t('composer.confirmarArquiteturaDesabilitado')
-                      : undefined
-                  }
-                >
-                  {t('composer.confirmarArquitetura')}
-                </Button>
-              )}
-              {/*
-                Gate `necessidade-validada` (RN-406, ADR 0095): confirmação
-                humana SEPARADA de "Estou pronto para produzir" — este botão
-                só existe para não deixar o Criativo (o modelo) se
-                autovalidar (`modelo-de-time.md`, anti-padrão registrado).
-                Habilita só DEPOIS que o product_brief já existe (não dá pra
-                "validar" algo que ainda não foi consolidado) e some assim
-                que já foi validada.
-              */}
-              {criativoActive && !necessidadeJaValidada && (
-                <Button
-                  variant="success"
-                  loading={validandoNecessidade}
-                  onClick={handleValidateNecessity}
-                  disabled={streaming || !hasProductBrief}
-                  title={
-                    !hasProductBrief
-                      ? t('composer.confirmarNecessidadeDesabilitado')
-                      : undefined
-                  }
-                >
-                  {t('composer.confirmarNecessidade')}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className={styles.activatePrompt}>
-              {sessaoEhTerminal(session?.status) && draft.trim() !== '' && (
-                <textarea
-                  className={styles.textarea}
-                  value={draft}
-                  readOnly
-                  aria-label={t('ativacao.mensagemNaoEnviada')}
-                />
-              )}
-              {session?.status === 'created' ? (
-                <>
-                  {t('ativacao.naoAtivada')}
-                  <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
-                </>
-              ) : (
-                <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
-              )}
-            </div>
-          )}
+          <SessionComposer
+            isActive={isActive}
+            handoffDaInfraOferecido={handoffDaInfraOferecido}
+            handleAcceptHandoff={handleAcceptHandoff}
+            manualHandoffTarget={manualHandoffTarget}
+            setManualHandoffTarget={setManualHandoffTarget}
+            enviandoHandoffManual={enviandoHandoffManual}
+            activeFor={activeFor}
+            handleRequestManualHandoff={handleRequestManualHandoff}
+            session={session}
+            draft={draft}
+            setDraft={setDraft}
+            handleComposerKeyDown={handleComposerKeyDown}
+            streaming={streaming}
+            handleSend={handleSend}
+            handleCancel={handleCancel}
+            criativoActive={criativoActive}
+            prontidaoJaDeclarada={prontidaoJaDeclarada}
+            handleReadiness={handleReadiness}
+            hasBusinessRule={hasBusinessRule}
+            arquitetoActive={arquitetoActive}
+            arquiteturaJaDeclarada={arquiteturaJaDeclarada}
+            handleArchitectureReadiness={handleArchitectureReadiness}
+            hasPromotedStory={hasPromotedStory}
+            necessidadeJaValidada={necessidadeJaValidada}
+            validandoNecessidade={validandoNecessidade}
+            handleValidateNecessity={handleValidateNecessity}
+            hasProductBrief={hasProductBrief}
+            handleActivate={handleActivate}
+          />
         </div>
 
         {asideOpen && (
