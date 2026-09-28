@@ -62,7 +62,7 @@ import styles from './EsperaDoRunner.module.css';
  */
 
 /** Frequência da sonda. Um `GET` leve, na chave de cache que a página já tem. */
-const INTERVALO_MS = 3_000;
+export const INTERVALO_MS = 3_000;
 /** Teto da espera — 3 minutos cobrem `chmod`, primeira execução e o join do canal. */
 export const TETO_MS = 180_000;
 
