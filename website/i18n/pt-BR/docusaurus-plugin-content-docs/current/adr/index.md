@@ -20,7 +20,7 @@ atual.** Para o estado atual, use [Regras de negócio](../business-rules.md),
 [Arquitetura](../architecture.md) e o [Runbook](../runbook.md). Para o
 raciocínio, venha aqui.
 
-Dos 61, todos estão **aceitos** menos os que ainda esperam implementação — hoje o [0053](0053-dev-lead-e-paralelismo-autorizado.md), o [0054](0054-gates-como-registro-declarativo.md) e o [0056](0056-o-engine-trabalha-em-repositorio-remoto.md), marcados **propostos** no próprio arquivo. O [0055](0055-escopo-de-caminho-na-politica-de-terminal.md) foi aceito ao ser implementado na Fase F. Nenhum check confere esta frase: ela envelheceu dizendo 48 quando já eram 54, e de novo 58 quando já eram 59, e é o argumento do ADR 0029 (`gerar > verificar > lembrar`) se confirmando contra si mesmo.
+Dos 61, todos estão **aceitos** menos os que ainda esperam implementação — hoje o [0053](0053-dev-lead-e-paralelismo-autorizado.md), o [0054](0054-gates-como-registro-declarativo.md) e o [0056](0056-o-engine-trabalha-em-repositorio-remoto.md), marcados **propostos** no próprio arquivo. O [0055](0055-escopo-de-caminho-na-politica-de-terminal.md) foi aceito ao ser implementado na Fase F. O [0154](0154-chave-de-dispositivo-de-maquina.md) e o [0155](0155-a-primeira-conta-nasce-no-terminal.md) seguiram o mesmo caminho: aceitos em 2026-09-27, depois de a FASE 30 os exercitar, com uma seção "Notas de aceitação" nomeando onde o texto e o código divergem. Nenhum check confere esta frase: ela envelheceu dizendo 48 quando já eram 54, e de novo 58 quando já eram 59, e é o argumento do ADR 0029 (`gerar > verificar > lembrar`) se confirmando contra si mesmo.
 
 ## Fase 2 — Git
 

@@ -20,7 +20,7 @@ current.** For the current state, use [Business rules](../business-rules.md),
 [Architecture](../architecture.md) and the [Runbook](../runbook.md). For the
 reasoning, come here.
 
-Of the 61, all are **accepted** except those still waiting for implementation — today [0053](0053-dev-lead-e-paralelismo-autorizado.md), [0054](0054-gates-como-registro-declarativo.md) and [0056](0056-o-engine-trabalha-em-repositorio-remoto.md), marked **proposed** in the file itself. [0055](0055-escopo-de-caminho-na-politica-de-terminal.md) was accepted once it was implemented in Phase F. No check verifies this sentence: it aged saying 48 when there were already 54, and again 58 when there were already 59, and it's the argument of ADR 0029 (`gerar > verificar > lembrar`) confirming itself against itself.
+Of the 61, all are **accepted** except those still waiting for implementation — today [0053](0053-dev-lead-e-paralelismo-autorizado.md), [0054](0054-gates-como-registro-declarativo.md) and [0056](0056-o-engine-trabalha-em-repositorio-remoto.md), marked **proposed** in the file itself. [0055](0055-escopo-de-caminho-na-politica-de-terminal.md) was accepted once it was implemented in Phase F. [0154](0154-chave-de-dispositivo-de-maquina.md) and [0155](0155-a-primeira-conta-nasce-no-terminal.md) took the same path: accepted on 2026-09-27, after Phase 30 exercised them, with an "acceptance notes" section naming where the text and the code diverge. No check verifies this sentence: it aged saying 48 when there were already 54, and again 58 when there were already 59, and it's the argument of ADR 0029 (`gerar > verificar > lembrar`) confirming itself against itself.
 
 ## Phase 2 — Git
 

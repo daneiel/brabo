@@ -30,6 +30,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
+  [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
+  `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552
+  implementadas. A decisão não foi reescrita: cada um ganhou "Notas de
+  aceitação" nomeando onde o texto diverge do código — no 0154, a listagem e a
+  revogação que precisaram de código, o mínimo de `developer` aplicado por
+  linha e o `install` que recusa as duas espécies juntas; no 0155, o
+  `NODE_ENV=production` do `provisionarUsuario` (resolvido extraindo o núcleo
+  para `ProvisionarUsuarioUseCase`), o teto de dez falhas da espera e o
+  `status` que não sabe de projeto.
+- **docs**: a tradução pt-BR do ADR 0107 deixa de morar órfã sob o número 0104
+  (AT-231) — o arquivo e o título passam a `0107`, e o site pt-BR volta a gerar
+  a página dela. O comentário de `apps/web/src/lib/agente-de-maquina.ts` que
+  citava `0118-configuracao-do-runner-pelo-navegador.md` aponta para o nome
+  real do ADR 0118.
+
 - **broker/runner/api/engine**: o pull de imagem que passa do teto de controle
   deixa de falhar calado (AT-234, RN-605). O `start` da porta de Docker faz o
   pull como passo explícito (`image inspect`, depois `docker pull` sob o mesmo

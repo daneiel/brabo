@@ -2,7 +2,16 @@
 
 ## Status
 
-**Proposed.** Primeira das duas decisões da
+**Accepted** em 2026-09-27 (AT-108), depois de implementado — o mesmo caminho
+do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md). Nasceu
+`Proposed` na sessão 1 da FASE 30 (2026-09-11) e foi exercitado pelas RN-543..552
+nas sessões 2 a 8, com o fechamento narrado em
+[historico-de-fases.md](../explanation/historico-de-fases.md) e em
+[fase-30-runner-por-maquina.md](../explanation/fase-30-runner-por-maquina.md).
+Onde o texto abaixo diverge do código, a decisão NÃO foi reescrita: a
+divergência está nomeada em "Notas de aceitação", no fim.
+
+Primeira das duas decisões da
 [FASE 30](../explanation/fase-30-runner-por-maquina.md). A outra é o
 [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md), e ela depende desta:
 sem identidade de máquina, não há o que o instalador registre.
@@ -202,3 +211,36 @@ silêncio.
   ela que o servidor sabe que aquele processo pode materializar a pasta de um
   projeto recém-criado — que é o "linkar a pasta depois" que esta fase
   persegue.
+
+## Notas de aceitação (2026-09-27)
+
+Conferido contra o código na aceitação. A decisão fica como está; estes são os
+pontos em que o texto e o código divergem, e onde o código resolveu:
+
+- **Ponto 1 — "a RN-519 e a RN-520 continuam valendo sem código novo".** Não
+  continuaram sem código. A listagem passou a incluir as chaves de máquina em
+  todo projeto do dono (`apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:88`)
+  e a dizer a espécie, derivada de `project_id` num lugar só (`:23`); a
+  revogação de uma chave de máquina passou a chamar `disconnectRunnerOfUser`
+  uma vez por projeto em modo `runner` do dono
+  (`apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:120`).
+  É a consequência que as Consequences já previam, paga em código (RN-543).
+- **Ponto 3 — "o mínimo da rota é `developer`".** Não há `@RequireRole` em
+  `GET runner/projects`: não há projeto no caminho contra o qual resolvê-lo. O
+  mínimo é aplicado por LINHA, com o papel efetivo do projeto
+  (`apps/api/src/application/use-cases/runner/list-runner-projects.use-case.ts:75`),
+  e só credencial de MÁQUINA entra — uma presa a projeto é 403 com mensagem
+  própria (`apps/api/src/interfaces/http/auth/pat-auth.guard.ts:279`). O
+  conjunto listado é o mesmo que o ponto promete (RN-543).
+- **Ponto 4 — o discriminador da unit.** Já corrigido no próprio texto, na
+  sessão 4, enquanto `Proposed`: é a flag `--machine`
+  (`apps/runner/src/servico.ts:898`, `resolverEspecie` em `:912`), nunca a
+  ausência de `--project` (RN-545).
+- **Ponto 5 — as duas espécies convivendo.** O texto descreve units por
+  projeto e a de máquina instaladas juntas, com o `status` apontando a
+  sobreposição. O código não deixa chegar lá: `install` RECUSA quando a OUTRA
+  espécie já está instalada, nomeando o `uninstall` de cada unit, sem remover
+  nada e sem `--force` (`apps/runner/src/servico.ts:993`,
+  `recusaDeSobreposicao` em `:1269`). O `status` continua dizendo em texto que
+  a outra existe — o que sobra do ponto 5 é o caso de quem instalou antes da
+  guarda (RN-545).
