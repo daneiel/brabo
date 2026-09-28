@@ -66,6 +66,29 @@ make k8s-down && pnpm dev     # do modo validação para o de desenvolvimento
 
 Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
 
+### Uma instalação e um checkout na mesma máquina
+
+O compose de dev é o projeto Docker **`brabo-dev`** (containers
+`brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…); uma instalação feita pelo
+`install.sh` é **`brabo`**. Até o ADR 0170 os dois se chamavam `brabo`, então
+compartilhavam containers, rede e volumes, e o `reset-total.sh` apagaria o banco
+da instalação.
+
+Mesmo com os nomes separados, o `pnpm dev` (pelo preflight) e o
+`reset-total.sh` **recusam** enquanto houver na máquina container do compose de
+instalação, e os listam. Para desenvolver, derrube a instalação **sem** `-v` —
+os volumes e os dados ficam, e `up -d` a traz de volta:
+
+```bash
+docker compose -f <pasta da instalação>/docker/docker-compose.install.yml \
+  --env-file <pasta da instalação>/.env down   # o preflight imprime os caminhos exatos
+```
+
+**Desenvolvia aqui antes do ADR 0170?** Os dados seguem nos volumes antigos
+`brabo_*`, e o próximo `pnpm dev` começa com `brabo-dev_*` vazios; o preflight
+avisa. Copiar os dados, recomeçar do zero e distinguir os volumes do dev antigo
+dos de uma instalação estão no runbook, "Moving a dev environment to brabo-dev".
+
 ### Pasta local dos workspaces
 
 Por padrão, os arquivos que os agentes escrevem vivem num volume Docker

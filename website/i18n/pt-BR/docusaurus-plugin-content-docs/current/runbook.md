@@ -92,20 +92,22 @@ precisa copiar o conteúdo antes de trocar:
 ```bash
 pnpm dev:down
 docker run --rm \
-  -v brabo_project_workspaces:/de \
+  -v brabo-dev_project_workspaces:/de \
   -v "$(realpath ~/brabo-projetos)":/para \
   alpine sh -c 'cp -a /de/. /para/'
 docker run --rm \
-  -v brabo_git_local_repos:/de \
+  -v brabo-dev_git_local_repos:/de \
   -v "$(realpath ~/brabo-projetos-bare)":/para \
   alpine sh -c 'cp -a /de/. /para/'
 # defina as duas variáveis no .env, depois:
 pnpm dev
 ```
 
-O nome do volume (`brabo_project_workspaces`) tem o prefixo do projeto
-Compose (`name: brabo` em `docker/docker-compose.yml`) — confirme com
-`docker volume ls` se você renomeou o projeto. O volume antigo continua
+O nome do volume (`brabo-dev_project_workspaces`) tem o prefixo do projeto
+Compose (`name: brabo-dev` em `docker/docker-compose.yml`, ADR 0170) — confirme
+com `docker volume ls`. Um ambiente de dev de antes do ADR 0170 ainda tem os
+dados em `brabo_*`: veja antes "Moving a dev environment to brabo-dev" no
+runbook em inglês. O volume antigo continua
 existindo depois (Compose não apaga volume que saiu de uso); remova com
 `docker volume rm` se tiver certeza de que a cópia funcionou.
 
@@ -419,13 +421,13 @@ aparece — e não antes, porque nada mais no caminho de criação sai da api.
 Confirme de **dentro** do container, que é onde o endereço vale:
 
 ```bash
-docker exec brabo-api-1 node -e '
+docker exec brabo-dev-api-1 node -e '
 for (const u of ["http://engine:4000/health", "http://localhost:4000/health"]) {
   fetch(u, { signal: AbortSignal.timeout(5000) })
     .then((r) => console.log(u, "->", r.status))
     .catch((e) => console.log(u, "-> FALHOU:", e.cause?.code ?? e.message));
 }'
-docker exec brabo-api-1 sh -c 'echo $ENGINE_URL'
+docker exec brabo-dev-api-1 sh -c 'echo $ENGINE_URL'
 ```
 
 `engine:4000` respondendo `200` enquanto `localhost:4000` dá `ECONNREFUSED`, com
@@ -478,7 +480,7 @@ visivelmente rodando na máquina dela.
 repetidamente, numa cadência fixa de aproximadamente **5,13 s**:
 
 ```bash
-docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+docker logs brabo-dev-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
 ```
 
 Dezenas dessas em poucas horas, todas carregando a mesma string de ticket, é a

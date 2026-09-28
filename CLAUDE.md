@@ -170,6 +170,7 @@ estado lido do repositório e não da conversa.
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
 | O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |
 | O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
+| O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação (AT-173) | ADR 0170 |
 
 ## Estado atual e aberto
 
@@ -1233,6 +1234,27 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ela. Pré-requisito novo de host entra em `scripts/dev/reset-total-lib.sh`,
   antes do `stop`; `reset-total-ordem.spec.ts` roda o script inteiro com
   binários de mentira no PATH e reprova a ordem invertida.
+- O compose de DEV é o projeto Docker `brabo-dev` e o de INSTALAÇÃO é `brabo`
+  (ADR 0170, AT-173) — containers `brabo-dev-api-1` × `brabo-api-1`, volumes
+  `brabo-dev_pgdata` × `brabo_pgdata`. Até ali os dois eram `brabo`, UM projeto
+  numa máquina com os dois: o banco da instalação recebeu migration do dev, e o
+  `DROP SCHEMA` do reset cairia nele. NÃO renomeie o de instalação (desligaria
+  as instalações existentes dos próprios volumes) e NÃO volte o de dev a
+  `brabo`; o overlay de observabilidade repete `brabo-dev` porque o `name:` do
+  último `-f` vence. Comando ou doc de DEV cita `brabo-dev-*`; o que fala da
+  INSTALAÇÃO (o `brabo_project_workspaces` que o `install.sh` mede) continua
+  `brabo`. O `preflight.mjs` e o `reset-total.sh` RECUSAM enquanto houver na
+  máquina container do compose de instalação — pelo ARQUIVO do rótulo
+  `com.docker.compose.project.config_files`, em qualquer estado e qualquer
+  `-p` — ou se o dev resolver o projeto `brabo`; no reset é o PRIMEIRO passo,
+  antes do preflight. A régua mora em DOIS lugares de propósito
+  (`scripts/dev/instalacao-na-maquina.mjs` e `recusar_se_ha_instalacao` em
+  `reset-total-lib.sh`, porque o spec do reset roda com `node` de mentira). Os
+  volumes `brabo_*` do dev antigo só geram AVISO, derivado das chaves que SÓ o
+  compose de dev declara; nenhum script apaga volume, e o procedimento de cópia
+  está no runbook ("Moving a dev environment to brabo-dev"). Prova de guarda ou
+  de subida se faz num projeto DESCARTÁVEL (`-p <nome>`), nunca contra o
+  `brabo-dev` corrente nem contra uma instalação real.
 - `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
   (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
   que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).

@@ -228,20 +228,22 @@ want to lose the work needs to copy the content before switching:
 ```bash
 pnpm dev:down
 docker run --rm \
-  -v brabo_project_workspaces:/de \
+  -v brabo-dev_project_workspaces:/de \
   -v "$(realpath ~/brabo-projetos)":/para \
   alpine sh -c 'cp -a /de/. /para/'
 docker run --rm \
-  -v brabo_git_local_repos:/de \
+  -v brabo-dev_git_local_repos:/de \
   -v "$(realpath ~/brabo-projetos-bare)":/para \
   alpine sh -c 'cp -a /de/. /para/'
 # set the two variables in .env, then:
 pnpm dev
 ```
 
-The volume name (`brabo_project_workspaces`) carries the Compose project's
-prefix (`name: brabo` in `docker/docker-compose.yml`) — check with `docker
-volume ls` if you renamed the project. The old volume keeps existing
+The volume name (`brabo-dev_project_workspaces`) carries the Compose project's
+prefix (`name: brabo-dev` in `docker/docker-compose.yml`, [ADR
+0170](adr/0170-compose-de-dev-brabo-dev.md)) — check with `docker volume ls`.
+A dev environment from before ADR 0170 still has its data under `brabo_*`: see
+[Moving a dev environment to brabo-dev](#dev-para-brabo-dev) first. The old volume keeps existing
 afterward (Compose doesn't delete a volume that fell out of use); remove it
 with `docker volume rm` once you're sure the copy worked.
 
@@ -792,7 +794,7 @@ so this class of problem shouldn't recur.
    -v` — safe for these, they're reproducible build artifacts, never source
    of truth) or by `chown`-ing them in place:
    ```bash
-   docker run --rm -v brabo_api_app_node_modules:/v alpine chown -R "$(id -u):$(id -g)" /v
+   docker run --rm -v brabo-dev_api_app_node_modules:/v alpine chown -R "$(id -u):$(id -g)" /v
    # repeat for the other node_modules/_build/deps/.mix/.hex volumes
    ```
    **Brand-new volumes** (a first clone, or a machine that only ran the
@@ -829,8 +831,8 @@ so this class of problem shouldn't recur.
    (local bare repos, per-project worktrees), so dropping them loses data.
    Fix them in place:
    ```bash
-   docker run --rm -v brabo_git_local_repos:/v alpine chown -R "$(id -u):$(id -g)" /v
-   docker run --rm -v brabo_project_workspaces:/v alpine chown -R "$(id -u):$(id -g)" /v
+   docker run --rm -v brabo-dev_git_local_repos:/v alpine chown -R "$(id -u):$(id -g)" /v
+   docker run --rm -v brabo-dev_project_workspaces:/v alpine chown -R "$(id -u):$(id -g)" /v
    ```
    A volume created after the fix already comes up with the right owner. When
    you add a **new** named volume, create the directory in the image:
@@ -856,7 +858,7 @@ The price is that **a reset never reproduces a first clone.** A defect that
 only shows up with a volume that does not exist yet — like the `node_modules`
 volume that used to be born `root` (AT-172) — passes every reset unseen. To
 exercise that path, use a **throwaway compose project**, never this script and
-never your `brabo` project:
+never your `brabo-dev` project (nor `brabo`, the installation's name):
 
 ```bash
 docker compose -p brabo-primeiro-clone -f docker/docker-compose.yml build engine
@@ -876,6 +878,13 @@ with the `alpine` one-liner in the table below), and the image it built.
 
 **The order is the point, and it is not negotiable:**
 
+0. **The installation guard** ([ADR 0170](adr/0170-compose-de-dev-brabo-dev.md)),
+   before the preflight: if this machine has any container from the
+   INSTALLATION compose (its `com.docker.compose.project.config_files` label
+   points at `docker-compose.install.yml`), or if the dev compose would resolve
+   to the project `brabo`, it refuses with `RESET NÃO COMEÇOU`, naming what it
+   found. Until ADR 0170 dev and installation were the same Docker project, and
+   this script's `DROP SCHEMA` would have landed on the installation's database.
 1. `preflight`, then the **host prerequisites** (AT-203), then `build` — the
    slow part, done while your environment is still up. The migrations and the
    seed run on the HOST, with the checkout's `apps/engine/deps`/`_build` and
@@ -919,9 +928,91 @@ re-append the session's 5 events).
 |---|---|
 | `RESET INCOMPLETO — parou em: migrations (api + engine)` with `permission denied` under `apps/engine/_build` | `pnpm engine:migrate` runs on the HOST, and Docker creates a missing bind-mount point as `root`. Fix it in place: `docker run --rm -v "$PWD/apps/engine:/x" alpine chown -R "$(id -u):$(id -g)" /x/_build` |
 | `RESET INCOMPLETO … banco apagado, migrado e semeado, mas estes serviços não responderam: <lista>` | the database is fine; a process didn't come back. `docker compose -f docker/docker-compose.yml --env-file .env logs <serviço>` says why. Nothing here needs the reset to run again |
+| `RESET NÃO COMEÇOU — recusado em: guarda da instalação na máquina (ADR 0170)` | nothing was touched. There is an installation of Brabo on this machine (the containers are listed), or `COMPOSE_PROJECT_NAME=brabo` is set. Bring the installation down **without** `-v` (the refusal prints the exact `docker compose -f <folder>/docker/docker-compose.install.yml --env-file <folder>/.env down` — its volumes and data stay) or unset the variable; see [Moving a dev environment to brabo-dev](#dev-para-brabo-dev) |
 | `RESET NÃO COMEÇOU — recusado em: pré-requisitos de host das migrations` | nothing was touched. `mix deps.get`/`mix compile` failed in `apps/engine` on the host (read the output above it), or `drizzle-kit`/`ts-node` don't resolve — `pnpm install --frozen-lockfile` |
-| `O NEO4J RECUSA A SENHA DO .env`, before any effect or after `container brabo-neo4j-1 is unhealthy` | Neo4j stores the password in the `neo4j_data` volume when it is **created** and ignores `NEO4J_AUTH` afterwards, while the healthcheck uses the one in `.env`. Measured on 2026-09-26: a volume from 09/13, the container recreated with the default password, healthcheck `The client is unauthorized due to authentication failure`. Put the old password back in `NEO4J_PASSWORD`, or change it inside Neo4j (`ALTER CURRENT USER SET PASSWORD FROM … TO …`, the command is printed), or — the graph is derived, `pnpm --filter api grafo:reprojetar` rebuilds it — remove the volume yourself. The script never removes it (AT-181) |
+| `O NEO4J RECUSA A SENHA DO .env`, before any effect or after `container brabo-dev-neo4j-1 is unhealthy` | Neo4j stores the password in the `neo4j_data` volume when it is **created** and ignores `NEO4J_AUTH` afterwards, while the healthcheck uses the one in `.env`. Measured on 2026-09-26: a volume from 09/13, the container recreated with the default password, healthcheck `The client is unauthorized due to authentication failure`. Put the old password back in `NEO4J_PASSWORD`, or change it inside Neo4j (`ALTER CURRENT USER SET PASSWORD FROM … TO …`, the command is printed), or — the graph is derived, `pnpm --filter api grafo:reprojetar` rebuilds it — remove the volume yourself. The script never removes it (AT-181) |
 | the `up --wait` times out | `BRABO_RESET_WAIT_TIMEOUT` (seconds, default 600). A first boot with empty `node_modules`/`_build` volumes runs `pnpm install`/`mix deps.get` before the process listens |
+
+### Moving a dev environment to brabo-dev {#dev-para-brabo-dev}
+
+Since [ADR 0170](adr/0170-compose-de-dev-brabo-dev.md) the dev compose
+(`docker/docker-compose.yml`) is the Docker project **`brabo-dev`**: containers
+`brabo-dev-api-1`, `brabo-dev-postgres-1`…, volumes `brabo-dev_pgdata`,
+`brabo-dev_neo4j_data`…, network `brabo-dev_default`. The installation compose
+(`docker-compose.install.yml`) stays **`brabo`**, and so do the installations
+already out there. Before, both were `brabo` — one Docker project: bringing one
+up over the other recreated the containers and bound them to the other's
+database (measured on 2026-09-19: an installation's database received a dev
+migration), and `reset-total.sh` would have dropped the installation's schemas.
+
+**What changes for you if you already developed here:** the next `pnpm dev`
+creates NEW, empty `brabo-dev_*` volumes. Your data stays where it was, in the
+`brabo_*` volumes, untouched — nothing in this change removes a volume. The
+preflight warns while it sees them (it never refuses for this, and never
+deletes). Pick one of the two paths.
+
+**Telling dev volumes from an installation's.** Both carry the label
+`com.docker.compose.project=brabo`, so the prefix alone says nothing. What does:
+
+```bash
+docker volume ls --filter label=com.docker.compose.project=brabo \
+  --format '{{.Name}}\t{{.Label "com.docker.compose.volume"}}'
+docker ps -a --filter label=com.docker.compose.project=brabo \
+  --format '{{.Names}}\t{{.Label "com.docker.compose.project.config_files"}}'
+```
+
+- Volumes that only the dev compose declares — `api_*_node_modules`,
+  `web_*_node_modules`, `broker_*_node_modules`, `engine_build`, `engine_deps`,
+  `engine_mix`, `engine_hex` — prove a dev environment used the name `brabo`.
+  The installation never creates them.
+- Volumes both composes declare — `pgdata`, `neo4j_data`, `neo4j_logs`,
+  `ollama_data`, `git_local_repos`, `project_workspaces`,
+  `brabo_projects_base` — are ambiguous on their own. If no container of an
+  installation exists (the second command shows no `docker-compose.install.yml`)
+  and you never installed Brabo on this machine, they are your old dev data.
+  If you did install it, they may be the installation's (or a mix, after the
+  accident this ADR closes): do not copy nor delete them before you know.
+  `backup_local` only exists in the installation.
+
+**Path A — carry the data over** (the database, the graph, the local bare
+repositories and the workspaces; the build-artifact volumes are not worth
+copying, the new ones fill themselves on the first boot):
+
+```bash
+# 1. the old stack down, WITHOUT -v (it may still be running as `brabo`).
+#    ONLY when the second command above listed no installation container:
+#    `-p brabo down` would bring an installation down just the same.
+docker compose -p brabo -f docker/docker-compose.yml --env-file .env down
+# 2. create the new (empty) volumes without starting anything
+docker compose -f docker/docker-compose.yml --env-file .env create
+# 3. copy, volume by volume
+for v in pgdata neo4j_data neo4j_logs git_local_repos project_workspaces ollama_data; do
+  docker volume inspect "brabo_$v" >/dev/null 2>&1 || continue
+  docker run --rm -v "brabo_$v":/de -v "brabo-dev_$v":/para \
+    alpine sh -c 'cp -a /de/. /para/'
+done
+# 4. up as brabo-dev
+pnpm dev
+```
+
+`cp -a` keeps owners and modes, which matters for `pgdata` (the Postgres image
+refuses a data directory it doesn't own) and for the two data volumes (see
+[Dev containers write as your user](#dev-containers-nao-root) above). Postgres must be **down**
+while its directory is copied — that is what step 1 is for.
+
+**Path B — start from scratch:** just run `pnpm dev`, then
+`bash scripts/dev/reset-total.sh` to migrate and seed the new database. The
+old volumes stay on disk until you remove them.
+
+**Removing the old volumes, only after the new stack works and only the ones
+you proved are dev** (the installation's are data you'd lose):
+
+```bash
+docker volume rm brabo_api_root_node_modules brabo_engine_build  # …one by one, by name
+```
+
+No script does this for you, on purpose: `docker volume rm` of an
+installation's `brabo_pgdata` is the one mistake here that cannot be undone.
 
 ---
 
@@ -1174,16 +1265,18 @@ Activating a session is the first step that **crosses over** to the engine
 where a wrong `ENGINE_URL` shows up — and not before, because nothing else
 on the creation path leaves the api.
 
-Confirm from **inside** the container, which is where the address matters:
+Confirm from **inside** the container, which is where the address matters
+(`brabo-dev-api-1` in the dev compose; in an installation it is `brabo-api-1`,
+[ADR 0170](adr/0170-compose-de-dev-brabo-dev.md)):
 
 ```bash
-docker exec brabo-api-1 node -e '
+docker exec brabo-dev-api-1 node -e '
 for (const u of ["http://engine:4000/health", "http://localhost:4000/health"]) {
   fetch(u, { signal: AbortSignal.timeout(5000) })
     .then((r) => console.log(u, "->", r.status))
     .catch((e) => console.log(u, "-> FAILED:", e.cause?.code ?? e.message));
 }'
-docker exec brabo-api-1 sh -c 'echo $ENGINE_URL'
+docker exec brabo-dev-api-1 sh -c 'echo $ENGINE_URL'
 ```
 
 `engine:4000` responding `200` while `localhost:4000` gives
@@ -1252,7 +1345,7 @@ stacked causes, all closed by [RN-433](business-rules.md#rn-433):
    Confirm from inside the container:
 
    ```bash
-   docker exec brabo-api-1 sh -c 'echo $ENGINE_PUBLIC_URL'
+   docker exec brabo-dev-api-1 sh -c 'echo $ENGINE_PUBLIC_URL'
    # expected: http://localhost:4000 (or your real public engine address)
    ```
 
@@ -1276,7 +1369,7 @@ stacked causes, all closed by [RN-433](business-rules.md#rn-433):
    constructor appends `/websocket` again on top of whatever endpoint it's
    given. The engine received `GET /runner/runner/websocket/websocket` and
    rejected it (`Phoenix.Router.NoRouteError`), visible in
-   `docker logs brabo-engine-1` as a connection that never gets past
+   `docker logs brabo-dev-engine-1` as a connection that never gets past
    `REFUSED CONNECTION`. Fixed by passing `engineWsUrl` straight to
    `Socket` — `apps/runner/src/channel.ts` (the CLI side of the same
    contract) already did this correctly.
@@ -1293,7 +1386,7 @@ machine.
 refused over and over, at a fixed cadence of roughly **5,13 s**:
 
 ```bash
-docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+docker logs brabo-dev-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
 ```
 
 Dozens of those in a few hours, all carrying the same ticket string, is the

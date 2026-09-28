@@ -4,6 +4,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **dev**: o compose de DEV (`docker/docker-compose.yml`) passa a ser o projeto
+  Docker **`brabo-dev`** (AT-173, [ADR 0170](docs/adr/0170-compose-de-dev-brabo-dev.md)).
+  Containers `brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…, rede
+  `brabo-dev_default`. Até aqui ele e o compose de INSTALAÇÃO se chamavam os
+  dois `brabo` e eram o MESMO projeto numa máquina com os dois: o banco de uma
+  instalação recebeu uma migration do dev, e o `reset-total.sh` apagaria os
+  schemas dela. A instalação e o compose de produção NÃO mudam.
+
+  **Ação de quem já desenvolve, uma vez:** derrube o stack antigo SEM `-v`
+  (`docker compose -p brabo -f docker/docker-compose.yml --env-file .env down`
+  — só se a máquina não tiver instalação; o preflight diz se tiver). O próximo
+  `pnpm dev` sobe com volumes `brabo-dev_*` VAZIOS: os dados continuam nos
+  `brabo_*`, intocados. Copie-os ou recomece do zero pelo runbook, "Moving a
+  dev environment to brabo-dev"; o preflight AVISA enquanto vir volumes
+  `brabo_*` do dev antigo, e nenhum script apaga volume.
+
+  E o `pnpm dev` (pelo preflight) e o `reset-total.sh` passam a **recusar**,
+  nomeando o que acharam, enquanto houver na máquina container do compose de
+  instalação (qualquer estado, qualquer `-p`) ou se o compose de dev fosse
+  resolver o projeto `brabo` (`COMPOSE_PROJECT_NAME`). Para desenvolver numa
+  máquina com instalação, derrube-a antes SEM `-v` — os dados dela ficam.
+
 ### Novidades
 
 - **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
