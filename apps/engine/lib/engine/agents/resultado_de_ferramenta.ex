@@ -5,7 +5,7 @@ defmodule Engine.Agents.ResultadoDeFerramenta do
   Até aqui só o Criativo gravava `tool.result`, e sem o texto que a ferramenta
   devolveu: o agente reidratado (RN-580) sabia QUE chamou `create_epic`, não o
   id do épico que ela respondeu. Este módulo é o ÚNICO lugar que monta o
-  payload, para os seis servidores não divergirem.
+  payload, para os sete servidores (o Infra Lead incluído, RN-593) não divergirem.
 
   O texto é CORTADO em #{2_000} caracteres (`teto/0`) — o resultado de uma
   ferramenta pode ser uma listagem grande, e o event log é lido por todo

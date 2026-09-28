@@ -27,9 +27,10 @@ defmodule Engine.Agents.Conversacionais do
   @prefixos ~w(criativo po arquiteto dev-lead ux-designer staff infra)
 
   # Quanto `parar_da_sessao/1` espera um conversacional sair antes de matá-lo.
-  # O Infra Lead roda o turno DENTRO do `handle_call` — o `stop` só é atendido
-  # quando o turno acaba, e esperar um turno de LLM inteiro (minutos) para
-  # parar um agente de uma sessão que já fechou é o defeito, não a cura.
+  # Até a RN-617 o Infra Lead rodava o turno DENTRO do `handle_call`, e o
+  # `stop` só era atendido quando o turno acabava; hoje os sete usam
+  # `TurnoAssincrono` e saem na hora, e o teto fica como rede para um
+  # servidor que esteja ocupado por outro motivo.
   @espera_ms 5_000
 
   @doc "As chaves de registro dos conversacionais, na ordem da lista."
@@ -40,10 +41,9 @@ defmodule Engine.Agents.Conversacionais do
   que ESTA chamada parou — nunca o de uma entrada velha do Registry —, para o
   log dizer quem.
 
-  O turno em curso morre junto: os servidores que usam `TurnoAssincrono`
+  O turno em curso morre junto: os sete servidores usam `TurnoAssincrono` e
   abandonam a task no `terminate/2` (sem gravar nada — a sessão já não
-  aceita), e o Infra Lead, que não usa, é morto se não sair em
-  #{@espera_ms}ms.
+  aceita); quem não sair em #{@espera_ms}ms é morto.
   """
   @spec parar_da_sessao(String.t()) :: [String.t()]
   def parar_da_sessao(session_id) do

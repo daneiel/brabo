@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
+  agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
+  [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
+  turno dele migrou para o `TurnoAssincrono` dos outros seis: o clique responde
+  ao aceitar, uma segunda mensagem com turno em curso é recusada com nome
+  (`409 turno_em_andamento`) — inclusive durante o kickoff, que antes a prendia
+  pelo turno inteiro —, "Parar" funciona, o turno que o reinício do engine
+  interrompe fecha com desfecho durável, e o teto de 14 iterações esgotado é
+  narrado. Depois o composer passou a oferecê-lo: quando o Infra Lead é o
+  agente ativado mais recente, a mensagem vai para ele (antes era `422
+  agente_sem_conversa`). Conversar não abre efeito novo: a PR de infra e as
+  subidas de container continuam propostas para aprovação. Correção de gate que
+  chega no meio de um turno espera o fim dele em vez de se perder, e a faixa de
+  atividade narra as quatro ferramentas do Infra Lead.
 - **web**: converter um projeto para o modo Runner deixa de terminar no escuro
   (AT-143, RN-612). Salvar a conversão monta, na mesma seção de Configurações,
   o painel de onboarding do runner (o mesmo da aba Código), já para o projeto

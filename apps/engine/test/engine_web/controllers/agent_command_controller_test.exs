@@ -5,7 +5,7 @@ defmodule EngineWeb.AgentCommandControllerTest do
   use EngineWeb.ConnCase, async: false
 
   alias Engine.Agents.{Areas, CriativoServer, CriativoSupervisor, PoServer, PoSupervisor}
-  alias Engine.Infra.InfraLeadServer
+  alias Engine.Infra.{InfraLeadServer, InfraLeadSupervisor}
   alias Engine.Sessions.FakeEngineApiClient
   alias EngineWeb.AgentCommandController
 
@@ -121,23 +121,26 @@ defmodule EngineWeb.AgentCommandControllerTest do
   # RN-587 (AT-132). A api grava o `chat.message` ANTES de perguntar ao engine;
   # o 422 deixava a mensagem no fio com cara de entregue e a frase só no toast.
   describe "a recusa de mensagem fica no fio (RN-587)" do
-    test "infra: agent.error durável, origem politica, com a frase e o motivo", %{
-      conn: conn,
-      project_id: project_id,
-      session_id: session_id
-    } do
+    # Até a RN-617 este caso era o `infra`; ele passou a conversar, e o nome do
+    # roster que segue sem cláusula é o lead de QA.
+    test "agente do roster sem conversa: agent.error durável, origem politica, com a frase e o motivo",
+         %{
+           conn: conn,
+           project_id: project_id,
+           session_id: session_id
+         } do
       conn =
         AgentCommandController.message(conn, %{
           "sessionId" => session_id,
           "projectId" => project_id,
-          "agent" => "infra",
-          "text" => "sobe o container"
+          "agent" => "qa",
+          "text" => "roda os testes"
         })
 
       assert %{"error" => frase} = json_response(conn, 422)
 
       assert_receive {:event_appended, ^project_id, ^session_id,
-                      %{type: "agent.error", actorKind: "agent", actorId: "infra", payload: p}}
+                      %{type: "agent.error", actorKind: "system", actorId: "engine", payload: p}}
 
       assert p.origem == "politica"
       assert p.reason == "agente_sem_conversa"
@@ -191,7 +194,7 @@ defmodule EngineWeb.AgentCommandControllerTest do
     end
 
     test "sem projectId no corpo: recusa só como resposta, nada é gravado", %{conn: conn} do
-      conn = AgentCommandController.message(conn, %{"agent" => "infra", "text" => "oi"})
+      conn = AgentCommandController.message(conn, %{"agent" => "qa", "text" => "oi"})
       assert conn.status == 422
       refute_receive {:event_appended, _, _, _}, 100
     end
@@ -228,11 +231,21 @@ defmodule EngineWeb.AgentCommandControllerTest do
       _ = :sys.get_state(pid)
     end
 
-    test "infra: 422 nomeado, e NINGUÉM lê — nem o Criativo, nem o Infra Lead", %{
-      conn: conn,
-      project_id: project_id,
-      session_id: session_id
-    } do
+    # RN-617 (ADR 0175): o Infra Lead é o sétimo conversacional. Até ali esta
+    # mensagem era 422 `agente_sem_conversa` e ninguém a lia.
+    test "infra: cláusula PRÓPRIA — 202 no aceite, o turno é do Infra Lead e o Criativo não sobe",
+         %{
+           conn: conn,
+           project_id: project_id,
+           session_id: session_id
+         } do
+      {:ok, pid, _origin} = InfraLeadSupervisor.start_agent(session_id, project_id)
+
+      :sys.replace_state(pid, fn s ->
+        Process.put(:fake_llm_turn_stream_hang, true)
+        s
+      end)
+
       conn =
         AgentCommandController.message(conn, %{
           "sessionId" => session_id,
@@ -241,13 +254,55 @@ defmodule EngineWeb.AgentCommandControllerTest do
           "text" => "sobe o container"
         })
 
-      assert %{"motivo" => "agente_sem_conversa", "error" => mensagem} =
-               json_response(conn, 422)
-
-      assert mensagem =~ "Infra Lead"
-      assert mensagem =~ "nenhum agente a leu"
+      assert conn.status == 202
+      assert_receive :turno_pendurado, 1_000
+      assert %{turno_assincrono: %{task: %Task{}}} = :sys.get_state(pid)
       assert GenServer.whereis(CriativoServer.via(session_id)) == nil
+
+      segunda =
+        AgentCommandController.message(build_conn(), %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "infra",
+          "text" => "Continue"
+        })
+
+      assert %{"motivo" => "turno_em_andamento"} = json_response(segunda, 409)
+
+      # "Parar" alcança o Infra Lead (`via_for/2`) e mata o turno.
+      parar =
+        AgentCommandController.cancel(build_conn(), %{
+          "sessionId" => session_id,
+          "agent" => "infra"
+        })
+
+      assert parar.status == 202
+      assert %{turno_assincrono: nil} = :sys.get_state(pid)
+    end
+
+    test "infra com o engine recém-reiniciado: a mensagem reergue o agente SEM kickoff", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
       assert GenServer.whereis(InfraLeadServer.via(session_id)) == nil
+
+      conn =
+        AgentCommandController.message(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "infra",
+          "text" => "oi"
+        })
+
+      assert conn.status == 202
+      pid = GenServer.whereis(InfraLeadServer.via(session_id))
+      assert is_pid(pid)
+
+      # O turno da mensagem fecha; o kickoff (que lê o contexto de infra) é do
+      # handoff aceito (`start/2`), nunca desta rota.
+      drenar_kickoff(pid)
+      refute_received {:infra_context_fetched}
     end
 
     # A enumeração vem do catálogo de áreas (GERADO de `agent-areas.ts`, a
@@ -265,7 +320,7 @@ defmodule EngineWeb.AgentCommandControllerTest do
       fora_de_conversa =
         (das_areas ++ ~w(secops psicologo anamnese dev-backend agente-que-nao-existe))
         |> Enum.uniq()
-        |> Enum.reject(&(&1 == "dev-lead"))
+        |> Enum.reject(&(&1 in ~w(dev-lead infra)))
 
       for agente <- fora_de_conversa do
         conn =

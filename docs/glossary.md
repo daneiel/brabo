@@ -105,10 +105,11 @@ model → the model requests a tool → the tool becomes a `proposed_action`
 has an iteration ceiling; once exhausted, the agent ends with a blocking
 artifact.
 
-**Turn (conversational agent)** — one round of work by one of the five
+**Turn (conversational agent)** — one round of work by one of the
 session-scoped conversational agents (Creative, PO, Architect, Dev Lead,
-Staff — the last one from ADR 0088, dormant for automatic triggering, but
-activatable via manual handoff): one streamed call to the LLM plus the
+UX Designer, Staff — from ADR 0088, dormant for automatic triggering, but
+activatable via manual handoff — and, since
+[RN-617](business-rules.md#rn-617), the Infra Lead): one streamed call to the LLM plus the
 tool loop it triggers. Since [RN-122](business-rules.md#rn-122) it runs on
 a supervised `Task` (`Engine.Agents.TurnoAssincrono`), no longer inside
 the `handle_call` that received the message — that's what lets the
@@ -118,7 +119,7 @@ render. Since [RN-578](business-rules.md#rn-578) the command that starts a
 turn is answered on ACCEPTANCE: the click returns as soon as the Task is up,
 and the end of the turn arrives through the session channel and the event
 log, never through that HTTP response. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
-Architect, Dev Lead, and Staff 14) — it's a constant on the agent's own
+Architect, Dev Lead, UX Designer, Staff and Infra Lead 14) — it's a constant on the agent's own
 server, not the `ToolLoop`'s ceiling
 (`Engine.Harness.Iteracoes`), which applies to execution and gate agents.
 Staff is the only one with no `kickoff/1`: it stays idle until the first
@@ -135,7 +136,7 @@ second name for it.
 **Rehydration (conversational agent)** — how a conversational agent's
 process rebuilds its history from the event log when it comes up over a
 session that already has a conversation (restart, or the PO taking over from
-the Creative agent). One path for the six, `Engine.Agents.Reidratacao`
+the Creative agent). One path for the seven, `Engine.Agents.Reidratacao`
 ([RN-580](business-rules.md#rn-580)): it reads the **tail** (the last 200
 events, not the first), brings back structured questions and the agent's own
 tool calls, and when the conversation doesn't fit, opens with a system message

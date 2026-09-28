@@ -171,16 +171,17 @@ describe('RN-584 — os destinos que a tela oferece, contra as cláusulas do eng
     ).toBe(true);
   });
 
-  it('`infra` NÃO é destino do composer e tem recusa PRÓPRIA no engine', () => {
-    // Decisão da RN-584: o Infra Lead é propositivo (RN-499), e o
-    // `user_message/2` dele roda o turno inteiro no `handle_call`, sem o
-    // aceite do ADR 0163. A tela não o oferece e o engine diz por quê.
+  it('`infra` É destino do composer desde a RN-617, com UMA cláusula que conversa', () => {
+    // Até a RN-617 era o contrário: a RN-584 o recusava com nome, porque o
+    // `user_message/2` dele rodava o turno inteiro no `handle_call`. O turno
+    // migrou para o `TurnoAssincrono` (ADR 0175) e só então a cláusula nasceu —
+    // e a recusa antiga saiu, para não haver dois caminhos para o mesmo nome.
     expect(roster).toContain('infra');
-    expect(destinosQueConversam).not.toContain('infra');
+    expect(destinosQueConversam).toContain('infra');
     const daInfra = clausulasDeMensagem.filter((c) => c.agente === 'infra');
     expect(daInfra).toHaveLength(1);
-    expect(daInfra[0]!.recusa).toBe(true);
-    expect(daInfra[0]!.conversa).toBe(false);
+    expect(daInfra[0]!.conversa).toBe(true);
+    expect(daInfra[0]!.recusa).toBe(false);
   });
 
   it('a recusa de `message/2` GRAVA o `agent.error` (RN-587)', () => {

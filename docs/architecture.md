@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 169 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 170 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -150,7 +150,7 @@ top, so a call written between imports would run too late).
 | `harness/` (33) | context assembly, ToolLoop, compaction. **No LLM call happens outside here** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | the QA area (Lead + Automation, Performance/Security and QA-strategy sub-specialties — the Lead's second moment, ADR 0090 — all with an LLM) and SecOps (deterministic) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | the Infra area (conversational, session-scoped Lead + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | the Infra area (conversational, session-scoped Lead — since [RN-617](business-rules.md#rn-617) the seventh conversational agent, reachable from the composer and running its turns on `TurnoAssincrono` — + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | session lifecycle, `:global` registry | `sessions/session_server.ex` |
 | `actions/` (9) | terminal and git executors, lint/scanner detectors | `actions/git_executor.ex` |
 | `agents/` (16) | Creative, PO, Architect, Dev Lead, Staff (ADR 0088, dormant for automatic trigger) — each turn runs on a supervised Task (`TurnoAssincrono`, RN-122), no longer inside `handle_call`, so a `:cancel` can actually interrupt it | `agents/turno_assincrono.ex` |
@@ -658,7 +658,11 @@ second shows the model doesn't require the same internal implementation:
 (mirroring `ArquitetoServer`, external contact unchanged by explicit
 request of CLAUDE.md 8c), and delegates to `WorkflowsAgent` — which, with
 no user on the other side, runs as a bounded `ToolLoop`, just like the QA
-subagents. The 8b's generic `delegations` needed ONE adjustment to serve
+subagents. Since [RN-617](business-rules.md#rn-617)
+([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) the Infra Lead
+also takes composer messages, and all three of its turns (kickoff, gate
+correction, message) run on the same `TurnoAssincrono` Task as the other six
+conversational agents. The 8b's generic `delegations` needed ONE adjustment to serve
 the second area: `task_id` became nullable, because Infra delegates over the
 session, not over a backlog task.
 

@@ -14,7 +14,7 @@ defmodule Engine.Agents.TurnoOrfao do
 
   ## O que faz
 
-  Para cada um dos seis agentes que compartilham `TurnoAssincrono` cujo ÚLTIMO
+  Para cada um dos sete agentes que compartilham `TurnoAssincrono` cujo ÚLTIMO
   `agent.status` é `working` e que não tem turno vivo, ACRESCENTA (evento é
   imutável; o `working` gravado não é reescrito):
 
@@ -33,7 +33,7 @@ defmodule Engine.Agents.TurnoOrfao do
 
     * `varrer/2`, no boot, pelo `Engine.Sessions.Rehydrator`, para cada sessão
       não terminal — é o que fecha o turno mesmo que ninguém mande mensagem;
-    * `fechar/3` no `init/1` de cada um dos seis servidores — a rede de
+    * `fechar/3` no `init/1` de cada um dos sete servidores — a rede de
       segurança para quando o boot não conseguiu (api ainda de pé nenhum
       segundo) e o agente só é acordado depois pela próxima mensagem.
 
@@ -51,9 +51,10 @@ defmodule Engine.Agents.TurnoOrfao do
 
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
-  # Os seis que rodam pelo `TurnoAssincrono`. O Infra Lead roda o turno dentro
-  # do `handle_call` e fica de fora — declarado na RN-586.
-  @agentes ~w(criativo po arquiteto dev-lead ux-designer staff)
+  # Os sete que rodam pelo `TurnoAssincrono`. O Infra Lead ficou de fora na
+  # RN-586 (o turno dele rodava no `handle_call`) e entrou na RN-617, quando
+  # passou a conversar pelo composer.
+  @agentes ~w(criativo po arquiteto dev-lead ux-designer staff infra)
 
   @espera_do_cluster_ms 2_000
 

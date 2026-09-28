@@ -31,9 +31,9 @@ import i18n from './i18n';
 const NS = 'toolNarration';
 
 /**
- * As 20 ferramentas dos seis agentes conversacionais (Criativo, PO,
- * Arquiteto, Dev Lead, UX Designer, Staff) que têm frase própria em
- * `toolNarration.json`. `confirm_readiness`/`confirm_architecture` NÃO
+ * As 24 ferramentas dos sete agentes conversacionais (Criativo, PO,
+ * Arquiteto, Dev Lead, UX Designer, Staff e, desde a RN-617, o Infra Lead)
+ * que têm frase própria em `toolNarration.json`. `confirm_readiness`/`confirm_architecture` NÃO
  * entram: são rota HTTP/`GenServer.call` disparada por clique do usuário,
  * nunca uma tool call do modelo.
  */
@@ -58,6 +58,10 @@ export const FERRAMENTAS_CONHECIDAS = [
   'assess_implementability',
   'propose_prototype',
   'propose_rfc',
+  'validate_infra_file',
+  'propose_infra_pr',
+  'propose_container_start',
+  'container_start_via_runner',
 ] as const;
 
 export type FerramentaConhecida = (typeof FERRAMENTAS_CONHECIDAS)[number];

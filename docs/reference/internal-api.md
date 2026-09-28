@@ -160,7 +160,7 @@ the sender.
 The engine never writes directly to the events table — it **asks** the api, which
 controls the `seq` and the atomicity with the outbox.
 
-`GET /events` is what the six conversational agents read when their process
+`GET /events` is what the seven conversational agents read when their process
 comes up over a session that already has a conversation, and what their
 kickoffs read to find the brief, the rules, the module map and the stories
 ([RN-580](../business-rules.md#rn-580)). Until then the route only understood
