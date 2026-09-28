@@ -1214,6 +1214,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `rollout-evidencia` em toda rodada que chegou à prova. Nada muda no que conta
   como adotada ou drenada, nem no teto de 120s.
 
+### Documentação
+
+- **docs**: o [ADR 0176](docs/adr/0176-sessionpage-abaixo-de-mil-linhas.md)
+  declara o programa que leva `apps/web/src/routes/SessionPage.tsx` abaixo de
+  1 000 linhas (AT-138, `BRB-015`): medido em **2 637 linhas** na `dev`
+  (`018b8cd24c`), depois de a linha de dívida ter fechado em 2 479 pelos ADRs
+  0122/0124 e o número ter voltado a crescer sem ninguém medir. Dez PRs
+  mecânicos e empilhados — cada um move um recorte sem mudar comportamento,
+  com os 28 arquivos `SessionPage.*.test.tsx` passando sem edição — até 834
+  linhas, e a trava de CI (1 000 linhas ou mais reprovam) nasce só no último,
+  por decisão do mantenedor.
+
 ## v6.1.0 — 2026-09-13
 
 ### Novidades
