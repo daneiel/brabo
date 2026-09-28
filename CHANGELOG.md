@@ -1157,6 +1157,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: a **reprojeção do grafo no cluster exercita os quatro
+  caminhos do tradutor** (AT-191, BRB-018). O cenário de
+  `make test-reprojecao-k8s` passa de dois para quatro eventos: além da
+  mensagem e do handoff, uma `psychologist.hypothesis_proposed` que cita a
+  mensagem como evidência e um `anamnese.profile_updated` de um usuário
+  próprio do cenário — a `Hipotese`, o `Evento` e o `PerfilAnamnese` só eram
+  provados pelo spec contra o Neo4j de dev. O subgrafo esperado vai de 5|4
+  para 9|6 nós|arestas, MEDIDO antes de apagar, depois de reconstruir e na
+  segunda reprojeção (rodada `36498776825`, 18 s). O tempo da reprojeção num
+  event log grande segue não medido.
 - **deploy/k8s**: a **reprojeção da pasta `docs/` dos artefatos roda no
   cluster, pela imagem, como a do grafo** (AT-198, RN-590).
   `make test-reprojecao-artefatos-k8s` cria pela API um projeto próprio com um

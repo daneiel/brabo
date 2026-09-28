@@ -2358,6 +2358,14 @@ The same proof also runs **inside the local cluster**: `make test-reprojecao-k8s
 It runs the command exactly as this section tells you to run it in an incident
 (`kubectl exec deploy/api -- node scripts/reprojetar-grafo.js --project <id>`),
 against the cluster's Postgres and Neo4j, on a project it creates itself.
+Since AT-191 its scenario exercises **all four translation paths** of the
+`GraphEventTranslator` — a `handoff.offered`, a
+`psychologist.hypothesis_proposed` citing a message as evidence, an
+`anamnese.profile_updated` for a user of its own, and the `Interacao` of the
+closed session — and requires **9 nodes and 6 edges** before the wipe, after
+the rebuild and after the second run (measured on run `36498776825`). The
+Psychologist and the Anamnesis stay paused: the proof appends the events they
+would write and checks what the reprojection rebuilds from them.
 
 The graph being empty until you run this has a named effect: reads that depend
 on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
@@ -2573,9 +2581,11 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
 5. runs `make test-reprojecao-k8s` (AT-127, BRB-018): the graph is not backed up
    ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)) because it is
    reprojected from the event log, so the workflow proves that too — it creates
-   its own project with a closed session and two events, reprojects it, **wipes
-   that subgraph** in Neo4j, reprojects, and requires the same node and edge
-   counts, then reprojects again. It uses no state left by the other targets and
+   its own project with a closed session and four events (a message, a
+   handoff, a Psychologist hypothesis and an Anamnesis profile — every path of
+   the translator, AT-191), reprojects it, **wipes that subgraph** in Neo4j,
+   reprojects, and requires the same node and edge counts (9|6), then
+   reprojects again. It uses no state left by the other targets and
    is **not** coupled to `test-restore` (the graph does not depend on a backup);
 6. runs `make test-reprojecao-artefatos-k8s` (AT-198, RN-590), the same proof
    for the other derived projection — the `docs/` folder of the artifacts. It
@@ -2627,7 +2637,7 @@ free disk on `ubuntu-latest`):
 | `make rollout-test` | 24 s |
 | `make test-restore` | 21 s |
 | `make test-restore-mutacao` | 31 s (run `35473548113`) |
-| `make test-reprojecao-k8s` | 16 s (run `35471428634`) |
+| `make test-reprojecao-k8s` | 16 s (run `35471428634`); 18 s with the four-event scenario (run `36498776825`) |
 | `make test-reprojecao-artefatos-k8s` | 4 s (run `36498695123`, whole job 10 min 28 s) |
 | whole job | 12 min 56 s |
 
