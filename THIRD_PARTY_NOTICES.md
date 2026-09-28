@@ -146,6 +146,12 @@ licenças de base Alpine da seção 1. O cliente MinIO (`mc`) **foi removido** n
 Fase 5 — carregava 33 CVEs por ser um binário Go congelado desde setembro/2025
 ([ADR 0027](docs/adr/0027-fase5-backup-hardening-release.md), decisão 1b).
 
+O **servidor** S3 do cluster local não entra aqui porque não é distribuído por
+nós: o SeaweedFS (Apache-2.0) é puxado do Docker Hub pelo próprio cluster, só
+no overlay local. Ele substituiu o MinIO (AGPL-3.0) quando a MinIO deixou de
+publicar a imagem comunitária
+([ADR 0169](docs/adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
+
 ## 4. Dependências de aplicação
 
 Não são redistribuídas por nós, mas registradas para auditoria.

@@ -1994,9 +1994,14 @@ making it is that "back up every volume" costs space while hiding what matters.
 | format | `pg_dump --format=custom --compress=9`; `tar -czf` for the repos |
 | history | `backup_runs` table — the **dump**, keyed by `object_key`. The repo archive carries the same timestamp in the sibling prefix; the link is the name, not a column |
 
-In the local cluster the S3 destination is a MinIO inside the `brabo`
-namespace; in staging/prod it's the real bucket. The procedure doesn't
-change — only the endpoint.
+In the local cluster the S3 destination is a SeaweedFS (`s3-local`, the
+`weed server -s3` gateway on port 9000) inside the `brabo` namespace — it was
+MinIO until MinIO stopped publishing its community image
+([ADR 0169](adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)); in
+staging/prod it's the real bucket. The procedure doesn't change — only the
+endpoint. If the bootstrap stops at `rollout status deployment/s3-local` with
+`ImagePullBackOff`, the pinned image stopped being served: the digest keeps
+the bytes from changing, not the publisher from leaving.
 
 > **The default compose destination is a named volume, and that is fine for
 > verifying and wrong for migrating.** `docker compose down -v` deletes

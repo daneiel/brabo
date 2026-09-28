@@ -226,6 +226,18 @@ the same debt the action SHAs carry. `.github/dependabot.yml` enables the
 `github-actions` ecosystem for that reason; the `docker` ecosystem is
 **not** enabled, and turning it on is a separate decision.
 
+**A digest guarantees immutability, not availability.** The pin protects
+against the owner of a tag moving it; it does not protect against the
+publisher deleting the repository. That happened with MinIO: the local
+overlay's S3 server was pinned by index digest on `quay.io/minio/minio`,
+MinIO stopped publishing its community image, and the same digest started
+answering 401 (Docker Hub: 404). The bootstrap died at `rollout status` and
+no property proof ran until the server was replaced by SeaweedFS
+([ADR 0169](../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
+The symptom, if it happens again to any pinned image, is `ImagePullBackOff`
+on a digest that has not changed — the fix is a new image from a publisher
+that still serves one, never unpinning.
+
 ## The build cache cannot hide a stale package
 
 The final stage (`runtime`) of every `Dockerfile.prod` runs `apk upgrade`.
