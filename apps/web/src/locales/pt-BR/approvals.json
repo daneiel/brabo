@@ -256,5 +256,24 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate bloqueado — corrija antes de propor o merge.",
     "mergeNoSession": "Sem sessão no projeto para propor a ação."
+  },
+  "politica": {
+    "motivo": "A política decidiu por: {{motivo}}",
+    "motivoNaoRegistrado": "Motivo da política não registrado (proposta antes de o motivo ir para o log)",
+    "foraDoRecorte": "Motivo da política fora dos eventos carregados nesta tela",
+    "raiz": {
+      "raizGerenciada": "raiz do escopo: pasta gerenciada “{{segmento}}”",
+      "baseDeProjetos": "raiz do escopo: “{{segmento}}” dentro da base de projetos",
+      "nomeDaPasta": "raiz do escopo: pasta “{{segmento}}” na máquina do runner",
+      "indisponivel": "raiz do escopo: sem forma relativa (pasta montada fora da base de projetos, ou sem base configurada)",
+      "formaDesconhecida": "raiz do escopo: gravada numa forma que esta tela não conhece",
+      "naoRegistrada": "raiz do escopo não registrada (proposta antes de a raiz ir para o log)"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}: ação aprovada automaticamente pela política",
+      "negada": "{{ator}}: ação negada pela política",
+      "pendente": "{{ator}}: ação aguardando decisão",
+      "proposta": "{{ator}} propôs uma ação"
+    }
   }
 }

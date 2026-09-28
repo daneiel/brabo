@@ -256,5 +256,24 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
     "mergeNoSession": "No session in the project to propose the action."
+  },
+  "politica": {
+    "motivo": "Policy decided by: {{motivo}}",
+    "motivoNaoRegistrado": "Policy reason not recorded (proposed before the reason was logged)",
+    "foraDoRecorte": "Policy reason not in the events loaded on this screen",
+    "raiz": {
+      "raizGerenciada": "scope root: managed folder “{{segmento}}”",
+      "baseDeProjetos": "scope root: “{{segmento}}” under the projects base",
+      "nomeDaPasta": "scope root: folder “{{segmento}}” on the runner's machine",
+      "indisponivel": "scope root: no relative form (mounted folder outside the projects base, or no base configured)",
+      "formaDesconhecida": "scope root: recorded in a form this screen does not know",
+      "naoRegistrada": "scope root not recorded (proposed before the root was logged)"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}: action auto-approved by policy",
+      "negada": "{{ator}}: action denied by policy",
+      "pendente": "{{ator}}: action waiting for a decision",
+      "proposta": "{{ator}} proposed an action"
+    }
   }
 }

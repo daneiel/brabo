@@ -102,6 +102,7 @@ import {
   turnoDoSeq,
   type TimelineEntry,
 } from '../lib/session-timeline';
+import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
 import { StorySlide } from './StorySlide';
 import { ehRecusaDeSessaoEncerrada, sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
@@ -1307,6 +1308,7 @@ export function SessionPage({
             key={action.id}
             action={action}
             variant="chat"
+            decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
             onApprove={() => approveAction(projectId, sessionId, action.id).then(invalidateActions)}
             onDeny={() => denyAction(projectId, sessionId, action.id).then(invalidateActions)}
             onAlwaysAllow={() =>
