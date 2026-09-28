@@ -2578,6 +2578,26 @@ bootstrap from 710 s to 547–555 s and the whole job from 13 min 43 s to
 10 min 59 s (runs `36367504128` and `36368334920`). The image build (141–161 s)
 and the `seed-smoke` wait (still 180 s) are unchanged by it.
 
+**The image build stays a plain `docker build`, on purpose** (AT-178, measured
+and declined). Building the four images through `docker-bake.hcl` with the
+`type=gha` cache `ci.yml` already uses — in parallel, loaded into the daemon,
+the bootstrap then running with `BRABO_SKIP_BUILD=1` — was tried on a branch
+and ran green twice:
+
+| | image build | whole job |
+|---|---|---|
+| `docker build` in the bootstrap (runs `36367504128`, `36368334920`) | 161 s, 145 s | 10 min 59 s |
+| bake, first run on the ref (`36369702417`) | 177 s (buildx setup included) | 11 min 44 s |
+| bake, warm cache (`36370592556`) | 116 s (buildx setup included) | 11 min 32 s |
+
+Warm, the step gains 30–45 s; cold, it loses 15–30 s; at the job level the
+difference is inside the run-to-run noise. The run that matters is the weekly
+one on `main`, and the Actions cache evicts an entry nobody read for 7 days —
+a weekly cadence is exactly where the cache is most often cold. The
+`no-cache-filter = ["runtime"]` of the bakefile (AT-110) also rebuilds every
+final stage anyway, which is what keeps the warm gain small. Revisit only with
+a measurement showing a warm cache on the scheduled run.
+
 The cadence follows that cost. Almost all of it is the bootstrap, which a
 nightly run would pay seven times a week to re-prove properties whose code
 changes far less often than that; weekly keeps the alarm inside one sprint,
