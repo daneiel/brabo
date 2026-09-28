@@ -974,9 +974,12 @@ reason in the URL.
   connection in each project is dropped, best effort, through the RN-520
   path. Declared and not done: machine keys (account-wide; they stop reaching
   this workspace because the role resolves to none), already-connected
-  session sockets, and `workspaces.created_by` — the LLM
-  key agents spend (RN-058) stays the creator's even after the creator is
-  removed.
+  session sockets. The **owner of record** (`workspaces.created_by`, whose
+  LLM and git credentials agents spend, RN-058) cannot be removed: 409
+  `criador_do_workspace` until `PUT /workspaces/:workspaceId/owner-of-record`
+  (`role:owner`, target must already be `owner`, else 409
+  `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
+  Any owner may transfer it, including to another owner who did not ask.
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -1304,6 +1307,7 @@ reason in the URL.
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
+| PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |

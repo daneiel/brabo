@@ -100,6 +100,44 @@ um projeto custa um `sem_runner`, faltar um deixa de pé o que a remoção exist
 para derrubar. Em `try/catch` que só loga: efeito colateral nunca derruba o
 efeito principal, a régua da [RN-520](../business-rules.md#rn-520).
 
+**7. O TITULAR não sai; a titularidade se transfere** (decisão do
+mantenedor, 2026-09-27, [RN-616](../business-rules.md#rn-616)).
+`workspaces.created_by` não decide autorização (quem decide é o papel, ADR 0127),
+mas é por ele que se resolve a credencial de LLM que os agentes gastam e a de
+git das ações de agente ([RN-058](../business-rules/custo.md#rn-058),
+`ResolveCredentialOwnerUseCase`) e o dono do relatório de gasto
+([RN-060](../business-rules/custo.md#rn-060)). Remover o criador pelo ponto 4
+deixaria os agentes gastando a credencial de quem já não está no workspace.
+Então, com o nome de **titular**:
+
+- `DELETE .../members/:userId` com alvo = titular é **409 nomeado**,
+  `criador_do_workspace`, dizendo que é preciso transferir antes e por quê. O
+  teto do ponto 2 vem primeiro: o titular tentando se remover recebe o 403 de
+  sempre. O ponto 3 continua valendo — o titular é um `owner`, e o chamador
+  segue sendo o owner que fica.
+- Nasce `PUT /workspaces/:workspaceId/owner-of-record`, `owner`, corpo
+  `{ userId }`. O destino precisa JÁ ser `owner` do workspace — ser titular é
+  pagar — senão **409** `titular_precisa_ser_owner`. Grava `created_by`, numa
+  transação com a leitura do papel; transferir para o titular atual é
+  idempotente. Qualquer `owner` pode chamar, inclusive transferindo para OUTRO
+  owner que não pediu: é a mesma autoridade que já remove e rebaixa donos, e
+  consentimento do destino seria um fluxo de convite que o produto não tem.
+- **O gasto, a partir do commit:** `ResolveCredentialOwnerUseCase` passa a
+  devolver o NOVO titular; o turno de agente procura a credencial DELE para o
+  provider do modelo, e as ações de git, a credencial de git dele. Se ele não
+  tiver, o produto faz o que já fazia com qualquer titular sem credencial: o
+  turno termina com `"Nenhuma credencial cadastrada para <provider>"`
+  (`RunLlmTurnUseCase`/`StreamLlmTurnUseCase`) e a leitura do remoto git falha
+  nomeando de quem é a credencial que falta. A transferência NÃO confere isso
+  antes — seria uma leitura por provider sem saber quais os projetos usam, e
+  recusar por isso trancaria justamente a saída do titular que vai embora.
+  `ollama` não usa credencial e segue igual. O gasto já registrado fica onde
+  estava: `token_usage` não guarda titular, e o relatório passa a ser lido
+  pelo novo titular inteiro, histórico incluído.
+- Não há evento de domínio para mudança de membro nem de titularidade (o
+  upsert e a remoção também não emitem); a transferência deixa uma linha de
+  log com de/para/quem. Um evento de auditoria para as três é frente própria.
+
 ## O que fica declarado e NÃO é feito
 
 - **As chaves de MÁQUINA** (`project_id` nulo) ficam: são da CONTA e servem os
@@ -111,13 +149,6 @@ efeito principal, a régua da [RN-520](../business-rules.md#rn-520).
   sessão por usuário exigiria um comando novo no engine — frente própria.
 - **O terminal `:web`** do removido não é alvo da desconexão (a RN-520 só
   derruba `:runner`); mesma lacuna, mesmo motivo.
-- **`workspaces.created_by` não muda.** É por ele que se resolve a chave de LLM
-  que os agentes gastam ([RN-058](../business-rules/custo.md#rn-058)) e o dono
-  do relatório de gasto. Remover o CRIADOR (outro `owner`) é permitido pelo
-  ponto 4, e depois disso os agentes do workspace **continuam gastando a
-  credencial de quem já não está nele**. Transferir essa propriedade — ou
-  recusar remover o criador — é decisão de produto que a AT-115 não cobre, e
-  fica **aberta, sem dono**, em vez de decidida aqui de passagem.
 - **Tela.** Não existe seção de membros de workspace no `apps/web` (medido: o
   único vestígio de `/workspaces/:id/members` é o tipo gerado em
   `api-types.generated.ts`, e nem há `GET` de membros de workspace). Não se cria
@@ -126,7 +157,7 @@ efeito principal, a régua da [RN-520](../business-rules.md#rn-520).
 ## Consequences
 
 **Offboarding deixa de ser escrita no banco.** Um `owner` remove qualquer outra
-pessoa, inclusive outro `owner`, e a remoção é real: sai do workspace e de todos
+pessoa, inclusive outro `owner` (o titular depois de transferir), e a remoção é real: sai do workspace e de todos
 os projetos dele, e o runner dela cai.
 
 **A linha dos tetos tem cinco portas e dois tetos.** Nenhum teto novo nasceu:

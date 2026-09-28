@@ -178,7 +178,7 @@ estado lido do repositório e não da conversa.
 | A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
 
 | A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
-| A remoção de membro de workspace nasce, protegida pela mesma cláusula (AT-115) | ADR 0173, RN-615 |
+| A remoção de membro de workspace nasce, protegida pela mesma cláusula, e a titularidade se transfere (AT-115) | ADR 0173, RN-615, RN-616 |
 
 | O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
 
@@ -201,13 +201,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Botão "Ativar execução" mudar de dono continua fora de escopo, por decisão
   declarada (ADR 0053 item 5) — só a metade da delegação Dev Lead →
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
-- Remover do workspace o CRIADOR (`workspaces.created_by`, outro `owner`) é
-  permitido pela rota do ADR 0173 (RN-615), e `created_by` NÃO muda: é por ele
-  que se resolve a credencial de LLM que os agentes gastam (RN-058) e o dono
-  do relatório de gasto, então os agentes continuam gastando a chave de quem
-  já não está no workspace. Transferir essa propriedade, ou recusar remover o
-  criador, é decisão de produto que a AT-115 não cobriu — não resolva de
-  passagem
 
 **Cortes e pausas vigentes:**
 - FASE 25b DEIXOU de ser corte no compose LOCAL (RN-512, ADR 0146 ponto 3): o
@@ -1511,10 +1504,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   dentro), as chaves de dispositivo de PROJETO e os PATs dele ali — e depois
   derruba o runner vivo dele em cada projeto pelo caminho da RN-520, sem
   derrubar a remoção se o engine falhar. Fica de fora, declarado: chave de
-  MÁQUINA, socket de sessão já conectado, terminal `:web`, e
-  `workspaces.created_by` — remover o CRIADOR deixa os agentes gastando a
-  credencial de LLM dele (RN-058), decisão de produto ABERTA, sem dono. Não
-  há tela de membros de workspace; a rota é de API. Segue possível e declarado:
+  MÁQUINA, socket de sessão já conectado, terminal `:web`. O TITULAR
+  (`workspaces.created_by`, de quem é a credencial que os agentes gastam,
+  RN-058, e o relatório de gasto, RN-060) NÃO sai: 409 `criador_do_workspace`
+  até `PUT workspaces/:id/owner-of-record` (`owner`, destino JÁ `owner`, senão
+  409 `titular_precisa_ser_owner`) passar a titularidade (RN-616). Titular não
+  é autorização — quem autoriza continua sendo o papel —, e a transferência
+  não confere se o novo titular tem credencial: sem ela, o turno termina com o
+  desfecho de sempre ("Nenhuma credencial cadastrada"). Não há tela de membros
+  de workspace; as rotas são de API. Segue possível e declarado:
   rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
   workspace (única forma de revogar propriedade, reversível pela mesma rota);
   reescrever o próprio papel com o MESMO valor (upsert idempotente não é

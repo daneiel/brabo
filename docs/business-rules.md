@@ -13949,7 +13949,7 @@ compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) ma
 deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
 certo, porque sem a variável a api nunca chama o broker.
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:297`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:349`
   (`getProjectsBase`, `:256` o campo novo),
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
@@ -15981,6 +15981,7 @@ da prova, e por isso é asserido em teste.
 |---|---|
 | remover a SI MESMO do workspace, havendo ou não outro owner | **403** |
 | remover OUTRO `owner` | passa — é como se revoga propriedade por inteiro |
+| remover o TITULAR (`created_by`), por outro owner | **409** `criador_do_workspace` — [RN-616](#rn-616) |
 | remover qualquer outra pessoa | passa |
 | remover quem não tem linha de workspace | 204 — as linhas de projeto dele no workspace saem igual |
 
@@ -15998,13 +15999,12 @@ remoção.
 workspaces; aqui ela deixa de alcançar porque o papel resolve para nenhum); o
 socket de SESSÃO já conectado e o terminal `:web` do removido (seguem até cair;
 o ticket novo é recusado); tela (não existe seção de membros de workspace no
-`apps/web`); e `workspaces.created_by` — remover o CRIADOR deixa os agentes do
-workspace gastando a credencial de LLM dele ([RN-058](business-rules/custo.md#rn-058)),
-decisão de produto ABERTA, sem dono.
+`apps/web`). O TITULAR (`workspaces.created_by`) não sai por esta rota — é a
+[RN-616](#rn-616).
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:221`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:234`
   (`removeMember`);
-  `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:64`
+  `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:79`
   (`RemoveWorkspaceMemberUseCase`);
   `apps/api/src/domain/iam/tetos-de-rebaixamento.ts:88`
   (`MENSAGEM_TETO_AUTO_REMOCAO_DO_WORKSPACE`), `:248`
@@ -16028,6 +16028,70 @@ decisão de produto ABERTA, sem dono.
   `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada em
   `docs/security-surface.md`)
 - **ADR:** [0173](adr/0173-remocao-de-membro-de-workspace.md)
+- **Origem:** AT-115 (EP-002/HS-006)
+
+---
+
+### RN-616 — O TITULAR do workspace não sai pela remoção de membro: 409 `criador_do_workspace` até transferir, e a titularidade só vai para outro `owner` {#rn-616}
+
+Decisão do mantenedor sobre a questão que a [RN-615](#rn-615) deixou aberta
+(AT-115, [ADR 0173](adr/0173-remocao-de-membro-de-workspace.md), ponto 7).
+`workspaces.created_by` não autoriza nada — quem autoriza é o papel
+([RN-472](#rn-472)) —, mas é por ele que se resolve a credencial de LLM que os
+agentes gastam e a de git das ações de agente
+([RN-058](business-rules/custo.md#rn-058)) e o dono do relatório de gasto
+([RN-060](business-rules/custo.md#rn-060)). Remover o criador deixaria os
+agentes gastando a credencial de quem já não está no workspace. A coluna passa a
+ser chamada, na regra, de **titular**.
+
+**A recusa.** `DELETE /workspaces/:workspaceId/members/:userId` com alvo = titular
+é **409** com `code: "criador_do_workspace"`: *"Não é possível remover o titular
+do workspace: a credencial de LLM que os agentes gastam, a de git das ações de
+agente e o relatório de gasto são dele (RN-058/RN-060). Transfira antes a
+titularidade para outro owner (PUT /workspaces/:workspaceId/owner-of-record) e
+remova depois."* O teto da RN-615 vem antes: o titular tentando se remover
+recebe o 403 de auto-remoção.
+
+**A transferência.** `PUT /workspaces/:workspaceId/owner-of-record`, `owner`,
+corpo `{ userId }`, responde o workspace (200). O destino precisa JÁ ser `owner`
+do workspace, senão **409** `titular_precisa_ser_owner` (*"A titularidade só vai
+para quem já é owner deste workspace: o titular paga o que os agentes gastam
+(RN-058). Promova a pessoa a owner antes, ou escolha outro owner."*). Grava
+`created_by` numa transação com a leitura do papel; transferir para o titular
+atual é idempotente. Qualquer `owner` pode transferir, inclusive para OUTRO
+owner que não pediu — declarado, é a mesma autoridade que remove donos.
+
+**O gasto, a partir do commit.** `ResolveCredentialOwnerUseCase` devolve o novo
+titular: o turno de agente procura a credencial DELE para o provider do modelo,
+e as ações de git a credencial de git dele. Sem credencial, o desfecho é o que
+já existia — o turno termina com *"Nenhuma credencial cadastrada para
+<provider>"* e a leitura do remoto git falha nomeando de quem é a credencial que
+falta. A transferência NÃO confere isso antes (declarado no ADR). O gasto
+registrado não se move: `token_usage` não guarda titular, e o relatório inteiro,
+histórico incluído, passa a ser do novo titular. Sem evento de domínio: fica
+uma linha de log com de/para/quem.
+
+- **Código:** `apps/api/src/domain/iam/titularidade-do-workspace.ts:22`
+  (`CODIGO_CRIADOR_DO_WORKSPACE`), `:38` (`removeOTitular`);
+  `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:120`
+  (`removeOTitular`);
+  `apps/api/src/application/use-cases/iam/transfer-workspace-ownership.use-case.ts:39`
+  (`TransferWorkspaceOwnershipUseCase`);
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:98`
+  (`transferirTitularidade`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:269`
+  (`transferOwnership`)
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
+  (`describe` "o TITULAR não sai": o 409 com código e nada escrito; o titular
+  removendo a si mesmo recebe o 403; depois de transferir, remover o antigo
+  criador passa e o novo titular vira o protegido — e `describe`
+  "TransferWorkspaceOwnershipUseCase": para owner grava `created_by`; para
+  `maintainer` e para não-membro é 409 `titular_precisa_ser_owner`; para o
+  titular atual é idempotente);
+  `apps/api/test/interfaces/http/iam/workspaces-members.controller.spec.ts`
+  (`owner` e a delegação da transferência)
+- **ADR:** [0173](adr/0173-remocao-de-membro-de-workspace.md), ponto 7
 - **Origem:** AT-115 (EP-002/HS-006)
 
 ---
