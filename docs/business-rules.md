@@ -13574,7 +13574,8 @@ ausente como "não registrado". Todo evento novo tem o campo, porque
 
 Nada em `decide()` muda — nenhum teto, nenhum veredito, nenhuma string. A
 tela também não muda nesta regra: o motivo passa a EXISTIR no log, e
-mostrá-lo é outra entrega.
+mostrá-lo é outra entrega. (Desde a [RN-614](#rn-614) a tela o mostra na
+linha do evento no painel de log e no `ApprovalCard`, pela mesma frase.)
 
 **O que o motivo NÃO diz, declarado:** ele nomeia a regra, não a RAIZ do
 escopo — o ponto 7 do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
@@ -15650,7 +15651,10 @@ régua: o que ela faz é EXPRIMIR a mesma raiz sem a parte absoluta.
 de outro tipo, não tem o campo; não há reprocessamento nem coluna nova. O
 outbox não o carrega, pelo mesmo motivo da [RN-567](#rn-567) (sem
 consumidor no engine). Nada em `decide()` muda, nenhum teto, e a tela não
-muda — onde ele aparece é outra entrega (AT-148). A web lê o payload como
+muda — onde ele aparece é outra entrega (AT-148). (Desde a
+[RN-614](#rn-614) a raiz aparece junto do motivo, na linha do evento no painel
+de log e no `ApprovalCard`, sempre relativa e com texto próprio para
+`indisponivel`.) A web lê o payload como
 registro genérico, então evento antigo e novo passam pela mesma leitura.
 
 **Declarado:** em `mounted`, o segmento é relativo à base configurada NO
@@ -15879,3 +15883,52 @@ projeto aberto, e as outras listas seguiam anunciando a revogada.
   fora (RN-519); (3) a rota que CRIA chave de máquina continua servindo só
   instalação de UMA pessoa (RN-552) — a Conta lista e revoga, não cria.
 - **Origem:** AT-118 (EP-003/HS-007)
+
+### RN-614 — A tela mostra o motivo da política e a raiz do escopo, numa frase só, nos dois lugares {#rn-614}
+
+A [RN-567](#rn-567) pôs no `proposed_action.created` a regra que decidiu
+(`reason`) e a [RN-609](#rn-609) pôs a raiz do escopo (`scopeRoot`, só em
+`terminal`) — e as duas declararam que a tela não mudava. Quem auditava pela
+tela uma ação que PASSOU continuava sem saber qual regra a deixou passar.
+
+**A regra:** o dado aparece em DOIS lugares (decisão do mantenedor), e os dois
+dizem a MESMA frase, montada por UMA função, `fraseDaDecisaoDaPolitica`:
+
+- a **linha do evento no painel de log** — `classifyEvent` ganha o ramo de
+  `proposed_action.created` (tipo `permission`, `bad` quando negada), com o
+  desfecho da política e, depois do travessão, a frase;
+- o **`ApprovalCard`**, numa linha própria logo abaixo da frase do que
+  acontece ([RN-096](#rn-096)) — nunca dentro do payload colapsado.
+
+A ação (`proposed_actions`) não guarda nenhum dos dois campos: a tela os lê do
+EVENTO, que ela já carrega (`decisaoDaPoliticaDaAcao`, pelo `actionId`). Por
+isso o card tem TRÊS estados, que não colapsam: tela que não lê o event log
+(o painel "precisa de você", PRs, containers) não passa o dado e o card CALA;
+tela que lê (o chat da sessão e a fila da aba Aprovações, ambos sobre a sessão
+mais recente) e não achou o evento na janela carregada diz *"fora dos eventos
+carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
+`ApprovalCard` — hipótese do Psicólogo não é `proposed_action`.
+
+**Ausente não é "sem motivo", e o absoluto nunca aparece.** Evento anterior à
+RN-567 diz *"motivo da política não registrado"*; `terminal` anterior à RN-609
+diz *"raiz do escopo não registrada"*; outro tipo, sem `scopeRoot`, não fala de
+raiz (o escopo só é consultado em `terminal`). As quatro âncoras têm texto
+próprio — pasta gerenciada, segmento dentro da base de projetos, nome da pasta
+na máquina do runner, e `indisponivel` (*"sem forma relativa"*, sem segmento).
+Âncora que a tela não conhece diz que não conhece, e não imprime o segmento: a
+tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
+(`approvals.json`, chave `politica`).
+
+- **Código:** `apps/web/src/lib/decisao-da-politica.ts:111`
+  (`fraseDaDecisaoDaPolitica`), `:65` (`lerDecisaoDaPolitica`), `:124`
+  (`decisaoDaPoliticaDaAcao`), `:145` (`linhaDoEventoDePolitica`);
+  `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
+  `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
+  `apps/web/src/routes/SessionPage.tsx:1311` e
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:452` (quem passa o dado)
+- **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
+  `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
+  sem vazar caminho), `:114` (os dois idiomas), `:144` (a linha do log É a
+  frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
+  usa a mesma função, e os três estados)
+- **Origem:** AT-148 (EP-025/HS-043)

@@ -19,6 +19,7 @@ import {
   type Task,
 } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
 import { getRegistroDeGates } from '../lib/api-client';
 import { Button } from '../components/ui/Button';
@@ -445,6 +446,10 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                           key={action.id}
                           action={action}
                           variant="queue"
+                          // AT-148 (RN-614): a aba já lê os eventos da
+                          // sessão mais recente — a mesma de onde vêm estas
+                          // ações. Fora da janela carregada, o card diz.
+                          decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
                           selectable
                           selected={selected.has(action.id)}
                           onToggleSelect={() => toggleSelect(action.id)}

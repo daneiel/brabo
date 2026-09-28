@@ -644,7 +644,12 @@ document describes:
   `workspace_dir_name` in `container`/`runner`, the segment under
   `BRABO_PROJECTS_BASE` in `mounted`), never the absolute path, which would
   expose the user's `$HOME` to every member. The outbox row carries neither
-  `reason` nor `scopeRoot` — no engine consumer reads them.
+  `reason` nor `scopeRoot` — no engine consumer reads them. Since
+  [RN-614](../business-rules.md#rn-614) the UI shows both, in one sentence
+  built by one function: on the event's line in the session log panel and on
+  the approval card (session chat and the Approvals tab queue). An older
+  event says "not recorded", and the card says so when the event is outside
+  the events loaded on that screen.
 
 This wasn't true until Phase 12e. The first three rows went **only to the
 outbox**, which is transport — drained, marked with `processed_at`, and
