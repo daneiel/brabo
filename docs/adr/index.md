@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 167 architectural decision records, grouped by phase, with what each one decided.
+description: Brabo's 168 architectural decision records, grouped by phase, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
