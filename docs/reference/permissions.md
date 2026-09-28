@@ -638,8 +638,13 @@ document describes:
   the exact wording `decide()` uses. Events recorded before
   [RN-567](../business-rules.md#rn-567) have no `reason`: read that as "not
   recorded", not as "no rule". The reason names the rule, not the scope
-  root, so ADR 0055 point 7 is only partly covered. The outbox row carries
-  no `reason` — no engine consumer reads it.
+  root; since [RN-609](../business-rules.md#rn-609) a `terminal` action's
+  event also carries `scopeRoot` — the execution mode plus a RELATIVE
+  identifier of the root the path scope compared against (the
+  `workspace_dir_name` in `container`/`runner`, the segment under
+  `BRABO_PROJECTS_BASE` in `mounted`), never the absolute path, which would
+  expose the user's `$HOME` to every member. The outbox row carries neither
+  `reason` nor `scopeRoot` — no engine consumer reads them.
 
 This wasn't true until Phase 12e. The first three rows went **only to the
 outbox**, which is transport — drained, marked with `processed_at`, and
