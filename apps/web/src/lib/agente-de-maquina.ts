@@ -25,7 +25,7 @@ import { roleAtLeast } from './roles';
  * da CONTA, não deste navegador. `runner_device_keys` não sabe de que máquina
  * o navegador está falando — então o mais forte que a tela pode afirmar é
  * *"sua conta tem uma máquina pareada"*, nunca *"esta máquina está pareada"*.
- * Por isso o caminho do [ADR 0118](../../../../docs/adr/0118-configuracao-do-runner-pelo-navegador.md)
+ * Por isso o caminho do [ADR 0118](../../../../docs/adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
  * continua alcançável em TODOS os estados: ele é o que resolve exatamente o
  * caso de estar numa segunda máquina.
  *

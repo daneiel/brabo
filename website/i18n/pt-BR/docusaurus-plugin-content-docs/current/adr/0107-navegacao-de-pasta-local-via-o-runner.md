@@ -1,4 +1,4 @@
-# ADR 0104 — Navegação de pasta local via o Runner
+# ADR 0107 — Navegação de pasta local via o Runner
 
 - **Status:** Aceito
 - **Data:** 2026-08-20
