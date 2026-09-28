@@ -599,8 +599,8 @@ the failure would otherwise surface on the machine of whoever installs —
 the worst possible place to discover it.
 
 The runner binaries follow in `build-runner-binaries.yml`, with **one**
-signed `checksums.txt` covering the five targets rather than five
-separate signatures: verifying four and forgetting the fifth is a failure
+signed `checksums.txt` covering the four targets rather than one
+signature per binary: verifying three and forgetting the fourth is a failure
 mode nobody notices, and a single manifest removes it.
 
 #### The version lives in the tag, and the release is what carries it to the artifact

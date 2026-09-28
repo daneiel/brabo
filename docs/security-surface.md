@@ -64,8 +64,10 @@ binary from GitHub Releases so the browser never talks to GitHub
 directly. Public for the same reason as `/metrics`/JWKS: the binary
 itself is not a secret, and requiring a session to download the very
 tool that lets someone authenticate would be backwards. `platform` is a
-closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
-`win32-x64`), never interpolated raw into the GitHub URL — closing the
+closed allowlist (`linux-x64`/`linux-arm64`/`darwin-arm64`/`win32-x64` —
+the four targets the release matrix builds; `darwin-x64` left in
+[ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) and is refused with its
+own message pointing at the npm package), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
 asset URL (never the binary's bytes) is cached in memory for a few
 minutes, purely to stay under GitHub's unauthenticated rate limit under

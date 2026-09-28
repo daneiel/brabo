@@ -670,36 +670,28 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   (chave real com crédito) e citar a saída no PR — doc do hub não é prova.
   Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- Binário standalone: DOIS dos cinco alvos chegam à Release. `v4.0.1` e
+- Binário standalone: DOIS dos QUATRO alvos chegam à Release. `v4.0.1` e
   `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
   `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
   `v4.0.0` FOI corrigida, com espera de teto 600s em
-  `build-runner-binaries.yml`. O que falta são os outros três, e são TRÊS
-  causas distintas, não uma: `win32-x64` e `darwin-arm64` reprovam no BUILD
-  por motivo próprio de plataforma (o `.node` do `node-pty` fora de
-  `build/Release`; `--self-test-pty` com `posix_spawnp failed`), e as duas
-  correções JÁ ESTÃO na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca
-  exercitadas — o que falta aí é uma TAG, não uma sessão. `darwin-x64`
-  (`macos-13`) é o único que nunca chegou a construir: ele fica **24h00m01s**
-  na fila e é cancelado, o MESMO número nas três tags, que é o teto do
-  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A causa está MEDIDA
-  (AT-065, 2026-09-13): `macos-13` é label SEM RUNNER, a imagem foi aposentada
-  pelo GitHub em dez/2025 (e ficou 30min na fila de novo, num ensaio por
-  `workflow_dispatch`). O label Intel que o GitHub oferece no lugar,
-  `macos-15-intel`, agenda em segundos e CONSTRÓI, mas reprova no
-  `--self-test-pty`: sob o Bun o `onData` do `node-pty` nunca entrega a saída
-  do filho — bug ABERTO do runtime (oven-sh/bun#25822, nenhuma release
-  corrigida), com a MESMA prova passando sob Node no mesmo runner. Ou seja, o
-  bloqueio deixou de ser runner (pagar runner não resolve) e passou a ser o
-  Bun, e a matriz segue com `macos-13` de propósito: trocar o label não faz o
-  alvo publicar. Decidir entre esperar o Bun (e aí trocar o label) ou tirar a
-  plataforma (a promessa vira quatro alvos, em ADR novo) é decisão de dono.
-  Não medido, mas o issue do Bun foi aberto em darwin ARM64: é provável que o
-  `darwin-arm64` esbarre no mesmo defeito depois do conserto do
-  `spawn-helper`, e aí "falta uma TAG" não bastaria para ele. O que
-  DEIXOU de depender dessa decisão é o manifesto assinado: desde a RN-565 o
-  job `checksums` não tem `needs: build`, então o `darwin-x64` na fila não
-  segura mais o `checksums.txt` por um dia
+  `build-runner-binaries.yml`. O que falta são os outros dois, e são DUAS
+  causas distintas: `win32-x64` e `darwin-arm64` reprovam no BUILD por motivo
+  próprio de plataforma (o `.node` do `node-pty` fora de `build/Release`;
+  `--self-test-pty` com `posix_spawnp failed`), e as duas correções JÁ ESTÃO
+  na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca exercitadas — o que
+  falta aí é uma TAG, não uma sessão. Não medido, mas o issue do Bun
+  (oven-sh/bun#25822, o `onData` do `node-pty` que nunca dispara) foi aberto
+  em darwin ARM64: é provável que o `darwin-arm64` esbarre nele depois do
+  conserto do `spawn-helper`, e aí "falta uma TAG" não bastaria. O quinto
+  alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
+  AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
+  que reprova, com a MESMA prova passando sob Node. O Mac Intel usa
+  `npm install -g @brabo/runner`: o `install.sh` diz isso sem baixar, o proxy
+  recusa `darwin-x64` com 400 próprio e o navegador nem pede o download. Os
+  quatro lugares que enumeram alvos (matriz, `PLATAFORMAS` da api, o `case` do
+  `install.sh`, a lista do web) são amarrados por
+  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
+  depois de o Bun corrigir, nunca só trocar o label
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
@@ -1125,8 +1117,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
   0149) a esteira também ASSINA o que publica: `cosign` keyless (OIDC do
   Actions) nas imagens publicadas (cinco desde o ADR 0162) por DIGEST — nunca por tag, que é ponteiro
-  móvel — e UM `checksums.txt` assinado cobrindo os cinco binários do
-  runner, não cinco assinaturas. Os dois workflows VERIFICAM o que
+  móvel — e UM `checksums.txt` assinado cobrindo os binários do runner
+  (quatro alvos desde o ADR 0174), não uma assinatura por binário. Os dois workflows VERIFICAM o que
   assinaram no mesmo run, porque assinatura que ninguém tenta verificar é
   arquivo a mais e a falha apareceria só na máquina de quem instala. E desde
   o ADR 0172 (AT-179) o `release.yml` ESCANEIA o que publica antes de
@@ -1174,8 +1166,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   RN-565 o manifesto NÃO é mais refém da matriz: o job `checksums` perdeu o
   `needs: build` e passou a esperar os ASSETS da Release, com teto, em vez do
   JOB mais lento — que podia nem começar. O número é medido nas três tags que
-  existem: `darwin-x64` fica 24h00m01s na fila e é cancelado, o MESMO valor
-  nas três, enquanto os outros quatro terminam em no máximo 4m18s. `always()`
+  existem: `darwin-x64` ficava 24h00m01s na fila e era cancelado, o MESMO
+  valor nas três, enquanto os outros quatro terminavam em no máximo 4m18s (o
+  alvo saiu da matriz depois, no ADR 0174; a correção vale para qualquer alvo
+  sem runner). `always()`
   cobria dependência CANCELADA e por isso o job RODAVA; o que ele nunca
   cobriu foi QUANDO, e um manifesto que chega um dia depois é, para quem
   instala, um manifesto ausente (RN-525/526 recusam sem ele, em TODA
