@@ -281,7 +281,7 @@ describe('RunnerOnboardingPanel', () => {
   it('fora do Chromium (sem suporte a escrita de arquivos): mostra "Baixar arquivos" em vez do botão automático', async () => {
     const user = userEvent.setup();
     suportaEscritaDeArquivosMock.mockReturnValue(false);
-    detectarPlataformaMock.mockResolvedValue('darwin-x64');
+    detectarPlataformaMock.mockResolvedValue('darwin-arm64');
     baixarKitManualMock.mockResolvedValue({
       instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
       falhaDoBinario: null,
@@ -299,7 +299,7 @@ describe('RunnerOnboardingPanel', () => {
       expect(baixarKitManualMock).toHaveBeenCalledWith({
         projectId: 'proj-1',
         apiUrl: 'https://api.brabo.example',
-        platform: 'darwin-x64',
+        platform: 'darwin-arm64',
       }),
     );
     expect(

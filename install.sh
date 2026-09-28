@@ -1086,8 +1086,22 @@ instalar_o_runner() {
   case "$plataforma" in
     linux-amd64)  alvo='linux-x64' ;;
     linux-arm64)  alvo='linux-arm64' ;;
-    darwin-amd64) alvo='darwin-x64' ;;
     darwin-arm64) alvo='darwin-arm64' ;;
+    # Mac Intel NÃO tem binário, por decisão (ADR 0174): o runner `macos-13`
+    # foi aposentado pelo GitHub e, no `macos-15-intel`, o Bun quebra o
+    # `onData` do node-pty (oven-sh/bun#25822). A MESMA prova passa sob Node,
+    # então o caminho dele é o pacote npm. Nenhum download é tentado — pedir
+    # um asset que a Release não publica só produziria um 404 com cara de
+    # rede fora. O resto da instalação segue, e `RUNNER_BIN` fica vazio, que é
+    # como o fechamento sabe dizer o que ficou para depois.
+    darwin-amd64)
+      dizer ''
+      dizer "${C_BOLD}Agente local${C_RESET}"
+      dizer 'Mac Intel (darwin-x64) não tem binário do agente local — decisão do ADR 0174.' >&2
+      dizer 'O agente local NÃO foi instalado; o resto da instalação está de pé.' >&2
+      dizer 'Instale pelo npm (roda sob Node): npm install -g @brabo/runner' >&2
+      return 0
+      ;;
     *) recusar "sem binário de runner para '${plataforma}'." ;;
   esac
 

@@ -10463,9 +10463,11 @@ publicar a Release**:
   `:5.0.0` atestaria o que aquela tag apontava no instante da assinatura, e não
   o que ela aponta quando alguém baixa. O digest é o que o manifesto já registra
   e o que o overlay de produção já aplica (ADR 0119);
-- os **cinco binários** do runner são cobertos por **UM** `checksums.txt`
-  assinado, e não por cinco assinaturas — quem verifica quatro e esquece o
-  quinto não tem como saber que esqueceu;
+- os **binários** do runner (cinco alvos quando esta regra nasceu, **quatro**
+  desde o [ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md), que tirou o
+  `darwin-x64`) são cobertos por **UM** `checksums.txt` assinado, e não por
+  uma assinatura por binário — quem verifica três e esquece o quarto não tem
+  como saber que esqueceu;
 - a assinatura é **keyless** (OIDC do GitHub Actions): a identidade que assina é
   o próprio workflow, e não existe chave privada em custódia. Um par de chaves
   próprio significaria mais um segredo de CI, e este repositório já viu um PAT
@@ -12710,6 +12712,20 @@ existia, antes de qualquer escrita.
   chamada, depois do runner e antes do marcador), `:1792` (o `ownerEmail`).
   Números relidos pelo símbolo em 18/09 (AT-096); os de `:966`/`:682` já não
   batiam em 17/09
+
+- **Código:** `install.sh:1477` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1276` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1376` (`parear_esta_maquina`, o `id` virando `--id`), `:1453`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1179`
+  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
+  `:1220` (`criar_primeira_conta`) e `:1239` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1254` (`ler_sem_eco`), `:1158`
+  (`nome_da_maquina`), `:1440` (`avisar_chave_parcial`), `:1137`/`:1144`
+  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1795` (a
+  chamada, depois do runner e antes do marcador), `:1806` (o `ownerEmail`).
+  Números relidos pelo símbolo em 18/09 (AT-096) e de novo em 27/09 (AT-065,
+  que acrescentou o ramo do Mac Intel em `instalar_o_runner`); os de
+  `:966`/`:682` já não batiam em 17/09
 - **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
   rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
   de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o
@@ -13499,7 +13515,7 @@ release não tem binários quando o que houve foi a matriz inteira falhar.
 `timeout-minutes: 20` do próprio job `build` — o máximo que um alvo **com
 runner** pode demorar depois de começar. O que ele deliberadamente não cobre é
 o tempo de **fila**, e não cobrir tempo de fila é o ponto inteiro. O laço sai
-cedo quando os cinco chegam, que é o caminho feliz.
+cedo quando todos os alvos chegam, que é o caminho feliz.
 
 **Nada do que o job FAZ muda.** Ele continua montando o manifesto a partir dos
 assets (e não de `dist-bin/`, vazio ali), assinando com `cosign` keyless e
@@ -13521,11 +13537,23 @@ pode depender dela — é justamente por depender dela que ele não saía.
 > A decisão pendente deixou de ser de runner e passou a ser esperar o Bun ou
 > tirar a plataforma. A regra acima não muda com isso.
 
-- **Código:** `.github/workflows/build-runner-binaries.yml:288` (o job, agora
-  sem `needs:`), `:321` (`timeout-minutes: 40`, que cabe as duas esperas),
-  `:331` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
-  `:369` (o passo que espera), `:373`/`:374` (os dois tetos), `:382` (a Release
-  ausente, que é erro), `:405` (o teto dos binários, que é `notice`), `:455` (o
+> **Decidido em 2026-09-27 ([ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md), AT-065):
+> a plataforma saiu.** A matriz passou a QUATRO alvos, e `ALVOS_ESPERADOS`
+> acompanhou — é contra ele que a ausência é declarada, e deixar `darwin-x64`
+> ali faria todo manifesto anunciar, para sempre, uma falta que é decisão. O
+> Mac Intel fica com `npm install -g @brabo/runner` (sob Node, onde a mesma
+> prova passa): o `install.sh` diz isso sem tentar baixar, o proxy
+> `GET /runner-releases/binary` recusa `darwin-x64` com 400 próprio que aponta
+> o npm, e o painel do navegador nem pede o download. A regra desta RN não
+> muda: ela continua valendo para qualquer alvo que fique sem runner, e
+> `scripts/ci/alvos-do-runner.spec.ts` reprova quando a matriz, a lista da api,
+> o `case` do instalador e a do navegador divergem.
+
+- **Código:** `.github/workflows/build-runner-binaries.yml:283` (o job, agora
+  sem `needs:`), `:318` (`timeout-minutes: 40`, que cabe as duas esperas),
+  `:328` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:397` (o passo que espera), `:401`/`:402` (os dois tetos), `:410` (a Release
+  ausente, que é erro), `:433` (o teto dos binários, que é `notice`), `:499` (o
   manifesto nomeando o que não cobre)
 - **Teste:** `scripts/ci/checksums-nao-espera-a-matriz.spec.ts` — que o job não
   tem `needs:`, que os dois tetos existem, que o teto dos binários é derivado
@@ -13536,9 +13564,9 @@ pode depender dela — é justamente por depender dela que ele não saía.
   antes de anexar, `id-token: write`, o `install.sh` no manifesto). É ESTÁTICO,
   e o limite é declarado no topo do arquivo: o job só se prova numa tag final,
   e nunca rodou em nenhuma
-- **Lacuna DECLARADA:** a matriz continua sendo cinco alvos e a Release continua
-  recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na `dev` nunca
-  exercitada, e `darwin-x64` não tem. O manifesto vai nascer cobrindo dois e vai
+- **Lacuna DECLARADA:** a matriz é de quatro alvos desde o ADR 0174 e a Release
+  continua recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na
+  `dev` nunca exercitada. O manifesto vai nascer cobrindo dois e vai
   **dizer** isso, que é a diferença entre parcial e silencioso. E, com a matriz
   falhando inteira, o job gasta as duas esperas antes de recusar
 - **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)

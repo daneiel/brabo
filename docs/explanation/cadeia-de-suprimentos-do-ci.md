@@ -330,7 +330,9 @@ Declared, not fixed:
   `cosign` keyless — the OIDC identity of the workflow, no key in
   custody anywhere — and `build-runner-binaries.yml` gained a
   consolidating job that publishes **one signed `checksums.txt`**
-  covering the five binaries, rather than five separate signatures.
+  covering the runner binaries (four targets since
+  [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), which dropped
+  `darwin-x64`), rather than one signature per binary.
   Both workflows **verify what they just signed**, in the same run:
   a signature nobody tries to verify is one more file in the release,
   and the failure would otherwise surface on the machine of whoever

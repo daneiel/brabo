@@ -636,3 +636,36 @@ esac
     expect(saida.stdout).toContain('o binário do agente local não foi instalado');
   });
 });
+
+// ADR 0174 (AT-065): Mac Intel deixou de ter binário. O instalador não tenta
+// baixar um asset que a Release não publica — diz em texto qual é o caminho
+// (o pacote npm, sob Node) e deixa `RUNNER_BIN` vazio, que é o que faz o
+// fechamento relatar a pendência em vez de chamar um comando inexistente.
+describe('install.sh — o agente local em Mac Intel', () => {
+  it('não baixa nada, aponta o npm e deixa RUNNER_BIN vazio', async () => {
+    const trilha = path.join(os.tmpdir(), `brabo-curl-${process.pid}-${Date.now()}.txt`);
+    const curl = comBinario('curl', `#!/bin/sh\nprintf '%s\\n' "$*" >> '${trilha}'\nexit 0\n`);
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-home-'));
+    try {
+      const r = await rodar(
+        `instalar_o_runner darwin-amd64 '${home}'; echo SAIU=$?\nprintf 'bin=[%s]\\n' "$RUNNER_BIN"`,
+        { env: { PATH: `${curl.dir}:${process.env.PATH ?? ''}`, HOME: home } },
+      );
+      expect(r.stdout).toContain('SAIU=0');
+      expect(r.stdout).toContain('bin=[]');
+      expect(r.stderr).toContain('npm install -g @brabo/runner');
+      expect(r.stderr).toContain('ADR 0174');
+      expect(fs.existsSync(trilha)).toBe(false);
+      expect(fs.existsSync(path.join(home, '.local', 'bin', 'brabo-runner'))).toBe(false);
+    } finally {
+      fs.rmSync(curl.dir, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(trilha, { force: true });
+    }
+  });
+
+  it('Mac Apple Silicon continua pedindo o binário darwin-arm64', () => {
+    expect(fonte()).toMatch(/^\s*darwin-arm64\) alvo='darwin-arm64' ;;$/m);
+    expect(fonte()).not.toMatch(/alvo='darwin-x64'/);
+  });
+});

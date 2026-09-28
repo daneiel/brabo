@@ -268,6 +268,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `ExternalSecret` sem o `extract` ou com `_PREVIOUS` em `data:`. O overlay
   local não muda: o `SecretStore` do provider `kubernetes` lê o Secret `brabo`
   que o bootstrap cria, e o `extract` o traz inteiro.
+
+- **runner**: o binário standalone deixa de prometer o **Mac Intel**
+  (`darwin-x64`) — a matriz de `build-runner-binaries.yml` passa a QUATRO
+  alvos (AT-065, [ADR 0174](docs/adr/0174-runner-sem-binario-darwin-x64.md)).
+  O alvo nunca publicou: `macos-13` não tem runner (24h na fila nas três tags)
+  e, no `macos-15-intel`, o Bun quebra o `onData` do `node-pty`
+  (oven-sh/bun#25822). No Mac Intel o agente local vem do npm
+  (`npm install -g @brabo/runner`, sob Node, onde a mesma prova passa), e as
+  três portas dizem isso: o `install.sh` não tenta mais baixar um binário
+  inexistente e mostra o comando npm, `GET /runner-releases/binary` recusa
+  `darwin-x64` com 400 próprio que aponta o npm (antes: 502
+  `plataforma_nao_publicada`), e o painel do navegador nem pede o download. O
+  `checksums.txt` deixa de anunciar a falta do `darwin-x64` em toda Release.
 - **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
   [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
   `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552

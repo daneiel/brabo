@@ -10181,7 +10181,7 @@
     },
     "/runner-releases/binary": {
       "get": {
-        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
+        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
         "operationId": "RunnerReleasesController_binary",
         "parameters": [],
         "responses": {

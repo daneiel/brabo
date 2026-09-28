@@ -74,6 +74,24 @@ export function plataformasSuportadas(): readonly RunnerPlatform[] {
   return PLATAFORMAS;
 }
 
+/**
+ * Plataforma que o runner ATENDE (a pasta, a configuração e a chave valem
+ * igual) mas para a qual a Release NÃO publica binário, por decisão: o Mac
+ * Intel saiu da matriz no ADR 0174 — sem runner Intel utilizável no Actions,
+ * e o Bun quebrando o `onData` do node-pty no `macos-15-intel`
+ * (oven-sh/bun#25822). O caminho dele é o pacote npm, sob Node.
+ *
+ * Por isso `darwin-x64` continua em `PLATAFORMAS`: detectar Mac Intel é
+ * verdade, e é o que permite dizer o caminho certo em vez de mandar a pessoa
+ * escolher outra plataforma. O que muda é que o passo do binário nem chega a
+ * pedir o download — a api recusaria com 400 de qualquer jeito.
+ */
+const SEM_BINARIO_PUBLICADO: readonly RunnerPlatform[] = ['darwin-x64'];
+
+export function temBinarioPublicado(platform: string): boolean {
+  return !(SEM_BINARIO_PUBLICADO as readonly string[]).includes(platform);
+}
+
 // A File System Access API (`showDirectoryPicker`) e a UA-CH
 // (`navigator.userAgentData`) não fazem parte do `lib.dom.d.ts` padrão do
 // TypeScript ainda — augmentação mínima, só o que este módulo usa.
@@ -254,6 +272,13 @@ async function lerCorpoDeErro(
 
 /** Bytes do binário do runner para `platform`, direto da api (rota pública). */
 export async function baixarBinario(platform: string): Promise<ArrayBuffer> {
+  if (!temBinarioPublicado(platform)) {
+    // Sem rede: a falha é conhecida de antemão, e ela cai no mesmo caminho
+    // best-effort (`falhaDoBinario` → `COMANDO_VIA_NPM`) de qualquer outra.
+    throw new Error(
+      `A Release não publica binário para "${platform}" (Mac Intel), por decisão (ADR 0174) — o caminho é o npm, sob Node.`,
+    );
+  }
   const res = await fetch(
     `${API_URL}/runner-releases/binary?platform=${encodeURIComponent(platform)}`,
   );

@@ -4130,7 +4130,9 @@ cosign verify \
 
 ### The runner binaries
 
-One signed `checksums.txt` covers all five targets, so verification is two
+One signed `checksums.txt` covers all four targets (Intel Mac has no binary
+since [ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) — it uses
+`npm install -g @brabo/runner`), so verification is two
 steps: the manifest's signature, then the binary against the manifest.
 
 ```bash

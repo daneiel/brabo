@@ -24,6 +24,7 @@ import {
   exportarJwkPublica,
   gerarParDeChaves,
   suportaEscritaDeArquivos,
+  temBinarioPublicado,
 } from './runner-bootstrap';
 
 function fakeResponse(status: number, body: ArrayBuffer | null = new ArrayBuffer(4)): Response {
@@ -164,6 +165,18 @@ describe('baixarBinario', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.brabo.example/runner-releases/binary?platform=linux-x64',
     );
+  });
+
+  // ADR 0174 — o Mac Intel não tem binário publicado. A falha é conhecida de
+  // antemão, então nem vai à rede; cai no mesmo best-effort (npm) de sempre.
+  it('darwin-x64 recusa sem rede, nomeando o ADR 0174', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(baixarBinario('darwin-x64')).rejects.toThrow(/ADR 0174/);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(temBinarioPublicado('darwin-x64')).toBe(false);
+    expect(temBinarioPublicado('darwin-arm64')).toBe(true);
   });
 
   it('erro HTTP vira mensagem legível', async () => {
