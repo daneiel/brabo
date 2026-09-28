@@ -489,17 +489,23 @@ export function SessionPage({
   // `handoff.offered` dele vira divisor mudo, já que nunca é "a oferta
   // atual"); só o card ACIONÁVEL é que fica restrito a quem sabe responder
   // aqui.
+  //
+  // Desde a RN-617 o Infra Lead CONVERSA e está em `AGENTES_DE_CHAT`, mas o
+  // handoff dele segue fora DESTE card por NOME: o aceite dele tem o card
+  // PRÓPRIO logo abaixo (RN-499), e deixá-lo cair aqui o ofereceria duas
+  // vezes — e, por ser o mais antigo, voltaria a esconder o do Dev Lead.
   const offeredHandoff = handoffs.find(
     (h) =>
       h.status === 'offered' &&
       !activeFor(h.toAgent) &&
+      h.toAgent !== 'infra' &&
       (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
   );
 
   // O handoff da INFRA, que o filtro logo acima deixa de fora — e de
-  // propósito: `AGENTES_DE_CHAT` está CERTO em excluir o Infra Lead (ele não
-  // tem cláusula de `message` no engine, e alargar aquela lista faria o
-  // composer mandar mensagem que seria roteada em silêncio pro Criativo).
+  // propósito. Até a RN-617 o motivo era o Infra Lead não conversar; desde
+  // ela ele conversa, e o motivo que sobra é o do card próprio: ele mora na
+  // faixa que não rola, e aceitar a Infra ativa um agente que PROPÕE.
   //
   // O que o comentário da RN-136 acima descreve como consequência aceita —
   // "Infra nunca é aceito por AQUI … na prática, nunca" — não era aceitável:
@@ -510,8 +516,8 @@ export function SessionPage({
   // `container_start` → aprovado → container `running`" era INALCANÇÁVEL por
   // tela nenhuma (RN-499).
   //
-  // A correção NÃO é alargar `AGENTES_DE_CHAT`: é um card PRÓPRIO, fora do
-  // fio, que chama o MESMO `handleAcceptHandoff`. `activeFor` é o mesmo
+  // A correção foi um card PRÓPRIO, fora do fio, que chama o MESMO
+  // `handleAcceptHandoff`. `activeFor` é o mesmo
   // predicado da linha acima — handoff já aceito (ou Infra já ativa nesta
   // sessão por qualquer outro caminho) não reabre convite nenhum.
   const handoffDaInfraOferecido = handoffs.find(

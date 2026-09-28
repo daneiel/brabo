@@ -6,20 +6,28 @@ import type { Epic, SessionEvent } from './api-types';
  * quem tem rota de `message` wireada no engine, não só `start`.
  *
  * Conferido em `agent_command_controller.ex`: há cláusula própria pra cada
- * um dos seis. Até a RN-584 a última cláusula não olhava o agente e entregava
- * ao Criativo qualquer outro valor — `"infra"` inclusive —; desde ela, todo
- * nome sem cláusula é 422 NOMEADO (`agente_sem_conversa`), e a frase chega ao
- * toast por `mensagemDaRecusaDoAgente`. Infra Lead continua de fora: é
- * propositivo (RN-499), e o engine recusa mensagem a ele com frase própria.
- * `scripts/ci/destinos-do-composer.spec.ts` lê ESTA lista e reprova o nome
- * que não tiver cláusula do outro lado.
+ * um dos sete. Até a RN-584 a última cláusula não olhava o agente e entregava
+ * ao Criativo qualquer outro valor; desde ela, todo nome sem cláusula é 422
+ * NOMEADO (`agente_sem_conversa`), e a frase chega ao toast por
+ * `mensagemDaRecusaDoAgente`. `scripts/ci/destinos-do-composer.spec.ts` lê
+ * ESTA lista e reprova o nome que não tiver cláusula do outro lado.
  *
  * `ux-designer` e `staff` entraram aqui pelo handoff manual (ADR 0109/
  * RN-440): as duas cláusulas já existiam no engine (ADR 0087/0088) sem
  * NENHUM jeito de um humano chegar até elas pela tela — só pela rota
- * interna. `infra`/`qa` continuam de fora: são leads de ÁREA sem
- * `kickoff/1` nem cláusula de `message`, o mesmo padrão já documentado
- * acima para Infra.
+ * interna.
+ *
+ * `infra` entrou na RN-617 (ADR 0175), o sétimo: o turno do Infra Lead migrou
+ * para o `TurnoAssincrono` do engine (aceite imediato, "Parar", turno órfão
+ * fechado) e só DEPOIS ganhou cláusula de `message`. Ele vira o destinatário
+ * quando é o agente ativado mais recentemente, pela mesma regra dos outros —
+ * sem destinatário padrão. O aceite do handoff dele continua no card PRÓPRIO
+ * (RN-499), fora do fio: `offeredHandoff` o exclui por nome. `qa` segue de
+ * fora — lead de ÁREA sem cláusula de `message`.
+ *
+ * NÃO é gerada: `SOLO_CONVERSATIONAL_AGENTS` (gerada por `gerar:areas`) é a
+ * lista de agentes SEM área que um handoff manual endereça, e o Infra Lead é
+ * lead de área — não entra lá.
  *
  * Movida para cá na extração do hook `useSessionReadiness` (PR 5/5, ADR
  * 0122) porque o loop de `activeAgent` é quem a usa — `SessionPage.tsx`
@@ -33,6 +41,7 @@ export const AGENTES_DE_CHAT = [
   'dev-lead',
   'ux-designer',
   'staff',
+  'infra',
 ] as const;
 
 export interface SessionReadiness {

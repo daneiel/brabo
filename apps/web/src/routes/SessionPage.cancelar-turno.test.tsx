@@ -235,3 +235,45 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
     );
   });
 });
+
+describe('SessionPage — o composer oferece o Infra Lead (RN-617)', () => {
+  // Criativo primeiro, Infra depois: o destinatário é o agente ativado mais
+  // RECENTE entre os que conversam (RN-584, sem destinatário padrão). Até a
+  // RN-617 `infra` não estava em `AGENTES_DE_CHAT` e a mensagem seguia para o
+  // Criativo — o agente que a pessoa não via mais falando.
+  const comInfraAtiva = [
+    ...eventosIniciais,
+    {
+      id: 'e1',
+      seq: 2,
+      type: 'agent.activated',
+      actor: { kind: 'agent', id: 'infra' },
+      payload: { agent: 'infra' },
+      createdAt: '2026-08-10T12:00:01.000Z',
+    },
+  ];
+
+  it('envia ao Infra Lead e o "Parar" para o turno DELE', async () => {
+    eventos.mockReturnValue({ items: comInfraAtiva });
+    sendAgentMessage.mockImplementation(() => new Promise<void>(() => {}));
+    cancelAgentTurn.mockResolvedValue({ ok: true });
+
+    montar();
+    await enviarMensagem('por que essa imagem?');
+
+    await waitFor(() =>
+      expect(sendAgentMessage).toHaveBeenCalledWith(
+        'proj-1',
+        ID,
+        'infra',
+        'por que essa imagem?',
+      ),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Parar' }));
+
+    await waitFor(() =>
+      expect(cancelAgentTurn).toHaveBeenCalledWith('proj-1', ID, 'infra'),
+    );
+  });
+});

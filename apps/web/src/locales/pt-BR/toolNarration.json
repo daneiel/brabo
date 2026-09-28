@@ -19,7 +19,11 @@
     "propose_execution_plan": "Montando o plano de execução",
     "assess_implementability": "Avaliando se a história é implementável",
     "propose_prototype": "Desenhando o protótipo",
-    "propose_rfc": "Redigindo a RFC"
+    "propose_rfc": "Redigindo a RFC",
+    "validate_infra_file": "Validando um arquivo de infra",
+    "propose_infra_pr": "Preparando a PR de infra",
+    "propose_container_start": "Propondo a subida do container",
+    "container_start_via_runner": "Propondo a subida do container na sua máquina"
   },
   "fallback": "Usando {{tool}}…"
 }

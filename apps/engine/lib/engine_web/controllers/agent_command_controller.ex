@@ -10,9 +10,10 @@ defmodule EngineWeb.AgentCommandController do
   nomeados quando o agente recusa antes de subir (`responder_ao_aceite/2`).
 
   Desde a RN-584, `message/2` não tem destinatário padrão: cada agente que
-  conversa tem cláusula PRÓPRIA, e todo o resto — `infra` inclusive — é 422
-  nomeado. Até lá a última cláusula não olhava o agente e entregava ao
-  Criativo o que fosse escrito para qualquer outro.
+  conversa tem cláusula PRÓPRIA, e todo o resto é 422 nomeado. Até lá a
+  última cláusula não olhava o agente e entregava ao Criativo o que fosse
+  escrito para qualquer outro. Desde a RN-617 (ADR 0175) o Infra Lead é o
+  sétimo com cláusula — até ali ele era a recusa nomeada da RN-584.
   """
 
   use EngineWeb, :controller
@@ -40,7 +41,7 @@ defmodule EngineWeb.AgentCommandController do
   # nome —, só separa, na recusa, "mandou sem texto" de "não conversa".
   # `scripts/ci/destinos-do-composer.spec.ts` reprova esta lista divergindo das
   # cláusulas, e as cláusulas divergindo do que a tela oferece.
-  @agentes_de_conversa ~w(criativo po arquiteto dev-lead ux-designer staff)
+  @agentes_de_conversa ~w(criativo po arquiteto dev-lead ux-designer staff infra)
 
   def start(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => "criativo"}) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
@@ -182,24 +183,22 @@ defmodule EngineWeb.AgentCommandController do
     responder_ao_aceite(conn, CriativoServer.user_message(session_id, text))
   end
 
-  # O Infra Lead NÃO recebe mensagem de chat (RN-584), e a recusa é NOMEADA.
-  # Não é falta de código: `InfraLeadServer` é PROPOSITIVO (RN-499) — o
-  # trabalho dele chega como proposta (PR de infra, subida de container) —
-  # e o `user_message/2` que ele ainda exporta roda o turno INTEIRO dentro do
-  # `handle_call` (até 180 s), sem o aceite do ADR 0163 e sem "Parar"
-  # (`via_for/2` não o conhece). Dar a ele uma cláusula aqui devolveria ao
-  # clique a espera que a RN-578 tirou; decidir se ele passa a conversar é
-  # decisão de produto, não correção.
-  def message(conn, %{"agent" => "infra"} = params) do
-    recusar_mensagem(
-      conn,
-      params,
-      422,
-      "agente_sem_conversa",
-      "O Infra Lead não conversa pelo chat: ele trabalha por proposta — a PR " <>
-        "de infra e a subida do container —, e o que pede decisão aparece em " <>
-        "Aprovações. A mensagem ficou registrada, mas nenhum agente a leu."
-    )
+  # O Infra Lead conversa desde a RN-617 (ADR 0175). Até ali esta cabeça era
+  # a recusa NOMEADA da RN-584 (`agente_sem_conversa`), porque o turno dele
+  # rodava INTEIRO dentro do `handle_call` — sem o aceite do ADR 0163 e sem
+  # "Parar". A cláusula só nasceu depois de o turno migrar para
+  # `TurnoAssincrono`: a resposta é o ACEITE, como nos outros seis, e o que
+  # ele faz com efeito externo continua nascendo `proposed_action`.
+  def message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => "infra",
+        "text" => text
+      }) do
+    # Start SEM kickoff: o kickoff é do handoff aceito (`start/2`); aqui o
+    # agente só é reerguido se o engine reiniciou, e reidrata no `init/1`.
+    {:ok, _pid, _origin} = InfraLeadSupervisor.start_agent(session_id, project_id)
+    responder_ao_aceite(conn, InfraLeadServer.user_message(session_id, text))
   end
 
   def message(conn, %{"agent" => agent} = params) when agent in @agentes_de_conversa do
@@ -378,7 +377,7 @@ defmodule EngineWeb.AgentCommandController do
     # O nome vem da rota pública: só vira ator quando é um agente que o
     # roster conhece; qualquer outra coisa é o próprio engine falando.
     {kind, id} =
-      if agent in ["infra" | @agentes_de_conversa],
+      if agent in @agentes_de_conversa,
         do: {"agent", agent},
         else: {"system", "engine"}
 
@@ -413,5 +412,6 @@ defmodule EngineWeb.AgentCommandController do
   defp via_for("dev-lead", session_id), do: {:ok, DevLeadServer.via(session_id)}
   defp via_for("ux-designer", session_id), do: {:ok, UxDesignerServer.via(session_id)}
   defp via_for("staff", session_id), do: {:ok, StaffServer.via(session_id)}
+  defp via_for("infra", session_id), do: {:ok, InfraLeadServer.via(session_id)}
   defp via_for(_agent, _session_id), do: :error
 end
