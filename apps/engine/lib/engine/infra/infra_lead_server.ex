@@ -44,6 +44,25 @@ defmodule Engine.Infra.InfraLeadServer do
   quando o projeto não tem repositório (`recusa_de_infra_pr/4`) — o mesmo
   predicado que `ExecuteInfraPrUseCase` aplica na api, lido do mesmo Postgres.
 
+  ## O sétimo conversacional (RN-617, ADR 0175)
+
+  Desde a RN-617 ele também CONVERSA pelo composer: `message/2` do
+  `EngineWeb.AgentCommandController` tem cláusula própria para `infra`, e a
+  tela o oferece como destinatário quando ele é o agente ativado mais
+  recentemente (RN-584 — sem destinatário padrão). Antes disso o turno dele
+  inteiro rodava DENTRO do `handle_call`/`handle_cast`: o clique esperava o
+  turno (180 s de teto), "Parar" nunca era atendido e o reinício no meio
+  deixava o `working` preso. Agora os três turnos — kickoff, correção de gate
+  e mensagem — sobem por `Engine.Agents.TurnoAssincrono`: o aceite sai com o
+  `agent.status: working` já gravado, a segunda mensagem é 409
+  `turno_em_andamento`, "Parar" mata a Task, o turno órfão fecha por
+  `Engine.Agents.TurnoOrfao` e o histórico vem de `Engine.Agents.Reidratacao`.
+
+  Conversar NÃO abre caminho novo de efeito externo: as ferramentas são as
+  mesmas quatro, e tudo que tem efeito continua nascendo `proposed_action`
+  (a PR de infra e as duas subidas de container, com as recusas locais das
+  RN-566/RN-610/RN-577 intactas).
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -89,11 +108,21 @@ defmodule Engine.Infra.InfraLeadServer do
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
   # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
   alias Engine.Runners.Registry, as: RunnerRegistry
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "infra"
 
-  alias Engine.Agents.{FalhaDeTurno, Reidratacao, ResultadoDeFerramenta}
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
+  # O teto de iterações do laço do Infra Lead — o de sempre dele, e o mesmo de
+  # Arquiteto, Dev Lead, UX Designer e Staff (raciocínio, não conversa leve).
+  # Continua valendo para os três turnos, a mensagem do composer inclusive.
   @max_iterations 14
 
   # --- API pública ---
@@ -107,6 +136,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
+  # A mensagem do composer (RN-617, ADR 0175). O `handle_call` responde ao
+  # ACEITAR (ADR 0163, RN-578) — o turno roda numa Task de `TurnoAssincrono` —,
+  # então o teto do `GenServer.call` só cobre o aceite, nunca o turno. É o
+  # mesmo número dos outros seis conversacionais, e deixou de competir com os
+  # 225 s do `propose_action` de container (RN-605), que agora corre DENTRO da
+  # Task, sem ninguém esperando síncrono.
   def user_message(session_id, text),
     do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
 
@@ -123,6 +158,12 @@ defmodule Engine.Infra.InfraLeadServer do
       :pinned => true
     }
 
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta). Até a RN-617 o Infra Lead ficava de
+    # fora — o turno dele rodava no `handle_call`, sem o `working` gravado
+    # antes do aceite; agora ele passa pelo MESMO `TurnoAssincrono` dos outros.
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
@@ -136,22 +177,35 @@ defmodule Engine.Infra.InfraLeadServer do
          ProposeInfraPr.spec(),
          ProposeContainerStart.spec(),
          ProposeContainerStartViaRunner.spec()
-       ]
+       ],
+       # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
+       # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
+       # do turno, e uma segunda mensagem ser RECUSADA com nome em vez de
+       # esperar na fila do processo.
+       turno_assincrono: nil,
+       # Correção de gate (`{:correct, _}`) que chegou com um turno em curso:
+       # guardada e rodada no fecho, na ordem de chegada. Antes da RN-617 o
+       # turno bloqueava o processo e o cast esperava na caixa de mensagens;
+       # sem esta fila o `TurnoAssincrono` a DESCARTARIA (sem `from`, com turno
+       # em curso, ele só loga) — e o gate pediria mudança a ninguém.
+       correcoes_pendentes: []
      }}
   end
 
+  # Os três turnos — kickoff, correção de gate e mensagem do composer — rodam
+  # pelo MESMO `TurnoAssincrono` (RN-617). O kickoff continua sendo um cast
+  # disparado só no start FRESCO; o que mudou é ONDE ele roda: numa Task, e
+  # por isso "Parar" o alcança e uma mensagem que chega no meio dele recebe
+  # 409 `turno_em_andamento` em vez de esperar o turno inteiro na fila.
   @impl true
   def handle_cast(:kickoff, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
+    TurnoAssincrono.iniciar(state, nil, fn ->
       state
       |> append(user_msg(kickoff_instruction(state)))
       |> compact()
       |> run_turn(@max_iterations)
-      |> conclude()
-
-    {:noreply, state}
+      |> concluir()
+    end)
   end
 
   # Gate (QA/SecOps) reprovou (Fase 4a) — corrige na MESMA branch/PR:
@@ -161,9 +215,72 @@ defmodule Engine.Infra.InfraLeadServer do
   # dos dois é "dono" do finding, e `ExecuteInfraPrUseCase` já recommita na
   # mesma PR quando o artefato de sessão já existe (idempotente).
   @impl true
-  def handle_cast({:correct, findings}, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_cast({:correct, findings}, %{turno_assincrono: %{}} = state) do
+    {:noreply, Map.update(state, :correcoes_pendentes, [findings], &(&1 ++ [findings]))}
+  end
 
+  @impl true
+  def handle_cast({:correct, findings}, state) do
+    {:noreply, iniciar_correcao(state, findings)}
+  end
+
+  @impl true
+  def handle_cast(:cancel, state) do
+    {:noreply, state |> TurnoAssincrono.cancelar() |> drenar_correcao_pendente()}
+  end
+
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
+  @impl true
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+
+    TurnoAssincrono.iniciar(state, from, fn ->
+      work |> run_turn(@max_iterations) |> concluir()
+    end)
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      # A fila vem do state ANTERIOR à mensagem: o `novo_state` é o que a Task
+      # devolveu, e ela capturou o state do INÍCIO do turno — antes de a
+      # correção chegar e entrar na fila (o mesmo raciocínio do
+      # `handoff_dev_pendente` do Arquiteto).
+      {:ok, novo_state} ->
+        pendentes = Map.get(state, :correcoes_pendentes, [])
+
+        {:noreply,
+         novo_state
+         |> Map.put(:correcoes_pendentes, pendentes)
+         |> drenar_correcao_pendente()}
+
+      :ignorado ->
+        {:noreply, state}
+    end
+  end
+
+  defp drenar_correcao_pendente(%{turno_assincrono: nil} = state) do
+    case Map.get(state, :correcoes_pendentes, []) do
+      [] ->
+        state
+
+      [findings | resto] ->
+        state
+        |> Map.put(:correcoes_pendentes, resto)
+        |> iniciar_correcao(findings)
+    end
+  end
+
+  defp drenar_correcao_pendente(state), do: state
+
+  defp iniciar_correcao(state, findings) do
     instruction =
       user_msg(
         "O gate #{findings.gate} pediu mudanças: #{findings.reason}\n" <>
@@ -174,28 +291,16 @@ defmodule Engine.Infra.InfraLeadServer do
           "os seus arquivos — o Workflows é rerrodado junto e a correção dele entra na mesma PR."
       )
 
-    state =
-      state
-      |> append(instruction)
-      |> compact()
-      |> run_turn(@max_iterations)
-      |> conclude()
+    {:noreply, novo_state} =
+      TurnoAssincrono.iniciar(state, nil, fn ->
+        state
+        |> append(instruction)
+        |> compact()
+        |> run_turn(@max_iterations)
+        |> concluir()
+      end)
 
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn(@max_iterations)
-      |> conclude()
-
-    {:reply, :ok, state}
+    novo_state
   end
 
   # --- Turno com loop bounded de tool use ---
@@ -203,7 +308,18 @@ defmodule Engine.Infra.InfraLeadServer do
   # `{:done, state}` — turno acabou sem propor (sem tool call, ou limite de
   # iterações). `{:proposed, title, files, state}` — o modelo chamou
   # `propose_infra_pr`; o turno HALTS aqui, sem consumir mais iterações.
-  defp run_turn(state, remaining) when remaining <= 0, do: {:done, state}
+  #
+  # O teto (`@max_iterations`, 14) deixou de ser SILENCIOSO na RN-617, a mesma
+  # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
+  # evento nenhum, indistinguível de um turno que simplesmente acabou.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    {:done, state}
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -642,24 +758,18 @@ defmodule Engine.Infra.InfraLeadServer do
 
   # --- Conclusão do turno: consolida com o Workflows e propõe (ou bloqueia) ---
 
-  # `agent.status` só aceita "working"/"idle" (`LiveBroadcast.agent_status/4`
-  # — contrato compartilhado com Criativo/PO/Arquiteto, não estendo pra um
-  # terceiro valor). "blocked" descreveria o DESFECHO da rodada, não se o
-  # agente está disponível — o agente terminou o turno de qualquer jeito, e
-  # o desfecho de bloqueio já fica visível pelo evento `dev.error` que
-  # `aplicar/2` emite.
-  defp conclude({:proposed, title, files, state}) do
+  # O fim do turno, DENTRO da Task: consolida com o Workflows e propõe (ou
+  # bloqueia) e devolve o `state` — o contrato de `TurnoAssincrono`. Os sinais
+  # de fim (`agent.done` no canal, `agent.status: idle` no log) NÃO saem daqui:
+  # quem os emite é `TurnoAssincrono.finalizar/1`, no processo do servidor,
+  # depois de o turno sair do state (RN-585). O desfecho de bloqueio fica
+  # visível pelo `dev.error` que `aplicar/2` emite.
+  defp concluir({:proposed, title, files, state}) do
     {_status, state} = finalize(state, title, files)
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
     state
   end
 
-  defp conclude({:done, state}) do
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    state
-  end
+  defp concluir({:done, state}), do: state
 
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
@@ -924,13 +1034,8 @@ defmodule Engine.Infra.InfraLeadServer do
     :ok
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # O `agent.status` (persistido, ADR 0021) saiu daqui na RN-617: quem o
+  # grava é `TurnoAssincrono`, no aceite (`working`) e no fecho (`idle`).
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

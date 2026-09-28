@@ -9,6 +9,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
   alias Engine.Infra.InfraLeadServer
   alias Engine.Sessions.FakeEngineApiClient
+  import Engine.Agents.TurnoAssincronoCase, only: [sync_call: 3, sync_cast: 3]
 
   setup do
     root =
@@ -116,7 +117,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       })
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "open_infra_pr", %{kind: "agent", id: "infra"}, payload}
     paths = Enum.map(payload.files, & &1["path"])
@@ -156,7 +157,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       })
     ])
 
-    assert {:noreply, _} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "open_infra_pr", _actor, payload}
     paths = Enum.map(payload.files, & &1["path"])
@@ -179,7 +180,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       # ToolLoop encerra com {:ok, ctx} (sem emit_infra_delegation_result).
     ])
 
-    assert {:noreply, _} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "open_infra_pr", _, _}
 
@@ -229,7 +230,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       })
     ])
 
-    assert {:noreply, _} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "open_infra_pr", %{kind: "agent", id: "infra"}, _payload}
   end
@@ -245,7 +246,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("Ainda estou analisando os módulos.")
     ])
 
-    assert {:noreply, _} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "open_infra_pr", _, _}
   end
@@ -270,7 +271,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       })
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "indisponível"))
@@ -314,7 +315,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     ])
 
     findings = %{gate: "qa", reason: "lint falhou", diagnosis: "DL3006: pin a versão"}
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast({:correct, findings}, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, {:correct, findings}, state)
 
     assert_received {:propose_action, "open_infra_pr", _actor, _payload}
     assert_received {:delegation_recorded, %{subagent: "infra-lead"}}
@@ -330,7 +331,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("feito")])
 
     assert {:reply, :ok, _} =
-             InfraLeadServer.handle_call({:user_message, "gere os artefatos"}, self(), state)
+             sync_call(InfraLeadServer, {:user_message, "gere os artefatos"}, state)
 
     assert_received %Phoenix.Socket.Broadcast{
       event: "agent.status",
@@ -394,7 +395,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # MAPA na primeira posição — que não casava com NENHUMA cláusula de
     # `conclude/1` (só `{:proposed, _, _, _}` e `{:done, _}`), e o
     # `FunctionClauseError` matava o processo `:temporary` pra sempre.
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:event_appended, _pid, _sid,
                      %{type: "agent.error", payload: %{mensagem: mensagem}}}
@@ -432,7 +433,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("pronto-cs")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "container_start", %{kind: "agent", id: "infra"}, payload}
     assert payload.imagem == "node:22-bookworm-slim"
@@ -476,7 +477,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("pronto-cs-mounted")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "container_start", %{kind: "agent", id: "infra"}, payload}
     assert payload.imagem == "node:22-bookworm-slim"
@@ -500,7 +501,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar-cs")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     # A metade que importa: a api NUNCA foi chamada.
     refute_received {:propose_action, "container_start", _, _}
@@ -558,7 +559,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-do-409")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
     assert recusa["content"] =~ "container_start recusado: Esta instalação não tem broker"
@@ -587,7 +588,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar-pr")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     # A api NUNCA foi chamada, e o Workflows (um laço de LLM pago) nunca rodou:
     # nenhuma delegação registrada para uma PR que não pode existir.
@@ -633,7 +634,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar-sem-projeto")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "container_start", _, _}
 
@@ -718,7 +719,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-do-via-runner")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:event_appended, _pid, _sid,
                      %{type: "tool.call", payload: %{tool: "container_start_via_runner"}}}
@@ -820,7 +821,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar-de-pe")
     ])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "container_start", _, _}
 
@@ -855,7 +856,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("pronto-sem-img")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "container_start", _, _}
   end
@@ -880,7 +881,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("pronto-csvr")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     assert_received {:propose_action, "container_start_via_runner", %{kind: "agent", id: "infra"},
                      payload}
@@ -916,7 +917,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "container_start_via_runner", _, _}
 
@@ -955,7 +956,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       FakeEngineApiClient.final_response("depois-de-recusar")
     ])
 
-    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, _new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     refute_received {:propose_action, "container_start_via_runner", _, _}
   end
@@ -984,7 +985,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
     assert user_msg["content"] =~ "api: node:22-bookworm-slim — estabilidade e LTS"
@@ -1000,7 +1001,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
 
@@ -1017,11 +1018,145 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
 
-    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+    assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
 
     user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
 
     assert user_msg["content"] =~
              "(sem roteamento vigente — o Arquiteto não rodou route_modules_to_infra nesta sessão)"
+  end
+
+  # RN-617 (ADR 0175, AT-141): o Infra Lead vira o SÉTIMO conversacional. Antes
+  # o turno dele inteiro rodava DENTRO do `handle_call`: o clique esperava o
+  # turno, "Parar" nunca era atendido e uma segunda mensagem ficava na fila.
+  describe "o turno pelo TurnoAssincrono (RN-617)" do
+    test "aceite imediato: responde :ok com o turno AINDA rodando, e o working já gravado",
+         %{state: state} do
+      Process.put(:fake_llm_turn_stream_hang, true)
+      from = {self(), make_ref()}
+
+      assert {:reply, :ok, %{turno_assincrono: %{task: %Task{}}} = em_curso} =
+               InfraLeadServer.handle_call({:user_message, "sobe o container?"}, from, state)
+
+      # A ORDEM é contrato (ADR 0163): o `working` está no log ANTES do aceite.
+      assert status_gravados() == ["working"]
+      assert_receive :turno_pendurado, 1_000
+
+      _ = InfraLeadServer.handle_cast(:cancel, em_curso)
+    end
+
+    test "segunda mensagem com turno em curso: recusa NOMEADA e durável, nada é lido",
+         %{state: state} do
+      Process.put(:fake_llm_turn_stream_hang, true)
+
+      {:reply, :ok, em_curso} =
+        InfraLeadServer.handle_call({:user_message, "primeira"}, {self(), make_ref()}, state)
+
+      assert_receive :turno_pendurado, 1_000
+
+      assert {:reply, {:error, :turno_em_andamento}, mesmo} =
+               InfraLeadServer.handle_call(
+                 {:user_message, "Continue"},
+                 {self(), make_ref()},
+                 em_curso
+               )
+
+      assert mesmo.turno_assincrono == em_curso.turno_assincrono
+      refute Enum.any?(mesmo.messages, &(&1["content"] == "Continue"))
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "agent.error",
+                         actorId: "infra",
+                         payload: %{reason: "turno_em_andamento"}
+                       }}
+
+      _ = InfraLeadServer.handle_cast(:cancel, mesmo)
+    end
+
+    test "Parar: mata a Task no meio, grava o desfecho e devolve o agente ocioso",
+         %{state: state, session_id: session_id} do
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+      Process.put(:fake_llm_turn_stream_hang, true)
+
+      {:reply, :ok, %{turno_assincrono: %{task: %Task{pid: task_pid}}} = em_curso} =
+        InfraLeadServer.handle_call({:user_message, "gere"}, {self(), make_ref()}, state)
+
+      assert_receive :turno_pendurado, 1_000
+
+      assert {:noreply, parado} = InfraLeadServer.handle_cast(:cancel, em_curso)
+
+      assert parado.turno_assincrono == nil
+      refute Process.alive?(task_pid)
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "agent.error",
+                         actorId: "infra",
+                         payload: %{reason: "cancelado_pelo_usuario"}
+                       }}
+
+      assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+      assert "idle" in status_gravados()
+    end
+
+    test "sem turno em curso, Parar é no-op", %{state: state} do
+      assert {:noreply, ^state} = InfraLeadServer.handle_cast(:cancel, state)
+    end
+
+    test "correção de gate com turno em curso NÃO é descartada: roda no fecho", %{state: state} do
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.final_response("olá"),
+        FakeEngineApiClient.final_response("corrigido")
+      ])
+
+      {:reply, :ok, %{turno_assincrono: %{task: %Task{ref: ref}}} = em_curso} =
+        InfraLeadServer.handle_call({:user_message, "oi"}, {self(), make_ref()}, state)
+
+      findings = %{gate: "qa", reason: "lint falhou", diagnosis: "DL3006"}
+      {:noreply, com_fila} = InfraLeadServer.handle_cast({:correct, findings}, em_curso)
+      assert com_fila.correcoes_pendentes == [findings]
+
+      assert_receive {^ref, resultado}, 5_000
+      {:noreply, depois} = InfraLeadServer.handle_info({ref, resultado}, com_fila)
+
+      # A correção subiu como turno NOVO no fecho do primeiro.
+      assert depois.correcoes_pendentes == []
+      assert %{turno_assincrono: %{task: %Task{ref: ref2}}} = depois
+      assert_receive {^ref2, resultado2}, 5_000
+      {:noreply, fim} = InfraLeadServer.handle_info({ref2, resultado2}, depois)
+
+      assert fim.turno_assincrono == nil
+      assert Enum.any?(fim.messages, &(&1["content"] =~ "O gate qa pediu mudanças"))
+    end
+
+    test "teto de iterações esgotado é narrado (toolloop.limit_reached)", %{state: state} do
+      Process.put(
+        :fake_llm_turns,
+        List.duplicate(
+          tool_turn("validate_infra_file", %{"path" => "Dockerfile", "content" => "FROM node:20"}),
+          14
+        )
+      )
+
+      assert {:reply, :ok, _} = sync_call(InfraLeadServer, {:user_message, "valide"}, state)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "toolloop.limit_reached", payload: %{max_iterations: 14}}}
+    end
+  end
+
+  defp status_gravados(acc \\ []) do
+    receive do
+      {:event_appended, _, _, %{type: "agent.status", payload: %{status: s}}} ->
+        status_gravados([s | acc])
+
+      {:event_appended, _, _, _} ->
+        status_gravados(acc)
+    after
+      0 -> Enum.reverse(acc)
+    end
   end
 end

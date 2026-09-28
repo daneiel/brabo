@@ -1,8 +1,8 @@
 defmodule Engine.Agents.ReidratacaoDosSeisTest do
   @moduledoc """
-  RN-580 nos SEIS conversacionais: cada um sobe pelo MESMO caminho
+  RN-580 nos SETE conversacionais (o Infra Lead desde a RN-617): cada um sobe pelo MESMO caminho
   (`Engine.Agents.Reidratacao`). O teste passa pelo `init/1` de verdade de cada
-  servidor — é ele que prova que nenhum dos seis ficou com a cópia antiga de
+  servidor — é ele que prova que nenhum deles ficou com a cópia antiga de
   `rehydrate/2`, que lia o começo e ignorava pergunta e ferramenta.
 
   Também as leituras de kickoff que liam os PRIMEIROS 200 eventos de todos os
@@ -20,6 +20,7 @@ defmodule Engine.Agents.ReidratacaoDosSeisTest do
     UxDesignerServer
   }
 
+  alias Engine.Infra.InfraLeadServer
   alias Engine.Sessions.FakeEngineApiClient
   import Engine.Agents.TurnoAssincronoCase, only: [sync_call: 3, sync_cast: 3]
 
@@ -52,7 +53,10 @@ defmodule Engine.Agents.ReidratacaoDosSeisTest do
     {ArquitetoServer, "arquiteto"},
     {DevLeadServer, "dev-lead"},
     {UxDesignerServer, "ux-designer"},
-    {StaffServer, "staff"}
+    {StaffServer, "staff"},
+    # O sétimo desde a RN-617: o turno do Infra Lead migrou para o
+    # `TurnoAssincrono`, e com ele a reidratação e o fecho do órfão.
+    {InfraLeadServer, "infra"}
   ]
 
   for {modulo, agente} <- @seis do

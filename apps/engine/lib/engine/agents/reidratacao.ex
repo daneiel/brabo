@@ -1,9 +1,9 @@
 defmodule Engine.Agents.Reidratacao do
   @moduledoc """
-  O caminho ÚNICO pelo qual os seis agentes conversacionais (Criativo, PO,
-  Arquiteto, Dev Lead, UX Designer e Staff) reconstroem a conversa a partir do
-  event log quando o processo deles sobe sobre uma sessão que já tem conversa
-  (RN-580). Antes cada um tinha a SUA cópia de `rehydrate/2` + `to_message/1`,
+  O caminho ÚNICO pelo qual os agentes conversacionais (Criativo, PO,
+  Arquiteto, Dev Lead, UX Designer, Staff e, desde a RN-617, o Infra Lead)
+  reconstroem a conversa a partir do event log quando o processo deles sobe
+  sobre uma sessão que já tem conversa (RN-580). Antes cada um tinha a SUA cópia de `rehydrate/2` + `to_message/1`,
   as seis idênticas, e as seis com os mesmos três defeitos:
 
     1. **Liam o COMEÇO, não o fim.** `list_events/2` pede `limit=200` sem

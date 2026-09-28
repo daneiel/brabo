@@ -22,6 +22,7 @@ defmodule Engine.Agents.TurnoOrfaoTest do
     UxDesignerServer
   }
 
+  alias Engine.Infra.InfraLeadServer
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
@@ -66,7 +67,10 @@ defmodule Engine.Agents.TurnoOrfaoTest do
     {ArquitetoServer, "arquiteto"},
     {DevLeadServer, "dev-lead"},
     {UxDesignerServer, "ux-designer"},
-    {StaffServer, "staff"}
+    {StaffServer, "staff"},
+    # O sétimo desde a RN-617: o turno do Infra Lead migrou para o
+    # `TurnoAssincrono`, e com ele a reidratação e o fecho do órfão.
+    {InfraLeadServer, "infra"}
   ]
 
   for {modulo, agente} <- @seis do
