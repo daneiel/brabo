@@ -1091,7 +1091,14 @@ make k8s-down         # removes the cluster
 ```
 
 Variables: `BRABO_SKIP_BUILD=1` (uses the daemon's images),
-`BRABO_KEEP_CLUSTER=1` (reuses the cluster), `BRABO_CLUSTER_TOOL=kind`.
+`BRABO_KEEP_CLUSTER=1` (reuses the cluster), `BRABO_CLUSTER_TOOL=kind`,
+`BRABO_SKIP_OBSERVABILITY=1` (no Tempo, Loki, Collector, Alloy or Grafana —
+AT-177). The last one is an explicit opt-out for the scheduled proofs and the
+default does not change: `make deploy-local` still brings the whole stack up.
+Prometheus and the prometheus-adapter stay either way, because the engine's HPA
+scales on `oban_queue_depth` through the External Metrics API they serve.
+Independent helm releases (ESO, CNPG, metrics-server, Prometheus) install in
+parallel; each writes its own log, printed only if it fails.
 
 ### Validating a pipeline tag {#validar-tag-do-pipeline}
 
@@ -2508,7 +2515,9 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
 1. installs `k3d`, `helm` and `kubectl` by pinned checksum;
 2. runs `deploy/k8s/bootstrap.sh` — the same bootstrap `make deploy-local`
    runs, building the four production images from the checked-out tree (no
-   registry, no secret);
+   registry, no secret) — with `BRABO_SKIP_OBSERVABILITY=1` (AT-177): none of
+   the proofs reads Tempo, Loki, the Collector, Alloy or Grafana, and that is
+   the only difference from the cluster `make deploy-local` gives you;
 3. runs `make smoke-k8s`, then `make hpa-test`, `make rollout-test` and
    `make test-restore`, in the `Makefile`'s order, each one even when an earlier
    one failed (a broken HPA must not hide a broken restore);
@@ -2562,6 +2571,12 @@ free disk on `ubuntu-latest`):
 | whole job | 12 min 56 s |
 
 (First fully green run, `34784563928`, on 2026-09-13.)
+
+With `BRABO_SKIP_OBSERVABILITY=1` and the operators in parallel (AT-177), the
+helm phase went from 253 s (run `36362479629`, on `dev`) to 89–90 s, the
+bootstrap from 710 s to 547–555 s and the whole job from 13 min 43 s to
+10 min 59 s (runs `36367504128` and `36368334920`). The image build (141–161 s)
+and the `seed-smoke` wait (still 180 s) are unchanged by it.
 
 The cadence follows that cost. Almost all of it is the bootstrap, which a
 nightly run would pay seven times a week to re-prove properties whose code
