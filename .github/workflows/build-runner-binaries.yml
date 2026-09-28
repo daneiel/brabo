@@ -4,10 +4,10 @@ name: Build runner binaries
 # build --compile)"), até agora fora de escopo. Workflow PRÓPRIO, disparado
 # pela MESMA tag final de `release.yml`/`publish-runner.yml` — mesma
 # disciplina do ADR 0030 ("workflow PRÓPRIO disparado pela tag... nada a
-# religar aqui"). Cinco binários (um por plataforma do backlog), cada um
-# construído no seu runner NATIVO — nunca cross-compila addon nativo — e
-# anexado à MESMA GitHub Release que `release.yml` cria (`gh release
-# upload`, nunca `create`).
+# religar aqui"). Quatro binários (um por plataforma — o Mac Intel saiu no
+# ADR 0174 e fica com o pacote npm), cada um construído no seu runner
+# NATIVO — nunca cross-compila addon nativo — e anexado à MESMA GitHub
+# Release que `release.yml` cria (`gh release upload`, nunca `create`).
 #
 # Roda em PARALELO a `release.yml`/`publish-runner.yml`, sem `needs:` — a
 # única dependência real é a Release EXISTIR, e o passo de upload ESPERA por
@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        # VAZIA = ENSAIO: constrói e roda o smoke nas cinco plataformas a
+        # VAZIA = ENSAIO: constrói e roda o smoke nas quatro plataformas a
         # partir da branch escolhida, e NÃO anexa nada a Release nenhuma.
         #
         # Existe porque estes binários só eram construídos numa tag, e foi
@@ -43,7 +43,7 @@ env:
   NODE_VERSION: '24.11.1'
   PNPM_VERSION: '11.3.0'
   # `oven-sh/setup-bun` aceita "latest", mas fixar a versão evita que uma
-  # release do Bun quebre os cinco builds ao mesmo tempo sem aviso — mesmo
+  # release do Bun quebre os quatro builds ao mesmo tempo sem aviso — mesmo
   # raciocínio que já vale para NODE_VERSION/PNPM_VERSION no resto do repo.
   BUN_VERSION: '1.4.0'
 
@@ -58,7 +58,7 @@ jobs:
     name: Binário (${{ matrix.target }})
     strategy:
       # `fail-fast: false` — uma plataforma falhando não deve impedir as
-      # outras quatro de publicar o binário delas. O ADR 0112 documenta
+      # outras três de publicar o binário delas. O ADR 0112 documenta
       # exatamente qual plataforma foi validada de ponta a ponta neste
       # sandbox (só linux-x64) e quais dependem só desta matriz para a
       # primeira prova real.
@@ -74,20 +74,15 @@ jobs:
           # `node-gyp rebuild` compila local aqui como em `linux-x64`.
           - target: linux-arm64
             os: ubuntu-24.04-arm
-          # `macos-13` NÃO TEM RUNNER: a imagem macOS 13 foi aposentada pelo
-          # GitHub (changelog de 2025-09-19, fim em dez/2025), e o job fica
-          # 24h00m01s na fila e é cancelado nas três tags (`v4.0.0`, `v4.0.1`,
-          # `v5.0.0`) — de novo 30min na fila, sem runner, no ensaio de
-          # 2026-09-13 (run 34769280227). O label Intel que o GitHub oferece no
-          # lugar, `macos-15-intel`, FOI medido no mesmo dia e agenda em 3–22s
-          # (cinco runs) e CONSTRÓI — mas reprova no `--self-test-pty`: sob o
-          # Bun o `onData` do node-pty nunca entrega a saída do filho (bug
-          # aberto oven-sh/bun#25822, sem release corrigida; a MESMA prova
-          # passa sob Node no mesmo runner, run 34770476634). O label fica
-          # como está, de propósito: trocá-lo não faz o alvo publicar, e
-          # tirar a plataforma ou esperar o Bun é decisão de dono (AT-065).
-          - target: darwin-x64
-            os: macos-13
+          # `darwin-x64` (Mac Intel) SAIU da matriz por decisão (ADR 0174,
+          # AT-065). `macos-13` não tem runner (imagem aposentada pelo GitHub
+          # em dez/2025: o job ficava 24h00m01s na fila nas três tags), e o
+          # substituto `macos-15-intel` agenda e constrói mas reprova no
+          # `--self-test-pty` — sob o Bun o `onData` do node-pty nunca entrega
+          # a saída do filho (oven-sh/bun#25822, aberto). A MESMA prova passa
+          # sob Node, então o Mac Intel fica com `npm install -g @brabo/runner`
+          # e o `install.sh` diz isso em vez de baixar. Religar o alvo é ADR
+          # novo, depois de o Bun corrigir — não é trocar o label.
           - target: darwin-arm64
             os: macos-14
           - target: win32-x64
@@ -134,7 +129,7 @@ jobs:
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] && [ -z "$ENTRADA" ]; then
             # ENSAIO: constrói a partir do que foi escolhido no dispatch e não
-            # anexa nada. Sem isto, a única forma de exercitar as cinco
+            # anexa nada. Sem isto, a única forma de exercitar as quatro
             # plataformas era cortar uma tag — e uma falha de plataforma só
             # aparecia com a Release já publicada.
             echo 'ensaio=true' >> "$GITHUB_OUTPUT"
@@ -268,7 +263,7 @@ jobs:
             echo "anexado: $nome -> $TAG"
           fi
 
-  # ADR 0149 (BRB-005) — UM `checksums.txt` assinado, não cinco assinaturas.
+  # ADR 0149 (BRB-005) — UM `checksums.txt` assinado, não uma assinatura por binário.
   #
   # Por que um job SEPARADO e não um passo dentro da matriz: cada job da
   # matriz roda numa plataforma diferente e enxerga só o PRÓPRIO binário. Um
@@ -276,8 +271,8 @@ jobs:
   # anexaram — e é por isso que este job baixa os assets da Release em vez de
   # ler `dist-bin/`, que aqui está vazio.
   #
-  # Cinco assinaturas separadas seriam cinco jeitos de a verificação ficar
-  # pela metade: quem verifica quatro e esquece o quinto não tem como saber
+  # Quatro assinaturas separadas seriam quatro jeitos de a verificação ficar
+  # pela metade: quem verifica três e esquece o quarto não tem como saber
   # que esqueceu. Um manifesto assinado cobre o conjunto com uma verificação
   # só, e é o formato que qualquer consumidor sabe ler.
   #
@@ -296,7 +291,9 @@ jobs:
     # **24h00m01s** na fila e é cancelado pelo teto do Actions, o MESMO
     # número nas três — ou seja, nunca recebe runner. Todos os outros quatro
     # jobs terminam em no máximo **4m18s** (linux-x64 na `v4.0.1`,
-    # 17:38:28Z → 17:42:44Z). Com `needs:`, o manifesto assinado só podia
+    # 17:38:28Z → 17:42:44Z). (O `darwin-x64` saiu da matriz no ADR 0174;
+    # a correção continua valendo para qualquer alvo que fique sem runner.)
+    # Com `needs:`, o manifesto assinado só podia
     # nascer UM DIA depois da Release, e para quem instala isso é o mesmo que
     # não nascer: sem `checksums.txt`, `GET /runner-releases/binary` recusa
     # com `release_sem_manifesto` (RN-525) e o `install.sh` recusa junto
@@ -323,12 +320,12 @@ jobs:
       contents: write # anexar o manifesto e o bundle à Release
       id-token: write # assinar keyless (a identidade é ESTE workflow)
     env:
-      # Os cinco alvos da matriz acima. Escrito aqui de novo, de propósito: é
-      # contra ESTA lista que a ausência é declarada, e uma lista derivada do
+      # Os quatro alvos da matriz acima (o `darwin-x64` saiu no ADR 0174).
+      # Escrito aqui de novo, de propósito: é contra ESTA lista que a ausência é declarada, e uma lista derivada do
       # que foi baixado nunca acusaria falta nenhuma. No JOB e não no passo
       # porque agora são DOIS passos que a leem — quem espera e quem declara —,
       # e duas cópias divergiriam no dia em que a matriz mudasse.
-      ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64'
+      ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-arm64 win32-x64'
     steps:
       - name: Qual tag
         id: alvo
@@ -385,7 +382,7 @@ jobs:
       #    `release.yml` leva).
       # 2. Os binários. Ausência aqui é ESPERADA e não é erro: é justamente o
       #    caso que o manifesto sabe declarar. O laço PARA cedo quando os
-      #    cinco chegam — que é o caminho feliz e o mais rápido — e desiste no
+      #    quatro chegam — que é o caminho feliz e o mais rápido — e desiste no
       #    teto quando algum não chega.
       #
       # O teto dos binários é 1200s = os `timeout-minutes: 20` do próprio job
@@ -489,8 +486,8 @@ jobs:
             exit 1
           fi
 
-          # O manifesto DIZ o que cobre. Um checksums que lista quatro e cala
-          # sobre o quinto é pior que nenhum: quem verifica os quatro conclui
+          # O manifesto DIZ o que cobre. Um checksums que lista três e cala
+          # sobre o quarto é pior que nenhum: quem verifica os três conclui
           # que verificou a release.
           # `$ASSETS_DO_INSTALADOR` sem aspas de propósito: é uma lista, um nome
           # por linha, e nenhum nome tem espaço (o script recusa a tabela que
