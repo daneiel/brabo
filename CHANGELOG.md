@@ -172,6 +172,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci/k8s**: o `produtor | grep -q x` sob `pipefail` deixa de reprovar sobre
+  um resultado verdadeiro nos outros cinco lugares onde a corrida da AT-241
+  existia (AT-242). O `grep -q` sai na linha que casa, o produtor que ainda
+  escreve morre de EPIPE e a pipeline falha: `bootstrap.sh` via um cluster k3d
+  ou kind que EXISTE como ausente (e o `cluster create` reprovava por nome
+  repetido), `test-restore.sh` contava a mutação PEGA como "reprovou por outro
+  motivo", o `smoke.sh` reprovava um `/metrics` acima de 64 KiB (medido: 260 de
+  300 rodadas a 86 KB), o `build-runner-binaries.yml` reenviava um binário já
+  anexado e o `install-e2e.yml` não enxergava a linha que já estava no journal.
+  A saída agora é lida inteira antes do `grep`, e o produtor que falha de
+  verdade ganha desfecho próprio onde antes virava "não casou". Os demais
+  `| grep -q` do repositório ficam: fora de `pipefail`, ou com produtor que
+  escreve numa vez só (medido por `strace`).
 - **instalação**: a instalação passa a drenar o outbox (AT-219). O
   `docker-compose.install.yml` herdou do compose de produção
   `START_OUTBOX_DRAIN=false` e `START_ANAMNESE=false`, com o motivo dele

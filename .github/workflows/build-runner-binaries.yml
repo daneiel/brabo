@@ -255,8 +255,13 @@ jobs:
             sleep "$INTERVALO_SEGUNDOS"
           done
 
-          ja_anexado="$(gh release view "$TAG" --json assets --jq ".assets[].name" | grep -qx "$nome" && echo true || echo false)"
-          if [ "$ja_anexado" = 'true' ]; then
+          # A lista é LIDA INTEIRA antes do `grep` (AT-242), nunca por pipe: o
+          # `gh --jq` escreve em pedaços, o `grep -q` sai no nome que casa e,
+          # sob `pipefail`, o EPIPE do resto faria um asset JÁ anexado parecer
+          # ausente — e o `upload` seguinte reprovaria por nome repetido.
+          anexados="$(gh release view "$TAG" --json assets --jq ".assets[].name")" \
+            || { echo "::error::não foi possível listar os assets de $TAG (a saída do gh está acima)"; exit 1; }
+          if grep -qx "$nome" <<<"$anexados"; then
             echo "::notice::$nome já está anexado a $TAG — nada a fazer (idempotência)."
           else
             gh release upload "$TAG" "$arquivo"
