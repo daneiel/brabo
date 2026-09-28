@@ -1431,15 +1431,38 @@ Verificação: na api, `apps/api/test/infrastructure/security/service-token.spec
 > serviço que as lê, vazias por padrão — definir uma no `.env` e recriar o
 > serviço basta ([RN-595](pathname://../business-rules/autenticacao#rn-595); guardado por
 > `scripts/ci/previous-nos-composes.spec.ts`, que deriva a lista do código).
-> **No Kubernetes ainda não**: os Pods leem `envFrom: brabo-secrets`, e o
-> `ExternalSecret` (`deploy/k8s/base/common/externalsecrets.yaml`) só
-> materializa as chaves que lista. Elas não estão listadas de propósito — uma
-> entrada de `data` cuja propriedade falta no provider reprova a
-> sincronização do Secret inteiro, e `_PREVIOUS` ausente é o estado normal.
-> Como elas chegam ao Pod é decisão aberta sobre o cofre de segredos; até lá,
-> uma rotação no cluster exige a variável definida à mão no Deployment. Nos
-> dois casos, confirme dentro do container (`printenv`) antes de contar com a
-> etapa 2.
+> **No Kubernetes elas chegam pelo cofre de segredos** (AT-220): o
+> `ExternalSecret` (`deploy/k8s/base/common/externalsecrets.yaml`) puxa o
+> objeto `brabo` inteiro com `dataFrom.extract`, então a `_PREVIOUS` que existe
+> ali entra no `brabo-secrets` e a que não existe simplesmente não está — sem
+> falha de sincronização fora de rotação. Elas nunca são listadas uma a uma:
+> entrada de `data` cuja propriedade falta reprova a sincronização do Secret
+> inteiro, e `_PREVIOUS` ausente é o estado normal. Nos dois casos, confirme
+> dentro do container (`printenv`) antes de contar com a etapa 2.
+
+#### No Kubernetes {#rotacao-no-kubernetes}
+
+A mesma dança, com o objeto `brabo` do provider de segredos no lugar do `.env`
+(no cluster local, o Secret `brabo` que o bootstrap criou):
+
+1. **Acrescente** a chave `_PREVIOUS` (valor antigo) e **troque** a atual (valor
+   novo) no objeto `brabo`, na mesma mudança. Localmente:
+   `kubectl -n brabo patch secret brabo --type merge -p '{"stringData":{"AUTH_JWT_SECRET_PREVIOUS":"<antigo>","AUTH_JWT_SECRET":"<novo>"}}'`.
+2. **Force a sincronização** em vez de esperar o `refreshInterval` (1h):
+   `kubectl -n brabo annotate externalsecret brabo-secrets force-sync="$(date +%s)" --overwrite`,
+   e confira a chave no `brabo-secrets`.
+3. **Reinicie** quem a lê — `envFrom` é lido quando o container sobe: a api
+   para `AUTH_JWT_SECRET` e `CREDENTIALS_MASTER_KEY`, api **e** engine para
+   `BRABO_SERVICE_TOKEN` (`kubectl -n brabo rollout restart deployment/api deployment/engine`).
+4. **Retire-a** quando a condição da rotação se cumprir: remova a chave
+   `_PREVIOUS` do objeto `brabo`, force a sincronização de novo (ela SAI do
+   `brabo-secrets`) e reinicie de novo.
+
+Custo declarado: TUDO o que estiver no objeto `brabo` vira variável de api,
+engine, dos Jobs de migração e do CronJob de backup. Verificação:
+`scripts/ci/previous-nos-composes.spec.ts` em todo PR; a sincronização por um
+External Secrets Operator de verdade foi exercitada uma vez, à mão, num k3d
+descartável.
 
 ```bash
 # gere um valor com entropia suficiente; ele nunca precisa ser digitado
@@ -1542,11 +1565,11 @@ No cluster local o Secret-fonte é criado pelo bootstrap; em staging/prod o valo
 vai no provider que o External Secrets lê. Depois, reinicie a api para que ela
 carregue as duas:
 
-> Publicar `CREDENTIALS_MASTER_KEY_PREVIOUS` no provider **não** a coloca no
-> Pod: o `ExternalSecret` não a lista (ver a nota no fim de
-> [Rotação das chaves do auth](#rotacao-das-chaves-do-auth)). Até essa decisão
-> ser tomada, defina-a à mão no Deployment da api durante a rotação e remova-a
-> na etapa 3. Nos composes ela já está mapeada — é o `.env` mais recriar a api.
+> Publicar `CREDENTIALS_MASTER_KEY_PREVIOUS` no objeto `brabo` do provider a
+> coloca no `brabo-secrets` na próxima sincronização (o `ExternalSecret` puxa o
+> objeto inteiro) — force a sincronização e confira como em
+> [No Kubernetes](#rotacao-no-kubernetes), depois reinicie. Nos composes é o
+> `.env` mais recriar a api.
 
 ```bash
 kubectl -n brabo rollout restart deployment/api
