@@ -217,6 +217,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   enfileira o Psicólogo. Nenhuma rodada e nenhum token a mais.
   `flags-do-engine-no-compose.spec.ts` deixa de declarar a divergência da
   instalação; ela passa a repetir o default do código.
+- **backup**: `docker/backup/test-restore-compose.sh` deixa de acusar *"o
+  compose não tem serviço 'backup'"* sobre um compose que o tem (AT-241). A
+  checagem era `config --services | grep -qx backup` sob `pipefail`: o `grep`
+  sai na primeira linha que casa, o Compose ainda escrevendo morre de EPIPE
+  (saída 255, stderr vazio) e a pipeline falha — medido em 12 de 480 rodadas
+  sob carga, e visto no CI. A lista agora é lida inteira antes do `grep`, e o
+  Compose que falha de verdade ganha mensagem própria.
 - **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
   [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
   `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552
