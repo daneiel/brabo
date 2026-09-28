@@ -28,6 +28,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   resolver o projeto `brabo` (`COMPOSE_PROJECT_NAME`). Para desenvolver numa
   máquina com instalação, derrube-a antes SEM `-v` — os dados dela ficam.
 
+- **auth**: `AUTH_TOKEN_PEPPER` passa a ser **obrigatório em produção** e
+  deixa de cair no `AUTH_JWT_SECRET`
+  ([RN-613](docs/business-rules/autenticacao.md#rn-613)). Sem ele a api
+  recusa subir, com a mensagem *"defina com o valor ATUAL de AUTH_JWT_SECRET
+  para não deslogar ninguém"*. O fallback silencioso fazia de toda rotação do
+  JWT uma troca do pepper — todo mundo deslogado, todo PAT morto —, e era o
+  caso de TODA instalação por compose: o `docker-compose.prod.yml` e o
+  `docker-compose.install.yml` nem repassavam a variável (agora repassam).
+
+  **O que o operador faz, ANTES de subir esta versão:** definir
+  `AUTH_TOKEN_PEPPER` com o valor **atual** de `AUTH_JWT_SECRET` — copiar, não
+  gerar um novo. O hash dos tokens fica byte a byte o mesmo, ninguém é
+  deslogado, e daí em diante o JWT pode rotacionar sozinho (runbook, "Auth key
+  rotation": pepper antes, JWT depois).
+  - **Instalação pelo `install.sh`:** rodado na pasta do `.env` anterior, ele
+    faz isso sozinho — lê o `.env` (sem executá-lo), mantém o pepper que já
+    houver ou grava o `AUTH_JWT_SECRET` atual como pepper, e diz no terminal de
+    onde o valor veio, sem imprimi-lo. Instalação nova ganha pepper aleatório
+    próprio.
+  - **Compose de produção com `.env` à mão:** acrescente a linha
+    `AUTH_TOKEN_PEPPER=<o valor de AUTH_JWT_SECRET>`.
+  - **Kubernetes:** nada — o `ExternalSecret` e o `bootstrap.sh` já traziam a
+    propriedade `AUTH_TOKEN_PEPPER`.
+  - **Desenvolvimento:** o compose de dev e o `.env.example` ganham um pepper
+    de dev PRÓPRIO (`dev-auth-token-pepper-change-me`); a sessão local cai uma
+    vez, e é só entrar de novo.
+
 ### Novidades
 
 - **web**: converter um projeto para o modo Runner deixa de terminar no escuro

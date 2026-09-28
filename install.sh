@@ -448,7 +448,7 @@ imprimir_plano() {
   printf 'perguntar\tfaz\texige TTY; sem TTY relata e sai 0\n'
   printf 'gravar-marcador\tfaz\t%s\n' "$(caminho_do_marcador)"
   printf 'escolher-fonte\tfaz\t--source=ghcr (digest verificado) ou --source=local (bake, árvore limpa em tag)\n'
-  printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD, no .env com modo 600\n'
+  printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD e AUTH_TOKEN_PEPPER, no .env com modo 600 (o pepper de quem migra é o AUTH_JWT_SECRET atual, RN-613)\n'
   printf 'subir-compose\tfaz\tdocker/docker-compose.install.yml (a cópia verificada, sob a pasta de onde o script roda), com --wait; as migrações vêm no encadeamento\n'
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
@@ -681,7 +681,60 @@ segredo_base64() {
   openssl rand -base64 "$1" | tr -d '\n'
 }
 
+# Lê `NOME=valor` de um `.env` SEM executá-lo: `source` num arquivo que pode
+# ter sido editado à mão rodaria o que estivesse nele. Vale a ÚLTIMA ocorrência
+# (é a que o Compose usa), aspas simples ou duplas em volta saem, e um `\r` de
+# arquivo editado no Windows também. Arquivo ausente é resposta vazia.
+valor_no_env_anterior() {
+  local nome="$1" arquivo="$2"
+  [ -n "$arquivo" ] && [ -f "$arquivo" ] || return 0
+  awk -v nome="$nome" '
+    index($0, nome "=") == 1 { v = substr($0, length(nome) + 2); achou = 1 }
+    END {
+      if (!achou) exit
+      sub(/\r$/, "", v)
+      if (length(v) >= 2 && ((substr(v, 1, 1) == "\"" && substr(v, length(v), 1) == "\"") || (substr(v, 1, 1) == "\047" && substr(v, length(v), 1) == "\047"))) {
+        v = substr(v, 2, length(v) - 2)
+      }
+      printf "%s", v
+    }
+  ' "$arquivo"
+}
+
+# O pepper do hash dos tokens (RN-613) é o ÚNICO segredo cuja origem importa
+# numa migração: até ali, sem `AUTH_TOKEN_PEPPER`, a api usava o
+# `AUTH_JWT_SECRET` no lugar — e o compose de instalação nem repassava a
+# variável, então TODA instalação anterior está nesse caso. Gerar um pepper
+# novo para ela deslogaria todo mundo e mataria todo PAT; o que mantém o hash
+# é o valor ATUAL do JWT. A ordem de precedência:
+#
+#   1. exportado no ambiente (quem sabe o que faz);
+#   2. o pepper que o `.env` anterior já tinha;
+#   3. o `AUTH_JWT_SECRET` do `.env` anterior — a MIGRAÇÃO;
+#   4. o `AUTH_JWT_SECRET` exportado — reinstalação reaproveitando o segredo;
+#   5. aleatório — instalação NOVA, pepper próprio desde o primeiro dia.
+#
+# `ORIGEM_DO_PEPPER` diz qual dos cinco valeu, para `main` DIZER no terminal —
+# nunca o valor. Aqui não se imprime nada: o spec lê a saída desta função.
+ORIGEM_DO_PEPPER=''
 gerar_segredos() {
+  local env_anterior="${1:-}" jwt_exportado="${AUTH_JWT_SECRET:-}" anterior
+  if [ -n "${AUTH_TOKEN_PEPPER:-}" ]; then
+    ORIGEM_DO_PEPPER='ambiente'
+  elif anterior="$(valor_no_env_anterior AUTH_TOKEN_PEPPER "$env_anterior")" && [ -n "$anterior" ]; then
+    AUTH_TOKEN_PEPPER="$anterior"
+    ORIGEM_DO_PEPPER='pepper-anterior'
+  elif anterior="$(valor_no_env_anterior AUTH_JWT_SECRET "$env_anterior")" && [ -n "$anterior" ]; then
+    AUTH_TOKEN_PEPPER="$anterior"
+    ORIGEM_DO_PEPPER='jwt-anterior'
+  elif [ -n "$jwt_exportado" ]; then
+    AUTH_TOKEN_PEPPER="$jwt_exportado"
+    ORIGEM_DO_PEPPER='jwt-exportado'
+  else
+    AUTH_TOKEN_PEPPER="$(segredo_base64 32)"
+    ORIGEM_DO_PEPPER='gerado'
+  fi
+
   GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(segredo_base64 32)}"
   AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(segredo_base64 32)}"
   BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(segredo_base64 32)}"
@@ -706,6 +759,8 @@ escrever_env() {
 # Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
 # Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
 # \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
+# AUTH_TOKEN_PEPPER (RN-613) é independente do AUTH_JWT_SECRET: numa migração
+# ele nasce com o valor que o JWT tinha, e trocá-lo desloga todo mundo.
 BRABO_API_IMAGE=${BRABO_API_IMAGE}
 BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
 BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
@@ -714,12 +769,28 @@ BRABO_BROKER_IMAGE=${BRABO_BROKER_IMAGE}
 BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
 GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
 AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+AUTH_TOKEN_PEPPER=${AUTH_TOKEN_PEPPER}
 BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
 CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
 SECRET_KEY_BASE=${SECRET_KEY_BASE}
 NEO4J_PASSWORD=${NEO4J_PASSWORD}
 ENV
   escrever_env_do_broker "$env_arquivo"
+}
+
+# O terminal diz DE ONDE veio o pepper, nunca o valor — ele vale tanto quanto
+# o JWT, e a saída do instalador vai parar em log de CI e em print de tela.
+dizer_a_origem_do_pepper() {
+  case "$ORIGEM_DO_PEPPER" in
+    jwt-anterior|jwt-exportado)
+      ok 'AUTH_TOKEN_PEPPER: a instalação anterior não tinha um, e ele nasce com o valor ATUAL do AUTH_JWT_SECRET (não impresso).'
+      detalhe '  É o valor que a api já usava no lugar dele: os refresh tokens e os PATs continuam'
+      detalhe '  válidos, e daí em diante o AUTH_JWT_SECRET rotaciona sem deslogar ninguém (RN-613).'
+      ;;
+    pepper-anterior) ok 'AUTH_TOKEN_PEPPER: mantido o da instalação anterior (não impresso).' ;;
+    ambiente) ok 'AUTH_TOKEN_PEPPER: o do ambiente (não impresso).' ;;
+    *) ok 'AUTH_TOKEN_PEPPER: gerado, próprio desta instalação.' ;;
+  esac
 }
 
 # O bloco do broker, SEMPRE junto — as linhas não existem uma sem a outra:
@@ -1739,9 +1810,14 @@ main() {
   # Depois da base (a segunda raiz do broker DERIVA dela) e antes do `.env`
   # (é ele que carrega a decisão): uma recusa aqui não deixa nada gravado.
   consentir_broker
-  gerar_segredos
 
+  # O `.env` que existir aqui é LIDO antes de ser sobrescrito — só para o
+  # pepper (RN-613), e sem ser executado. Numa migração ele ainda está no lugar:
+  # `migrar_instalacao_anterior` apaga volumes, nunca o arquivo.
   local env_arquivo="${PWD}/.env"
+  gerar_segredos "$env_arquivo"
+  dizer_a_origem_do_pepper
+
   escrever_env "$env_arquivo"
   ok ".env gravado com modo 600"
 

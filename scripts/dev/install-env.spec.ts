@@ -40,10 +40,11 @@ function carregavel(): string {
   return caminho;
 }
 
-/** Os seis segredos que `gerar_segredos` produz, na ordem em que o bash os imprime. */
+/** Os sete segredos que `gerar_segredos` produz, na ordem em que o bash os imprime. */
 const SEGREDOS = [
   'GIT_OAUTH_STATE_SECRET',
   'AUTH_JWT_SECRET',
+  'AUTH_TOKEN_PEPPER',
   'BRABO_SERVICE_TOKEN',
   'CREDENTIALS_MASTER_KEY',
   'SECRET_KEY_BASE',
@@ -81,8 +82,13 @@ function ambienteLimpo(): NodeJS.ProcessEnv {
  */
 function gerarEnv(
   broker: { ligado: boolean; gid?: string; raiz?: string } = { ligado: false },
-): { arquivo: string; valores: Record<string, string>; base: string } {
+  envAnterior?: string,
+): { arquivo: string; valores: Record<string, string>; base: string; origemDoPepper: string; saida: string } {
   const arquivo = path.join(tmp, `env-${Math.random().toString(36).slice(2)}`);
+  // A migração, como `main` a faz: o `.env` da instalação anterior está no
+  // MESMO caminho que o novo vai ocupar, e `gerar_segredos` o lê antes de
+  // `escrever_env` o sobrescrever.
+  if (envAnterior !== undefined) fs.writeFileSync(arquivo, envAnterior, { mode: 0o600 });
   const base = path.join(tmp, 'projetos');
   fs.mkdirSync(base, { recursive: true });
   // O estado que `consentir_broker` deixaria — as três globais que ele
@@ -98,9 +104,10 @@ function gerarEnv(
       `source "${carregavel()}"
        BASE_DE_PROJETOS="$1"
        ${estadoDoBroker}
-       gerar_segredos
+       gerar_segredos "$2"
+       dizer_a_origem_do_pepper >&2
        escrever_env "$2"
-       printf '%s\\0' ${SEGREDOS.map((s) => `"$${s}"`).join(' ')}`,
+       printf '%s\\0' ${SEGREDOS.map((s) => `"$${s}"`).join(' ')} "$ORIGEM_DO_PEPPER"`,
       'install-env',
       base,
       arquivo,
@@ -113,7 +120,13 @@ function gerarEnv(
   SEGREDOS.forEach((nome, i) => {
     valores[nome] = partes[i] ?? '';
   });
-  return { arquivo, valores, base };
+  return {
+    arquivo,
+    valores,
+    base,
+    origemDoPepper: partes[SEGREDOS.length] ?? '',
+    saida: r.stderr,
+  };
 }
 
 const composeDisponivel = (() => {
@@ -172,6 +185,7 @@ describe('o .env do instalador (AT-083)', () => {
     expect(ambiente('engine').SECRET_KEY_BASE).toBe(valores.SECRET_KEY_BASE);
     expect(ambiente('engine').BRABO_SERVICE_TOKEN).toBe(valores.BRABO_SERVICE_TOKEN);
     expect(ambiente('api').AUTH_JWT_SECRET).toBe(valores.AUTH_JWT_SECRET);
+    expect(ambiente('api').AUTH_TOKEN_PEPPER).toBe(valores.AUTH_TOKEN_PEPPER);
     expect(ambiente('api').BRABO_SERVICE_TOKEN).toBe(valores.BRABO_SERVICE_TOKEN);
     expect(ambiente('api').CREDENTIALS_MASTER_KEY).toBe(valores.CREDENTIALS_MASTER_KEY);
     expect(ambiente('api').GIT_OAUTH_STATE_SECRET).toBe(valores.GIT_OAUTH_STATE_SECRET);
@@ -219,6 +233,81 @@ describe('o .env do instalador (AT-083)', () => {
     } else {
       expect(c.stderr).toMatch(/variable name|unexpected character/);
     }
+  });
+});
+
+// RN-613: o pepper deixou de cair no AUTH_JWT_SECRET, e a api recusa subir sem
+// ele. Instalação NOVA ganha um próprio; a MIGRAÇÃO ganha o valor ATUAL do JWT
+// — é o que a api anterior usava no lugar do pepper, e é o que mantém válidos
+// os refresh tokens e os PATs. Provado contra o parser do Compose, valor
+// INTEIRO, como o resto deste arquivo.
+describe('o AUTH_TOKEN_PEPPER do instalador (RN-613)', () => {
+  const configDe = (arquivo: string) => {
+    const r = spawnSync(
+      'docker',
+      ['compose', '-f', COMPOSE, '--env-file', arquivo, 'config', '--format', 'json'],
+      { env: ambienteLimpo(), encoding: 'utf8' },
+    );
+    expect(r.status, `o Compose recusou o .env:\n${r.stderr}`).toBe(0);
+    return JSON.parse(r.stdout) as {
+      services: Record<string, { environment?: Record<string, string | null> }>;
+    };
+  };
+
+  // Um valor com `/`, `+` e `=` — o alfabeto do base64 que o instalador gera —,
+  // sem entropia (Gitleaks).
+  const JWT_DA_INSTALACAO_ANTERIOR = 'jwt/anterior+de-teste=nao-e-segredo==';
+
+  it('instalação NOVA: pepper próprio, aleatório, diferente do JWT — e chega inteiro à api', (ctx) => {
+    const { arquivo, valores, origemDoPepper, saida } = gerarEnv();
+    expect(origemDoPepper).toBe('gerado');
+    expect(valores.AUTH_TOKEN_PEPPER).toHaveLength(44);
+    expect(valores.AUTH_TOKEN_PEPPER).not.toBe(valores.AUTH_JWT_SECRET);
+    expect(saida).toContain('AUTH_TOKEN_PEPPER: gerado');
+    if (PULAR) ctx.skip(PULAR);
+    expect(configDe(arquivo).services.api?.environment?.AUTH_TOKEN_PEPPER).toBe(
+      valores.AUTH_TOKEN_PEPPER,
+    );
+  });
+
+  it('MIGRAÇÃO sem pepper: o .env ganha AUTH_TOKEN_PEPPER = o AUTH_JWT_SECRET atual, dito no terminal SEM o valor', (ctx) => {
+    const { arquivo, valores, origemDoPepper, saida } = gerarEnv(
+      { ligado: false },
+      `# .env de uma instalação anterior à RN-613\nAUTH_JWT_SECRET=${JWT_DA_INSTALACAO_ANTERIOR}\nNEO4J_PASSWORD=x\n`,
+    );
+    expect(origemDoPepper).toBe('jwt-anterior');
+    expect(valores.AUTH_TOKEN_PEPPER).toBe(JWT_DA_INSTALACAO_ANTERIOR);
+    expect(saida).toContain('valor ATUAL do AUTH_JWT_SECRET');
+    expect(saida).not.toContain(JWT_DA_INSTALACAO_ANTERIOR);
+    // A linha está no arquivo que substituiu o anterior, UMA vez.
+    const linhas = fs.readFileSync(arquivo, 'utf8').split('\n');
+    expect(linhas.filter((l) => l.startsWith('AUTH_TOKEN_PEPPER='))).toEqual([
+      `AUTH_TOKEN_PEPPER=${JWT_DA_INSTALACAO_ANTERIOR}`,
+    ]);
+    if (PULAR) ctx.skip(PULAR);
+    expect(configDe(arquivo).services.api?.environment?.AUTH_TOKEN_PEPPER).toBe(
+      JWT_DA_INSTALACAO_ANTERIOR,
+    );
+  });
+
+  it('MIGRAÇÃO de quem já tinha pepper: ele é mantido, não trocado pelo JWT', () => {
+    const { valores, origemDoPepper, saida } = gerarEnv(
+      { ligado: false },
+      `AUTH_JWT_SECRET=${JWT_DA_INSTALACAO_ANTERIOR}\nAUTH_TOKEN_PEPPER="pepper-anterior-nao-e-segredo"\n`,
+    );
+    expect(origemDoPepper).toBe('pepper-anterior');
+    expect(valores.AUTH_TOKEN_PEPPER).toBe('pepper-anterior-nao-e-segredo');
+    expect(saida).not.toContain('pepper-anterior-nao-e-segredo');
+  });
+
+  it('o .env anterior é LIDO, nunca executado', () => {
+    const marca = path.join(tmp, 'executou');
+    const { origemDoPepper } = gerarEnv(
+      { ligado: false },
+      `AUTH_JWT_SECRET=$(touch ${marca})\n`,
+    );
+    expect(origemDoPepper).toBe('jwt-anterior');
+    expect(fs.existsSync(marca)).toBe(false);
   });
 });
 

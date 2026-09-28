@@ -12693,15 +12693,15 @@ de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
 TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
 existia, antes de qualquer escrita.
 
-- **Código:** `install.sh:1463` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:1262` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
-  o teto), `:1362` (`parear_esta_maquina`, o `id` virando `--id`), `:1439`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1165`
+- **Código:** `install.sh:1534` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1333` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1433` (`parear_esta_maquina`, o `id` virando `--id`), `:1510`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1236`
   (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
-  `:1205` (`criar_primeira_conta`) e `:1225` (`registrar_chave_de_maquina`) —
-  os vereditos das duas rotas —, `:1240` (`ler_sem_eco`), `:1144`
-  (`nome_da_maquina`), `:1426` (`avisar_chave_parcial`), `:1123`/`:1130`
-  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1781` (a
+  `:1255` (`criar_primeira_conta`) e `:1296` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1311` (`ler_sem_eco`), `:1215`
+  (`nome_da_maquina`), `:1456` (`avisar_chave_parcial`), `:1194`/`:1201`
+  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1857` (a
   chamada, depois do runner e antes do marcador), `:1792` (o `ownerEmail`).
   Números relidos pelo símbolo em 18/09 (AT-096); os de `:966`/`:682` já não
   batiam em 17/09
@@ -13798,9 +13798,9 @@ profile ligado. Coberto por `scripts/dev/prova-de-restauracao-env.spec.ts`.
   `:573` (`ASSETS_DO_INSTALADOR`), `:575` (`destino_do_asset_do_instalador`, a
   tabela do lado que baixa), `:600` (`baixar_e_verificar_os_arquivos_da_instalacao`),
   `:607`/`:615`/`:617` (as três recusas), `:634`
-  (`materializar_os_arquivos_da_instalacao`), `:1502` (a migração materializa
-  antes do backup), `:1606` (a verificação logo depois da própria origem),
-  `:1755` (a subida materializa antes do `up`);
+  (`materializar_os_arquivos_da_instalacao`), `:1573` (a migração materializa
+  antes do backup), `:1677` (a verificação logo depois da própria origem),
+  `:1831` (a subida materializa antes do `up`);
   `scripts/ci/assets-do-instalador.ts:55` (a tabela do lado que publica), `:93`
   (`problemasDoMapeamento`), `:135` (`prepararAssets`);
   `.github/workflows/build-runner-binaries.yml:468` (os assets preparados do
@@ -14063,10 +14063,10 @@ no Linux. Docker rootless ou remoto não tem o socket em `/var/run/docker.sock`,
 que é o caminho que o compose monta, e cai na recusa do item 2 — ligar o broker
 ali não é oferecido por outro caminho.
 
-- **Código:** `install.sh:931` (`consentir_broker`), `:883`
-  (`medir_gid_do_socket`), `:918` (`calcular_raiz_gerenciada`), `:987`
-  (`conferir_o_broker`), `:731` (`escrever_env_do_broker`), `:784` (o broker no
-  manifesto), `:1741` (a ordem: depois da base, antes do `.env`);
+- **Código:** `install.sh:1002` (`consentir_broker`), `:954`
+  (`medir_gid_do_socket`), `:989` (`calcular_raiz_gerenciada`), `:1058`
+  (`conferir_o_broker`), `:778` (`escrever_env_do_broker`), `:855` (o broker no
+  manifesto), `:1812` (a ordem: depois da base, antes do `.env`);
   `docker/docker-compose.install.yml` (o serviço `broker` e a rede `broker`)
 - **Teste:** `scripts/dev/install-broker.spec.ts:158` (sem terminal: desligado,
   dito, Docker intocado — caso de falha), `:169` (Enter), `:179` (`n`), `:187`

@@ -150,7 +150,7 @@ issuer. Decisions in
 |---|---|---|
 | `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **only outside production** | passphrase the access token's Ed25519 pair is **derived** from via scrypt — no private key is committed. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
 | `AUTH_JWT_SECRET_PREVIOUS` | — | accepted **only for verification**, during rotation; enters the JWKS and never signs |
-| `AUTH_TOKEN_PEPPER` | `AUTH_JWT_SECRET` | HMAC key for hashing opaque tokens and the lockout bucket key |
+| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **only outside production** | HMAC key for hashing opaque tokens (refresh, account links, PATs) and the lockout bucket key. **Its own secret — it no longer falls back to `AUTH_JWT_SECRET`** ([RN-613](../business-rules/autenticacao.md#rn-613)). **In production the api refuses to boot** if it's missing, set to either example value from this repository, or shorter than 16 characters. An installation that ran without it must set it to the **current** `AUTH_JWT_SECRET`, or everyone is logged out — see the [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
 | `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 days |
 | `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | absolute ceiling of the family, counted from login — without it rotation grants an eternal session |

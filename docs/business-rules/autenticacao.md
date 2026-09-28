@@ -148,7 +148,7 @@ verificação, para a rotação não ter janela de indisponibilidade.
   quando ele decide, o `EngineServiceGuard` ainda não rodou.
 - **Origem:** [ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
 
-### RN-597 — Trocar o pepper é logout global, e sem `AUTH_TOKEN_PEPPER` o pepper É o `AUTH_JWT_SECRET` {#rn-597}
+### RN-597 — Trocar o pepper é logout global {#rn-597}
 
 O pepper que chaveia o HMAC dos tokens opacos não tem `_PREVIOUS`, e trocá-lo
 tem consequência, não procedimento: todo refresh token em circulação, todo link
@@ -160,22 +160,68 @@ ou expirado", e os baldes de lockout mudam de chave — conta travada destrava. 
 SENHA sobrevive (argon2id com salt por registro, sem pepper): trocar o pepper
 custa um login, nunca uma conta, e a api sobe normalmente com o valor novo.
 
-O pepper sem valor próprio cai no `AUTH_JWT_SECRET` (`pepper`, o `??` sobre
-`passphraseAtual()`). Por isso a promessa do runbook de que trocar o
-`AUTH_JWT_SECRET` não desloga ninguém só vale com `AUTH_TOKEN_PEPPER`
-DEFINIDO; sem ele, a rotação do JWT é também a do pepper, com todas as
-consequências acima.
+Até a [RN-613](#rn-613), o pepper sem valor próprio caía no
+`AUTH_JWT_SECRET`, e a rotação do JWT era também a do pepper, com todas as
+consequências acima. Desde ela o pepper é obrigatório em produção e nunca
+emprestado do JWT.
 
-- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:137`
-  (`pepper`), `:154` (`hashDeToken`), `:173` (`baldeDeEmail`);
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:212`
+  (`pepper`), `:228` (`hashDeToken`), `:247` (`baldeDeEmail`);
   `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:142`
 - **Teste:** `test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`,
   contra o Postgres de teste
-- **Borda:** o `docker-compose.prod.yml` e o `docker-compose.install.yml` não
-  repassam `AUTH_TOKEN_PEPPER` à api, então nessas instalações o pepper é
-  sempre o `AUTH_JWT_SECRET`; o Kubernetes o define à parte (`brabo-secrets`).
+- **Borda:** o ALVO de "trocar" inclui o erro de quem separa o pepper do JWT
+  gerando um valor novo em vez de copiar o atual — é a mesma troca, e desloga
+  do mesmo jeito (fixado no mesmo spec, "a ordem errada").
 - **Origem:** [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
   AT-196
+
+### RN-613 — `AUTH_TOKEN_PEPPER` é obrigatório e próprio; quem migra o define com o `AUTH_JWT_SECRET` atual {#rn-613}
+
+O pepper do HMAC dos tokens opacos (refresh, links de conta, PATs, balde de
+lockout) deixou de cair no `AUTH_JWT_SECRET`. O fallback silencioso
+(`AUTH_TOKEN_PEPPER ?? passphraseAtual()`) fazia de toda rotação "sem
+downtime" do JWT uma troca do pepper, e era o caminho COMUM: os composes de
+produção e de instalação nem repassavam a variável. Em produção a api RECUSA
+subir sem ele, e a recusa diz o conserto — *"defina com o valor ATUAL de
+AUTH_JWT_SECRET para não deslogar ninguém"* —, porque a correção óbvia (gerar
+um aleatório) é a que desloga todo mundo. Com o pepper igual ao JWT antigo o
+hash é byte a byte o de antes, os refresh tokens e os PATs seguem válidos, e
+daí em diante o JWT rotaciona sozinho. Pepper igual ao JWT NÃO é recusado: é o
+estado legítimo de toda instalação migrada. Valem as réguas do JWT (RN-114):
+em branco, os dois literais de exemplo do repositório e menos de 16 caracteres
+derrubam o boot. Fora de produção vale um default de desenvolvimento PRÓPRIO
+(`dev-auth-token-pepper-change-me`), nunca o do JWT.
+
+O `install.sh` faz a migração: instalação NOVA gera um pepper aleatório;
+havendo um `.env` anterior na pasta, ele é LIDO (nunca executado) antes de ser
+sobrescrito, e o pepper dele é mantido — ou, sem pepper, nasce com o
+`AUTH_JWT_SECRET` dele. O terminal diz de onde o valor veio, nunca o valor.
+
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:168`
+  (`pepperAtual`), `:212` (`pepper`); `apps/api/src/main.ts:46` (a checagem de
+  boot); `install.sh:688` (`valor_no_env_anterior`), `:720` (`gerar_segredos`),
+  `:783` (`dizer_a_origem_do_pepper`); a variável nos três composes
+  (`docker/docker-compose.yml`, `docker-compose.prod.yml`,
+  `docker-compose.install.yml`), no `docker/smoke.sh` e no `.env.example`
+- **Teste:** `test/infrastructure/security/auth-key-material.spec.ts`
+  (describe "pepperAtual (RN-613)": recusa sem pepper mesmo com JWT, a
+  mensagem, os exemplos, o piso, igual ao JWT aceito, o default de dev);
+  `test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` (describe "a
+  migração do RN-613": o refresh gravado com a fórmula ANTIGA segue válido com o
+  pepper igual ao JWT antigo e sobrevive à troca do JWT; o describe do
+  `AUTH_JWT_SECRET`: sem pepper fora de produção, trocar o JWT não desloga);
+  `scripts/dev/install-env.spec.ts` (describe "o AUTH_TOKEN_PEPPER do
+  instalador (RN-613)", contra `docker compose config`, valor inteiro)
+- **Borda:** o instalador só enxerga o `.env` da pasta em que roda. Instalação
+  cujo `.env` mora em outro lugar, compose próprio e Kubernetes com
+  `ExternalSecret` fazem a migração à mão, pelo runbook — no Kubernetes a
+  propriedade `AUTH_TOKEN_PEPPER` já existia no `ExternalSecret` e no
+  `bootstrap.sh`, e um provider que não a tenha já reprovava a sincronização.
+  E a migração do instalador apaga os volumes (ADR 0150): o refresh só
+  sobrevive para quem restaura o dump do Postgres, que é o caso que importa.
+- **Origem:** AT-210 (achado da AT-196), decisão do mantenedor: migração com o
+  valor atual
 
 ### RN-595 — Toda `_PREVIOUS` que um serviço lê chega a ele pelos três composes, vazia por padrão {#rn-595}
 
@@ -192,7 +238,7 @@ eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
 
 - **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml` e
   `docker/docker-compose.install.yml` (serviços `api`, `engine` e `broker`);
-  os leitores são `apps/api/src/infrastructure/security/auth-key-material.ts:131`
+  os leitores são `apps/api/src/infrastructure/security/auth-key-material.ts:136`
   (`passphraseAnterior`), `apps/api/src/infrastructure/security/service-token.ts:92`
   (`tokenDeServicoAnterior`), `apps/api/src/infrastructure/security/envelope-encryption.service.ts:93`,
   `apps/engine/config/runtime.exs:70` e `apps/broker/src/config.ts:85`
@@ -225,7 +271,7 @@ trim) continua não contando como rotação.
 
 - **Onde:** `apps/api/src/infrastructure/security/service-token.ts:63`
   (`exigirTokenDeProducao`), `:92` (`tokenDeServicoAnterior`);
-  `apps/api/src/main.ts:43` (`tokenDeServicoAnterior`), que roda no boot ao lado do atual
+  `apps/api/src/main.ts:50` (`tokenDeServicoAnterior`), que roda no boot ao lado do atual
 - **Teste:** `test/infrastructure/security/service-token.spec.ts` (describe
   "tokenDeServicoAnterior (RN-598)")
 - **Borda:** esta RN é o lado da api. O engine e o broker aplicam a mesma

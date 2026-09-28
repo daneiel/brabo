@@ -2772,17 +2772,46 @@ is the same three-step dance as the master key (below):
 3. After 15 minutes (the access token's TTL), no token from the old key
    survives. **Remove `AUTH_JWT_SECRET_PREVIOUS`** and restart.
 
-Nobody gets logged out — **provided `AUTH_TOKEN_PEPPER` is set**. Refresh
-tokens are hashed with the pepper, not with this key; but an unset pepper
-falls back to `AUTH_JWT_SECRET`, and then rotating this key is also a pepper
-rotation, with the global logout described below
-([RN-597](business-rules/autenticacao.md#rn-597)). Kubernetes sets the pepper
-separately; the `docker-compose.prod.yml` and `docker-compose.install.yml`
-don't pass it to the api at all.
+Nobody gets logged out: refresh tokens are hashed with `AUTH_TOKEN_PEPPER`,
+not with this key, and since [RN-613](business-rules/autenticacao.md#rn-613)
+the pepper is mandatory and never borrowed from this key.
+
+**The order, if this installation predates RN-613: pepper FIRST, JWT after.**
+Before RN-613 an unset pepper silently fell back to `AUTH_JWT_SECRET` — and
+the production and install composes didn't even pass `AUTH_TOKEN_PEPPER` to
+the api, so that was every compose installation. Now the api **refuses to
+boot** without the pepper, with a message saying what to do. The migration
+that logs nobody out:
+
+1. Set `AUTH_TOKEN_PEPPER` to the **current** value of `AUTH_JWT_SECRET`
+   (copy it; don't generate a new one). Restart the api. The token hashes are
+   byte for byte what they were, so every refresh token and PAT keeps working.
+   `install.sh` does this step by itself when it finds the previous `.env` in
+   the folder it runs from, and says so on the terminal without printing the
+   value; Kubernetes already had `AUTH_TOKEN_PEPPER` in the `ExternalSecret`.
+2. Only then rotate `AUTH_JWT_SECRET` with the three steps above. From here on
+   the two secrets are independent, and a pepper equal to the *old* JWT
+   secret is the expected state, not a leftover.
+
+**If someone rotates the JWT before separating**, on a version before RN-613
+that rotation *was* a pepper change: everyone is logged out, every open
+email/reset link dies and every PAT stops authenticating — the global logout
+described in the next section. There is no undo short of putting the old
+value back as `AUTH_TOKEN_PEPPER` (which revives the old tokens that haven't
+expired, and invalidates anything issued in between). On RN-613 and later the
+mistake can't happen silently: without a pepper the api doesn't boot. The one
+way to still hit it is generating a **new** pepper during the migration
+instead of copying the current JWT secret — same global logout.
 
 Verification: `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts`
-(describe "rotação de chave") and, for the pepper condition,
-`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`.
+(describe "rotação de chave"); for the pepper,
+`apps/api/test/infrastructure/security/auth-key-material.spec.ts` (describe
+"pepperAtual (RN-613)": the boot refusal and its message),
+`apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
+(describe "a migração do RN-613": a refresh hashed by the old fallback stays
+valid with the pepper set to the old JWT secret, and survives the JWT
+rotation) and `scripts/dev/install-env.spec.ts` (the `.env` the installer
+writes in both cases, through `docker compose config`).
 
 ### `AUTH_TOKEN_PEPPER` — global logout, no middle ground {#troca-do-auth-token-pepper}
 
@@ -2808,8 +2837,10 @@ reset link say "expired".
 
 > The api does **not** fail to boot with a new pepper. It simply stops
 > recognizing any old token. If support reports "everyone got logged out
-> at the same time", this variable is the first place to look — and, if it
-> was never set, `AUTH_JWT_SECRET`.
+> at the same time", this variable is the first place to look — and, on a
+> version before [RN-613](business-rules/autenticacao.md#rn-613) where it was
+> never set, `AUTH_JWT_SECRET`. It **does** fail to boot without one, in
+> production: see the migration order above.
 
 Verification: `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
 ([RN-597](business-rules/autenticacao.md#rn-597)).
