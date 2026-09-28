@@ -3404,6 +3404,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/machine-device-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the authenticated user's own MACHINE device keys
+         * @description Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: "maquina"`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used.
+         */
+        get: operations["MachineDeviceKeysController_listMachineDeviceKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/machine-device-keys/{deviceKeyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revokes one of the authenticated user’s own MACHINE device keys
+         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
+         */
+        delete: operations["MachineDeviceKeysController_revokeMachineDeviceKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/preferences": {
         parameters: {
             query?: never;
@@ -18664,6 +18704,80 @@ export interface operations {
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MachineDeviceKeysController_listMachineDeviceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MachineDeviceKeysController_revokeMachineDeviceKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceKeyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Key revoked. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No machine key with this id belongs to the caller (it does not exist, is a project key, or is someone else’s — one answer for all). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

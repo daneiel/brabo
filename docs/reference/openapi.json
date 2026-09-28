@@ -10466,6 +10466,82 @@
         ]
       }
     },
+    "/users/me/machine-device-keys": {
+      "get": {
+        "description": "Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: \"maquina\"`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used.",
+        "operationId": "MachineDeviceKeysController_listMachineDeviceKeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunnerDeviceKeyListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the authenticated user's own MACHINE device keys",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/machine-device-keys/{deviceKeyId}": {
+      "delete": {
+        "description": "Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.",
+        "operationId": "MachineDeviceKeysController_revokeMachineDeviceKey",
+        "parameters": [
+          {
+            "name": "deviceKeyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Key revoked. No body."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "404": {
+            "description": "No machine key with this id belongs to the caller (it does not exist, is a project key, or is someone else’s — one answer for all)."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revokes one of the authenticated user’s own MACHINE device keys",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/users/me/preferences": {
       "get": {
         "operationId": "UserPreferencesController_get",

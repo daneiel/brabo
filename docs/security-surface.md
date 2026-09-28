@@ -668,6 +668,22 @@ reason in the URL.
   Revoking a MACHINE key asks the engine to drop the live runner in EACH
   runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
+- **The MACHINE key is also reachable per ACCOUNT, with no project in the
+  path** ([RN-611](business-rules.md#rn-611)): `GET /users/me/machine-device-keys`
+  and `DELETE /users/me/machine-device-keys/:deviceKeyId`, classified `jwt`
+  because the scope is the caller themselves, like the rest of `/users/me/*`.
+  They exist because the one-line install creates the account and the machine
+  key BEFORE any project, and every other listing needs a `:projectId`: there,
+  the key was live and unreachable. They are deliberately narrow — only
+  MACHINE keys (a project key answers 404, the same as a key that doesn't
+  exist or is someone else's, so nothing leaks) and only the CALLER's (the
+  `userId` comes from the session JWT and goes into the `WHERE`; no parameter
+  names another user, and the `maintainer` view stays out, as RN-519 decided).
+  The `DELETE` is the same revocation as the per-project route, delegated to
+  the same use case: it drops the live runner in each runner-mode project the
+  owner reaches, target `{project, user}` unchanged; with no project yet it
+  only records the revocation, which is all there is to stop — the waiting
+  machine agent (RN-550) has no connection, and its next ticket is refused.
 - **Revoking a device key now reaches the LIVE connection, and the target
   is `{project, user}` — never `{key}`**
   ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
@@ -1135,6 +1151,8 @@ reason in the URL.
 | POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
+| GET | `/users/me/machine-device-keys` | jwt |
+| DELETE | `/users/me/machine-device-keys/:deviceKeyId` | jwt |
 | GET | `/users/me/preferences` | jwt |
 | PATCH | `/users/me/preferences` | jwt |
 | GET | `/workspaces` | jwt |

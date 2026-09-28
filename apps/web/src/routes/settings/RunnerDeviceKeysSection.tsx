@@ -10,6 +10,10 @@ import {
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { userIdDaSessao } from '../../lib/auth';
 import { podeLerChavesDeDispositivo } from '../../lib/agente-de-maquina';
+import {
+  chavesDoProjetoQueryKey,
+  invalidarChavesDeDispositivo,
+} from '../../lib/chaves-de-dispositivo-queries';
 import type { RunnerDeviceKeyListItem } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -128,7 +132,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     isError,
     isSuccess,
   } = useQuery({
-    queryKey: ['runner-device-keys', projectId],
+    queryKey: chavesDoProjetoQueryKey(projectId),
     queryFn: () => listRunnerDeviceKeys(projectId),
     // A tela deixa de perguntar o que a api negaria (RN-548): um 403
     // previsível viraria "não consegui ler", que é o pior dos dois textos —
@@ -150,7 +154,10 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     try {
       await revokeRunnerDeviceKey(projectId, aRevogar.id);
       setARevogar(null);
-      queryClient.invalidateQueries({ queryKey: ['runner-device-keys', projectId] });
+      // Todas as listagens, não só a deste projeto (RN-611): uma chave de
+      // MÁQUINA aparece na de todo projeto do dono e na da Conta, e
+      // invalidar só esta deixaria as outras anunciando viva a revogada.
+      void invalidarChavesDeDispositivo(queryClient);
     } catch (erro) {
       // A frase da api, e não uma nossa: o que sobra aqui é 403 (papel vencido
       // entre o render e o clique) e rede, e nesses casos a mensagem dela é a
