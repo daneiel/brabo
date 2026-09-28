@@ -14,10 +14,8 @@ import {
   getSessionModelBinding,
   listModels,
   mensagemDaApi,
-  promoteStories,
   renameSession,
   requestManualHandoff,
-  returnStory,
   sendAgentMessage,
   setAgentAutonomy,
   startAgent,
@@ -46,9 +44,6 @@ import { AGENTS } from '../lib/agents';
 import { AGENT_AUTONOMY_ALL_ACTIONS } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStrip } from '../components/TurnActivityStrip';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { Textarea } from '../components/ui/Textarea';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
@@ -69,6 +64,8 @@ import { SessionFio } from './SessionFio';
 import { SessionComposer } from './SessionComposer';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
 import { useRolagemDoFio } from '../lib/session-rolagem';
+import { usePromocaoDeHistorias } from '../lib/session-promocao';
+import { DevolverHistoriaModal } from './DevolverHistoriaModal';
 
 interface SessionPageProps {
   projectId: string;
@@ -136,21 +133,6 @@ export function SessionPage({
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
   // estado.
   const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
-  // Promoção inline de história (RN-126) — o mesmo mecanismo de
-  // `PromotionQueue` (ProjectBacklogTab.tsx), só que disparado a partir do
-  // card no fio em vez da aba Backlog. `promovendoStoryId` é o id em voo (só
-  // um por vez, como o resto da tela); `recusandoStory` abre o modal de
-  // motivo, espelhando o padrão do backlog.
-  const [promovendoStoryId, setPromovendoStoryId] = useState<string | null>(null);
-  const [recusandoStory, setRecusandoStory] = useState<{ id: string; title: string } | null>(null);
-  const [motivoRecusa, setMotivoRecusa] = useState('');
-  const [enviandoRecusa, setEnviandoRecusa] = useState(false);
-  // Carrossel de histórias (RN-148) — "Aprovar todas" promove o LOTE inteiro
-  // numa chamada só (`promoteStories` já é lote por natureza); estado
-  // separado de `promovendoStoryId` porque as duas ações podem existir na
-  // mesma tela (um slide promovendo sozinho enquanto o lote não foi
-  // acionado) e cada botão desabilita só o que é dele.
-  const [promovendoTodas, setPromovendoTodas] = useState(false);
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
   const [ativandoExecucao, setAtivandoExecucao] = useState(false);
@@ -217,6 +199,30 @@ export function SessionPage({
     setTurnoViaCanal,
     turnoAgentRef,
   } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
+
+  // A promoção de histórias pelo fio (RN-126/RN-148) mora em
+  // `../lib/session-promocao` desde o PR 8 do ADR 0176.
+  const {
+    promovendoStoryId,
+    recusandoStory,
+    setRecusandoStory,
+    motivoRecusa,
+    setMotivoRecusa,
+    enviandoRecusa,
+    promovendoTodas,
+    handlePromoteStory,
+    handlePromoteAll,
+    handleReturnStory,
+  } = usePromocaoDeHistorias({
+    projectId,
+    sessionId,
+    queryClient,
+    showToast,
+    t,
+    iniciarTurnoDoAgente,
+    acompanharTurnoPeloLog,
+    finalizarTurnoDoAgente,
+  });
 
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
   // eventos já persistidos no meio do turno duplicava a bolha (o dado novo
@@ -680,102 +686,6 @@ export function SessionPage({
     }
   }
 
-  // Promoção inline (RN-126) — mesmos `promoteStories`/`returnStory` que
-  // `PromotionQueue` já chama; só o gatilho muda, do botão na aba Backlog
-  // pro card no fio. `promoteStories` é sempre lote (mesmo pra uma história),
-  // e a resposta traz `failed` com o motivo do domínio quando recusa — o
-  // toast reaproveita essa informação em vez de um "erro" genérico.
-  async function handlePromoteStory(storyId: string) {
-    if (promovendoStoryId || promovendoTodas) return;
-    setPromovendoStoryId(storyId);
-    try {
-      const r = await promoteStories(projectId, [storyId]);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      if (r.failed.length > 0) {
-        showToast({
-          title: t('toasts.erroPromover'),
-          message: r.failed[0]?.reason,
-          tone: 'danger',
-        });
-      } else {
-        showToast({ title: t('toasts.historiaPromovida'), tone: 'success' });
-      }
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistoria'), tone: 'danger' });
-    } finally {
-      setPromovendoStoryId(null);
-    }
-  }
-
-  // "Aprovar todas" do carrossel (RN-148) — uma chamada só de `promoteStories`
-  // com o LOTE inteiro, em vez de N chamadas em série. A resposta tem a mesma
-  // forma da unitária (`promoted`/`failed`), e o toast soma: sucesso total,
-  // parcial (com o motivo da primeira falha) ou falha total.
-  async function handlePromoteAll(storyIds: string[]) {
-    if (promovendoStoryId || promovendoTodas || storyIds.length === 0) return;
-    setPromovendoTodas(true);
-    try {
-      const r = await promoteStories(projectId, storyIds);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      if (r.failed.length === 0) {
-        showToast({
-          title: t('toasts.historiasPromovidas', { count: r.promoted.length }),
-          tone: 'success',
-        });
-      } else if (r.promoted.length > 0) {
-        showToast({
-          title: t('toasts.promovidasParcial', { promovidas: r.promoted.length, total: storyIds.length }),
-          message: r.failed[0]?.reason,
-          tone: 'warning',
-        });
-      } else {
-        showToast({
-          title: t('toasts.erroPromover'),
-          message: r.failed[0]?.reason,
-          tone: 'danger',
-        });
-      }
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistorias'), tone: 'danger' });
-    } finally {
-      setPromovendoTodas(false);
-    }
-  }
-
-  async function handleReturnStory() {
-    if (!recusandoStory || motivoRecusa.trim() === '' || enviandoRecusa) return;
-    setEnviandoRecusa(true);
-    // RN-174: devolver NÃO é só gravar a recusa — `ReturnStoryUseCase` chama
-    // `reviseStory`, que é um `handle_call({:revise, …})` no `po_server`, e
-    // esta chamada só resolve depois de o PO rodar o turno INTEIRO (reescrever
-    // a história). Sem armar o indicador, a tela ficava muda esse tempo todo.
-    //
-    // Quem reescreve é SEMPRE o PO (`reviseStory` → `po_server`), não o
-    // `activeAgent` do momento — é por ele que o log é lido depois do aceite.
-    iniciarTurnoDoAgente('po');
-    try {
-      await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
-      setRecusandoStory(null);
-      setMotivoRecusa('');
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
-      // ADR 0163 (RN-578): resolver é o ACEITE. Se o PO não estava de pé, a
-      // api engoliu a notificação e nenhum `working` novo foi gravado — o
-      // `idle` antigo é o mais recente, e a leitura do log fecha na hora.
-      acompanharTurnoPeloLog('po');
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
-      // Um erro que deixasse `streaming` ligado travaria o composer até o
-      // próximo turno.
-      finalizarTurnoDoAgente();
-    } finally {
-      setEnviandoRecusa(false);
-    }
-  }
-
   async function handleSend() {
     const text = draft.trim();
     if (!text || streaming || session?.status !== 'active') return;
@@ -1059,36 +969,14 @@ export function SessionPage({
         )}
       </div>
 
-      {/* Modal de motivo da devolução (RN-126) — mesmo padrão de
-          `PromotionQueue` em ProjectBacklogTab.tsx, disparado a partir do
-          card inline em vez da aba Backlog. */}
-      {recusandoStory && (
-        <Modal
-          title={t('modal.devolverTitulo', { titulo: recusandoStory.title })}
-          onClose={() => setRecusandoStory(null)}
-        >
-          <Textarea
-            label={t('modal.motivo')}
-            value={motivoRecusa}
-            onChange={(e) => setMotivoRecusa(e.target.value)}
-            hint={t('modal.motivoDica')}
-            placeholder={t('modal.motivoPlaceholder')}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <Button
-              variant="danger"
-              loading={enviandoRecusa}
-              disabled={motivoRecusa.trim() === ''}
-              onClick={handleReturnStory}
-            >
-              {t('modal.devolverAoPo')}
-            </Button>
-            <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
-              {t('modal.cancelar')}
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <DevolverHistoriaModal
+        recusandoStory={recusandoStory}
+        setRecusandoStory={setRecusandoStory}
+        motivoRecusa={motivoRecusa}
+        setMotivoRecusa={setMotivoRecusa}
+        enviandoRecusa={enviandoRecusa}
+        handleReturnStory={handleReturnStory}
+      />
     </div>
   );
 }
