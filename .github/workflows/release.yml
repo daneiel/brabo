@@ -48,6 +48,13 @@ permissions:
 env:
   NODE_VERSION: '24.11.1'
   PNPM_VERSION: '11.3.0'
+  # O MESMO trivy do job `images` do `ci.yml` (ADR 0172). Duplicado, e não
+  # num lugar só, porque `env:` de workflow não se importa de outro arquivo e
+  # uma action composta só para duas variáveis seria um terceiro lugar a
+  # manter; a duplicação é GUARDADA por `scripts/ci/trivy-do-release.spec.ts`,
+  # que reprova se versão ou sha256 divergirem entre os dois workflows.
+  TRIVY_VERSION: '0.70.0'
+  TRIVY_SHA256: '8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9'
 
 jobs:
   release:
@@ -321,6 +328,103 @@ jobs:
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
 
+      # ADR 0172 (AT-179). O Trivy sobre o que esta tag ACABOU de publicar, por
+      # DIGEST, ANTES da assinatura — imagem reprovada não recebe `cosign sign`,
+      # e sem assinatura o `install.sh` não a instala. Até aqui a imagem que o
+      # instalador baixa nunca tinha sido escaneada: o `ci.yml` escaneia um
+      # build LOCAL do PR, e a tag publica uma build FRIA diferente (o cache de
+      # PR não é legível de uma tag, medido na AT-110).
+      #
+      # Consequência DECLARADA de reprovar aqui: o push já aconteceu (é ele que
+      # cria o digest), então as tags da versão ficam no GHCR SEM assinatura e
+      # SEM Release. É o estado certo — nada instala imagem sem assinatura —, e
+      # refazer é apagar a tag e cortar de novo com a base corrigida.
+      #
+      # Binário e não a action, pelo mesmo motivo do `ci.yml` e com a MESMA
+      # versão e o MESMO sha256 (guardados por spec).
+      - name: Instalar o binário do trivy
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          sudo chmod 0755 /usr/local/bin/trivy
+          trivy --version
+
+      - name: Baixar a base de vulnerabilidades do trivy
+        run: trivy image --cache-dir /tmp/trivy-cache --no-progress --download-db-only
+
+      # O RELATÓRIO vem antes do portão de propósito: se o portão reprovar, o
+      # resumo do job já está escrito e diz os dois números por imagem. Este
+      # scan NÃO tem `--ignore-unfixed` e sai sempre com 0 — ele existe para o
+      # CVE SEM correção, que é relatado (resumo do job e asset da Release) e
+      # não bloqueia, por decisão do mantenedor. Quem lê o JSON e monta o
+      # markdown é `scripts/ci/trivy-do-release.ts`; o veredito NUNCA sai de lá.
+      # Sequencial, com um `--cache-dir` só: são cinco imagens por rede, e a
+      # disputa de lock que obrigou o `ci.yml` a isolar caches só existe em
+      # paralelo.
+      - name: Trivy — relatório do que não tem correção
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/trivy"
+          node scripts/ci/trivy-do-release.ts referencias .release/images.json \
+            | while read -r alvo referencia; do
+                trivy image \
+                  --cache-dir /tmp/trivy-cache \
+                  --image-src remote \
+                  --no-progress \
+                  --format json \
+                  --output "${RUNNER_TEMP}/trivy/${alvo}.json" \
+                  --scanners vuln \
+                  --severity HIGH,CRITICAL \
+                  --ignorefile .trivyignore.yaml \
+                  --skip-db-update \
+                  --exit-code 0 \
+                  "${referencia}"
+              done
+          node scripts/ci/trivy-do-release.ts resumo .release/images.json \
+            "${RUNNER_TEMP}/trivy" "${VERSAO}" > "${RUNNER_TEMP}/trivy-sem-correcao.md"
+          cat "${RUNNER_TEMP}/trivy-sem-correcao.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # O PORTÃO. As flags são as do job `images` do `ci.yml`, byte a byte
+      # (`--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` e o MESMO
+      # `.trivyignore.yaml`, que tem `expired_at` em toda entrada) — a spec
+      # compara as duas invocações. Sem allowlist nova: este passo não aceita
+      # outro arquivo de exceções. Todas as imagens são escaneadas antes de
+      # reprovar, para o log dizer QUAIS falharam, e não só a primeira.
+      - name: Trivy — HIGH/CRITICAL com correção reprova, antes de assinar
+        run: |
+          set -uo pipefail
+          reprovadas=()
+          while read -r alvo referencia; do
+            if ! trivy image \
+                --cache-dir /tmp/trivy-cache \
+                --image-src remote \
+                --no-progress \
+                --format table \
+                --scanners vuln \
+                --severity HIGH,CRITICAL \
+                --ignore-unfixed \
+                --ignorefile .trivyignore.yaml \
+                --skip-db-update \
+                --exit-code 1 \
+                "${referencia}"; then
+              echo "::error::Trivy reprovou ${alvo} (${referencia}): HIGH/CRITICAL com correção disponível."
+              reprovadas+=("${alvo}")
+            fi
+          done < <(node scripts/ci/trivy-do-release.ts referencias .release/images.json)
+          if [ "${#reprovadas[@]}" -gt 0 ]; then
+            {
+              echo
+              echo "**Reprovado:** ${reprovadas[*]} — nada foi assinado nem publicado como Release."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Trivy: nenhuma imagem com HIGH/CRITICAL corrigível."
+
       # ADR 0149 (BRB-005). Assina as CINCO imagens por DIGEST, lido do
       # manifesto que o passo acima acabou de gerar — nunca por tag, que é
       # ponteiro móvel: assinar `:5.0.0` garantiria o que aquela tag apontava
@@ -367,10 +471,14 @@ jobs:
           # `.release/images.json` como ASSET: é a cópia autoritativa do que
           # esta tag publicou, disponível no mesmo instante em que a tag
           # existe. A cópia versionada entra depois, pela PR do CHANGELOG.
+          # `trivy-sem-correcao.md` é o relatório do passo do Trivy (ADR 0172):
+          # o que tem correção reprovou antes daqui, então o que sobra nele é o
+          # HIGH/CRITICAL SEM correção, relatado e não bloqueante.
           gh release create "${TAG}" \
             --title "${TAG}" \
             --notes-file RELEASE_NOTES.md \
-            .release/images.json
+            .release/images.json \
+            "${RUNNER_TEMP}/trivy-sem-correcao.md"
 
       # O CHANGELOG.md do repositório volta por PR para `dev`, não por push.
       #
