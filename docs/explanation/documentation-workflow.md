@@ -265,6 +265,61 @@ is per heading, so a partial translation isn't a problem: an RN that
 wasn't translated falls back to the English page, which is checked
 anyway.
 
+### The runbook's procedures table {#the-runbook-procedures-table}
+
+The runbook ends with a table of its **operation** procedures —
+`procedure | anchor | verification | schedule` — saying what proves each one
+and what runs that proof
+([Procedures and how each is verified](../runbook.md#procedimentos-e-verificacao)).
+It exists because of EP-015's closing criterion: no row with an empty
+verification or one that says "see below", and the proofs that exist run on a
+schedule, not from memory. Measured on 2026-09-25 (AT-129), the table the
+criterion talked about did not exist in the repository: a seven-row copy lived
+in the maintainer's notes, against 28 operation procedures here, and one row
+pointed at another note. A hand-written table of file names ages the same way
+prose numbers do — a spec gets renamed, a workflow loses its `schedule:`, and
+the cell keeps claiming.
+
+`generate.mjs` checks it (`verificarProcedimentosDoRunbook`, logic in
+`scripts/docs/procedimentos-do-runbook.mjs`, proven by mutation in
+`procedimentos-do-runbook.spec.ts`). Per row, it fails when:
+
+- the **anchor** cell has no `(#id)` link, or the id is not an explicit
+  `{#id}` on a heading of the runbook — the same contract as the RN anchors:
+  a retitled section must not break the link;
+- the **verification** cell is empty, says "see below/above", names a file
+  that is not tracked by git or a `make` target the `Makefile` does not have,
+  or names nothing checkable and does not start with `**None**` — the explicit
+  statement that no proof exists;
+- a **schedule** segment (they are separated by `;`) does not start with its
+  trigger class — `weekly`/`daily`/`monthly`, `every PR`, `every tag` or
+  `manual` — or a workflow it cites is missing or does not have that trigger
+  in its parsed `on:` (`schedule:`, `pull_request`, `push: tags`). A `manual`
+  segment may not cite a workflow.
+
+The column is called `schedule` and still accepts `every PR` and `every tag`
+on purpose. The criterion's question is "does it run without someone
+remembering?", and a spec that `ci.yml` runs on every pull request answers
+yes; calling it `manual` would be wrong in the other direction. What the check
+guarantees is that the class written is the one the workflow **has**: `weekly`
+pointing at a workflow with no `schedule:` fails, which is the case AT-193
+named.
+
+A missing section, a missing table, changed column headers or zero rows is
+`CEGO` and fails.
+
+**Severity: `block`**, for the same reason as the RN anchors: the table was
+born with every row checked, so there is no inherited debt, and whatever
+breaks it later (a renamed spec, a workflow that lost its schedule) is the
+fault of the PR that broke it, which is also the PR that can fix it.
+
+**Only the English runbook carries the table.** The pt-BR translation is
+behind the English one (AT-209), its `traducao-pt-br` docmap rule is `warn`,
+and its headings do not carry the ten explicit ids this table added to the
+English page. A
+second, unchecked copy of the table there would be exactly the copy the table
+exists to replace.
+
 ## The pieces
 
 ```mermaid
