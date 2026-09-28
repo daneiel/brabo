@@ -573,6 +573,7 @@ deliberately modest:
 | the five production images | built to prove the tag is **buildable** — the fifth, the container broker, since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) |
 | the version baked into three of them | baked in as an `ARG` in the api,
 the web and the broker — see below |
+| **Trivy on the five published images** | **by digest**, from the registry, **before** signing — HIGH/CRITICAL with a fix fails the release; what has no fix is reported in the job summary and as the `trivy-sem-correcao.md` Release asset ([ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md)) |
 | **signatures for the five images** | `cosign` keyless, **by digest**,
 signed and then verified in the same run
 ([ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)) |
@@ -582,6 +583,15 @@ precise about **why by digest**: signing `:5.0.0` would attest whatever
 that tag pointed at in the instant of signing, and a tag is a movable
 pointer. The digest is what `.release/images.json` already records and
 what the production overlay already applies.
+
+The scan comes **before** the signature, and the order is the rule: an image
+Trivy fails is never signed, so the installer never takes it. It uses the
+exact flags and `.trivyignore.yaml` of `ci.yml`'s scan, because the image a
+tag publishes is a cold build from another run — not the one the PR scanned.
+The push has already happened when the scan runs (it is what creates the
+digest), so a failed tag leaves unsigned images in the GHCR and no Release;
+`scripts/ci/trivy-do-release.spec.ts` guards the order and the flags, since no
+PR ever runs this workflow.
 
 The signature is **verified in the same run, before the Release exists**.
 A signature nobody tries to verify is one more file in the registry, and

@@ -176,6 +176,8 @@ estado lido do repositório e não da conversa.
 
 | A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
 
+| O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
+
 ## Estado atual e aberto
 
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
@@ -1120,7 +1122,24 @@ o RACIOCÍNIO da triagem, que continua valendo.
   móvel — e UM `checksums.txt` assinado cobrindo os cinco binários do
   runner, não cinco assinaturas. Os dois workflows VERIFICAM o que
   assinaram no mesmo run, porque assinatura que ninguém tenta verificar é
-  arquivo a mais e a falha apareceria só na máquina de quem instala. Desde a
+  arquivo a mais e a falha apareceria só na máquina de quem instala. E desde
+  o ADR 0172 (AT-179) o `release.yml` ESCANEIA o que publica antes de
+  assinar: Trivy sobre o DIGEST de cada imagem do `.release/images.json`
+  (`--image-src remote`), entre o registro e o `cosign sign` — imagem
+  reprovada não é assinada, e o `install.sh` não instala imagem sem
+  assinatura. Até ali só o `ci.yml` escaneava, e ele escaneia um build LOCAL do
+  PR, enquanto a tag constrói FRIA noutra execução (AT-110). O portão usa as
+  flags do `ci.yml` BYTE A BYTE (`--severity HIGH,CRITICAL --ignore-unfixed
+  --exit-code 1`, o MESMO `.trivyignore.yaml`) e o veredito é o código de
+  saída do Trivy, nunca uma régua em TS; o que NÃO tem correção é RELATADO
+  (resumo do job e asset `trivy-sem-correcao.md`, por
+  `scripts/ci/trivy-do-release.ts`) e não bloqueia. Sem allowlist nova — não
+  acrescente `--ignorefile`, `--skip-*` nem `--vex` ao release para uma tag
+  passar. Versão, `sha256` e flags do Trivy existem nos DOIS workflows, de
+  propósito (`env:` não se importa), e `scripts/ci/trivy-do-release.spec.ts`
+  reprova a divergência e o portão depois da assinatura: quem sobe o Trivy sobe
+  nos dois no mesmo PR. Preço declarado: o push vem antes do scan, então tag
+  reprovada deixa imagem SEM assinatura no GHCR e sem Release. Desde a
   RN-525 o proxy `GET /runner-releases/binary` VERIFICA — mas só o sha256
   contra o `checksums.txt` da mesma release, nunca a ASSINATURA dele: é
   INTEGRIDADE e não procedência, e está escrito assim no docblock, na
