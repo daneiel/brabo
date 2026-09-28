@@ -10,7 +10,9 @@ keywords: [runbook, operations, incident, restore, rollout, kubernetes]
 # Operational Runbook
 
 One single document, because at 3am nobody opens a directory to pick a file.
-Start with triage.
+Start with triage. What proves each procedure, and what runs that proof, is in
+the table at the end:
+[Procedures and how each is verified](#procedimentos-e-verificacao).
 
 ## Triage — from symptom to procedure
 
@@ -1000,7 +1002,7 @@ make k8s-down         # removes the cluster
 Variables: `BRABO_SKIP_BUILD=1` (uses the daemon's images),
 `BRABO_KEEP_CLUSTER=1` (reuses the cluster), `BRABO_CLUSTER_TOOL=kind`.
 
-### Validating a pipeline tag
+### Validating a pipeline tag {#validar-tag-do-pipeline}
 
 ```bash
 make deploy-local TAG=v0.2.0-qa.1
@@ -1013,6 +1015,12 @@ detached checkout of the tag and builds the images from that commit.
 It **refuses** to run with a dirty tree, instead of guessing what to do
 with your work in progress. When it finishes you're left in a detached
 HEAD; the command to go back appears in the log.
+
+Verification: **none**. No workflow passes `TAG=`: the scheduled
+`propriedades.yml` builds the checked-out tree, never a tag, so the detached
+checkout in `deploy/k8s/bootstrap.sh` (and its refusal on a dirty tree) runs
+only when someone types it. What it brings up afterwards is the same bootstrap
+and smoke as [Local deploy](#deploy-local), which are proven.
 
 ### Deploying a release's images {#imagens-de-uma-release}
 
@@ -1054,6 +1062,17 @@ Three things worth knowing before you run it:
 If `make imagens-do-release` says it can't find `.release/images.json`, you
 skipped step 1. If it can't find `kustomize`, the version the CI uses is
 pinned in `KUSTOMIZE_VERSION`, in `.github/workflows/ci.yml`.
+
+Verification: `scripts/ci/aplicar-imagens.spec.ts`, on every PR, proves the
+half of step 2 that **reads** the file — it accepts the `images.json` that
+`release.yml` writes and refuses one with no `imagens`, an empty list, or no
+version and commit. What it hands to `kustomize edit set image` is proven by
+`scripts/ci/images-manifest.spec.ts` — always by digest, never a tag, and only
+the four images the kustomize base declares. Running `kustomize` on the overlay
+has no spec. The chain as a whole
+(download a real release's file, write it, `kubectl apply -k`) has **never
+run as a proof**: nothing applies a release's digests to a cluster, and the
+scheduled cluster runs images built from the tree, not the published ones.
 
 ### What version is live {#que-versao-esta-no-ar}
 
@@ -1631,7 +1650,7 @@ kubectl -n brabo exec deploy/engine -- /app/bin/engine rpc 'IO.inspect(Node.list
 Should list the other pods. An empty list with more than one replica is a
 defect.
 
-### Secrets: fallback to sealed-secrets
+### Secrets: fallback to sealed-secrets {#fallback-sealed-secrets}
 
 The default is the External Secrets Operator. Where it isn't viable,
 replace the `ExternalSecret` in
@@ -1650,6 +1669,13 @@ kubectl create secret generic brabo-secrets \
 
 The `SealedSecret` is encrypted for that cluster's public key and can be
 versioned. A plain Secret **never** can.
+
+Verification: **none**. Nothing in the repository runs `kubeseal`, and the
+scheduled cluster (`propriedades.yml`) materializes `brabo-secrets` through
+External Secrets, so this path has never been exercised. Before relying on it,
+bring up a cluster with the `SealedSecret` in place and run `make smoke-k8s`:
+its first step requires every pod Ready, and a pod whose `secretRef` points
+at a Secret that never materialized is not.
 
 ### Known limits of this environment
 
@@ -1814,7 +1840,7 @@ Empty list = the DNSCluster didn't resolve the headless Service, or the
 NetworkPolicy is blocking the distribution range (9100–9110). Without a
 cluster, each replica is an island and every rollout drains everything.
 
-### Increasing the drain window
+### Increasing the drain window {#aumentar-a-janela-de-drain}
 
 If sessions run long and the 45s drain isn't enough, both values go up
 **together** — and in this order of reasoning: pick the drain, then add
@@ -1828,6 +1854,15 @@ terminationGracePeriodSeconds: 150   # drain + ~30s teardown
 
 Touching only `terminationGracePeriodSeconds` doesn't lengthen the drain;
 touching only the drain makes kubelet kill mid-way.
+
+Verification: **none of its own**. `make rollout-test` is the proof that
+applies, and the scheduled run proves only the pair the **local** overlay
+produces: 90 s of grace from `deploy/k8s/base/engine/deployment.yaml` and a
+20 s drain from `deploy/k8s/overlays/local/patches.yaml` — not the 45 s of the
+default, and not a raised one. After raising both in the overlay you deploy, run
+`make rollout-test` with the same values in the local overlay
+before the rollout that matters; nothing checks that the grace period stays
+above the drain.
 
 ---
 
@@ -1925,7 +1960,7 @@ Three things in that output matter more than the last row:
 - **No rows at all** means the CronJob has never run successfully. Then
   the problem isn't the restore.
 
-### The automated path (the same one the test runs)
+### The automated path (the same one the test runs) {#restore-automatizado}
 
 On Kubernetes:
 
@@ -1953,7 +1988,14 @@ ask for: it verifies the bare-repo archive, because on Kubernetes the
 legitimately skipped, while under compose it is mounted and skipping would be a
 false green.
 
-### Restoring for real, during an incident
+The two are **not** proven on the same cadence: `make test-restore` (and its
+deliberate break, `make test-restore-mutacao`) runs every week in
+[`propriedades.yml`](#provas-de-propriedade-agendadas);
+`make test-restore-compose` runs in no workflow — only when someone types it,
+or when the installer migrates. So the bare-repo verification, which only the compose
+path performs, has no schedule either.
+
+### Restoring for real, during an incident {#restore-de-verdade}
 
 The `brabo-restore` script restores into a NEW database and never touches
 the source one — on purpose. Restoring over the live database is
@@ -2006,6 +2048,13 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 > change **also** the value in the provider, or the system quietly goes
 > back to the old database within an hour — mid-recovery.
 
+Verification: steps 1 and 2 are the `brabo-restore` that `make test-restore`
+runs every week, and the two queries of step 2 are the ones
+`docker/backup/restore.sh` asks itself. Step 3 — patching `DATABASE_URL` and
+restarting api and engine against the recovered database — has **never been
+exercised**: the proof drops `brabo_restore_test` when it finishes and never
+points a running api at it.
+
 ### What the restore does NOT cover
 
 - **User credentials become unreadable if `CREDENTIALS_MASTER_KEY` is
@@ -2040,7 +2089,9 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 
 ### Recovering the bare repos {#restore-dos-bare-repos}
 
-Verifying costs nothing and writes nothing — it is the weekly gesture:
+Verifying costs nothing and writes nothing — it is the weekly gesture, and a
+gesture is all it is: no workflow runs it (see
+[the automated path](#restore-automatizado)):
 
 ```bash
 docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore-git
@@ -2070,6 +2121,13 @@ It **refuses to extract over existing repos**. Overlaying two repository states
 produces a mix that no `git` complains about and nobody notices until a `fetch`
 brings back the wrong history. Empty the volume, or pass `RESTORE_GIT_FORCE=1`
 if the overlay is genuinely what you want.
+
+Verification: the shell functions behind both gestures are proven on every PR by
+`scripts/ci/backup-lib.spec.ts` — archive and restore round-trip identical, no
+`*.lock` copied, a truncated archive refused on reading, a destination it cannot
+write refused before `tar`. The commands themselves, in the backup image against
+the real volume, run only through `make test-restore-compose` (the verifying
+half, never `--restaurar`), which no workflow schedules.
 
 ### Losing the graph (Neo4j) {#perda-do-grafo}
 
@@ -2246,6 +2304,10 @@ Where it writes, and what it does **not** cover:
 The proof is `apps/api/test/scripts/reprojetar-artefatos.spec.ts`: it builds a
 scenario with the forward projector on a real Postgres and a real disk, **wipes**
 the folder, reprojects, compares every path and content, and reprojects again.
+It runs on every PR. The command as this section tells you to run it in an
+incident — `node scripts/reprojetar-artefatos.js` inside the api **image** —
+has no proof yet: unlike the graph, it has no target in the scheduled cluster
+run.
 
 ### When the restore fails
 
@@ -2524,7 +2586,7 @@ Decisions in
 First-party auth has **three** secrets, with very different consequences
 when swapped. Confusing the first two is the expensive mistake here.
 
-### `AUTH_JWT_SECRET` — zero-downtime rotation
+### `AUTH_JWT_SECRET` — zero-downtime rotation {#rotacao-do-auth-jwt-secret}
 
 The Ed25519 pair that signs the access token is derived from it. Rotation
 is the same three-step dance as the master key (below):
@@ -2550,7 +2612,7 @@ Verification: `apps/api/test/infrastructure/security/ed25519-access-token-issuer
 (describe "rotação de chave") and, for the pepper condition,
 `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`.
 
-### `AUTH_TOKEN_PEPPER` — global logout, no middle ground
+### `AUTH_TOKEN_PEPPER` — global logout, no middle ground {#troca-do-auth-token-pepper}
 
 This is the HMAC key for hashing refresh tokens and account tokens.
 Changing it invalidates, all at once:
@@ -2580,7 +2642,7 @@ reset link say "expired".
 Verification: `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`
 ([RN-597](business-rules/autenticacao.md#rn-597)).
 
-### `BRABO_SERVICE_TOKEN` — zero-downtime rotation, on both sides
+### `BRABO_SERVICE_TOKEN` — zero-downtime rotation, on both sides {#rotacao-do-brabo-service-token}
 
 This is the shared secret that authenticates api ↔ engine traffic
 ([RN-035](business-rules/autenticacao.md#rn-035)). It has nothing to do with a user
@@ -2641,7 +2703,7 @@ the broker, `apps/broker/src/config.spec.ts`.
 openssl rand -base64 48
 ```
 
-### Account locked by lockout
+### Account locked by lockout {#conta-travada-por-lockout}
 
 The lockout is short (30s to 15 minutes) and resolves itself: the
 sliding window drains. **There's no unlock endpoint**, on purpose — see
@@ -2660,6 +2722,11 @@ delete from auth_lockout_hits where bucket_key = '<subject_key>';
 ```
 
 A successful password reset also unlocks the account.
+
+Verification: **none** for the two queries above — they were checked against
+the schema by reading, never executed by a spec. The lockout itself (the
+window, the counter, what unlocks it) is covered by
+`apps/api/test/application/use-cases/auth/lockout.spec.ts`.
 
 > **The trail is never erased.** `auth_lockout_hits` is an ephemeral
 > counter; `auth_events` is append-only and survives everything, including
@@ -3065,6 +3132,11 @@ pnpm obs:down    # tears down just the four, leaving the apps up
 The command finishes by checking what came up — if it says `ok` on every
 line, the panel has data; if it complains, it says which piece was
 missing.
+
+Verification: that closing check is `scripts/dev/observabilidade-pronta.mjs`,
+and it is a **self-check, not a proof** — it runs only when someone brings the
+overlay up, and it has no spec and no workflow. A change that breaks the
+overlay surfaces the next time someone runs `pnpm dev:obs`.
 
 | tool | address | serves for |
 |---|---|---|
@@ -3560,6 +3632,21 @@ the one-line command that installs for real.
 > ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
 > Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
 
+Verification: `.github/workflows/install-e2e.yml` runs the one-liner above on
+a **clean** machine, under a real pty, on every final tag — the installer, the
+stack, the first account, the machine key and the agent picking up the first
+project. On every PR the `scripts/dev/install*.spec.ts` specs prove the pieces
+that do not need a Release: the plan and the state (`install.spec.ts`), the
+`.env` through Compose's own parser (`install-env.spec.ts`), the closing steps
+(`install-fechamento.spec.ts`), the refused invocations
+(`install-invocacao.spec.ts`), the downloaded files
+(`install-arquivos-da-instalacao.spec.ts`), the broker question
+(`install-broker.spec.ts`), and that the E2E itself has not rotted
+(`install-e2e.spec.ts`). The **migration** path — backup, prove, delete,
+install, restore — has no end-to-end run: the E2E machine is clean, so the
+question is never asked, and only the restore proof's `.env` hand-off has a spec
+(`scripts/dev/prova-de-restauracao-env.spec.ts`).
+
 ### The container broker in an installation {#broker-na-instalacao}
 
 Projects in **Container** and **Mounted** mode run inside a container, and the
@@ -3656,6 +3743,14 @@ not an orphan and keeps running. Nothing in your projects is deleted; Container
 and Mounted projects stop executing, and the project screen stops offering
 them ([ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
 
+Verification: turning it on **at install time** is proven — the question and
+its refusals by `scripts/dev/install-broker.spec.ts` on every PR, and the whole
+path by `.github/workflows/install-e2e.yml` on every final tag, which answers
+*sim* and requires the broker on, the api reaching it, and `COMPOSE_PROFILES` and
+`BROKER_URL` written to `.env`. Turning it on **later** by the five commands above, and turning it
+**off**, have **no verification**: nothing runs them, and the
+`up --remove-orphans` caveat was measured once by hand.
+
 ---
 
 ## Verifying a published artifact {#verificar-artefato-publicado}
@@ -3718,7 +3813,7 @@ binaries — macOS notarization and Windows Authenticode. Those need a paid
 signing identity and are a separate backlog item; the OS will still warn on
 first run.
 
-### The written offer of source, inside the engine image
+### The written offer of source, inside the engine image {#oferta-de-fonte-na-imagem}
 
 Signing answers *"is this what the pipeline published?"*. A second question
 travels with the same image and has a different answer: **where is the source
@@ -3917,3 +4012,67 @@ The report shows **every** provider, including the skipped ones, with the
 reason and the origin of the failure. `sem_credencial` means the key
 never arrived; `falha · origem infra` means it couldn't even reach the
 provider; `falha · origem modelo` means it answered with a refusal.
+
+Verification: steps 2–4 are proven on every PR — the contract suite
+(`apps/api/test/contract/llm-provider.contract.ts`, run by each provider's
+`*.contract.spec.ts`) against a fake server, and the typecheck that breaks when
+a name is missing from either list. Step 6 is **manual by nature**: it needs a
+real credential with credit, which CI does not have. The per-provider
+`*.smoke.spec.ts` files are the scripted form of it, and they skip without a
+key — the environment holds a credential only for OpenRouter (see the
+`TODO(humano)` on the LLM smokes in `CLAUDE.md`).
+
+---
+
+## Procedures and how each is verified {#procedimentos-e-verificacao}
+
+Every **operation** procedure of this page, with the file that proves it and
+what runs that proof. Diagnosis sections (what to do when something looks
+wrong) and the development-environment sections are not here: they are ways to
+find a cause, not procedures that can pass or fail.
+
+- **verification** names the spec, script, workflow or `make` target that
+  proves the procedure, or starts with **None** and says so. A partial proof
+  names what it covers and what it does not.
+- **schedule** says what runs it without anyone remembering: a scheduled
+  workflow (`weekly`), every pull request (`every PR`), every final tag
+  (`every tag`), or `manual` — someone has to remember.
+
+`pnpm docs:check` reads this table and fails when a file in **verification**
+is not in the repository, a `make` target is not in the `Makefile`, a cell is
+empty or says "see below", an anchor is not a heading of this page, or a
+workflow in **schedule** does not have the trigger the cell claims
+(`schedule:` for `weekly`, `pull_request` for `every PR`, `push: tags` for
+`every tag`). How it works is in
+[How documentation stays alive](explanation/documentation-workflow.md#the-runbook-procedures-table).
+
+| procedure | anchor | verification | schedule |
+|---|---|---|---|
+| Bring the stack up in a local cluster | [Local deploy](#deploy-local) | `make deploy-local` ends with `make smoke-k8s` (`deploy/k8s/smoke.sh`); the scheduled run does the same `deploy/k8s/bootstrap.sh` and smoke | weekly `.github/workflows/propriedades.yml` |
+| Validate a pipeline tag (`TAG=`) | [Validating a pipeline tag](#validar-tag-do-pipeline) | **None.** No workflow passes `TAG=`; the detached checkout of the tag runs only by hand | manual |
+| Prove the engine's HPA scales | [Local deploy](#deploy-local) | `make hpa-test` (`deploy/k8s/hpa-test.sh`) | weekly `.github/workflows/propriedades.yml` |
+| Validate the overlays without a cluster | [Local deploy](#deploy-local) | `make k8s-validate` (`deploy/k8s/validate.sh`) | every PR `.github/workflows/ci.yml` |
+| Deploy a release's images | [Deploying a release's images](#imagens-de-uma-release) | `scripts/ci/aplicar-imagens.spec.ts` proves reading the release manifest, `scripts/ci/images-manifest.spec.ts` the digests handed to `kustomize`; running it on the overlay and applying a real release's digests: none | every PR `.github/workflows/ci.yml` (the spec); manual (the chain) |
+| Roll out the engine | [Engine rollout](#rollout-do-engine) | `make rollout-test` (`deploy/k8s/rollout-test.sh`); its evidence collectors by `scripts/ci/rollout-evidencia.spec.ts` | weekly `.github/workflows/propriedades.yml`; every PR `.github/workflows/ci.yml` (the collectors) |
+| Increase the drain window | [Increasing the drain window](#aumentar-a-janela-de-drain) | **None of its own.** `make rollout-test` proves only the local overlay's pair (20 s drain, 90 s grace); rerun it with the raised values | manual |
+| Fall back to sealed-secrets | [Secrets: fallback to sealed-secrets](#fallback-sealed-secrets) | **None.** Nothing runs `kubeseal`; the scheduled cluster uses External Secrets | manual |
+| Verify a backup on Kubernetes | [The automated path](#restore-automatizado) | `make test-restore` (`deploy/k8s/test-restore.sh`) and the deliberate break `make test-restore-mutacao` | weekly `.github/workflows/propriedades.yml` |
+| Verify a backup on a compose installation | [The automated path](#restore-automatizado) | `make test-restore-compose` (`docker/backup/test-restore-compose.sh`); its `.env` hand-off by `scripts/dev/prova-de-restauracao-env.spec.ts` | manual (the proof — no workflow runs it); every PR `.github/workflows/ci.yml` (the spec) |
+| Restore for real during an incident | [Restoring for real](#restore-de-verdade) | steps 1–2: `make test-restore` (the same `brabo-restore`, the same queries as `docker/backup/restore.sh`); step 3, promoting `DATABASE_URL`: none, never exercised | weekly `.github/workflows/propriedades.yml` (steps 1–2); manual (step 3) |
+| Verify and recover the bare repos | [Recovering the bare repos](#restore-dos-bare-repos) | `scripts/ci/backup-lib.spec.ts` (the functions); `make test-restore-compose` (the verifying command, in the image); `--restaurar` in the image: none | every PR `.github/workflows/ci.yml` (the spec); manual (the commands) |
+| Reproject the graph | [Losing the graph](#perda-do-grafo) | `make test-reprojecao` (`apps/api/test/scripts/reprojetar-grafo.spec.ts`, skipped on PRs, which have no Neo4j) and `make test-reprojecao-k8s` (`deploy/k8s/test-reprojecao.sh`) | weekly `.github/workflows/propriedades.yml` |
+| Reproject the artifact folder | [Losing the artifact folder](#perda-da-pasta-de-artefatos) | `apps/api/test/scripts/reprojetar-artefatos.spec.ts`; the command inside the api image: none | every PR `.github/workflows/ci.yml`; manual (the image path) |
+| Rotate `AUTH_JWT_SECRET` | [`AUTH_JWT_SECRET`](#rotacao-do-auth-jwt-secret) | `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts` and `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Change `AUTH_TOKEN_PEPPER` | [`AUTH_TOKEN_PEPPER`](#troca-do-auth-token-pepper) | `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Rotate `BRABO_SERVICE_TOKEN` | [`BRABO_SERVICE_TOKEN`](#rotacao-do-brabo-service-token) | `apps/api/test/infrastructure/security/service-token.spec.ts`, `apps/api/test/interfaces/engine-service.guard.spec.ts`, `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`, `apps/engine/test/engine/runtime_service_token_test.exs`, `apps/broker/src/config.spec.ts` and `scripts/ci/previous-nos-composes.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Unlock an account by SQL | [Account locked by lockout](#conta-travada-por-lockout) | **None.** The two queries were checked against the schema by reading; `apps/api/test/application/use-cases/auth/lockout.spec.ts` covers the lockout, not them | manual |
+| Rotate the master key | [Master key rotation](#rotacao-da-chave-mestra) | `apps/api/test/scripts/rewrap-deks.spec.ts` and `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Cut the spend in a cost incident | [Cost incident](#incidente-de-custo) | `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts` runs the section's SQL, in both languages, against the migrated schema; steps (b) and (d), on the screen: none | every PR `.github/workflows/ci.yml` |
+| Bring up observability without a cluster | [Local observability](#observabilidade-local) | `scripts/dev/observabilidade-pronta.mjs`, a self-check at the end of `pnpm dev:obs`, with no spec | manual |
+| Check the gate registry in the image | [Gate registry](#registro-de-gates) | `docker/smoke.sh` calls both routes against the production image; its gate functions by `scripts/ci/smoke-gates.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Install | [Installing](#instalando) | `.github/workflows/install-e2e.yml` (clean machine) and `scripts/dev/install*.spec.ts`; the migration path end to end: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the specs) |
+| Turn the installation's broker on or off | [The container broker in an installation](#broker-na-instalacao) | at install: `scripts/dev/install-broker.spec.ts` and `.github/workflows/install-e2e.yml`; turning it on later by hand, and off: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the spec); manual (later, and off) |
+| Verify a published artifact | [Verifying a published artifact](#verificar-artefato-publicado) | the publishing workflows verify what they signed, in the same run: `.github/workflows/release.yml` (`cosign verify`) and `.github/workflows/build-runner-binaries.yml` (`cosign verify-blob`) | every tag `.github/workflows/release.yml` `.github/workflows/build-runner-binaries.yml` |
+| Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps the `COPY`; the published image carrying the file: none | every PR `.github/workflows/ci.yml` (the spec); manual (the published image) |
+| Bump a third-party image | [Bumping a third-party image](#subindo-imagem-de-terceiro) | `scripts/ci/imagens-pinadas.ts` and `scripts/ci/imagens-pinadas.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Add a compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) | steps 2–4: `apps/api/test/contract/llm-provider.contract.ts`, run by each provider's contract spec; step 6, with a real credential: none in CI — the smoke specs skip without a key | every PR `.github/workflows/ci.yml` (steps 2–4); manual (step 6) |
