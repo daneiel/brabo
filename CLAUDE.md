@@ -324,8 +324,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `X=true` e reiniciar". Medido no container: `[true] [] []`. As oito flags
   BOOLEANAS do `runtime.exs` estão nos TRÊS composes agora (o de instalação
   desde a AT-202), cada uma com o MESMO default do código salvo as duas chaves
-  de boot que produção e instalação desligam de propósito, DECLARADAS no spec, e `scripts/ci/flags-do-engine-no-compose.spec.ts`
-  DERIVA a lista e reprova a próxima que faltar. E ligar a Anamnese periódica
+  de boot que PRODUÇÃO desliga de propósito, DECLARADAS no spec, e
+  `scripts/ci/flags-do-engine-no-compose.spec.ts` DERIVA a lista e reprova a
+  próxima que faltar. A INSTALAÇÃO tinha a mesma divergência por CÓPIA e deixou
+  de ter (AT-219): ali `START_OUTBOX_DRAIN=false` deixava o outbox sem
+  consumidor nenhum — sessão encerrada não parava, dev agent esperando
+  decisão/gate/container nunca acordava. Não "uniformize" produção e
+  instalação em nenhum dos sentidos. As duas chaves de boot ligadas não gastam
+  token com as flags de PRODUTO desligadas: o `kickoff/0` da Anamnese não
+  agenda job, e o drain não enfileira o Psicólogo. E ligar a Anamnese periódica
   são DUAS variáveis: `START_ANAMNESE` é a chave de BOOT (decide se o tick é
   agendado) e `ANAMNESE_ENABLED` é a flag de PRODUTO (decide se uma rodada nova
   pode acontecer) — o Psicólogo tem só a segunda, porque o gatilho automático

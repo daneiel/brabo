@@ -161,6 +161,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **instalação**: a instalação passa a drenar o outbox (AT-219). O
+  `docker-compose.install.yml` herdou do compose de produção
+  `START_OUTBOX_DRAIN=false` e `START_ANAMNESE=false`, com o motivo dele
+  ("existe pra validar as imagens"). Numa instalação, isso deixava o outbox
+  sem NENHUM consumidor: o `OutboxDrainWorker` é o único que entrega ao engine
+  os eventos `session`/`task`/`container` que a api grava. Sessão encerrada pela
+  api não parava o processo nem os agentes conversacionais dela (RN-581). O dev
+  agent que esperava uma decisão de ação, um gate, a PR ou o container chegar em
+  `running` nunca era acordado. A mesma chave agenda a poda de worktrees órfãos
+  e a adoção de sessões sem dono, e as duas também estavam paradas. As duas
+  chaves voltam ao `true` do `runtime.exs` SÓ na instalação; produção e dev
+  ficam como estavam, e o comentário do compose explica a divergência. A
+  Anamnese e o Psicólogo continuam PAUSADOS: `ANAMNESE_ENABLED` e
+  `PSYCHOLOGIST_ENABLED` seguem `false`. Com a flag de produto desligada, o
+  `kickoff/0` da Anamnese não agenda job nenhum, e o `Outbox.Drain` não
+  enfileira o Psicólogo. Nenhuma rodada e nenhum token a mais.
+  `flags-do-engine-no-compose.spec.ts` deixa de declarar a divergência da
+  instalação; ela passa a repetir o default do código.
 - **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
   [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
   `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552

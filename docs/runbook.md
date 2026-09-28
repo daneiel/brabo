@@ -3653,8 +3653,19 @@ exposed in `docker-compose.yml`.
 > `scripts/ci/flags-do-engine-no-compose.spec.ts` checks all **three** files
 > and fails the build for the next boolean flag that isn't mapped, or that
 > carries a default other than the code's (`START_OUTBOX_DRAIN` and
-> `START_ANAMNESE` are `false` in production and install on purpose, and the
-> spec declares that divergence by name). On Kubernetes there was nothing to fix — a
+> `START_ANAMNESE` are `false` in the production compose on purpose, and the
+> spec declares that divergence by name). The install compose used to carry
+> the same `false` — copied from production together with production's reason
+> ("it exists to validate the images") — and since AT-219 it repeats the
+> code's `true`. That was a defect of the install, not a cost choice:
+> `START_OUTBOX_DRAIN` is the only thing that drains the api's outbox into the
+> engine, so on a one-machine install a closed session never stopped its
+> processes and a dev agent waiting on an approval, a gate or the container
+> was never woken. Neither key spends tokens with the product flags off: with
+> `ANAMNESE_ENABLED=false` the Anamnesis `kickoff/0` schedules no job at all,
+> and the drain only enqueues the Psychologist with `PSYCHOLOGIST_ENABLED=true`.
+> On an install, turning the Anamnesis back on is therefore just
+> `ANAMNESE_ENABLED=true`. On Kubernetes there was nothing to fix — a
 > Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
 > these variables. Both flags are read at boot: change them and
 > `docker compose up -d engine`.
