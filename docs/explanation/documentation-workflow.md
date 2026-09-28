@@ -102,6 +102,224 @@ the source of truth is the ADR directory, `verificarVersaoAnunciada`
 when it's the CHANGELOG's latest release — or a function of its own
 next to them, when it's neither.
 
+**Counts derived from code (AT-123).** A sweep on 2026-09-25 of
+`docs/`, `README.md`, `CONTRIBUTING.md`, `THIRD_PARTY_NOTICES.md` and
+`CLAUDE.md` found five numbers already wrong — "nove schemas" (eleven),
+"doze operações" of the git contract (fifteen), "dez abas" (twelve),
+"três imagens" built by CI (five), "Thirteen types" of
+`proposed_action` (twenty-one) — none with a check behind it. The
+counts whose source is a place in the code now live in
+`scripts/docs/contagens-do-codigo.mjs`, called by
+`verificarContagensDerivadasDoCodigo`: one table row per SENTENCE
+(the same count said in two files is two sentences that age apart),
+each pointing at an extractor that counts the artifact — the
+`overrides` blocks of the two `pnpm-workspace.yaml`, the golden-set's
+`CASOS` and `ARQUIVOS_CURADOS` and its `floor.json`, the total that
+`scripts/ci/imagens-pinadas.ts` prints, `ALVOS`, the smoke's non-root
+loop, the methods of `GitProviderContract` and of `DockerPort`, the
+tab `REGISTRO`, the dev compose services without `profiles:` (which
+must ALL have a healthcheck, or the expected value becomes a sentence
+the prose doesn't have), `ACTION_TYPES`, the `action_status` enum and
+the `pgTable(` calls. Comparison ignores case and follows the
+sentence's form (Portuguese masculine/feminine words, English words,
+or digits). Because the extractors are many, each is proven by
+MUTATION in `contagens-do-codigo.spec.ts`: change the artifact and not
+the prose, and it must fail `DESATUAL`; remove the sentence or the
+source, and it must fail `CEGO`.
+
+What was **dated instead of derived**, and why: the per-app file counts
+in `architecture.md` and the broker's "six routes" change with almost
+every PR or are read off a `switch`, so a check would only add noise —
+they carry "measured 2026-09-25". Numbers that describe a design
+invariant ("two layers", "three states") or a past measurement already
+dated in place (`THIRD_PARTY_NOTICES.md`, the runbook's restore
+transcripts) were left as they are.
+
+### Line references with a symbol
+
+An RN cites code by `path:line`, and a line number goes stale every
+time someone edits the file. RN-547 cited `fechar_a_instalacao` at
+`install.sh:966` and `post_interno` at `:682`. By 2026-09-17 they were
+at `:1107` and `:809`, and by 2026-09-18 at `:1463` and `:1165`. A line
+number can't be generated, and in general it can't be verified either,
+because `apps/api/src/foo.ts:40` alone doesn't say what should be
+there. When the RN also **names the symbol** next to the line, though,
+the line *can* be verified. That's the only case `generate.mjs` checks
+(`verificarRefsComSimbolo`, with its logic in
+`scripts/docs/refs-com-simbolo.mjs`, tested).
+
+**The pattern is narrow on purpose.** A noisy check gets switched off in
+its first month. It reads the three RN files (`business-rules.md`,
+`business-rules/custo.md`, `business-rules/autenticacao.md`) and takes
+only these two forms:
+
+```
+`<path>:<N>` (`<symbol>`     explicit reference
+`:<N>` (`<symbol>`           continuation — inherits the path
+```
+
+- The symbol has to come **right after** the reference, opening a
+  parenthesis and in backticks. Only whitespace may sit between them,
+  including a line break.
+- The symbol has to be an **identifier**: `fechar_a_instalacao`,
+  `join/3`, `git_dir?`, `Engine.Runners.RunnerReadiness`, `decide()`.
+  `MARCADOR_SCHEMA=3`, a phrase or a path is not a symbol, and gets
+  skipped.
+- **Ambiguous pairs are skipped**: `:640`/`:647` (`a`/`b`), or two
+  references before one symbol. The check can't know which symbol goes
+  with which line.
+- A continuation inherits the last explicit path **in the same list
+  item**. A blank line or a new `- ` ends the item.
+- The path resolves from the repo root. If it isn't there, the check
+  uses the **single** tracked file whose path ends with it. If no file
+  matches, or more than one does, the reference is counted apart as
+  unresolved.
+
+A reference **matches** when the symbol, or its last `.` segment, shows
+up as a whole word within **±3 lines** of `N`. The window allows for a
+citation that points at the docblock rather than the signature. It stays
+small because drift moves by dozens or hundreds of lines. When a
+reference doesn't match, the output names the nearest line where the
+symbol does appear. That line is a hint, not a fix, because the nearest
+occurrence may be a call rather than the definition.
+
+**Measured on 2026-09-18**, over every `path:N` in the three files:
+
+| | count |
+|---|---|
+| `…:N` references in total | 592 |
+| match the pattern | 187 |
+| correct (within ±3) | 116 |
+| wrong | 71 |
+| unresolved path | 0 |
+
+A spot check of the 71 found no false positives: each reference it
+covered was real drift, a rename, or a symbol that moved to another
+file. Widening the window to ±5 would clear only three of them. Nine are
+between 4 and 10 lines off, and the other 62 are further. The RN-547 code bullet was
+re-read by symbol and fixed in the same PR, which leaves **63**. They
+are too many to fix one by one inside this change, and the nearest
+occurrence is not always the definition. The list is what `pnpm
+docs:check` prints.
+
+**Severity: `warn`.** It reports and doesn't fail, because a `block`
+would stop every PR that touches an RN file over debt someone else left.
+There is one exception, the house rule: if the check extracts **zero**
+references, that is `CEGO` and **fails**. Zero means the RN syntax
+changed or the extractor broke, and a blind check stays green forever.
+
+**When to promote it to `block`:** once the list is **empty**, and
+after **four consecutive weeks** of `docs:check` on `dev` with no new
+wrong references in RNs touched during those weeks. At that point every
+new wrong reference is the current PR's fault, and the PR can fix it.
+Promote it earlier and it charges each PR for someone else's debt. If
+the pattern shows a real false positive before then, narrow the
+pattern. Don't widen the window.
+
+**The list went empty on 2026-09-26** (AT-122). In the eight days after
+the check landed, the 63 known-wrong references had grown to **75**. That
+growth is the drift the check exists to show. All 75 were re-read by
+symbol against the code of that day, and none was a false positive of
+the pattern. Most had drifted by dozens of lines. One was a rename:
+`modo_de_execucao/1` became `exigencias_do_projeto/1` in RN-516. One had
+moved to another file: `escreverEnv` went from `preflight.mjs` to
+`env-file.mjs`. Two pointed at the right test, but at the `it(` line,
+while the symbol (`types`) only shows up a few lines below, in the body.
+Those two now point at the body line. The window stayed at ±3. The
+bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
+their unchecked neighbouring references re-read in the same pass. After
+that, **273 references match the pattern, 273 are correct, and 0 are
+wrong**. The four weeks start when that change reaches `dev`. The
+severity stays `warn` until then.
+
+### Every RN heading carries its anchor
+
+The `{#rn-NNN}` anchor on an RN heading is the contract for links from
+outside: it survives a retitled RN and an RN moved to another file. On
+2026-09-26 (AT-230) `dev` had **451** `### RN-` headings and **449**
+anchors. RN-305 and RN-306 had been written without one, in
+`business-rules.md` and in its pt-BR translation, and nothing failed.
+The site build doesn't catch it: without an explicit anchor Docusaurus
+derives the id from the heading text and the page compiles. What breaks
+is a `#rn-305` link someone writes later. The RN count doesn't catch it
+either, because it counts headings, not anchors.
+
+`generate.mjs` now checks it (`verificarAncorasDeRn`, with its logic in
+`scripts/docs/ancoras-de-rn.mjs`, proven by mutation in
+`ancoras-de-rn.spec.ts`). Every heading, at any level, that **starts**
+with `RN-<digits>` has to **end** in `{#rn-<same digits>}`, leading
+zeros included (`RN-001` → `rn-001`). A missing anchor and an anchor
+with another number or name both fail, one line per heading, with the
+file and line. Zero headings found is `CEGO` and also fails.
+
+**Severity: `block`**, unlike the line references above: there is no
+inherited debt (the two missing anchors were added in the same change),
+and each new heading is written by the PR that adds it.
+
+**The pt-BR translation is covered too.** The files are found by glob:
+`docs/business-rules.md`, `docs/business-rules/*.md`, and the same two
+paths under `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`.
+The pt-BR site serves `business-rules#rn-305` from the translated file,
+and the translation had copied the heading without its anchor. The rule
+is per heading, so a partial translation isn't a problem: an RN that
+wasn't translated falls back to the English page, which is checked
+anyway.
+
+### The runbook's procedures table {#the-runbook-procedures-table}
+
+The runbook ends with a table of its **operation** procedures —
+`procedure | anchor | verification | schedule` — saying what proves each one
+and what runs that proof
+([Procedures and how each is verified](../runbook.md#procedimentos-e-verificacao)).
+It exists because of EP-015's closing criterion: no row with an empty
+verification or one that says "see below", and the proofs that exist run on a
+schedule, not from memory. Measured on 2026-09-25 (AT-129), the table the
+criterion talked about did not exist in the repository: a seven-row copy lived
+in the maintainer's notes, against 28 operation procedures here, and one row
+pointed at another note. A hand-written table of file names ages the same way
+prose numbers do — a spec gets renamed, a workflow loses its `schedule:`, and
+the cell keeps claiming.
+
+`generate.mjs` checks it (`verificarProcedimentosDoRunbook`, logic in
+`scripts/docs/procedimentos-do-runbook.mjs`, proven by mutation in
+`procedimentos-do-runbook.spec.ts`). Per row, it fails when:
+
+- the **anchor** cell has no `(#id)` link, or the id is not an explicit
+  `{#id}` on a heading of the runbook — the same contract as the RN anchors:
+  a retitled section must not break the link;
+- the **verification** cell is empty, says "see below/above", names a file
+  that is not tracked by git or a `make` target the `Makefile` does not have,
+  or names nothing checkable and does not start with `**None**` — the explicit
+  statement that no proof exists;
+- a **schedule** segment (they are separated by `;`) does not start with its
+  trigger class — `weekly`/`daily`/`monthly`, `every PR`, `every tag` or
+  `manual` — or a workflow it cites is missing or does not have that trigger
+  in its parsed `on:` (`schedule:`, `pull_request`, `push: tags`). A `manual`
+  segment may not cite a workflow.
+
+The column is called `schedule` and still accepts `every PR` and `every tag`
+on purpose. The criterion's question is "does it run without someone
+remembering?", and a spec that `ci.yml` runs on every pull request answers
+yes; calling it `manual` would be wrong in the other direction. What the check
+guarantees is that the class written is the one the workflow **has**: `weekly`
+pointing at a workflow with no `schedule:` fails, which is the case AT-193
+named.
+
+A missing section, a missing table, changed column headers or zero rows is
+`CEGO` and fails.
+
+**Severity: `block`**, for the same reason as the RN anchors: the table was
+born with every row checked, so there is no inherited debt, and whatever
+breaks it later (a renamed spec, a workflow that lost its schedule) is the
+fault of the PR that broke it, which is also the PR that can fix it.
+
+**Only the English runbook carries the table.** The pt-BR translation is
+behind the English one (AT-209), its `traducao-pt-br` docmap rule is `warn`,
+and its headings do not carry the ten explicit ids this table added to the
+English page. A
+second, unchecked copy of the table there would be exactly the copy the table
+exists to replace.
+
 ## The pieces
 
 ```mermaid
@@ -127,6 +345,18 @@ Two severities: `block` fails the PR, `warn` only comments. And a
 `generated: true` attribute, which marks the documents that come out
 of the generator.
 
+A rule that charges for what makes no sense teaches people to reach for
+the escape hatch by reflex. That is why `politica-de-branches` watches an
+**allow-list** in `scripts/ci/` — the scripts that *are* the branch policy
+and their specs — instead of `scripts/ci/**` minus a hand-kept list of
+exclusions, which every new repository-wide spec in that folder had to join
+(eleven by AT-206). The allow-list does not give up failing closed:
+`scripts/docs/politica-de-branches.spec.ts` derives the set from the
+repository — every `scripts/ci/` file whose opening docblock cites
+`branching-policy.md`, plus its spec — and fails if the rule diverges. A new
+policy script declares its source in its header, like the others, and the
+spec does the rest.
+
 ### `docmap.mjs` — validates the map
 
 Runs before everything else, because a broken map makes the rest lie.
@@ -145,7 +375,11 @@ Two output modes:
 
 **Whole file** — `docs/reference/scripts.md`. There's no prose to
 preserve: the list of commands is the content. It comes from each
-package's `package.json` and the `Makefile`'s annotated targets.
+package's `package.json` and the `Makefile`'s annotated targets. The
+package list is declared in `gerarScripts`, including the two packages
+outside the workspace (`website/`, `e2e/`, run with `--dir`), and a
+`package.json` that is missing or doesn't parse fails generation by
+name — it used to drop the package silently (AT-224).
 
 **Marked block** — the stretch between `<!-- BEGIN:GENERATED:<id> -->`
 and `<!-- END:GENERATED:<id> -->` inside a hand-written file. That's
@@ -159,6 +393,44 @@ The inventory marks with ⚠️ whatever shows up in the code and has
 `agent.response` — two real event types — showed up after being left
 out of the first draft.
 
+**What the environment inventory catches, measured (AT-124,
+2026-09-25).** The sources and their globs live in
+`scripts/docs/fontes-de-env.mjs`, proven against the real tree by
+`fontes-de-env.spec.ts`. A mutation per source — a new
+`process.env.X` in a file straight under `e2e/`, nested in
+`e2e/suporte/`, straight under `apps/api/scripts/` and nested one level
+below it, each `git add`ed — made `--check` fail with `DESATUAL` on
+`configuration.md` in all four. One hole was found and closed: the
+`.spec.` filter, right for sources where a spec is a unit test sitting
+next to the code, was also dropping `e2e/testes/*.spec.ts` — the
+Playwright tests themselves, where a new `e2e/` variable is most likely
+to be born — and that mutation passed green. One limit stays declared:
+the inventory reads only **versioned** files (`git ls-files`), so an
+untracked file is invisible until `git add`.
+
+**The environment ⚠️ is a gate (AT-211, 2026-09-27).** Until then what
+failed was only the **stale block**: once `docs:generate` rewrote it,
+the variable sat there with ⚠️ and `--check` passed —
+`HUGGINGFACE_API_TOKEN` and `HUGGINGFACE_HUB_URL` stayed that way for
+months. By the maintainer's decision, `--check` now fails on **any**
+⚠️ in the environment inventory, for **both** kinds of source
+(`produto` and `ferramenta`), even with the block up to date. The
+failure names the variable, the file that reads it and the section of
+`configuration.md` where the description goes (`SEM DESC.` lines). The
+rule lives in `scripts/docs/inventario-de-env.mjs` and is proven by
+mutation in `inventario-de-env.spec.ts`: a new variable without a
+description fails, the same one with a description passes.
+
+A `**TODO(humano):**` on the line that cites the variable **counts as a
+description** and doesn't fail: the docs rule is "never invent; without
+information, TODO(humano)", and a gate that failed the TODO would push
+whoever doesn't know what the variable does into inventing a sentence
+to get green. The TODO is a **declared** gap, with the question written
+where the answer goes; the ⚠️ is a **silent** one. `--check` still lists
+variables described only by a TODO, on a `TODO` line, without failing.
+The event inventory in `events.md` keeps its ⚠️ as a visible gap — the
+decision covered the environment inventory only.
+
 `--check` writes nothing and fails if anything would be different.
 That's CI's mode.
 
@@ -167,6 +439,17 @@ That's CI's mode.
 Cross-references `git diff --name-only <base>...HEAD` with the map.
 For every triggered rule whose document wasn't touched: `block` fails
 it, `warn` comments.
+
+For a Dependabot PR whose diff is only action-pin bumps, a step just before the
+drift (`scripts/ci/dependabot-justifica-pin.ts`) writes the `docs-not-needed:`
+line into the body, in the same job so it writes and reads in one execution.
+The workflow listens to `edited`, and `@dependabot rebase` emits `synchronize`
+and `edited` together; `concurrency` cancels one, so the surviving run may be
+the `edited` one. Hence the step also evaluates on `edited` **when the editor is
+the bot** (AT-100), and never when it is a human (their deletion of the line
+wins). It can't loop: body edits made with the workflow token don't fire
+`edited`. Failure stays closed: if the write fails, the drift reads the event
+body and the PR stays blocked.
 
 ### `audit.mjs` — the monthly audit
 
@@ -241,6 +524,43 @@ that's where this conversation starts.
 The same episode produced the map's `site-e-publicacao` rule:
 `website/**` wasn't covered by any rule, and changing the site config
 didn't demand documentation.
+
+### `links-do-locale.mjs` — a rewritten link skips the broken-link check
+
+The `markdown.hooks.onBrokenMarkdownLinks` hook in
+`website/docusaurus.config.ts` rewrites links that break only because
+of a known translation gap (`reference/`, `adr/`, `explanation/`) to
+`pathname://`. That's Docusaurus's official escape hatch, and escaping
+is the point: **a `pathname://` link is never checked again**, so a
+wrong rewrite can't fail the build.
+
+One did, for the whole pt-BR site (AT-221). The rewrite returned
+`pathname:///pt-BR/<slug>`, but `pathname://` isn't a domain-absolute
+path — `<Link>` passes it through `useBaseUrl`, and the pt-BR build's
+baseUrl already is `/brabo/prd/pt-BR/`. Every rewritten link came out
+as `/brabo/prd/pt-BR/pt-BR/...`: 441 hrefs on 56 pages, all 404, with
+`docs:build` green.
+
+The rewrite now lives in `scripts/docs/links-do-locale.mjs` as a pure
+function with a spec, and returns the bare slug — the locale comes from
+the baseUrl of whichever locale is compiling, and the target page
+exists there (translated, or served by fallback at the same slug). The
+same module, run after `docs:build` in `docs-check.yml`, scans the
+built HTML and fails on any `href` with a doubled locale prefix. A new
+locale goes into `LOCALES_COM_PREFIXO` too, or its duplication passes
+silently.
+
+The `adr/` exemption used to swallow a misspelled ADR filename too:
+it looked only at the *shape* of the name (`NNNN-*.md`), so
+`0055-politica-de-terminal.md` — an ADR that never existed under that
+name — was rewritten to a slug no locale has. Twenty-three such links
+sat in the docs, 404 (AT-227). Since then a target that looks
+like an ADR must exist in `docs/adr/` **before** any gap exemption
+applies, including a source inside `adr/`, `reference/` or
+`explanation/`; a wrong slug fails `docs:build` in every locale.
+
+What the guard still does **not** catch: a non-ADR link from inside one
+of the gap zones whose target doesn't exist in the repository at all.
 
 ### Publishing, one site per rung
 
@@ -366,6 +686,7 @@ pnpm docs:start      # local server, with hot reload
 # does the API reference render? needs the build above, and isn't part
 # of docs:check because that one doesn't build the site
 node scripts/docs/api-render-check.mjs
+node scripts/docs/links-do-locale.mjs   # no href with a doubled locale prefix (AT-221)
 ```
 
 Or, if you're in Claude Code, `/sync-docs` runs the whole cycle and
@@ -398,7 +719,7 @@ It will complain unfairly sometimes. A refactor that renames internal
 variables triggers `dominio-e-regras` without changing any business
 rule. That's expected: the map works by file path, not by semantics.
 
-There are **two** ways out, and both require a human explaining why:
+There are **two** ways out, and both require someone explaining why:
 
 ```
 PR label:      docs-not-needed
@@ -409,6 +730,15 @@ Use it without guilt when it applies. The escape hatch exists **on
 purpose**: without a legitimate way out, the habit that forms is to
 cheat — a cosmetic commit to the doc just to make the check pass. Then
 the mechanism starts lying, which is worse than not existing.
+
+**One class of PR gets the body line from a bot**, and only one: a Dependabot
+PR whose diff is nothing but action pin changes (the `uses:` SHA and its
+version comment). A step right before the drift writes the line, marked as the
+bot's, and the drift still reads only the line — see
+[A pin bump justifies itself](./branching-policy.md#a-pin-bump-justifies-itself).
+Because editing the body with `GITHUB_TOKEN` fires no `edited` event, and a
+re-run reuses the original payload, the drift reads the body from
+`PR_BODY_FILE` when that step rewrote it, and from the event otherwise.
 
 What's **not** okay is using the escape hatch out of haste. If you
 used it three times in the same week for the same rule, the rule is

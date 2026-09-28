@@ -59,6 +59,9 @@ vi.mock('../../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
     getProject: (...args: unknown[]) => getProject(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // Nenhum provider com a capability de roteamento (ADR 0166): o estado de
+    // produção enquanto o smoke do OpenRouter não rodar.
+    listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     clearAgentModelBinding: vi.fn(),

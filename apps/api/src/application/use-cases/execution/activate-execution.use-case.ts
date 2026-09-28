@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,14 @@ import { AgentAutonomyRepository } from '../../ports/agent-autonomy-repository.p
 import { ApiToEngineClient } from '../../ports/api-to-engine-client.port';
 import { ProjectRepository } from '../../ports/project-repository.port';
 import { PermissionsFileStore } from '../../ports/permissions-file-store.port';
+import { ProvisionedRepositoryRepository } from '../../ports/provisioned-repository-repository.port';
+import { HandoffRepository } from '../../ports/handoff-repository.port';
+import { ContainerRepository } from '../../ports/container-repository.port';
+import { isTerminal } from '../../../domain/sessions/session-state-machine';
+import {
+  motivoDeExecucaoSemRepositorio,
+  type HandoffDaAtivacao,
+} from '../../../domain/execution/repositorio-para-executar';
 import { DEV_TERMINAL_ALLOW_PATTERNS } from '../../../domain/actions/dev-terminal-patterns';
 import { TransitionSessionUseCase } from '../sessions/transition-session.use-case';
 import { CreateSessionUseCase } from '../sessions/create-session.use-case';
@@ -67,7 +76,9 @@ const DEFAULT_TASK_BUDGET_MICROS = 500_000;
 export const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
 
 /**
- * Ativa a fase de execução de um projeto (Fase 4a): exige module_map vigente;
+ * Ativa a fase de execução de um projeto (Fase 4a): exige module_map vigente
+ * e repositório provisionado (RN-582 — sem ele, 409 nomeando o handoff que
+ * falta aceitar);
  * usa a sessão de execução vigente — ou cria e ativa uma, se não houver;
  * seeda as instruções + a autonomia (auto_approve nos git ops) de um dev por
  * módulo; e manda o engine subir os DevAgentServers.
@@ -91,6 +102,9 @@ export class ActivateExecutionUseCase {
     private readonly permissionsFile: PermissionsFileStore,
     private readonly seedAreas: SeedAgentAreasUseCase,
     private readonly getSessionPendingWork: GetSessionPendingWorkUseCase,
+    private readonly repositories: ProvisionedRepositoryRepository,
+    private readonly handoffs: HandoffRepository,
+    private readonly containers: ContainerRepository,
   ) {}
 
   async execute(
@@ -113,6 +127,28 @@ export class ActivateExecutionUseCase {
     if (!moduleMap || moduleMap.modules.length === 0) {
       throw new BadRequestException(
         'Projeto sem module_map vigente — o Arquiteto precisa definir os módulos antes de executar',
+      );
+    }
+
+    // Sem repositório, NADA começa (RN-582, ADR 0165). Os dev agents
+    // trabalham em worktrees do repositório do projeto; ativar sem ele dava
+    // 201 e deixava a execução "ativa" sem onde trabalhar, para sempre
+    // (AT-092: as três tabelas de git vazias depois de um 201). A checagem
+    // vem ANTES de qualquer efeito — persistir orçamento, semear o
+    // `permissions.json`, criar sessão —, para a recusa não deixar rastro.
+    //
+    // Recusa e não provisiona: provisionar aqui esconderia um efeito de git
+    // dentro da ativação, e os agentes ANTERIORES a ela (Arquiteto, Infra)
+    // continuariam sem repositório. Quem provisiona é o aceite do handoff ao
+    // Arquiteto, com o do Dev Lead como segunda porta — e a frase diz qual
+    // falta, lida do estado dos handoffs do projeto. Repositório ADOTADO conta.
+    const repositorio = await this.repositories.findByProjectId(projectId);
+    if (!repositorio) {
+      throw new ConflictException(
+        motivoDeExecucaoSemRepositorio(
+          projectId,
+          await this.handoffsComEstadoDaSessao(projectId),
+        ),
       );
     }
 
@@ -246,17 +282,29 @@ export class ActivateExecutionUseCase {
 
     // Sugestão de paralelização: módulos com ≥2 tasks pegáveis têm ramos
     // independentes disponíveis — sugere um subagente extra (aceite 1-clique).
-    for (const m of moduleMap.modules) {
-      const claimable = await this.taskRepo.countClaimableByModule(
-        projectId,
-        m.name,
-      );
-      if (claimable >= 2) {
-        await this.appendEvent.execute(projectId, session.id, {
-          type: 'execution.parallelization_suggested',
-          actor: { kind: 'system', id: 'parallelization' },
-          payload: { module: m.name, availableTasks: claimable },
-        });
+    //
+    // Só quando o projeto TEM container `running` registrado (AT-104). Sem ele
+    // o dev agent não reivindica task nenhuma (`dev.blocked_by_container`,
+    // RN-502) — a mesma leitura que o engine faz —, e "há tasks pegáveis" é
+    // verdade que não vira capacidade: um agente extra num módulo cujo agente
+    // nem começa só multiplica os bloqueados (v6.1.0: três `parallelize`
+    // aprovados sobre três agentes parados). O bloqueio é do PROJETO e não do
+    // módulo, então a guarda é uma só. Custo declarado: a sugestão é emitida
+    // na ativação e não é refeita quando o container sobe depois. O teto do
+    // pedido (RN-154, `RequestParallelizationUseCase`) não é tocado.
+    if (await this.containerRodando(projectId)) {
+      for (const m of moduleMap.modules) {
+        const claimable = await this.taskRepo.countClaimableByModule(
+          projectId,
+          m.name,
+        );
+        if (claimable >= 2) {
+          await this.appendEvent.execute(projectId, session.id, {
+            type: 'execution.parallelization_suggested',
+            actor: { kind: 'system', id: 'parallelization' },
+            payload: { module: m.name, availableTasks: claimable },
+          });
+        }
       }
     }
 
@@ -270,6 +318,35 @@ export class ActivateExecutionUseCase {
     }
 
     return { sessionId: session.id, modules };
+  }
+
+  /**
+   * Os handoffs do projeto + se a sessão de cada `offered` já está encerrada
+   * (AT-131). Só os `offered` são consultados — são os únicos para os quais a
+   * frase pode mandar aceitar —, uma leitura por sessão distinta. Sessão que
+   * não se acha fica sem marca (não sei = aberta).
+   */
+  private async handoffsComEstadoDaSessao(
+    projectId: string,
+  ): Promise<HandoffDaAtivacao[]> {
+    const todos = await this.handoffs.findByProject(projectId);
+    const encerrada = new Map<string, boolean>();
+    for (const h of todos) {
+      if (h.status !== 'offered' || encerrada.has(h.sessionId)) continue;
+      const sessao = await this.sessions.findInProject(projectId, h.sessionId);
+      encerrada.set(h.sessionId, sessao ? isTerminal(sessao.status) : false);
+    }
+    return todos.map((h) => ({
+      toAgent: h.toAgent,
+      status: h.status,
+      sessaoEncerrada: encerrada.get(h.sessionId) ?? false,
+    }));
+  }
+
+  /** Mesmo predicado do engine (`ProjectContainerLifecycle.running?/1`): linha registrada `running`. */
+  private async containerRodando(projectId: string): Promise<boolean> {
+    const linha = await this.containers.findByProject(projectId);
+    return linha?.status === 'running';
   }
 
   /**

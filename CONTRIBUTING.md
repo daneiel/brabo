@@ -8,7 +8,7 @@ processo funciona de verdade.
 
 **Com todas as letras: PR grande sem issue prévia provavelmente será
 recusado.** Não por burocracia — por respeito ao seu tempo. Este projeto tem
-decisões arquiteturais registradas em [159 ADRs](docs/adr/index.md), e uma
+decisões arquiteturais registradas em [172 ADRs](docs/adr/index.md), e uma
 mudança que contradiz uma delas custa muito trabalho para depois ser
 rejeitada.
 
@@ -162,7 +162,7 @@ Antes de marcar o PR como pronto:
 - Melhoria de mensagem de erro — especialmente as que hoje não dizem o que fazer
 - Cobertura de teste em caminho de falha
 - Acessibilidade e correção de contraste na UI
-- Provider de git novo, **se** implementar as doze operações, declarar as
+- Provider de git novo, **se** implementar as quinze operações, declarar as
   capabilities honestamente e passar na suite de contrato
 
 ## O que provavelmente não aceito

@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { DelegationEventPayload, SessionEvent } from './api-types';
 import { AGENTS } from './agents';
+import { linhaDoEventoDePolitica } from './decisao-da-politica';
 import {
   BranchIcon,
   CommitIcon,
@@ -712,6 +713,19 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: granted
         ? `${actorLabel} concedeu permissão${payloadField(payload, 'pattern') ? ` para ${payloadField(payload, 'pattern')}` : ''}`
         : `${actorLabel} negou permissão`,
+    };
+  }
+  // AT-148 (RN-614): a linha diz o MOTIVO da política (RN-567) e, em
+  // `terminal`, a RAIZ relativa do escopo (RN-609). A frase é a MESMA do
+  // `ApprovalCard` — sai de `lib/decisao-da-politica.ts`, nunca daqui.
+  if (type === 'proposed_action.created') {
+    const status = payloadField(payload, 'status');
+    return {
+      kind: 'permission',
+      icon: PermissionIcon,
+      color: status === 'denied' ? 'var(--danger)' : 'var(--text-secondary)',
+      bad: status === 'denied',
+      text: linhaDoEventoDePolitica(actorLabel, payload),
     };
   }
   // Ações git executadas viram `action.<kind>` (execute-git-action.use-case).

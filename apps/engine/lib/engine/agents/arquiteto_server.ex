@@ -15,7 +15,14 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
 
   alias Engine.Harness.Tools.{
     CreateModuleMap,
@@ -81,7 +88,13 @@ defmodule Engine.Agents.ArquitetoServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -104,7 +117,11 @@ defmodule Engine.Agents.ArquitetoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
-       turno_assincrono: nil
+       turno_assincrono: nil,
+       # `:offer_dev_handoff` que chegou com o turno de fechamento ainda em
+       # curso (ADR 0163): fica guardado e roda quando o turno fechar, para o
+       # handoff ao Dev Lead continuar nascendo DEPOIS do de Infra.
+       handoff_dev_pendente: false
      }}
   end
 
@@ -119,7 +136,15 @@ defmodule Engine.Agents.ArquitetoServer do
 
   @impl true
   def handle_cast(:cancel, state) do
-    {:noreply, TurnoAssincrono.cancelar(state)}
+    {:noreply, state |> TurnoAssincrono.cancelar() |> drenar_handoff_dev_pendente()}
+  end
+
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
   end
 
   @impl true
@@ -141,28 +166,66 @@ defmodule Engine.Agents.ArquitetoServer do
   # da MESMA confirmação. Continua síncrono — é só uma chamada HTTP rápida
   # de criação de handoff, não uma chamada ao LLM, então não precisa da
   # Task/cancelamento de `TurnoAssincrono`.
+  #
+  # ADIADO quando há turno em curso (ADR 0163, RN-578). A api chama
+  # `offer_infra_handoff` e, na sequência, este — e até o ADR 0163 a
+  # sequência só acontecia depois de o turno de fechamento TERMINAR, porque o
+  # primeiro `GenServer.call` segurava a resposta até lá. Com o aceite
+  # imediato, este chegaria no meio do turno e o handoff ao Dev Lead nasceria
+  # ANTES do de Infra (que é criado no fim da Task). Guardar e rodar no fecho
+  # preserva a ordem, e o fecho cobre os mesmos quatro desfechos em que o
+  # handoff era oferecido antes: sucesso, falha narrada, crash e cancelamento.
+  @impl true
+  def handle_call(:offer_dev_handoff, _from, %{turno_assincrono: %{}} = state) do
+    {:reply, :ok, Map.put(state, :handoff_dev_pendente, true)}
+  end
+
   @impl true
   def handle_call(:offer_dev_handoff, _from, state) do
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "dev-lead",
-             nil
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
-      end
-
-    {:reply, :ok, state}
+    {:reply, :ok, oferecer_handoff_dev(state)}
   end
 
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
-      {:ok, novo_state} -> {:noreply, novo_state}
-      :ignorado -> {:noreply, state}
+      # A marca vem do state ANTERIOR à mensagem: o `novo_state` é o que a
+      # Task devolveu, e ela capturou o state do INÍCIO do turno — antes de o
+      # `:offer_dev_handoff` chegar e marcar a pendência.
+      {:ok, novo_state} ->
+        pendente = Map.get(state, :handoff_dev_pendente, false)
+
+        {:noreply,
+         novo_state
+         |> Map.put(:handoff_dev_pendente, pendente)
+         |> drenar_handoff_dev_pendente()}
+
+      :ignorado ->
+        {:noreply, state}
+    end
+  end
+
+  defp oferecer_handoff_dev(state) do
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "dev-lead",
+           nil
+         ) do
+      {:ok, _handoff} -> state
+      {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
+    end
+  end
+
+  # `Map.get/3` com default: um state reidratado por um caminho antigo não
+  # carrega a chave, e a ausência vale "nada pendente".
+  defp drenar_handoff_dev_pendente(state) do
+    if Map.get(state, :handoff_dev_pendente, false) do
+      state
+      |> Map.put(:handoff_dev_pendente, false)
+      |> oferecer_handoff_dev()
+    else
+      state
     end
   end
 
@@ -276,11 +339,9 @@ defmodule Engine.Agents.ArquitetoServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    {_, text} = resultado
 
     append(state, %{
       "role" => "tool",
@@ -304,8 +365,14 @@ defmodule Engine.Agents.ArquitetoServer do
   # --- Kickoff ---
 
   defp kickoff_instruction(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} -> build_kickoff(events)
+    # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
+    # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.product_brief",
+           "artifact.business_rule",
+           "backlog.story_created"
+         ]) do
+      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Defina a arquitetura do produto (module_map, ADRs, insights)."
     end
   end
@@ -370,23 +437,6 @@ defmodule Engine.Agents.ArquitetoServer do
     #{stories}
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

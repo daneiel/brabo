@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
@@ -12,17 +12,16 @@ import i18n from '../lib/i18n';
 /**
  * RN-131 — mesmo bug do `SessionPage.turno-preso.test.tsx` (rede de
  * segurança contra o canal perder `agent.done`), desta vez em
- * `handleReadiness`. `confirmReadiness` também é um `GenServer.call`
- * síncrono no engine (até 120s) — `handleSend` já ganhou a rede de
- * segurança (chamar `finalizarTurnoDoAgente()` assim que a chamada síncrona
- * resolve, independente do canal ter entregue `agent.done`), mas
- * `handleReadiness` tinha ficado de fora: sem ela, clicar em "Estou pronto
- * para produzir" e o canal nunca entregar `onAgentDone` deixava a bolha do
- * agente presa vazia (`streaming: true`, sem texto) pra sempre.
+ * `handleReadiness`. Até o ADR 0163 a rede era "a chamada síncrona
+ * resolveu"; desde ele (RN-578) `confirmReadiness` resolve no ACEITE, e a
+ * rede passou a ser a leitura da cauda do log (`agent.status` persistido do
+ * Criativo). Sem ela, clicar em "Estou pronto para produzir" e o canal nunca
+ * entregar `onAgentDone` deixava a bolha do agente presa vazia pra sempre.
  */
 
 const getSession = vi.fn();
 const confirmReadiness = vi.fn();
+const cauda = vi.fn();
 let canalHandlers: SessionChannelHandlers | undefined;
 
 const EVENTOS_CRIATIVO_ATIVO = [
@@ -98,6 +97,7 @@ vi.mock('../lib/api-client', () => ({
   approveAction: vi.fn(),
   approveAlwaysAction: vi.fn(),
   confirmReadiness: (...args: unknown[]) => confirmReadiness(...args),
+  listSessionEvents: (...args: unknown[]) => cauda(...args),
   denyAction: vi.fn(),
   sendAgentMessage: vi.fn(),
   setSessionModelBinding: vi.fn(),
@@ -151,15 +151,27 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
+const STATUS = (seq: number, status: string) => ({
+  id: `st-${seq}`,
+  seq,
+  type: 'agent.status',
+  actor: { kind: 'agent', id: 'criativo' },
+  payload: { status },
+  createdAt: '2026-08-10T12:00:02.000Z',
+});
+
 describe('SessionPage — handleReadiness ganha a mesma rede de segurança de handleSend (RN-131)', () => {
-  it('caminho feliz: confirmReadiness resolver reconcilia o estado mesmo sem onAgentDone', async () => {
-    let resolverConfirmacao: () => void = () => {};
-    confirmReadiness.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolverConfirmacao = () => resolve();
-        }),
-    );
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('caminho feliz: aceito, a tela segue o log e libera no idle mesmo sem onAgentDone', async () => {
+    confirmReadiness.mockResolvedValue({ ok: true });
+    cauda.mockResolvedValue({ items: [STATUS(4, 'working')], nextCursor: null });
 
     montar();
 
@@ -168,23 +180,53 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     });
     fireEvent.click(botao);
 
-    // `streaming` liga na hora — a bolha do agente aparece.
     const campo = await screen.findByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
-    await waitFor(() => expect(campo).toBeDisabled());
+    await waitFor(() => expect(cauda).toHaveBeenCalled());
 
-    // O canal registrou os handlers, mas o teste NUNCA chama onAgentDone —
-    // simula o broadcast perdido (join tardio, ticket expirado, etc.), o
-    // mesmo cenário do bug em `handleSend`.
+    // O aceite JÁ voltou e o turno segue: a tela continua ocupada. Até o ADR
+    // 0163, resolver esta chamada era o que a liberava.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(campo).toBeDisabled();
+
+    // O canal registrou os handlers, mas o teste NUNCA chama onAgentDone.
     expect(canalHandlers?.onAgentDone).toBeTypeOf('function');
 
-    // A REST call (o `GenServer.call` síncrono) resolve — é o sinal de fim
-    // de turno que a correção usa como rede de segurança.
-    resolverConfirmacao();
+    // O brief ficou pronto: o log ganha o `idle` do Criativo.
+    cauda.mockResolvedValue({
+      items: [STATUS(4, 'working'), STATUS(9, 'idle')],
+      nextCursor: null,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
 
-    // Sem a correção, `streaming` ficaria travado em `true` pra sempre: só
-    // `onAgentDone` resetava, e ele nunca chega neste teste.
+    await waitFor(() => expect(campo).not.toBeDisabled());
+  });
+
+  it('CASO DE FALHA: 422 sem regra de negócio mostra a frase do engine e libera a tela', async () => {
+    confirmReadiness.mockRejectedValue(
+      Object.assign(new Error('422'), {
+        status: 422,
+        body: { message: 'Nenhuma regra de negócio foi capturada nesta conversa.' },
+      }),
+    );
+
+    montar();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Estou pronto para produzir' }),
+    );
+
+    expect(
+      await screen.findByText('Nenhuma regra de negócio foi capturada nesta conversa.'),
+    ).toBeInTheDocument();
+    const campo = await screen.findByPlaceholderText(
+      'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
+    );
     await waitFor(() => expect(campo).not.toBeDisabled());
   });
 

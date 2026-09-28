@@ -25,6 +25,8 @@ const promoteStories = vi.fn<(projectId: string, ids: string[]) => Promise<Promo
 const returnStory = vi.fn<(projectId: string, storyId: string, reason: string) => Promise<{ ok: true }>>();
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
+/** A cauda do log que a rede de segurança lê depois do aceite (ADR 0163). */
+const cauda = vi.fn();
 
 // `Link` captura `to`/`params`/`search` explicitamente — o `href` codifica os
 // três, o suficiente pra afirmar o DESTINO (mesmo padrão do teste de handoff
@@ -78,6 +80,7 @@ vi.mock('../lib/session-channel', () => ({
 vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
 
 vi.mock('../lib/api-client', () => ({
+  listSessionEvents: (...args: unknown[]) => cauda(...args),
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
   getSession: (...args: unknown[]) => getSession(...args),
   getSessionBudget: vi.fn().mockResolvedValue(null),
@@ -312,8 +315,32 @@ describe('SessionPage — item 2: promoção de história inline no fio (RN-126)
       });
       expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
+      // Resolver é o ACEITE (ADR 0163): o PO ainda reescreve, e o log diz
+      // `working` — o indicador fica.
+      const statusDoPo = (seq: number, status: string) => ({
+        id: `st-${seq}`,
+        seq,
+        type: 'agent.status',
+        actor: { kind: 'agent', id: 'po' },
+        payload: { status },
+        createdAt: '2026-08-10T12:00:02.000Z',
+      });
+      cauda.mockResolvedValue({ items: [statusDoPo(5, 'working')], nextCursor: null });
       await act(async () => {
         resolver();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000);
+      });
+      expect(screen.getByText('Pensando…')).toBeInTheDocument();
+
+      // O PO terminou no log: o indicador sai.
+      cauda.mockResolvedValue({
+        items: [statusDoPo(5, 'working'), statusDoPo(8, 'idle')],
+        nextCursor: null,
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000);
       });
       await waitFor(() =>
         expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),

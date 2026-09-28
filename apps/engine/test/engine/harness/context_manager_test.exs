@@ -68,6 +68,55 @@ defmodule Engine.Harness.ContextManagerTest do
     assert before_tokens > after_tokens
   end
 
+  # RN-580: o resumo era a ÚNICA memória do que foi compactado e morria com o
+  # processo — o evento gravava só as contagens. Agora grava o texto, de quem é,
+  # e quantas mensagens ele substituiu; é o que a reidratação lê de volta.
+  test "context.compacted grava o RESUMO, o agente e quantas mensagens ele substituiu" do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("O usuário quer X.")])
+
+    ctx = %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "criativo",
+      messages: [
+        msg("system", "P", true),
+        msg("user", long, false),
+        msg("assistant", long, false),
+        msg("assistant", "recente", false)
+      ],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+
+    assert {:ok, _} = ContextManager.maybe_compact(ctx)
+
+    assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
+    assert payload.summary == "O usuário quer X."
+    assert payload.agent == "criativo"
+    assert payload.messagesSummarized == 2
+  end
+
+  test "sumarizador falhando: o resumo gravado é o fallback determinístico, nunca vazio" do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+    Process.put(:fake_llm_turn_error, :timeout)
+
+    ctx = %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "po",
+      messages: [msg("system", "P", true), msg("user", long, false), msg("assistant", "r", false)],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+
+    assert {:ok, _} = ContextManager.maybe_compact(ctx)
+
+    assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
+    assert payload.summary == "(1 turnos anteriores omitidos)"
+  end
+
   test "sem estouro de janela: não compacta, contexto intacto" do
     messages = [msg("system", "P", true), msg("assistant", "curto", false)]
 

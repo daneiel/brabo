@@ -49,6 +49,9 @@ vi.mock('../../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
     getProject: (...args: unknown[]) => getProject(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // Nenhum provider com a capability de roteamento (ADR 0166): o estado de
+    // produção enquanto o smoke do OpenRouter não rodar.
+    listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
     setAgentModelBinding: vi.fn(),
     clearAgentModelBinding: vi.fn(),
@@ -130,7 +133,7 @@ describe('cadeia da cascata — os DOIS sentidos de `agent`', () => {
     getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
       Promise.resolve(
         slug === 'qa-automacao'
-          ? { modelId: 'm-agente', origin: 'agent', skipped: [] }
+          ? { modelId: 'm-agente', origin: 'agent', routingPreference: null, skipped: [] }
           : null,
       ),
     );
@@ -158,7 +161,7 @@ describe('cadeia da cascata — os DOIS sentidos de `agent`', () => {
     getAgentModelBinding.mockResolvedValue({
       modelId: 'm-criativo',
       origin: 'agent',
-      skipped: [],
+      routingPreference: null, skipped: [],
     });
     getWorkspaceModelBinding.mockResolvedValue({ modelId: 'm-workspace' });
     montar(<ModelsSection projectId="proj-1" />);
@@ -199,7 +202,7 @@ describe('cadeia da cascata — os DOIS sentidos de `agent`', () => {
     getAreaModelBinding.mockResolvedValue({
       modelId: 'm-criativo',
       origin: 'agent',
-      skipped: [],
+      routingPreference: null, skipped: [],
     });
     getWorkspaceModelBinding.mockResolvedValue({ modelId: 'm-workspace' });
     montar(<AreaModelsSection projectId="proj-1" />);
@@ -212,7 +215,7 @@ describe('cadeia da cascata — os DOIS sentidos de `agent`', () => {
     getAgentModelBinding.mockResolvedValue({
       modelId: 'm-criativo',
       origin: 'agent',
-      skipped: [],
+      routingPreference: null, skipped: [],
     });
     montar(<ModelsSection projectId="proj-1" />, 'en');
 
@@ -235,7 +238,7 @@ describe('cadeia da cascata — o nível PULADO entra na própria cadeia', () =>
           ? {
               modelId: 'm-proj',
               origin: 'project',
-              skipped: [
+              routingPreference: null, skipped: [
                 { scope: 'agent', modelId: 'm-sumiu', reason: 'unavailable' },
               ],
             }
@@ -297,7 +300,7 @@ describe('montarCadeia — a derivação, sem tela', () => {
 
   it('nível mais ESPECÍFICO que o vencedor é vazio — a cascata provou', () => {
     const cadeia = montarCadeia({
-      resolvido: { modelId: 'm', origin: 'project', skipped: [] },
+      resolvido: { modelId: 'm', origin: 'project', routingPreference: null, skipped: [] },
       niveis: [...niveis],
       proprios: { workspace: 'm-ws', project: 'm' },
       herdadoDoStart: false,
@@ -313,7 +316,7 @@ describe('montarCadeia — a derivação, sem tela', () => {
 
   it('herança do Criativo: o vencedor da cascata NÃO é o valor vigente', () => {
     const cadeia = montarCadeia({
-      resolvido: { modelId: 'm-criativo', origin: 'agent', skipped: [] },
+      resolvido: { modelId: 'm-criativo', origin: 'agent', routingPreference: null, skipped: [] },
       niveis: [...niveis],
       proprios: { workspace: 'm-ws' },
       herdadoDoStart: true,
@@ -345,7 +348,7 @@ describe('montarCadeia — a derivação, sem tela', () => {
       resolvido: {
         modelId: 'm-ws',
         origin: 'workspace',
-        skipped: [{ scope: 'area', modelId: 'm-sumiu', reason: 'unavailable' }],
+        routingPreference: null, skipped: [{ scope: 'area', modelId: 'm-sumiu', reason: 'unavailable' }],
       },
       niveis: [...niveis],
       proprios: { workspace: 'm-ws', area: 'm-sumiu' },
@@ -359,8 +362,8 @@ describe('montarCadeia — a derivação, sem tela', () => {
 });
 
 describe('herdouDoCriativo — o que a tela consegue provar', () => {
-  const doCriativo = { modelId: 'm-criativo', origin: 'agent' as const, skipped: [] };
-  const resolvido = { modelId: 'm-criativo', origin: 'agent' as const, skipped: [] };
+  const doCriativo = { modelId: 'm-criativo', origin: 'agent' as const, routingPreference: null, skipped: [] };
+  const resolvido = { modelId: 'm-criativo', origin: 'agent' as const, routingPreference: null, skipped: [] };
 
   it('nada acima do workspace + Criativo com linha própria: é herança', () => {
     expect(
@@ -391,7 +394,7 @@ describe('herdouDoCriativo — o que a tela consegue provar', () => {
       herdouDoCriativo({
         agentKey: 'qa-automacao',
         resolvido,
-        daArea: { modelId: 'm-area', origin: 'area', skipped: [] },
+        daArea: { modelId: 'm-area', origin: 'area', routingPreference: null, skipped: [] },
         doProjeto: null,
         doCriativo,
       }),
@@ -404,9 +407,9 @@ describe('herdouDoCriativo — o que a tela consegue provar', () => {
         agentKey: 'qa-automacao',
         resolvido: {
           ...resolvido,
-          skipped: [{ scope: 'area', modelId: 'm-area', reason: 'unavailable' }],
+          routingPreference: null, skipped: [{ scope: 'area', modelId: 'm-area', reason: 'unavailable' }],
         },
-        daArea: { modelId: 'm-area', origin: 'area', skipped: [] },
+        daArea: { modelId: 'm-area', origin: 'area', routingPreference: null, skipped: [] },
         doProjeto: null,
         doCriativo,
       }),
@@ -432,7 +435,7 @@ describe('herdouDoCriativo — o que a tela consegue provar', () => {
         resolvido,
         daArea: null,
         doProjeto: null,
-        doCriativo: { modelId: 'm-ws', origin: 'workspace', skipped: [] },
+        doCriativo: { modelId: 'm-ws', origin: 'workspace', routingPreference: null, skipped: [] },
       }),
     ).toBe(false);
   });
@@ -441,7 +444,7 @@ describe('herdouDoCriativo — o que a tela consegue provar', () => {
     expect(
       herdouDoCriativo({
         agentKey: 'qa-automacao',
-        resolvido: { modelId: 'm-outro', origin: 'agent', skipped: [] },
+        resolvido: { modelId: 'm-outro', origin: 'agent', routingPreference: null, skipped: [] },
         daArea: null,
         doProjeto: null,
         doCriativo,

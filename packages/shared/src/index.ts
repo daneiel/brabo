@@ -83,7 +83,26 @@ export interface LLMProviderCapabilities {
    * degrada olhando a capability, nunca descobrindo na falha.
    */
   readonly embeddings: boolean;
+  /**
+   * O provider sabe receber um CRITÉRIO DE ROTEAMENTO entre os upstreams que
+   * servem o mesmo modelo (ADR 0166) — hoje, só um HUB tem o que rotear.
+   * Camada de PROVIDER apenas: o critério é do hub, e o catálogo não o publica
+   * por modelo.
+   *
+   * Obrigatório pelo mesmo motivo de `embeddings`, e `true` só quando um smoke
+   * contra a API real provou que o hub aceita o campo e o upstream devolvido
+   * responde a ele — nunca por leitura de documentação (ADR 0041).
+   */
+  readonly routingPreference: boolean;
 }
+
+/**
+ * O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). É o
+ * vocabulário do `provider.sort` do OpenRouter, que é o único consumidor hoje;
+ * a lista em runtime mora em `apps/api/src/domain/llm/routing-preference.ts`
+ * (este pacote é 100% tipo).
+ */
+export type RoutingPreference = "price" | "throughput" | "latency";
 
 /**
  * O que se pede a um provider ao gerar embedding (ADR 0075).
@@ -243,6 +262,11 @@ export interface ChatOptions {
   host?: string;
   /** Ferramentas oferecidas ao modelo (tool calling). */
   tools?: ToolDef[];
+  /**
+   * Critério de roteamento do binding vencedor (ADR 0166). Provider que não
+   * declara `capabilities.routingPreference` IGNORA — nunca falha por ele.
+   */
+  routingPreference?: RoutingPreference;
 }
 
 export interface ChatTextDeltaChunk {

@@ -50,6 +50,22 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `session.closed` | normal termination |
 | `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
 
+**A terminal session no longer takes conversation ([RN-581](../business-rules.md#rn-581)).**
+Once a session is `closed` or `closed_abnormally`, appending a conversation
+event is refused with **409** and `reason: "sessao_encerrada"`. Conversation is
+either a type that only exists as conversation (`chat.message`,
+`chat.structured_question`, `chat.structured_question_answered`,
+`agent.status`, `agent.activated`, `handoff.offered`, `handoff.accepted`,
+`readiness.confirmed`, `necessity.validated`,
+`architecture.readiness_confirmed`) or any event whose actor is a
+conversational agent — so `tool.call`/`agent.response` from the Creative agent
+are refused while the same types from the Psychologist, which runs **on** the
+closed session, still come in. Human decisions on a pending action
+(`action.approved`/`action.denied`) also still come in: the action queue
+outlives the session. A session closed because the conversation sat idle past
+its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
+`closed`, like `heartbeat_timeout`.
+
 ### Chat and agents
 
 | type | when |
@@ -59,16 +75,33 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `chat.structured_question_answered` | the user answered the form; the answers also come back as `chat.message` for the agent to read |
 | `agent.activated` | an agent took on work in the session |
 | `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules/autenticacao.md#rn-175)) |
-| `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
-| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook |
+| `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
+| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the seven conversational agents (the Infra Lead since [RN-617](../business-rules.md#rn-617)), by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules.md#rn-589)). The same payload comes from the Infra Lead for every tool it dispatches inline, and from the Dev Lead when a suspended call is settled — never while it waits for approval ([RN-593](../business-rules.md#rn-593)) |
 | `handoff.offered` | one agent offered the work to another |
 | `handoff.accepted` | the recipient accepted |
+| `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
+
+**What a conversational agent reads back ([RN-580](../business-rules.md#rn-580)).**
+When one of the seven conversational agents comes up over a session that already
+has a conversation, `Engine.Agents.Reidratacao` rebuilds its history from the
+**tail** of this log (the last 200 events): `chat.message`, `agent.response`,
+`chat.structured_question` (as the agent's own turn, with labels and options),
+and its OWN `tool.call`/`tool.result` (as a text note — the events carry no call
+id, so they are never replayed as `role: tool`). `chat.structured_question_answered`
+is deliberately skipped: the api records the same answers as a `chat.message`
+right after it, and that is what the agent read live. Since [RN-589](../business-rules.md#rn-589) all seven record `tool.result`
+with the text the tool returned (`resultado`, cut at 2,000 characters, with
+`resultadoTotal` giving the real length when it cuts); a call from a session
+recorded before that has no `tool.result` and the note says the log has no outcome.
+When the conversation is longer than the tail, the history opens with a system
+message stating how many earlier events were left out, the latest recorded
+compaction summary, and the opening messages.
 
 ### Proposed actions
 
 | type | when |
 |---|---|
-| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/custo.md#rn-049)). `payload.reason` says WHICH policy rule decided — the string `decide()` returns, on all three outcomes; absent on events recorded before the rule existed, which means "not recorded", never "no reason". The outbox row of the same name does NOT carry it ([RN-567](../business-rules.md#rn-567)) |
+| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/custo.md#rn-049)). `payload.reason` says WHICH policy rule decided — the string `decide()` returns, on all three outcomes; absent on events recorded before the rule existed, which means "not recorded", never "no reason". The outbox row of the same name does NOT carry it ([RN-567](../business-rules.md#rn-567)). On `terminal` actions — the only type whose decision consults the path scope — `payload.scopeRoot` says WHICH root the scope compared against, as `{ executionMode, ancora, segmento }`: `container` → `ancora: raiz_gerenciada` and the `workspace_dir_name`; `mounted` → `ancora: base_de_projetos` and the segment under `BRABO_PROJECTS_BASE` (`ancora: indisponivel`, `segmento: null` when the folder is outside the base or there is none); `runner` → `ancora: nome_da_pasta` and the `workspace_dir_name`. NEVER the absolute path, which would expose the user's `$HOME` to every member. Absent on older events and on other action types; not in the outbox either ([RN-609](../business-rules.md#rn-609)) |
 | `proposed_action.approved` | decided by the user — `actor` is **whoever clicked**. Auto-approval does NOT go through here: it shows up in `created` with `status: auto_approved` and an agent actor |
 | `proposed_action.denied` | denied — terminal state. `actor` is whoever refused it, and `payload.reason` is the reason |
 | `proposed_action.executed` | executed successfully |
@@ -100,7 +133,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 |---|---|
 | `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
 | `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
-| `execution.parallelization_suggested` | the system proposed parallelizing |
+| `execution.parallelization_suggested` | the system proposed parallelizing — emitted at activation only when the project has a registered `running` container (otherwise the dev agents are blocked, `dev.blocked_by_container`, and more agents would only multiply the blocked ones; AT-104) |
 | `execution.parallelization_accepted` | accepted — the subagent inherits the base agent's cap |
 | `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
 | `dev.working` | claimed a task and set up the worktree |
@@ -151,6 +184,7 @@ have to learn a second name just because the conversational agent doesn't use
 | `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules.md#rn-505)) |
 | `artifact.module_map` | the Architect's module map |
 | `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
+| `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (who decided is the actor: `arquiteto` or `infra-lead`) — the project's container image, emitted by the api (`DecidirImagemDoProjetoUseCase`) when the Architect decides it or the Infra Lead elects a candidate ([RN-491](../business-rules.md#rn-491)); versioned, no table. The engine only READS whether one exists, to refuse `container_start_via_runner` locally without it ([RN-610](../business-rules.md#rn-610)) |
 | `artifact.insight` | — |
 | `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validated in `Engine.Agents.StaffTools`, not by `ArtifactSchemas` — same case as `artifact.insight`): `problema`, `opcoes` (list of `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call |
@@ -247,9 +281,19 @@ reloads the page doesn't get them back — they get the event log back instead.
 | `agent.status` | visible agent state change |
 | `agent.done` | turn ended |
 | `agent.error` | turn failed |
-| `event.appended` | a new event entered the log — the panel's refresh trigger |
+| `event.appended` | a new event entered the log — the panel's refresh trigger; carries only `type` and `actorId` |
 
 A domain event almost always produces an `event.appended`; the reverse doesn't hold.
+Since [RN-579](../business-rules.md#rn-579) the engine emits it for **every**
+write the api confirmed through the `EngineApiClient` facade (appends, proposed
+actions, handoffs, the PO's backlog), and never for a refused one. Writes the
+api makes on its own — a human deciding an action, a session transition — reach
+the same broadcast since AT-157: the api asks the engine for it after the write
+commits (`POST /internal/sessions/:id/event-appended`), and does not ask for
+writes that came from the engine, which already announces them. The browser uses it only as a trigger: it invalidates what the
+`type` affects (events and budget always; actions, handoffs or backlog by
+prefix), with a minimum window per target, and while the channel is alive the
+session screen's polls fall back to 15s (30s for the budget).
 
 ### Who can listen (RN-108)
 
@@ -337,7 +381,7 @@ makes a new identifier show up here even if nobody wrote about it.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Extracted from the emission points: **91 identifiers**, of which **2** are not described above.
+Extracted from the emission points: **92 identifiers**, of which **2** are not described above.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -358,6 +402,7 @@ Extracted from the emission points: **91 identifiers**, of which **2** are not d
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.project_image` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
@@ -386,7 +431,7 @@ Extracted from the emission points: **91 identifiers**, of which **2** are not d
 - `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
-- `chat.structured_question` <sub>(apps/engine/lib/engine/harness/tools/ask_structured_questions.ex)</sub>
+- `chat.structured_question` <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
 - `chat.structured_question_answered` <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
 - `delegation.dispensed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
@@ -429,7 +474,7 @@ Extracted from the emission points: **91 identifiers**, of which **2** are not d
 - `session.created` <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub>
 - `session.draining` <sub>(apps/engine/lib/engine/shutdown.ex)</sub>
 - `tool.call` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `tool.result` <sub>(apps/engine/lib/engine/agents/criativo_server.ex)</sub>
+- `tool.result` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 <!-- END:GENERATED:eventos-inventario -->
 
 ---

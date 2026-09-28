@@ -411,4 +411,39 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
     expect(screen.queryByText('QA de Automação')).not.toBeInTheDocument();
     expect(screen.queryByText('QA')).not.toBeInTheDocument();
   });
+
+  // AT-130 — `executionActivated` passa pela mesma guarda de sessão.
+  it('resumo de OUTRA sessão dizendo `executionActivated: false` não esconde dev agents que a janela prova', async () => {
+    listSessionEvents.mockResolvedValue({ items: CAUDA, nextCursor: null }); // traz execution.activated
+    getProjectsSummary.mockResolvedValue([
+      {
+        ...resumo({ executionActivated: false, gatesEverOpened: false }),
+        latestSessionId: 'sess-ideacao-posterior',
+      },
+    ]);
+
+    montar();
+
+    expect(await screen.findByText('dev-backend')).toBeInTheDocument();
+  });
+
+  it('resumo de OUTRA sessão dizendo `executionActivated: true` não forja dev agents que a janela não prova', async () => {
+    listSessionEvents.mockResolvedValue({
+      items: [EVENTOS[0], EVENTOS[2]], // sem execution.activated
+      nextCursor: null,
+    });
+    getProjectsSummary.mockResolvedValue([
+      {
+        ...resumo({ executionActivated: true, gatesEverOpened: false }),
+        latestSessionId: 'sess-ideacao-posterior',
+      },
+    ]);
+
+    montar();
+
+    expect(
+      await screen.findByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
+  });
 });

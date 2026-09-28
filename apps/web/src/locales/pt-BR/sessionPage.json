@@ -54,6 +54,7 @@
     "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
   },
   "ativacao": {
+    "mensagemNaoEnviada": "Sua mensagem não enviada",
     "naoAtivada": "Sessão ainda não ativada.",
     "ativarSessao": "Ativar sessão",
     "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens."
@@ -82,6 +83,7 @@
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
+    "semRepositorio": "Sem repositório ainda: aceitar este handoff o provisiona, e só então a execução pode ser ativada.",
     "acompanheExecucao": "Acompanhe a execução em Executores",
     "infraTitulo": "{{de}} passou o bastão à Infra",
     "infraDetalhe": "Aceitar ativa o Infra Lead, que assume o provisionamento e vai PROPOR a subida do container do projeto — a proposta ainda passa por você em Aprovações.",
@@ -105,6 +107,7 @@
     "erroEnviar": "Não foi possível enviar as respostas"
   },
   "toasts": {
+    "sessaoEncerrada": "Esta sessão foi encerrada e não aceita mais mensagens. Abra uma sessão nova para continuar.",
     "erro": "Erro",
     "erroAtivarSessao": "Não foi possível ativar a sessão",
     "erroRenomear": "Não foi possível renomear a sessão",

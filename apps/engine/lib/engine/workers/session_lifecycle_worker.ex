@@ -5,11 +5,20 @@ defmodule Engine.Workers.SessionLifecycleWorker do
   NÃO é mais tratado aqui — a criação do processo agora é um comando
   síncrono da api (POST /internal/sessions, ver
   EngineWeb.SessionCommandController); este worker só para um processo
-  ainda rodando quando a api já sabe do encerramento.
+  ainda rodando quando a api já sabe do encerramento — e, desde a RN-581, os
+  agentes CONVERSACIONAIS da sessão (`Engine.Agents.Conversacionais`), em
+  todos os nós.
+
+  É aqui, e não no `SessionServer`, porque este é o ponto por onde TODO
+  fechamento passa: heartbeat, conversa ociosa, fechamento humano, crash. O
+  `SessionServer` só vê os que ele mesmo causa, e só no nó dele.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 5
 
+  require Logger
+
+  alias Engine.Agents.Conversacionais
   alias Engine.Sessions.{Monitor, SessionServer}
   alias Engine.Telemetry.Span
 
@@ -49,10 +58,26 @@ defmodule Engine.Workers.SessionLifecycleWorker do
       pid when is_pid(pid) ->
         :ok = Monitor.expect_stop(session_id)
         SessionServer.stop(pid)
-        :ok
 
       nil ->
         :ok
     end
+
+    parar_conversacionais(session_id)
+  end
+
+  defp parar_conversacionais(session_id) do
+    case Conversacionais.parar_da_sessao_no_cluster(session_id) do
+      [] ->
+        :ok
+
+      parados ->
+        Logger.info(
+          "sessão #{session_id} encerrada: agentes conversacionais parados " <>
+            "(#{Enum.join(parados, ", ")})"
+        )
+    end
+
+    :ok
   end
 end

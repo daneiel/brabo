@@ -8,6 +8,23 @@ keywords: [regras de negócio, autenticação, refresh, cookie, PAT, OAuth]
 
 # Autenticação
 
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-223): a [versão em inglês](pathname://../../business-rules/autenticacao) é a fonte, tem
+> 96 RNs nesta página e esta tradução tem 91. As 5
+> abaixo **só existem lá**, e link para uma delas aponta para a versão
+> em inglês:
+>
+> [RN-595](pathname://../../business-rules/autenticacao#rn-595), [RN-597](pathname://../../business-rules/autenticacao#rn-597)–[RN-598](pathname://../../business-rules/autenticacao#rn-598), [RN-601](pathname://../../business-rules/autenticacao#rn-601), [RN-603](pathname://../../business-rules/autenticacao#rn-603).
+>
+> Medido em 2026-09-26 (AT-229), título E corpo: das RNs presentes, estas
+> têm aqui um enunciado mais antigo que o da versão em inglês:
+>
+> [RN-035](pathname://../../business-rules/autenticacao#rn-035), [RN-105](pathname://../../business-rules/autenticacao#rn-105), [RN-107](pathname://../../business-rules/autenticacao#rn-107), [RN-108](pathname://../../business-rules/autenticacao#rn-108), [RN-117](pathname://../../business-rules/autenticacao#rn-117), [RN-153](pathname://../../business-rules/autenticacao#rn-153), [RN-154](pathname://../../business-rules/autenticacao#rn-154), [RN-169](pathname://../../business-rules/autenticacao#rn-169), [RN-170](pathname://../../business-rules/autenticacao#rn-170).
+>
+> Onde a fonte ainda está em português, a comparação é de texto; onde ela
+> já foi traduzida para o inglês, só dá para comparar o tamanho, e uma
+> diferença de até 12% passa como tradução. Na dúvida, o inglês vale.
+
 > Estas RNs saíram de [`business-rules.md`](../business-rules.md) sem
 > mudar uma vírgula do conteúdo: a página única passava de 640 KB e
 > estas duas seções sozinhas eram metade dela. As âncoras `#rn-NNN`
@@ -466,7 +483,7 @@ que some (RN-088: nunca falha silenciosa ou confusa).
   `apps/api/src/domain/anamnese/anamnese-disabled.error.ts`,
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
   (`runAnamnese`), `apps/api/src/application/use-cases/anamnese/run-anamnese.use-case.ts`,
-  `apps/web/src/routes/ProjectSettingsTab.tsx` (`ProficiencySection`)
+  `apps/web/src/routes/settings/ProficiencySection.tsx`
 - **Teste:**
   `apps/engine/test/engine/workers/anamnese_scheduler_worker_test.exs`
   (`kickoff/0` não agenda desativado, agenda ativado, default desligado;
@@ -645,7 +662,7 @@ leitura contra o mesmo banco — é o que garante que RN-075 (escopo de
 terminal) e RN-092 (leitura de código) continuam apontando para a MESMA
 pasta que o engine realmente usa.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projects.workspaceDirName`),
+- **Onde:** `apps/api/src/db/schema/iam.ts` (`projects.workspaceDirName`),
   `apps/api/src/db/migrations/0042_tough_captain_midlands.sql`,
   `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
   (`workspaceDirNameFor`, `projectScopeRoot`),
@@ -1319,7 +1336,7 @@ sessão). Para ações, é o `seq` do evento `proposed_action.created` correlato
 `action.seq`, que é `bigserial` único e global de toda a tabela
 `proposed_actions`, compartilhado por todas as sessões e projetos do
 sistema, e portanto incomparável com `event.seq` (contraste deliberado, ver
-`apps/api/src/db/schema.ts`). Comparar os dois direto produzia ordem
+`apps/api/src/db/schema/actions.ts`). Comparar os dois direto produzia ordem
 imprevisível toda vez que um `ApprovalCard` entrava na mistura com eventos
 normais. Ações sem esse vínculo (só o bootstrap de Gitflow —
 `git_repo_create`/`git_branch_create`, que gravam apenas outbox) degradam
@@ -2069,7 +2086,7 @@ um colapso de doze mensagens é UMA entrada na tela.
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/SessionPage.tsx:284` (o corte do fio), `:1898`
+  toggle); `apps/web/src/routes/SessionPage.tsx:223` (o corte do fio), `:1459`
   (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
@@ -2103,8 +2120,8 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:2988` (`REGRAS_POR_PAGINA`) e
-  a ordenação das quatro seções em `ContextAside`;
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:98` (`REGRAS_POR_PAGINA`) e
+  a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-178"), `apps/web/src/components/ActivityFeed.test.tsx`
@@ -2134,9 +2151,9 @@ ambíguo. O contador do cabeçalho da seção conta a árvore INTEIRA, não só 
 raízes: dizer "3" com dezoito tarefas dentro seria o mesmo tipo de número que
 não corresponde a nada que a [RN-151](#rn-151) tirou da sidebar.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:2904`
-  (`montarArvoreDeBacklog`), `:3097` (as raízes viram item), `:3114` (a
-  contagem da árvore)
+- **Onde:** `apps/web/src/lib/session-backlog-tree.ts:68`
+  (`montarArvoreDeBacklog`), `apps/web/src/routes/ContextAside.tsx:210` (as
+  raízes viram item), `:225` (a contagem da árvore)
 - **Teste:** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
   (casos "épico/história/tarefa do PO viram árvore" e "nó sem pai carregado
   aparece na raiz")
@@ -2178,9 +2195,9 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:325` (`baixados`); `apps/web/src/routes/SessionPage.tsx:3032`
-  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim de
-  `ContextAside`
+  `:359` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
+  arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-180")
 - **Origem:** revisão da própria rodada — o teto de 200 existia em silêncio nas
@@ -2338,10 +2355,12 @@ quadrado de iniciais por projeto (borda na cor de identidade,
 trilha reexpande a barra, abre aquele projeto e navega para ele.
 
 A preferência é do usuário e sobrevive a reload: `brabo.sidebar.collapsed`
-(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **manual**
-(`colapsadoManual`) e se soma por OR a um segundo estado, **automático**
-(`autoColapsado`, [RN-201](#rn-201)) — o colapso visível é a união dos dois,
-mas só o manual é gravado.
+(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **só manual**
+(`colapsadoManual`): havia um segundo estado, **automático**
+(`autoColapsado`), somado por OR pela aba de Código, e ele foi removido pelo
+[ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md) — ver
+[RN-201](#rn-201). Nenhuma tela recolhe a sidebar por conta própria; o que se
+vê recolhido foi o usuário quem pediu, e está gravado.
 
 - **Onde:** `apps/web/src/routes/Shell.tsx:340-351` (estado e toggle),
   `apps/web/src/routes/Shell.module.css` (`.sidebar`, `.colapsado .sidebar`,
@@ -2487,7 +2506,7 @@ expandida — o que sai é o item solto sem destino.
 - **Origem:** PROGRAMA 28, Onda 2, frente B —
   `design_handoff_brabo/README.md` seção "Navigation shell"
 
-### RN-201 — Projeto/aba ativos persistem entre páginas; a aba Código recolhe sem gravar preferência {#rn-201}
+### RN-201 — Projeto/aba ativos persistem entre páginas; o colapso da sidebar é SÓ do usuário {#rn-201}
 
 Duas chaves finais do handoff: `brabo.project` (o projeto ativo) e
 `brabo.tab` (a aba ativa) — gravadas quando o usuário clica um link de aba
@@ -2495,30 +2514,48 @@ NA SIDEBAR (`LinhaDeAba`/o link de nome do projeto). `?tab=` na URL só vale
 como deep-link INICIAL (`project-tabs.ts`, FASE 24) — trocar de aba dentro
 de `ProjectPage.tsx` é estado local e não escreve na URL depois do
 primeiro load, então estas chaves são o único jeito de a preferência
-sobreviver entre uma navegação e outra.
+sobreviver entre uma navegação e outra. **Esta metade nunca mudou.**
 
-**Auto-collapse do Código, sem gravar preferência.** A rota de Código
-(`ProjectCodeTab.tsx`) não é uma URL própria — é uma ABA dentro de
-`ProjectPage.tsx`, montada/desmontada por troca de `tab` (React desmonta o
-componente anterior ao trocar o `component` da aba ativa). Isso descarta a
-alternativa óbvia ("observar a URL no Shell"): a URL não muda ao trocar de
-aba, só no load inicial. A solução é um `Context` — `AutoCollapseContext`
-(`apps/web/src/lib/sidebar-state.ts`) —, porque `Shell.tsx` fica ACIMA de
-`<Outlet />` na árvore e não há como uma aba passar uma prop pra cima sem
-um canal explícito. `useAutoCollapseSidebar()` chama `registrar(true)` no
-`useEffect` de montagem e `registrar(false)` na limpeza; o Shell soma esse
-sinal (`autoColapsado`) por OR ao colapso manual, e só o manual é
-persistido — por isso o estado anterior volta sozinho ao sair do Código.
+**O auto-colapso da aba de Código SAIU (ADR 0126).** Até aqui a aba de
+Código recolhia a sidebar sozinha para dar largura ao editor, sem gravar
+preferência: `AutoCollapseContext`/`useAutoCollapseSidebar` em
+`sidebar-state.ts`, registrados por `ProjectCodeTab.tsx` (a única
+chamadora) e somados por OR ao colapso manual dentro do `Shell`. O contexto,
+o hook, o estado `autoColapsado`, o `Provider` em torno de `<Outlet />` e o
+`disabled` do botão de recolher — que existia só para proteger esse caminho
+— foram todos removidos.
 
-- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`AutoCollapseContext`,
-  `useAutoCollapseSidebar`, `lerProjetoAtivo`/`gravarProjetoAtivo`,
-  `lerAbaAtiva`/`gravarAbaAtiva`), `apps/web/src/routes/Shell.tsx`
-  (`autoCollapseValue`, o `Provider` em torno de `<Outlet />`),
-  `apps/web/src/routes/ProjectCodeTab.tsx` (a única chamadora hoje)
-- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe
-  "useAutoCollapseSidebar", "projeto e aba ativos")
+O motivo é estrutural: com o trilho vertical do projeto
+(`routes/ProjectRail.tsx`) sempre presente, manter o auto-colapso poria a
+trilha de ícones do Shell encostada no trilho do projeto — DOIS trilhos
+verticais adjacentes, permanentes, na aba mais pesada do produto.
+
+O que passa a valer: **o colapso da sidebar é uma decisão do USUÁRIO, e só
+dele.** Continua manual, continua persistido em `brabo.sidebar.collapsed`
+([RN-195](#rn-195)), e nenhuma tela recolhe a sidebar por conta própria.
+
+**O custo, aceito e declarado:** a aba de Código passa a abrir com a sidebar
+EXPANDIDA (264px) + o trilho do projeto (180px) + o trilho do próprio
+`CodeShell` (48px) — 492px de moldura antes do primeiro caractere de código,
+MEDIDOS no navegador, contra ~110px antes (62px de sidebar recolhida + 48px
+do trilho do Código). Recolher manualmente continua possível e
+ainda produz trilho do Shell ao lado do trilho do projeto — a diferença é
+que agora quem escolheu foi o usuário, não o sistema.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts:80-105`
+  (`lerProjetoAtivo`/`gravarProjetoAtivo`, `lerAbaAtiva`/`gravarAbaAtiva`, e
+  o comentário que registra a remoção), `apps/web/src/routes/Shell.tsx:366-369`
+  (só `colapsadoManual` sobrou), `apps/web/src/routes/ProjectCodeTab.tsx`
+  (nenhuma chamada de colapso)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "projeto e
+  aba ativos"), `apps/web/src/routes/Shell.test.tsx` (describe "Shell —
+  colapso da sidebar": a preferência só nasce de clique no botão e é sempre
+  gravada). O describe "useAutoCollapseSidebar" foi removido junto com o
+  hook.
 - **Origem:** PROGRAMA 28, Onda 2, frente B —
-  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1, "Auto-collapse"
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1; a metade do
+  auto-colapso foi revista pelo
+  [ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md)
 ### RN-202 — A aba `sessions` continua "Chat", nunca "Chat RAG" {#rn-202}
 
 O handoff de design mais recente do PROGRAMA 28 chama a aba consultiva de
@@ -2583,8 +2620,7 @@ mais honesto disponível sem inventar nota. Capacidade sem nenhum modelo curado
 mostra "sem cobertura curada" — nunca esconde a linha, mesmo padrão que a
 coluna Origem de `ModelsSection` já usa para o binding pulado.
 
-- **Onde:** `apps/web/src/routes/ProjectSettingsTab.tsx`
-  (`MelhoresModelosPorCapacidadeSection`)
+- **Onde:** `apps/web/src/routes/settings/MelhoresModelosPorCapacidadeSection.tsx`
 - **Teste:** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
   (describe "MelhoresModelosPorCapacidadeSection")
 - **ADR:** [0077](../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
@@ -2721,7 +2757,7 @@ padrão de `projects.workspace_mode`/`workspace_path` (ADR 0072): `scope =
 escrever esta tabela é um pipeline (Onda 4) que não necessariamente passa
 pelo mesmo caso de uso toda vez.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum` e os dois CHECK
+- **Onde:** `apps/api/src/db/schema/rag.ts` (`chunkScopeEnum` e os dois CHECK
   da tabela `chunks`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("recusa chunk de docs sem source_path — o CHECK da migração 0045, não
@@ -2737,7 +2773,7 @@ para as duas divergirem — um trecho com vetor mas sem entrada léxica, ou
 vice-versa — sem nenhum mecanismo do banco impedindo. Uma linha, uma fonte
 de verdade para as duas metades da busca.
 
-- **Onde:** `apps/api/src/db/schema.ts` (tabela `chunks`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (tabela `chunks`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   (as três specs escrevem e leem as duas colunas na mesma linha)
 - **ADR:** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
@@ -2751,7 +2787,7 @@ transação do `INSERT`, sem depender de nenhum provider de LLM responder
 (diferente de `embedding`, que só chega quando um pipeline de indexação
 existir).
 
-- **Onde:** `apps/api/src/db/schema.ts` (coluna `search_vector`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (coluna `search_vector`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("grava um chunk de docs com vetor e devolve o search_vector gerado pela
   GENERATED ALWAYS AS")
@@ -2769,7 +2805,7 @@ não existe (Onda 4) — sem isso, chunking teria que esperar embedding,
 misturando duas falhas de natureza diferente (parsing de documento contra
 chamada de rede a um provider) numa escrita atômica só.
 
-- **Onde:** `apps/api/src/db/schema.ts` (coluna `embedding`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (coluna `embedding`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("grava um chunk de docs com vetor..." grava com `embedding` preenchido;
   as outras duas specs gravam sem ele, confirmando a nulabilidade)

@@ -65,6 +65,19 @@ describe('AgentCard', () => {
     expect(onAutonomyChange).toHaveBeenCalledWith('auto');
   });
 
+  it('mostra a frase de autonomia sob o toggle só quando o chamador a passa (RN-603)', () => {
+    const semFrase = renderCard({ autonomy: 'auto', onAutonomyChange: vi.fn() });
+    expect(screen.queryByText('frase do modo automático')).toBeNull();
+    semFrase.unmount();
+
+    renderCard({
+      autonomy: 'auto',
+      onAutonomyChange: vi.fn(),
+      autonomyHint: 'frase do modo automático',
+    });
+    expect(screen.getByText('frase do modo automático')).toBeInTheDocument();
+  });
+
   describe('rearmar (Fase 12b — RN-047)', () => {
     it('só aparece com status travado E o handler — nenhum dos dois sozinho basta', () => {
       const onRearm = vi.fn();

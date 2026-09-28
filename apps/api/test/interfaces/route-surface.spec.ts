@@ -127,7 +127,10 @@ function rotasRegistradas(app: INestApplication): Map<string, Rota> {
         string | undefined;
       if (sufixo === undefined) continue; // não é rota
 
-      const metodo = Reflect.getMetadata(METHOD_METADATA, handler) as number;
+      const metodo = Reflect.getMetadata(
+        METHOD_METADATA,
+        handler,
+      ) as RequestMethod;
       const caminho =
         '/' +
         [base, sufixo]
@@ -197,6 +200,7 @@ const SEM_CORPO_JSON = new Map<
   ['POST /auth/reset-password', 'sem-conteudo'],
   ['PUT /projects/:projectId/agent-autonomy', 'sem-conteudo'],
   ['DELETE /projects/:projectId/members/:userId', 'sem-conteudo'],
+  ['DELETE /workspaces/:workspaceId/members/:userId', 'sem-conteudo'],
   // FASE 23 / ADR 0064 — "voltar a herdar" é 204: apaga o binding, sem corpo.
   ['DELETE /projects/:projectId/agent-bindings/:agentSlug', 'sem-conteudo'],
   ['DELETE /projects/:projectId/area-bindings/:areaKey', 'sem-conteudo'],
@@ -215,6 +219,8 @@ const SEM_CORPO_JSON = new Map<
     'DELETE /projects/:projectId/runner-device-keys/:deviceKeyId',
     'sem-conteudo',
   ],
+  // RN-611 — revogar a chave de MÁQUINA pela conta é 204, mesmo padrão.
+  ['DELETE /users/me/machine-device-keys/:deviceKeyId', 'sem-conteudo'],
   // Proxy do binário standalone do runner — o corpo é o ARQUIVO, nunca JSON.
   ['GET /runner-releases/binary', 'binario'],
 ]);

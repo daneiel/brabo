@@ -122,6 +122,7 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     detalheDaObservacao: null,
     naoVerificado: null,
     acaoPendente: null,
+    brokerConfigurado: true,
     ...overrides,
   };
 }
@@ -512,6 +513,79 @@ describe('ContainersPage', () => {
       ),
     ).toBeInTheDocument();
     expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  // ADR 0161, RN-574 — a instalação do AT-085: sem broker, a tela deixou
+  // aprovar duas `container_start` que só podiam falhar. Agora ela recusa
+  // ANTES do clique, para `container` E `mounted`, e diz por quê em TEXTO.
+  it.each(['container', 'mounted'] as const)(
+    'instalação SEM broker, projeto %s: botão inerte e o motivo dito em TEXTO — nunca propõe',
+    (executionMode) => {
+      useContainersOverview.mockReturnValue({
+        isPending: false,
+        isError: false,
+        data: [
+          itemRunnerSemContainer({
+            executionMode,
+            workspaceVerifiedAt: null,
+            brokerConfigurado: false,
+          }),
+        ],
+        refetch: vi.fn(),
+      });
+
+      montar();
+
+      expect(screen.getByRole('button', { name: 'Subir container' })).toBeDisabled();
+      expect(
+        screen.getByText(/Esta instalação não sobe container para projetos Container ou Pasta montada/),
+      ).toBeInTheDocument();
+      expect(proposeAction).not.toHaveBeenCalled();
+    },
+  );
+
+  // AT-105, RN-591 — parar/remover também passam pelo broker.
+  it('instalação SEM broker, container registrado: Parar/Remover inertes, com o motivo em TEXTO', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ brokerConfigurado: false })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    expect(screen.getByText(/stops and removes containers|para e remove os containers/)).toBeInTheDocument();
+    expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('com broker, Parar segue habilitado num container de pé', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item()],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).not.toBeDisabled();
+  });
+
+  it('instalação SEM broker não afeta projeto runner: ele sobe pelo agente local', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer({ brokerConfigurado: false })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir container' })).not.toBeDisabled();
+    expect(screen.queryByText(/Esta instalação não sobe container/)).toBeNull();
   });
 
   it('runner que nunca confirmou pasta: botão inerte, motivo próprio — nunca confundido com "sem imagem"', () => {

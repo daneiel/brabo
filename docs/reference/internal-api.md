@@ -160,6 +160,25 @@ the sender.
 The engine never writes directly to the events table — it **asks** the api, which
 controls the `seq` and the atomicity with the outbox.
 
+`GET /events` is what the seven conversational agents read when their process
+comes up over a session that already has a conversation, and what their
+kickoffs read to find the brief, the rules, the module map and the stories
+([RN-580](../business-rules.md#rn-580)). Until then the route only understood
+`afterSeq` and `limit`, and the engine only sent `limit=200` — so it got the
+**first** 200 events, and an agent woken on a 201-event conversation came up
+without the message it was answering. Two query parameters were added, both
+**additive** (without them the response is byte for byte the old one):
+
+| parameter | effect |
+|---|---|
+| `latest=true` | returns the **tail** — the last `limit` events, still in ascending `seq` — and ignores `afterSeq`; same semantics as the human route (ADR 0021) |
+| `types=a.b,c.d` | only events of these types, and `limit` counts only them; at most 20 types, each matching `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`, otherwise **400** |
+
+The page stays capped at **200** ([ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md)):
+neither parameter makes the read unbounded. On the engine side the new reads go
+through `EngineApiClient.list_events/3`; `list_events/2` still exists, unchanged,
+for the callers that did not migrate (`InfraLeadServer`, `DevLeadTools`).
+
 And that's why the session-type guard lives in the append use case, and not
 in `ActivateExecutionUseCase`: `POST /events` here and the user's route fall into the
 same funnel. Since FASE 20, `execution.activated` in a `consultiva` session
@@ -168,6 +187,20 @@ event does not promote it ([RN-097](../business-rules.md#rn-097)). No other
 contract change: the other event types remain identical, and the rejection
 happens **before** `incrementSeq`, so a rejected attempt does not open a gap
 in `seq`.
+
+Since [RN-581](../business-rules.md#rn-581) the same funnel also refuses
+**conversation** in a session that is already `closed`/`closed_abnormally`:
+**409** with a named body — `{ message, reason: "sessao_encerrada", status,
+type }`. "Conversation" is a type that only exists as conversation
+(`chat.message`, `chat.structured_question[_answered]`, `agent.status`,
+`agent.activated`, `handoff.offered`/`accepted`, the readiness events) **or**
+any event whose actor is a conversational agent (the six plus `dev-lead` and
+`infra`). What the close itself produces keeps coming in — the Psychologist's
+`ToolLoop`, the Anamnesis outcomes, the human deciding a pending action. The
+status comes from the **same** `UPDATE` that reserves the `seq`, and the
+refusal rolls that increment back: no gap either. The engine's
+`append_event/3` logs the refusal as a warning instead of dropping it, since
+most of its callers discard the return value.
 
 `ActivateExecutionUseCase` gained a second side effect that does **not** go
 through any route in this document ([RN-135](../business-rules/custo.md#rn-135)): at the
@@ -184,6 +217,29 @@ is the same story in reverse: it exposes via external HTTP a read
 `ActivateExecutionUseCase`. No new `engine → api` path, no side
 effect — it's a `SELECT`, and the criterion (an `active` session with `execution.activated`
 recorded) doesn't change anything about what the engine already did.
+
+Since [RN-579](../business-rules.md#rn-579) (AT-093) the `EngineApiClient`
+facade has one side effect on top of these routes, and it is on the engine's
+OWN channel, not on the api: when the api **confirms** a write to a session —
+`POST /events` (both `append_event` and `append_event_returning`),
+`POST /actions` (`proposed_action.created`), `POST /handoffs`
+(`handoff.offered`) and the PO's `create_epic`/`create_story`/`create_task`
+(`backlog.*_created`) — the facade broadcasts `event.appended` on
+`session:<id>` with only `type` and `actorId`. A refused write broadcasts
+nothing. No route and no request body changed; before this, only
+`ArtifactEmitter` and the Infra Lead broadcast, by hand, and even for writes
+the api had refused. It is what lets the browser drop its 3s poll while the
+channel is alive.
+
+Writes the api makes on its own — a human deciding an action, a session
+transition, a chat message answered by the api's own LLM turn — do not go
+through that facade, and since AT-157 they reach the channel the other way
+round: after the write **commits**, the api calls
+`POST /internal/sessions/:id/event-appended` (see *api → engine*) and the
+engine broadcasts the same `event.appended`. Writes that arrived from the
+engine itself (`/internal/*`) are not announced a second time. The call is
+best effort and never awaited; if it is lost, the browser's 15s fallback poll
+covers it, as before.
 
 ### LLM
 
@@ -264,10 +320,23 @@ finished, not about who's still watching. In a real execution this held on to
 an `offered` handoff for the Architect inside a closed session
 ([RN-064](../business-rules/custo.md#rn-064)).
 
-Response: `{ pending, motivo }`. `motivo` goes to the engine log — a session that
+Response: `{ pending, motivo, aguardandoUsuarioDesde }`. `motivo` goes to the engine log — a session that
 refuses to close without saying why is undiagnosable. And the api being down
 does **not** prevent closing: trading an orphan session for an immortal session would be
 trading one defect for another.
+
+`aguardandoUsuarioDesde` is the fifth signal
+([RN-581](../business-rules.md#rn-581)), and the only one with a **ceiling**:
+when the most recent turn-ending event of the conversation (`agent.response`,
+`chat.structured_question`, `agent.error` on the agent side; `chat.message`,
+`chat.structured_question_answered` on the user side) came from a
+conversational agent, the conversation is waiting for the user, and the api
+returns the ISO instant that turn ended. The api says *since when*; the engine
+decides *for how long* (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, 8h) and, past
+it, closes the session as `closed` with cause `conversation_idle_timeout`. It
+is `null` whenever any of the four uncapped signals is present — those win,
+as they always did. A present value the engine cannot parse is treated as an
+error (the heartbeat close), never as "no ceiling".
 
 ### Gate registry
 
@@ -424,7 +493,9 @@ exactly the session scope that caused the defect these routes fix
 
 The PO had **four tools and all of them writes** (`create_epic`,
 `create_story`, `create_task`, `offer_handoff`). Its context was assembled
-once, at kickoff, from the last 200 events of the **current session** —
+once, at kickoff, from the **first** 200 events of the **current session** (this
+page used to say "last"; it was the first, which is what
+[RN-580](../business-rules.md#rn-580) measured and fixed) —
 and after that it never re-read anything again. In a long session, or in a resumed
 one, it didn't know which rules existed, which it had already covered, nor what it
 had already created itself. The symptom that appeared in real use was a backlog with
@@ -723,6 +794,20 @@ row doesn't guarantee the container is up right now). `{ sucesso: false,
 motivo }` is the NORMAL shape for that; the engine turns it into an
 ordinary `failed_result`, same as any other failed command — never a
 crash, never a silent fallback back to `System.cmd` outside the container.
+
+**Each hop waits longer than the one below it**
+([RN-604](../business-rules.md#rn-604)). The broker cuts the command at
+`timeoutMs` and answers `timedOut: true`; the api's call to the broker waits
+`timeoutMs` plus the broker's own overhead (`tetoDaOperacao` in
+`container-broker.client.ts` — at most `timeoutMs` + 45s, 5s for the screen's
+`inspect`, 195s for `start`/`stop`/`remove` — [RN-605](../business-rules.md#rn-605)); and the engine's call to this
+route passes `receive_timeout: timeoutMs + 90s`
+(`teto_do_container_exec_ms/1`). Before AT-233 the engine fell back to Req's
+15s default — the same number as `TERMINAL_ACTION_TIMEOUT_MS` — and the api
+used 5s for everything, so any command over 5s came back as "the broker did
+not respond". A ceiling that runs out now says so: `motivo` names the
+operation and the number (`teto-excedido`), distinct from an unreachable
+broker.
 
 ### Per-agent context
 
@@ -1071,7 +1156,7 @@ The installer does not stop at the account. Its next step
 ([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) is to
 pair the local agent, and pairing needs a credential — the only one that
 existed was bound to a PROJECT
-([ADR 0118](../adr/0118-configuracao-do-runner-pelo-navegador.md)), in an
+([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)), in an
 installation that has no project yet. Since
 [RN-543](../business-rules.md#rn-543) a machine key is just a device key with
 `project_id NULL`; what was missing was a route that creates one, and
@@ -1120,13 +1205,14 @@ Twenty command routes, plus the health ones. Under `/internal` with `VerifyServi
 | method | path | what it triggers |
 |---|---|---|
 | POST | `/sessions` | starts the `SessionServer` |
+| POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
-| POST | `/sessions/:id/agent/message` | user message in the thread |
+| POST | `/sessions/:id/agent/message` | user message in the thread — **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)) |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
-| POST | `/sessions/:id/agent/readiness` | readiness confirmation |
-| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra |
-| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)) |
+| POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api; `202` on acceptance, `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra — `202` on acceptance, with the closing turn still running; `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)); arriving while the Arquiteto's closing turn runs, it is HELD and created when that turn ends, so it still lands after the Infra one ([RN-578](../business-rules.md#rn-578)) |
 | POST | `/sessions/:id/execution/start` | activates the execution phase |
 | POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |

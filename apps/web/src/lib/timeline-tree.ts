@@ -1,4 +1,9 @@
 import type { SessionEvent } from './api-types';
+import { statusDoEventoDev } from './agent-status';
+// A instância do i18n direto, com `ns` explícito — mesmo padrão de
+// `agent-status.ts#descreverStatus`: `montarArvore` é função pura chamada
+// fora de hook, e recebe o idioma como argumento (`getFixedT`).
+import i18n from './i18n';
 
 /**
  * A linha do tempo de cada agente, em ÁRVORE.
@@ -26,6 +31,7 @@ export type MarcoTipo =
   | 'handoff'
   | 'delegacao'
   | 'trabalho'
+  | 'espera'
   | 'gate';
 
 export interface Marco {
@@ -80,78 +86,169 @@ const DA_SESSAO = new Set([
   'chat.message',
 ]);
 
+/**
+ * A CHAVE do rótulo em `executors:timelineTree.label.*` (AT-134). A DECISÃO
+ * por tipo — se vira nó, que `MarcoTipo`, que detalhe — continua aqui, no
+ * código, e é ela que `scripts/ci/vocabulario-de-eventos-dev.spec.ts` lê; só
+ * o TEXTO mora nos locales, nos dois idiomas. `timeline-tree.test.ts` reprova
+ * chave desta união sem texto em `en` ou em `pt-BR`.
+ */
+export type ChaveDeRotulo =
+  | 'agentActivated'
+  | 'agentResponse'
+  | 'agentError'
+  | 'toolCall'
+  | 'toolResult'
+  | 'handoffOffered'
+  | 'handoffAccepted'
+  | 'artifactProductBrief'
+  | 'artifactBusinessRule'
+  | 'artifactModuleMap'
+  | 'artifactModuleRouting'
+  | 'artifactInsight'
+  | 'delegationCompleted'
+  | 'delegationFailed'
+  | 'delegationDispensed'
+  | 'devStarted'
+  | 'devWorking'
+  | 'devIdle'
+  | 'devAwaitingApproval'
+  | 'devAwaitingGate'
+  | 'devBlocked'
+  | 'devBlockedByContainer'
+  | 'devError'
+  | 'devIdleTripped'
+  | 'prGateChanged';
+
 interface Traducao {
   tipo: MarcoTipo;
-  rotulo: string;
-  detalhe?: (p: Record<string, unknown>) => string | undefined;
+  rotulo: ChaveDeRotulo;
+  detalhe?: (p: Record<string, unknown>, t: Tradutor) => string | undefined;
 }
 
 const texto = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() !== '' ? v : undefined;
 
+/** Texto da árvore num idioma FIXO — namespace `executors`, subárvore `timelineTree`. */
+type Tradutor = (chave: string, opcoes?: Record<string, unknown>) => string;
+
+function tradutorDaArvore(idioma: string | undefined): Tradutor {
+  const t = i18n.getFixedT(idioma ?? i18n.language, 'executors');
+  return (chave, opcoes = {}) => t(`timelineTree.${chave}`, opcoes);
+}
+
+/** "origem <x>" / "origin <x>" — o detalhe de falha e de delegação falhada. */
+const comOrigem = (t: Tradutor, origem: string | undefined): string | undefined =>
+  origem && t('detail.origin', { origem });
+
 /**
  * De tipo de evento para marco. O que não está aqui NÃO vira nó: a árvore
  * mostra marcos, não o log inteiro — para isso já existe o log, que continua
  * a um clique.
+ *
+ * Para o vocabulário `dev.*` isso NÃO vale como omissão: todo tipo que o
+ * engine emite tem de estar aqui ou em `TRADUCAO_FORA`, com o motivo, e
+ * `scripts/ci/vocabulario-de-eventos-dev.spec.ts` reprova o que faltar. Foi
+ * por omissão que `dev.blocked_by_container` sumia da árvore (AT-087): numa
+ * instalação real o ramo parava em `dev.started`, e a frase do presente
+ * afirmava trabalho sobre um agente parado esperando o container subir.
+ *
+ * `dev.rearmed` saiu desta tabela de propósito: quem o grava é a API, com
+ * ator `user` (o clique do humano), e o filtro de `montarArvore` só pendura
+ * marco de ator `agent` — a linha nunca produziu nó. O `dev.idle`/
+ * `dev.working` que o rearm dispara no engine é o que aparece no ramo.
  */
 const TRADUCAO: Record<string, Traducao> = {
-  'agent.activated': { tipo: 'ativado', rotulo: 'assumiu o trabalho' },
-  'agent.response': { tipo: 'resposta', rotulo: 'respondeu' },
+  'agent.activated': { tipo: 'ativado', rotulo: 'agentActivated' },
+  'agent.response': { tipo: 'resposta', rotulo: 'agentResponse' },
   'agent.error': {
     tipo: 'falha',
-    rotulo: 'falhou',
-    detalhe: (p) => texto(p.origem) && `origem ${texto(p.origem)}`,
+    rotulo: 'agentError',
+    detalhe: (p, t) => comOrigem(t, texto(p.origem)),
   },
   'tool.call': {
     tipo: 'ferramenta',
-    rotulo: 'usou ferramenta',
+    rotulo: 'toolCall',
     detalhe: (p) => texto(p.tool),
   },
   'tool.result': {
     tipo: 'ferramenta',
-    rotulo: 'ferramenta respondeu',
+    rotulo: 'toolResult',
     detalhe: (p) => texto(p.tool),
   },
   'handoff.offered': {
     tipo: 'handoff',
-    rotulo: 'ofereceu o trabalho',
+    rotulo: 'handoffOffered',
     detalhe: (p) => texto(p.toAgent) && `→ ${texto(p.toAgent)}`,
   },
-  'handoff.accepted': { tipo: 'handoff', rotulo: 'aceitou o trabalho' },
-  'artifact.product_brief': { tipo: 'artefato', rotulo: 'emitiu o brief' },
-  'artifact.business_rule': { tipo: 'artefato', rotulo: 'emitiu regra de negócio' },
-  'artifact.module_map': { tipo: 'artefato', rotulo: 'emitiu o module_map' },
-  'artifact.module_routing': { tipo: 'artefato', rotulo: 'roteou módulos para infra' },
-  'artifact.insight': { tipo: 'artefato', rotulo: 'emitiu hipótese' },
+  'handoff.accepted': { tipo: 'handoff', rotulo: 'handoffAccepted' },
+  'artifact.product_brief': { tipo: 'artefato', rotulo: 'artifactProductBrief' },
+  'artifact.business_rule': { tipo: 'artefato', rotulo: 'artifactBusinessRule' },
+  'artifact.module_map': { tipo: 'artefato', rotulo: 'artifactModuleMap' },
+  'artifact.module_routing': { tipo: 'artefato', rotulo: 'artifactModuleRouting' },
+  'artifact.insight': { tipo: 'artefato', rotulo: 'artifactInsight' },
   'delegation.completed': {
     tipo: 'delegacao',
-    rotulo: 'subagente concluiu',
+    rotulo: 'delegationCompleted',
     detalhe: (p) => texto(p.area),
   },
   'delegation.failed': {
     tipo: 'delegacao',
-    rotulo: 'subagente falhou',
-    detalhe: (p) => texto(p.failureOrigin) && `origem ${texto(p.failureOrigin)}`,
+    rotulo: 'delegationFailed',
+    detalhe: (p, t) => comOrigem(t, texto(p.failureOrigin)),
   },
-  'delegation.dispensed': { tipo: 'delegacao', rotulo: 'dispensou a delegação' },
-  'dev.started': { tipo: 'trabalho', rotulo: 'começou a task' },
-  'dev.working': { tipo: 'trabalho', rotulo: 'trabalhando' },
-  'dev.idle': { tipo: 'trabalho', rotulo: 'ocioso' },
-  'dev.awaiting_approval': { tipo: 'trabalho', rotulo: 'esperando sua aprovação' },
-  'dev.awaiting_gate': { tipo: 'gate', rotulo: 'esperando o gate' },
+  'delegation.dispensed': { tipo: 'delegacao', rotulo: 'delegationDispensed' },
+  // `dev.started` é emitido ao RECEBER a ordem de trabalhar, ANTES de
+  // reivindicar task nenhuma (`DevAgentServer.handle_cast(:work)`, e só
+  // depois `try_claim`) — "começou a task" afirmava o que ainda não tinha
+  // acontecido. Quem diz que há task é `dev.working`, que carrega o título.
+  'dev.started': { tipo: 'trabalho', rotulo: 'devStarted' },
+  'dev.working': {
+    tipo: 'trabalho',
+    rotulo: 'devWorking',
+    detalhe: (p) => texto(p.taskTitle),
+  },
+  'dev.idle': { tipo: 'trabalho', rotulo: 'devIdle' },
+  'dev.awaiting_approval': { tipo: 'trabalho', rotulo: 'devAwaitingApproval' },
+  'dev.awaiting_gate': { tipo: 'gate', rotulo: 'devAwaitingGate' },
   'dev.blocked': {
     tipo: 'trabalho',
-    rotulo: 'bloqueado',
+    rotulo: 'devBlocked',
     detalhe: (p) => texto(p.reason),
   },
-  'dev.idle_tripped': { tipo: 'trabalho', rotulo: 'circuit breaker abriu' },
-  'dev.rearmed': { tipo: 'trabalho', rotulo: 'rearmado por você' },
+  // RN-502: sem container `running` REGISTRADO o dev agent não reivindica
+  // task e fica `:idle`, re-tentando quando o container subir. O `reason`
+  // vem do engine por extenso e diz o que fazer — é ele o detalhe.
+  'dev.blocked_by_container': {
+    tipo: 'espera',
+    rotulo: 'devBlockedByContainer',
+    detalhe: (p) => texto(p.reason),
+  },
+  'dev.error': {
+    tipo: 'falha',
+    rotulo: 'devError',
+    detalhe: (p) => texto(p.reason),
+  },
+  'dev.idle_tripped': { tipo: 'trabalho', rotulo: 'devIdleTripped' },
   'pr.gate_changed': {
     tipo: 'gate',
-    rotulo: 'gate mudou',
+    rotulo: 'prGateChanged',
     detalhe: (p) => texto(p.gate) ?? texto(p.status),
   },
 };
+
+/**
+ * Tipo `dev.*` que o engine emite e que a árvore decidiu NÃO mostrar, com o
+ * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Vazio hoje:
+ * os tipos que o engine emite têm todos um marco honesto. Declarar aqui é
+ * decisão registrada, nunca esquecimento.
+ */
+export const TRADUCAO_FORA: Record<string, string> = {};
+
+/** As chaves de rótulo que a tabela USA — o teste as cobra nos dois locales. */
+export const CHAVES_DE_ROTULO_USADAS: readonly ChaveDeRotulo[] = Object.values(TRADUCAO).map(
+  (t) => t.rotulo,
+);
 
 /** Marcos que ENCERRAM um turno — depois deles o agente não está "fazendo". */
 const DESFECHOS = new Set<MarcoTipo>(['resposta', 'falha', 'handoff']);
@@ -172,28 +269,64 @@ export function marcoExpansivel(m: Marco): boolean {
  * A frase de "agora". Fala do ÚLTIMO marco, porque é ele que descreve o
  * presente — e diz explicitamente quando o agente está parado, em vez de
  * deixar o ramo mudo (que foi o defeito que originou tudo isto).
+ *
+ * Para marco `dev.*`, SE é trabalho em curso não se decide aqui: é o estado
+ * que o PAINEL do time dá ao mesmo evento (`statusDoEventoDev`), e só
+ * `trabalhando` deixa o ramo ativo. Duas tabelas para o mesmo evento
+ * divergiram uma vez (AT-087) — a árvore dizia trabalho onde o painel dizia
+ * `aguardando`. Tipo `dev.*` que o painel não decidiu NÃO vira ativo: na
+ * dúvida a tela não afirma trabalho.
  */
-function frasePresente(ultimo: Marco | undefined): { agora: string; ativo: boolean } {
-  if (!ultimo) return { agora: 'ainda não entrou em ação', ativo: false };
+function frasePresente(
+  ultimo: Marco | undefined,
+  tArvore: Tradutor,
+): { agora: string; ativo: boolean } {
+  if (!ultimo) return { agora: tArvore('now.notYet'), ativo: false };
 
   if (DESFECHOS.has(ultimo.tipo)) {
     if (ultimo.tipo === 'falha') {
-      return { agora: `parou por falha${ultimo.detalhe ? ` (${ultimo.detalhe})` : ''}`, ativo: false };
+      return {
+        agora: ultimo.detalhe
+          ? tArvore('now.failedWithDetail', { detalhe: ultimo.detalhe })
+          : tArvore('now.failed'),
+        ativo: false,
+      };
     }
     if (ultimo.tipo === 'handoff') {
-      return { agora: `passou adiante ${ultimo.detalhe ?? ''}`.trim(), ativo: false };
+      return {
+        agora: ultimo.detalhe
+          ? tArvore('now.handedOffWithDetail', { detalhe: ultimo.detalhe })
+          : tArvore('now.handedOff'),
+        ativo: false,
+      };
     }
-    return { agora: 'terminou o turno', ativo: false };
+    return { agora: tArvore('now.turnEnded'), ativo: false };
   }
 
-  const detalhe = ultimo.detalhe ? ` — ${ultimo.detalhe}` : '';
-  return { agora: `${ultimo.rotulo}${detalhe}`, ativo: true };
+  const ativo = ultimo.eventType.startsWith('dev.')
+    ? statusDoEventoDev(ultimo.eventType) === 'trabalhando'
+    : true;
+  return {
+    agora: ultimo.detalhe
+      ? tArvore('now.withDetail', { rotulo: ultimo.rotulo, detalhe: ultimo.detalhe })
+      : ultimo.rotulo,
+    ativo,
+  };
 }
 
-export function montarArvore(events: SessionEvent[]): {
+/**
+ * `idioma` é entrada explícita (AT-134): rótulo e frase do presente saem
+ * traduzidos daqui, e o componente que memoiza a árvore passa o idioma
+ * corrente — trocar de idioma refaz a árvore. Omitido, vale o idioma ativo.
+ */
+export function montarArvore(
+  events: SessionEvent[],
+  idioma?: string,
+): {
   ramos: RamoDeAgente[];
   tronco: Marco[];
 } {
+  const tArvore = tradutorDaArvore(idioma);
   const porAgente = new Map<string, Marco[]>();
   const tronco: Marco[] = [];
   // Estado de agrupamento por iteração, por agente — ver o comentário de
@@ -235,8 +368,8 @@ export function montarArvore(events: SessionEvent[]): {
       eventId: evento.id,
       seq: evento.seq,
       tipo: traducao.tipo,
-      rotulo: traducao.rotulo,
-      detalhe: traducao.detalhe?.(payload),
+      rotulo: tArvore(`label.${traducao.rotulo}`),
+      detalhe: traducao.detalhe?.(payload, tArvore),
       em: evento.createdAt,
       eventType: evento.type,
       payload,
@@ -248,7 +381,7 @@ export function montarArvore(events: SessionEvent[]): {
   const ramos: RamoDeAgente[] = [...porAgente.entries()].map(
     ([agente, marcos]) => {
       const ordenados = [...marcos].sort((a, b) => a.seq - b.seq);
-      const { agora, ativo } = frasePresente(ordenados[ordenados.length - 1]);
+      const { agora, ativo } = frasePresente(ordenados[ordenados.length - 1], tArvore);
       return {
         agente,
         marcos: ordenados,

@@ -105,17 +105,21 @@ model → the model requests a tool → the tool becomes a `proposed_action`
 has an iteration ceiling; once exhausted, the agent ends with a blocking
 artifact.
 
-**Turn (conversational agent)** — one round of work by one of the five
+**Turn (conversational agent)** — one round of work by one of the
 session-scoped conversational agents (Creative, PO, Architect, Dev Lead,
-Staff — the last one from ADR 0088, dormant for automatic triggering, but
-activatable via manual handoff): one streamed call to the LLM plus the
+UX Designer, Staff — from ADR 0088, dormant for automatic triggering, but
+activatable via manual handoff — and, since
+[RN-617](business-rules.md#rn-617), the Infra Lead): one streamed call to the LLM plus the
 tool loop it triggers. Since [RN-122](business-rules.md#rn-122) it runs on
 a supervised `Task` (`Engine.Agents.TurnoAssincrono`), no longer inside
 the `handle_call` that received the message — that's what lets the
 composer's **"Stop"** button actually cancel the turn (kills the task,
 cuts the connection to the api) instead of just stopping the client-side
-render. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
-Architect, Dev Lead, and Staff 14) — it's a constant on the agent's own
+render. Since [RN-578](business-rules.md#rn-578) the command that starts a
+turn is answered on ACCEPTANCE: the click returns as soon as the Task is up,
+and the end of the turn arrives through the session channel and the event
+log, never through that HTTP response. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
+Architect, Dev Lead, UX Designer, Staff and Infra Lead 14) — it's a constant on the agent's own
 server, not the `ToolLoop`'s ceiling
 (`Engine.Harness.Iteracoes`), which applies to execution and gate agents.
 Staff is the only one with no `kickoff/1`: it stays idle until the first
@@ -128,6 +132,15 @@ also stopped being silent: once exhausted, it emits the SAME
 `toolloop.limit_reached` ([RN-166](business-rules/autenticacao.md#rn-166)), because
 it's the same fact and whoever reads the event log shouldn't need a
 second name for it.
+
+**Rehydration (conversational agent)** — how a conversational agent's
+process rebuilds its history from the event log when it comes up over a
+session that already has a conversation (restart, or the PO taking over from
+the Creative agent). One path for the seven, `Engine.Agents.Reidratacao`
+([RN-580](business-rules.md#rn-580)): it reads the **tail** (the last 200
+events, not the first), brings back structured questions and the agent's own
+tool calls, and when the conversation doesn't fit, opens with a system message
+that states how many earlier events were left out.
 
 **Handoff** — the explicit handover of work from one agent to another.
 Explicit because the destination and the reason are recorded in the event
@@ -182,7 +195,7 @@ which is durable, never the status.
 
 **`proposed_action`** — every action with an external effect (a terminal
 command, commit, push, PR, merge, spend) is **born** here, it never
-executes directly. Thirteen types. Six states
+executes directly. Twenty-one types. Six states
 ([RN-003](business-rules.md#rn-003)).
 
 **`permissions.json`** — the project's policy file. Matches a command

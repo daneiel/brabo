@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { ExecuteInfraPrUseCase } from './execute-infra-pr.use-case';
 import { ExecuteContainerStartUseCase } from './execute-container-start.use-case';
 import { ExecuteContainerStartViaRunnerUseCase } from './execute-container-start-via-runner.use-case';
 import { ExecuteContainerStopUseCase } from './execute-container-stop.use-case';
+import { ContainerBrokerPort } from '../../ports/container-broker.port';
 import { ObterCicloDeVidaDoContainerUseCase } from '../containers/obter-ciclo-de-vida-do-container.use-case';
 import {
   decide,
@@ -28,7 +30,10 @@ import {
   commandFromPayload,
   cwdFromPayload,
 } from '../../../domain/actions/pattern-for-action';
-import { projectScopeRoot } from '../../../infrastructure/filesystem/project-workspaces-root';
+import {
+  projectScopeRoot,
+  raizDoEscopoNoEvento,
+} from '../../../infrastructure/filesystem/project-workspaces-root';
 import { AppendSessionEventUseCase } from '../sessions/append-session-event.use-case';
 import type { Actor } from '../../../domain/sessions/session-event.entity';
 import type { ActionStatus } from '../../../domain/actions/action-state-machine';
@@ -61,6 +66,7 @@ export class ProposeActionUseCase {
     private readonly executeContainerStop: ExecuteContainerStopUseCase,
     private readonly appendSessionEvent: AppendSessionEventUseCase,
     private readonly obterCicloDeVidaDoContainer: ObterCicloDeVidaDoContainerUseCase,
+    private readonly brokerPort: ContainerBrokerPort,
   ) {}
 
   @Traced('application')
@@ -77,6 +83,22 @@ export class ProposeActionUseCase {
     const project = await this.projects.findById(projectId);
     if (!project) throw new NotFoundException('Projeto não encontrado');
 
+    // Sem broker configurado, `container`/`mounted` não têm quem suba, pare ou
+    // remova o container (ADR 0144): a ação aprovada só terminaria `failed`
+    // com `BrokerIndisponivelError` (AT-105, RN-591). Recusa NOMEADA antes de
+    // criar a proposta — é a mesma fonte (`configurado()`) da RN-574, e é o
+    // que o agente lê como resultado da tool, sem HTTP extra no laço dele.
+    if (
+      ACOES_DO_BROKER.includes(actionType) &&
+      project.executionMode !== 'runner' &&
+      !this.brokerPort.configurado()
+    ) {
+      throw new ConflictException({
+        code: 'sem_broker_na_instalacao',
+        message: `Esta instalação não tem broker de container (BROKER_URL vazia): \`${actionType}\` em projeto \`${project.executionMode}\` só terminaria em falha. Use o modo \`runner\`, ou configure o broker.`,
+      });
+    }
+
     // Contexto todo buscado ANTES de chamar decide() — a função em si é
     // pura (ver domain/actions/decide.ts), zero IO.
     //
@@ -86,14 +108,14 @@ export class ProposeActionUseCase {
     // container_start, projeto `mounted`/`runner`, etc.).
     const [
       effectiveRole,
-      autonomyMode,
+      autonomia,
       permissionsFile,
       containerExecutionActive,
     ] = await Promise.all([
       this.resolveEffectiveRole.forProject(session.createdBy, projectId),
       input.actor.kind === 'agent'
-        ? this.agentAutonomy.findMode(projectId, input.actor.id, actionType)
-        : Promise.resolve(null as PermissionPolicy | null),
+        ? this.agentAutonomy.resolve(projectId, input.actor.id, actionType)
+        : Promise.resolve(null),
       this.permissionsFileStore.read(project),
       actionType === 'terminal' && project.executionMode === 'container'
         ? this.obterCicloDeVidaDoContainer
@@ -121,7 +143,10 @@ export class ProposeActionUseCase {
       },
       {
         effectiveRole,
-        autonomyMode,
+        autonomyMode: autonomia?.mode ?? null,
+        // A origem (específica ou curinga) é o que deixa `decide()` reconhecer
+        // o modo automático (RN-603, ADR 0167) sem resolver precedência de novo.
+        autonomyOrigin: autonomia?.origem,
         permissionsFile,
         // A raiz do escopo de terminal (ADR 0055) deriva do MODO do projeto
         // desde o ADR 0072: pasta gerenciada no `container`, a pasta do usuário
@@ -186,6 +211,15 @@ export class ProposeActionUseCase {
           status,
           resolvedPolicy: decision.policy,
           reason: decision.reason,
+          // `scopeRoot` (RN-609): QUAL raiz o escopo de caminho comparou —
+          // só em `terminal`, o único tipo em que `decide()` consulta o
+          // escopo (`terminalNoEscopo`). O modo e um identificador RELATIVO,
+          // NUNCA o caminho absoluto: o log é lido por todo membro e, em
+          // `mounted`/`runner`, o caminho traz o `$HOME` do usuário. AUSENTE
+          // é "não registrado" (evento anterior, ou tipo sem escopo).
+          ...(actionType === 'terminal'
+            ? { scopeRoot: raizDoEscopoNoEvento(project) }
+            : {}),
         },
       });
 
@@ -247,6 +281,13 @@ export class ProposeActionUseCase {
     return action;
   }
 }
+
+/** As três ações de ciclo de vida que passam pelo broker (ADR 0144/RN-495). */
+const ACOES_DO_BROKER: ActionType[] = [
+  'container_start',
+  'container_stop',
+  'container_remove',
+];
 
 function initialStatusFor(
   policy: PermissionPolicy,

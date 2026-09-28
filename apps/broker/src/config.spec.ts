@@ -101,6 +101,59 @@ describe('lerConfiguracao — produção', () => {
   });
 });
 
+describe('lerConfiguracao — produção, o token ANTERIOR (RN-601)', () => {
+  const base = {
+    NODE_ENV: 'production',
+    BRABO_SERVICE_TOKEN: 'um-token-bem-longo-de-verdade',
+  };
+
+  it('aceita um anterior forte, sem o espaço em volta', () => {
+    const config = lerConfiguracao({
+      ...base,
+      BRABO_SERVICE_TOKEN_PREVIOUS: '  o-anterior-tambem-bem-longo \n',
+    });
+    expect(config.tokenAnterior).toBe('o-anterior-tambem-bem-longo');
+  });
+
+  it('ausente ou só espaço é null, sem recusa — fora da rotação é o normal', () => {
+    expect(lerConfiguracao(base).tokenAnterior).toBeNull();
+    expect(
+      lerConfiguracao({ ...base, BRABO_SERVICE_TOKEN_PREVIOUS: '   ' })
+        .tokenAnterior,
+    ).toBeNull();
+  });
+
+  it('recusa o literal público no anterior, nomeando a variável', () => {
+    expect(() =>
+      lerConfiguracao({
+        ...base,
+        BRABO_SERVICE_TOKEN_PREVIOUS: ' dev-service-token-change-me ',
+      }),
+    ).toThrow(/^BRABO_SERVICE_TOKEN_PREVIOUS está com o valor de exemplo/);
+  });
+
+  it('recusa anterior curto demais depois do trim, nomeando a variável', () => {
+    expect(() =>
+      lerConfiguracao({ ...base, BRABO_SERVICE_TOKEN_PREVIOUS: '  curto  ' }),
+    ).toThrow(/^BRABO_SERVICE_TOKEN_PREVIOUS tem 5 caracteres/);
+  });
+
+  it('um anterior igual ao atual (depois do trim) não é rotação', () => {
+    expect(
+      lerConfiguracao({
+        ...base,
+        BRABO_SERVICE_TOKEN_PREVIOUS: ` ${base.BRABO_SERVICE_TOKEN} `,
+      }).tokenAnterior,
+    ).toBeNull();
+  });
+
+  it('fora de produção o anterior não passa pela régua', () => {
+    expect(
+      lerConfiguracao({ BRABO_SERVICE_TOKEN_PREVIOUS: 'curto' }).tokenAnterior,
+    ).toBe('curto');
+  });
+});
+
 describe('tokenConfere', () => {
   const config = lerConfiguracao({
     BRABO_SERVICE_TOKEN: 'token-de-teste-atual-nao-e-segredo',

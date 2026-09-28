@@ -13,6 +13,13 @@ RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) 
 
 WORKDIR /workspace
 
+# Os TRÊS volumes de `node_modules` do serviço `web` (docker-compose.yml) nascem
+# `root:root` quando o caminho não existe NA IMAGEM, e o `pnpm install` do CMD
+# morre com EACCES (AT-172). Mesmo remédio das linhas de `/data` em
+# docker/api/Dockerfile: criar e dar dono aos pontos de montagem antes do USER.
+RUN mkdir -p /workspace/node_modules /workspace/apps/web/node_modules /workspace/packages/shared/node_modules \
+  && chown "${DEV_UID}:${DEV_GID}" /workspace/node_modules /workspace/apps/web/node_modules /workspace/packages/shared/node_modules
+
 USER ${DEV_UID}:${DEV_GID}
 
 # `--filter web...`: instala só o web e as dependências dele (incluindo

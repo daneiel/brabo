@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, expect, afterEach } from 'vitest';
+import { ConflictException } from '@nestjs/common';
 import { ActivateExecutionUseCase } from '../../../../src/application/use-cases/execution/activate-execution.use-case';
 import { DEV_TERMINAL_ALLOW_PATTERNS } from '../../../../src/domain/actions/dev-terminal-patterns';
 import type { ModuleMapRepository } from '../../../../src/application/ports/module-map-repository.port';
@@ -11,6 +12,9 @@ import type { AgentAutonomyRepository } from '../../../../src/application/ports/
 import type { ApiToEngineClient } from '../../../../src/application/ports/api-to-engine-client.port';
 import type { ProjectRepository } from '../../../../src/application/ports/project-repository.port';
 import type { PermissionsFileStore } from '../../../../src/application/ports/permissions-file-store.port';
+import type { ProvisionedRepositoryRepository } from '../../../../src/application/ports/provisioned-repository-repository.port';
+import type { ContainerRepository } from '../../../../src/application/ports/container-repository.port';
+import type { HandoffRepository } from '../../../../src/application/ports/handoff-repository.port';
 import type { TransitionSessionUseCase } from '../../../../src/application/use-cases/sessions/transition-session.use-case';
 import { CreateSessionUseCase } from '../../../../src/application/use-cases/sessions/create-session.use-case';
 import type { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
@@ -39,6 +43,10 @@ function build(opts?: {
   sessaoOrigem?: { id: string; status: string } | null;
   /** O que `GetSessionPendingWorkUseCase` devolve para a sessão de origem. */
   pendingWork?: { pending: boolean; motivo: string | null };
+  /** Estado registrado do container do projeto (AT-104). Default: nenhum. */
+  container?: 'running' | 'provisioning' | null;
+  /** Tasks pegáveis por módulo (AT-104). Default: 0. */
+  pegaveis?: number;
   /**
    * A LOCALIZAÇÃO do workspace do projeto (RN-169/RN-478) — o par
    * (modo, caminho) + o nome de pasta congelado. O default é o modo de
@@ -51,6 +59,16 @@ function build(opts?: {
    * justamente ONDE o arquivo cai no disco.
    */
   permissionsStore?: PermissionsFileStore;
+  /**
+   * O repositório do projeto (RN-582). O default é TER um — é o estado de
+   * todo projeto que chega a ativar pelo fluxo; os casos da recusa passam
+   * `null`.
+   */
+  repositorio?: { origin: 'created' | 'adopted' } | null;
+  /** Os handoffs do projeto, lidos só para escolher a frase da recusa. */
+  handoffsDoProjeto?: { toAgent: string; status: string; sessionId?: string }[];
+  /** Status das sessões que os handoffs citam (AT-131), por id. */
+  statusDeSessao?: Record<string, string>;
 }) {
   const started: {
     budget?: number;
@@ -86,15 +104,15 @@ function build(opts?: {
       if (opts?.sessaoOrigem?.id === sessionId) {
         return Promise.resolve(opts.sessaoOrigem);
       }
+      const status = opts?.statusDeSessao?.[sessionId];
+      if (status) return Promise.resolve({ id: sessionId, status });
       return Promise.resolve(null);
     },
   } as unknown as SessionRepository;
 
   const getSessionPendingWork = {
     execute: () =>
-      Promise.resolve(
-        opts?.pendingWork ?? { pending: false, motivo: null },
-      ),
+      Promise.resolve(opts?.pendingWork ?? { pending: false, motivo: null }),
   } as unknown as GetSessionPendingWorkUseCase;
 
   const createSession = {
@@ -105,7 +123,7 @@ function build(opts?: {
   } as unknown as CreateSessionUseCase;
 
   const taskRepo = {
-    countClaimableByModule: () => Promise.resolve(0),
+    countClaimableByModule: () => Promise.resolve(opts?.pegaveis ?? 0),
   } as unknown as TaskRepository;
 
   const agentAutonomy = {
@@ -195,6 +213,24 @@ function build(opts?: {
     },
   } as unknown as AgentAreaRepository);
 
+  const repositories = {
+    findByProjectId: () =>
+      Promise.resolve(
+        opts?.repositorio === undefined
+          ? { origin: 'created' }
+          : opts.repositorio,
+      ),
+  } as unknown as ProvisionedRepositoryRepository;
+
+  const handoffs = {
+    findByProject: () => Promise.resolve(opts?.handoffsDoProjeto ?? []),
+  } as unknown as HandoffRepository;
+
+  const containers = {
+    findByProject: () =>
+      Promise.resolve(opts?.container ? { status: opts.container } : null),
+  } as unknown as ContainerRepository;
+
   return {
     useCase: new ActivateExecutionUseCase(
       moduleMaps,
@@ -210,6 +246,9 @@ function build(opts?: {
       permissionsFile,
       seedAreas,
       getSessionPendingWork,
+      repositories,
+      handoffs,
+      containers,
     ),
     areasSemeadas,
     started,
@@ -517,9 +556,7 @@ describe('ActivateExecutionUseCase — fecha a sessão de origem (RN-135)', () =
       'sess-origem',
     );
 
-    expect(transicoes.filter((t) => t.sessionId === 'sess-origem')).toEqual(
-      [],
-    );
+    expect(transicoes.filter((t) => t.sessionId === 'sess-origem')).toEqual([]);
   });
 
   it('sessão de origem já não está active: não tenta transicionar', async () => {
@@ -538,9 +575,7 @@ describe('ActivateExecutionUseCase — fecha a sessão de origem (RN-135)', () =
       'sess-origem',
     );
 
-    expect(transicoes.filter((t) => t.sessionId === 'sess-origem')).toEqual(
-      [],
-    );
+    expect(transicoes.filter((t) => t.sessionId === 'sess-origem')).toEqual([]);
   });
 
   it('sem `originSessionId` (chamador antigo, ex. Visão Geral): nada é fechado', async () => {
@@ -691,5 +726,113 @@ describe('ActivateExecutionUseCase — permissions.json em projeto `runner` (RN-
     await expect(useCase.execute('proj-1', 'user-1')).rejects.toMatchObject({
       status: 400,
     });
+  });
+});
+
+describe('ActivateExecutionUseCase — sem repositório, nada começa (RN-582)', () => {
+  // AT-092: `execution/activate` respondia 201 num projeto sem repositório, e
+  // as três tabelas de git ficavam vazias para sempre.
+  it('sem repositório: 409, e NENHUM efeito antes da recusa', async () => {
+    const r = build({ repositorio: null, projectBudget: 1 });
+
+    await expect(
+      r.useCase.execute('proj-1', 'user-1', 300_000),
+    ).rejects.toThrow(ConflictException);
+
+    // A recusa vem antes de tudo: nem orçamento persistido, nem
+    // permissions.json, nem sessão, nem engine, nem evento.
+    expect(r.projectUpdates).toEqual([]);
+    expect(r.allowPatterns).toEqual([]);
+    expect(r.sessoesCriadas).toEqual([]);
+    expect(r.started.budget).toBeUndefined();
+    expect(r.eventos).toEqual([]);
+    expect(r.areasSemeadas).toEqual([]);
+  });
+
+  it('a frase nomeia o handoff ao Dev Lead pendente — a saída do exp001', async () => {
+    // O estado exato da AT-092: Arquiteto aceito sob a regra velha, Infra
+    // aceito, Dev Lead ainda `offered`.
+    const r = build({
+      repositorio: null,
+      handoffsDoProjeto: [
+        { toAgent: 'po', status: 'accepted' },
+        { toAgent: 'arquiteto', status: 'accepted' },
+        { toAgent: 'infra', status: 'accepted' },
+        { toAgent: 'dev-lead', status: 'offered' },
+      ],
+    });
+
+    await expect(r.useCase.execute('proj-1', 'user-1')).rejects.toThrow(
+      /Aceite o handoff ao Dev Lead/,
+    );
+  });
+
+  it('handoff oferecido em sessão FECHADA: a frase não manda aceitá-lo (AT-131)', async () => {
+    const r = build({
+      repositorio: null,
+      handoffsDoProjeto: [
+        { toAgent: 'arquiteto', status: 'offered', sessionId: 's-fechada' },
+      ],
+      statusDeSessao: { 's-fechada': 'closed' },
+    });
+
+    const erro: unknown = await r.useCase
+      .execute('proj-1', 'user-1')
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ConflictException);
+    const mensagem = (erro as ConflictException).message;
+    expect(mensagem).toMatch(/sessão já encerrada/);
+    expect(mensagem).not.toMatch(/Aceite o handoff/);
+  });
+
+  it('repositório ADOTADO conta como repositório', async () => {
+    const r = build({ repositorio: { origin: 'adopted' } });
+
+    await expect(r.useCase.execute('proj-1', 'user-1')).resolves.toMatchObject({
+      sessionId: 'sess-1',
+    });
+    expect(r.eventos.map((e) => e.type)).toContain('execution.activated');
+  });
+
+  it('com repositório, a ativação segue como sempre', async () => {
+    const r = build();
+
+    await r.useCase.execute('proj-1', 'user-1');
+
+    expect(r.eventos.map((e) => e.type)).toContain('execution.activated');
+  });
+});
+
+describe('ActivateExecutionUseCase — sugestão de paralelização (AT-104)', () => {
+  const sugestoes = (eventos: { type: string }[]) =>
+    eventos.filter((e) => e.type === 'execution.parallelization_suggested');
+
+  it('agentes bloqueados (sem container running) e tasks pegáveis: NÃO sugere +1 agente', async () => {
+    const { useCase, eventos } = build({ pegaveis: 6, container: null });
+    await useCase.execute('proj-1', 'user-1');
+    expect(sugestoes(eventos)).toHaveLength(0);
+  });
+
+  it('container só em provisioning também não conta como capacidade', async () => {
+    const { useCase, eventos } = build({
+      pegaveis: 6,
+      container: 'provisioning',
+    });
+    await useCase.execute('proj-1', 'user-1');
+    expect(sugestoes(eventos)).toHaveLength(0);
+  });
+
+  it('com container running e ≥2 tasks pegáveis: sugere, um evento por módulo', async () => {
+    const { useCase, eventos } = build({ pegaveis: 3, container: 'running' });
+    await useCase.execute('proj-1', 'user-1');
+    const s = sugestoes(eventos);
+    expect(s).toHaveLength(MODULOS.length);
+    expect(s[0]).toMatchObject({ payload: { availableTasks: 3 } });
+  });
+
+  it('com container running e <2 tasks pegáveis: não sugere', async () => {
+    const { useCase, eventos } = build({ pegaveis: 1, container: 'running' });
+    await useCase.execute('proj-1', 'user-1');
+    expect(sugestoes(eventos)).toHaveLength(0);
   });
 });

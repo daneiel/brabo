@@ -23,6 +23,15 @@ export type MotivoDeBloqueio =
   /** Já está `running`/`provisioning` — subir não é a próxima ação. */
   | 'ja_esta_de_pe'
   /**
+   * Projeto `container`/`mounted` numa instalação SEM broker (`BROKER_URL`
+   * vazia, ADR 0161, RN-574). Os dois modos só sobem container pelo broker
+   * (ADR 0144), e sem ele `container_start` aprovada só pode terminar `failed`
+   * com `BrokerIndisponivelError` — foi assim que a instalação do AT-085
+   * deixou aprovar duas subidas que não tinham como dar certo. `runner` nunca
+   * cai aqui: quem sobe o container dele é o agente local.
+   */
+  | 'sem_broker_na_instalacao'
+  /**
    * Nenhum `artifact.project_image` decidido. O portão da RN-105 vale nos TRÊS
    * modos desde a RN-494/ADR 0135: sem imagem não há o que subir, e propor
    * seria abrir uma decisão que já se sabe que termina em falha.
@@ -71,6 +80,17 @@ export function acaoDeSubidaDoModo(
 }
 
 /**
+ * `container` e `mounted` sobem pelo BROKER, no servidor (ADR 0144); `runner`,
+ * pelo agente local. É a MESMA ramificação por destino de
+ * `acaoDeSubidaDoModo`, lida pelo outro lado: quem depende do broker.
+ */
+export function usaBroker(
+  executionMode: ContainerOverviewItem['executionMode'],
+): boolean {
+  return acaoDeSubidaDoModo(executionMode) === 'container_start';
+}
+
+/**
  * A tela pode oferecer "subir o container" nesta linha? (RN-521)
  *
  * Pura de propósito: é a regra inteira num lugar só, testável sem montar a
@@ -94,6 +114,13 @@ export function decidirSubida(input: {
 
   if (status === 'running' || status === 'provisioning') {
     return { pode: false, motivo: 'ja_esta_de_pe' };
+  }
+  // Antes da imagem, de propósito: decidir a imagem não destrava nada numa
+  // instalação que não tem quem suba o container, e mandar a pessoa decidir
+  // uma seria apontar para a porta errada. `!== true` e não `=== false`:
+  // "não sei" nunca vira "tem" (RN-468).
+  if (usaBroker(item.executionMode) && item.brokerConfigurado !== true) {
+    return { pode: false, motivo: 'sem_broker_na_instalacao' };
   }
   if (!item.temImagemDecidida) {
     return { pode: false, motivo: 'sem_imagem_decidida' };
@@ -128,4 +155,34 @@ export function decidirSubida(input: {
  */
 export function podeDecidirCicloDeVida(papel: Role | null | undefined): boolean {
   return roleAtLeast(papel, 'maintainer');
+}
+
+/**
+ * Parar/remover container de `container`/`mounted` também passam pelo BROKER
+ * (ADR 0144/RN-495), então numa instalação sem ele só podem terminar em falha
+ * (AT-105, RN-591). `!== true`: "não sei" nunca vira "tem" (RN-468). Só vale
+ * onde há container REGISTRADO — a régua de papel/estado continua sendo a de
+ * `podeDecidirCicloDeVida`.
+ */
+export function semBrokerParaCicloDeVida(item: ContainerOverviewItem): boolean {
+  return usaBroker(item.executionMode) && item.brokerConfigurado !== true;
+}
+
+/**
+ * Converter para um modo que sobe pelo broker, numa instalação em que a
+ * ausência dele foi CONFIRMADA (`false`), produz um projeto que nunca executa
+ * (AT-105, RN-591). Três estados: só `false` bloqueia — carregando, consulta
+ * falha ou campo ausente (`undefined`) não afirmam nada, e NÃO viram "tem"
+ * nem "não tem". Converter para o modo que o projeto já tem não é conversão.
+ */
+export function conversaoSemBroker(input: {
+  atual: ContainerOverviewItem['executionMode'];
+  alvo: ContainerOverviewItem['executionMode'];
+  brokerConfigurado: boolean | null | undefined;
+}): boolean {
+  return (
+    input.alvo !== input.atual &&
+    usaBroker(input.alvo) &&
+    input.brokerConfigurado === false
+  );
 }

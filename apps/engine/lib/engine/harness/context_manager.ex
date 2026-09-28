@@ -25,7 +25,9 @@ defmodule Engine.Harness.ContextManager.Default do
   das `keep_recent` iterações mais recentes, sumariza as mais antigas
   não-pinned via `llm_turn` (agent "context-manager", modelo barato),
   substitui-as por uma mensagem de resumo, preserva as pinned + as recentes,
-  e emite `context.compacted` (`tokensBefore`/`tokensAfter`). Determinístico
+  e emite `context.compacted` (`tokensBefore`/`tokensAfter` e, desde a
+  RN-580, o `summary` que substituiu os turnos, o `agent` e quantas mensagens
+  ele resumiu — `messagesSummarized`). Determinístico
   dado o resumo do modelo.
 
   A janela EFETIVA é `min(context_window, teto_de_transporte)` — ver
@@ -123,7 +125,20 @@ defmodule Engine.Harness.ContextManager.Default do
       type: "context.compacted",
       actorKind: "agent",
       actorId: @summarizer_agent,
-      payload: %{tokensBefore: tokens_before, tokensAfter: tokens_after}
+      # `summary` e `agent` desde a RN-580: antes só as contagens iam para o
+      # log, e o resumo — a ÚNICA memória do que foi compactado — morria com o
+      # processo. A reidratação (`Engine.Agents.Reidratacao`) o lê de volta
+      # quando a conversa passa do teto de leitura; `agent` é o que a deixa
+      # pegar o resumo do PRÓPRIO agente numa sessão com vários. Eventos
+      # gravados antes disto ficam como estão (imutáveis): sem resumo, e a
+      # reidratação diz isso em vez de inventar.
+      payload: %{
+        tokensBefore: tokens_before,
+        tokensAfter: tokens_after,
+        summary: summary,
+        agent: Map.get(ctx, :agent),
+        messagesSummarized: length(older)
+      }
     })
 
     {:ok, %{ctx | messages: new_messages}}

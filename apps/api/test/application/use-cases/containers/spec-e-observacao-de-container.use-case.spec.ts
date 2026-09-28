@@ -58,10 +58,10 @@ function montarSpec(
   estado: EstadoDoContainer,
 ): ObterSpecDeContainerUseCase {
   const projects = {
-    findById: async () => project,
+    findById: () => Promise.resolve(project),
   } as unknown as ProjectRepository;
   const obterImagem = {
-    execute: async () => estado,
+    execute: () => Promise.resolve(estado),
   } as unknown as ObterContainerDoProjetoUseCase;
   return new ObterSpecDeContainerUseCase(projects, obterImagem);
 }
@@ -253,9 +253,9 @@ function brokerDeTeste(
 ): ContainerBrokerPort {
   return {
     configurado: () => overrides.configurado ?? true,
-    inspect: async () => {
-      if (overrides.erro !== undefined) throw overrides.erro;
-      return overrides.resultado ?? null;
+    inspect: () => {
+      if (overrides.erro !== undefined) return Promise.reject(overrides.erro);
+      return Promise.resolve(overrides.resultado ?? null);
     },
   } as unknown as ContainerBrokerPort;
 }
@@ -295,13 +295,35 @@ describe('ObterEstadoObservadoDoContainerUseCase — observado nunca herda regis
     });
   });
 
+  it('`teto-excedido` no inspect cai no MESMO lado de `sem-resposta` (RN-604)', async () => {
+    // A tela distingue configurado de não configurado; o motivo novo do
+    // transporte (AT-233) não abre um terceiro valor de `naoObservado`, e o
+    // texto que o nomeia chega pelo `detalhe`.
+    const caso = new ObterEstadoObservadoDoContainerUseCase(
+      brokerDeTeste({
+        erro: new BrokerIndisponivelError(
+          'teto-excedido',
+          'o broker de container não respondeu `inspect` dentro do teto desta operação (5000ms)',
+        ),
+      }),
+    );
+
+    const resultado = await caso.execute(PROJETO);
+
+    expect(resultado).toMatchObject({
+      observado: null,
+      naoObservado: 'broker-sem-resposta',
+    });
+    expect(resultado.detalhe).toContain('`inspect`');
+  });
+
   it('sem BROKER_URL, declara a ausência e nem chama o broker', async () => {
     let chamou = false;
     const broker = {
       configurado: () => false,
-      inspect: async () => {
+      inspect: () => {
         chamou = true;
-        return null;
+        return Promise.resolve(null);
       },
     } as unknown as ContainerBrokerPort;
 

@@ -17,7 +17,12 @@ import {
 import { AGENT_LIST, AREAS, areaFor } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
-import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-types';
+import type {
+  Model,
+  ModelBindingScope,
+  ResolvedBinding,
+  RoutingPreference,
+} from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
 import { Button } from '../../components/ui/Button';
@@ -34,6 +39,7 @@ import {
 } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { useAplicacaoEmLote } from './aplicar-a-todos';
+import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -166,13 +172,24 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         // Só existe padrão PRÓPRIO de área quando a área não herdou o dela.
         area: daArea?.origin === 'area' ? daArea.modelId : undefined,
       },
-      herdadoDoStart: herdouDoCriativo({
-        agentKey,
-        resolvido,
-        daArea,
-        doProjeto: bindingDoProjeto,
-        doCriativo: resolvidoDoCriativo,
-      }),
+      herdadoDoStart: herdadoDoStartDe(agentKey, resolvido),
+    });
+  }
+
+  /** O agente pousou no modelo do Criativo, sem linha própria (RN-470). */
+  function herdadoDoStartDe(
+    agentKey: string,
+    resolvido: ResolvedBinding | null | undefined,
+  ) {
+    const areaDoAgente = areaFor(agentKey);
+    return herdouDoCriativo({
+      agentKey,
+      resolvido,
+      daArea: areaDoAgente
+        ? bindingDaAreaPorChave.get(areaDoAgente.key)
+        : undefined,
+      doProjeto: bindingDoProjeto,
+      doCriativo: resolvidoDoCriativo,
     });
   }
 
@@ -315,6 +332,32 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   }
 
   /**
+   * O critério de roteamento do binding PRÓPRIO do agente (ADR 0166, RN-583).
+   *
+   * Regrava o MESMO modelo com o critério novo — o PUT é do binding inteiro,
+   * e o critério não existe fora dele. Mesmo desfecho de `handleModelChange`:
+   * relê só no sucesso, e a recusa (o 422 de provider sem a capability, que o
+   * controle já não oferece, ou o 403 de papel) vai por `mensagemDaApi`.
+   */
+  async function handleRoutingChange(
+    agentKey: string,
+    modelId: string,
+    routingPreference: RoutingPreference | null,
+  ) {
+    try {
+      await setAgentModelBinding(projectId, agentKey, modelId, {
+        routingPreference,
+      });
+      invalidarBindingDoAgente(agentKey);
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('roteamento.toast.saveError')),
+        tone: 'danger',
+      });
+    }
+  }
+
+  /**
    * "Voltar a herdar" (RN-102) — APAGA o binding do agente, nunca grava nele
    * o modelo da área: gravar viraria cópia, e a próxima mudança da área
    * deixaria este agente para trás em silêncio.
@@ -401,33 +444,54 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
+        const modeloVigente = allModels.find((m) => m.id === resolved?.modelId);
         return modelsByCategory ? (
-          <ModelPicker
-            models={modelsByCategory}
-            selectedModelId={resolved?.modelId}
-            onSelect={(model) => handleModelChange(agent.key, model)}
-            variant="inline"
-            // Desabilitar, não esconder (ADR 0064): quem não tem `developer`
-            // continua VENDO o modelo vigente do agente — e a cadeia inteira na
-            // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
-            // picker, e não num overlay daqui, porque overlay não bloqueia o
-            // teclado.
-            disabled={!podeEditar}
-            // Abre com "aptos para agentes" MARCADO. Este picker grava no
-            // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
-            // com que a api recusa manda a pessoa exatamente para este filtro
-            // ("Use o filtro 'aptos para agentes' no seletor de modelos"), que
-            // até agora nenhuma tela ligava. Oferecer o modelo chat-only aqui
-            // era oferecer um clique que só existe para ser recusado.
-            //
-            // Isto torna IMPROVÁVEL a causa mais comum de 422, nunca
-            // impossível: `SetModelBindingUseCase` recusa por outras duas
-            // (modelo desativado no workspace e sumido do provider, RN-043),
-            // que este filtro não cobre — o modelo `unavailable` continua
-            // listado, MARCADO, de propósito. O toast de `handleModelChange`
-            // continua sendo o que conta o desfecho.
-            filtroDeAgentesPadrao
-          />
+          <span className={styles.modeloComRoteamento}>
+            <ModelPicker
+              models={modelsByCategory}
+              selectedModelId={resolved?.modelId}
+              onSelect={(model) => handleModelChange(agent.key, model)}
+              variant="inline"
+              // Desabilitar, não esconder (ADR 0064): quem não tem `developer`
+              // continua VENDO o modelo vigente do agente — e a cadeia inteira na
+              // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
+              // picker, e não num overlay daqui, porque overlay não bloqueia o
+              // teclado.
+              disabled={!podeEditar}
+              // Abre com "aptos para agentes" MARCADO. Este picker grava no
+              // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
+              // com que a api recusa manda a pessoa exatamente para este filtro
+              // ("Use o filtro 'aptos para agentes' no seletor de modelos"), que
+              // até agora nenhuma tela ligava. Oferecer o modelo chat-only aqui
+              // era oferecer um clique que só existe para ser recusado.
+              //
+              // Isto torna IMPROVÁVEL a causa mais comum de 422, nunca
+              // impossível: `SetModelBindingUseCase` recusa por outras duas
+              // (modelo desativado no workspace e sumido do provider, RN-043),
+              // que este filtro não cobre — o modelo `unavailable` continua
+              // listado, MARCADO, de propósito. O toast de `handleModelChange`
+              // continua sendo o que conta o desfecho.
+              filtroDeAgentesPadrao
+            />
+            {/* O critério de roteamento mora com o modelo (ADR 0166): é do
+                binding, e só é editável na linha que TEM binding próprio —
+                `origin: 'agent'` que não seja a herança do Criativo. Mesmo
+                `podeEditar` do picker ao lado, porque é o MESMO endpoint. */}
+            <PreferenciaDeRoteamento
+              resolvido={resolved}
+              modelo={modeloVigente}
+              proprio={
+                resolved?.origin === 'agent' &&
+                !herdadoDoStartDe(agent.key, resolved)
+              }
+              podeEditar={podeEditar}
+              alvo={agent.name}
+              onChange={(preferencia) =>
+                resolved &&
+                handleRoutingChange(agent.key, resolved.modelId, preferencia)
+              }
+            />
+          </span>
         ) : null;
       },
     },

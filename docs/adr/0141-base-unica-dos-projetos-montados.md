@@ -31,7 +31,7 @@ sugerido.
 
 E há um segundo problema, que a sugestão de caminho torna concreto. A regra
 "a pasta do projeto não pode se sobrepor ao checkout do Brabo", que é o coração
-do [ADR 0055](0055-escopo-de-caminho-em-comando-de-agente.md), é aplicada por
+do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md), é aplicada por
 `caminhoDeWorkspaceLocalValido` comparando contra `raizDoBrabo()` — que é
 `process.cwd()`, e dentro do container da api é `/workspace`. O checkout REAL,
 no disco de quem desenvolve, a api não tem como conhecer. Quem clonar o Brabo

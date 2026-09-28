@@ -261,7 +261,10 @@
   background: var(--danger);
 }
 
-.gate {
+/* `espera` é o agente PARADO por algo fora dele (hoje, o container do
+   projeto que não subiu — RN-502): mesma cor do gate, que também é espera. */
+.gate,
+.espera {
   background: var(--warning);
 }
 

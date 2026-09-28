@@ -51,6 +51,8 @@ const getProjectsBase = vi.fn();
 const convertProjectExecutionMode = vi.fn();
 const listProjectFolders = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
+const getContainerLifecycle = vi.fn();
+const listRunnerDeviceKeys = vi.fn();
 
 vi.mock('../../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -68,6 +70,8 @@ vi.mock('../../lib/api-client', async () => {
     convertProjectExecutionMode: (...args: unknown[]) =>
       convertProjectExecutionMode(...args),
     listProjectFolders: (...args: unknown[]) => listProjectFolders(...args),
+    getContainerLifecycle: (...args: unknown[]) => getContainerLifecycle(...args),
+    listRunnerDeviceKeys: (...args: unknown[]) => listRunnerDeviceKeys(...args),
   };
 });
 
@@ -121,6 +125,8 @@ beforeEach(async () => {
   getProject.mockResolvedValue(projeto());
   getProjectsBase.mockResolvedValue({ projectsBase: '/home/dani/projetos' });
   convertProjectExecutionMode.mockResolvedValue(projeto());
+  getContainerLifecycle.mockResolvedValue(null);
+  listRunnerDeviceKeys.mockResolvedValue([]);
   listProjectFolders.mockResolvedValue({
     base: '/home/dani/projetos',
     path: '/home/dani/projetos',
@@ -210,7 +216,7 @@ describe('RN-559 — o navegador de pastas no ramo `mounted`', () => {
     expect(screen.queryByText(settingsPtBR.executionMode.path.baseLoading)).toBeNull();
   });
 
-  it('o ramo `runner` NÃO ganha navegador, e a seção diz por quê em texto', async () => {
+  it('o ramo `runner` NÃO ganha navegador, e a seção diz por quê em texto (RN-612: o caminho é provisório)', async () => {
     await montar();
     trocarModoPara('runner');
 
@@ -278,5 +284,232 @@ describe('RN-560 — o aviso da conversão', () => {
     expect(screen.getByText(settingsPtBR.executionMode.warning.leavesManaged)).toBeTruthy();
     // Nada de "fica em ``" — a variante com caminho não é renderizada.
     expect(screen.queryByText(/O que estiver em \s*—/)).toBeNull();
+  });
+});
+
+describe('RN-591 — a conversão sabe se a instalação tem broker (AT-105)', () => {
+  it('caso de falha: ausência CONFIRMADA — converter para `container` fica inerte, com o motivo em texto', async () => {
+    getProjectsBase.mockResolvedValue({
+      projectsBase: '/home/dani/projetos',
+      brokerConfigurado: false,
+    });
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/d/x' }));
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('container');
+
+    expect(await screen.findByText(settingsPtBR.executionMode.noBroker)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Converter' })).toBeDisabled();
+  });
+
+  it('caminho feliz: broker confirmado, ou "não sei", não bloqueia a conversão', async () => {
+    getProjectsBase.mockResolvedValue({
+      projectsBase: '/home/dani/projetos',
+      brokerConfigurado: true,
+    });
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/d/x' }));
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('container');
+
+    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Converter' })).not.toBeDisabled();
+  });
+
+  it('ausência confirmada NÃO bloqueia converter para `runner`', async () => {
+    getProjectsBase.mockResolvedValue({ projectsBase: null, brokerConfigurado: false });
+    await montar();
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    trocarModoPara('runner');
+
+    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+  });
+});
+
+const CICLO_REGISTRADO = {
+  status: 'running',
+  imageVersion: 1,
+  resources: { cpus: 1, memoryMb: 512, pidsLimit: 256 },
+  failureReason: null,
+  createdAt: '2026-09-01T10:00:00.000Z',
+  statusChangedAt: '2026-09-01T10:00:00.000Z',
+};
+
+describe('AT-144 — o aviso diz só as consequências que valem para ESTE projeto', () => {
+  it('sem nenhuma condição (container nunca provisionado, sem espelho, sem pasta confirmada): nenhuma linha a mais', async () => {
+    await montar();
+    await waitFor(() => expect(getContainerLifecycle).toHaveBeenCalledWith('proj-1'));
+
+    expect(screen.queryByTestId('aviso-espelho')).toBeNull();
+    expect(screen.queryByTestId('aviso-container')).toBeNull();
+    expect(screen.queryByTestId('aviso-pasta-confirmada')).toBeNull();
+  });
+
+  it('container REGISTRADO num projeto `container`: o aviso diz que ele é removido', async () => {
+    getContainerLifecycle.mockResolvedValue(CICLO_REGISTRADO);
+    await montar();
+
+    const linha = await screen.findByTestId('aviso-container');
+    expect(linha.textContent).toBe(settingsPtBR.executionMode.warning.containerRemoved);
+  });
+
+  it('linha `removed` não é container a remover', async () => {
+    getContainerLifecycle.mockResolvedValue({ ...CICLO_REGISTRADO, status: 'removed' });
+    await montar();
+    await waitFor(() => expect(getContainerLifecycle).toHaveBeenCalled());
+
+    expect(screen.queryByTestId('aviso-container')).toBeNull();
+  });
+
+  it('caso de falha: a leitura do ciclo de vida FALHA — "não sei" tem texto próprio e nunca vira "não há container"', async () => {
+    getContainerLifecycle.mockRejectedValue(new Error('rede'));
+    await montar();
+
+    const linha = await screen.findByTestId('aviso-container');
+    expect(linha.textContent).toBe(settingsPtBR.executionMode.warning.containerUnknown);
+  });
+
+  it('`mounted` com espelho: o espelho aparece, e o container NÃO — o caso de uso só remove ao sair de `container`', async () => {
+    getProject.mockResolvedValue(
+      projeto({
+        executionMode: 'mounted',
+        workspacePath: '/home/dani/projetos/loja',
+        mirrorPath: '/home/dani/espelho/loja',
+      }),
+    );
+    getContainerLifecycle.mockResolvedValue(CICLO_REGISTRADO);
+    await montar();
+
+    const espelho = await screen.findByTestId('aviso-espelho');
+    expect(espelho.textContent).toContain('/home/dani/espelho/loja');
+    expect(screen.queryByTestId('aviso-container')).toBeNull();
+    // Nem pergunta: fora de `container` a resposta não mudaria o aviso.
+    expect(getContainerLifecycle).not.toHaveBeenCalled();
+  });
+
+  it('`runner` com pasta confirmada: o aviso diz que a confirmação deixa de valer, com a data', async () => {
+    getProject.mockResolvedValue(
+      projeto({
+        executionMode: 'runner',
+        workspacePath: '/home/dani/loja',
+        workspaceVerifiedAt: '2026-09-20T12:00:00.000Z',
+      }),
+    );
+    await montar();
+
+    const linha = await screen.findByTestId('aviso-pasta-confirmada');
+    expect(linha.textContent).toContain(
+      new Date('2026-09-20T12:00:00.000Z').toLocaleString('pt-BR'),
+    );
+    expect(screen.queryByTestId('aviso-espelho')).toBeNull();
+  });
+
+  it('em `en` (o idioma default), as três condicionais saem em inglês', async () => {
+    await i18n.changeLanguage('en');
+    getContainerLifecycle.mockResolvedValue(CICLO_REGISTRADO);
+    getProject.mockResolvedValue(
+      projeto({ mirrorPath: '/home/dani/espelho', workspaceVerifiedAt: '2026-09-20T12:00:00.000Z' }),
+    );
+    render(
+      <Wrapper>
+        <ExecutionModeSection projectId="proj-1" />
+      </Wrapper>,
+    );
+    await screen.findByText(settingsEn.executionMode.title);
+
+    expect((await screen.findByTestId('aviso-container')).textContent).toBe(
+      settingsEn.executionMode.warning.containerRemoved,
+    );
+    expect(screen.getByTestId('aviso-espelho').textContent).toContain('mirror destination');
+    expect(screen.getByTestId('aviso-pasta-confirmada').textContent).toContain('stops counting');
+  });
+
+  it('as quatro frases existem nos dois idiomas, com as mesmas interpolações', () => {
+    for (const bundle of [settingsPtBR, settingsEn]) {
+      const w = bundle.executionMode.warning;
+      expect(w.mirrorCleared).toContain('{{destino}}');
+      expect(w.verifiedLost).toContain('{{data}}');
+      expect(w.containerRemoved.length).toBeGreaterThan(0);
+      expect(w.containerUnknown.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('RN-612 — converter para `runner`: converte, DEPOIS onboarda (AT-143)', () => {
+  it('caminho feliz: salvar a conversão monta o próximo passo com o painel de onboarding do projeto agora `runner`', async () => {
+    const convertido = projeto({ executionMode: 'runner', workspacePath: '/home/dani/loja' });
+    getProject.mockResolvedValueOnce(projeto()).mockResolvedValue(convertido);
+    convertProjectExecutionMode.mockResolvedValue(convertido);
+    await montar();
+
+    // Antes de salvar não há painel: o projeto ainda não é `runner`, e
+    // onboardar aqui seria o 400 do `ConfirmProjectWorkspaceUseCase`.
+    trocarModoPara('runner');
+    expect(screen.queryByTestId('proximo-passo-runner')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(settingsPtBR.executionMode.pathAria), {
+      target: { value: '/home/dani/loja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Converter' }));
+
+    const passo = await screen.findByTestId('proximo-passo-runner');
+    expect(passo.textContent).toContain(settingsPtBR.executionMode.nextStep.title);
+    expect(passo.textContent).toContain(settingsPtBR.executionMode.nextStep.machineAgent);
+    expect(passo.textContent).toContain('systemctl --user restart brabo-runner.service');
+    // O painel é o MESMO da aba Código, e pergunta pelas chaves DESTE projeto.
+    await waitFor(() => expect(listRunnerDeviceKeys).toHaveBeenCalledWith('proj-1'));
+  });
+
+  it('com chave de MÁQUINA já pareada, o painel a reconhece em vez de mandar parear de novo', async () => {
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/dani/loja' }));
+    listRunnerDeviceKeys.mockResolvedValue([
+      {
+        id: 'chave-1',
+        name: 'laptop',
+        projectId: null,
+        especie: 'maquina',
+        createdAt: '2026-09-01T10:00:00.000Z',
+        revokedAt: null,
+        lastUsedAt: '2026-09-10T08:00:00.000Z',
+      },
+    ]);
+    await montar();
+
+    expect(await screen.findByText(/sua conta já tem máquina pareada: laptop/i)).toBeTruthy();
+  });
+
+  it('caso de falha: projeto `runner` com pasta JÁ confirmada não ganha o próximo passo', async () => {
+    getProject.mockResolvedValue(
+      projeto({
+        executionMode: 'runner',
+        workspacePath: '/home/dani/loja',
+        workspaceVerifiedAt: '2026-09-20T12:00:00.000Z',
+      }),
+    );
+    await montar();
+
+    expect(screen.queryByTestId('proximo-passo-runner')).toBeNull();
+  });
+
+  it('trocar o modo no seletor esconde o próximo passo — ele é do projeto SALVO, não do rascunho', async () => {
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/dani/loja' }));
+    await montar();
+    expect(await screen.findByTestId('proximo-passo-runner')).toBeTruthy();
+
+    trocarModoPara('container');
+    expect(screen.queryByTestId('proximo-passo-runner')).toBeNull();
+  });
+
+  it('em `en`, o próximo passo e o texto do caminho provisório saem em inglês', async () => {
+    await i18n.changeLanguage('en');
+    getProject.mockResolvedValue(projeto({ executionMode: 'runner', workspacePath: '/home/dani/loja' }));
+    render(
+      <Wrapper>
+        <ExecutionModeSection projectId="proj-1" />
+      </Wrapper>,
+    );
+    const passo = await screen.findByTestId('proximo-passo-runner');
+    expect(passo.textContent).toContain(settingsEn.executionMode.nextStep.title);
+    expect(screen.getByText(settingsEn.executionMode.path.runnerTyped)).toBeTruthy();
   });
 });

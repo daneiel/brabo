@@ -69,3 +69,19 @@ export function pollQueParaNoErro(
 ): (query: QueryComEstado) => number | false {
   return (query) => (query.state.status === 'error' ? false : intervaloMs);
 }
+
+/**
+ * Os defaults de TODA query da app — `main.tsx` os usa, e o teste de
+ * orçamento de requisições da Sessão (`canal-vivo.orcamento.test.tsx`) mede
+ * com os MESMOS, para que o número medido seja o que o navegador faz.
+ *
+ * `refetchIntervalInBackground: false` já é o default do TanStack v5, e a
+ * AT-093 mediu isso em vez de supor: aba OCULTA não polla (o `focusManager`
+ * lê `visibilitychange`). Fica escrito aqui para que ninguém o ligue "para a
+ * aba de trás ficar em dia" — cada aba oculta viraria mais um navegador
+ * inteiro contra os 300/min do mesmo usuário.
+ */
+export const OPCOES_PADRAO_DAS_QUERIES = {
+  retry: deveRetentar,
+  refetchIntervalInBackground: false,
+} as const;

@@ -29,6 +29,8 @@ const answerStructuredQuestion =
   >();
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
+/** A cauda do log que a rede de segurança lê depois do aceite (ADR 0163). */
+const cauda = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -104,6 +106,7 @@ vi.mock('../lib/api-client', async () => {
     setSessionModelBinding: vi.fn(),
     startAgent: vi.fn(),
     transitionSession: vi.fn(),
+    listSessionEvents: (...args: unknown[]) => cauda(...args),
   };
 });
 
@@ -242,6 +245,40 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
         },
       );
     });
+  });
+
+  it('AT-154: 409 sessao_encerrada diz que a sessão fechou, refaz a leitura dela e mantém o que foi digitado', async () => {
+    answerStructuredQuestion.mockRejectedValue(
+      Object.assign(new Error('409'), {
+        status: 409,
+        body: { message: 'A sessão está encerrada.', reason: 'sessao_encerrada', status: 'closed' },
+      }),
+    );
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+
+    montar();
+
+    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
+      target: { value: 'Checkout Fácil' },
+    });
+    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
+      target: { value: 'Lojistas' },
+    });
+    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+
+    const leiturasAntes = getSession.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
+
+    expect(
+      await screen.findByText(
+        'Esta sessão foi encerrada e não aceita mais mensagens. Abra uma sessão nova para continuar.',
+      ),
+    ).toBeInTheDocument();
+    // Não é o erro genérico, e a sessão foi relida.
+    expect(screen.queryByText('Não foi possível enviar as respostas')).not.toBeInTheDocument();
+    await waitFor(() => expect(getSession.mock.calls.length).toBeGreaterThan(leiturasAntes));
+    // As respostas continuam nos campos.
+    expect(screen.getByLabelText('Qual o nome do produto?')).toHaveValue('Checkout Fácil');
   });
 
   it('já respondido (chat.structured_question_answered posterior): vira somente leitura, sem formulário', async () => {
@@ -392,6 +429,17 @@ describe('SessionPage — saída por texto livre no select (RN-171)', () => {
  * terminou de conectar (ticket + join, RN-108), o `agent.status` "working" se
  * perde.
  */
+function statusDoCriativo(seq: number, status: string) {
+  return {
+    id: `st-${seq}`,
+    seq,
+    type: 'agent.status',
+    actor: { kind: 'agent', id: 'criativo' },
+    payload: { status },
+    createdAt: '2026-08-10T12:00:02.000Z',
+  };
+}
+
 describe('SessionPage — responder o formulário arma o indicador de turno (RN-174)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -432,9 +480,25 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
     });
     expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
-    // A chamada resolve: o turno acabou, e o indicador sai junto.
+    // A chamada resolve: é o ACEITE (ADR 0163), não o fim do turno — o log
+    // ainda diz `working`, e o indicador fica. Até o ADR 0163 era aqui que
+    // ele saía.
+    cauda.mockResolvedValue({ items: [statusDoCriativo(3, 'working')], nextCursor: null });
     await act(async () => {
       resolver();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
+
+    // O turno termina no log: o indicador sai.
+    cauda.mockResolvedValue({
+      items: [statusDoCriativo(3, 'working'), statusDoCriativo(7, 'idle')],
+      nextCursor: null,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
     });
     await waitFor(() =>
       expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),

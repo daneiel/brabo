@@ -135,7 +135,9 @@ Quatro coisas que o menu faz e vale saber:
   ficar saudável e semeia; no fim **pergunta** o `/health` da api e do engine e
   o `/` do web antes de dizer qualquer coisa — se algum não responder, ele
   nomeia e sai com código 1, em vez de anunciar sucesso. É a segunda tela que
-  pede confirmação (digitando `RESET`), e não remove volumes. Detalhes em
+  pede confirmação (digitando `RESET`), e não remove volumes — e diz isso ao
+  rodar, porque o outro lado é que um reset nunca reproduz um primeiro clone
+  (defeito que só aparece com volume novo passa despercebido). Detalhes em
   [`docs/runbook.md`](docs/runbook.md#reset-total).
 
 **Opções de linha de comando:**
@@ -215,7 +217,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 423 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 462 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
@@ -223,10 +225,10 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Scripts](docs/reference/scripts.md) | todo comando `pnpm` e alvo do `Makefile`, extraídos da fonte |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
-| [Artefatos](docs/reference/artifacts.md) | os nove schemas e quem pode emitir cada um |
+| [Artefatos](docs/reference/artifacts.md) | os onze schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 159 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 172 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Governança](GOVERNANCE.md) | modelo hoje (mantenedor único), os três papéis do modo `community` e o critério de quem entra em cada um |
@@ -397,6 +399,7 @@ make deploy-local     # sobe cluster k3d, instala tudo e roda o smoke
 make hpa-test         # enche a fila do Oban e prova que o HPA escala
 make rollout-test     # prova que um rollout do engine não deixa sessão órfã
 make test-restore     # dispara backup real, restaura e valida
+make test-restore-mutacao  # quebra o restore de propósito e exige que a prova reprove
 make k8s-validate     # monta e valida os overlays (não precisa de cluster)
 make k8s-down         # remove o cluster
 ```
@@ -412,7 +415,7 @@ Passo a passo e diagnóstico no [runbook](docs/runbook.md#deploy-local).
 
 `.github/workflows/ci.yml` roda em push para `feature/**` e em PR para `dev`:
 lint em modo verificação, testes de api/web/engine, validação dos manifests
-(`kustomize build` + `kubeconform` + shellcheck), build das três imagens com
+(`kustomize build` + `kubeconform` + shellcheck), build das cinco imagens com
 cache, **Trivy** nas imagens, **gitleaks** no repositório, auditoria de
 dependências com gate em crítica, e o teste de fumaça.
 
@@ -429,11 +432,11 @@ rodapé ([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-ho
 Depois do login o app opera sobre o primeiro workspace do usuário:
 
 - **Dashboard** (`/`) — grid de projetos e o wizard "Novo projeto"
-- **Projeto** (`/projects/:id`) — dez abas, derivadas de um registro único
+- **Projeto** (`/projects/:id`) — doze abas, derivadas de um registro único
   (`apps/web/src/routes/project-tabs.ts`, e não de listas paralelas): Visão
   geral (time de agentes, arquitetura e o diagrama C4), Executores, Criativo,
-  Chat, Code, Backlog, Aprovações (fila + tabela do `permissions.json`),
-  Insights, Gastos e Configurações (modelos por agente e por área, membros,
+  Chat, Insights, Código, PRs, Aprovações (fila + tabela do
+  `permissions.json`), Backlog, Arquitetura, Gastos e Configurações (modelos por agente e por área, membros,
   credenciais, teto de paralelismo)
 - **Sessão** (`/projects/:id/sessions/:sid`) — chat com streaming, seletor de
   modelo, `TokenMeter` ao vivo e aprovação de ações inline
@@ -467,7 +470,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 26 concluídas**, versão **v6.0.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 26 concluídas**, versão **v6.1.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única, e a cadeia inteira provada contra um
 GitHub real — adoção do repositório, promoção de história, dev agent escrevendo

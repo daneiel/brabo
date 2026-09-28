@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
+import {
+  fraseDaDecisaoDaPolitica,
+  fraseDaDecisaoForaDoRecorte,
+  type DecisaoDaPoliticaLida,
+} from '../lib/decisao-da-politica';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
@@ -149,6 +154,15 @@ interface ApprovalCardProps {
    * checagem de papel aqui dentro.
    */
   onActivateAutoMode?: () => void;
+  /**
+   * O motivo da política e a raiz do escopo (AT-148, RN-614), lidos do
+   * `proposed_action.created` por `decisaoDaPoliticaDaAcao` — a ação em si
+   * (`proposed_actions`) não guarda nenhum dos dois. Três estados, e eles não
+   * colapsam: `undefined` = esta tela não lê o event log, e o card cala;
+   * `null` = a tela lê, mas o evento não está entre os carregados, e o card
+   * DIZ isso; objeto = a frase de `lib/decisao-da-politica.ts`.
+   */
+  decisaoDaPolitica?: DecisaoDaPoliticaLida | null;
 }
 
 export function ApprovalCard({
@@ -162,6 +176,7 @@ export function ApprovalCard({
   onDeny,
   onAlwaysAllow,
   onActivateAutoMode,
+  decisaoDaPolitica,
 }: ApprovalCardProps) {
   const { t } = useTranslation('approvals');
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
@@ -252,6 +267,16 @@ export function ApprovalCard({
           despejo de `chave: JSON.stringify(valor)` que estava aqui. */}
       <p className={styles.frase}>{frase ?? `${verbo} — ${SEM_FRASE}.`}</p>
 
+      {/* AT-148 (RN-614): QUAL regra decidiu e, em `terminal`, contra qual
+          raiz relativa — a MESMA frase da linha do evento no painel de log. */}
+      {decisaoDaPolitica !== undefined && (
+        <p className={styles.motivoDaPolitica} data-testid="motivo-da-politica">
+          {decisaoDaPolitica === null
+            ? fraseDaDecisaoForaDoRecorte()
+            : fraseDaDecisaoDaPolitica(decisaoDaPolitica)}
+        </p>
+      )}
+
       <Disclosure
         titulo={temCorpoProprio ? t('approvalCard.details.title') : t('approvalCard.details.rawPayloadTitle')}
         padraoAberto={detalheAberto}
@@ -307,7 +332,10 @@ export function ApprovalCard({
                 : t('approvalCard.notes.alwaysAllow')}
             </span>
           )}
-          {variant === 'chat' && onActivateAutoMode && (
+          {/* A nota do modo automático vale nas DUAS variantes (RN-603): é a
+              única frase que diz, antes do clique, o que o botão libera — e
+              na fila de Aprovações o botão existe igual. */}
+          {onActivateAutoMode && (
             <span className={styles.note}>
               <AlertIcon size={12} />
               {t('approvalCard.notes.autoMode', { actor: actorLabel })}

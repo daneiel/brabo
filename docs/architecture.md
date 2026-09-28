@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 159 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 172 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -123,7 +123,7 @@ only once per story ([RN-539](business-rules.md#rn-539),
 
 ## Code map
 
-### `apps/api` — NestJS, 444 files
+### `apps/api` — NestJS, 906 files in `src/` (measured 2026-09-25)
 
 Four layers, and the order matters:
 
@@ -143,14 +143,14 @@ auto-instrumentation doesn't catch an already-loaded module, and a separate
 module is what guarantees that: TypeScript hoists all `require`s to the
 top, so a call written between imports would run too late).
 
-### `apps/engine` — Elixir/OTP, 155 files
+### `apps/engine` — Elixir/OTP, 219 files in `lib/` (measured 2026-09-25)
 
 | module | what it is | start with |
 |---|---|---|
 | `harness/` (33) | context assembly, ToolLoop, compaction. **No LLM call happens outside here** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | the QA area (Lead + Automation, Performance/Security and QA-strategy sub-specialties — the Lead's second moment, ADR 0090 — all with an LLM) and SecOps (deterministic) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | the Infra area (conversational, session-scoped Lead + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | the Infra area (conversational, session-scoped Lead — since [RN-617](business-rules.md#rn-617) the seventh conversational agent, reachable from the composer and running its turns on `TurnoAssincrono` — + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | session lifecycle, `:global` registry | `sessions/session_server.ex` |
 | `actions/` (9) | terminal and git executors, lint/scanner detectors | `actions/git_executor.ex` |
 | `agents/` (16) | Creative, PO, Architect, Dev Lead, Staff (ADR 0088, dormant for automatic trigger) — each turn runs on a supervised Task (`TurnoAssincrono`, RN-122), no longer inside `handle_call`, so a `:cancel` can actually interrupt it | `agents/turno_assincrono.ex` |
@@ -159,11 +159,11 @@ top, so a call written between imports would run too late).
 **Entrypoint:** `lib/engine/application.ex` — the whole supervision tree is
 there, and it's the best file to understand what's running.
 
-### `apps/broker` — Node/TS, 8 files
+### `apps/broker` — Node/TS, 9 files in `src/` (measured 2026-09-25)
 
 The only process in the product with access to a Docker daemon
 ([ADR 0130](adr/0130-broker-de-container.md)), and the smallest service here:
-no framework, `node:http`, six routes.
+no framework, `node:http`, six routes (measured 2026-09-25 in `src/servidor.ts`).
 
 | file | what it is |
 |---|---|
@@ -175,7 +175,7 @@ no framework, `node:http`, six routes.
 **Entrypoint:** `src/index.ts`. Docker access itself is not here: it comes from
 `packages/docker-port`, the same file the runner uses.
 
-### `apps/web` — React 19, 70 files
+### `apps/web` — React 19, 487 files in `src/` (measured 2026-09-25)
 
 `src/lib/api-types.ts` and `src/lib/activity.ts` are the two files worth
 reading first: the first is the contract with the api, the second
@@ -332,7 +332,7 @@ from a status, so a network error says "I don't know" instead of spinning in
 discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
 ACCOUNT, not to this browser, so the strongest sentence available is "your
 account has a paired machine". Both limits are stated on screen, and they are
-why the [ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md) flow is
+why the [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) flow is
 not removed: it moves into a `<details>` whose label names the case it still
 answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
 against the ENDPOINT's `developer`, and a real 403 lands in the same state —
@@ -658,7 +658,11 @@ second shows the model doesn't require the same internal implementation:
 (mirroring `ArquitetoServer`, external contact unchanged by explicit
 request of CLAUDE.md 8c), and delegates to `WorkflowsAgent` — which, with
 no user on the other side, runs as a bounded `ToolLoop`, just like the QA
-subagents. The 8b's generic `delegations` needed ONE adjustment to serve
+subagents. Since [RN-617](business-rules.md#rn-617)
+([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) the Infra Lead
+also takes composer messages, and all three of its turns (kickoff, gate
+correction, message) run on the same `TurnoAssincrono` Task as the other six
+conversational agents. The 8b's generic `delegations` needed ONE adjustment to serve
 the second area: `task_id` became nullable, because Infra delegates over the
 session, not over a backlog task.
 

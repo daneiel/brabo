@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   acaoDeSubidaDoModo,
+  conversaoSemBroker,
+  semBrokerParaCicloDeVida,
   decidirSubida,
   podeDecidirCicloDeVida,
 } from './containers-subida';
@@ -35,6 +37,7 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     detalheDaObservacao: null,
     naoVerificado: 'sem_container_registrado',
     acaoPendente: null,
+    brokerConfigurado: true,
     ...overrides,
   };
 }
@@ -48,6 +51,57 @@ describe('acaoDeSubidaDoModo', () => {
 });
 
 describe('decidirSubida', () => {
+  // ADR 0161, RN-574.
+  it.each(['container', 'mounted'] as const)(
+    'instalação sem broker, projeto %s: recusa com motivo próprio, antes da imagem',
+    (executionMode) => {
+      const decisao = decidirSubida({
+        item: item({
+          executionMode,
+          brokerConfigurado: false,
+          temImagemDecidida: false,
+        }),
+        papel: 'maintainer',
+        temSessao: true,
+      });
+
+      expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
+    },
+  );
+
+  it('instalação sem broker não recusa projeto runner — quem sobe é o agente local', () => {
+    const decisao = decidirSubida({
+      item: item({
+        executionMode: 'runner',
+        brokerConfigurado: false,
+        workspaceVerifiedAt: '2026-09-01T10:00:00.000Z',
+      }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toMatchObject({ pode: true, acao: 'container_start_via_runner' });
+  });
+
+  it('broker "não sei" (campo ausente) não vira "tem": recusa', () => {
+    const semCampo = item();
+    delete (semCampo as Partial<ContainerOverviewItem>).brokerConfigurado;
+
+    const decisao = decidirSubida({ item: semCampo, papel: 'maintainer', temSessao: true });
+
+    expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
+  });
+
+  it('container já de pé continua dizendo isso, mesmo sem broker', () => {
+    const decisao = decidirSubida({
+      item: item({ registrado: registro(), brokerConfigurado: false }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toEqual({ pode: false, motivo: 'ja_esta_de_pe' });
+  });
+
   it('projeto sem container, imagem decidida, maintainer com sessão: pode subir pelo broker', () => {
     const decisao = decidirSubida({
       item: item(),
@@ -201,5 +255,33 @@ describe('podeDecidirCicloDeVida', () => {
     expect(podeDecidirCicloDeVida('developer')).toBe(false);
     expect(podeDecidirCicloDeVida('viewer')).toBe(false);
     expect(podeDecidirCicloDeVida(undefined)).toBe(false);
+  });
+});
+
+describe('sem broker: parar/remover e conversão (AT-105, RN-591)', () => {
+  it('parar/remover em container/mounted sem broker (ou "não sei") é recusado; runner não', () => {
+    expect(semBrokerParaCicloDeVida(item({ brokerConfigurado: false }))).toBe(true);
+    expect(
+      semBrokerParaCicloDeVida(item({ executionMode: 'mounted', brokerConfigurado: false })),
+    ).toBe(true);
+    expect(
+      semBrokerParaCicloDeVida(
+        item({ brokerConfigurado: undefined as unknown as boolean }),
+      ),
+    ).toBe(true);
+    expect(semBrokerParaCicloDeVida(item({ brokerConfigurado: true }))).toBe(false);
+    expect(
+      semBrokerParaCicloDeVida(item({ executionMode: 'runner', brokerConfigurado: false })),
+    ).toBe(false);
+  });
+
+  it('conversão: só a ausência CONFIRMADA para um modo de broker bloqueia', () => {
+    const base = { atual: 'runner', alvo: 'container' } as const;
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: false })).toBe(true);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: true })).toBe(false);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: null })).toBe(false);
+    expect(conversaoSemBroker({ ...base, brokerConfigurado: undefined })).toBe(false);
+    expect(conversaoSemBroker({ atual: 'container', alvo: 'runner', brokerConfigurado: false })).toBe(false);
+    expect(conversaoSemBroker({ atual: 'container', alvo: 'container', brokerConfigurado: false })).toBe(false);
   });
 });

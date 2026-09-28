@@ -17,7 +17,7 @@ documentação de projeto.
 | **Conteúdo da imagem do engine** | **Sim, se a imagem for publicada** | o binário sai empacotado dentro dela |
 | **Fontes do design system** | **Sim, se a imagem do web for publicada** | desde o ADR 0036 os `.woff2` são auto-hospedados e saem dentro da imagem |
 
-As quatro imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
+As cinco imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
 final ([ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). A
 seção 1 **é obrigação**, não informativo — esta frase dizia o contrário desde
 2026-07-27 e ficou para trás quando a publicação passou a acontecer de verdade.
@@ -145,6 +145,12 @@ como copyleft):
 licenças de base Alpine da seção 1. O cliente MinIO (`mc`) **foi removido** na
 Fase 5 — carregava 33 CVEs por ser um binário Go congelado desde setembro/2025
 ([ADR 0027](docs/adr/0027-fase5-backup-hardening-release.md), decisão 1b).
+
+O **servidor** S3 do cluster local não entra aqui porque não é distribuído por
+nós: o SeaweedFS (Apache-2.0) é puxado do Docker Hub pelo próprio cluster, só
+no overlay local. Ele substituiu o MinIO (AGPL-3.0) quando a MinIO deixou de
+publicar a imagem comunitária
+([ADR 0169](docs/adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
 
 ## 4. Dependências de aplicação
 

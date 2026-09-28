@@ -136,7 +136,7 @@
     "notes": {
       "alwaysAllow": "\"Always allow\" records the rule in .brabo/permissions.json",
       "alwaysAllowScoped": "\"Always allow\" releases this action type only for {{agent}} — not for the project's other agents",
-      "autoMode": "\"Auto mode\" releases EVERY future action from {{actor}} without asking — except merges into a protected branch, instruction patches and parallelism, which keep always asking for your decision. You can turn it off later from the agent's card."
+      "autoMode": "\"Auto mode\" lets {{actor}} run any command without asking, even outside the project folder — git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision, and anything in deny stays denied. You can turn it off later from the agent's card."
     },
     "decided": {
       "denied": "Denied",
@@ -256,5 +256,24 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
     "mergeNoSession": "No session in the project to propose the action."
+  },
+  "politica": {
+    "motivo": "Policy decided by: {{motivo}}",
+    "motivoNaoRegistrado": "Policy reason not recorded (proposed before the reason was logged)",
+    "foraDoRecorte": "Policy reason not in the events loaded on this screen",
+    "raiz": {
+      "raizGerenciada": "scope root: managed folder “{{segmento}}”",
+      "baseDeProjetos": "scope root: “{{segmento}}” under the projects base",
+      "nomeDaPasta": "scope root: folder “{{segmento}}” on the runner's machine",
+      "indisponivel": "scope root: no relative form (mounted folder outside the projects base, or no base configured)",
+      "formaDesconhecida": "scope root: recorded in a form this screen does not know",
+      "naoRegistrada": "scope root not recorded (proposed before the root was logged)"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}: action auto-approved by policy",
+      "negada": "{{ator}}: action denied by policy",
+      "pendente": "{{ator}}: action waiting for a decision",
+      "proposta": "{{ator}} proposed an action"
+    }
   }
 }

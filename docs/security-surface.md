@@ -64,8 +64,10 @@ binary from GitHub Releases so the browser never talks to GitHub
 directly. Public for the same reason as `/metrics`/JWKS: the binary
 itself is not a secret, and requiring a session to download the very
 tool that lets someone authenticate would be backwards. `platform` is a
-closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
-`win32-x64`), never interpolated raw into the GitHub URL — closing the
+closed allowlist (`linux-x64`/`linux-arm64`/`darwin-arm64`/`win32-x64` —
+the four targets the release matrix builds; `darwin-x64` left in
+[ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) and is refused with its
+own message pointing at the npm package), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
 asset URL (never the binary's bytes) is cached in memory for a few
 minutes, purely to stay under GitHub's unauthenticated rate limit under
@@ -319,6 +321,20 @@ reason in the URL.
   doesn't enter the computation: the base is **installation**
   configuration, identical for every workspace, and the parameter is there
   only to give the `RolesGuard` a scope.
+
+  Since [ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)
+  ([RN-573](business-rules.md#rn-573)) the response also carries
+  `brokerConfigurado: boolean` — whether `BROKER_URL` is set, read through
+  `ContainerBrokerPort.configurado()`. It discloses one bit of installation
+  topology (is there a Docker-socket-holding broker at all), never its
+  address, and the minimum stays `maintainer`. The same bit rides on every
+  row of `GET /workspaces/:workspaceId/containers` (`viewer`,
+  [RN-574](business-rules.md#rn-574)), a deliberate widening: that page must
+  say BEFORE the click that `container`/`mounted` cannot start here, and
+  anyone who can see the page could already infer the absence from
+  `naoObservado: broker-nao-configurado` whenever a row is
+  `provisioning`/`running`. It says the
+  variable exists, never that the broker answers.
 - **`GET /workspaces/:workspaceId/project-folders` serves directory
   listings from a client-supplied path, and its whole safety is ONE
   containment** ([RN-504](business-rules.md#rn-504),
@@ -654,6 +670,22 @@ reason in the URL.
   Revoking a MACHINE key asks the engine to drop the live runner in EACH
   runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
+- **The MACHINE key is also reachable per ACCOUNT, with no project in the
+  path** ([RN-611](business-rules.md#rn-611)): `GET /users/me/machine-device-keys`
+  and `DELETE /users/me/machine-device-keys/:deviceKeyId`, classified `jwt`
+  because the scope is the caller themselves, like the rest of `/users/me/*`.
+  They exist because the one-line install creates the account and the machine
+  key BEFORE any project, and every other listing needs a `:projectId`: there,
+  the key was live and unreachable. They are deliberately narrow — only
+  MACHINE keys (a project key answers 404, the same as a key that doesn't
+  exist or is someone else's, so nothing leaks) and only the CALLER's (the
+  `userId` comes from the session JWT and goes into the `WHERE`; no parameter
+  names another user, and the `maintainer` view stays out, as RN-519 decided).
+  The `DELETE` is the same revocation as the per-project route, delegated to
+  the same use case: it drops the live runner in each runner-mode project the
+  owner reaches, target `{project, user}` unchanged; with no project yet it
+  only records the revocation, which is all there is to stop — the waiting
+  machine agent (RN-550) has no connection, and its next ticket is refused.
 - **Revoking a device key now reaches the LIVE connection, and the target
   is `{project, user}` — never `{key}`**
   ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
@@ -923,6 +955,33 @@ reason in the URL.
   over HTTP, which is the class of state ADR 0127 was born to eliminate.
   Demoting **another** owner therefore stays allowed — the only way ownership
   gets revoked, and reversible through the same route by any remaining owner.
+- **`DELETE /workspaces/:workspaceId/members/:userId` is `role:owner`, and it
+  is the fifth door of the same family**
+  ([ADR 0173](adr/0173-remocao-de-membro-de-workspace.md),
+  [RN-615](business-rules.md#rn-615)). It did not exist when ADR 0157 was
+  written — the sentence above about "no member `@Delete`" describes that
+  moment. It carries the same cap with no new rule: `remocaoEhAutoRebaixamento`
+  with the workspace role as today's effective role and *none* as the role
+  after, since no level above catches the fall — so **removing YOURSELF is
+  always 403**. That same clause is what protects the **last owner**, without
+  counting: only an `owner` calls the route, nobody removes themselves, so
+  every successful call leaves at least the caller as `owner`. Removing
+  **another** owner is allowed (it is how ownership is revoked entirely), and
+  cap 1 still has no counterpart here — `@RequireRole('owner')` keeps
+  preventing hierarchy inversion. The removal also **cascades**, in one
+  transaction: the target's `project_members` rows in this workspace (without
+  it the project-overrides-workspace rule would keep them inside every project
+  where they had their own row), their PROJECT device keys and their PATs
+  here (every PAT belongs to one project); after commit their live runner
+  connection in each project is dropped, best effort, through the RN-520
+  path. Declared and not done: machine keys (account-wide; they stop reaching
+  this workspace because the role resolves to none), already-connected
+  session sockets. The **owner of record** (`workspaces.created_by`, whose
+  LLM and git credentials agents spend, RN-058) cannot be removed: 409
+  `criador_do_workspace` until `PUT /workspaces/:workspaceId/owner-of-record`
+  (`role:owner`, target must already be `owner`, else 409
+  `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
+  Any owner may transfer it, including to another owner who did not ask.
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -985,6 +1044,28 @@ reason in the URL.
   inactivity heartbeat, [RN-073](business-rules/custo.md#rn-073)) confirms
   there's no handoff, action, or turn hanging there. It never closes the
   execution session the call itself just activated.
+- **`GET /internal/sessions/:sessionId/pending-work` gained
+  `aguardandoUsuarioDesde`, and no route changed classification**
+  ([RN-581](business-rules.md#rn-581)). Still `engine-service`: the field
+  is the instant a conversational agent's turn ended, read from the same
+  event log the engine already writes, and it only decides how long the
+  engine keeps a session open. The same RN made the session routes that
+  append conversation (`POST .../agents/:agent/message`, the chat,
+  handoffs, `POST .../agents/:agent/start`,
+  `POST /internal/sessions/:sessionId/events`) answer **409**
+  `sessao_encerrada` on a terminal session — a refusal by STATE, after
+  the role check, never a new role. `terminationReason` on the session
+  responses gained one documented value, `conversation_idle_timeout`.
+- **`POST /projects/:projectId/execution/activate` refuses with `409` when
+  the project has no repository, and the classification didn't change**
+  — still `role:maintainer` ([RN-582](business-rules.md#rn-582),
+  [ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)). The
+  refusal comes before any side effect. Its message is chosen from the
+  project's handoffs, read across ALL its sessions — so it can say "accept
+  the handoff to the Architect/Dev Lead". What it reveals is only that such a
+  handoff exists and its status, which any `viewer` of the project already reads
+  through `GET .../sessions/:sessionId/handoffs`; it never names a session or
+  a user.
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
@@ -1093,11 +1174,14 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
 | GET | `/runner/projects` | jwt |
+| GET | `/llm/provider-capabilities` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
+| GET | `/users/me/machine-device-keys` | jwt |
+| DELETE | `/users/me/machine-device-keys/:deviceKeyId` | jwt |
 | GET | `/users/me/preferences` | jwt |
 | PATCH | `/users/me/preferences` | jwt |
 | GET | `/workspaces` | jwt |
@@ -1224,6 +1308,8 @@ reason in the URL.
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
+| DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
+| PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |

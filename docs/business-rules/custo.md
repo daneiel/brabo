@@ -148,6 +148,49 @@ cost.
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
+
+Um binding de modelo pode guardar um **critério de roteamento** —
+`routing_preference`: `price`, `throughput` ou `latency` — que diz ao HUB
+como escolher o upstream que serve o modelo. Anulável: `null` é o
+comportamento de sempre, nada vai ao fio e o hub decide sozinho.
+
+1. **Viaja com o binding que venceu, nunca cascateia sozinho.** A cascata
+   continua sendo de binding: o nível vencedor traz o modelo E o critério
+   dele. O nível que a cascata PULA (modelo indisponível, sem tool calling)
+   leva o critério junto — sobreviver só o critério produziria combinação que
+   ninguém escolheu.
+2. **Escrita em três formas.** No `PUT .../model-binding` dos cinco escopos,
+   `routingPreference` **ausente** preserva o gravado se o provider do modelo
+   novo declara a capability, e vira `null` se não declara; **`null`** limpa;
+   **valor** para provider sem a capability é **422**
+   (`RoutingPreferenceNotSupportedError`). Invariante: nenhum binding guarda
+   critério para provider que não o declara.
+3. **Congela o que FOI AO FIO.** `token_usage.routing_preference` é gravado
+   por chamada, ao lado do `upstream_provider` da [RN-042](#rn-042): o critério
+   enviado, e `null` quando o binding não tinha ou quando o provider não
+   declara a capability (o que não foi enviado não é procedência de nada).
+   Mesma régua do preço congelado (ADR 0042).
+4. **Capability de PROVIDER, só com prova.**
+   `LLMProviderCapabilities.routingPreference` é obrigatória nos nove, e é
+   `false` nos nove hoje — inclusive no OpenRouter, cujo fio (`provider: { sort
+   }`) está pronto mas não foi provado contra a API real (sem
+   `OPENROUTER_TEST_KEY` no ambiente). Enquanto for `false`, a feature é
+   DORMENTE: a rota recusa, a tela diz em texto que nenhum provider desta
+   instalação tem a opção provada, e nada muda no fio.
+
+- **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
+  `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
+  `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:93`
+  (congela no metering)
+- **Test:** `test/domain/llm/routing-preference.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts`; a prova
+  manual da capability é `test/infrastructure/llm/openrouter-provider.roteamento.smoke.spec.ts`
+- **Origin:** [ADR 0166](../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md) (AT-090)
+
 ### RN-043 — A discovered model enters disabled; a model that disappears is marked, never deleted {#rn-043}
 
 Catalog sync has three outcomes, and none of them is destructive:
@@ -968,6 +1011,29 @@ neighbors; `teste` and `ci` carry the path, and a target that
 disappeared FAILS. It's the same failure mode the docmap calls a dead
 glob — a rule that never fires and fakes coverage.
 
+**That last claim is about the REPOSITORY, and it is never evaluated at
+runtime.** The registry is validated in two layers: `validarRegistro`
+(the content — `block` needs `script`, the four human gates stay human,
+`active` needs evidence, no duplicate id, no orphan `entrada`) holds
+wherever the file is read and is what the api's loader calls;
+`validarLocalizadores` (the target file is on disk) only means anything
+inside a checkout, and is enforced by the test on the real file and by
+phase 2 of `validacao-gates.ts`.
+
+The two used to be one function, and it cost a production defect,
+measured on the installed v6.1.0: `GET /gates` returned `500` with
+`RegistroDeGatesInvalido` listing all eleven targets as missing — twelve
+5xx in about 55 minutes, in every installation. The production image
+carries `/app/docs/gates.yml` and nothing else from `docs/`;
+`apps/api/test/`, `scripts/ci/` and `.github/` never enter it. The rule
+was not loosened — it moved to where the question exists. Do not put it
+back in the loader: `arquivoExiste` in a process that has no repository
+answers about a different tree.
+
+The screen hid it: [RN-084](#rn-084) makes `PrGateTimeline` fall back to
+the full pipeline when the route fails, so the 500 showed up only in the
+api's logs.
+
 Three types because not every gate lives in the event log:
 [`merge-protegida`](../business-rules.md#rn-014) is a ceiling in a pure rule that emits no
 event of its own (what guarantees it is a test) and `backmerge` is CI
@@ -985,12 +1051,21 @@ column would open up the whole query. Who promoted a story (human or
 the PO) lives in the `actor_kind` column and stays outside the
 declarative vocabulary.
 
-- **Where:** `apps/api/src/domain/gates/gate-registry.ts`, registered in
-  `docs/gates.yml`, measured in `apps/api/scripts/validacao-gates.ts`
+- **Where:** `apps/api/src/domain/gates/gate-registry.ts`
+  (`validarRegistro` and `validarLocalizadores`), registered in
+  `docs/gates.yml`, measured in `apps/api/scripts/validacao-gates.ts`;
+  the loader that deliberately calls only the first is
+  `apps/api/src/infrastructure/gates/gate-registry.loader.ts`
 - **Test:** `apps/api/test/domain/gates/gate-registry.spec.ts`
-  (`is valid: no accumulated problem`; `no (event_types + filtro) pair
-  repeats between gates`)
-- **Origin:** PHASE 15a (ADR 0054)
+  (`é válido: nenhum problema acumulado`; `todo alvo de prova citado
+  existe no repositório`; `validarRegistro ignora o disco: alvo ausente
+  não é problema DELE`; `nenhum par (event_types + filtro) se repete
+  entre gates`) and
+  `apps/api/test/infrastructure/gates/gate-registry.loader.spec.ts`
+  (`carrega o registro real sem exigir os alvos que a imagem não leva`,
+  against a root rebuilt as the production image's tree)
+- **Origin:** PHASE 15a (ADR 0054); the two-layer split came from the
+  `GET /gates` 500 measured on the installed v6.1.0 (AT-086)
 
 ### RN-071 — The four user-authority gates cannot be declared automatic {#rn-071}
 
@@ -2014,6 +2089,11 @@ plano meio proposto não teria como ser retratado.
 
 ### RN-064 — Heartbeat não encerra sessão com trabalho pendente {#rn-064}
 
+> **Estendida pela [RN-581](../business-rules.md#rn-581) (AT-072):** um agente
+> conversacional esperando o usuário passou a ser o QUINTO sinal, e o único com
+> teto (8h, causa `conversation_idle_timeout`); a resposta ganhou
+> `aguardandoUsuarioDesde`. O resto desta regra vale como está.
+
 O timeout de heartbeat mede inatividade da **aba**, não do **trabalho**. Antes
 de encerrar, o `SessionServer` pergunta à api se sobrou trabalho
 (`GET /internal/sessions/:id/pending-work`); havendo, reagenda o timeout e
@@ -2413,10 +2493,10 @@ só numa seção seria pior que a lacuna.
   `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
   "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
   mudar de mínimo),
-  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:195` e `:222`
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:208` e `:236`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
-  `apps/web/src/routes/settings/ModelsSection.tsx:77` (`podeEditar`, e por que
+  `apps/web/src/routes/settings/ModelsSection.tsx:85` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
   que diz o motivo)
@@ -2556,12 +2636,12 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:122` (`cadeiaDoAgente`),
-  `:242` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:285` (`handleClearAgentBinding` — os
+  `apps/web/src/routes/settings/ModelsSection.tsx:157` (`cadeiaDoAgente`),
+  `:322` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:391` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:352` (coluna Origem), `:422`
   (`não há nível abaixo`), `:441` (`sem gasto ainda`),
-  `apps/web/src/components/ModelPicker.tsx:83` (`selected` sai do prop — o
+  `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o
   picker não guarda a escolha, e é por isso que a recusa não deixa valor
   fantasma na tela),
   `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:38`

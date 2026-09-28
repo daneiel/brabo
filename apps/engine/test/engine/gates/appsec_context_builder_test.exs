@@ -1,5 +1,9 @@
 defmodule Engine.Gates.AppSecContextBuilderTest do
-  use ExUnit.Case, async: true
+  # async: false (AT-133): troca e APAGA `:engine_api_client`, env GLOBAL da
+  # VM. Rodando em paralelo, o `delete_env` do `on_exit` tirava o Fake de
+  # debaixo de outro módulo async no meio da chamada (`CreateModuleMapTest`
+  # caía no cliente `Live` e em `:econnrefused`).
+  use ExUnit.Case, async: false
 
   alias Engine.Gates.AppSecContextBuilder
   alias Engine.Sessions.FakeEngineApiClient

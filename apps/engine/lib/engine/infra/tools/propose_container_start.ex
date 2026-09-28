@@ -19,7 +19,10 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   dele, e não há roteamento contra o qual eleger candidata. A recusa é texto
   de RESULTADO de ferramenta (entrada do laço, RN-163), nunca erro de turno.
   `container`/`mounted` seguem propondo, INCLUSIVE sem imagem decidida:
-  a recusa é sobre MODO, e eleger a imagem é o que esta proposta faz.
+  a recusa é sobre MODO, e eleger a imagem é o que esta proposta faz. Desde
+  a RN-610 ela recusa também quando o container já está REGISTRADO
+  `running`/`provisioning` — elegeria uma imagem que o container de pé, com a
+  versão congelada, não usaria.
 
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado

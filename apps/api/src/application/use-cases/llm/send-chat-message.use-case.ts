@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ulid } from 'ulid';
 import { UnitOfWork } from '../../ports/unit-of-work.port';
 import { SessionRepository } from '../../ports/session-repository.port';
 import { SessionEventRepository } from '../../ports/session-event-repository.port';
 import { OutboxRepository } from '../../ports/outbox-repository.port';
+import { SessionChannelNotifier } from '../../ports/session-channel-notifier.port';
 import { ModelRepository } from '../../ports/model-repository.port';
 import { UserCredentialRepository } from '../../ports/user-credential-repository.port';
 import { EncryptionService } from '../../ports/encryption.port';
@@ -12,8 +13,14 @@ import { TokenEstimator } from '../../ports/token-estimator.port';
 import { ResolveModelBindingUseCase } from './resolve-model-binding.use-case';
 import { CheckBudgetGateUseCase } from './check-budget-gate.use-case';
 import { RecordLlmUsageUseCase } from './record-llm-usage.use-case';
+import { preferenciaEnviada } from '../../../domain/llm/routing-preference';
 import { calculateCostMicros } from '../../../domain/llm/cost-calculator';
 import type { Actor } from '../../../domain/sessions/session-event.entity';
+import {
+  ConversaEmSessaoEncerradaError,
+  garantirQueSessaoAceitaEvento,
+} from '../../../domain/sessions/conversa-em-sessao-encerrada';
+import { conflitoDeSessaoEncerrada } from '../sessions/append-session-event.use-case';
 
 export interface SendChatMessageInput {
   projectId: string;
@@ -50,6 +57,8 @@ export class SendChatMessageUseCase {
     private readonly resolveModelBinding: ResolveModelBindingUseCase,
     private readonly checkBudgetGate: CheckBudgetGateUseCase,
     private readonly recordLlmUsage: RecordLlmUsageUseCase,
+    // AT-157: avisa o canal da sessão; opcional para quem monta à mão.
+    @Optional() private readonly canal?: SessionChannelNotifier,
   ) {}
 
   async *execute(input: SendChatMessageInput): AsyncGenerator<ChatSseEvent> {
@@ -59,11 +68,29 @@ export class SendChatMessageUseCase {
     //    ao provider — se a sessão não existir, propaga 404 sem custo
     //    nenhum envolvido.
     await this.unitOfWork.runInTransaction(async () => {
-      const seq = await this.sessions.incrementSeq(
+      const reservado = await this.sessions.incrementSeq(
         input.projectId,
         input.sessionId,
       );
-      if (seq === null) throw new NotFoundException('Sessão não encontrada');
+      if (reservado === null) {
+        throw new NotFoundException('Sessão não encontrada');
+      }
+      // RN-581: este caminho grava `chat.message` sem passar pelo funil
+      // `AppendSessionEventUseCase`, então a trava do estado tem de estar aqui
+      // também — senão o chat humano seria a porta que o funil fechou.
+      try {
+        garantirQueSessaoAceitaEvento(
+          reservado.status,
+          'chat.message',
+          input.actor,
+        );
+      } catch (error) {
+        if (error instanceof ConversaEmSessaoEncerradaError) {
+          throw conflitoDeSessaoEncerrada(error);
+        }
+        throw error;
+      }
+      const seq = reservado.seq;
 
       await this.sessionEvents.append({
         id: ulid(),
@@ -79,6 +106,11 @@ export class SendChatMessageUseCase {
         eventType: 'session_event.appended',
         payload: { seq, type: 'chat.message' },
       });
+      this.canal?.eventAppended(
+        input.sessionId,
+        'chat.message',
+        input.actor.id,
+      );
     });
 
     // 2) Resolve o binding + modelo. Sem isso, nenhuma chamada é feita.
@@ -130,6 +162,12 @@ export class SendChatMessageUseCase {
 
     // 5) Chama o provider e repassa os deltas em tempo real.
     const provider = this.llmProviders.get(model.provider);
+    // O critério do binding VENCEDOR, e só se este provider o declara — é o
+    // que vai ao fio e o que congela no metering (ADR 0166, RN-583).
+    const routingPreference = preferenciaEnviada(
+      binding.routingPreference,
+      provider.capabilities,
+    );
     let fullText = '';
     let inputTokens = 0;
     let outputTokens = 0;
@@ -141,7 +179,11 @@ export class SendChatMessageUseCase {
     try {
       for await (const chunk of provider.chat(
         [{ role: 'user', content: input.text }],
-        { model: model.name, apiKey },
+        {
+          model: model.name,
+          apiKey,
+          ...(routingPreference ? { routingPreference } : {}),
+        },
       )) {
         if (chunk.type === 'text_delta') {
           fullText += chunk.text;
@@ -196,12 +238,18 @@ export class SendChatMessageUseCase {
           latencyMs,
           bindingOrigin: binding.origin,
           upstreamProvider,
+          routingPreference,
         });
 
-        const seq = await this.sessions.incrementSeq(
+        // A resposta de um turno que COMEÇOU com a sessão aberta entra mesmo
+        // que ela tenha fechado no meio: o ator é o modelo, não um agente
+        // conversacional, e o gasto já foi feito e medido — recusar só
+        // apagaria do log o que o metering registrou (RN-581).
+        const reservado = await this.sessions.incrementSeq(
           input.projectId,
           input.sessionId,
         );
+        const seq = reservado?.seq ?? null;
         if (seq !== null) {
           await this.sessionEvents.append({
             id: ulid(),
@@ -227,6 +275,11 @@ export class SendChatMessageUseCase {
             eventType: 'session_event.appended',
             payload: { seq, type: 'agent.response' },
           });
+          this.canal?.eventAppended(
+            input.sessionId,
+            'agent.response',
+            assistantActor.id,
+          );
         }
       });
     } catch {

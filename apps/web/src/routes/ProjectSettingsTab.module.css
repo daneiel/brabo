@@ -907,3 +907,12 @@
 .loteDetalhe {
   color: var(--text-muted);
 }
+
+/* O picker de modelo e, abaixo dele, o critério de roteamento do MESMO
+   binding (ADR 0166): empilhados na mesma célula porque são uma decisão só. */
+.modeloComRoteamento {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}

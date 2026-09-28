@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -17,6 +18,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -24,6 +26,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { ContainerBrokerPort } from '../../../application/ports/container-broker.port';
 import type { User } from '../../../domain/iam/user.entity';
 import { RequireRole } from './require-role.decorator';
 import { CreateWorkspaceUseCase } from '../../../application/use-cases/iam/create-workspace.use-case';
@@ -32,6 +35,8 @@ import { GetWorkspaceUseCase } from '../../../application/use-cases/iam/get-work
 import { UpdateWorkspaceUseCase } from '../../../application/use-cases/iam/update-workspace.use-case';
 import { DeleteWorkspaceUseCase } from '../../../application/use-cases/iam/delete-workspace.use-case';
 import { AddWorkspaceMemberUseCase } from '../../../application/use-cases/iam/add-workspace-member.use-case';
+import { RemoveWorkspaceMemberUseCase } from '../../../application/use-cases/iam/remove-workspace-member.use-case';
+import { TransferWorkspaceOwnershipUseCase } from '../../../application/use-cases/iam/transfer-workspace-ownership.use-case';
 import { CreateProjectUseCase } from '../../../application/use-cases/iam/create-project.use-case';
 import { ListProjectsForWorkspaceUseCase } from '../../../application/use-cases/iam/list-projects-for-workspace.use-case';
 import { GetWorkspaceSummaryUseCase } from '../../../application/use-cases/iam/get-workspace-summary.use-case';
@@ -41,6 +46,7 @@ import { GetUnreadEventsForWorkspaceUseCase } from '../../../application/use-cas
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { TransferOwnershipDto } from './dto/transfer-ownership.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UnreadEventsDto } from './dto/unread-events.dto';
 import { BEARER } from '../../../infrastructure/openapi/documento';
@@ -85,6 +91,9 @@ export class WorkspacesController {
     private readonly getProjectsStatusForWorkspace: GetProjectsStatusForWorkspaceUseCase,
     private readonly getProjectsSummaryForWorkspace: GetProjectsSummaryForWorkspaceUseCase,
     private readonly getUnreadEventsForWorkspace: GetUnreadEventsForWorkspaceUseCase,
+    private readonly broker: ContainerBrokerPort,
+    private readonly removeWorkspaceMember: RemoveWorkspaceMemberUseCase,
+    private readonly transferWorkspaceOwnership: TransferWorkspaceOwnershipUseCase,
   ) {}
 
   @Post()
@@ -157,8 +166,8 @@ export class WorkspacesController {
       "by ALL of the workspace's projects. That role is NECESSARY but not " +
       'SUFFICIENT: changing YOUR OWN role here is refused with 403 in both ' +
       'directions, and cannot be enabled anywhere. There is no level above ' +
-      'to catch the fall and no route that removes a member, so a self ' +
-      'downgrade would be unrecoverable through the UI. Demoting ANOTHER ' +
+      'to catch the fall, so a self downgrade would be unrecoverable through ' +
+      'the UI. Demoting ANOTHER ' +
       '`owner` is still allowed — it is the only way ownership is revoked.',
   })
   @ApiCreatedResponse({ type: WorkspaceMemberResponseDto })
@@ -177,6 +186,95 @@ export class WorkspacesController {
       user.id,
       dto.userId,
       dto.role,
+    );
+  }
+
+  /**
+   * A quinta porta da linha dos tetos (ADR 0173, RN-615). `owner`, o MESMO
+   * mínimo do upsert logo acima: quem mexe na lista de membros é quem a
+   * mantém. O teto (a si mesmo, nunca) e a cascata moram no caso de uso.
+   */
+  @Delete(':workspaceId/members/:userId')
+  @RequireRole('owner')
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Disassociates a user from the workspace',
+    description:
+      'Only `owner`, like the upsert. Removes the workspace row AND, in the ' +
+      "same transaction, the user's rows in every project of this workspace " +
+      '(the project role overrides the workspace one, so leaving them would ' +
+      "keep the user inside those projects), plus the user's PROJECT device " +
+      'keys and personal access tokens in them. Afterwards the live runner ' +
+      'connection of that user in each project is dropped, best effort. ' +
+      'Machine device keys and open sessions are left alone — they stop ' +
+      'reaching this workspace because the role resolves to none.\n\n' +
+      'Removing YOURSELF is refused with 403 and cannot be enabled anywhere: ' +
+      'there is no level above to catch the fall. That same clause is what ' +
+      'protects the last `owner` — only an `owner` can call this route and ' +
+      'nobody removes themselves, so every successful call leaves at least ' +
+      'the caller as `owner`. Removing ANOTHER `owner` is allowed — it is ' +
+      'how ownership is revoked — except the OWNER OF RECORD ' +
+      '(`createdBy`), refused with 409 `criador_do_workspace` until ' +
+      '`PUT :workspaceId/owner-of-record` moves it to another owner: the LLM ' +
+      'key agents spend and the spend report are theirs. Idempotent: a ' +
+      "target without a workspace row still has this workspace's project " +
+      'rows cleared, and gets `204`.',
+  })
+  @ApiNoContentResponse({ description: 'Association removed. No body.' })
+  @ApiForbiddenResponse({
+    description:
+      'Not `owner` of the workspace, OR the target is the caller ' +
+      '(self-removal cap).',
+  })
+  @ApiConflictResponse({
+    description:
+      '`criador_do_workspace`: the target is the owner of record; transfer ' +
+      'it first.',
+  })
+  removeMember(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentUser() user: User,
+    @Param('userId') userId: string,
+  ) {
+    return this.removeWorkspaceMember.execute(workspaceId, user.id, userId);
+  }
+
+  /**
+   * A transferência da TITULARIDADE (ADR 0173, RN-616): o que a recusa da
+   * remoção do titular manda fazer antes. `owner`, o mínimo das outras rotas
+   * de membro; a regra do destino mora no caso de uso.
+   */
+  @Put(':workspaceId/owner-of-record')
+  @RequireRole('owner')
+  @ApiOperation({
+    summary: "Transfers the workspace's owner of record",
+    description:
+      'The owner of record is `createdBy`: whose LLM credential the agents ' +
+      'spend and whose git credential agent actions use (RN-058), and who ' +
+      'owns the spend report (RN-060). It does not grant authorization — ' +
+      'roles do. The target must already be an `owner` of the workspace ' +
+      '(409 `titular_precisa_ser_owner` otherwise). From the commit on, ' +
+      "agent turns look up the NEW owner of record's credential; if they " +
+      'have none for the model provider, the turn ends with the existing ' +
+      '"no credential registered" outcome for that provider — this route does ' +
+      'not check it beforehand. Any `owner` may call it, including for ' +
+      'another owner. Transferring to the current owner of record is a no-op.',
+  })
+  @ApiOkResponse({ type: WorkspaceResponseDto })
+  @ApiConflictResponse({
+    description:
+      '`titular_precisa_ser_owner`: the target is not an `owner` of the ' +
+      'workspace.',
+  })
+  transferOwnership(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentUser() user: User,
+    @Body() dto: TransferOwnershipDto,
+  ) {
+    return this.transferWorkspaceOwnership.execute(
+      workspaceId,
+      user.id,
+      dto.userId,
     );
   }
 
@@ -221,6 +319,15 @@ export class WorkspacesController {
    * `WEB_ORIGIN` direto. `workspaceId` não entra no cálculo de propósito: a
    * base é da INSTALAÇÃO, não do workspace; ele está na rota porque é o que dá
    * escopo ao `RolesGuard`.
+   *
+   * `brokerConfigurado` mora AQUI e não numa rota nova (ADR 0161, RN-573):
+   * é a mesma pergunta — "que modo esta INSTALAÇÃO consegue executar?" —,
+   * feita pelo mesmo chamador (o assistente de criação), no mesmo instante.
+   * `mounted` precisa das DUAS coisas (a base para a pasta existir, o broker
+   * para o container subir, ADR 0144), e `container` precisa do broker. A
+   * fonte é `ContainerBrokerPort.configurado()`, a MESMA que decide se a
+   * leitura do estado observado pergunta ou declara ausência — uma segunda
+   * leitura de `BROKER_URL` seria a segunda fonte que um dia diverge.
    */
   @Get(':workspaceId/projects-base')
   @RequireRole('maintainer')
@@ -232,11 +339,18 @@ export class WorkspacesController {
       'state, never an error — means this installation has no ' +
       '`BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted ' +
       'mode at all. The same value for every workspace: it is installation ' +
-      'configuration, and `workspaceId` only scopes the authorization.',
+      'configuration, and `workspaceId` only scopes the authorization.\n\n' +
+      '`brokerConfigurado` answers the other half of the same question: ' +
+      '`container` and `mounted` only start a container through the broker ' +
+      '(ADR 0144), so without it the wizard does not pre-select Mounted and ' +
+      'offers Runner instead (ADR 0161, RN-573).',
   })
   @ApiOkResponse({ type: ProjectsBaseResponseDto })
   getProjectsBase(): ProjectsBaseResponseDto {
-    return { projectsBase: baseDeProjetos() };
+    return {
+      projectsBase: baseDeProjetos(),
+      brokerConfigurado: this.broker.configurado(),
+    };
   }
 
   /**

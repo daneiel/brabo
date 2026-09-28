@@ -2,7 +2,17 @@
 
 ## Status
 
-**Proposed.** Segunda das duas decisões da
+**Accepted** em 2026-09-27 (AT-108), depois de implementado — o mesmo caminho
+do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md). Nasceu
+`Proposed` na sessão 1 da FASE 30 (2026-09-11) e foi exercitado pelas RN-543..552
+nas sessões 2 a 8 (a E2E em máquina limpa, RN-549, é a prova de ponta a ponta),
+com o fechamento narrado em
+[historico-de-fases.md](../explanation/historico-de-fases.md) e em
+[fase-30-runner-por-maquina.md](../explanation/fase-30-runner-por-maquina.md).
+Onde o texto abaixo diverge do código, a decisão NÃO foi reescrita: a
+divergência está nomeada em "Notas de aceitação", no fim.
+
+Segunda das duas decisões da
 [FASE 30](../explanation/fase-30-runner-por-maquina.md). Depende do
 [ADR 0154](0154-chave-de-dispositivo-de-maquina.md): sem identidade de máquina,
 não há o que registrar aqui.
@@ -149,3 +159,41 @@ por `workspace_create` (RN-532), sem ninguém voltar ao terminal.
   linha *"enquanto os artefatos não forem assinados"* e assinou antes de
   instalar; esta fase fecha a outra ponta — instalar não é entregar bytes, é
   deixar utilizável.
+
+## Notas de aceitação (2026-09-27)
+
+Conferido contra o código na aceitação. A decisão fica como está; estes são os
+pontos em que o texto e o código divergem, e onde o código resolveu:
+
+- **Ponto 2 e Consequences — "a conta nasce verificada, por
+  `provisionarUsuario`", que "ganha um terceiro chamador".** O texto não
+  enfrentou que o script `provisionarUsuario` RECUSA rodar com
+  `NODE_ENV=production` (`apps/api/src/scripts/provisionar-usuario.ts:37`), e
+  o instalador roda exatamente em produção. A resolução foi extrair o núcleo —
+  o trio de escritas que faz a conta nascer verificada — para
+  `ProvisionarUsuarioUseCase`
+  (`apps/api/src/application/use-cases/auth/provisionar-usuario.use-case.ts:43`)
+  e deixar a recusa no SCRIPT, que é quem ela protege (senha conhecida criada
+  sem interação humana). Quem ganhou o chamador novo foi o caso de uso, pela
+  rota da primeira conta
+  (`apps/api/src/application/use-cases/auth/criar-primeira-conta.use-case.ts:85`);
+  o script continua com os dois de antes, seed e smoke, e `BRABO_FORCE_SEED`
+  NÃO é o caminho do instalador (RN-546).
+- **Ponto 4 — por qual credencial a chave de máquina é registrada.** Já
+  detalhado no próprio texto, enquanto `Proposed`: o service token, pela
+  `POST /internal/machine-device-keys` (RN-552). O par nasce no terminal por
+  dois comandos, `brabo-runner device-key create` e `finish --id`, porque o
+  `kid` é o id do registro no servidor e só existe depois dele (RN-551).
+- **Ponto 5 — "não sai com código diferente de zero".** A espera com zero
+  projetos existe (RN-550, que corrigiu a saída com 0 da RN-544 justamente por
+  contrariar este ponto), mas tem teto de DEZ consultas seguidas sem resposta
+  útil, e aí o agente sai com 1 nomeando o número
+  (`apps/runner/src/espera-de-projetos.ts:75`, a saída em
+  `apps/runner/src/index.ts:1547`). Lista vazia não conta como falha — só a
+  api que não responde.
+- **Ponto 5 — "`service status` diz 'de pé, nenhum projeto em modo runner'".**
+  O `status` não sabe de projeto: ele responde do disco e do gerenciador, com
+  os quatro estados da RN-518 (`apps/runner/src/servico.ts:246`), e a unit de
+  máquina esperando aparece como `rodando`. Quem diz "nenhum projeto em modo
+  runner" é o LOG do próprio agente (`apps/runner/src/index.ts:1529`). O ponto
+  de não haver quinto estado se cumpre; o texto atribuído ao `status`, não.

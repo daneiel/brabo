@@ -35,7 +35,16 @@ defmodule Engine.Agents.UxDesignerServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono, UxDesignerTools}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao,
+    UxDesignerTools
+  }
+
   alias Engine.Sessions.EngineApiClient
 
   @agent "ux-designer"
@@ -80,7 +89,13 @@ defmodule Engine.Agents.UxDesignerServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -111,6 +126,14 @@ defmodule Engine.Agents.UxDesignerServer do
   @impl true
   def handle_cast(:cancel, state) do
     {:noreply, TurnoAssincrono.cancelar(state)}
+  end
+
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
   end
 
   @impl true
@@ -214,8 +237,11 @@ defmodule Engine.Agents.UxDesignerServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+
     {text, desfecho} =
-      case run_tool(name, args, state) do
+      case resultado do
         {:ok, s} -> {s, :ok}
         {:error, s} -> {s, :error}
       end
@@ -239,8 +265,12 @@ defmodule Engine.Agents.UxDesignerServer do
   # --- Kickoff ---
 
   defp kickoff_instruction(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} -> build_kickoff(events)
+    # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
+    # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.product_brief"
+         ]) do
+      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Proponha o protótipo navegável (propose_prototype) a partir da conversa."
     end
   end
@@ -268,23 +298,6 @@ defmodule Engine.Agents.UxDesignerServer do
     #{summary}
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

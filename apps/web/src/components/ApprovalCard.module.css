@@ -402,6 +402,19 @@
   color: var(--text-primary);
 }
 
+/* AT-148 (RN-614): o motivo da política e a raiz do escopo — linha de
+   contexto logo abaixo da frase, mais apagada que ela: responde "qual regra
+   decidiu", pergunta de auditoria e não de decisão. */
+.motivoDaPolitica {
+  margin: -6px 0 0;
+  padding: 0 16px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
 /*
  * O colapso. A margem de 16px vai no CABEÇALHO, não no bloco: os corpos ricos
  * (comando, diff, PR) já trazem o próprio `padding: … 16px`, e um padding no

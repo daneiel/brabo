@@ -707,7 +707,7 @@ export interface paths {
         };
         /**
          * Paginates the session's event log for the engine
-         * @description Used to REHYDRATE an agent's conversation history after a restart. The equivalent human route is protected by RBAC; this one, by the service token.
+         * @description Used to REHYDRATE a conversational agent's history and to read the artifacts its kickoff needs. The equivalent human route is protected by RBAC; this one, by the service token. `latest=true` returns the TAIL (still in ascending `seq`) and ignores `afterSeq`; `types` restricts the page to those event types. The page is capped at 200 either way (ADR 0060).
          */
         get: operations["InternalSessionsController_listEvents"];
         put?: never;
@@ -1208,6 +1208,26 @@ export interface paths {
          * @description Does NOT touch the database, on purpose. If it did, a slow Postgres would restart ALL replicas at once and turn degradation into a total outage. The pod is pulled from the load balancer by `/health`.
          */
         get: operations["HealthController_live"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/provider-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists what each LLM provider can do, independent of the model
+         * @description The PROVIDER layer of the capabilities (ADR 0041) for the nine providers, read from the same instances that serve the calls. A capability is only `true` when proven against the real API. The screen reads `routingPreference` from here before offering a routing preference on a binding (ADR 0166).
+         */
+        get: operations["ProviderCapabilitiesController_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2623,7 +2643,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists the project's sessions */
+        /**
+         * Lists the project's sessions
+         * @description Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).
+         */
         get: operations["SessionsController_list"];
         put?: never;
         /**
@@ -2773,7 +2796,7 @@ export interface paths {
         put?: never;
         /**
          * Sends a message to the active agent
-         * @description The response is just the acknowledgment. What the agent replies arrives via the session's event log and the chat SSE — not through this call.
+         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.
          */
         post: operations["AgentsController_message"];
         delete?: never;
@@ -2813,7 +2836,7 @@ export interface paths {
         put?: never;
         /**
          * Answers a set of the agent's structured questions
-         * @description Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once.
+         * @description Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.
          */
         post: operations["AgentsController_submitStructuredQuestionAnswer"];
         delete?: never;
@@ -2853,7 +2876,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the architecture is ready and offers the handoff to Infra
-         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous.
+         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.
          */
         post: operations["AgentsController_handoffInfra"];
         delete?: never;
@@ -3088,7 +3111,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms that the discovery session with the Criativo is done
-         * @description It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log.
+         * @description It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.
          */
         post: operations["AgentsController_readiness"];
         delete?: never;
@@ -3266,7 +3289,7 @@ export interface paths {
         };
         /**
          * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
+         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
         put?: never;
@@ -3376,6 +3399,46 @@ export interface paths {
          */
         post: operations["GitCredentialsController_create"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/machine-device-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the authenticated user's own MACHINE device keys
+         * @description Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: "maquina"`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used.
+         */
+        get: operations["MachineDeviceKeysController_listMachineDeviceKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/machine-device-keys/{deviceKeyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revokes one of the authenticated user’s own MACHINE device keys
+         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
+         */
+        delete: operations["MachineDeviceKeysController_revokeMachineDeviceKey"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3576,10 +3639,32 @@ export interface paths {
         put?: never;
         /**
          * Associates a user with the workspace
-         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall and no route that removes a member, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.
+         * @description Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.
          */
         post: operations["WorkspacesController_addMember"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disassociates a user from the workspace
+         * @description Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none.
+         *
+         *     Removing YOURSELF is refused with 403 and cannot be enabled anywhere: there is no level above to catch the fall. That same clause is what protects the last `owner` — only an `owner` can call this route and nobody removes themselves, so every successful call leaves at least the caller as `owner`. Removing ANOTHER `owner` is allowed — it is how ownership is revoked — except the OWNER OF RECORD (`createdBy`), refused with 409 `criador_do_workspace` until `PUT :workspaceId/owner-of-record` moves it to another owner: the LLM key agents spend and the spend report are theirs. Idempotent: a target without a workspace row still has this workspace's project rows cleared, and gets `204`.
+         */
+        delete: operations["WorkspacesController_removeMember"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3729,6 +3814,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/owner-of-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Transfers the workspace's owner of record
+         * @description The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing "no credential registered" outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op.
+         */
+        put: operations["WorkspacesController_transferOwnership"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/project-folders": {
         parameters: {
             query?: never;
@@ -3781,6 +3886,8 @@ export interface paths {
         /**
          * The base folder for projects in Mounted mode
          * @description The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.
+         *
+         *     `brokerConfigurado` answers the other half of the same question: `container` and `mounted` only start a container through the broker (ADR 0144), so without it the wizard does not pre-select Mounted and offers Runner instead (ADR 0161, RN-573).
          */
         get: operations["WorkspacesController_getProjectsBase"];
         put?: never;
@@ -4972,6 +5079,11 @@ export interface components {
             naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | "sem_container_registrado" | null;
             /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
+            /**
+             * @description Whether THIS INSTALLATION has a container broker configured (`BROKER_URL` set, ADR 0130) — the same value on every row, because it is installation configuration and not a property of the project. `container` and `mounted` projects only start a container through the broker (ADR 0144), so with `false` the page refuses the start button for them BEFORE the click and says why (ADR 0161, RN-574); `runner` projects are unaffected. It says the variable exists, never that the broker answers — that is what `naoObservado` reports.
+             * @example false
+             */
+            brokerConfigurado: boolean;
         };
         ContainerSpecInternalResponseDto: {
             /** @example f52be111-0000-4000-8000-000000000000 */
@@ -6133,6 +6245,27 @@ export interface components {
             content: string;
             toolCalls: components["schemas"]["ToolCallResponseDto"][];
         };
+        LLMProviderCapabilitiesResponseDto: {
+            /** @example true */
+            streaming: boolean;
+            /** @example true */
+            toolCalling: boolean;
+            /**
+             * @description The provider can LIST its own catalog (catalog sync).
+             * @example true
+             */
+            listModels: boolean;
+            /**
+             * @description Text → vector (ADR 0075). Only `true` when proven.
+             * @example false
+             */
+            embeddings: boolean;
+            /**
+             * @description The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count.
+             * @example false
+             */
+            routingPreference: boolean;
+        };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];
             usage: components["schemas"]["LlmUsageResponseDto"];
@@ -6326,6 +6459,12 @@ export interface components {
             scopeId: string;
             /** @example 01JC4Z0000MODELO00000000001 */
             modelId: string;
+            /**
+             * @description How a hub picks the upstream for this binding (ADR 0166, RN-583). `null` = the hub decides on its own. Only ever set for a provider that declares the `routingPreference` capability.
+             * @example null
+             * @enum {string|null}
+             */
+            routingPreference: "price" | "throughput" | "latency" | null;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
             /**
@@ -7253,6 +7392,11 @@ export interface components {
              * @example /home/voce/brabo
              */
             projectsBase: Record<string, never> | null;
+            /**
+             * @description Whether this installation has a container broker configured (`BROKER_URL` set, ADR 0130). `container` and `mounted` projects only start a container through the broker (ADR 0144), and without one every dev agent is blocked forever (ADR 0143). With `false` the project wizard does not pre-select Mounted, keeps Container and Mounted visible but not selectable with the reason in text, and pre-selects Runner (ADR 0161, RN-573). It says the variable exists, never that the broker answers. Installation configuration, like `projectsBase`: the same for every workspace.
+             * @example false
+             */
+            brokerConfigurado: boolean;
         };
         ProjectUnreadEventsResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
@@ -7488,6 +7632,14 @@ export interface components {
              * @example You authorized the same request four times in this window, and none was denied.
              */
             rationale: string;
+        };
+        ProviderCapabilitiesResponseDto: {
+            /**
+             * @example openrouter
+             * @enum {string}
+             */
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            capabilities: components["schemas"]["LLMProviderCapabilitiesResponseDto"];
         };
         ProvisionedRepositoryResponseDto: {
             /** @example 01JC4Z0000REPOSITORIO000001 */
@@ -8081,6 +8233,12 @@ export interface components {
              * @enum {string}
              */
             origin: "workspace" | "project" | "area" | "agent" | "session";
+            /**
+             * @description The routing preference OF THE BINDING THAT WON the cascade (ADR 0166). It never cascades on its own: a skipped level takes its preference with it, and no level inherits only the preference of another.
+             * @example null
+             * @enum {string|null}
+             */
+            routingPreference: "price" | "throughput" | "latency" | null;
             /** @description More specific scopes the cascade discarded before reaching `origin`. Empty on the normal path. */
             skipped: components["schemas"]["SkippedBindingResponseDto"][];
         };
@@ -8401,9 +8559,76 @@ export interface components {
              */
             createdAt: string;
         };
+        SessionListItemResponseDto: {
+            /**
+             * @description The session's ULID.
+             * @example 01JC4Z8QK3M7YV2N5T9B0PXHRA
+             */
+            id: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Who opened the session.
+             * @example 01JC4Z0000USUARIO0000000001
+             */
+            createdBy: string;
+            /**
+             * @description Explicit state machine: created → active → closing → closed | closed_abnormally. An invalid transition responds 409.
+             * @example active
+             * @enum {string}
+             */
+            status: "created" | "active" | "closing" | "closed" | "closed_abnormally";
+            /**
+             * @description The INTENT with which the session was opened, chosen at creation and immutable. `consultiva` (consultative) is conversation only; `criativa` (creative) produces and is the only one that enters execution. Not to be confused with execution state, which remains the `execution.activated` event in the log.
+             * @example criativa
+             * @enum {string}
+             */
+            kind: "consultiva" | "criativa";
+            /**
+             * @description Friendly name, or `null`. Screens compose it with the id's hashtag; it never replaces it.
+             * @example Cart checkout
+             */
+            name: Record<string, never> | null;
+            /**
+             * @description Next `seq` of the event log. Serves as a cursor: `?afterSeq=41` fetches everything after 41.
+             * @example 42
+             */
+            nextSeq: number;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:03:22.187Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:31:09.004Z
+             */
+            updatedAt: string;
+            /**
+             * Format: date-time
+             * @description Only filled in terminal states.
+             * @example null
+             */
+            closedAt: Record<string, never> | null;
+            /**
+             * @description Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.
+             * @example null
+             */
+            terminationReason: Record<string, never> | null;
+            /**
+             * @description W3C `traceparent` of the root span. This is how the whole session is recovered in Tempo.
+             * @example 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+             */
+            traceParent: Record<string, never> | null;
+            /**
+             * @description Whether this is the TECHNICAL session opened by repository provisioning (the one linked from `repo_bootstraps`), as opposed to a work session. It is the link, never the name: renaming the session does not change it. Screens that pick "the most recent session" skip it unless it is the only one.
+             * @example false
+             */
+            technical: boolean;
+        };
         SessionPendingWorkResponseDto: {
             /**
-             * @description There is work that blocks closing due to tab inactivity. Today: an `offered` handoff waiting for acceptance.
+             * @description There is work that blocks closing due to tab inactivity: an `offered` handoff, a `pending` action, an agent mid-turn, a dev agent working or blocked, or a conversational agent waiting for the user (RN-064, RN-581).
              * @example true
              */
             pending: boolean;
@@ -8412,6 +8637,11 @@ export interface components {
              * @example handoff po → arquiteto aguardando aceite
              */
             motivo: Record<string, never> | null;
+            /**
+             * @description Set ONLY when the one thing pending is a conversational agent waiting for the user (RN-581): the instant its turn ended. It is the only pending signal with a ceiling, and the engine applies it (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default 8h) — past it the session closes with `conversation_idle_timeout`. `null` otherwise.
+             * @example 2026-09-18T12:00:00.000Z
+             */
+            aguardandoUsuarioDesde: string | null;
         };
         SessionResponseDto: {
             /**
@@ -8465,7 +8695,7 @@ export interface components {
              */
             closedAt: Record<string, never> | null;
             /**
-             * @description Reason reported by the engine when terminating (heartbeat_timeout, killed, exception…). `null` on a human close or a still-live session.
+             * @description Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.
              * @example null
              */
             terminationReason: Record<string, never> | null;
@@ -8522,6 +8752,12 @@ export interface components {
              * @example 9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b
              */
             modelId: string;
+            /**
+             * @description How a HUB picks the upstream that serves the model (ADR 0166, RN-583). ABSENT keeps the stored value when the new model's provider accepts it, and clears it otherwise; `null` clears it; a value for a model whose provider does not declare the `routingPreference` capability (`GET /llm/provider-capabilities`) is refused with 422. It travels WITH this binding: it never cascades on its own.
+             * @example throughput
+             * @enum {string|null}
+             */
+            routingPreference?: "price" | "throughput" | "latency" | null;
         };
         SetModelsActiveDto: {
             /**
@@ -8913,6 +9149,14 @@ export interface components {
             arguments: {
                 [key: string]: unknown;
             };
+        };
+        TransferOwnershipDto: {
+            /**
+             * Format: uuid
+             * @description Id of the user who becomes the owner of record. Must already be an `owner` of this workspace.
+             * @example 3f1b2c8e-5a4d-4b7e-9c10-2d6f8a1b4c33
+             */
+            userId: string;
         };
         TransitionSessionDto: {
             /**
@@ -10422,6 +10666,10 @@ export interface operations {
                 projectId: string;
                 afterSeq?: string;
                 limit?: string;
+                /** @description Fetches the tail of the log; ignores `afterSeq`. */
+                latest?: string;
+                /** @description Comma-separated event types (at most 20). Only events of these types count toward `limit`. */
+                types?: string;
             };
             header?: never;
             path: {
@@ -11634,6 +11882,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthStatusResponseDto"];
                 };
+            };
+        };
+    };
+    ProviderCapabilitiesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCapabilitiesResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -13668,7 +13949,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
+            /** @description The project has no repository yet (RN-582): the dev agents work in worktrees of it, so nothing starts. The message names what is missing — the handoff to the Architect (or, as a second door, to the Dev Lead) whose acceptance provisions it, or the provisioning page when that handoff was already accepted and left no repository. Also: the origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -16045,7 +16326,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionResponseDto"][];
+                    "application/json": components["schemas"]["SessionListItemResponseDto"][];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -16607,7 +16888,7 @@ export interface operations {
             path: {
                 projectId: string;
                 sessionId: string;
-                /** @description Slug of the active agent. */
+                /** @description Slug of the conversational agent that reads the message: criativo, po, arquiteto, dev-lead, ux-designer or staff. Any other slug — infra included — is refused with 422; it is never delivered to a default agent (RN-584). */
                 agent: string;
             };
             cookie?: never;
@@ -16654,8 +16935,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The agent is not active in this session. */
+            /** @description The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16785,8 +17073,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description This question set has already been answered. */
+            /** @description This question set has already been answered; or the agent is still in the middle of a turn and did not read the answers (ADR 0163). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The agent that asked does not take chat messages — the answers were recorded but NO agent read them (RN-584). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16888,6 +17183,13 @@ export interface operations {
             };
             /** @description Project, session, or handoff not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Arquiteto is still in the middle of a turn — the confirmation was recorded but the closing turn did not start (ADR 0163). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17733,6 +18035,20 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The Criativo is still in the middle of a turn — the confirmation was recorded but the brief did not start (ADR 0163). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Rate limit per user or per IP. */
             429: {
                 headers: {
@@ -18438,6 +18754,80 @@ export interface operations {
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MachineDeviceKeysController_listMachineDeviceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MachineDeviceKeysController_revokeMachineDeviceKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceKeyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Key revoked. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No machine key with this id belongs to the caller (it does not exist, is a project key, or is someone else’s — one answer for all). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19164,6 +19554,62 @@ export interface operations {
             };
         };
     };
+    WorkspacesController_removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Association removed. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not `owner` of the workspace, OR the target is the caller (self-removal cap). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `criador_do_workspace`: the target is the owner of record; transfer it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelBindingsController_getWorkspaceBinding: {
         parameters: {
             query?: never;
@@ -19570,6 +20016,73 @@ export interface operations {
             };
             /** @description Some id in the batch doesn't exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_transferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `titular_precisa_ser_owner`: the target is not an `owner` of the workspace. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -55,11 +55,35 @@ defmodule Engine.Sessions.Rehydrator do
 
     Enum.each(sessions, fn s -> SessionSupervisor.start_session(s.session_id, s.project_id) end)
 
+    fechar_turnos_orfaos(sessions)
+
     # O readiness probe do Kubernetes só libera tráfego depois disto: aceitar
     # heartbeat de alguém reconectando antes da sessão existir de novo é
     # exatamente o que a ordem da árvore de supervisão evita, e o probe
     # precisa de um sinal para afirmar o mesmo.
     Readiness.mark(:sessions)
+  end
+
+  # RN-586: o processo dos conversacionais NÃO é reidratado aqui (sobe quando a
+  # próxima mensagem chega), mas o `agent.status: working` que o turno
+  # interrompido deixou no log continua lá, sem dono. Fecha-se com desfecho
+  # durável, FORA do caminho do readiness — o boot não espera a api — e nunca
+  # reexecutando o turno. Falha aqui é logada; o `init/1` de cada agente repete
+  # a tentativa quando ele for acordado.
+  defp fechar_turnos_orfaos([]), do: :ok
+
+  defp fechar_turnos_orfaos(sessions) do
+    Task.Supervisor.start_child(Engine.TaskSupervisor, fn ->
+      Enum.each(sessions, fn s ->
+        try do
+          Engine.Agents.TurnoOrfao.varrer(s.project_id, s.session_id)
+        rescue
+          erro -> Logger.warning("rehydrator: varredura de turno órfão falhou: #{inspect(erro)}")
+        end
+      end)
+    end)
+
+    :ok
   end
 
   # Só espera se houver um cluster para formar. Sem `DNS_CLUSTER_QUERY`

@@ -66,10 +66,65 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # event log (RN-539: histórico ilegível não prova ausência de artefato,
     # então nada é disparado).
     case Process.get(:fake_events_error) do
-      nil -> {:ok, Process.get(:fake_events, [])}
+      # Os PRIMEIROS 200, como a api devolve para `limit=200` sem `latest` — o
+      # fake devolvia TUDO, e por isso nenhum teste enxergava o corte que a
+      # RN-580 fechou.
+      nil -> {:ok, Enum.take(Process.get(:fake_events, []), 200)}
       reason -> {:error, reason}
     end
   end
+
+  # Leitura COM opções (RN-580) — simula a rota da api sobre `:fake_events`:
+  # filtra por `:types`, aplica `:after_seq`, e corta pelo FIM (`:latest`) ou
+  # pelo COMEÇO, como o repositório faz. Evento sem `"seq"` ganha a posição
+  # (1-based) como seq — é o que o `seq` gapless da api seria.
+  #
+  # Cada chamada é registrada em `:fake_list_events_calls` (dicionário de
+  # processo, NÃO mensagem ao `:test_pid`: testes antigos fazem
+  # `refute_received` amplos e uma mensagem nova os contaminaria).
+  #
+  # Falha: `:fake_events_error` derruba TODA leitura (mesmo contrato da /2);
+  # `:fake_events_error_quando` é uma função `opts -> motivo | nil`, para falhar
+  # só UMA das leituras (a da abertura, a das compactações).
+  @impl true
+  def list_events(_project_id, _session_id, opts) do
+    Process.put(:fake_list_events_calls, Process.get(:fake_list_events_calls, []) ++ [opts])
+
+    erro_seletivo =
+      case Process.get(:fake_events_error_quando) do
+        f when is_function(f, 1) -> f.(opts)
+        _ -> nil
+      end
+
+    case Process.get(:fake_events_error) || erro_seletivo do
+      nil ->
+        eventos =
+          Process.get(:fake_events, [])
+          |> Enum.with_index(1)
+          |> Enum.map(fn {e, i} -> Map.put_new(e, "seq", i) end)
+          |> filtrar_tipos(Keyword.get(opts, :types))
+          |> filtrar_after_seq(Keyword.get(opts, :after_seq), Keyword.get(opts, :latest))
+
+        limite = min(Keyword.get(opts, :limit, 200), 200)
+
+        if Keyword.get(opts, :latest),
+          do: {:ok, Enum.take(eventos, -limite)},
+          else: {:ok, Enum.take(eventos, limite)}
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  defp filtrar_tipos(eventos, [_ | _] = tipos),
+    do: Enum.filter(eventos, &(Map.get(&1, "type") in tipos))
+
+  defp filtrar_tipos(eventos, _), do: eventos
+
+  defp filtrar_after_seq(eventos, seq, latest) when is_integer(seq) and latest != true,
+    do: Enum.filter(eventos, &(&1["seq"] > seq))
+
+  defp filtrar_after_seq(eventos, _seq, _latest), do: eventos
 
   @impl true
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id) do
@@ -557,7 +612,12 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # `SessionServer`, que roda em processo próprio (spawnado pelo supervisor)
     # — um `Process.put` do teste nunca chegaria lá. Default é "nada pendente",
     # para todo teste que não se importa manter o comportamento antigo.
-    {:ok, Application.get_env(:engine, :fake_pending_work, %{pending: false, motivo: nil})}
+    {:ok,
+     Application.get_env(:engine, :fake_pending_work, %{
+       pending: false,
+       motivo: nil,
+       aguardando_usuario_desde: nil
+     })}
   end
 
   @impl true
@@ -573,6 +633,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # teste saber exatamente quando o turno "começou a gastar" — e nunca
     # manda mensagem nenhuma depois: se a task NÃO for morta, o teste que
     # espera silêncio (`refute_receive`) prova a diferença.
+    # `:fake_llm_turn_stream_gate` — o turno PARA aqui até o teste mandar
+    # `:abrir_portao` para a task, e avisa `{:turno_no_portao, task_pid}` antes.
+    # Diferente do `hang`, ele SEGUE depois: existe para o teste controlar o
+    # instante em que a task termina (AT-099 — a ordem entre o fim da task e o
+    # fechamento do turno no GenServer), sem sono nenhum.
+    if Process.get(:fake_llm_turn_stream_gate) do
+      if pid = Application.get_env(:engine, :test_pid),
+        do: send(pid, {:turno_no_portao, self()})
+
+      receive do
+        :abrir_portao -> :ok
+      end
+    end
+
     if Process.get(:fake_llm_turn_stream_hang) do
       if pid = Application.get_env(:engine, :test_pid), do: send(pid, :turno_pendurado)
       Process.sleep(:infinity)
@@ -653,7 +727,12 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       Map.get(por_tipo, action_type) ||
         Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "auto_approved"})
 
-    {:ok, resposta}
+    # `:fake_propose_action_erro` — a api RECUSANDO a proposta (ex.: 409
+    # `sem_broker_na_instalacao`, AT-105), no formato de `post_returning/3`.
+    case Process.get(:fake_propose_action_erro) do
+      nil -> {:ok, resposta}
+      erro -> {:error, erro}
+    end
   end
 
   # RN-423 (ADR 0104) — scriptável via `:fake_confirm_workspace` (padrão

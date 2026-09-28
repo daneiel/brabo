@@ -281,7 +281,7 @@ describe('RunnerOnboardingPanel', () => {
   it('fora do Chromium (sem suporte a escrita de arquivos): mostra "Baixar arquivos" em vez do botão automático', async () => {
     const user = userEvent.setup();
     suportaEscritaDeArquivosMock.mockReturnValue(false);
-    detectarPlataformaMock.mockResolvedValue('darwin-x64');
+    detectarPlataformaMock.mockResolvedValue('darwin-arm64');
     baixarKitManualMock.mockResolvedValue({
       instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
       falhaDoBinario: null,
@@ -299,7 +299,7 @@ describe('RunnerOnboardingPanel', () => {
       expect(baixarKitManualMock).toHaveBeenCalledWith({
         projectId: 'proj-1',
         apiUrl: 'https://api.brabo.example',
-        platform: 'darwin-x64',
+        platform: 'darwin-arm64',
       }),
     );
     expect(
@@ -369,10 +369,11 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
       await screen.findByText(/sua conta já tem máquina pareada: laptop/i),
     ).toBeInTheDocument();
     // O gesto é conferir o serviço na máquina pareada — nunca refazer o
-    // pareamento que ela já tem.
-    expect(
-      screen.getByText('brabo-runner service status --project proj-1'),
-    ).toBeInTheDocument();
+    // pareamento que ela já tem. E o serviço é o da ESPÉCIE (AT-106): chave de
+    // máquina é servida pela unit de MÁQUINA (RN-545), então a pergunta é
+    // `--machine`; a por projeto responderia sobre uma unit que não existe.
+    expect(screen.getByText('brabo-runner service status --machine')).toBeInTheDocument();
+    expect(screen.queryByText(/service status --project/)).not.toBeInTheDocument();
 
     // O caminho do ADR 0118 NÃO é removido: ele fica atrás de um rótulo que
     // nomeia o caso em que ainda é a resposta (BRB-031 é decisão à parte).
@@ -493,6 +494,99 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
 
     await waitFor(() => expect(listRunnerDeviceKeysMock).not.toHaveBeenCalled());
     expect(screen.queryByText(/sua conta já tem máquina pareada/i)).not.toBeInTheDocument();
+
+    cleanup();
+  });
+});
+
+describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-107)', () => {
+  const chaveDeProjeto = {
+    id: 'chave-p',
+    name: 'kit-do-navegador',
+    projectId: 'proj-1',
+    especie: 'projeto' as const,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    revokedAt: null,
+    lastUsedAt: '2026-09-10T08:00:00.000Z',
+  };
+
+  it('chave de projeto ativa: anuncia, custo da espécie é ESTE projeto, parear vira segundo caminho', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeProjeto]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/este projeto já está pareado: kit-do-navegador/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/chave registrada não é agente rodando/i)).toBeInTheDocument();
+    expect(screen.getByText(/derruba o agente local aqui, não nos seus outros projetos/i)).toBeInTheDocument();
+    expect(screen.queryByText(/todos eles/i)).not.toBeInTheDocument();
+    // Chave de PROJETO é servida pela unit do projeto: o comando continua o
+    // por projeto, e o `--machine` não aparece (AT-106).
+    expect(screen.getByText('brabo-runner service status --project proj-1')).toBeInTheDocument();
+    expect(screen.queryByText(/service status --machine/)).not.toBeInTheDocument();
+    expect(screen.getByText(/estou em outra máquina — parear esta também/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('as DUAS espécies ativas: cada bloco oferece o comando da SUA unit, e a espera segue UMA', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([
+      chaveDeProjeto,
+      {
+        ...chaveDeProjeto,
+        id: 'chave-m',
+        name: 'laptop',
+        projectId: null,
+        especie: 'maquina' as const,
+      },
+    ]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/sua conta já tem máquina pareada: laptop/i)).toBeInTheDocument();
+    expect(screen.getByText('brabo-runner service status --machine')).toBeInTheDocument();
+    expect(screen.getByText('brabo-runner service status --project proj-1')).toBeInTheDocument();
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
+
+    cleanup();
+  });
+
+  it('chave de projeto REVOGADA: avisa e o painel volta a mandar parear', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([
+      { ...chaveDeProjeto, revokedAt: '2026-09-11T00:00:00.000Z' },
+    ]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    expect(await screen.findByText(/está revogada/i)).toBeInTheDocument();
+    expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/estou em outra máquina — parear esta também/i),
+    ).not.toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('chave ativa de OUTRO projeto não reconhece este', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    listRunnerDeviceKeysMock.mockResolvedValue([{ ...chaveDeProjeto, projectId: 'proj-2' }]);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    await waitFor(() => expect(listRunnerDeviceKeysMock).toHaveBeenCalled());
+    expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
 
     cleanup();
   });

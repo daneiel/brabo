@@ -75,6 +75,8 @@
     "activationErrorTitle": "Could not tell if execution was already activated.",
     "introReady": "Activate execution for the dev agents to implement the backlog in parallel.",
     "introNeedsModuleMap": "Define the module_map (Architect) before activating execution.",
+    "introNeedsRepository": "This project has no repository yet, and without one the dev agents have nowhere to work. It is created when you accept the handoff to the Architect — or, if that one was already accepted, the handoff to the Dev Lead.",
+    "provisionNow": "Provision the repository now",
     "activate": "Activate execution",
     "devAgentsLabel": "Dev agents",
     "spinningUp": "Spinning up the agents…",

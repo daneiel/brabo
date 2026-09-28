@@ -33,8 +33,35 @@ defmodule Engine.Infra.InfraLeadServer do
   `recusa_local_de_subida/2` lê o projeto UMA vez e cada tool tem a sua
   CLÁUSULA — a ramificação por DESTINO do ADR 0144/RN-503, a mesma que a
   página `/containers` aplica (RN-521): `container`/`mounted` pelo BROKER,
-  `runner` pelo agente local. O que o agente NÃO checa, e a tela checa, é
-  imagem decidida e pasta confirmada — declarado no CLAUDE.md.
+  `runner` pelo agente local. Desde a RN-610 elas também recusam por
+  ESTADO, na ordem da tela: as duas quando o container já está REGISTRADO
+  `running`/`provisioning`; `container_start_via_runner` também sem imagem
+  decidida, com pasta nunca confirmada e sem runner conectado.
+  `propose_container_start` NÃO recusa por imagem: eleger a imagem é o que
+  ela faz (RN-491).
+
+  Desde a RN-577, `propose_infra_pr` também recusa localmente, antes do HALT,
+  quando o projeto não tem repositório (`recusa_de_infra_pr/4`) — o mesmo
+  predicado que `ExecuteInfraPrUseCase` aplica na api, lido do mesmo Postgres.
+
+  ## O sétimo conversacional (RN-617, ADR 0175)
+
+  Desde a RN-617 ele também CONVERSA pelo composer: `message/2` do
+  `EngineWeb.AgentCommandController` tem cláusula própria para `infra`, e a
+  tela o oferece como destinatário quando ele é o agente ativado mais
+  recentemente (RN-584 — sem destinatário padrão). Antes disso o turno dele
+  inteiro rodava DENTRO do `handle_call`/`handle_cast`: o clique esperava o
+  turno (180 s de teto), "Parar" nunca era atendido e o reinício no meio
+  deixava o `working` preso. Agora os três turnos — kickoff, correção de gate
+  e mensagem — sobem por `Engine.Agents.TurnoAssincrono`: o aceite sai com o
+  `agent.status: working` já gravado, a segunda mensagem é 409
+  `turno_em_andamento`, "Parar" mata a Task, o turno órfão fecha por
+  `Engine.Agents.TurnoOrfao` e o histórico vem de `Engine.Agents.Reidratacao`.
+
+  Conversar NÃO abre caminho novo de efeito externo: as ferramentas são as
+  mesmas quatro, e tudo que tem efeito continua nascendo `proposed_action`
+  (a PR de infra e as duas subidas de container, com as recusas locais das
+  RN-566/RN-610/RN-577 intactas).
 
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
@@ -73,17 +100,29 @@ defmodule Engine.Infra.InfraLeadServer do
 
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ArtifactEmitter
-  alias Engine.Projects.Project
+  alias Engine.Projects.{Project, ProjectRepository}
+  alias Engine.Containers.ProjectContainerLifecycle
+  alias Engine.SessionEvents.Event
   # `as: RunnerRegistry`, nunca `Registry` puro: este módulo já usa o
   # `Registry` NATIVO do Elixir/OTP em `via/1` (`{:via, Registry, ...}`) — um
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
   # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
   alias Engine.Runners.Registry, as: RunnerRegistry
-  alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
+  alias Engine.Sessions.EngineApiClient
 
   @agent "infra"
 
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
+  # O teto de iterações do laço do Infra Lead — o de sempre dele, e o mesmo de
+  # Arquiteto, Dev Lead, UX Designer e Staff (raciocínio, não conversa leve).
+  # Continua valendo para os três turnos, a mensagem do composer inclusive.
   @max_iterations 14
 
   # --- API pública ---
@@ -97,6 +136,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
+  # A mensagem do composer (RN-617, ADR 0175). O `handle_call` responde ao
+  # ACEITAR (ADR 0163, RN-578) — o turno roda numa Task de `TurnoAssincrono` —,
+  # então o teto do `GenServer.call` só cobre o aceite, nunca o turno. É o
+  # mesmo número dos outros seis conversacionais, e deixou de competir com os
+  # 225 s do `propose_action` de container (RN-605), que agora corre DENTRO da
+  # Task, sem ninguém esperando síncrono.
   def user_message(session_id, text),
     do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
 
@@ -113,7 +158,13 @@ defmodule Engine.Infra.InfraLeadServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta). Até a RN-617 o Infra Lead ficava de
+    # fora — o turno dele rodava no `handle_call`, sem o `working` gravado
+    # antes do aceite; agora ele passa pelo MESMO `TurnoAssincrono` dos outros.
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -126,22 +177,35 @@ defmodule Engine.Infra.InfraLeadServer do
          ProposeInfraPr.spec(),
          ProposeContainerStart.spec(),
          ProposeContainerStartViaRunner.spec()
-       ]
+       ],
+       # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
+       # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
+       # do turno, e uma segunda mensagem ser RECUSADA com nome em vez de
+       # esperar na fila do processo.
+       turno_assincrono: nil,
+       # Correção de gate (`{:correct, _}`) que chegou com um turno em curso:
+       # guardada e rodada no fecho, na ordem de chegada. Antes da RN-617 o
+       # turno bloqueava o processo e o cast esperava na caixa de mensagens;
+       # sem esta fila o `TurnoAssincrono` a DESCARTARIA (sem `from`, com turno
+       # em curso, ele só loga) — e o gate pediria mudança a ninguém.
+       correcoes_pendentes: []
      }}
   end
 
+  # Os três turnos — kickoff, correção de gate e mensagem do composer — rodam
+  # pelo MESMO `TurnoAssincrono` (RN-617). O kickoff continua sendo um cast
+  # disparado só no start FRESCO; o que mudou é ONDE ele roda: numa Task, e
+  # por isso "Parar" o alcança e uma mensagem que chega no meio dele recebe
+  # 409 `turno_em_andamento` em vez de esperar o turno inteiro na fila.
   @impl true
   def handle_cast(:kickoff, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
+    TurnoAssincrono.iniciar(state, nil, fn ->
       state
       |> append(user_msg(kickoff_instruction(state)))
       |> compact()
       |> run_turn(@max_iterations)
-      |> conclude()
-
-    {:noreply, state}
+      |> concluir()
+    end)
   end
 
   # Gate (QA/SecOps) reprovou (Fase 4a) — corrige na MESMA branch/PR:
@@ -151,9 +215,72 @@ defmodule Engine.Infra.InfraLeadServer do
   # dos dois é "dono" do finding, e `ExecuteInfraPrUseCase` já recommita na
   # mesma PR quando o artefato de sessão já existe (idempotente).
   @impl true
-  def handle_cast({:correct, findings}, state) do
-    broadcast(state, "agent.status", %{status: "working"})
+  def handle_cast({:correct, findings}, %{turno_assincrono: %{}} = state) do
+    {:noreply, Map.update(state, :correcoes_pendentes, [findings], &(&1 ++ [findings]))}
+  end
 
+  @impl true
+  def handle_cast({:correct, findings}, state) do
+    {:noreply, iniciar_correcao(state, findings)}
+  end
+
+  @impl true
+  def handle_cast(:cancel, state) do
+    {:noreply, state |> TurnoAssincrono.cancelar() |> drenar_correcao_pendente()}
+  end
+
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
+  @impl true
+  def handle_call({:user_message, text}, from, state) do
+    work = state |> append(user_msg(text)) |> compact()
+
+    TurnoAssincrono.iniciar(state, from, fn ->
+      work |> run_turn(@max_iterations) |> concluir()
+    end)
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    case TurnoAssincrono.tratar_resultado(msg, state) do
+      # A fila vem do state ANTERIOR à mensagem: o `novo_state` é o que a Task
+      # devolveu, e ela capturou o state do INÍCIO do turno — antes de a
+      # correção chegar e entrar na fila (o mesmo raciocínio do
+      # `handoff_dev_pendente` do Arquiteto).
+      {:ok, novo_state} ->
+        pendentes = Map.get(state, :correcoes_pendentes, [])
+
+        {:noreply,
+         novo_state
+         |> Map.put(:correcoes_pendentes, pendentes)
+         |> drenar_correcao_pendente()}
+
+      :ignorado ->
+        {:noreply, state}
+    end
+  end
+
+  defp drenar_correcao_pendente(%{turno_assincrono: nil} = state) do
+    case Map.get(state, :correcoes_pendentes, []) do
+      [] ->
+        state
+
+      [findings | resto] ->
+        state
+        |> Map.put(:correcoes_pendentes, resto)
+        |> iniciar_correcao(findings)
+    end
+  end
+
+  defp drenar_correcao_pendente(state), do: state
+
+  defp iniciar_correcao(state, findings) do
     instruction =
       user_msg(
         "O gate #{findings.gate} pediu mudanças: #{findings.reason}\n" <>
@@ -164,28 +291,16 @@ defmodule Engine.Infra.InfraLeadServer do
           "os seus arquivos — o Workflows é rerrodado junto e a correção dele entra na mesma PR."
       )
 
-    state =
-      state
-      |> append(instruction)
-      |> compact()
-      |> run_turn(@max_iterations)
-      |> conclude()
+    {:noreply, novo_state} =
+      TurnoAssincrono.iniciar(state, nil, fn ->
+        state
+        |> append(instruction)
+        |> compact()
+        |> run_turn(@max_iterations)
+        |> concluir()
+      end)
 
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call({:user_message, text}, _from, state) do
-    broadcast(state, "agent.status", %{status: "working"})
-
-    state =
-      state
-      |> append(user_msg(text))
-      |> compact()
-      |> run_turn(@max_iterations)
-      |> conclude()
-
-    {:reply, :ok, state}
+    novo_state
   end
 
   # --- Turno com loop bounded de tool use ---
@@ -193,7 +308,18 @@ defmodule Engine.Infra.InfraLeadServer do
   # `{:done, state}` — turno acabou sem propor (sem tool call, ou limite de
   # iterações). `{:proposed, title, files, state}` — o modelo chamou
   # `propose_infra_pr`; o turno HALTS aqui, sem consumir mais iterações.
-  defp run_turn(state, remaining) when remaining <= 0, do: {:done, state}
+  #
+  # O teto (`@max_iterations`, 14) deixou de ser SILENCIOSO na RN-617, a mesma
+  # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
+  # evento nenhum, indistinguível de um turno que simplesmente acabou.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    {:done, state}
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -244,16 +370,23 @@ defmodule Engine.Infra.InfraLeadServer do
           title = Map.get(args, "title", "Dockerfiles e compose de dev")
           files = Map.get(args, "files", [])
 
-          st =
-            append(st, %{
-              "role" => "tool",
-              "content" => "arquivos recebidos, consolidando com o Workflows antes de propor.",
-              "toolCallId" => Map.get(call, "id"),
-              "name" => "propose_infra_pr",
-              :pinned => false
-            })
+          case recusa_de_infra_pr(call, title, files, st) do
+            nil ->
+              st =
+                append(st, %{
+                  "role" => "tool",
+                  "content" =>
+                    "arquivos recebidos, consolidando com o Workflows antes de propor.",
+                  "toolCallId" => Map.get(call, "id"),
+                  "name" => "propose_infra_pr",
+                  :pinned => false
+                })
 
-          {:halt, {:proposed, title, files, st}}
+              {:halt, {:proposed, title, files, st}}
+
+            st_recusado ->
+              {:cont, {:cont, st_recusado}}
+          end
 
         "propose_container_start" ->
           {:cont, {:cont, dispatch_container_start(call, st)}}
@@ -268,6 +401,51 @@ defmodule Engine.Infra.InfraLeadServer do
     |> case do
       {:proposed, _title, _files, _state} = result -> result
       {:cont, state} -> run_turn(state, remaining - 1)
+    end
+  end
+
+  # `propose_infra_pr` sem repositório (RN-577) — `nil` quando o projeto TEM
+  # repositório e o turno segue para o HALT de sempre; o `state` com a recusa
+  # anexada como resultado de ferramenta quando não tem.
+  #
+  # A pergunta vem ANTES do HALT, e não em `abrir_pr/3`, de propósito: depois
+  # do HALT o `finalize/3` já rodou o `WorkflowsAgent` (um laço de LLM inteiro,
+  # pago) e registrou duas delegações `completed` para uma PR que não pode
+  # existir. Recusar aqui não gasta nada, e o laço CONTINUA — o modelo lê o
+  # motivo e segue o turno (RN-163), como nas recusas da RN-566.
+  #
+  # Rastro durável: `tool.call` ANTES da pergunta (o molde da RN-566) e
+  # `tool.result` com `ok: false` e o motivo — sem ele o event log teria a
+  # chamada mas não o porquê. O `tool.call` leva o título e os CAMINHOS, nunca
+  # o conteúdo dos arquivos (que viaja inteiro no payload da proposta quando
+  # ela existe). No caminho que propõe nada muda: a `proposed_action` continua
+  # sendo o rastro dele, como sempre foi.
+  defp recusa_de_infra_pr(call, title, files, state) do
+    case ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") do
+      nil ->
+        nil
+
+      motivo ->
+        caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+        emit(state, "tool.call", %{
+          tool: "propose_infra_pr",
+          args: %{title: title, paths: caminhos}
+        })
+
+        emit(
+          state,
+          "tool.result",
+          ResultadoDeFerramenta.payload("propose_infra_pr", {:error, motivo})
+        )
+
+        append(state, %{
+          "role" => "tool",
+          "content" => motivo,
+          "toolCallId" => Map.get(call, "id"),
+          "name" => "propose_infra_pr",
+          :pinned => false
+        })
     end
   end
 
@@ -295,7 +473,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
 
-    text =
+    resultado =
       case recusa_local_de_subida(:container_start, state.project_id) do
         nil ->
           actor = %{kind: "agent", id: @agent}
@@ -308,24 +486,30 @@ defmodule Engine.Infra.InfraLeadServer do
                  payload
                ) do
             {:ok, %{"id" => _id, "status" => status}} ->
-              "container_start proposto (status #{status}) — decisão final do usuário."
+              {:ok, "container_start proposto (status #{status}) — decisão final do usuário."}
 
             {:error, reason} ->
-              "container_start recusado: #{inspect(reason)}"
+              {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
           end
 
         motivo ->
-          motivo
+          {:error, motivo}
       end
 
-    append(state, %{
-      "role" => "tool",
-      "content" => text,
-      "toolCallId" => id,
-      "name" => "propose_container_start",
-      :pinned => false
-    })
+    registrar_resultado(state, id, "propose_container_start", resultado)
   end
+
+  # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
+  # engine não recebe essa variável, e uma segunda fonte para ela divergiria da
+  # `ContainerBrokerPort.configurado()` da api (AT-105, RN-591). Quem recusa é a
+  # api, ao propor, com 409 `sem_broker_na_instalacao`: a chamada que o laço já
+  # fazia, sem HTTP a mais. Aqui só se devolve ao modelo o TEXTO da recusa, e
+  # não o `inspect` da tupla crua.
+  defp motivo_da_recusa_da_api({status, %{"message" => mensagem}})
+       when is_integer(status) and is_binary(mensagem),
+       do: mensagem
+
+  defp motivo_da_recusa_da_api(reason), do: inspect(reason)
 
   # `container_start_via_runner` (RN-508, ADR 0145) — MESMO desenho de
   # `dispatch_container_start/2` (despacha inline, sem HALT), e desde a
@@ -349,7 +533,7 @@ defmodule Engine.Infra.InfraLeadServer do
       args: %{rationale: rationale}
     })
 
-    text =
+    resultado =
       case recusa_local_de_subida(:container_start_via_runner, state.project_id) do
         nil ->
           actor = %{kind: "agent", id: @agent}
@@ -362,23 +546,18 @@ defmodule Engine.Infra.InfraLeadServer do
                  %{rationale: rationale}
                ) do
             {:ok, %{"id" => _id, "status" => status}} ->
-              "container_start_via_runner proposto (status #{status}) — decisão final do usuário."
+              {:ok,
+               "container_start_via_runner proposto (status #{status}) — decisão final do usuário."}
 
             {:error, reason} ->
-              "container_start_via_runner recusado: #{inspect(reason)}"
+              {:error, "container_start_via_runner recusado: #{inspect(reason)}"}
           end
 
         motivo ->
-          motivo
+          {:error, motivo}
       end
 
-    append(state, %{
-      "role" => "tool",
-      "content" => text,
-      "toolCallId" => id,
-      "name" => "container_start_via_runner",
-      :pinned => false
-    })
+    registrar_resultado(state, id, "container_start_via_runner", resultado)
   end
 
   # `nil` quando a tool PODE propor; mensagem NOMEADA quando não pode — a
@@ -386,53 +565,153 @@ defmodule Engine.Infra.InfraLeadServer do
   # RN-163), nunca `agent.error` nem fim de turno.
   #
   # A leitura do projeto é UMA, comum às duas tools; o que diverge é a
-  # CLÁUSULA de cada uma (`recusa_por_modo/3`). Duas réguas paralelas
-  # divergiriam no primeiro modo novo do enum — e a régua aqui é a MESMA
-  # ramificação por DESTINO do ADR 0144/RN-503 que a página `/containers`
-  # aplica em `acaoDeSubidaDoModo` (RN-521): `container` e `mounted` sobem
-  # pelo BROKER (`container_start`), `runner` sobe pelo agente local
-  # (`container_start_via_runner`).
+  # CLÁUSULA de cada uma. Primeiro o MODO (`recusa_por_modo/2`, RN-566) — é
+  # ele que diz qual das duas tools usar, e responder "falta imagem" a quem
+  # chamou a tool errada apontaria a porta errada —, depois o ESTADO
+  # (`recusa_por_estado/3`, RN-610), na MESMA ordem em que a página
+  # `/containers` recusa em `decidirSubida`: já de pé, sem imagem, pasta
+  # nunca confirmada. A régua de modo é a ramificação por DESTINO do ADR
+  # 0144/RN-503 que a tela aplica em `acaoDeSubidaDoModo` (RN-521):
+  # `container` e `mounted` sobem pelo BROKER (`container_start`), `runner`
+  # sobe pelo agente local (`container_start_via_runner`).
   #
   # As leituras são locais — `Project.get/1` (mesmo padrão de
-  # `Engine.Actions.TerminalExecutor`) e `RunnerRegistry.connected?/1`
-  # (`:global`, alcança runner conectado em QUALQUER nó do cluster) — e
-  # nenhuma bate na api: um HTTP aqui poria uma chamada de rede dentro do
-  # laço do agente.
+  # `Engine.Actions.TerminalExecutor`), `ProjectContainerLifecycle` e
+  # `Event.imagem_decidida?/1` (o mesmo Postgres, direto, como a RN-577 faz
+  # com `project_repositories`) e `RunnerRegistry.connected?/1` (`:global`,
+  # alcança runner conectado em QUALQUER nó do cluster) — e nenhuma bate na
+  # api: um HTTP aqui poria uma chamada de rede dentro do laço do agente. Cada
+  # cláusula é uma função avaliada SÓ se a anterior passou: a primeira recusa
+  # encerra, e as leituras seguintes nem acontecem.
+  #
+  # O que NENHUMA cláusula checa, e por quê: broker ausente na instalação (o
+  # engine não lê `BROKER_URL`; quem recusa é a api, ao propor, com 409
+  # `sem_broker_na_instalacao`, RN-591), e papel/sessão (o agente não é quem
+  # clica; a sessão é a dele).
   defp recusa_local_de_subida(tool, project_id) do
     case Project.get(project_id) do
-      nil -> "projeto não encontrado."
-      %{execution_mode: modo} -> recusa_por_modo(tool, modo, project_id)
+      nil ->
+        "projeto não encontrado."
+
+      projeto ->
+        recusa_por_modo(tool, projeto.execution_mode) ||
+          recusa_por_estado(tool, projeto, project_id)
     end
   end
 
   # `propose_container_start` — o caminho do BROKER. Lista de PERMITIDOS,
   # como a do próprio broker: modo novo no enum nasce RECUSADO com mensagem,
   # nunca proposto por omissão.
-  #
-  # O que esta cláusula NÃO checa, de propósito: imagem decidida. A eleição
-  # de imagem é justamente o que esta proposta FAZ (ADR 0131/RN-491), então
-  # exigi-la antes inverteria a ordem. A `/containers` checa as TRÊS coisas
-  # (imagem, modo, pasta confirmada) porque tem um humano clicando; o agente
-  # checa o MODO — a diferença está declarada no CLAUDE.md.
-  defp recusa_por_modo(:container_start, modo, _project_id) when modo in ~w(container mounted),
-    do: nil
+  defp recusa_por_modo(:container_start, modo) when modo in ~w(container mounted), do: nil
 
-  defp recusa_por_modo(:container_start, "runner", _project_id),
+  defp recusa_por_modo(:container_start, "runner"),
     do:
       "projeto no modo `runner` — o broker nunca alcança a pasta dele (ela " <>
         "mora na máquina do usuário), e o payload desta tool elege uma " <>
         "candidata do roteamento do Arquiteto, que não existe nesse modo. " <>
         "Use `container_start_via_runner`, não esta tool."
 
-  defp recusa_por_modo(:container_start, outro, _project_id),
+  defp recusa_por_modo(:container_start, outro),
     do:
       "projeto no modo `#{outro}` — `propose_container_start` sobe pelo " <>
         "BROKER, que atende só `container` e `mounted` (ADR 0144)."
 
   # `container_start_via_runner` — o caminho do AGENTE LOCAL (RN-508).
-  # Exclusiva de `runner`, e a única das duas que também pergunta pela
-  # presença de um runner conectado: é a metade que só o engine sabe.
-  defp recusa_por_modo(:container_start_via_runner, "runner", project_id) do
+  defp recusa_por_modo(:container_start_via_runner, "runner"), do: nil
+
+  defp recusa_por_modo(:container_start_via_runner, "mounted"),
+    do:
+      "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
+        "como `container`. Use `propose_container_start`, não esta tool."
+
+  defp recusa_por_modo(:container_start_via_runner, outro),
+    do:
+      "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
+        "de `runner`. Use `propose_container_start` (o broker)."
+
+  # As cláusulas de ESTADO de cada tool (RN-610), na ordem da `/containers`.
+  #
+  # `propose_container_start` tem UMA, de propósito: NÃO checa imagem
+  # decidida. A eleição de imagem é justamente o que esta proposta FAZ (ADR
+  # 0131/RN-491), então exigi-la antes inverteria a ordem — a tela checa
+  # imagem para os dois modos porque o botão dela não elege nada.
+  #
+  # `container_start_via_runner` tem QUATRO: ela sobe a imagem JÁ decidida e
+  # não elege nenhuma (`ExecuteContainerStartViaRunnerUseCase` falha sem
+  # ela), precisa de uma pasta que um runner já confirmou, e de um runner
+  # conectado AGORA — a metade que só o engine sabe, e a tela não (ela só
+  # ressalva `runner_pode_estar_desconectado`).
+  defp recusa_por_estado(:container_start, _projeto, project_id) do
+    recusa_ja_de_pe("propose_container_start", project_id)
+  end
+
+  defp recusa_por_estado(:container_start_via_runner, projeto, project_id) do
+    tool = "container_start_via_runner"
+
+    [
+      fn -> recusa_ja_de_pe(tool, project_id) end,
+      fn -> recusa_sem_imagem_decidida(project_id) end,
+      fn -> recusa_pasta_nunca_confirmada(projeto, project_id) end,
+      fn -> recusa_runner_desconectado(project_id) end
+    ]
+    |> Enum.find_value(& &1.())
+  end
+
+  # `ja_esta_de_pe` da `/containers`. A execução não FALHARIA aqui
+  # (`SubirCicloDeVidaDoContainerUseCase` é idempotente sobre
+  # `provisioning`/`running`), mas a proposta gastaria uma decisão humana num
+  # nada — e em `container`/`mounted` pior que nada: elegeria uma imagem nova
+  # (nova versão de `artifact.project_image`) que o container de pé, com a
+  # versão CONGELADA na linha (RN-245), não usaria. Registrado não é
+  # observado (RN-486): o texto diz o que fazer quando o container morreu por
+  # fora, em vez de afirmar que ele está vivo.
+  defp recusa_ja_de_pe(tool, project_id) do
+    case ProjectContainerLifecycle.status_registrado(project_id) do
+      status when status in ~w(running provisioning) ->
+        "o container deste projeto já está REGISTRADO como `#{status}` — " <>
+          "subir não é a próxima ação, e `#{tool}` não foi proposta. O " <>
+          "registro não é observação (RN-486): se o container morreu por " <>
+          "fora, ou se a imagem precisa mudar, diga ao usuário que parar ou " <>
+          "remover é pela página `/containers`; só depois disso uma nova " <>
+          "subida faz sentido. Não repita a chamada agora."
+
+      _ ->
+        nil
+    end
+  end
+
+  # `sem_imagem_decidida` da `/containers` — só para `runner`, pelo motivo
+  # escrito acima de `recusa_por_estado/3`. O predicado é o da api
+  # (`Event.imagem_decidida?/1`).
+  defp recusa_sem_imagem_decidida(project_id) do
+    if Event.imagem_decidida?(project_id) do
+      nil
+    else
+      "nenhuma imagem de container foi decidida para este projeto " <>
+        "(`artifact.project_image`, RN-105) — `container_start_via_runner` " <>
+        "sobe a imagem JÁ decidida e não elege nenhuma, então aprovada ela " <>
+        "só poderia falhar, e não foi proposta. Quem decide a imagem é o " <>
+        "Arquiteto (`choose_project_image`): diga isso ao usuário e não " <>
+        "repita a chamada até haver decisão."
+    end
+  end
+
+  # `runner_nunca_confirmou` da `/containers`: `workspace_verified_at` nulo
+  # quer dizer que nenhum agente local jamais confirmou a pasta (RN-423).
+  # Carimbo não é batimento (RN-468) — por isso esta cláusula não substitui a
+  # seguinte, que pergunta pelo AGORA.
+  defp recusa_pasta_nunca_confirmada(%{workspace_verified_at: nil}, project_id),
+    do:
+      "a pasta deste projeto nunca foi confirmada por um agente local " <>
+        "(`workspace_verified_at` vazio, RN-423) — nenhum `brabo-runner` " <>
+        "jamais conectou a ele, e `container_start_via_runner` não foi " <>
+        "proposta. Peça ao usuário para rodar `brabo-runner --project " <>
+        "#{project_id} --dir <pasta>` na máquina dele: a confirmação " <>
+        "acontece quando o runner conecta."
+
+  defp recusa_pasta_nunca_confirmada(_projeto, _project_id), do: nil
+
+  defp recusa_runner_desconectado(project_id) do
     if RunnerRegistry.connected?(project_id) do
       nil
     else
@@ -442,16 +721,6 @@ defmodule Engine.Infra.InfraLeadServer do
     end
   end
 
-  defp recusa_por_modo(:container_start_via_runner, "mounted", _project_id),
-    do:
-      "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
-        "como `container`. Use `propose_container_start`, não esta tool."
-
-  defp recusa_por_modo(:container_start_via_runner, outro, _project_id),
-    do:
-      "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
-        "de `runner`. Use `propose_container_start` (o broker)."
-
   defp dispatch_tool(call, state) do
     name = Map.get(call, "name")
     args = Map.get(call, "arguments", %{})
@@ -459,15 +728,25 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    registrar_resultado(state, id, name, run_tool(name, args, state))
+  end
+
+  # O desfecho de uma ferramenta despachada inline, nos DOIS lugares de
+  # sempre (RN-593): o `tool.result` durável, montado pelo MESMO módulo dos
+  # seis conversacionais (RN-589) — antes o Infra Lead só gravava o de recusa
+  # de `propose_infra_pr`, com payload próprio, e o reidratado lia "o log não
+  # registra o desfecho" sobre toda chamada de `validate_infra_file` e de
+  # subida de container —, e a mensagem `role: "tool"` que o modelo lê.
+  #
+  # `propose_infra_pr` ACEITA não passa por aqui, de propósito: ela não emite
+  # `tool.call` (o rastro dela é a `proposed_action`, RN-577), e um
+  # `tool.result` sem chamada viraria nota órfã na reidratação.
+  defp registrar_resultado(state, id, name, {_sentido, texto} = resultado) do
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
 
     append(state, %{
       "role" => "tool",
-      "content" => text,
+      "content" => texto,
       "toolCallId" => id,
       "name" => name,
       :pinned => false
@@ -479,24 +758,18 @@ defmodule Engine.Infra.InfraLeadServer do
 
   # --- Conclusão do turno: consolida com o Workflows e propõe (ou bloqueia) ---
 
-  # `agent.status` só aceita "working"/"idle" (`LiveBroadcast.agent_status/4`
-  # — contrato compartilhado com Criativo/PO/Arquiteto, não estendo pra um
-  # terceiro valor). "blocked" descreveria o DESFECHO da rodada, não se o
-  # agente está disponível — o agente terminou o turno de qualquer jeito, e
-  # o desfecho de bloqueio já fica visível pelo evento `dev.error` que
-  # `aplicar/2` emite.
-  defp conclude({:proposed, title, files, state}) do
+  # O fim do turno, DENTRO da Task: consolida com o Workflows e propõe (ou
+  # bloqueia) e devolve o `state` — o contrato de `TurnoAssincrono`. Os sinais
+  # de fim (`agent.done` no canal, `agent.status: idle` no log) NÃO saem daqui:
+  # quem os emite é `TurnoAssincrono.finalizar/1`, no processo do servidor,
+  # depois de o turno sair do state (RN-585). O desfecho de bloqueio fica
+  # visível pelo `dev.error` que `aplicar/2` emite.
+  defp concluir({:proposed, title, files, state}) do
     {_status, state} = finalize(state, title, files)
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
     state
   end
 
-  defp conclude({:done, state}) do
-    broadcast(state, "agent.done", %{})
-    broadcast(state, "agent.status", %{status: "idle"})
-    state
-  end
+  defp concluir({:done, state}), do: state
 
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
@@ -691,23 +964,6 @@ defmodule Engine.Infra.InfraLeadServer do
     """
   end
 
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
-
   # --- Helpers ---
 
   defp compact(state) do
@@ -774,16 +1030,12 @@ defmodule Engine.Infra.InfraLeadServer do
       payload: payload
     })
 
-    Engine.Sessions.LiveBroadcast.event_appended(state.session_id, type, @agent, payload)
+    # O `event.appended` sai da fachada, com a escrita confirmada (RN-579).
+    :ok
   end
 
-  # `agent.status` PRECISA ser persistido, não só broadcastado: o painel do
-  # time deriva o roster do event log buscado por HTTP (ver
-  # Engine.Sessions.LiveBroadcast.agent_status/4 e o ADR 0021).
-  defp broadcast(state, "agent.status", %{status: status}) do
-    LiveBroadcast.agent_status(state.project_id, state.session_id, @agent, status)
-  end
-
+  # O `agent.status` (persistido, ADR 0021) saiu daqui na RN-617: quem o
+  # grava é `TurnoAssincrono`, no aceite (`working`) e no fecho (`idle`).
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
   end

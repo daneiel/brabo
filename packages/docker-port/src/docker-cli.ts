@@ -55,8 +55,8 @@
  *     silêncio na primeira mudança de layout do CLI;
  *   - a versão do CLI é a da máquina do usuário, não uma que o lockfile
  *     congela. Por isso nenhuma flag exótica é usada: `run`, `ps`, `stop`,
- *     `rm`, `inspect` e `exec` com opções que existem desde muito antes das
- *     versões que alguém possa ter.
+ *     `rm`, `inspect`, `image inspect`, `pull` e `exec` com opções que existem
+ *     desde muito antes das versões que alguém possa ter.
  *
  * O broker do lado servidor NÃO herdava esta decisão pela mesma prova — ele
  * roda numa imagem que nós construímos e nunca vira binário standalone, então
@@ -93,8 +93,26 @@ import type {
 export const TIMEOUT_DE_EXEC_PADRAO_MS = 15_000;
 export const TETO_DE_BYTES_PADRAO = 32_768;
 
-/** Teto das chamadas de CONTROLE (`ps`, `inspect`, `run`, `stop`, `rm`), que não são o comando do usuário. */
-const TIMEOUT_DE_CONTROLE_MS = 30_000;
+/**
+ * Teto das chamadas de CONTROLE (`ps`, `inspect`, `image inspect`, `pull`,
+ * `run`, `stop`, `rm`), que não são o comando do usuário.
+ *
+ * O `pull` roda sob ESTE teto, e não sob um próprio, por decisão do mantenedor
+ * (AT-234, opção D): imagem cujo download passa de 30s não sobe por este
+ * caminho, e o desfecho é `PullExcedeuTetoError`, nomeado. A api espelha este
+ * número (`CONTROLE_DO_DOCKER_MS`) e o engine deriva dele o teto do
+ * `container_start` — mudou aqui, muda nos dois (RN-604/RN-605).
+ */
+export const TIMEOUT_DE_CONTROLE_MS = 30_000;
+
+/**
+ * Quantas chamadas de controle o `start` faz no PIOR caso, em série: os dois
+ * `ps` de `resolver` (o gerenciado e o homônimo), o `image inspect`, o `pull`,
+ * o `run` e o `docker version` que `executar` roda quando a última falha, para
+ * nomear a causa. Quem espera o `start` (a api pelo broker, o engine pelo
+ * runner) deriva o próprio teto daqui (RN-605).
+ */
+export const CHAMADAS_DE_CONTROLE_NO_START = 6;
 
 /** Segundos entre SIGTERM e SIGKILL num `docker stop`. */
 const GRACA_DE_PARADA_S = 10;
@@ -154,6 +172,40 @@ export class ComandoDeDockerFalhouError extends Error {
     this.args = args;
     this.exitCode = exitCode;
     this.stderr = stderr;
+  }
+}
+
+/**
+ * O `docker pull` de uma imagem ausente não terminou dentro do teto de
+ * controle (AT-234, RN-605). Erro PRÓPRIO, com `origem: 'infra'`, e não
+ * `ComandoDeDockerFalhouError`: aqui o motivo é CONHECIDO — o daemon estava
+ * vivo (o `docker version` de confirmação respondeu) e o download foi mais
+ * longo que o teto. Antes desta classe, o pull acontecia dentro do `run` e o
+ * estouro chegava como "código -1, sem saída de erro", sem nome e com
+ * `origem: null`.
+ *
+ * O teto NÃO é maior que o de controle, por decisão do mantenedor (opção D):
+ * a mensagem diz a consequência inteira em vez de prometer o que não
+ * acontece. Matar o `docker pull` CANCELA o download (medido no Docker 29.8.0,
+ * containerd) — a imagem NÃO continua baixando por trás.
+ */
+export class PullExcedeuTetoError extends Error {
+  readonly origem = 'infra';
+  readonly imagem: string;
+  readonly tetoMs: number;
+
+  constructor(imagem: string, tetoMs: number) {
+    super(
+      `o \`docker pull ${imagem}\` não terminou dentro do teto de ${tetoMs}ms ` +
+        'e foi cancelado: parar de esperar o CLI cancela o download no daemon, ' +
+        'então a imagem continua ausente. Imagem grande não sobe por este ' +
+        'caminho — limitação declarada (AT-234, RN-605). Baixe-a antes no host ' +
+        `que roda os containers (\`docker pull ${imagem}\`) e tente de novo. ` +
+        'Nenhum container foi criado.',
+    );
+    this.name = 'PullExcedeuTetoError';
+    this.imagem = imagem;
+    this.tetoMs = tetoMs;
   }
 }
 
@@ -286,6 +338,9 @@ export class DockerViaCli extends DockerPort {
       return { containerId: existente.id, nome, jaEstavaDePe: false };
     }
 
+    // O pull, quando há, acontece AQUI, nomeado e sob o teto de controle — e
+    // não dentro do `run`, onde o estouro virava "código -1" sem nome (AT-234).
+    await this.garantirImagem(spec.imagem);
     const criado = await this.executar(this.argsDeCriacao(spec, nome), TIMEOUT_DE_CONTROLE_MS);
     return { containerId: criado.stdout.trim(), nome, jaEstavaDePe: false };
   }
@@ -413,6 +468,40 @@ export class DockerViaCli extends DockerPort {
     return null;
   }
 
+  /**
+   * A imagem está no daemon? Se não, `docker pull` sob o MESMO teto de
+   * controle (AT-234, opção D). Presente é o caso comum e custa um
+   * `image inspect`; tag presente NÃO é re-baixada, que é o comportamento do
+   * próprio `docker run` (`--pull missing`, o default).
+   *
+   * `image inspect` que falha por qualquer motivo leva ao `pull`, sem
+   * classificar a falha: se o daemon está fora, o `pull` também falha e o
+   * `docker version` de `executar` nomeia a causa. Classificar a saída do
+   * `inspect` seria ler mensagem de vendor, que o ADR 0002/0041 proíbem.
+   */
+  private async garantirImagem(imagem: string): Promise<void> {
+    const presente = await this.rodar(
+      ['image', 'inspect', '--format', '{{.Id}}', imagem],
+      TIMEOUT_DE_CONTROLE_MS,
+    );
+    if (presente.exitCode === 0) return;
+
+    const args = ['pull', imagem];
+    const pull = await this.rodar(args, TIMEOUT_DE_CONTROLE_MS);
+    if (pull.exitCode === 0) return;
+    if (pull.timedOut) {
+      // Estourou o teto: antes de afirmar "o pull demorou", confirma que o
+      // daemon está vivo — um daemon travado também estoura, e o conserto
+      // dele é outro.
+      const ping = await this.rodar(ARGS_DE_PING, TIMEOUT_DE_CONTROLE_MS);
+      if (ping.exitCode !== 0) {
+        throw new DockerIndisponivelError(this.endereco, this.causaDe(ping));
+      }
+      throw new PullExcedeuTetoError(imagem, TIMEOUT_DE_CONTROLE_MS);
+    }
+    await this.classificarFalha(args, pull);
+  }
+
   private async listar(filtros: readonly string[]): Promise<LinhaDePs[]> {
     const args = ['ps', '--all', '--no-trunc', '--format', '{{json .}}'];
     for (const filtro of filtros) args.push('--filter', filtro);
@@ -445,7 +534,13 @@ export class DockerViaCli extends DockerPort {
   ): Promise<ResultadoDoCli> {
     const resultado = await this.rodar(args, timeoutMs);
     if (resultado.exitCode === 0) return resultado;
+    return this.classificarFalha(args, resultado);
+  }
 
+  private async classificarFalha(
+    args: readonly string[],
+    resultado: ResultadoDoCli,
+  ): Promise<never> {
     const ping = await this.rodar(ARGS_DE_PING, TIMEOUT_DE_CONTROLE_MS);
     if (ping.exitCode !== 0) {
       throw new DockerIndisponivelError(this.endereco, this.causaDe(ping));

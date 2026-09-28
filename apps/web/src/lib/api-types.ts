@@ -214,6 +214,14 @@ export interface ProjectUnreadEvents {
  */
 export interface ProjectsBase {
   projectsBase: string | null;
+  /**
+   * Esta instalação tem broker de container (`BROKER_URL`)? (ADR 0161,
+   * RN-573). `container` e `mounted` só sobem container pelo broker (ADR
+   * 0144); sem ele o assistente não pré-seleciona `mounted`, deixa os dois
+   * cards inertes com o motivo em texto e pré-seleciona `runner`. Diz que a
+   * variável existe, nunca que o broker responde.
+   */
+  brokerConfigurado: boolean;
 }
 
 /**
@@ -352,6 +360,15 @@ export interface Session {
   updatedAt: string;
   closedAt: string | null;
 }
+
+/**
+ * A sessão como `GET /projects/:projectId/sessions` a devolve: a `Session`
+ * mais o marcador `technical` (RN-592), que sai do tipo GERADO do OpenAPI —
+ * `true` só para a sessão que o provisionamento abriu (o vínculo em
+ * `repo_bootstraps`, nunca o nome). O GET de uma sessão não o carrega.
+ */
+export type SessaoListada = Session &
+  Pick<components['schemas']['SessionListItemResponseDto'], 'technical'>;
 
 export type ActorKind = 'user' | 'agent' | 'system';
 
@@ -558,11 +575,25 @@ export type ModelBindingScope =
   | 'agent'
   | 'session';
 
+/**
+ * O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). Sai do
+ * tipo GERADO do OpenAPI (ADR 0116), não de uma cópia à mão.
+ */
+export type RoutingPreference = NonNullable<
+  components['schemas']['ResolvedBindingResponseDto']['routingPreference']
+>;
+
+/** As capabilities de PROVIDER (ADR 0041), por provider — gerado. */
+export type ProviderCapabilities =
+  components['schemas']['ProviderCapabilitiesResponseDto'];
+
 export interface ModelBinding {
   id: string;
   scope: ModelBindingScope;
   scopeId: string;
   modelId: string;
+  /** Critério do hub gravado NESTE binding (ADR 0166). */
+  routingPreference: RoutingPreference | null;
 }
 
 export interface SkippedBinding {
@@ -574,6 +605,11 @@ export interface SkippedBinding {
 export interface ResolvedBinding {
   modelId: string;
   origin: ModelBindingScope;
+  /**
+   * O critério do binding que VENCEU a cascata (ADR 0166). Não cascateia à
+   * parte: viaja com o modelo, do mesmo nível que `origin`.
+   */
+  routingPreference: RoutingPreference | null;
   /**
    * Escopos mais específicos que a cascata descartou antes de chegar em
    * `origin` (Fase 9c). Vazio no caminho normal; é o que permite a UI dizer
@@ -1400,6 +1436,12 @@ export interface ContainerOverviewItem {
   naoVerificado: MotivoDeNaoVerificacao | null;
   /** A `proposed_action` pendente de container deste projeto, se houver. */
   acaoPendente: ProposedAction | null;
+  /**
+   * Esta INSTALAÇÃO tem broker (`BROKER_URL`)? O mesmo valor em toda linha
+   * (ADR 0161, RN-574): sem ele, `container`/`mounted` não sobem container, e
+   * a tela recusa a subida ANTES do clique dizendo por quê.
+   */
+  brokerConfigurado: boolean;
 }
 
 // --- Aba Code, só leitura (FASE 26) — espelha

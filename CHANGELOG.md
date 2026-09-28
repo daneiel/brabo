@@ -4,6 +4,1218 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **dev**: o compose de DEV (`docker/docker-compose.yml`) passa a ser o projeto
+  Docker **`brabo-dev`** (AT-173, [ADR 0170](docs/adr/0170-compose-de-dev-brabo-dev.md)).
+  Containers `brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…, rede
+  `brabo-dev_default`. Até aqui ele e o compose de INSTALAÇÃO se chamavam os
+  dois `brabo` e eram o MESMO projeto numa máquina com os dois: o banco de uma
+  instalação recebeu uma migration do dev, e o `reset-total.sh` apagaria os
+  schemas dela. A instalação e o compose de produção NÃO mudam.
+
+  **Ação de quem já desenvolve, uma vez:** derrube o stack antigo SEM `-v`
+  (`docker compose -p brabo -f docker/docker-compose.yml --env-file .env down`
+  — só se a máquina não tiver instalação; o preflight diz se tiver). O próximo
+  `pnpm dev` sobe com volumes `brabo-dev_*` VAZIOS: os dados continuam nos
+  `brabo_*`, intocados. Copie-os ou recomece do zero pelo runbook, "Moving a
+  dev environment to brabo-dev"; o preflight AVISA enquanto vir volumes
+  `brabo_*` do dev antigo, e nenhum script apaga volume.
+
+  E o `pnpm dev` (pelo preflight) e o `reset-total.sh` passam a **recusar**,
+  nomeando o que acharam, enquanto houver na máquina container do compose de
+  instalação (qualquer estado, qualquer `-p`) ou se o compose de dev fosse
+  resolver o projeto `brabo` (`COMPOSE_PROJECT_NAME`). Para desenvolver numa
+  máquina com instalação, derrube-a antes SEM `-v` — os dados dela ficam.
+
+- **auth**: `AUTH_TOKEN_PEPPER` passa a ser **obrigatório em produção** e
+  deixa de cair no `AUTH_JWT_SECRET`
+  ([RN-613](docs/business-rules/autenticacao.md#rn-613)). Sem ele a api
+  recusa subir, com a mensagem *"defina com o valor ATUAL de AUTH_JWT_SECRET
+  para não deslogar ninguém"*. O fallback silencioso fazia de toda rotação do
+  JWT uma troca do pepper — todo mundo deslogado, todo PAT morto —, e era o
+  caso de TODA instalação por compose: o `docker-compose.prod.yml` e o
+  `docker-compose.install.yml` nem repassavam a variável (agora repassam).
+
+  **O que o operador faz, ANTES de subir esta versão:** definir
+  `AUTH_TOKEN_PEPPER` com o valor **atual** de `AUTH_JWT_SECRET` — copiar, não
+  gerar um novo. O hash dos tokens fica byte a byte o mesmo, ninguém é
+  deslogado, e daí em diante o JWT pode rotacionar sozinho (runbook, "Auth key
+  rotation": pepper antes, JWT depois).
+  - **Instalação pelo `install.sh`:** rodado na pasta do `.env` anterior, ele
+    faz isso sozinho — lê o `.env` (sem executá-lo), mantém o pepper que já
+    houver ou grava o `AUTH_JWT_SECRET` atual como pepper, e diz no terminal de
+    onde o valor veio, sem imprimi-lo. Instalação nova ganha pepper aleatório
+    próprio.
+  - **Compose de produção com `.env` à mão:** acrescente a linha
+    `AUTH_TOKEN_PEPPER=<o valor de AUTH_JWT_SECRET>`.
+  - **Kubernetes:** nada — o `ExternalSecret` e o `bootstrap.sh` já traziam a
+    propriedade `AUTH_TOKEN_PEPPER`.
+  - **Desenvolvimento:** o compose de dev e o `.env.example` ganham um pepper
+    de dev PRÓPRIO (`dev-auth-token-pepper-change-me`); a sessão local cai uma
+    vez, e é só entrar de novo.
+
+### Novidades
+
+- **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
+  agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
+  [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
+  turno dele migrou para o `TurnoAssincrono` dos outros seis: o clique responde
+  ao aceitar, uma segunda mensagem com turno em curso é recusada com nome
+  (`409 turno_em_andamento`) — inclusive durante o kickoff, que antes a prendia
+  pelo turno inteiro —, "Parar" funciona, o turno que o reinício do engine
+  interrompe fecha com desfecho durável, e o teto de 14 iterações esgotado é
+  narrado. Depois o composer passou a oferecê-lo: quando o Infra Lead é o
+  agente ativado mais recente, a mensagem vai para ele (antes era `422
+  agente_sem_conversa`). Conversar não abre efeito novo: a PR de infra e as
+  subidas de container continuam propostas para aprovação. Correção de gate que
+  chega no meio de um turno espera o fim dele em vez de se perder, e a faixa de
+  atividade narra as quatro ferramentas do Infra Lead.
+- **web**: converter um projeto para o modo Runner deixa de terminar no escuro
+  (AT-143, RN-612). Salvar a conversão monta, na mesma seção de Configurações,
+  o painel de onboarding do runner (o mesmo da aba Código), já para o projeto
+  agora `runner` — reconhecendo a máquina pareada, esperando o runner conectar
+  e dizendo o que o agente de máquina faz: se ele não atende projeto Runner
+  nenhum, pega este sozinho em até 60 s; se já atende outro, só depois de
+  reiniciar o serviço (o comando está na tela). O caminho digitado passa a ser
+  dito provisório — o runner o sobrescreve ao confirmar — e o navegador de
+  pastas segue fora desse ramo, com o motivo em texto.
+- **web**: o aviso da conversão de modo diz as consequências que valem para
+  ESTE projeto, e só elas (AT-144, RN-560): o destino de espelho que será
+  zerado, o container registrado que será removido (só quando o projeto é
+  Container, que é quando a conversão o remove — e "não consegui ler" quando a
+  leitura falha) e a pasta confirmada que deixa de valer, com a data.
+
+- **docs**: o `pnpm docs:check` passa a REPROVAR variável de ambiente sem
+  descrição em `docs/reference/configuration.md`, nas fontes de produto e de
+  ferramenta, mesmo com o inventário gerado em dia (AT-211) — antes, depois de
+  `pnpm docs:generate`, a marca ⚠️ ficava commitada e o check passava. A
+  mensagem nomeia a variável, o arquivo que a lê e a seção onde escrever; uma
+  linha com `TODO(humano)` conta como lacuna declarada e não reprova. As duas
+  variáveis que estavam assim, `HUGGINGFACE_API_TOKEN` e `HUGGINGFACE_HUB_URL`,
+  ganharam descrição (com `HUGGINGFACE_REQUEST_TIMEOUT_MS`, que o inventário
+  não enxerga), e um `TODO(humano)` registra que nenhum compose as repassa ao
+  serviço `api`.
+
+- **ci**: o `release.yml` passa a escanear com Trivy as imagens que PUBLICA,
+  por digest e antes de assiná-las (AT-179, ADR 0172). HIGH ou CRITICAL com
+  correção disponível reprova o release e a imagem não recebe assinatura — com
+  as mesmas flags e o mesmo `.trivyignore.yaml` do `ci.yml`, sem allowlist
+  nova. O que não tem correção é relatado no resumo do job e anexado à Release
+  (`trivy-sem-correcao.md`), sem bloquear. Até aqui a imagem que o instalador
+  baixa era a única que nenhum scan via: o PR escaneia um build local, e a tag
+  constrói outro. Medido contra os digests da `v6.1.0`: `api` e `web`
+  reprovariam hoje por `CVE-2026-45447` (openssl, corrigido em `3.3.7-r1`).
+
+- **web**: a tela passa a dizer QUAL regra de política decidiu uma ação e, em
+  comando de terminal, contra qual raiz do escopo (AT-148, RN-614). A linha do
+  `proposed_action.created` no painel de log da sessão diz o desfecho da
+  política e o motivo; o `ApprovalCard` do chat da sessão e da aba Aprovações
+  ganha a MESMA frase, logo abaixo do que acontece se você aprovar. A raiz é
+  sempre relativa (pasta gerenciada, segmento dentro da base de projetos, nome
+  da pasta na máquina do runner, ou "sem forma relativa"), nunca o caminho
+  absoluto. Ação proposta antes de o motivo ou a raiz irem para o log diz
+  "não registrado", e o card diz quando o evento está fora dos eventos
+  carregados. Em inglês e português.
+
+- **api**: nasce `DELETE /workspaces/:workspaceId/members/:userId` (`owner`,
+  204) — offboarding de membro de workspace deixa de ser escrita no banco
+  (AT-115, [ADR 0173](docs/adr/0173-remocao-de-membro-de-workspace.md),
+  [RN-615](docs/business-rules.md#rn-615)). Remover a SI MESMO é 403, sempre
+  (no workspace não há nível acima para segurar a queda), e é essa mesma
+  cláusula que impede tirar o último owner, sem contar owners. Remover OUTRO
+  owner passa. A remoção leva junto, na mesma transação, as linhas de projeto
+  da pessoa nos projetos do workspace, as chaves de dispositivo de projeto e
+  os PATs dela ali, e depois derruba o runner dela em cada projeto. A frase do
+  403 de auto-rebaixamento no workspace deixou de dizer que não existe rota
+  que remova membro. O TITULAR do workspace (quem o criou, de quem é a
+  credencial que os agentes gastam) não pode ser removido: 409
+  `criador_do_workspace` até a titularidade passar para outro owner pela rota
+  nova `PUT /workspaces/:workspaceId/owner-of-record` (`owner`; destino que não
+  é owner é 409 `titular_precisa_ser_owner`) — [RN-616](docs/business-rules.md#rn-616).
+  A partir da transferência, os agentes gastam a credencial do novo titular;
+  sem credencial para o provider, o turno termina como já terminava
+  ("Nenhuma credencial cadastrada").
+- **docs**: o runbook ganha a tabela *Procedures and how each is verified*
+  (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
+  o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou
+  manual). 24 nomeiam a verificação — várias só em parte, e a célula diz qual
+  parte — e 4 declaram que não há nenhuma (validar uma tag, aumentar a janela
+  de drain, o fallback de sealed-secrets, destravar conta por SQL). Treze
+  procedimentos passam a dizer isso também na prosa. O `pnpm docs:check`
+  confere a tabela e reprova arquivo inexistente, alvo do `make` que sumiu,
+  célula vazia ou "see below", âncora que não é de cabeçalho e workflow que não
+  tem o gatilho que a célula afirma.
+
+- **engine**: o Infra Lead para de propor subida de container que a página
+  `/containers` recusaria (AT-142, RN-610). As duas tools de subida recusam,
+  antes de propor e com o motivo como resultado de ferramenta, quando o
+  container já está registrado `running`/`provisioning`; e
+  `container_start_via_runner` recusa também sem imagem decidida e com a
+  pasta do projeto nunca confirmada por um agente local, além de sem runner
+  conectado (como já fazia). As leituras são locais (mesmo Postgres e
+  registro do engine, sem HTTP no laço). `propose_container_start` continua
+  propondo sem imagem decidida — eleger a imagem é o que ela faz (RN-491).
+
+- **api/web**: a chave de MÁQUINA do agente local ganha listagem e revogação
+  pela CONTA (AT-118, RN-611). `GET /users/me/machine-device-keys` lista só as
+  chaves de máquina do próprio usuário, revogadas incluídas, e
+  `DELETE /users/me/machine-device-keys/:deviceKeyId` revoga (204) com o mesmo
+  efeito da rota por projeto — derruba o agente local em todos os projetos do
+  dono em modo runner; chave de projeto ou de outra pessoa é 404. A tela da
+  Conta (`/account`) ganha a seção "Chaves de máquina", que funciona numa
+  instalação ainda sem projeto — antes, a chave criada pelo instalador era
+  viva e inalcançável ali. Revogar por qualquer uma das telas passa a
+  atualizar todas as listas em que a chave aparece. Registrar uma chave de
+  máquina nova continua revogando a anterior, e a Conta agora mostra isso.
+
+- **api/web**: o "Modo automático" de um agente passa a liberar QUALQUER
+  comando de terminal, inclusive fora da pasta do projeto (AT-226, RN-603,
+  ADR 0167). Com a curinga `"*"` em `auto_approve`, o teto de escopo de
+  caminho (ADR 0055) e o `require_approval` que o comando composto sintetiza
+  por segmento sem regra deixam de pedir aprovação — no `exp001`, 47 de 51
+  pedidos vinham só de citar `/work` ou `/tmp`. Continuam pedindo: push, PR,
+  deploy, `sudo`/`doas`, merge em branch protegida, patch de instrução,
+  paralelismo e remover container; `deny` e `ask` escritos no
+  `permissions.json` seguem valendo, e regra específica do tipo vence a
+  curinga. A nota do `ApprovalCard` (agora também na fila de Aprovações) e o
+  card do agente dizem, antes do clique, o que o modo libera e o que continua
+  pedindo; o toggle "manual" restaura o teto.
+
+- **api**: o evento de sessão `proposed_action.created` de uma ação de
+  `terminal` passa a dizer **qual raiz** o escopo de caminho comparou
+  (AT-147, [RN-609](docs/business-rules.md#rn-609)) — o campo `scopeRoot`,
+  com o modo de execução e um identificador RELATIVO: o `workspace_dir_name`
+  em `container` e `runner`, o segmento sob `BRABO_PROJECTS_BASE` em
+  `mounted` (e `segmento: null` quando a pasta não é exprimível sob a base).
+  **Nunca o caminho absoluto**: o log é lido por todo membro, e em
+  `mounted`/`runner` o caminho traz o `$HOME` do usuário. Aditivo e opcional:
+  eventos antigos e ações de outros tipos seguem sem o campo, o outbox não o
+  carrega, nenhum veredito muda e a tela não muda.
+
+- **api**: a pasta `docs/` dos artefatos dos agentes passa a ter caminho de
+  volta (AT-128, RN-590). `pnpm --filter api artefatos:reprojetar` (na imagem,
+  `node scripts/reprojetar-artefatos.js`, com `--project`/`--after-event`)
+  reescreve a pasta a partir do event log pelo MESMO tradutor do projetor vivo
+  (`ArtifactEventTranslator`, extraído do `ArtifactProjector`), idempotente, em
+  lotes por cursor, sem apagar nada e sem tocar a outbox; falha de escrita é
+  contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
+  entra em backup — é derivada.
+
+### Correções
+
+- **engine (segurança)**: `mint` sobe de 1.10.1 para 1.11.0, que fecha três
+  advisories: EEF-CVE-2026-91043 (GHSA-9x8p-qrf4-jq7g — campos `cookie`
+  indexados por HPACK numa resposta HTTP/2 escapavam de `max_header_list_size`
+  e esgotavam a memória do cliente), EEF-CVE-2026-92103 (GHSA-q95c-ccq6-j5j6 —
+  o cliente HTTP/2 bufferizava frames de até 16 MiB antes de aplicar
+  `max_frame_size`) e EEF-CVE-2026-94194 (GHSA-gvrc-75rc-7gj9 — o cliente
+  HTTP/1 aplicava framing chunked quando `chunked` não era a última
+  transfer-coding, permitindo *response smuggling*). Os advisories reprovavam o
+  job "Auditoria de dependências" (`mix hex.audit`) em todo PR. `hpax` sobe
+  junto de 1.0.4 para 1.1.0 porque o `mint` 1.11.0 exige `~> 1.1`; nenhuma
+  outra dependência muda no `mix.lock`.
+- **ci/k8s**: o `produtor | grep -q x` sob `pipefail` deixa de reprovar sobre
+  um resultado verdadeiro nos outros cinco lugares onde a corrida da AT-241
+  existia (AT-242). O `grep -q` sai na linha que casa, o produtor que ainda
+  escreve morre de EPIPE e a pipeline falha: `bootstrap.sh` via um cluster k3d
+  ou kind que EXISTE como ausente (e o `cluster create` reprovava por nome
+  repetido), `test-restore.sh` contava a mutação PEGA como "reprovou por outro
+  motivo", o `smoke.sh` reprovava um `/metrics` acima de 64 KiB (medido: 260 de
+  300 rodadas a 86 KB), o `build-runner-binaries.yml` reenviava um binário já
+  anexado e o `install-e2e.yml` não enxergava a linha que já estava no journal.
+  A saída agora é lida inteira antes do `grep`, e o produtor que falha de
+  verdade ganha desfecho próprio onde antes virava "não casou". Os demais
+  `| grep -q` do repositório ficam: fora de `pipefail`, ou com produtor que
+  escreve numa vez só (medido por `strace`).
+- **instalação**: a instalação passa a drenar o outbox (AT-219). O
+  `docker-compose.install.yml` herdou do compose de produção
+  `START_OUTBOX_DRAIN=false` e `START_ANAMNESE=false`, com o motivo dele
+  ("existe pra validar as imagens"). Numa instalação, isso deixava o outbox
+  sem NENHUM consumidor: o `OutboxDrainWorker` é o único que entrega ao engine
+  os eventos `session`/`task`/`container` que a api grava. Sessão encerrada pela
+  api não parava o processo nem os agentes conversacionais dela (RN-581). O dev
+  agent que esperava uma decisão de ação, um gate, a PR ou o container chegar em
+  `running` nunca era acordado. A mesma chave agenda a poda de worktrees órfãos
+  e a adoção de sessões sem dono, e as duas também estavam paradas. As duas
+  chaves voltam ao `true` do `runtime.exs` SÓ na instalação; produção e dev
+  ficam como estavam, e o comentário do compose explica a divergência. A
+  Anamnese e o Psicólogo continuam PAUSADOS: `ANAMNESE_ENABLED` e
+  `PSYCHOLOGIST_ENABLED` seguem `false`. Com a flag de produto desligada, o
+  `kickoff/0` da Anamnese não agenda job nenhum, e o `Outbox.Drain` não
+  enfileira o Psicólogo. Nenhuma rodada e nenhum token a mais.
+  `flags-do-engine-no-compose.spec.ts` deixa de declarar a divergência da
+  instalação; ela passa a repetir o default do código.
+- **backup**: `docker/backup/test-restore-compose.sh` deixa de acusar *"o
+  compose não tem serviço 'backup'"* sobre um compose que o tem (AT-241). A
+  checagem era `config --services | grep -qx backup` sob `pipefail`: o `grep`
+  sai na primeira linha que casa, o Compose ainda escrevendo morre de EPIPE
+  (saída 255, stderr vazio) e a pipeline falha — medido em 12 de 480 rodadas
+  sob carga, e visto no CI. A lista agora é lida inteira antes do `grep`, e o
+  Compose que falha de verdade ganha mensagem própria.
+- **k8s**: as variáveis `_PREVIOUS` passam a chegar aos Pods, e a rotação sem
+  janela de `AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN` e `CREDENTIALS_MASTER_KEY`
+  passa a funcionar no cluster (AT-220, metade Kubernetes da RN-595). O
+  `ExternalSecret` de `brabo-secrets` troca as treze entradas de `data:` por
+  `dataFrom.extract` do objeto `brabo`: o ESO não tem chave opcional em
+  `data:`, e listar uma `_PREVIOUS` ali derrubaria a sincronização fora de
+  rotação. Agora ela entra quando existe no store e sai quando é retirada. O
+  custo é declarado no manifesto e no runbook: TODA chave do objeto `brabo`
+  vira variável de api, engine, migrações e backup, e uma chave obrigatória
+  ausente deixou de reprovar a sincronização (quem acusa é o consumidor). O
+  runbook ganhou "Doing it in Kubernetes" (pôr, forçar a sincronização,
+  reiniciar, retirar), e `previous-nos-composes.spec.ts` reprova o
+  `ExternalSecret` sem o `extract` ou com `_PREVIOUS` em `data:`. O overlay
+  local não muda: o `SecretStore` do provider `kubernetes` lê o Secret `brabo`
+  que o bootstrap cria, e o `extract` o traz inteiro.
+
+- **runner**: o binário standalone deixa de prometer o **Mac Intel**
+  (`darwin-x64`) — a matriz de `build-runner-binaries.yml` passa a QUATRO
+  alvos (AT-065, [ADR 0174](docs/adr/0174-runner-sem-binario-darwin-x64.md)).
+  O alvo nunca publicou: `macos-13` não tem runner (24h na fila nas três tags)
+  e, no `macos-15-intel`, o Bun quebra o `onData` do `node-pty`
+  (oven-sh/bun#25822). No Mac Intel o agente local vem do npm
+  (`npm install -g @brabo/runner`, sob Node, onde a mesma prova passa), e as
+  três portas dizem isso: o `install.sh` não tenta mais baixar um binário
+  inexistente e mostra o comando npm, `GET /runner-releases/binary` recusa
+  `darwin-x64` com 400 próprio que aponta o npm (antes: 502
+  `plataforma_nao_publicada`), e o painel do navegador nem pede o download. O
+  `checksums.txt` deixa de anunciar a falta do `darwin-x64` em toda Release.
+- **docs**: os ADRs [0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md) e
+  [0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) passam de
+  `Proposed` a `Accepted` (AT-108), com a FASE 30 fechada e as RN-543..552
+  implementadas. A decisão não foi reescrita: cada um ganhou "Notas de
+  aceitação" nomeando onde o texto diverge do código — no 0154, a listagem e a
+  revogação que precisaram de código, o mínimo de `developer` aplicado por
+  linha e o `install` que recusa as duas espécies juntas; no 0155, o
+  `NODE_ENV=production` do `provisionarUsuario` (resolvido extraindo o núcleo
+  para `ProvisionarUsuarioUseCase`), o teto de dez falhas da espera e o
+  `status` que não sabe de projeto.
+- **docs**: a tradução pt-BR do ADR 0107 deixa de morar órfã sob o número 0104
+  (AT-231) — o arquivo e o título passam a `0107`, e o site pt-BR volta a gerar
+  a página dela. O comentário de `apps/web/src/lib/agente-de-maquina.ts` que
+  citava `0118-configuracao-do-runner-pelo-navegador.md` aponta para o nome
+  real do ADR 0118.
+
+- **k8s**: o cluster local volta a subir, e as provas de propriedade voltam a
+  rodar (AT-200, issue #633, ADR 0169). O destino S3 do backup no overlay
+  local era o MinIO, e a MinIO deixou de publicar a imagem comunitária (o
+  digest preso responde 401 no quay.io; o Docker Hub, 404): o `bootstrap.sh`
+  morria no `rollout status deployment/minio`. O servidor passa a ser o
+  SeaweedFS 4.47 (Apache-2.0), preso pelo digest do índice, na mesma porta
+  9000; os recursos passam a se chamar `s3-local` (o endpoint do backup vira
+  `http://s3-local.brabo.svc.cluster.local:9000`). O cliente (`aws-cli` da
+  imagem `brabo-backup`) e o que `make test-restore` afere não mudam.
+
+- **broker/runner/api/engine**: o pull de imagem que passa do teto de controle
+  deixa de falhar calado (AT-234, RN-605). O `start` da porta de Docker faz o
+  pull como passo explícito (`image inspect`, depois `docker pull` sob o mesmo
+  teto de 30 s) em vez de deixá-lo dentro do `docker run`, e o estouro vira
+  `PullExcedeuTetoError`: diz a imagem, o teto, que o pull foi cancelado e que
+  imagem grande não sobe por este caminho. O broker responde 504 com
+  `origem: 'infra'` (antes: 502, "código -1, sem saída de erro",
+  `origem: null`), e no modo `runner` a mesma mensagem chega no resultado do
+  `container_start`. A imagem grande continua sem subir na primeira tentativa,
+  por decisão declarada: o conserto é baixá-la antes no host. Junto, os tetos
+  de quem espera o `start` passam a contar o pior caso inteiro (os dois `ps`,
+  `image inspect`, `pull`, `run` e o `docker version` de diagnóstico): a api
+  espera 195 s (eram 105 s, e a conta esquecia um `ps`), o `RunnerRouter` do
+  engine 185 s no `start` e 125 s no `stop`/`remove` (eram 60 s), e o
+  `propose_action` do engine, que caía nos 15 s do Req, espera 225 s quando a
+  api executa ali mesmo um `container_start`, `container_start_via_runner` ou
+  `container_stop` auto-aprovado.
+- **api/engine**: comando de terminal com mais de 5 s num projeto
+  `container`/`mounted` com container de pé deixa de falhar como "o broker de
+  container não respondeu" (AT-233, RN-604). O cliente do broker aplicava o
+  teto de 5 s da leitura de tela às cinco operações; agora cada uma tem o
+  dela — `inspect` segue em 5 s, `exec` espera o `timeoutMs` do comando mais
+  a folga do broker, `start`/`stop`/`remove` esperam o pior caso do próprio
+  broker (105 s; 195 s desde a AT-234) —, e o engine, que também cortava aos 15 s do default do
+  Req, espera `timeoutMs` + 90 s. Teto estourado passa a dizer que foi o teto
+  daquela operação (`teto-excedido`), e não que o broker caiu. Continua
+  aberto: pull de imagem de mais de 30 s ainda é cortado pelo broker, e
+  `timeoutMs` acima de ~255 s esbarra nos 300 s do cliente HTTP do Node.
+- **docs**: RN-305 e RN-306 ganham a âncora `{#rn-305}`/`{#rn-306}` que
+  faltava, em inglês e na tradução pt-BR, e o `pnpm docs:check` passa a
+  reprovar cabeçalho de RN sem âncora ou com âncora de outro número, nos três
+  arquivos de RN e nas traduções pt-BR deles (AT-230). Havia 451 cabeçalhos e 449
+  âncoras, e nada reprovava: sem a âncora o site compila com um id tirado do
+  título, e quem quebra é o link `#rn-305` escrito depois.
+- **engine**: reerguer um agente logo depois de ele morrer deixa de depender de
+  o Registry já ter limpado a chave (AT-204). O Registry apaga a chave de forma
+  assíncrona (medido: em ~2% das vezes ela ainda está lá logo depois de
+  `terminate_child/2`). Nessa janela, o `DevRehydrator`, o `GateRescuer` e os
+  supervisores dos dev agents, do QA Lead e do SecOps tomavam o pid morto por
+  vivo e não subiam nada. Agora os quatro só contam como existente um pid VIVO.
+  Os testes passaram a abrir essa janela de propósito, com a limpeza do
+  Registry suspensa, em vez de esperá-la com `sleep`.
+- **engine**: fechar a sessão deixa de registrar como "parado" um agente
+  conversacional que já tinha morrido (AT-204). `Conversacionais.parar_da_sessao/1`
+  listava quem tinha chave no Registry, que pode guardar o pid morto por um
+  instante. Agora a lista só inclui quem essa chamada efetivamente parou.
+- **docs**: o runbook em inglês mostra a saída REAL do `rewrap-deks` (AT-222).
+  O exemplo vinha traduzido (`re-wrapped=`, `already on current key=`,
+  `failures=`), mas o script imprime em português (`re-embrulhados=`,
+  `já na chave atual=`, `falhas=`) — quem procurasse `failures=0` na saída não
+  acharia. O bloco passa a ser o texto de `main()` palavra por palavra, com a
+  glosa dos rótulos ao lado e os dois outros desfechos (`nada a fazer` e o de
+  falha, que sai com código 1); a prosa e a tabela de sintomas usam os rótulos
+  reais.
+- **docs**: 23 links para ADR com o nome de arquivo errado deixam de dar 404
+  (AT-227) — ex.: `0055-politica-de-terminal.md`, que nunca existiu (o ADR é
+  `0055-escopo-de-caminho-na-politica-de-terminal.md`). Estavam em seis ADRs,
+  no índice de ADRs, em `architecture.md`, `business-rules.md`, no runbook (os
+  dois idiomas), em `configuration.md`, `internal-api.md` e no recorte da
+  FASE 30, e dois no site pt-BR (índice de ADRs e regras de negócio) que
+  apontavam para `0104-navegacao-de-pasta-local-via-o-runner.md`, tradução
+  órfã do que hoje é o ADR 0107; nos ADRs só o ALVO do link mudou, nunca o
+  texto. A exceção `adr/`
+  do hook `onBrokenMarkdownLinks` olhava só a FORMA do nome (`NNNN-*.md`) e
+  engolia o slug errado com o build verde; agora o alvo com cara de ADR tem de
+  existir em `docs/adr/`, senão o `docs:build` reprova.
+- **docs**: a RN-201 em pt-BR volta a dizer o que vale (AT-229): o colapso da
+  sidebar é só do usuário desde o ADR 0126, e a tradução ainda descrevia o
+  auto-colapso da aba Código — a RN-195, que dizia o mesmo, acompanhou. As
+  RNs pt-BR foram comparadas com a versão em inglês por título E corpo:
+  dezessete só tinham referência velha (`schema.ts` antes da divisão por
+  agregado, componentes antes de `routes/settings/`, linhas de
+  `SessionPage.tsx`, o default `gemma:1b` que virou `gemma3:1b`) e foram
+  corrigidas; as que mudaram de enunciado (seis em `business-rules.md`, nove
+  em `autenticacao.md`, quatro em `custo.md`) passam a ser listadas na nota do topo de cada página, com link
+  para a versão em inglês. A nota de `autenticacao.md` ganhou a RN-603, que
+  só existe em inglês.
+- **docs**: as regras de negócio em pt-BR dizem o que só existe em inglês
+  (AT-223). Medido: a tradução tem 134 das 282 RNs de `business-rules.md`,
+  91 de 95 em `autenticacao.md` e 69 de 71 em `custo.md` — 154 RNs só em
+  inglês. Cada página pt-BR abre com a nota e a lista, com link para a âncora
+  na versão em inglês (o mesmo molde da AT-209 no runbook). E quatro âncoras
+  pt-BR levavam à regra ERRADA: a tradução numerava 421–424 as regras que o
+  inglês numera 428–431, então `#rn-421` em pt-BR abria outra regra; foram
+  renumeradas para a âncora apontar para a mesma regra nos dois idiomas.
+- **docs**: os links que o site pt-BR reescreve por gap de tradução deixam de
+  dar 404 (AT-221). O hook `onBrokenMarkdownLinks` devolvia
+  `pathname:///pt-BR/<slug>` e o baseUrl do locale acrescentava `/pt-BR` de
+  novo — `href=/brabo/prd/pt-BR/pt-BR/...`, 441 hrefs em 56 páginas, com o
+  `docs:build` verde (`pathname://` pula o checador de link quebrado). A
+  reescrita virou função pura em `scripts/docs/links-do-locale.mjs`, devolve o
+  slug sem prefixo de locale, e o mesmo módulo roda depois do build no
+  `docs-check.yml`, reprovando qualquer `href` com o locale duplicado.
+- **docs**: a referência de scripts gerada passa a listar o `e2e/` (AT-224) —
+  cinco comandos, como `pnpm --dir e2e test`, porque ele é pacote fora do
+  workspace como o `website/` (119 → 124). E um `package.json` que falta ou não
+  parseia deixa de sumir da página em silêncio: `gerarScripts` fazia
+  `catch { continue }`, e agora a geração reprova nomeando o arquivo.
+- **docs**: a referência de scripts gerada passa a listar `apps/runner`,
+  `apps/broker` e `packages/docker-port` (AT-218). `docs/reference/scripts.md`
+  prometia "every pnpm script" e omitia três membros do workspace — 16
+  comandos, de 103 para 119. Os três aparecem com o nome que o `--filter`
+  aceita (`@brabo/runner`, `@brabo/broker`, `@brabo/docker-port`), e a regra
+  `scripts` do docmap passa a observar os `package.json` deles e o do
+  `website/`, que o gerador já lia.
+- **docker**: no compose de dev a api passa a encontrar o broker sem
+  configuração (AT-213, RN-599). `BROKER_URL` ganha o default
+  `http://broker:8090`, o serviço que o próprio compose sobe desde a RN-512 —
+  antes a api respondia `brokerConfigurado: false` com o broker de pé e a
+  criação de projeto só oferecia `runner`. O valor do `.env` continua vencendo,
+  e os composes de produção e de instalação seguem sem default, de propósito.
+- **dev**: `pnpm dev` passa a relatar a pasta gerenciada a cada subida (AT-213,
+  RN-599), no molde do `DOCKER_GID`. Sem `PROJECT_WORKSPACES_HOST_DIR` o broker
+  fica sem `PROJECT_WORKSPACES_HOST_ROOT` e o `container_start` do modo
+  `container` termina recusado com o stack saudável; o relato diz isso, o
+  conserto e que trocar o volume pela pasta não migra o que está nele. Também
+  acusa o `~` (o Compose o expande no bind-mount, não na variável do broker) e
+  uma `PROJECT_WORKSPACES_HOST_ROOT` que diverge da pasta de api/engine. Nunca
+  recusa a subida nem grava o `.env`. O `.env.example` e o getting-started
+  deixam de sugerir `~` no caminho.
+- **docs**: a tradução pt-BR do runbook volta a cobrir as seções de maior
+  risco operacional (AT-209). *Instalando* (com o broker numa instalação) e
+  *Provas de propriedade agendadas* não existiam; as rotações das chaves do auth
+  e da chave mestra estavam atrás do inglês (sem o `key_id` da RN-563, a
+  consulta de progresso, a condição do pepper da RN-597, a RN-598 e as
+  `_PREVIOUS` nos composes); e a *sessão que não sai de `created`* não tinha o
+  `conversation_idle_timeout` da RN-581. O topo da página pt-BR passa a listar
+  as seções que só existem em inglês. Links para RNs que a tradução de
+  `business-rules.md` ainda não tem apontam para a versão em inglês.
+- **web**: criar projeto pela tela deixa de sair em rajada de 400 (AT-215,
+  RN-600). No modo **Runner local**, "Procurar pasta..." criava o projeto com
+  `name`/`slug` vazios quando o nome ainda não tinha sido digitado (o campo fica
+  abaixo do de caminho) e só dizia "Não deu para preparar a navegação de pasta
+  agora" — cada clique era um 400 novo. Agora o botão fica inerte, com o motivo
+  em texto, até o nome ter 2+ caracteres (e o caminho digitado ser absoluto); o
+  "Continuar" também exige o nome que a api aceita; as duas criações travam
+  durante o envio; e a frase da api aparece no passo.
+- **web**: no assistente de projeto, o modo **Runner local** passa a dizer
+  ANTES do clique que "Procurar pasta..." só funciona com o `brabo-runner`
+  rodando na máquina e conectado ao projeto (AT-214, RN-437). A lista vem do
+  agente local por construção (ADR 0108, RN-533), e a tela não dizia isso: quem
+  clicava sem runner via o botão "não funcionar". O aviso, em texto e nos dois
+  idiomas, mostra o comando (`brabo-runner --project <id> --dir <pasta>`) e diz
+  que digitar o caminho no campo é a alternativa.
+- **docker**: seis flags booleanas do engine passam a chegar a ele na
+  **instalação** (AT-202). O `docker-compose.install.yml` não mapeava
+  `START_MODEL_SYNC`, `START_GATE_RESCUE`, `ANAMNESE_ENABLED`,
+  `PSYCHOLOGIST_ENABLED`, `GRAPH_TEMPLATES_ENABLED` e
+  `GRAPH_INSTRUCTION_TEMPLATES_ENABLED`, que dev e produção mapeavam. Por isso
+  virá-las no `.env` de uma instalação não tinha efeito (a classe da RN-540).
+  Elas entram com o default do `runtime.exs`. `scripts/ci/flags-do-engine-no-compose.spec.ts`
+  passa a olhar os três composes e a cobrar o default do código em todos. As
+  duas divergências de produção e instalação (`START_OUTBOX_DRAIN` e
+  `START_ANAMNESE` em `false`) ficam declaradas com o motivo.
+- **docker**: as variáveis `_PREVIOUS` passam a chegar aos containers (AT-201,
+  RN-595). `AUTH_JWT_SECRET_PREVIOUS`, `BRABO_SERVICE_TOKEN_PREVIOUS` e
+  `CREDENTIALS_MASTER_KEY_PREVIOUS` não estavam no `environment:` de compose
+  nenhum — nem no de dev —, e como o Compose não repassa o ambiente do host,
+  as três rotações sem downtime do runbook viravam troca seca do segredo. Agora
+  a api recebe as três e o engine e o broker recebem a do token de serviço, nos
+  composes de dev, de produção e de instalação, com default vazio;
+  `CREDENTIALS_MASTER_KEY_PREVIOUS` entra no `.env.example`, e
+  `scripts/ci/previous-nos-composes.spec.ts` deriva a lista do código e reprova
+  a que faltar. O Kubernetes segue sem elas (o `ExternalSecret` não lista chave
+  opcional), declarado no runbook.
+- **docmap**: a regra `politica-de-branches` deixa de cobrar
+  `branching-policy.md` de todo spec novo de `scripts/ci/` (AT-206). O extglob
+  "tudo menos onze exclusões" virou lista de PERMITIDOS — os catorze scripts
+  que declaram `branching-policy.md` como fonte no docblock, e os specs deles
+  —, e `scripts/docs/politica-de-branches.spec.ts` deriva esse conjunto do
+  repositório e reprova se a regra divergir, então script de política novo
+  continua sendo cobrado.
+- **dev**: o `scripts/dev/reset-total.sh` deixa de morrer DEPOIS do
+  `DROP SCHEMA` por motivo do host (AT-203). Antes de qualquer efeito ele roda
+  `mix deps.get` e `mix compile` em `apps/engine` — `pnpm engine:migrate` roda
+  no HOST, e com dependência nova no `mix.lock` (mint 1.10.1, #613) o reset de
+  26/09 morreu com `lock mismatch` com o banco já apagado — e confere que
+  `drizzle-kit`/`ts-node` resolvem no `node_modules` do host. Também confere a
+  senha do Neo4j contra a do volume (o Neo4j só aplica `NEO4J_AUTH` na criação
+  de `neo4j_data`; medido: volume de 13/09, container de 26/09 com a senha
+  default, healthcheck `unauthorized`) e, se o `up --wait` reprovar por isso,
+  DIZ a causa e o conserto em vez do "RESET INCOMPLETO" genérico — sem apagar
+  volume (AT-181). Recusa antes do primeiro efeito sai como `RESET NÃO
+  COMEÇOU … Nada foi parado nem apagado`. Prova em
+  `scripts/dev/reset-total-ordem.spec.ts`, que roda o script inteiro com
+  `docker`/`mix`/`pnpm` de mentira no PATH.
+- **api**: `BRABO_SERVICE_TOKEN_PREVIOUS` passa pela mesma régua do token
+  atual (AT-205, RN-598). Antes, ele era comparado sem nenhuma validação.
+  Agora o espaço em volta é descartado, e em produção a api recusa subir se o
+  anterior for o default público de desenvolvimento ou tiver menos de 16
+  caracteres. A mensagem nomeia a variável. Continua opcional: fora da
+  rotação, ausente é o normal. O engine e o broker não mudaram (o engine não
+  valida nem o atual; ver a borda da RN-598).
+- **engine**, **broker**: os dois tokens de serviço passam pela MESMA régua da
+  api no engine e no broker (AT-216, RN-601). O engine lia os dois crus no
+  `runtime.exs`: sem trim, sem piso, e em produção subia com o default público
+  de dev quando a variável faltava. Agora, com a release `:prod`, ele recusa
+  subir se `BRABO_SERVICE_TOKEN` faltar, for o literal público ou tiver menos
+  de 16 caracteres depois do trim, e aplica as duas últimas ao
+  `BRABO_SERVICE_TOKEN_PREVIOUS` quando definido; a mensagem nomeia a
+  variável. O broker já fazia isso com o atual e agora faz com o anterior. Fora
+  de produção, nos dois, só o trim (e o engine passa a cair no default de dev
+  com a variável vazia, como a api, em vez de usar a string vazia). Como a
+  migração do engine (`bin/engine eval`) avalia o mesmo `runtime.exs`, o
+  serviço `migrate-engine` dos composes de produção e de instalação passa a
+  receber os dois tokens.
+- **docs**: cinco trechos do runbook que envelheceram ou se contradiziam
+  (AT-199). O "No TTY" do instalador ensinava `sh -c "$(curl …)"`, que a seção
+  "Installing" do mesmo arquivo diz nunca ter funcionado — agora ensina
+  `curl -fsSLO … && bash install.sh`; o "Local deploy" dizia que o seed não é
+  idempotente, e ele é (`seed.ts` reaproveita workspace, projeto e sessão); a
+  órfã do rollout nas provas agendadas dizia "NOT fixed", e a causa provável foi
+  corrigida na RN-588; o "What it does not do" do instalador dizia que ele não
+  pareia o agente local, e desde a RN-547 ele pareia; a tabela de alertas tinha
+  quatro das cinco regras de `brabo-alerts.yaml` (faltava *Backup do Postgres
+  atrasado*) e agora traz o título real, a severidade e o `for` de cada uma.
+- **docker**: o teto da conversa ociosa (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`,
+  RN-581) passa a chegar ao engine na **instalação** (AT-153). O
+  `docker-compose.install.yml` não o mapeava — só os composes de dev e de
+  produção —, e como o Compose não repassa o ambiente do host, mudá-lo no `.env`
+  de uma instalação não tinha efeito. Entra com o mesmo default do código (8h),
+  vai para o `.env.example`, e `scripts/ci/teto-ocioso-nos-composes.spec.ts`
+  cobra a linha nos três composes. O `deploy/k8s/` segue sem ela por decisão,
+  escrita no Deployment do engine: ali a ausência já é o default.
+- **docs**: a rotação dos segredos do auth no runbook passa a dizer como se
+  verifica e o que ela não cobria (AT-196, RN-597). "Trocar o `AUTH_JWT_SECRET`
+  não desloga ninguém" só vale com `AUTH_TOKEN_PEPPER` definido — sem ele o
+  pepper É o `AUTH_JWT_SECRET`, e os dois composes de produção não o repassam à
+  api; trocar o pepper também derruba todo PAT e zera o lockout; o aviso de
+  rotação do JWT sai no primeiro uso, não no boot; e as variáveis `_PREVIOUS`
+  não estão mapeadas nos composes nem no `ExternalSecret`, então defini-las
+  sozinhas não faz nada. Testes novos na api cobrem a coexistência de dois
+  `BRABO_SERVICE_TOKEN` e as consequências do pepper contra o Postgres.
+- **docs**: o passo 3(a) do "Cost incident" do runbook fazia
+  `update agent_autonomy set mode = 'manual'`, e `manual` não existe no enum
+  `permission_policy` (`auto_approve | require_approval | deny`) — reprovava
+  com `invalid input value for enum`, no meio do incidente de gasto (AT-194).
+  Agora é `set mode = 'require_approval' ... and mode = 'auto_approve'`: o
+  filtro impede o update de afrouxar as linhas `deny`. O passo também diz o que
+  NÃO corta (padrão em `allow` no `permissions.json` continua auto-aprovando).
+  Os blocos SQL da seção, nos dois idiomas, passam a rodar contra o schema
+  migrado em `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts`.
+- **sessões**: a web deixa de identificar a sessão técnica do provisionamento
+  pelo NOME (AT-183, RN-592). `GET /projects/:projectId/sessions` devolve
+  `technical` em cada item, pelo vínculo em `repo_bootstraps` — o mesmo critério
+  do resumo do workspace —, e a Visão Geral o lê para escolher a sessão mais
+  recente. Renomear a sessão `git-bootstrap` não faz mais a tela e a api
+  discordarem de qual é a sessão de trabalho.
+- **ci**: `scripts/ci/rollout-evidencia.spec.ts` deixa de estourar os 5s do
+  vitest com a máquina carregada (AT-174). O teste dos coletores somava ~4,5s de
+  relógio fixo (dois `sleep` no teste, a sonda de 2s dos laços, o `sleep 1` de
+  `evidencia_parar`) e reprovou em 2 de 3 rodadas sob carga; agora espera o
+  EVENTO (a linha do pod novo no log, cada PID sumir) e roda em ~0,25s. Na lib,
+  o intervalo dos laços vira `EVIDENCIA_INTERVALO` (default 2s, o de sempre) e
+  `evidencia_parar` espera os dois laços saírem, com teto de 10s dito, em vez de
+  dormir 1s.
+- **docs**: o inventário de variáveis de `configuration.md` deixava de fora os
+  testes do Playwright (`e2e/testes/*.spec.ts`), e uma `process.env.X` nova
+  num deles passava pelo `pnpm docs:check` verde (AT-124, medido por
+  mutação). As fontes do inventário saem de `generate.mjs` para
+  `scripts/docs/fontes-de-env.mjs`, com spec que as prova contra a árvore
+  real; em `e2e/` o filtro de `.spec.` deixa de valer.
+- **web**: o painel do runner, ao reconhecer chave de MÁQUINA pareada, passa a
+  oferecer `brabo-runner service status --machine` — a unit que serve essa
+  chave (RN-545) — em vez do `--project <id>`, que perguntava por uma unit que
+  não existe (AT-106, RN-548). Com chave de projeto, o comando segue o por
+  projeto. O comando continua sendo para PERGUNTAR; a tela não afirma que o
+  agente está de pé.
+- **web**: a árvore do time (tela de Sessão e seção Atividades da sidebar)
+  deixa de aparecer em português para quem usa o app em inglês (AT-134,
+  RN-572). Os rótulos dos marcos, a frase do "agora" e o detalhe de origem
+  passam pelo `react-i18next` nos dois idiomas (`executors:timelineTree.label`,
+  `.now`, `.detail`), e trocar o idioma refaz a árvore. A decisão por tipo de
+  evento continua no código, e a trava da AT-087 segue comparando-a com o
+  engine.
+- **ci**: o `apps/runner` ganha passo de lint no job `Lint` do `ci.yml`
+  (AT-103) — antes não havia lint nenhum na árvore do runner. É o mesmo
+  `oxlint` do web, sem `--fix`, com `correctness` como erro e
+  `--deny-warnings`, provado por mutação (erro plantado em `src/` e em
+  `scripts/` reprova com saída 1). Os dois avisos que ele acusava na `dev`
+  (`no-useless-spread` em `pty.ts`, `no-unsafe-optional-chaining` num spec)
+  entram corrigidos no mesmo PR.
+- **ci**: `apps/broker` e `packages/docker-port` ganham lint (AT-207) — nem
+  script nem passo de CI existiam para os dois. Mesma configuração do runner
+  (`.oxlintrc.json` com `correctness` como erro, `oxlint --deny-warnings`, sem
+  `--fix`), sobre `src/` e os `*.config.ts` da raiz de cada pacote, com um
+  passo cada no job `Lint` do `ci.yml`. Provado por mutação: um `x === NaN`
+  plantado em cada um dos quatro alvos reprova com saída 1. Na `dev` os dois
+  já passavam limpos — nenhum erro a corrigir.
+- **ci**: o ESLint da api passa a verificar também `apps/api/test/` (AT-208)
+  — o passo do job `Lint` rodava só `src/**/*.ts`, e fora dele o passivo
+  chegou a 528 erros e 14 avisos em 98 dos 361 arquivos (medido em 26/09).
+  Zerado por pasta em quatro PRs antes deste (`require-await`, `prettier`,
+  `unbound-method`, `no-unsafe-*`…), só com mudança de tipo e de formato —
+  nenhuma asserção mudou. O passo continua sem `--fix` e com
+  `--max-warnings 0`; provado por mutação (um `require-await` plantado num
+  spec reprova com saída 1).
+- **api**: os três `no-unsafe-assignment` de
+  `projects-summary.repository.spec.ts` saem (AT-188). O passo de lint do CI
+  não os via porque verifica só `src/**/*.ts`: `apps/api/test/` inteira fica
+  fora dele, e ela acusa 528 erros em 95 arquivos além desses três (medido,
+  não corrigido aqui). O script `lint` do `package.json` cobre `test/`, mas
+  não é o que o CI roda.
+- **ci**: o smoke das imagens de produção passa a chamar também
+  `GET /internal/gates`, com o service token (AT-109). A rota lê o mesmo
+  loader do `GET /gates` e sofria do mesmo 500 corrigido no AT-086, mas nenhum
+  smoke a chamava. As duas rotas passam pela MESMA checagem de corpo
+  (`checar_registro_de_gates`, que reprova o 500, a lista vazia e o registro sem
+  `merge-protegida`), provada sem stack por `scripts/ci/smoke-gates.spec.ts`.
+  O token chega ao `curl` pelo stdin (`--config -`), nunca pelo argv nem pelo
+  log.
+- **docs**: cinco números em prosa sobre o próprio repositório estavam errados
+  e nada os aferia (AT-123): o README dizia "nove schemas" (são onze), "dez
+  abas" (doze) e "build das três imagens" no CI (cinco); o `CONTRIBUTING.md`
+  pedia a provider novo "as doze operações" (são quinze); o glossário dava
+  "Thirteen types" de `proposed_action` (vinte e um). Corrigidos, e 27 frases
+  numéricas passam a ser DERIVADAS do código pelo `pnpm docs:check`
+  (`scripts/docs/contagens-do-codigo.mjs`, cada extrator provado por mutação):
+  overrides, golden-set do RAG, imagens de terceiro, contrato de git, porta de
+  Docker, abas, serviços do compose de dev, tipos e estados de ação, tabelas,
+  schemas e providers. As contagens de arquivos por app em `architecture.md` e
+  as "seis rotas" do broker passaram a ser DATADAS (2026-09-25).
+- **docs**: o `THIRD_PARTY_NOTICES.md` dizia "quatro imagens" e são cinco; a
+  contagem passa a ser derivada de `ALVOS` no `docs:check` (AT-123).
+- **api/web/engine**: a conversão de modo, parar/remover e o Infra Lead também
+  dizem que a instalação não tem broker (AT-105, RN-591). A conversão para
+  `container`/`mounted` fica inerte com o motivo em texto quando a ausência do
+  broker é CONFIRMADA ("não sei" não bloqueia); "Parar"/"Remover" na
+  `/containers` ficam inertes em `container`/`mounted`; e a api recusa com 409
+  `sem_broker_na_instalacao` a proposta de `container_start`/`_stop`/`_remove`
+  nesses modos — o Infra Lead lê o texto da recusa como resultado da
+  ferramenta, sem HTTP a mais no laço.
+- **sessão (canal)**: a escrita que a api faz por conta própria — a decisão de
+  um humano noutra aba, uma transição de sessão, o chat respondido pela api —
+  também avisa o canal da sessão (AT-157, RN-579). Antes o `event.appended` só
+  saía das escritas do engine, e essas chegavam à tela pelo fallback de 15s;
+  agora a api pede ao engine (`POST /internal/sessions/:id/event-appended`,
+  rota nova, interna) o mesmo aviso, só com tipo e ator, DEPOIS do commit e
+  nunca para escrita recusada ou desfeita. Escrita vinda do engine não é
+  avisada em dobro. O teto de 300 req/min não muda e o fallback continua.
+
+- **engine**: o Dev Lead que suspende numa aprovação e o Infra Lead passam a
+  gravar o `tool.result` com o texto, pelo mesmo módulo dos seis (AT-190,
+  RN-593). O Dev Lead grava na RETOMADA (`action_settled`), com o texto que o
+  modelo lê e `ok: false` para recusa ou falha — nunca "pending" na suspensão.
+  O Infra Lead grava para `validate_infra_file`, `propose_container_start` e
+  `container_start_via_runner`, aceitas ou recusadas; antes só a recusa de
+  `propose_infra_pr` deixava resultado, e o agente reidratado não sabia o
+  desfecho das outras.
+- **engine**: o texto que a ferramenta devolveu entra no `tool.result` dos seis
+  conversacionais (AT-151, RN-589). Só o Criativo gravava o evento, e sem o
+  texto; agora Criativo, PO, Arquiteto, Dev Lead, UX Designer e Staff gravam
+  `resultado` (ou `erro`), cortado em 2.000 caracteres com `resultadoTotal`
+  dizendo o tamanho real, e o agente reidratado o lê. Campo aditivo, sem
+  migration; sessão antiga segue sem o texto. `propose_adr` deixa de gravar o
+  próprio `tool.result` de recusa (o servidor o grava).
+- **docker (dev)**: o volume novo de `node_modules` deixa de nascer `root` e de
+  derrubar a `api` e a `web` com `EACCES: mkdir '/workspace/node_modules/.pnpm'`
+  (AT-172). Os Dockerfiles de dev das duas criam e dão dono aos três pontos de
+  montagem antes do `USER` — o mesmo remédio das linhas de `/data` — e o
+  `preflight.mjs` cria, como o usuário, as pastas correspondentes DENTRO do
+  checkout (o Docker as criava no host como root, ex.:
+  `packages/shared/node_modules`). Provado do zero, com volumes inexistentes e
+  sem `chown` à mão. Só aparece com volume inexistente: `reset-total.sh` não
+  remove esses volumes e o escondia.
+- **dev**: o `reset-total.sh` passa a DIZER, no começo e ao lado da frase de
+  sucesso, que não remove nem recria volume nenhum — e que por isso não
+  reproduz um primeiro clone (AT-181). O comportamento não muda (ele nunca
+  tocou volume); a tela de confirmação do `pnpm bootstrap` diz o mesmo, um
+  spec reprova linha executável do script que apague volume, e o runbook
+  ensina a provar o caminho de volume novo num projeto compose descartável.
+  Medido por esse caminho (AT-182): os volumes do engine (`_build`, `deps`,
+  `.mix`, `.hex`) já nascem com o dono `DEV_UID:DEV_GID` — nada a corrigir ali.
+- **sessões**: a sessão `git-bootstrap` deixa de virar a "mais recente" do
+  projeto (AT-131). O resumo do workspace e a Visão Geral ordenam a sessão de
+  provisionamento depois das de trabalho — ela só é a mais recente quando é a
+  única. E o 409 de `execution/activate` sem repositório deixa de mandar aceitar
+  um handoff que mora em sessão encerrada (o aceite ali é recusado, RN-581): a
+  frase diz que a sessão está encerrada e aponta a página de provisionamento.
+  RN-582 revisada, sem ADR novo.
+- **ci**: o build das imagens de produção deixa de reaproveitar uma camada de
+  `apk upgrade` congelada em cache (AT-110). O `docker-bake.hcl` passa
+  `no-cache-filter = ["runtime"]` ao alvo base dos cinco `Dockerfile.prod`, e o
+  Trivy do PR volta a escanear o que a tag publicaria; o cache dos estágios de
+  build continua. Custo: ~7–9 s por imagem, em paralelo. Não muda o que o
+  `release.yml` faz, e ele segue sem Trivy (AT-179).
+- **engine (segurança)**: `mint` sobe de 1.10.0 para 1.10.1, que fecha o
+  advisory EEF-CVE-2026-82672 (GHSA-rj5m-69wp-cxq9, MEDIUM): o cliente HTTP/1
+  aceitava lixo depois do tamanho do chunk, o que permitia *response smuggling*
+  contra intermediários estritos numa conexão reaproveitada. O advisory
+  reprovava o job "Auditoria de dependências" (`mix hex.audit`) em todo PR
+  desde 19/09; só `mint` mudou no `mix.lock`.
+- **engine**: o workspace cujo **`fetch` inicial falhou deixa de ser marcado
+  pronto na tentativa seguinte** (AT-112). `ensure!` cria o `.git` na primeira
+  linha da inicialização, e o ramo de "workspace de antes da marca" o tomava por
+  um repositório utilizável — a segunda tentativa falhava adiante, no `worktree
+  add`, longe da causa. Agora a inicialização que falha (qualquer passo, nos
+  caminhos local e `runner`) desfaz o `.git` que criou e relança a exceção
+  original, então a tentativa seguinte repete o mesmo erro
+  ([RN-558](docs/business-rules.md#rn-558)).
+- **web**: a tela **trata o 409 de conversa em sessão encerrada** e o botão
+  **Encerrar** fica inerte nos dois estados terminais (AT-154, AT-155). Enviar
+  mensagem, responder pergunta estruturada e confirmar prontidão numa sessão que
+  fechou por baixo mostravam o erro genérico; agora a tela reconhece o
+  `reason: "sessao_encerrada"`, diz que a sessão foi encerrada, refaz a leitura
+  dela (o composer some) e mantém o texto digitado. O botão "Encerrar" só
+  desabilitava em `closed` e, em `closed_abnormally`, devolvia 409 ao clique
+  ([RN-581](docs/business-rules.md#rn-581)).
+
+- **engine**: o Infra Lead e o parecer de implementabilidade do Dev Lead leem
+  a **cauda** da sessão, não o começo (AT-150). `InfraLeadServer` reidratava
+  por uma cópia antiga que lia os primeiros 200 eventos e só reconstruía
+  mensagens — passa a usar `Reidratacao.historico/3` (RN-580) — e
+  `DevLeadTools.run_assessment/2` passa a pedir os 200 mais recentes, então o
+  plano de teste emitido depois do 200º evento é encontrado em vez de pedir
+  QA-estratégia de novo.
+- **deploy**: o `bootstrap.sh` **diz o que viu quando o pod `seed-smoke` não
+  chega a `Succeeded`** (AT-176). A fase durava sempre 3m00s (o
+  `--timeout=180s` estourando, escondido por `|| true`); agora a saída registra
+  quanto o wait levou e, se ele falhar, a fase do pod, o estado do contêiner e o
+  fim do log. É só instrumentação: a hipótese de o seed não terminar por falta
+  de `process.exit` NÃO se confirmou localmente (termina sozinho, exit 0, em
+  ~2s), e o `|| true` fica, com o motivo escrito no script. A economia é a
+  confirmar em CI.
+- **web**: o painel do runner **reconhece chave de PROJETO já pareada**
+  (AT-107). Quem pareou o projeto pelo navegador e voltava à tela era mandado a
+  parear de novo — o defeito irmão do de máquina, um escopo abaixo. Agora o
+  painel lê a mesma listagem de chaves, reconhece a chave ativa deste projeto
+  (nunca a de outro, nunca a revogada), diz que chave registrada não é agente
+  rodando e que revogá-la derruba o agente só neste projeto, e recolhe o
+  pareamento num `<details>`. Nenhuma rota nova
+  ([RN-548](docs/business-rules.md#rn-548)).
+- **api**: a sugestão de paralelização deixa de contar módulo cujo dev agent
+  está bloqueado (AT-104). `execution.parallelization_suggested` só é emitida
+  na ativação quando o projeto tem container `running` registrado — o mesmo
+  predicado do engine para `dev.blocked_by_container`
+  ([RN-502](docs/business-rules.md#rn-502)); sem ele, "há tasks pegáveis" não
+  é capacidade, e pedir +1 agente só multiplicava os bloqueados. O teto de
+  `parallelize`/`raise_max_parallel` (RN-154) não muda. Custo declarado: a
+  sugestão não é refeita quando o container sobe depois da ativação.
+- **instalador**: a **prova de restauração da migração deixa de reprovar por
+  ambiente** (AT-102). `test-restore-compose.sh` chamava o Compose sem
+  `--env-file` (o `.env` da instalação fica uma pasta acima do compose) e, além
+  disso, o compose de instalação não declarava o volume `backup_local` que o
+  serviço `backup` usa, o que invalidava o arquivo inteiro assim que o profile
+  ligava. Agora o `install.sh` passa `BRABO_ENV_FILE` e o volume existe; a
+  garantia da RN-530 segue igual (backup não provado, nada apagado).
+
+- **engine**: a mensagem que **nenhum agente leu deixa de parecer entregue no
+  fio** (AT-132). As recusas 409 (turno em andamento, plano aguardando
+  aprovação) já gravavam `agent.error` ao lado do `chat.message`; as três
+  recusas 422 da rota de mensagem (`agente_sem_conversa`, `mensagem_sem_texto`,
+  `agente_ausente`) não, e a explicação sumia com o toast. Agora o engine grava
+  o `agent.error` (origem `politica`, a mesma frase do 422) e o transmite. A
+  api segue sem validar o `agent`: a recusa do engine é o único mecanismo
+  ([RN-587](docs/business-rules.md#rn-587)).
+
+- **engine**: o turno **interrompido pelo reinício do engine fecha com desfecho
+  durável** (AT-156). O `agent.status: working` é gravado antes do aceite, e o
+  fim do turno só sai do processo do agente; com o engine reiniciado no meio, o
+  último status ficava `working` para sempre — a faixa de atividade da tela não
+  saía e a sessão contava trabalho pendente sem teto, então não fechava por
+  heartbeat. Agora, no boot (para toda sessão reidratada) e na subida de cada um
+  dos seis conversacionais, o `working` sem turno vivo em nenhum nó do cluster
+  ganha um `agent.error` de origem `infra` que diz o que houve, seguido de
+  `agent.status: idle`. O turno **não** é refeito. O Infra Lead segue de fora
+  ([RN-586](docs/business-rules.md#rn-586)).
+
+- **ci**: o `@dependabot rebase` **deixa de cancelar a justificativa do bot**
+  (AT-100). O rebase emite `synchronize` e `edited` no mesmo segundo; o
+  `concurrency` cancela um, e quando o sobrevivente era o `edited` o passo que
+  escreve `docs-not-needed:` era pulado e o drift reprovava (#578, runs
+  `35412983999`/`35412984299`). O passo agora também avalia em `edited` quando
+  o editor é o próprio Dependabot (`editorPodeAvaliar`, testada); edição de
+  humano continua sem avaliar, e autor humano continua sem justificativa.
+  Falha fechado, sem laço (o token do workflow não dispara `edited`).
+
+- **engine**: o rollout **deixa de produzir sessão sem dono** (AT-078). O
+  `Monitor` do pod antigo apagava a linha de `session_states` quando o `:DOWN`
+  da sessão repassada chegava — depois de o par tê-la regravado —, e a sessão
+  ficava com dono e sem linha, invisível à adoção e ao drain do par. O drain
+  agora marca o repasse (`Monitor.expect_handoff/1`) e o Monitor não apaga a
+  linha de quem foi repassado; cada apagamento do Monitor passou a deixar uma
+  linha de log com sessão e nó. Provado por teste determinístico do
+  entrelaçamento, não pelo k3d ([RN-588](docs/business-rules.md#rn-588)).
+
+- **web**: a aba Executores **deixa de perder (ou forjar) os dev agents quando
+  existe uma sessão mais nova** (AT-130). `executionActivated` era lido do
+  resumo sem a guarda de sessão da RN-568; agora passa por ela e soma à janela
+  ([RN-568](docs/business-rules.md#rn-568)).
+- **engine/api**: uma mensagem de chat **deixa de ser entregue ao Criativo
+  quando era para outro agente** (AT-098). A última cláusula da rota interna
+  de mensagem não olhava o agente, então o que fosse escrito para o `infra` —
+  ou para qualquer nome sem cláusula própria — era lido pelo Criativo, com 202
+  e resposta no fio. Agora cada agente que conversa tem cláusula própria, e
+  todo o resto recebe **422** nomeado (`agente_sem_conversa`,
+  `agente_ausente`, `mensagem_sem_texto`) com uma frase que a tela mostra; o
+  Infra Lead tem frase própria, porque ele trabalha por proposta e não
+  conversa pelo chat. O "Parar" sem agente também deixa de parar o Criativo
+  por padrão. A OpenAPI documenta o 422 em `POST …/agents/:agent/message` e na
+  resposta ao formulário de perguntas. A tela não muda: ela já não oferecia o
+  `infra` no composer ([RN-584](docs/business-rules.md#rn-584)).
+
+- **engine/api**: a sessão **deixa de expirar no meio de uma conversa, e a
+  sessão encerrada deixa de aceitar conversa** (AT-072). O heartbeat fechava a
+  sessão 30s depois de a aba parar mesmo com o Criativo esperando resposta, e a
+  conversa seguia gravando na sessão morta. Agora um agente conversacional
+  esperando o usuário segura a sessão por até **8 horas** contadas do fim do
+  turno dele (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`); passado o teto, a sessão
+  fecha `closed` com causa própria, `conversation_idle_timeout`. E uma sessão
+  `closed`/`closed_abnormally` recusa evento de conversa com **409** nomeado
+  (`reason: "sessao_encerrada"`) — mensagem, handoff, ativação de agente —,
+  enquanto o que o fechamento produz (Psicólogo, Anamnese) e a decisão humana
+  sobre ação pendente continuam entrando. Ao fechar, os agentes conversacionais
+  da sessão são parados em todos os nós, e o turno em curso é abandonado sem
+  gravar. `GET /internal/sessions/:id/pending-work` ganha
+  `aguardandoUsuarioDesde` ([RN-581](docs/business-rules.md#rn-581)).
+
+- **engine**: o teto de **8 horas da conversa ociosa vale também com a aba
+  aberta** (AT-152). Ele só era checado quando o heartbeat expirava, e uma aba
+  aberta pinga a cada ~10s: uma conversa parada numa aba esquecida seguia viva
+  para sempre. Agora a sessão confere o teto num relógio próprio (a cada 5 min), sem relação com o ping, e fecha com a
+  mesma causa `conversation_idle_timeout`. O valor do teto não mudou
+  ([RN-581](docs/business-rules.md#rn-581)).
+
+- **engine**: o Arquiteto e o Infra Lead **deixam de propor PR em projeto sem
+  repositório**. Num projeto novo, todo `open_adr_pr` nascia condenado — o
+  Arquiteto trabalha antes do handoff ao Dev Lead, que é quando o repositório
+  nasce ([RN-522](docs/business-rules.md#rn-522)) —, e a pessoa aprovava
+  ações que só podiam terminar `failed` com *"Projeto sem repositório
+  provisionado"* (medido numa instalação real: quatro de quatro). As tools
+  `propose_adr` e `propose_infra_pr` passam a perguntar ANTES de propor, lendo
+  `project_repositories` localmente com o MESMO predicado dos casos de uso de
+  execução, e recusam com o motivo como resultado de ferramenta — o que falta
+  e quando passa a existir. No Infra Lead a recusa vem antes da consolidação
+  com o Workflows, então nenhum laço de LLM é gasto numa PR impossível. A
+  recusa deixa `tool.call` e `tool.result` (`ok: false`, com o motivo) no
+  event log. Os casos de uso continuam recusando como antes
+  ([RN-577](docs/business-rules.md#rn-577)).
+
+- **engine/api**: o agente conversacional que sobe sobre uma conversa que já
+  existe **recebe o FIM dela, não o começo** (AT-073). Os seis (Criativo, PO,
+  Arquiteto, Dev Lead, UX Designer e Staff) reconstruíam o histórico lendo os
+  PRIMEIROS 200 eventos da sessão — numa conversa de 201 eventos o agente
+  acordava sem a mensagem que estava respondendo — e só com mensagens e
+  respostas: a pergunta que ele fez por formulário e as ferramentas que chamou
+  sumiam. Agora os seis passam por um caminho só, que lê os 200 mais recentes,
+  traz as perguntas estruturadas e as próprias chamadas de ferramenta, e,
+  quando a conversa não cabe, abre com um resumo do começo que escreve quantos
+  eventos ficaram de fora ([RN-580](docs/business-rules.md#rn-580)). O
+  `context.compacted` passa a gravar o resumo da compactação (antes só as
+  contagens de tokens); conversa compactada antes disto é declarada como tal.
+  Os kickoffs do PO, Arquiteto, Dev Lead e UX Designer e as regras do product
+  brief do Criativo passam a ler por tipo, pela cauda — numa conversa longa o
+  PO recebia "(sem product brief disponível)". A rota interna
+  `GET /internal/sessions/:id/events` ganha `latest` e `types`, aditivos.
+
+- **engine/api/web**: o clique que dispara turno de agente **responde ao
+  aceitar**, não no fim do turno ([RN-578](docs/business-rules.md#rn-578),
+  [ADR 0163](docs/adr/0163-o-clique-responde-ao-aceitar.md)). Medido numa
+  instalação real da v6.1.0: responder o formulário de perguntas do Criativo
+  levou 97,3 s, confirmar a prontidão 97,3 s e confirmar a arquitetura 51,8 s —
+  cada um esperando o turno inteiro, e turno acima de 120/180 s virava 500 num
+  comando que tinha funcionado. O turno segue no engine e a tela acompanha o
+  fim pelo canal e pela cauda do log. Junto, a **recusa deixa de ser calada**:
+  mensagem mandada com o agente ainda em turno era aceita com 202 e nunca lida
+  (um *"Continue"* digitado durante o kickoff do Arquiteto, na mesma
+  instalação); agora é **409** com a frase do motivo e `agent.error` no fio. A
+  prontidão sem regra de negócio passa a responder **422**. O status e o corpo
+  de sucesso da api não mudam (`201 { ok: true }`).
+
+- **web/engine/api**: a tela de Sessão **deixa de pollar a cada 3s enquanto o
+  canal da sessão está vivo** ([RN-579](docs/business-rules.md#rn-579),
+  AT-093). Medido na v6.1.0: um navegador fazia mediana de 118 e pico de 263
+  req/min contra os 300/min do rate limit, e duas abas no pico recebiam 429.
+  Agora o engine avisa no canal `session:<id>` toda escrita que a api
+  confirmou, a tela invalida só o que o tipo do evento afeta (com janela
+  mínima por alvo, para uma rajada virar uma busca) e o poll fica como
+  fallback de 15s (30s para o orçamento). Uma aba vai de **123 para 46**
+  req/min; canal caído volta ao poll de sempre na hora. O teto do rate limit
+  não mudou. Com um turno aceito em curso, o aviso do `agent.status` do agente
+  acompanhado faz a tela ler o fim do turno na hora, em vez de esperar a
+  leitura de 4s do log ([RN-578](docs/business-rules.md#rn-578)), que continua
+  valendo como rede.
+- **api**: resposta de corpo vazio (`null`) passa a ter `ETag` e a voltar
+  **304**. `GET .../sessions/:id/budget` nunca voltava 304 (0% de 483) e
+  `GET .../execution/session` quase nunca (22%) porque sem corpo o Express não
+  gera validador — era o estado normal das duas rotas ("sessão sem orçamento",
+  "nenhuma execução ativa"). O corpo continua vazio.
+
+- **api**: `GET /gates` **volta a responder na imagem publicada**. O loader do
+  registro validava, EM RUNTIME, que todo arquivo de prova citado em
+  `docs/gates.yml` existia no disco — e a imagem de produção carrega
+  `/app/docs/gates.yml` e mais nada de `docs/`: `apps/api/test/`,
+  `scripts/ci/` e `.github/` nunca entram nela. O registro era, portanto,
+  inválido em **toda** instalação, com `RegistroDeGatesInvalido` listando os
+  **onze** alvos como "não existe" (medido na v6.1.0: 12 respostas 5xx em
+  ~55min), e a tela de gates caía no fallback da
+  [RN-084](docs/business-rules/custo.md#rn-084) em vez de mostrar erro — por
+  isso ninguém viu.
+
+  A régua **não foi desligada**, foi separada em duas
+  ([RN-070](docs/business-rules/custo.md#rn-070)): `validarRegistro` é
+  afirmação sobre o CONTEÚDO do registro e vale onde quer que ele seja lido —
+  é a única que o loader chama; `validarLocalizadores` é afirmação sobre o
+  REPOSITÓRIO e roda onde a pergunta existe, no teste do arquivo real (CI, a
+  cada PR) e na fase 2 do `pnpm --filter api validacao:gates`. Alvo que sumir
+  continua reprovando, e o loader continua **lançando** para registro
+  inválido por conteúdo — nunca devolvendo registro vazio.
+
+  De quebra, a fase 2 do medidor passou a enumerar **todos** os localizadores
+  em vez de só os de gate `active`+`block`: `rag-acertivo` cita workflow e
+  teste e nunca aparecia na tabela. E `docker/smoke.sh` passa a chamar
+  `GET /gates` contra a imagem de produção — nenhum E2E ou smoke a chamava, e
+  é por isso que uma suíte inteira verde não pegou nada (vitest e ExUnit rodam
+  de um checkout, onde os alvos existem).
+
+- **runner**: o agente local de MÁQUINA **passa a receber o `XDG_CONFIG_HOME`
+  que foi instalado**, e o `PATH` congelado chega inteiro (AT-095). A unit
+  escrevia `Environment=XDG_CONFIG_HOME=<pasta>` e `Environment=PATH=<path>`
+  crus, e `Environment=` separa por espaço e expande especificador: medido com
+  `XDG_CONFIG_HOME=/home/dan/50%off com espaco`, o valor efetivo
+  (`systemctl --user show -p Environment`) era `/home/dan/50popff`. A unit
+  carregava, `systemd-analyze verify` aprovava, o serviço subia — e procurava a
+  base e a chave numa pasta que não existe, calado
+  ([RN-545](docs/business-rules.md#rn-545), [RN-518](docs/business-rules.md#rn-518)).
+  Agora a atribuição inteira vai entre aspas (`Environment="VAR=valor"`), com
+  `\` e `"` escapados e `%` como `%%`. O `--dir` do `ExecStart=` da unit de
+  PROJETO tinha a mesma classe (`%` expandido na carga, `\` lido como escape,
+  `$` como variável) e foi junto. Quebra de linha em `PATH`/`XDG_CONFIG_HOME`
+  passa a ser recusada no `install`, nomeando a variável — era injeção de
+  diretiva. **Quem tem um desses caracteres no caminho reinstala**
+  (`brabo-runner service install`, com `--machine` se for a de máquina). A
+  prova deixou de ser o `verify`, que aprova a forma quebrada: o teste pergunta
+  ao próprio `systemd --test --user` o valor RESOLVIDO e o compara com o
+  gravado, e pula nomeando o motivo onde não há systemd.
+
+- **web**: a árvore do time **para de afirmar trabalho sobre dev agent
+  bloqueado** (AT-087). Numa instalação real o event log tinha `dev.started`
+  seguido de `dev.blocked_by_container`, e a árvore descartava o bloqueio (não
+  havia tradução para ele): o ramo ficava em "começou a task", ativo, enquanto
+  o painel ao lado já dizia `aguardando`. Agora o bloqueio é marco próprio, com
+  o motivo do engine como detalhe, e o ramo fica parado. Três mudanças
+  visíveis vêm junto ([RN-572](docs/business-rules.md#rn-572)): o ramo de um
+  dev agent só fica ativo quando o painel diz `trabalhando` para o mesmo evento
+  — `dev.idle`, `dev.blocked`, `dev.awaiting_gate`, `dev.awaiting_approval` e
+  `dev.idle_tripped` também deixam de contar como ativos; `dev.started` passa a
+  dizer "procurando task" (ele sai antes de reivindicar task nenhuma), e
+  `dev.working` mostra o título da task; e `dev.error` vira marco de falha com
+  o motivo. A classe fecha no CI: `scripts/ci/vocabulario-de-eventos-dev.spec.ts`
+  passa a reprovar tipo `dev.*` do engine sem decisão na árvore, como já
+  fazia com o painel. `container.start_failed` segue fora da árvore, de
+  propósito — o ator é `system`, e o tronco onde ele caberia não é desenhado
+  por tela nenhuma.
+
+- **runner**: o serviço do agente local **passa a iniciar**. A unit gerada por
+  `brabo-runner service install` escrevia `WorkingDirectory="/home/…"`, e o
+  systemd **não** faz unquoting nessa diretiva (ao contrário do `ExecStart=`,
+  onde as aspas são o certo): o valor deixava de começar com `/`, a unit era
+  recusada na carga (`Loaded: bad-setting`,
+  `WorkingDirectory= path is not absolute`) e **nunca iniciava** — em
+  instalação nenhuma, nas duas espécies de unit (por projeto,
+  [RN-518](docs/business-rules.md#rn-518); por máquina,
+  [RN-545](docs/business-rules.md#rn-545)). O LaunchAgent do macOS não era
+  afetado: lá o valor vai num `<string>` de XML.
+
+  **Quem já tem a unit quebrada conserta REINSTALANDO** —
+  `brabo-runner service install` (com `--machine`, se for a de máquina)
+  sobrescreve o arquivo inteiro, e não há conserto parcial nem nada a editar à
+  mão. `status` e `uninstall` continuam lendo a pasta de uma unit no estado
+  antigo, de propósito: quem está nele não pode perder também a saída dele.
+  Procedimento no runbook, seção *The unit is `bad-setting` and never starts*.
+
+  A suíte estava **verde** com o defeito de pé, porque cada asserção pedia de
+  volta exatamente a forma errada — asserção de string prova que o gerador
+  escreve o que o teste espera, nunca que o systemd aceita. A prova agora é
+  feita contra o validador de verdade (`systemd-analyze --user verify`, em
+  `apps/runner/src/servico-systemd.spec.ts`), que **pula nomeando o motivo**
+  onde não há systemd. Junto veio o caractere que a mesma diretiva exige
+  escapar e ninguém tinha visto: `%` passa por expansão de especificador, então
+  `/home/eu/50%off` subiria silenciosamente noutra pasta — agora sai `%%`.
+  Espaço continua indo literal, porque a linha inteira é o caminho.
+
+- **instalador**: o `install.sh` **volta a instalar em macOS**, e a falta de uma
+  ferramenta deixa de ser anunciada como adulteração (AT-091).
+
+  Medido no E2E da v6.1.0 (run `34794555890`, job `install.sh (macos-14)`): o
+  script chamava `sha256sum` nos cinco pontos de verificação e não tinha
+  alternativa nenhuma. O macOS traz `shasum -a 256`, então o
+  `sha256sum: command not found` fazia a comparação falhar e quem instalava lia
+  *"o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um
+  aviso: pare e investigue."* — mandado caçar um incidente de segurança que não
+  houve, numa plataforma que o próprio script diz suportar (há hash de `cosign`
+  `darwin-amd64`/`darwin-arm64` pinado nele).
+
+  Agora há UMA função de hash (`sha256sum` **ou** `shasum -a 256`), resolvida
+  **antes do primeiro download** — nunca no meio de uma verificação: a máquina
+  sem com que conferir não chega a ter o que conferir. Faltando as duas, a
+  recusa é PRÓPRIA e nomeia a ferramenta, diz onde cada uma mora e afirma que
+  nada foi baixado; hash que não bate continua com o texto de incidente de cada
+  chamador. As duas recusas nunca se disfarçam uma da outra, que é o ponto:
+  acusar adulteração por falta de `shasum` ensina a ignorar a frase no dia em
+  que ela for verdade. `--print-plan` continua imprimível sem nenhuma das duas,
+  e declara qual aceita (`conferir-hash`).
+
+- **instalador**: a forma documentada de instalar **passa a ser baixar e rodar
+  um arquivo** — `curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh`
+  — e o `.env` gerado deixa de sair quebrado (AT-083, achada instalando a v6.1.0
+  numa máquina limpa). Três defeitos em sequência:
+
+  1. A forma que o runbook, o cabeçalho do `install.sh`, o `pnpm bootstrap` e o
+     próprio relato sem TTY ensinavam, `sh -c "$(curl … install.sh)"`, **nunca
+     funcionou**: o instalador confere o hash de `$0` contra o manifesto
+     assinado ([RN-526](docs/business-rules.md#rn-526)), e em `X -c "…"` o `$0`
+     é o nome do shell. Com `dash` como `sh` (Debian/Ubuntu) morria antes, em
+     `set -o pipefail`. A verificação por `$0` **fica**, sem porta de pular
+     ([ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)); o que muda é a doc,
+     e as formas erradas viram **recusas nomeadas antes de qualquer download**
+     que imprimem a certa: shell que não é bash, e rodar sem arquivo (`-c` ou
+     pipe).
+  2. A falha saía sem nome: na v6.1.0 o `sha256sum` do `$0` inexistente
+     derrubava o script pelo `pipefail` com só o erro cru da ferramenta; na
+     `dev`, depois da AT-091, ela chegava como **acusação de adulteração**
+     (*"o hash deste arquivo não está no manifesto"*), porque a função de hash
+     devolvia vazio de dentro do subshell. Hash que a ferramenta não consegue
+     calcular é agora uma terceira recusa, própria.
+  3. O `SECRET_KEY_BASE` vinha de `openssl rand -base64 64`, que quebra a linha
+     aos 64 caracteres: o `.env` ganhava uma linha solta. Medido em 100
+     gerações, o Compose recusou 49 e **aceitou 51 com o segredo cortado** em 64
+     caracteres. Todo base64 perde as quebras de linha agora, e um spec novo
+     passa o `.env` das funções de verdade pelo parser do Compose, cobrando cada
+     segredo inteiro ([RN-527](docs/business-rules.md#rn-527)).
+
+  O instrumento também mentia: o E2E do instalador rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o stdin do
+  instalador nunca foi um terminal — o fluxo interativo nunca tinha sido
+  exercitado. Ele passa a rodar o instalador num pty de verdade, por um driver
+  que espera cada pergunta (e o eco desligado, nas de senha), e pela mesma forma
+  que o runbook manda ([RN-534](docs/business-rules.md#rn-534)). O workflow
+  segue sem rodar em PR; o driver é exercitado em PR por
+  `scripts/dev/install-e2e.spec.ts`.
+
+### Novidades
+
+- **web/api**: a criação de projeto e a página de containers **só oferecem o
+  modo que a instalação executa**. Numa instalação sem broker de container (a
+  instalação por Release — a imagem do broker não é publicada), o assistente
+  deixa de pré-selecionar "Pasta montada": os cards Container e Pasta montada
+  continuam visíveis mas inertes, um aviso em texto diz que esta instalação
+  não sobe container para esses modos, e "Runner local" vem pré-selecionado
+  ([RN-573](docs/business-rules.md#rn-573)). A página `/containers` recusa
+  antes do clique a subida de projeto `container`/`mounted` nessa instalação,
+  com o motivo em texto, em vez de deixar aprovar uma `container_start` que só
+  pode falhar ([RN-574](docs/business-rules.md#rn-574)). A api passa a
+  devolver `brokerConfigurado` em `GET /workspaces/:id/projects-base` e em
+  cada linha de `GET /workspaces/:id/containers` — sem rota nova
+  ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
+  Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
+  está certo: sem a variável a api nunca chama o broker.
+- **api/web**: o repositório do projeto **nasce no aceite do handoff ao
+  Arquiteto**, e não mais no do Dev Lead — o Arquiteto e o Infra Lead escrevem
+  no repositório antes do Dev Lead, e numa instalação real propuseram PRs para
+  um repositório que ainda não existia. O aceite ao Dev Lead continua
+  provisionando, como segunda porta que não cria nada quando o repositório já
+  existe: é a saída do projeto que passou pelo Arquiteto sem ganhar repositório.
+  `POST /projects/:id/execution/activate` sem repositório deixa de responder 201
+  e passa a responder **409**, dizendo qual handoff falta aceitar ou onde
+  provisionar; a Visão Geral deixa "Ativar execução" inerte com esse motivo em
+  texto, e o card do handoff ao Dev Lead tira o atalho de ativar enquanto não
+  há repositório ([RN-582](docs/business-rules.md#rn-582),
+  [ADR 0165](docs/adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)).
+  A recusa do Arquiteto e do Infra Lead a propor PR sem repositório
+  ([RN-577](docs/business-rules.md#rn-577)) muda de texto junto: deixa de
+  mandar esperar o aceite ao Dev Lead e diz que, com o gatilho no Arquiteto,
+  chegar ali é provisionamento que falhou ou projeto anterior à regra.
+
+- **api/web**: o binding de modelo ganha um **critério de roteamento**
+  (`price` | `throughput` | `latency`) para o hub escolher o upstream, e ele
+  **congela em `token_usage`** ao lado do `upstream_provider`
+  ([RN-583](docs/business-rules/custo.md#rn-583),
+  [ADR 0166](docs/adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md)).
+  Motivo medido (AT-090): 23 de 24 chamadas de um modelo via OpenRouter
+  caíram num upstream ~4x mais lento, porque o corpo saía sem `provider.sort`.
+  O critério viaja com o binding que venceu a cascata, nunca cascateia
+  sozinho; `PUT .../model-binding` aceita `routingPreference` nos cinco
+  escopos (ausente preserva, `null` limpa, valor para provider sem a
+  capability é 422), e `GET /llm/provider-capabilities` é rota nova. **A
+  feature nasce DORMENTE**: a capability `routingPreference` é `false` nos nove
+  providers, inclusive no OpenRouter, porque ainda não foi provada contra a
+  API real — a tela diz isso em texto e nada muda no fio. Virá-la é um PR de
+  uma linha acompanhado da saída de
+  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`.
+  Migration `0060_preferencia_de_roteamento` (duas colunas anuláveis, sem
+  backfill).
+
+- **instalador/esteira**: o **broker de container vira a quinta imagem
+  publicada**, e o `install.sh` **pergunta** se o liga
+  ([ADR 0162](docs/adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
+  [RN-575](docs/business-rules.md#rn-575)). Numa instalação por Release,
+  projeto Container ou Pasta montada nunca executava — quem sobe o container
+  desses modos é o broker, e a instalação não tinha o serviço porque a imagem
+  não existia no registry (`ghcr.io/daneiel/brabo-broker` respondia `denied`).
+  Agora `docker-bake.hcl` tem o alvo `broker`, e a imagem passa pelos mesmos
+  gates das outras quatro: construída e escaneada (Trivy) a cada PR, recusada
+  se rodar como root, provada subindo healthy com rootfs read-only e sem rede,
+  e publicada, registrada em `.release/images.json`, assinada e verificada por
+  digest a cada tag. O compose de instalação ganha o serviço **desligado**, sob
+  o profile `container-broker`, com as cinco camadas do ADR 0130 intactas. O
+  instalador pergunta *"Ligar o broker de container? [s/N]"* depois da base,
+  dizendo em texto que ligar entrega o socket do Docker da máquina ao serviço;
+  só um "s" liga, e aí ele **mede** o grupo do socket de dentro de um container
+  (recusa nomeada se não conseguir — nunca o `999` de palpite) e grava
+  `COMPOSE_PROFILES`, `BROKER_URL`, `DOCKER_GID` e a raiz da pasta gerenciada no
+  `.env`, juntos. Depois da subida confere que a api alcança o broker e que a
+  raiz calculada é a do volume; o que não confere vira pendência nomeada. A
+  decisão aparece no resumo final, e a frase de fechamento deixa de dizer que
+  só a Pasta montada fica sem container sem o broker — o modo Container também
+  fica. **Vale a partir da próxima tag**: o instalador exige `broker` no
+  `images.json`, que Releases anteriores não têm. O Kubernetes não conhece o
+  broker (`make imagens-do-release` segue aplicando quatro imagens).
+
+- **ci**: PR do Dependabot que **só troca o pin de uma action** (o SHA do
+  `uses:` e o comentário de versão ao lado) deixa de ficar bloqueado pelo drift
+  da documentação. O passo novo do `docs-check.yml` escreve no corpo do PR a
+  linha `docs-not-needed: <motivo>`, marcada como do bot, quando o autor é o
+  Dependabot **e** toda linha alterada é troca de pin — decidido por
+  `scripts/ci/dependabot-justifica-pin.ts`, testado. Job, gatilho, `with:`
+  novo, dependência pnpm, workflow novo ou autor humano: nada é escrito, e o
+  docmap julga como sempre. Se um push posterior trouxer algo além do pin, a
+  linha do bot é **removida**; a de um humano nunca é tocada. Os #578/#580
+  tinham sido destravados à mão. O drift passa a ler o corpo de
+  `PR_BODY_FILE` quando o passo o reescreve — editar o corpo com o
+  `GITHUB_TOKEN` não dispara `edited`, e re-executar o job reusa o corpo
+  antigo do evento (medido na run 34898913072).
+
+- **docs**: o `pnpm docs:check` passa a **conferir as refs `caminho:linha` das
+  RNs que nomeiam o símbolo** daquela linha — `` `install.sh:1463` (`fechar_a_instalacao`) ``
+  e a continuação `` `:1165` (`post_interno`) `` — contra o código, numa janela
+  de ±3 linhas, nos três arquivos de RN. Em **warn**: lista o que não bate, com
+  a linha mais próxima onde o símbolo aparece, e não reprova; só reprova se o
+  padrão extrair ZERO refs (`CEGO`). Medido em 18/09: 592 refs `…:N`, 187 casam
+  o padrão, 116 batiam e 71 não. O bullet de código da
+  [RN-547](docs/business-rules.md#rn-547) foi relido pelo símbolo e corrigido
+  (`fechar_a_instalacao` em `:966` → `:1463`, `post_interno` em `:682` →
+  `:1165`, e os demais do mesmo bullet); ficam 63, listados pelo check. Padrão,
+  janela e critério para `block` em
+  `docs/explanation/documentation-workflow.md`.
+
+### Testes
+
+- **ci**: a **restauração da instalação por compose e o arquivo dos bare repos
+  passam a rodar por agenda** (AT-195). O `propriedades.yml` ganha um segundo
+  job, `restore-compose`, noutro runner (o compose de produção publica as
+  mesmas portas que o k3d mapeia): constrói as imagens pelo `docker-bake.hcl`,
+  sobe o compose de produção pelo `docker/smoke.sh`, cria um bare repo no
+  volume como fixture e roda `make test-restore-compose` — backup real,
+  restore com as três validações e a verificação do arquivo dos bare repos,
+  que só o caminho compose faz. Verde sem a linha que nomeia os bare repos
+  verificados reprova o passo. Falha abre issue por alvo, como no job do
+  cluster; o alarme saiu para `scripts/ci/alarmar-prova.sh`, compartilhado
+  pelos dois jobs. Verde na rodada `36371633435` (job de 4 min 31 s, em
+  paralelo ao do cluster).
+- **deploy/k8s**: o **bootstrap das provas agendadas deixa de subir a
+  observabilidade que nenhuma prova lê, e os operadores do helm sobem em
+  paralelo** (AT-177). `BRABO_SKIP_OBSERVABILITY=1` (opt-out explícito, só o
+  `propriedades.yml` o liga) pula Tempo, Loki, Collector, Alloy e Grafana; o
+  Prometheus e o prometheus-adapter ficam, porque o HPA do engine escala por
+  `oban_queue_depth` pela External Metrics API deles. ESO, CNPG,
+  metrics-server e Prometheus — releases que não se conhecem — rodam o
+  `helm --wait` lado a lado, cada um com log próprio despejado só em falha. O
+  padrão de `make deploy-local` não muda (a stack inteira sobe, e os pares
+  Tempo/Loki e Collector/Alloy também em paralelo). Medido contra a `dev`
+  (rodada `36362479629`): helm de 253 s para 90 s, bootstrap de 710 s para
+  547–555 s, job de 13 min 43 s para 10 min 59 s (rodadas `36367504128` e
+  `36368334920`).
+- **deploy/k8s**: **a quebra proposital do restore é pega pela prova agendada,
+  e a última execução boa deixa de ser data escrita à mão** (AT-126, BRB-009).
+  `make test-restore-mutacao` (`RESTORE_MUTACAO=tabela-faltando` em
+  `test-restore.sh`) tira o backup, cria na ORIGEM uma tabela que o dump não tem
+  e roda o MESMO `brabo-restore`: passa só se ele reprovar nomeando a tabela, e
+  falha se aprovar ou se reprovar por outro motivo. É passo do
+  `propriedades.yml`, com issue própria (`make test-restore-mutacao`) quando a
+  quebra passa sem ser pega. Só numa rodada em que restore e mutação passam o
+  workflow grava o artefato `restore-ultima-execucao-boa` (`ultima-execucao-boa.json`,
+  90 dias); a seção "Last verified run" do runbook passa a apontar para ele.
+  `test-restore.sh` sem `RESTORE_MUTACAO` fica igual. Ainda aberto no BRB-009: a
+  última execução boa como MÉTRICA/`backupRuns` (exige código na api).
+- **deploy/k8s**: a **reprojeção do grafo roda no cluster local, como quarto
+  alvo do `propriedades.yml`** (AT-127, BRB-018). `make test-reprojecao-k8s`
+  cria pela API um projeto próprio (sessão fechada, dois eventos), roda
+  `node scripts/reprojetar-grafo.js --project` dentro do pod da api, APAGA o
+  subgrafo dele no Neo4j do cluster, reprojeta e exige a mesma contagem
+  (5 nós, 4 arestas), depois reprojeta de novo. Não depende do estado que os
+  outros alvos deixam nem do `test-restore`. Falha vira issue por alvo, como os
+  outros; nunca é gate de PR. Verde na rodada `35471428634` (16 s). O que segue
+  aberto no BRB-018 é a medição de tempo num event log grande.
+- **deploy/k8s**: `make rollout-test` **passa a guardar a evidência que morria
+  com o pod antigo** (AT-078). Antes do `rollout restart` ele anexa o log de
+  TODO pod do engine — os que já existem, desde o boot, e os que nascerem —,
+  segue `kubectl get events -w` do namespace, amostra réplicas do Deployment e
+  do HPA a cada 2s e grava cada leitura de dono, tudo em
+  `ROLLOUT_EVIDENCE_DIR`. Numa órfã, a falha cita toda linha que menciona a
+  sessão em todos esses arquivos e diz se ela ficou sem dono ANTES ou DEPOIS
+  do scale-down do HPA. `propriedades.yml` sobe o diretório como artefato
+  `rollout-evidencia` em toda rodada que chegou à prova. Nada muda no que conta
+  como adotada ou drenada, nem no teto de 120s.
+
+## v6.1.0 — 2026-09-13
+
 ### Novidades
 
 - **api**: o grafo de conhecimento (Neo4j) passa a ser **reconstruível a partir
@@ -25,6 +1237,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   graph*; prova em `make test-reprojecao`, que exige Neo4j de pé. O BRB-018
   **segue aberto**: falta a prova no cluster local e a medição de tempo num
   event log grande.
+
+- **install**: o compose do instalador viaja com ele, como asset assinado (62bc5cf06)
+- **api**: o grafo é reconstruído do event log pelo mesmo tradutor do projetor vivo (bb84f1869)
 
 ### Correções
 
@@ -72,6 +1287,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   produção criar a extensão continua sendo ação do operador, como a migração
   já dizia. Detalhe em [Scheduled property proofs](docs/runbook.md#provas-de-propriedade-agendadas).
 
+- **k8s**: o restore sobrevive à extensão de outro dono, e as provas esperam o desfecho (2d1d10a45)
+- **k8s**: o template1 do cluster local traz o pgvector para o restore (f503aa109)
+- **k8s**: o smoke e o rollout-test do cluster mandam o kind da sessão (7e1149b4a)
+- **k8s**: o Neo4j sobe no cluster e o pgvector nasce pelo superusuário (d7fcd0263)
+- **k8s**: NEO4J_URI e NEO4J_USER chegam à api no cluster (d449521af)
+- **k8s**: o bootstrap cria o NEO4J_PASSWORD que o ExternalSecret lê (0fc4f0f7e)
+- **k8s**: o imageName do CNPG leva a tag junto do digest (d55178245)
+
 ### Testes
 
 - **ci**: as três provas de propriedade do deploy em Kubernetes —
@@ -87,6 +1310,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   comentário na issue aberta, não issue nova. O `BRB-009` continua **aberto**:
   o critério pede também que uma quebra proposital do restore seja pega sem
   humano e que a última execução boa fique numa métrica.
+
+- **ci**: agenda as três provas de propriedade num k3d do Actions (0bd8310fc)
+- **ci**: diagnóstico temporário das ações propostas no golden-set do QA (e7d7d1b16)
+- **ci**: medição do golden-set do QA em ubuntu-latest (gatilho de push temporário) (a610c653e)
+
+### Documentação
+
+- **changelog**: o que entrou na dev depois do corte volta ao Unreleased (e5925984e)
+- **k8s**: as provas de propriedade medidas, e a órfã do rollout declarada (c17de30ad)
+- **docmap**: assets-do-instalador sai da regra de política de branches (cf612eca1)
+- **qa**: o golden-set do QA medido em CI — o relógio cabe, o instrumento não mede (81f298cb6)
+- **ci**: darwin-x64 medido — macos-13 não tem runner e macos-15-intel reprova no self-test sob o Bun (044f0778a)
+- **changelog**: v6.0.0 (0690fd5e9)
+- **architecture**: a dívida do SessionPage volta a ser declarada, com o número de hoje (3a808ba8d)
+
+### Manutenção
+
+- **ci**: a branch do Dependabot é permitida sem critério de caracteres (f5641cef9)
 
 ## v6.0.0 — 2026-09-13
 

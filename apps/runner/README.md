@@ -67,17 +67,18 @@ de Node, npm nem toolchain de compilação instalados:
 |---|---|
 | Linux x64 | `brabo-runner-linux-x64` |
 | Linux ARM64 | `brabo-runner-linux-arm64` |
-| macOS Intel | `brabo-runner-darwin-x64` |
 | macOS Apple Silicon | `brabo-runner-darwin-arm64` |
 | Windows x64 | `brabo-runner-win32-x64.exe` |
 
 > A tabela é a MATRIZ, não o que cada Release tem: até a `v5.0.0` só os dois
-> binários Linux chegaram a ser anexados (confira com `gh release view`). O
-> `darwin-x64` em particular não é publicado: o runner `macos-13` foi
-> aposentado pelo GitHub, e no `macos-15-intel` o binário constrói mas
-> reprova no `--self-test-pty`, por um bug do Bun com o `node-pty` no macOS
-> (oven-sh/bun#25822). Detalhe no comentário da matriz em
-> `.github/workflows/build-runner-binaries.yml`.
+> binários Linux chegaram a ser anexados (confira com `gh release view`).
+>
+> **macOS Intel não tem binário, por decisão** (ADR 0174): o runner
+> `macos-13` foi aposentado pelo GitHub, e no `macos-15-intel` o binário
+> constrói mas reprova no `--self-test-pty`, por um bug do Bun com o
+> `node-pty` no macOS (oven-sh/bun#25822). A MESMA prova passa sob Node, então
+> no Mac Intel o caminho é `npm install -g @brabo/runner` — e é isso que o
+> `install.sh` e o painel do navegador dizem em vez de baixar.
 
 ```sh
 # Linux/macOS
@@ -402,6 +403,28 @@ O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 `docker`): mudou o seu PATH, rode `service install` de novo.
 
+> **Unit instalada por uma versão anterior não inicia — reinstale.** Até esta
+> correção o `WorkingDirectory=` saía **entre aspas**, e o systemd não faz
+> unquoting nessa diretiva (ao contrário do `ExecStart=`, onde as aspas são o
+> certo): o valor deixava de começar com `/`, a unit era recusada na carga
+> (`Loaded: bad-setting`, `WorkingDirectory= path is not absolute`) e **nunca
+> iniciava**, nas duas espécies. Não há conserto parcial nem arquivo para
+> editar — `service install` sobrescreve o arquivo inteiro, então basta rodá-lo
+> de novo. `status` e `uninstall` continuam lendo a pasta de uma unit no estado
+> antigo, de propósito: quem está nele não pode perder também a saída dele.
+> O `%` é o único caractere que a pasta escapa (`%%`), porque essa diretiva
+> passa por expansão de especificador — espaço vai literal, já que a linha
+> inteira é o caminho.
+>
+> **`XDG_CONFIG_HOME` ou `PATH` com `%`, espaço, aspas ou barra: reinstale
+> também.** Até a AT-095 os dois saíam crus (`Environment=XDG_CONFIG_HOME=…`),
+> e `Environment=` separa por espaço e expande `%`: a unit subia, mas com
+> `/home/eu/50%off com espaco` o serviço recebia `/home/eu/50<id-do-os>ff` e
+> procurava a chave numa pasta que não existe. Agora a atribuição inteira vai
+> entre aspas e escapada. Quebra de linha nesses dois valores é recusada no
+> `install`. Confira o valor que o systemd entendeu, nunca o arquivo:
+> `systemctl --user show -p Environment brabo-runner.service`.
+
 ## Reconexão
 
 Quando a conexão cai, o runner **pede um ticket NOVO** e tenta de novo, com
@@ -429,12 +452,17 @@ de aprovação de sempre (todo comando de agente continua nascendo uma ação
 proposta, sujeita à política do projeto) e o seu consentimento em rodar este
 binário na própria máquina, com os seus privilégios.
 
-## Testes e typecheck deste workspace
+## Testes, typecheck e lint deste workspace
 
 ```bash
 pnpm --filter runner test
 pnpm --filter runner typecheck
+pnpm --filter runner lint
 ```
+
+O `lint` é o mesmo `oxlint` do web, em modo verificação (sem `--fix`), sobre
+`src/` e `scripts/`, com a categoria `correctness` como erro e
+`--deny-warnings` — e é o passo "Oxlint (runner)" do job `Lint` do `ci.yml`.
 
 Construir o binário standalone (exige [Bun](https://bun.sh) instalado —
 `curl -fsSL https://bun.sh/install | bash` — só na plataforma ATUAL; nunca

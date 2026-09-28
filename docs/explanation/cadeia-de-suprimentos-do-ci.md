@@ -169,14 +169,14 @@ is **revoked**, and the measurement is why: the 37 third-party references
 in the repository were on tags, and three of the places they run are
 worse than a `docker compose pull` going stale.
 
-- The `FROM` lines are the base of the four images we **publish** to
-  GHCR. A moved tag becomes bytes inside an image we sign and hand to
+- The `FROM` lines are the base of the images we **publish** to
+  GHCR — five since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md). A moved tag becomes bytes inside an image we sign and hand to
   other people.
 - `docker/docker-compose.install.yml` runs on the machine of whoever
-  installed the product, beside their Postgres. In that same file the
-  four **own** images already arrive by digest, through a variable the
+  installed the product, beside their Postgres. In that same file our
+  **own** images already arrive by digest, through a variable the
   installer fills — the third-party ones arrived by tag, next to them.
-- `ci.yml` and `golden-set-rag.yml` run third-party images as job
+- `ci.yml`, `golden-set-rag.yml` and `golden-set-qa.yml` run third-party images as job
   `services:`. That is literally the runner the action rule exists to
   protect, reached by the other door.
 
@@ -202,8 +202,8 @@ and one function answering both questions would answer both badly.
 What the check deliberately does **not** cover:
 
 - **The images we build ourselves** (`brabo-api`, `brabo-engine`,
-  `brabo-web`, `brabo-backup`, and `brabo-broker`, which is not
-  published). There is no third party who could move anything, and
+  `brabo-web`, `brabo-backup` and `brabo-broker` — the last one
+  published since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). There is no third party who could move anything, and
   `brabo-api:prod` is a *local* tag whose digest does not exist before
   the build. Where they do cross a registry they are **already** by
   digest, through the mechanism that owns them: `.release/images.json`
@@ -225,6 +225,72 @@ receives no security update until someone changes the digest by hand —
 the same debt the action SHAs carry. `.github/dependabot.yml` enables the
 `github-actions` ecosystem for that reason; the `docker` ecosystem is
 **not** enabled, and turning it on is a separate decision.
+
+**A digest guarantees immutability, not availability.** The pin protects
+against the owner of a tag moving it; it does not protect against the
+publisher deleting the repository. That happened with MinIO: the local
+overlay's S3 server was pinned by index digest on `quay.io/minio/minio`,
+MinIO stopped publishing its community image, and the same digest started
+answering 401 (Docker Hub: 404). The bootstrap died at `rollout status` and
+no property proof ran until the server was replaced by SeaweedFS
+([ADR 0169](../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
+The symptom, if it happens again to any pinned image, is `ImagePullBackOff`
+on a digest that has not changed — the fix is a new image from a publisher
+that still serves one, never unpinning.
+
+## The build cache cannot hide a stale package
+
+The final stage (`runtime`) of every `Dockerfile.prod` runs `apk upgrade`.
+BuildKit keys a layer by instruction plus parent layer, never by time, so with
+`cache-from` on, a PR build reused an `apk upgrade` layer frozen at that PR's
+first build (measured: `CACHED` on 5 of 5 images), and Trivy scanned an old
+openssl that the tag, built cold, would not carry. `docker-bake.hcl` therefore
+sets `no-cache-filter = ["runtime"]` on the shared base target: the final stage
+and what follows it are rebuilt every time, the build stages keep their cache
+(that is where the time is), and the scan looks at what the tag would publish.
+It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.
+
+That fixed what the **PR** scans. It could not fix what the **tag** publishes:
+a tag builds cold, from a different run, and until
+[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) nothing scanned it.
+
+## The release scans what it publishes, before signing it
+
+`release.yml` runs Trivy on each image **by digest**, straight from the
+registry (`--image-src remote`), after the bake pushes and records
+`.release/images.json` and **before** `cosign sign`. The order is the
+mechanism: an image that fails is never signed, and `install.sh` does not
+install an unsigned image. The push has already happened by then (it is what
+creates the digest), so a failed tag leaves its tags in the GHCR unsigned and
+without a Release — the correct state, since nothing installs them.
+
+The gate is the **same** rule as the `ci.yml` job, flag for flag:
+`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` and
+the same `.trivyignore.yaml`, whose every entry carries an `expired_at`. A HIGH
+or CRITICAL **with a fix available** fails the release. What has **no** fix is
+reported, not blocking: a second scan without `--ignore-unfixed` and with
+`--exit-code 0` feeds `scripts/ci/trivy-do-release.ts`, which writes the job
+summary and the `trivy-sem-correcao.md` Release asset. That script never
+decides the verdict — Trivy's exit code does —, because a second rule for
+"has a fix" would drift from Trivy's own the first time it added a status.
+There is **no new allowlist**: the step accepts no ignore file but the one the
+PR already uses.
+
+The binary is the same `v0.70.0` with the same `sha256` as `ci.yml`, declared
+twice because a workflow's `env:` cannot be imported. The duplication is
+guarded: `scripts/ci/trivy-do-release.spec.ts` fails when version, hash or the
+gate's flags diverge between the two workflows, when the gate moves after the
+signing, or when a second ignore file appears. Like `install-e2e.yml`, the
+release only runs on a final tag, so that spec is the proof a PR can give.
+
+Measured on 2026-09-27 against the digests of the last release (`v6.1.0`,
+four images, published 2026-09-14), with the same flags: `api` and `web` would
+**fail** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3` `3.3.7-r0`, fixed in
+`3.3.7-r1`), a CVE published after that tag —, `engine` and `backup` pass, and
+nothing HIGH/CRITICAL without a fix appears once `.trivyignore.yaml` is
+applied. Without it, `engine` would carry 56 fixable findings in the
+third-party scanner binaries that file documents. The four scans plus the
+database download took about 30 s.
 
 ## What is still trusted on faith
 
@@ -260,11 +326,13 @@ Declared, not fixed:
   (`npm audit signatures` or equivalent) in any job.
 - ~~**No signing or attestation of our own artifacts.**~~ **Closed by
   [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
-  (BRB-005). `release.yml` signs the four images **by digest** with
+  (BRB-005). `release.yml` signs the images it publishes **by digest** with
   `cosign` keyless — the OIDC identity of the workflow, no key in
   custody anywhere — and `build-runner-binaries.yml` gained a
   consolidating job that publishes **one signed `checksums.txt`**
-  covering the five binaries, rather than five separate signatures.
+  covering the runner binaries (four targets since
+  [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), which dropped
+  `darwin-x64`), rather than one signature per binary.
   Both workflows **verify what they just signed**, in the same run:
   a signature nobody tries to verify is one more file in the release,
   and the failure would otherwise surface on the machine of whoever
@@ -283,12 +351,29 @@ Declared, not fixed:
   spec fails when the installer's own copy of it diverges or when the compose
   gains a relative bind-mount that is not on it.
 
+  **The broker image is the fifth, and it is the one that matters most**
+  ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
+  It was built by nobody until then: the `Dockerfile.prod` existed and passed
+  `hadolint`, but no bake target built it, so it was never scanned and never
+  published, and the installation had no way to offer the service. It now
+  goes through every gate the other four do — the `ci.yml` builds it on every
+  PR, refuses it running as root, runs Trivy on it and brings it up healthy
+  with a read-only rootfs and no network; `release.yml` publishes, records,
+  signs and verifies it by digest with no extra line, because both loops read
+  `.release/images.json`. The reason it needs them more than any other: in an
+  installation that consents, it is the one service that receives the host's
+  Docker socket, so a vulnerability in it is a path to the whole machine.
+  Publishing it makes it a studiable public target; that price is declared
+  in the ADR, not hidden. The Kubernetes overlay does not know it
+  (`argumentosDeSetImage` emits only the four images the kustomize base
+  declares) — there is no broker Deployment, by decision.
+
   What this does **not** cover, and is a different item: **code-signing
   the runner binaries** for the OS (macOS notarization, Windows
   Authenticode), which needs a paid signing identity and stays in
   [the backlog](backlog.md).
 - ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
-  (above): all 37 third-party references — composes, kustomize manifests,
+  (above): all 39 third-party references — composes, kustomize manifests,
   Dockerfile `FROM` lines and the workflow `services:` — are pinned by
   digest with the tag in a comment, and `scripts/ci/imagens-pinadas.ts`
   fails the `lint` job on the next regression. What is **not** closed, and

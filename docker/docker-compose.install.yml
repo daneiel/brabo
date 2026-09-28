@@ -3,16 +3,18 @@
 # Ele é gerado a partir de `docker-compose.prod.yml` e difere dele em três
 # pontos, cada um com um motivo:
 #
-#   1. as quatro imagens vêm de VARIÁVEL, sem default. O `install.sh` grava
+#   1. as cinco imagens vêm de VARIÁVEL, sem default. O `install.sh` grava
 #      `BRABO_*_IMAGE` no `.env` — por DIGEST quando a fonte é o GHCR
 #      (`.release/images.json`, verificado pelo ADR 0149), ou pelo nome local
 #      quando é `--source=local`. Sem a variável o compose falha na hora, e
 #      não sobe metade da stack com uma imagem que ninguém escolheu;
 #   2. não há bloco `build:` em lugar nenhum. Este arquivo não constrói: é o
 #      ponto dele. Quem constrói é o `buildx bake`, quando o operador pede;
-#   3. o serviço `broker` NÃO EXISTE aqui, porque a imagem dele não é
-#      publicada — `docker-bake.hcl` tem quatro alvos. Ver o comentário da
-#      `BROKER_URL` na api, e a decisão 7 do ADR 0150.
+#   3. o serviço `broker` existe, sob o MESMO profile `container-broker` do
+#      compose de validação, mas quem o liga é o INSTALADOR, com consentimento
+#      explícito (ADR 0162) — gravando `COMPOSE_PROFILES`, `BROKER_URL` e o
+#      `DOCKER_GID` no `.env`. Até o ADR 0162 ele não existia aqui (decisão 7
+#      do ADR 0150): a imagem não era publicada.
 #
 # POR QUE UM ARQUIVO PRÓPRIO, e não um override sobre o de produção: aquele
 # arquivo se declara, no próprio cabeçalho, "compose de VALIDAÇÃO das imagens"
@@ -29,8 +31,13 @@
 # Uso (normalmente pelo `install.sh`, nunca à mão):
 #   docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait
 #
-# `name` diferente do compose de dev de propósito: os dois podem coexistir na
-# mesma máquina sem disputar containers, redes nem volumes.
+# `name` diferente do compose de dev de propósito — e só passou a ser VERDADE no
+# ADR 0170: até ali os dois se chamavam `brabo` e eram o MESMO projeto Docker
+# (medido em 19/09: o banco da instalação recebeu uma migration do dev). O dev
+# virou `brabo-dev`; este fica `brabo`, porque é o nome que as instalações já
+# existentes têm, e trocá-lo desligaria cada uma dos próprios volumes. Não
+# renomeie. O preflight e o reset do dev RECUSAM enquanto houver container
+# deste compose na máquina (`scripts/dev/instalacao-na-maquina.mjs`).
 name: brabo
 
 # Endurecimento comum a TODOS os nossos serviços de app. Cada um ainda declara
@@ -113,7 +120,7 @@ services:
   # migrations dos dois (verificado), então rodam em paralelo.
   # -------------------------------------------------------------------------
   migrate-api:
-    image: ${BRABO_API_IMAGE:?defina BRABO_API_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_API_IMAGE:?defina BRABO_API_IMAGE — o install.sh grava as cinco no .env}
     <<: *app-hardening
     restart: "no"
     tmpfs:
@@ -129,7 +136,7 @@ services:
         condition: service_healthy
 
   migrate-engine:
-    image: ${BRABO_ENGINE_IMAGE:?defina BRABO_ENGINE_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_ENGINE_IMAGE:?defina BRABO_ENGINE_IMAGE — o install.sh grava as cinco no .env}
     <<: *app-hardening
     restart: "no"
     tmpfs:
@@ -142,6 +149,13 @@ services:
       # suprir o literal público como fallback e mascarar esse `raise`
       # (RN-114, mesmo padrão do ADR 0059/RN-093).
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-}
+      # Também sem default, e pelo mesmo motivo: desde a RN-601 o `runtime.exs`
+      # de uma release `:prod` recusa subir sem um token de serviço válido — e
+      # o `eval` da migração avalia o MESMO arquivo. Sem estas duas aqui a
+      # migração morria antes de migrar. O Job do k8s já as recebia pelo
+      # `envFrom` de `brabo-secrets`.
+      BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       # Sem PHX_SERVER aqui: migração não sobe endpoint HTTP.
     command: ["/app/bin/engine", "eval", "Engine.Release.migrate()"]
     depends_on:
@@ -149,7 +163,7 @@ services:
         condition: service_healthy
 
   api:
-    image: ${BRABO_API_IMAGE:?defina BRABO_API_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_API_IMAGE:?defina BRABO_API_IMAGE — o install.sh grava as cinco no .env}
     <<: *app-hardening
     # /tmp é o único caminho gravável fora dos volumes (uploads temporários,
     # arquivos intermediários). O resto do rootfs é read-only.
@@ -178,12 +192,23 @@ services:
       # (ADR 0059, RN-093/RN-114). A linha continua aqui, com valor vazio,
       # porque omiti-la esconderia que a variável existe.
       CREDENTIALS_MASTER_KEY: ${CREDENTIALS_MASTER_KEY:-}
+      # Os `_PREVIOUS` só existem durante uma rotação sem downtime (runbook: "Auth
+      # key rotation" e "Master key rotation"); vazio = sem rotação, o normal. Sem
+      # estas linhas o Compose não os repassa e a rotação não acontece (RN-595).
+      CREDENTIALS_MASTER_KEY_PREVIOUS: ${CREDENTIALS_MASTER_KEY_PREVIOUS:-}
       # Auth first-party (Fase 7a). AUTH_JWT_SECRET deriva o par Ed25519 que
       # assina o access token; BRABO_SERVICE_TOKEN autentica o tráfego interno
       # engine <-> api nos dois sentidos — MESMO valor nos dois serviços deste
       # compose (ver a env do serviço `engine`, abaixo).
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
+      AUTH_JWT_SECRET_PREVIOUS: ${AUTH_JWT_SECRET_PREVIOUS:-}
+      # OBRIGATÓRIO desde a RN-613: sem ele a api recusa subir, e a recusa diz
+      # o conserto — numa instalação que já roda, o valor ATUAL do
+      # AUTH_JWT_SECRET, para ninguém ser deslogado. Até ali este compose nem o
+      # repassava, e o pepper caía no JWT: rotacionar o JWT deslogava todos.
+      AUTH_TOKEN_PEPPER: ${AUTH_TOKEN_PEPPER:-}
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
       ENGINE_URL: ${ENGINE_URL:-http://engine:4000}
@@ -221,22 +246,25 @@ services:
       # imagens, e uma validação não monta pasta de ninguém. Sem ela, a api
       # reporta `projectsBase: null` e o modo não é oferecido.
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
-      # Broker de container (ADR 0130). Vazia, e aqui não é só o default: o
-      # serviço `broker` NÃO EXISTE neste compose, porque a imagem dele não é
-      # publicada — `docker-bake.hcl` tem quatro alvos e `images-manifest.ts`
-      # aceita quatro. Consequência declarada no ADR 0150 (decisão 7): numa
-      # instalação por GHCR, projeto `mounted` não sobe container, porque quem
-      # o sobe é o broker (ADR 0144). Quem lê o estado observado declara "não
-      # observado" em vez de herdar o registrado — que é o comportamento certo
-      # para um broker ausente.
+      # Broker de container (ADR 0130). Vazia é o default, e é o estado de uma
+      # instalação que NÃO consentiu (ADR 0162): o serviço `broker`, abaixo,
+      # fica desligado sob o profile, projeto `container` e `mounted` não sobem
+      # container (quem os sobe é o broker, ADR 0144), e quem lê o estado
+      # observado declara "não observado" em vez de herdar o registrado. Quem
+      # consentiu tem `BROKER_URL=http://broker:8090` gravada pelo instalador,
+      # JUNTO com `COMPOSE_PROFILES=container-broker` — uma sem a outra é a api
+      # apontando para um serviço que não sobe, ou um broker que ninguém chama.
       BROKER_URL: ${BROKER_URL:-}
     ports:
       - "${API_PORT:-3000}:3000"
     networks:
       # A api participa de DUAS redes. Declarar `networks` num serviço tira
       # dele a default implícita — omitir `default` aqui a desligaria do
-      # postgres, do neo4j e do engine.
+      # postgres, do neo4j e do engine. A `broker` entra SEMPRE, ligado o
+      # broker ou não, como no compose de validação: rede vazia não concede
+      # nada, e condicioná-la ao profile exigiria dois arquivos.
       - default
+      - broker
     volumes:
       - git_local_repos:/data/git-repos
       - project_workspaces:/data/project-workspaces
@@ -259,7 +287,7 @@ services:
         condition: service_completed_successfully
 
   engine:
-    image: ${BRABO_ENGINE_IMAGE:?defina BRABO_ENGINE_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_ENGINE_IMAGE:?defina BRABO_ENGINE_IMAGE — o install.sh grava as cinco no .env}
     <<: *app-hardening
     tmpfs:
       # /tmp: 4 detectors e a árvore temporária do InfraGateRunner escrevem lá.
@@ -273,6 +301,7 @@ services:
       # levaria 401 em toda chamada interna e o sintoma apareceria só no
       # primeiro handoff.
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       PORT: 4000
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
       # Obrigatórios no release (runtime.exs, bloco :prod):
@@ -296,13 +325,51 @@ services:
       # árvores diferentes.
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
       SESSION_HEARTBEAT_TIMEOUT_MS: ${SESSION_HEARTBEAT_TIMEOUT_MS:-30000}
+      # Teto da conversa ociosa (RN-581): mesmo default do runtime.exs (8h).
+      # Faltava AQUI (AT-153) e só aqui: o Compose não repassa o ambiente do
+      # host, então `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` no `.env` de uma
+      # instalação era inerte, e o teto ficava preso nas 8h do código.
+      SESSION_CONVERSATION_IDLE_TIMEOUT_MS: ${SESSION_CONVERSATION_IDLE_TIMEOUT_MS:-28800000}
       TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-15000}
       SECOPS_SCAN_TIMEOUT_MS: ${SECOPS_SCAN_TIMEOUT_MS:-180000}
-      # Agentes de fundo desligados por default AQUI (não em dev): este compose
-      # existe pra validar as imagens, e Psicólogo/Anamnese começariam a
-      # consumir LLM sem provider configurado. Suba com `true` pra exercitar.
-      START_OUTBOX_DRAIN: ${START_OUTBOX_DRAIN:-false}
-      START_ANAMNESE: ${START_ANAMNESE:-false}
+      # As quatro `START_*` são CHAVES DE BOOT (decidem se o tick é agendado);
+      # as `*_ENABLED` são as flags de PRODUTO (RN-115/RN-117), que decidem se
+      # uma rodada NOVA pode acontecer — exercitar a Anamnese exige as DUAS em
+      # `true`. As seis de baixo faltavam AQUI e só aqui (AT-202): o Compose
+      # não repassa o ambiente do host, então defini-las no `.env` de uma
+      # instalação era inerte, a mesma classe da RN-540. Elas repetem o
+      # default do `runtime.exs`: a linha existe para EXISTIR o caminho de
+      # virar a flag, não para mudar o que já valia.
+      #
+      # As duas de cima repetem AQUI o `true` do código, e DIVERGEM do compose
+      # de produção (`docker-compose.prod.yml`, que as desliga) DE PROPÓSITO
+      # (AT-219). Este arquivo nasceu copiando o bloco dele, com o motivo dele
+      # ("existe pra validar as imagens"), e o motivo não vale aqui: isto é uma
+      # INSTALAÇÃO de uso, não uma validação de imagem.
+      #
+      # - `START_OUTBOX_DRAIN` NÃO é só "o Psicólogo via outbox". Ela agenda o
+      #   `OutboxDrainWorker` — o ÚNICO consumidor dos eventos `session`/
+      #   `task`/`container` que a api grava no outbox — e, junto, a poda de
+      #   worktrees órfãos e a adoção de sessões sem dono
+      #   (`Engine.Application`). Desligada numa instalação de uma máquina,
+      #   NINGUÉM drenava: sessão encerrada pela api não parava o processo nem
+      #   os conversacionais dela (RN-581), e o dev agent que esperava uma
+      #   decisão (`task.action_settled`), um gate, a PR ou o container chegar
+      #   em `running` (RN-502) nunca era acordado. O Psicólogo NÃO volta com
+      #   ela: `Outbox.Drain` só o enfileira com `PSYCHOLOGIST_ENABLED=true`.
+      # - `START_ANAMNESE` só decide se o `kickoff/0` do tick é CHAMADO. Com
+      #   `ANAMNESE_ENABLED=false` (a pausa de produto, que segue valendo) o
+      #   `kickoff/0` não agenda job nenhum e `perform/1` não reagenda: nenhuma
+      #   rodada e nenhum token. Ligar a Anamnese continua sendo UMA variável
+      #   só, a de produto, sem a armadilha de a chave de boot estar desligada.
+      START_OUTBOX_DRAIN: ${START_OUTBOX_DRAIN:-true}
+      START_ANAMNESE: ${START_ANAMNESE:-true}
+      START_MODEL_SYNC: ${START_MODEL_SYNC:-true}
+      START_GATE_RESCUE: ${START_GATE_RESCUE:-true}
+      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-false}
+      PSYCHOLOGIST_ENABLED: ${PSYCHOLOGIST_ENABLED:-false}
+      GRAPH_TEMPLATES_ENABLED: ${GRAPH_TEMPLATES_ENABLED:-false}
+      GRAPH_INSTRUCTION_TEMPLATES_ENABLED: ${GRAPH_INSTRUCTION_TEMPLATES_ENABLED:-false}
     ports:
       - "${ENGINE_PORT:-4000}:4000"
     volumes:
@@ -318,11 +385,67 @@ services:
         condition: service_completed_successfully
 
   # Broker de container (ADR 0130) — o ÚNICO serviço com `/var/run/docker.sock`
-  # montado, aqui como no compose de desenvolvimento. Não monte esse socket em
+  # montado, aqui como nos outros dois composes. Não monte esse socket em
   # nenhum outro.
   #
+  # Sob profile, e quem o liga é o INSTALADOR, perguntando (ADR 0162): o `.env`
+  # de quem consentiu traz `COMPOSE_PROFILES=container-broker`, e é por ele que
+  # `up -d --wait` passa a subir este serviço sem flag nenhuma na linha. O
+  # argumento é o da RN-512 (ADR 0146): quem instala na PRÓPRIA máquina já tem
+  # o socket — acabou de rodar `docker compose` —, então o broker recebê-lo não
+  # concede nada que essa pessoa não possua. O que a instalação não pode
+  # assumir é que ela saiba o que o socket é; por isso pergunta, com o risco em
+  # texto, em vez de ligar como o compose de desenvolvimento.
+  #
+  # As cinco camadas do ADR 0130 são as mesmas dos outros dois arquivos, e
+  # nenhuma depende do profile: sem `ports:`, só na rede `broker`
+  # (`internal: true`, sem egress, só a api do outro lado), token de serviço
+  # obrigatório em produção, cinco operações, spec computada a partir da api.
+  #
+  # NENHUM serviço tem `depends_on` dele: um serviço FORA do profile
+  # dependendo de um DENTRO faz o Compose recusar o arquivo inteiro.
+  broker:
+    image: ${BRABO_BROKER_IMAGE:?defina BRABO_BROKER_IMAGE — o install.sh grava as cinco no .env}
+    profiles: ["container-broker"]
+    <<: *app-hardening
+    # O CLI do docker escreve arquivo temporário (`DOCKER_CONFIG=/tmp/.docker`
+    # na imagem); o resto do rootfs é read-only.
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production
+      BROKER_PORT: 8090
+      # Sem default: com NODE_ENV=production o broker RECUSA subir com a
+      # variável vazia, com o literal público do repositório ou curta demais. É
+      # o MESMO valor da api e do engine (o instalador gera um só).
+      BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
+      API_URL: ${API_URL:-http://api:3000}
+      # A raiz da pasta GERENCIADA (modo `container`) no HOST. Aqui ela é o
+      # volume nomeado `project_workspaces`, e o compose não tem como saber
+      # onde o daemon o guarda — quem a calcula é o instalador
+      # (`<DockerRootDir>/volumes/brabo_project_workspaces/_data`) e a CONFERE
+      # contra o `Mountpoint` do volume depois da subida. Vazia, `start` de
+      # projeto `container` recusa nomeando a variável; as outras operações e o
+      # modo `mounted` seguem.
+      PROJECT_WORKSPACES_HOST_ROOT: ${PROJECT_WORKSPACES_HOST_ROOT:-}
+      # A base dos projetos MONTADOS no host (ADR 0141/0144) — deriva de
+      # `BRABO_PROJECTS_BASE`, que já é caminho de host por definição.
+      BRABO_PROJECTS_HOST_BASE: ${BRABO_PROJECTS_HOST_BASE:-${BRABO_PROJECTS_BASE:-}}
+    # SEM `ports:` — a primeira camada da contenção.
+    networks:
+      - broker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # O gid que o socket tem VISTO DE DENTRO de um container — o instalador o
+    # mede com esta mesma imagem, e recusa quando não consegue, em vez de gravar
+    # um palpite. O default 999 só vale para quem editar o `.env` à mão, e está
+    # errado em várias distribuições (medido: 984 numa delas).
+    group_add:
+      - "${DOCKER_GID:-999}"
+
   web:
-    image: ${BRABO_WEB_IMAGE:?defina BRABO_WEB_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_WEB_IMAGE:?defina BRABO_WEB_IMAGE — o install.sh grava as cinco no .env}
     <<: *app-hardening
     tmpfs:
       # O entrypoint renderiza o nginx.conf aqui (o /etc/nginx é read-only) e o
@@ -398,9 +521,9 @@ services:
     restart: "no"
 
   # O serviço `backup` entra aqui porque a imagem DELE é publicada — é o quarto
-  # alvo do bake (`scripts/ci/images-manifest.ts:54`), ao contrário do `broker`.
-  # Ele fica sob `profiles`, então não sobe com o resto; quem o usa é a
-  # migração (sessão 6 da FASE 29) e quem quiser rodar um backup à mão.
+  # alvo do bake (`scripts/ci/images-manifest.ts`). Ele fica sob `profiles`,
+  # então não sobe com o resto; quem o usa é a migração (sessão 6 da FASE 29) e
+  # quem quiser rodar um backup à mão.
 
   # Backup e restore contra compose (ADR 0152). A QUINTA imagem do bake nunca
   # tinha serviço aqui — ela era construída e usada só no k8s, e era por isso
@@ -415,7 +538,7 @@ services:
   #   docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore
   #   bash docker/backup/test-restore-compose.sh   # os dois acima, com veredito
   backup:
-    image: ${BRABO_BACKUP_IMAGE:?defina BRABO_BACKUP_IMAGE — o install.sh grava as quatro no .env}
+    image: ${BRABO_BACKUP_IMAGE:?defina BRABO_BACKUP_IMAGE — o install.sh grava as cinco no .env}
     profiles: ["backup"]
     <<: *app-hardening
     restart: "no"
@@ -457,6 +580,13 @@ services:
       postgres:
         condition: service_healthy
 
+networks:
+  # Rede PRÓPRIA do broker, `internal: true` (ADR 0130): o engine e o web não a
+  # alcançam, e o broker não alcança a internet — NUNCA, nem para puxar
+  # imagem: quem puxa é o daemon, não o processo. Só a api está dos dois lados.
+  broker:
+    internal: true
+
 volumes:
   pgdata:
   neo4j_data:
@@ -470,3 +600,10 @@ volumes:
   # linha de volume de `api`/`engine` continuar válida quando a variável não
   # está definida. Nada escreve dentro dele.
   brabo_projects_base:
+  # Destino dos backups quando `BRABO_BACKUP_HOST_DIR` não aponta para uma pasta
+  # do host (ADR 0152) — o mesmo volume do compose de produção. Faltava aqui: o
+  # serviço `backup` o referencia, e com o profile ligado (`run backup`) o
+  # Compose recusava o arquivo INTEIRO ("refers to undefined volume"), então a
+  # prova da migração nunca chegava a rodar (AT-102). Serve para VERIFICAR, nunca
+  # para migrar: `down -v` o apaga junto com o que deveria salvar.
+  backup_local:

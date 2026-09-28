@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
@@ -17,6 +17,8 @@ import {
   canAdvanceFromDetails,
   canAdvanceFromMode,
   canAdvanceFromWorkspace,
+  caminhoLocalParecePlausivel,
+  nomeAceitoPelaApi,
   providerNeedsCredential,
   slugify,
   type ModoDeRepositorio,
@@ -114,7 +116,11 @@ function montarPayloadDeCriacao(input: {
   modoDeWorkspace: ModoDeWorkspace;
   workspacePath: string;
 }): { name: string; slug: string; executionMode: ModoDeWorkspace; workspacePath?: string } {
-  const nomeDoProjeto = input.adotando ? nomeDoExternalId(input.externalId) : input.name;
+  // Recortado: o DTO mede `name` como veio, e " a" passaria no MinLength(2)
+  // com um projeto de nome de uma letra (AT-215).
+  const nomeDoProjeto = (
+    input.adotando ? nomeDoExternalId(input.externalId) : input.name
+  ).trim();
   return {
     name: nomeDoProjeto,
     slug: slugify(nomeDoProjeto),
@@ -189,6 +195,11 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [credError, setCredError] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // A trava que o `disabled` não dá (AT-215, RN-600): o estado de envio só
+  // chega ao botão no próximo render, e dois cliques no mesmo quadro passam
+  // os dois. Uma criação por vez, pelos DOIS caminhos que criam — o
+  // "Procurar pasta..." do modo runner e o "Provisionar".
+  const criacaoEmVoo = useRef(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -231,17 +242,54 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     ? (projectsBaseQuery.data?.projectsBase ?? null)
     : null;
 
+  /**
+   * O broker de container, a OUTRA metade da mesma pergunta (ADR 0161,
+   * RN-573): `container` e `mounted` só sobem container pelo broker (ADR
+   * 0144), e sem container `running` nenhum dev agent trabalha (ADR 0143).
+   *
+   * TRÊS estados, e eles não colapsam. `true` e `false` vêm da api; enquanto
+   * a consulta não chegou, ou quando ela FALHA, é "não sei" — e "não sei" não
+   * vira "tem" (não pré-seleciona `mounted`) nem vira "não tem" (não trava os
+   * cards nem afirma em texto uma ausência que ninguém confirmou): fica o
+   * comportamento de antes, `container` selecionado e `mounted` fora da tela
+   * pela régua da RN-513.
+   */
+  const brokerConfirmado =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.brokerConfigurado === true;
+  const semBrokerConfirmado =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.brokerConfigurado === false;
+
+  /**
+   * O modo que esta instalação CONSEGUE executar. Sem broker CONFIRMADO,
+   * `container` e `mounted` continuam na tela (tirar o card esconderia a
+   * informação, ADR 0064), mas inertes, com o motivo dito UMA vez em texto
+   * abaixo deles — e `runner` passa a ser o pré-selecionado.
+   */
+  const modoExecutavel = (modo: ModoDeWorkspace): boolean =>
+    modo === 'runner' || !semBrokerConfirmado;
+
   // O modo VIGENTE: a escolha humana quando existe, senão o default da
-  // instalação. Uma escolha em `mounted` que deixe de ser oferecível (a
-  // consulta invalidada devolvendo `null`) cai para o default em vez de
-  // ficar apontando para um card que saiu da tela.
+  // instalação. Uma escolha que deixe de ser oferecível (a consulta
+  // invalidada devolvendo `null`, ou um clique em `container` antes de a
+  // resposta dizer que não há broker) cai para o default em vez de ficar
+  // apontando para um card que saiu da tela ou ficou inerte.
+  //
+  // `mounted` só é PRÉ-selecionado com base E broker confirmados (RN-513
+  // revisada pela RN-573): pré-selecionar um modo que não sobe container foi
+  // o que deixou a instalação do AT-085 com seis dev agents bloqueados para
+  // sempre.
   const modoDeWorkspace: ModoDeWorkspace =
     modoDeWorkspaceEscolhido !== undefined &&
-    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted)
+    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted) &&
+    modoExecutavel(modoDeWorkspaceEscolhido)
       ? modoDeWorkspaceEscolhido
-      : podeOferecerMounted
-        ? 'mounted'
-        : 'container';
+      : semBrokerConfirmado
+        ? 'runner'
+        : podeOferecerMounted && brokerConfirmado
+          ? 'mounted'
+          : 'container';
 
   /**
    * DE ONDE o navegador de pastas lê o disco, decidido pelo MODO (RN-533).
@@ -259,6 +307,25 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         ? { tipo: 'runner', projectId: projetoParaNavegar.id }
         : undefined
       : { tipo: 'api', workspaceId };
+
+  /**
+   * Por que "Procurar pasta..." do modo `runner` ainda não pode criar o
+   * projeto (AT-215, RN-600). O clique CRIA (RN-437), e com o nome vazio —
+   * o campo do nome fica ABAIXO do de caminho neste passo — o corpo saía com
+   * `name: ''` e `slug: ''`: 400 garantido, a cada clique, com um toast que
+   * não dizia por quê. Com o motivo conhecido de antemão, o botão fica inerte
+   * e a tela diz o que falta, em texto (ADR 0064). Caminho VAZIO não bloqueia
+   * (o placeholder provisório da RN-437 cobre); caminho digitado e implausível
+   * bloqueia, porque seria a outra recusa certa.
+   */
+  const bloqueioDoProcurarNoRunner: 'nome' | 'caminho' | null =
+    modoDeWorkspace !== 'runner'
+      ? null
+      : !nomeAceitoPelaApi(adotando ? nomeDoExternalId(externalId) : name)
+        ? 'nome'
+        : caminhoLocal.trim() !== '' && !caminhoLocalParecePlausivel(caminhoLocal)
+          ? 'caminho'
+          : null;
 
   // Campo VAZIO não é "fora da base": não há caminho para a api recusar
   // ainda, e alarmar antes de a pessoa digitar seria a tela afirmando sobre
@@ -313,7 +380,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     // Provider e credencial são do caminho de ADOÇÃO, e só dele (RN-541).
     //
     // Criar um projeto deixou de provisionar repositório: o git nasce quando o
-    // Arquiteto passa o handoff ao Dev Lead, e nasce `local`, que é o único
+    // handoff ao Arquiteto é aceito (RN-582, ADR 0165 — antes era o do Dev
+    // Lead, RN-522), e nasce `local`, que é o único
     // provider que não pede credencial nenhuma. Perguntar "onde hospedar" na
     // criação seria perguntar por uma decisão que a tela não vai usar — e
     // cobrar um PAT para um repositório que ninguém vai criar agora.
@@ -420,6 +488,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       setNavegadorDePastaAberto(true);
       return;
     }
+    if (bloqueioDoProcurarNoRunner !== null) return;
 
     const snapshotAtual = snapshotDeIdentidade({ adotando, name, externalId });
     if (projetoParaNavegar && mesmaIdentidade(projetoParaNavegar.snapshot, snapshotAtual)) {
@@ -427,7 +496,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       return;
     }
 
+    if (criacaoEmVoo.current) return;
+    criacaoEmVoo.current = true;
     setCriandoParaNavegar(true);
+    setErroDeCriacao(null);
     try {
       const project = await createProject(
         workspaceId,
@@ -442,12 +514,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       setProjetoParaNavegar({ id: project.id, snapshot: snapshotAtual });
       setNavegadorDePastaAberto(true);
-    } catch {
+    } catch (error) {
+      // A recusa da api é o que ensina (o nome curto demais, o caminho fora
+      // da régua) — o toast genérico sozinho era o que fazia o dono clicar de
+      // novo, e de novo (AT-215). O motivo fica NA TELA, como no Provisionar.
+      const motivo =
+        error instanceof ApiError && error.status === 400
+          ? mensagemDaApi(error)
+          : null;
+      setErroDeCriacao(motivo);
       showToast({
         title: t('toasts.folderNavigationPrepareFailed'),
         tone: 'danger',
       });
     } finally {
+      criacaoEmVoo.current = false;
       setCriandoParaNavegar(false);
     }
   }
@@ -457,6 +538,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     // tela de plano. Ao criar ele é `undefined` no caso normal, e o `return`
     // incondicional que existia aqui faria o botão não fazer NADA, em silêncio.
     if (adotando && !provider) return;
+    if (criacaoEmVoo.current) return;
+    criacaoEmVoo.current = true;
     setSubmitting(true);
     setErroDeCriacao(null);
     try {
@@ -523,6 +606,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         tone: 'danger',
       });
       setSubmitting(false);
+    } finally {
+      criacaoEmVoo.current = false;
     }
   }
 
@@ -628,6 +713,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 ]
                   .filter(Boolean)
                   .join(' ')}
+                disabled={!modoExecutavel(m.id)}
                 onClick={() => setModoDeWorkspaceEscolhido(m.id)}
               >
                 <span className={styles.providerLabel}>{t(m.labelKey)}</span>
@@ -635,6 +721,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               </button>
             ))}
           </div>
+
+          {/* O motivo dos cards inertes, em TEXTO e uma vez (ADR 0064):
+              `title` em elemento `disabled` não abre no Chromium. Só com a
+              ausência CONFIRMADA pela api — "não sei" não afirma nada. */}
+          {semBrokerConfirmado && (
+            <div style={{ marginTop: 12 }} data-testid="aviso-sem-broker">
+              <Alert tone="warning">
+                <Trans
+                  i18nKey="workspace.noBroker"
+                  ns="newProject"
+                  components={{ strong: <strong />, code: <code /> }}
+                />
+              </Alert>
+            </div>
+          )}
 
           {modoDeWorkspace !== 'container' && (
             <div className={styles.field} style={{ marginTop: 16 }}>
@@ -654,7 +755,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   type="button"
                   variant="secondary"
                   onClick={() => void handleProcurarPasta()}
-                  disabled={criandoParaNavegar}
+                  disabled={criandoParaNavegar || bloqueioDoProcurarNoRunner !== null}
                 >
                   <FolderIcon size={14} />
                   {criandoParaNavegar ? t('workspace.preparing') : t('workspace.browseButton')}
@@ -665,6 +766,44 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   ? t('workspace.hintMounted')
                   : t('workspace.hintRunner')}
               </div>
+              {bloqueioDoProcurarNoRunner !== null && (
+                <div className={styles.slugPreview} data-testid="procurar-bloqueado">
+                  {bloqueioDoProcurarNoRunner === 'nome'
+                    ? adotando
+                      ? t('workspace.browseRunner.blockedAdoptName')
+                      : t('workspace.browseRunner.blockedName')
+                    : t('workspace.browseRunner.blockedPath')}
+                </div>
+              )}
+              {modoDeWorkspace === 'runner' && (
+                // O pré-requisito do botão, dito ANTES do clique (AT-214, ADR
+                // 0064: motivo em texto, nunca tooltip). No modo `runner` o
+                // navegador lê o disco da máquina pelo agente local, ancorado
+                // no projeto criado antecipadamente (RN-437, ADR 0108, RN-533)
+                // — sem `brabo-runner` rodando e conectado não há quem responda,
+                // e isso é POR CONSTRUÇÃO. O que faltava era a tela dizer isso
+                // a quem ainda não clicou, e dizer que digitar o caminho é a
+                // alternativa que não depende de nada.
+                <div className={styles.baseNote} data-testid="aviso-procurar-runner">
+                  <Trans
+                    i18nKey="workspace.browseRunner.requires"
+                    ns="newProject"
+                    components={{ strong: <strong />, code: <code /> }}
+                  />{' '}
+                  <code>
+                    {t('workspace.runnerHint.command', {
+                      id: projetoParaNavegar?.id ?? t('workspace.runnerHint.placeholderId'),
+                      caminho:
+                        caminhoLocal.trim() || t('workspace.browseRunner.placeholderPath'),
+                    })}
+                  </code>{' '}
+                  <Trans
+                    i18nKey="workspace.browseRunner.alternative"
+                    ns="newProject"
+                    components={{ strong: <strong /> }}
+                  />
+                </div>
+              )}
               {modoDeWorkspace === 'mounted' ? (
                 // DOIS estados, e são os dois que o backend realmente tem
                 // (RN-500/RN-501): dentro da base consentida a criação passa,

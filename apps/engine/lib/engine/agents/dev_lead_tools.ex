@@ -88,6 +88,7 @@ defmodule Engine.Agents.DevLeadTools do
   sobre a mesma story.
   """
 
+  alias Engine.Agents.Reidratacao
   alias Engine.Gates.Dispatcher
   alias Engine.Sessions.EngineApiClient
 
@@ -256,7 +257,13 @@ defmodule Engine.Agents.DevLeadTools do
         state
       )
       when parecer in ["implementavel", "inviavel"] do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
+    # A CAUDA, com o mesmo teto da reidratação (RN-580, ADR 0060): sem
+    # `latest`, a api devolve os PRIMEIROS 200 e numa sessão longa o plano de
+    # teste recém-emitido ficava de fora.
+    case EngineApiClient.list_events(state.project_id, state.session_id,
+           latest: true,
+           limit: Reidratacao.teto()
+         ) do
       {:ok, eventos} ->
         # Em PARALELO, e sem que o parecer dependa disso — ver a seção
         # "O appsec dispara junto" no moduledoc.

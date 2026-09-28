@@ -54,6 +54,7 @@
     "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need"
   },
   "ativacao": {
+    "mensagemNaoEnviada": "Your unsent message",
     "naoAtivada": "Session not activated yet.",
     "ativarSessao": "Activate session",
     "statusGenerico": "Session {{status}} — can't send messages."
@@ -82,6 +83,7 @@
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
+    "semRepositorio": "No repository yet: accepting this handoff provisions it, and only then can execution be activated.",
     "acompanheExecucao": "Follow the execution in Executors",
     "infraTitulo": "{{de}} handed off to Infra",
     "infraDetalhe": "Accepting activates the Infra Lead, who takes over provisioning and will PROPOSE starting the project container — the proposal still comes back to you in Approvals.",
@@ -105,6 +107,7 @@
     "erroEnviar": "Could not send the answers"
   },
   "toasts": {
+    "sessaoEncerrada": "This session was closed and no longer accepts messages. Start a new session to continue.",
     "erro": "Error",
     "erroAtivarSessao": "Could not activate the session",
     "erroRenomear": "Could not rename the session",
