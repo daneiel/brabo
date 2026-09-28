@@ -44,6 +44,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   zerado, o container registrado que será removido (só quando o projeto é
   Container, que é quando a conversão o remove — e "não consegui ler" quando a
   leitura falha) e a pasta confirmada que deixa de valer, com a data.
+
+- **docs**: o `pnpm docs:check` passa a REPROVAR variável de ambiente sem
+  descrição em `docs/reference/configuration.md`, nas fontes de produto e de
+  ferramenta, mesmo com o inventário gerado em dia (AT-211) — antes, depois de
+  `pnpm docs:generate`, a marca ⚠️ ficava commitada e o check passava. A
+  mensagem nomeia a variável, o arquivo que a lê e a seção onde escrever; uma
+  linha com `TODO(humano)` conta como lacuna declarada e não reprova. As duas
+  variáveis que estavam assim, `HUGGINGFACE_API_TOKEN` e `HUGGINGFACE_HUB_URL`,
+  ganharam descrição (com `HUGGINGFACE_REQUEST_TIMEOUT_MS`, que o inventário
+  não enxerga), e um `TODO(humano)` registra que nenhum compose as repassa ao
+  serviço `api`.
+
 - **docs**: o runbook ganha a tabela *Procedures and how each is verified*
   (AT-193, AT-197): os 28 procedimentos de operação, cada um com o arquivo que
   o prova e o que roda essa prova (agenda semanal, todo PR, toda tag ou

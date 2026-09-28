@@ -2152,8 +2152,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   e um inventário que nasce vazio não avisa, passa verde. As fontes moram em
   `scripts/docs/fontes-de-env.mjs`, provadas contra a árvore real pelo spec ao
   lado, e em `e2e/` o `.spec.ts` NÃO é filtrado: ali o spec É o código que lê
-  o ambiente (AT-124). O que reprova é o bloco DESATUALIZADO; regenerado, o ⚠️
-  fica commitado e o check passa — é lacuna visível, não portão.
+  o ambiente (AT-124). E o ⚠️ é PORTÃO desde a AT-211, nas DUAS espécies de
+  fonte: o `docs:check` reprova toda variável sem descrição mesmo com o bloco
+  regenerado (antes, regenerado, o ⚠️ ficava commitado e passava), nomeando a
+  variável, o arquivo que a lê e a seção de `configuration.md` onde escrever
+  (`scripts/docs/inventario-de-env.mjs`, provado por mutação no spec ao lado).
+  Um `**TODO(humano):**` na linha que cita a variável NÃO reprova, de
+  propósito: é lacuna DECLARADA, e reprová-lo empurraria quem não sabe a
+  resposta a inventar uma. O ⚠️ do inventário de EVENTOS segue sem reprovar.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
