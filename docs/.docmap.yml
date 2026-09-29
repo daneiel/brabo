@@ -453,6 +453,15 @@ rules:
     docs: ["docs/explanation/medicao-do-idioma.md"]
     severity: warn
 
+  # O replay do Jev da AT-237: o instrumento (passos, state, curva) e os
+  # números que ele produziu moram numa página só. Mudar a fronteira de passo,
+  # o state ou a régua de acerto muda o que a página afirma.
+  - id: medicao-do-jev
+    watch:
+      - "scripts/jev/**"
+    docs: ["docs/explanation/medicao-do-jev.md"]
+    severity: warn
+
   - id: scripts
     watch:
       - "package.json"

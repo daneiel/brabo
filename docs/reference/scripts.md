@@ -169,6 +169,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter scripts idioma:medir` | `node idioma/medir.ts` |
 | `pnpm --filter scripts idioma:extrair` | `node idioma/extrair.ts` |
 | `pnpm --filter scripts idioma:rotular` | `node idioma/rotular.ts` |
+| `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
 
 ## Makefile
 
@@ -194,4 +195,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-129 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+130 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

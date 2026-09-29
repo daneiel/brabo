@@ -142,6 +142,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   dependência nova. Números e leitura em
   [Measuring the language heuristic](docs/explanation/medicao-do-idioma.md).
 
+- **scripts**: o replay que MEDE o roteamento de ferramenta pelo Jev contra os
+  passos já gravados no event log local (AT-237) —
+  `pnpm --filter @brabo/scripts jev:replay` pergunta ao Jev, uma vez por passo
+  (fronteira tirada de `token_usage`), qual ferramenta ele ofereceria, e
+  imprime concordância por agente com IC de Wilson, a curva acerto × limiar pela
+  regra decidida na AT-236 (só restringe; `responder_sem_ferramenta` manda o
+  catálogo inteiro), latência e custo pelo `usage.cost`, conferido contra
+  `GET /api/v1/generation`. Nada no produto muda, nada é gravado no banco, e a
+  saída com ids de sessão fica fora do checkout. Na amostra de 29/09 (302
+  passos): concordância 47% (41–52%), abaixo da linha de base "repetir a
+  ferramenta anterior" (71%); nenhum limiar sustenta 90% de acerto no limite
+  inferior do IC; p95 de 410 ms; US$ 0,0000727 por passo. Números, recorte e o
+  que o replay não enxerga em
+  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md).
+
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
