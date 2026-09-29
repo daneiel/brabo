@@ -181,6 +181,7 @@ estado lido do repositório e não da conversa.
 | `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava depois (AT-138, BRB-015) | ADR 0176 |
 | O idioma das RESPOSTAS vira preferência da conta, com override por sessão, separado do `users.locale` (AT-162) | ADR 0177, RN-618 |
 | O projeto ganha idioma, o de artefato compartilhado e turno sem autor (AT-243) | ADR 0177, RN-619 |
+| A barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) | RN-620 |
 
 ## Estado atual e aberto
 

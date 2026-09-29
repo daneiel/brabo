@@ -23,5 +23,19 @@
     "conta": "escolhido por você na Conta",
     "detectado": "detectado pelas suas mensagens e confirmado por você",
     "interface": "o idioma da interface, porque nada foi escolhido nem detectado ainda"
+  },
+  "session": {
+    "label": "Respostas:",
+    "selectAria": "Idioma das respostas nesta sessão",
+    "followAccount": "Seguir a Conta ({{idioma}})",
+    "otherLabel": "Código de idioma (BCP-47) para esta sessão",
+    "pin": "Fixar",
+    "effective": "{{idioma}}, {{origem}}",
+    "notYetApplied": "ainda não chega aos agentes",
+    "readOnly": "trocar aqui pede papel developer",
+    "accountLink": "Conta",
+    "loading": "Idioma das respostas…",
+    "loadError": "Idioma das respostas indisponível",
+    "error": "Não foi possível fixar o idioma nesta sessão"
   }
 }
