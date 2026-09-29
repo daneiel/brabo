@@ -2402,8 +2402,8 @@ um colapso de doze mensagens é UMA entrada na tela.
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/SessionPage.tsx:223` (o corte do fio), `:1459`
-  (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:118` (o corte do fio), `:226`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:425` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2539,7 +2539,7 @@ subagente, só a narrar o que o lead já registrou. A origem da falha viaja junt
 em `delegation.failed`, pela mesma razão da [RN-059](../business-rules/custo.md#rn-059) — é ela que diz
 se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:1687`
+- **Onde:** `apps/web/src/routes/session-timeline-montagem.tsx:754`
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-181")
 - **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
