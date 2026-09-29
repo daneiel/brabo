@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "idioma:medir": "node idioma/medir.ts",
+    "idioma:extrair": "node idioma/extrair.ts",
+    "idioma:rotular": "node idioma/rotular.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

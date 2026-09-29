@@ -1,0 +1,123 @@
+{"id": "s001", "idioma": "pt", "caso": "pt-prosa", "texto": "Preciso que você revise o módulo de autenticação antes de a gente abrir o PR, porque o teste de refresh ainda está falhando de vez em quando e eu não consegui descobrir o motivo.", "origem": "sintetico"}
+{"id": "s002", "idioma": "pt", "caso": "pt-prosa", "texto": "Quero criar uma aplicação para controlar as despesas da minha casa. A ideia é que cada pessoa da família consiga registrar o que gastou e no fim do mês a gente veja um resumo por categoria.", "origem": "sintetico"}
+{"id": "s003", "idioma": "pt", "caso": "pt-prosa", "texto": "Não entendi por que o agente parou no meio da tarefa. Ele disse que ia rodar os testes e depois ficou em silêncio por uns dez minutos.", "origem": "sintetico"}
+{"id": "s004", "idioma": "pt", "caso": "pt-prosa", "texto": "Acho que a história está grande demais. Dá pra quebrar em duas partes? Uma só com o cadastro e outra com os relatórios.", "origem": "sintetico"}
+{"id": "s005", "idioma": "pt", "caso": "pt-prosa", "texto": "Obrigado pela explicação, agora ficou claro. Então vamos seguir com a opção que usa uma tabela nova em vez de coluna na tabela de usuários.", "origem": "sintetico"}
+{"id": "s006", "idioma": "pt", "caso": "pt-prosa", "texto": "Eu prefiro que o projeto use Postgres, porque já tenho experiência com ele e a equipe inteira conhece bem as ferramentas de backup.", "origem": "sintetico"}
+{"id": "s007", "idioma": "pt", "caso": "pt-prosa", "texto": "Revisei o documento do arquiteto e tenho duas dúvidas: onde fica guardada a sessão do usuário e o que acontece quando o servidor reinicia no meio de uma operação.", "origem": "sintetico"}
+{"id": "s008", "idioma": "pt", "caso": "pt-prosa", "texto": "Pode me mostrar o que mudou desde a última versão? Quero conferir antes de aprovar a promoção para a branch de qualidade.", "origem": "sintetico"}
+{"id": "s009", "idioma": "pt", "caso": "pt-prosa", "texto": "A tela de configurações ficou muito confusa depois da última mudança. Eu não sei mais onde fica a opção de trocar o modelo do agente.", "origem": "sintetico"}
+{"id": "s010", "idioma": "pt", "caso": "pt-prosa", "texto": "Isso não faz sentido pra mim. Se a aprovação já foi dada, por que a ação continua aparecendo como pendente na fila?", "origem": "sintetico"}
+{"id": "s011", "idioma": "pt", "caso": "pt-prosa", "texto": "Também quero que o sistema mande um aviso por e-mail quando o orçamento do mês passar de oitenta por cento.", "origem": "sintetico"}
+{"id": "s012", "idioma": "pt", "caso": "pt-prosa", "texto": "Então fica combinado assim: o time de infraestrutura cuida do container e o time de desenvolvimento só mexe no código da aplicação.", "origem": "sintetico"}
+{"id": "s013", "idioma": "pt", "caso": "pt-prosa", "texto": "Vamos começar pelo mais simples. Primeiro a página de login, depois a listagem, e só no final a parte de permissões.", "origem": "sintetico"}
+{"id": "s014", "idioma": "pt", "caso": "pt-prosa", "texto": "Estou achando a resposta do agente muito longa. Dá pra pedir que ele seja mais direto e mostre só o que mudou?", "origem": "sintetico"}
+{"id": "s015", "idioma": "pt", "caso": "pt-prosa", "texto": "Qual é a diferença entre o modo automático e o modo manual? Eu tenho medo de ligar o automático e ele sair apagando arquivo.", "origem": "sintetico"}
+{"id": "s016", "idioma": "pt", "caso": "pt-curto", "texto": "sim, pode seguir", "origem": "sintetico"}
+{"id": "s017", "idioma": "pt", "caso": "pt-curto", "texto": "não, espera um pouco", "origem": "sintetico"}
+{"id": "s018", "idioma": "pt", "caso": "pt-curto", "texto": "valeu!", "origem": "sintetico"}
+{"id": "s019", "idioma": "pt", "caso": "pt-curto", "texto": "manda ver", "origem": "sintetico"}
+{"id": "s020", "idioma": "pt", "caso": "pt-curto", "texto": "pode aprovar", "origem": "sintetico"}
+{"id": "s021", "idioma": "pt", "caso": "pt-curto", "texto": "isso mesmo", "origem": "sintetico"}
+{"id": "s022", "idioma": "pt", "caso": "pt-curto", "texto": "tá ótimo assim", "origem": "sintetico"}
+{"id": "s023", "idioma": "pt", "caso": "pt-curto", "texto": "faz sentido", "origem": "sintetico"}
+{"id": "s024", "idioma": "pt", "caso": "pt-typo", "texto": "vc pode ver oq ta errado nesse teste?", "origem": "sintetico"}
+{"id": "s025", "idioma": "pt", "caso": "pt-typo", "texto": "nao sei pq o build quebrou de novo, ontem tava funcionando normal e hj ninguem mexeu em nada", "origem": "sintetico"}
+{"id": "s026", "idioma": "pt", "caso": "pt-typo", "texto": "entao vc acha q vale a pena trocar o banco agora ou deixa pra depois do lancamento?", "origem": "sintetico"}
+{"id": "s027", "idioma": "pt", "caso": "pt-typo", "texto": "tbm nao consegui rodar localmente, da erro de permissao na pasta do projeto e eu nao sei como resolver isso", "origem": "sintetico"}
+{"id": "s028", "idioma": "pt", "caso": "pt-typo", "texto": "obg, era isso msm. agora roda de boa", "origem": "sintetico"}
+{"id": "s029", "idioma": "pt", "caso": "pt-typo", "texto": "voce consegue dar uma olhada no log e me dizer se o problema e na api ou no engine? to perdido aqui", "origem": "sintetico"}
+{"id": "s030", "idioma": "pt", "caso": "pt-typo", "texto": "a pagina de cadastro ta lenta demais, demora uns dez segundos pra carregar a lista de usuarios", "origem": "sintetico"}
+{"id": "s031", "idioma": "pt", "caso": "pt-typo", "texto": "quero q o sistema avise qnd o orcamento estourar, pode ser por email msm", "origem": "sintetico"}
+{"id": "s032", "idioma": "pt", "caso": "pt-tecnico", "texto": "O deploy falhou no step de build porque o pipeline não achou o cache das dependências. Pode fazer o rollback e abrir um hotfix?", "origem": "sintetico"}
+{"id": "s033", "idioma": "pt", "caso": "pt-tecnico", "texto": "Faz o merge da feature na dev e depois roda o smoke test no staging, mas não faz push direto na main.", "origem": "sintetico"}
+{"id": "s034", "idioma": "pt", "caso": "pt-tecnico", "texto": "O endpoint de upload está retornando timeout quando o payload passa de dez megas. Acho que é o limite do proxy reverso.", "origem": "sintetico"}
+{"id": "s035", "idioma": "pt", "caso": "pt-tecnico", "texto": "Precisamos de um health check melhor no container, o atual só testa se a porta está aberta e não se o banco responde.", "origem": "sintetico"}
+{"id": "s036", "idioma": "pt", "caso": "pt-tecnico", "texto": "Quero um dashboard com as métricas de throughput e latência, com alerta quando o p95 passar de meio segundo.", "origem": "sintetico"}
+{"id": "s037", "idioma": "pt", "caso": "pt-tecnico", "texto": "Esse commit quebrou o lint e o typecheck. Dá um revert e refaz o PR com o fix separado do refactor.", "origem": "sintetico"}
+{"id": "s038", "idioma": "pt", "caso": "pt-tecnico", "texto": "O agente fez um force push na branch da feature e a gente perdeu o review que estava pendente.", "origem": "sintetico"}
+{"id": "s039", "idioma": "pt", "caso": "pt-tecnico", "texto": "Coloca o feature flag desligado por padrão e liga só pro tenant de teste até a gente validar o fluxo de onboarding.", "origem": "sintetico"}
+{"id": "s040", "idioma": "pt", "caso": "pt-tecnico", "texto": "O container do worker está em crash loop, reiniciando a cada trinta segundos, e o Kubernetes já marcou como unhealthy.", "origem": "sintetico"}
+{"id": "s041", "idioma": "pt", "caso": "pt-tecnico", "texto": "Vamos usar o workflow do GitHub Actions com cache do pnpm e rodar os testes em paralelo por workspace.", "origem": "sintetico"}
+{"id": "s042", "idioma": "pt", "caso": "pt-codigo-inline", "texto": "A função `calcularTotal` está somando o desconto duas vezes. Olha o arquivo src/pedidos/total.ts, perto da linha 40, e me diz se você concorda.", "origem": "sintetico"}
+{"id": "s043", "idioma": "pt", "caso": "pt-codigo-inline", "texto": "Renomeia a variável user_id para usuarioId em todo o módulo, mas não mexe na coluna do banco, que continua user_id.", "origem": "sintetico"}
+{"id": "s044", "idioma": "pt", "caso": "pt-codigo-inline", "texto": "O teste em apps/api/test/auth.spec.ts está falhando com expected 401 to be 403. Acho que o guard está na ordem errada.", "origem": "sintetico"}
+{"id": "s045", "idioma": "pt", "caso": "pt-codigo-inline", "texto": "Pode rodar `pnpm --filter api test` de novo? Da última vez deu erro de conexão com o banco e eu não sei se era ambiente.", "origem": "sintetico"}
+{"id": "s046", "idioma": "pt", "caso": "pt-codigo-inline", "texto": "Quando eu chamo useQuery com a chave errada o componente fica carregando pra sempre, sem mostrar nenhum erro na tela.", "origem": "sintetico"}
+{"id": "s047", "idioma": "pt", "caso": "pt-com-codigo", "texto": "Esse trecho não compila e eu não entendo o motivo, você consegue explicar o que está errado e como corrigir sem mudar a assinatura?\n```ts\nexport function soma(a: number, b: number): string {\n  return a + b;\n}\n```", "origem": "sintetico"}
+{"id": "s048", "idioma": "pt", "caso": "pt-com-log", "texto": "O engine caiu de novo agora de manhã. Colei o erro aqui embaixo, você consegue descobrir o que aconteceu e se tem relação com a migração de ontem?\n2026-09-20 08:14:03.221 [error] GenServer Engine.Agents.Criativo terminating\n** (RuntimeError) connection refused\n    (engine 0.1.0) lib/engine/harness/tool_loop.ex:88: Engine.Harness.ToolLoop.run/2", "origem": "sintetico"}
+{"id": "s049", "idioma": "pt", "caso": "pt-com-log", "texto": "Olha esse stack trace que apareceu quando cliquei em salvar. A tela ficou branca e depois voltou sozinha, mas os dados não foram gravados.\nTypeError: Cannot read properties of undefined (reading 'map')\n    at ProjectList (ProjectList.tsx:42:18)\n    at renderWithHooks (react-dom.development.js:16305:18)", "origem": "sintetico"}
+{"id": "s050", "idioma": "pt", "caso": "pt-citacao-es", "texto": "O cliente mandou este comentário e eu queria que você respondesse de forma educada, explicando que a função ainda não existe:\n> ¿Por qué no puedo exportar los informes en PDF? Es muy importante para nuestro equipo y lo necesitamos antes del viernes.", "origem": "sintetico"}
+{"id": "s051", "idioma": "pt", "caso": "pt-citacao-en", "texto": "A documentação da biblioteca diz isto aqui, mas eu não sei se vale para a versão que a gente usa. Você pode conferir?\n> The client will automatically retry failed requests up to three times with exponential backoff, unless the error is not retryable.", "origem": "sintetico"}
+{"id": "s052", "idioma": "pt", "caso": "pt-citacao-es", "texto": "O usuário escreveu \"no puedo iniciar sesión desde ayer y ya intenté cambiar la contraseña dos veces\" no suporte. Você acha que é o mesmo problema do cookie que corrigimos semana passada?", "origem": "sintetico"}
+{"id": "s053", "idioma": "pt", "caso": "pt-citacao-en", "texto": "O erro do provider foi \"the model you requested does not support tool calling in this region\". Isso quer dizer que eu preciso trocar o modelo do agente?", "origem": "sintetico"}
+{"id": "s054", "idioma": "es", "caso": "es-prosa", "texto": "¿Puedes revisar por qué falla la prueba? Gracias", "origem": "sintetico"}
+{"id": "s055", "idioma": "es", "caso": "es-prosa", "texto": "Hola, quiero crear una aplicación para gestionar las reservas de mi restaurante. Los clientes tienen que poder elegir el día, la hora y el número de personas.", "origem": "sintetico"}
+{"id": "s056", "idioma": "es", "caso": "es-prosa", "texto": "No entiendo por qué el agente se detuvo a mitad de la tarea. Dijo que iba a ejecutar las pruebas y después no hizo nada más.", "origem": "sintetico"}
+{"id": "s057", "idioma": "es", "caso": "es-prosa", "texto": "Muy bien, entonces seguimos con la opción de la tabla nueva. Pero antes quiero ver el diagrama actualizado.", "origem": "sintetico"}
+{"id": "s058", "idioma": "es", "caso": "es-prosa", "texto": "La pantalla de configuración es muy confusa. ¿Dónde puedo cambiar el modelo que usa cada agente?", "origem": "sintetico"}
+{"id": "s059", "idioma": "es", "caso": "es-prosa", "texto": "Necesito que el sistema envíe una notificación cuando el presupuesto del mes supere el ochenta por ciento.", "origem": "sintetico"}
+{"id": "s060", "idioma": "es", "caso": "es-prosa", "texto": "Creo que la historia es demasiado grande. ¿Podemos dividirla en dos partes, una con el registro y otra con los informes?", "origem": "sintetico"}
+{"id": "s061", "idioma": "es", "caso": "es-prosa", "texto": "Ahora sí funciona, muchas gracias por la ayuda. Mañana seguimos con la parte de permisos.", "origem": "sintetico"}
+{"id": "s062", "idioma": "es", "caso": "es-prosa", "texto": "Yo prefiero usar Postgres porque el equipo ya lo conoce y tenemos experiencia con las copias de seguridad.", "origem": "sintetico"}
+{"id": "s063", "idioma": "es", "caso": "es-prosa", "texto": "¿Cuál es la diferencia entre el modo automático y el manual? Tengo miedo de activar el automático y que borre archivos.", "origem": "sintetico"}
+{"id": "s064", "idioma": "es", "caso": "es-curto", "texto": "vale, adelante", "origem": "sintetico"}
+{"id": "s065", "idioma": "es", "caso": "es-curto", "texto": "sí, perfecto", "origem": "sintetico"}
+{"id": "s066", "idioma": "es", "caso": "es-curto", "texto": "gracias!", "origem": "sintetico"}
+{"id": "s067", "idioma": "es", "caso": "es-curto", "texto": "hola, ¿estás ahí?", "origem": "sintetico"}
+{"id": "s068", "idioma": "es", "caso": "es-sin-tildes", "texto": "no se por que el build fallo otra vez, ayer funcionaba y hoy nadie toco nada", "origem": "sintetico"}
+{"id": "s069", "idioma": "es", "caso": "es-sin-tildes", "texto": "puedes ver que esta mal en este test? creo que el problema esta en la configuracion de la base de datos", "origem": "sintetico"}
+{"id": "s070", "idioma": "es", "caso": "es-sin-tildes", "texto": "la pagina de registro esta muy lenta, tarda como diez segundos en cargar la lista de usuarios", "origem": "sintetico"}
+{"id": "s071", "idioma": "es", "caso": "es-tecnico", "texto": "El deploy falló en el paso de build porque el pipeline no encontró la caché. ¿Puedes hacer el rollback y abrir un hotfix?", "origem": "sintetico"}
+{"id": "s072", "idioma": "es", "caso": "es-tecnico", "texto": "Haz el merge de la feature en dev y luego ejecuta el smoke test en staging, pero no hagas push directo a main.", "origem": "sintetico"}
+{"id": "s073", "idioma": "es", "caso": "es-tecnico", "texto": "El contenedor del worker está en crash loop y Kubernetes ya lo marcó como unhealthy.", "origem": "sintetico"}
+{"id": "s074", "idioma": "en", "caso": "en-prosa", "texto": "Can you check why this test fails?", "origem": "sintetico"}
+{"id": "s075", "idioma": "en", "caso": "en-prosa", "texto": "I want to build an app to manage the bookings of my restaurant. Customers should be able to pick the day, the time and the number of guests.", "origem": "sintetico"}
+{"id": "s076", "idioma": "en", "caso": "en-prosa", "texto": "I don't understand why the agent stopped in the middle of the task. It said it was going to run the tests and then nothing happened.", "origem": "sintetico"}
+{"id": "s077", "idioma": "en", "caso": "en-prosa", "texto": "The settings page is really confusing now. Where can I change the model that each agent uses?", "origem": "sintetico"}
+{"id": "s078", "idioma": "en", "caso": "en-prosa", "texto": "Please split this story into two parts, one for the signup flow and another one for the reports, so we can ship the first part sooner.", "origem": "sintetico"}
+{"id": "s079", "idioma": "en", "caso": "en-prosa", "texto": "Thanks, that makes sense. Let's go with the new table instead of adding a column to the users table.", "origem": "sintetico"}
+{"id": "s080", "idioma": "en", "caso": "en-prosa", "texto": "What is the difference between the automatic mode and the manual mode? I am afraid the automatic one will delete files.", "origem": "sintetico"}
+{"id": "s081", "idioma": "en", "caso": "en-prosa", "texto": "The deploy failed at the build step because the pipeline could not find the dependency cache. Can you roll back?", "origem": "sintetico"}
+{"id": "s082", "idioma": "en", "caso": "en-prosa", "texto": "I would rather use Postgres, since the whole team already knows it and we have backups sorted out.", "origem": "sintetico"}
+{"id": "s083", "idioma": "en", "caso": "en-prosa", "texto": "Could you review the architecture document and tell me where the user session is stored and what happens on restart?", "origem": "sintetico"}
+{"id": "s084", "idioma": "en", "caso": "en-curto", "texto": "yes, go ahead", "origem": "sintetico"}
+{"id": "s085", "idioma": "en", "caso": "en-curto", "texto": "thanks!", "origem": "sintetico"}
+{"id": "s086", "idioma": "en", "caso": "en-curto", "texto": "looks good to me", "origem": "sintetico"}
+{"id": "s087", "idioma": "en", "caso": "en-curto", "texto": "sounds good", "origem": "sintetico"}
+{"id": "s088", "idioma": "und", "caso": "curto-sem-idioma", "texto": "ok", "origem": "sintetico"}
+{"id": "s089", "idioma": "und", "caso": "curto-sem-idioma", "texto": "OK", "origem": "sintetico"}
+{"id": "s090", "idioma": "und", "caso": "curto-sem-idioma", "texto": "👍", "origem": "sintetico"}
+{"id": "s091", "idioma": "pt", "caso": "pt-curto", "texto": "blz", "origem": "sintetico"}
+{"id": "s092", "idioma": "und", "caso": "curto-sem-idioma", "texto": "?", "origem": "sintetico"}
+{"id": "s093", "idioma": "und", "caso": "curto-sem-idioma", "texto": "+1", "origem": "sintetico"}
+{"id": "s094", "idioma": "und", "caso": "curto-sem-idioma", "texto": "lgtm", "origem": "sintetico"}
+{"id": "s095", "idioma": "pt", "caso": "pt-curto", "texto": "sim", "origem": "sintetico"}
+{"id": "s096", "idioma": "und", "caso": "curto-sem-idioma", "texto": "ok ok", "origem": "sintetico"}
+{"id": "s097", "idioma": "und", "caso": "curto-sem-idioma", "texto": "1", "origem": "sintetico"}
+{"id": "s098", "idioma": "pt", "caso": "pt-curto", "texto": "feito", "origem": "sintetico"}
+{"id": "s099", "idioma": "und", "caso": "so-codigo", "texto": "```elixir\ndef handle_call({:user_message, text}, _from, state) do\n  {:reply, :ok, %{state | pending: [text | state.pending]}}\nend\n```", "origem": "sintetico"}
+{"id": "s100", "idioma": "und", "caso": "so-codigo", "texto": "```sql\nSELECT id, email FROM users WHERE created_at > now() - interval '7 days';\n```", "origem": "sintetico"}
+{"id": "s101", "idioma": "und", "caso": "so-codigo", "texto": "const total = itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0);", "origem": "sintetico"}
+{"id": "s102", "idioma": "und", "caso": "so-log", "texto": "2026-09-21T10:02:11.004Z ERROR [api] PrismaClientKnownRequestError: Unique constraint failed on the fields: (`email`)\n    at RequestHandler.handleRequestError (/app/node_modules/@prisma/client/runtime/library.js:122:6877)\n    at async UsersService.create (/app/dist/users/users.service.js:31:20)", "origem": "sintetico"}
+{"id": "s103", "idioma": "und", "caso": "so-log", "texto": "Traceback (most recent call last):\n  File \"/srv/app/main.py\", line 12, in <module>\n    main()\n  File \"/srv/app/main.py\", line 8, in main\n    raise ValueError(\"bad config\")\nValueError: bad config", "origem": "sintetico"}
+{"id": "s104", "idioma": "und", "caso": "so-log", "texto": "$ pnpm --filter api test\n ELIFECYCLE  Test failed. See above for more details.\nexit code 1", "origem": "sintetico"}
+{"id": "s105", "idioma": "und", "caso": "so-url", "texto": "https://github.com/exemplo/projeto/pull/123", "origem": "sintetico"}
+{"id": "s106", "idioma": "mul", "caso": "misto", "texto": "o deploy falhou, the pipeline says timeout", "origem": "sintetico"}
+{"id": "s107", "idioma": "mul", "caso": "misto", "texto": "valeu, thanks a lot!", "origem": "sintetico"}
+{"id": "s108", "idioma": "mul", "caso": "misto", "texto": "pode ser, but let's check the logs first", "origem": "sintetico"}
+{"id": "s109", "idioma": "mul", "caso": "misto", "texto": "gracias pela ajuda, amanhã sigo com isso", "origem": "sintetico"}
+{"id": "s110", "idioma": "mul", "caso": "misto", "texto": "ok então, let me know when it's done", "origem": "sintetico"}
+{"id": "s111", "idioma": "fr", "caso": "outra-lingua", "texto": "Bonjour, je voudrais créer une application pour gérer les réservations de mon restaurant. Les clients doivent pouvoir choisir le jour et l'heure.", "origem": "sintetico"}
+{"id": "s112", "idioma": "fr", "caso": "outra-lingua", "texto": "Je ne comprends pas pourquoi l'agent s'est arrêté au milieu de la tâche. Il a dit qu'il allait lancer les tests et ensuite plus rien.", "origem": "sintetico"}
+{"id": "s113", "idioma": "fr", "caso": "outra-lingua", "texto": "Merci, c'est beaucoup plus clair maintenant. On continue avec la nouvelle table.", "origem": "sintetico"}
+{"id": "s114", "idioma": "it", "caso": "outra-lingua", "texto": "Ciao, vorrei creare un'applicazione per gestire le prenotazioni del mio ristorante. I clienti devono poter scegliere il giorno e l'ora.", "origem": "sintetico"}
+{"id": "s115", "idioma": "it", "caso": "outra-lingua", "texto": "Non capisco perché l'agente si è fermato a metà del lavoro. Ha detto che avrebbe eseguito i test e poi niente.", "origem": "sintetico"}
+{"id": "s116", "idioma": "it", "caso": "outra-lingua", "texto": "Grazie, adesso è molto più chiaro. Andiamo avanti con la nuova tabella.", "origem": "sintetico"}
+{"id": "s117", "idioma": "de", "caso": "outra-lingua", "texto": "Hallo, ich möchte eine Anwendung bauen, um die Reservierungen meines Restaurants zu verwalten. Die Kunden sollen Tag und Uhrzeit wählen können.", "origem": "sintetico"}
+{"id": "s118", "idioma": "de", "caso": "outra-lingua", "texto": "Ich verstehe nicht, warum der Agent mitten in der Aufgabe aufgehört hat. Er wollte die Tests ausführen und dann passierte nichts mehr.", "origem": "sintetico"}
+{"id": "s119", "idioma": "gl", "caso": "outra-lingua", "texto": "Non entendo por que o axente parou no medio da tarefa. Dixo que ía executar as probas e despois non fixo nada máis.", "origem": "sintetico"}
+{"id": "s120", "idioma": "gl", "caso": "outra-lingua", "texto": "Quero crear unha aplicación para xestionar as reservas do meu restaurante, e os clientes teñen que poder escoller o día.", "origem": "sintetico"}
+{"id": "s121", "idioma": "ca", "caso": "outra-lingua", "texto": "No entenc per què l'agent s'ha aturat a la meitat de la tasca. Va dir que executaria les proves i després no va fer res més.", "origem": "sintetico"}
+{"id": "s122", "idioma": "ca", "caso": "outra-lingua", "texto": "Vull crear una aplicació per gestionar les reserves del meu restaurant, i els clients han de poder triar el dia i l'hora.", "origem": "sintetico"}
+{"id": "s123", "idioma": "nl", "caso": "outra-lingua", "texto": "Ik begrijp niet waarom de agent halverwege de taak is gestopt. Hij zei dat hij de tests zou draaien en daarna gebeurde er niets.", "origem": "sintetico"}
