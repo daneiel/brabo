@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "idioma:medir": "node idioma/medir.ts",
     "idioma:extrair": "node idioma/extrair.ts",
-    "idioma:rotular": "node idioma/rotular.ts"
+    "idioma:rotular": "node idioma/rotular.ts",
+    "jev:replay": "node jev/replay.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

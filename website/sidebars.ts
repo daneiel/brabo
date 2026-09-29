@@ -128,6 +128,7 @@ const sidebars: SidebarsConfig = {
         'explanation/fase-29-instalacao-de-uma-linha',
         'explanation/fase-30-runner-por-maquina',
         'explanation/medicao-do-idioma',
+        'explanation/medicao-do-jev',
       ],
     },
     {
