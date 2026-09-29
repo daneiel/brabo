@@ -401,8 +401,9 @@ function descobrirProviders() {
       // — a coluna existe justamente para que virar essa flag sem prova fique
       // visível na doc, como aconteceu com `list_models` na Fase 9c.
       embeddings: flag('embeddings'),
-      // ADR 0166. Nasce `no` nos nove: o OpenRouter tem o fio pronto e a
-      // flag espera o smoke com credencial real.
+      // ADR 0166. `yes` só no OpenRouter, provado pelo smoke com credencial
+      // real em 2026-09-29 (AT-158). Chave entre `{}` num comentário dentro do
+      // bloco de capabilities corta o match acima — escreva `provider.sort`.
       routingPreference: flag('routingPreference'),
     });
   }
