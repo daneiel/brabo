@@ -1,0 +1,105 @@
+{
+  "_leia": "Sequências SINTÉTICAS (nenhuma mensagem real) para a amostra de 10 mensagens / 2.000 caracteres e a histerese da AT-080. `inicial` é o idioma confiável antes da primeira mensagem (null = nenhum); `esperadoFinal` é o que a detecção deveria dizer depois da última; `trocasMaximas` é quantas trocas de idioma confiável são aceitáveis no caminho.",
+  "sequencias": [
+    {
+      "id": "q01",
+      "descricao": "conversa em pt-BR com mensagens curtas: chega a pt e não sai dele",
+      "inicial": null,
+      "esperadoFinal": "pt",
+      "trocasMaximas": 1,
+      "mensagens": [
+        "Quero criar uma aplicação para controlar as despesas da minha casa, com um resumo por categoria no fim do mês.",
+        "Cada pessoa da família precisa ter o próprio acesso, mas todo mundo vê o total da casa.",
+        "ok",
+        "sim",
+        "Então vamos começar pelo cadastro das despesas, depois a gente faz os relatórios.",
+        "valeu",
+        "Acho que também seria bom poder anexar a foto do recibo em cada despesa."
+      ]
+    },
+    {
+      "id": "q02",
+      "descricao": "pt-BR com UMA citação longa em espanhol no meio: a citação não pode virar preferência",
+      "inicial": "pt",
+      "esperadoFinal": "pt",
+      "trocasMaximas": 0,
+      "mensagens": [
+        "O suporte recebeu uma reclamação de um cliente e eu queria a sua ajuda para responder.",
+        "Ele escreveu isto aqui:\n> ¿Por qué no puedo exportar los informes en PDF? Es muy importante para nuestro equipo y lo necesitamos antes del viernes, por favor.",
+        "Você pode sugerir uma resposta educada explicando que a exportação ainda não existe?",
+        "ok, manda a versão final"
+      ]
+    },
+    {
+      "id": "q03",
+      "descricao": "pt-BR, depois UMA mensagem inteira em espanhol legítimo (sem aspas): não deve trocar por uma mensagem",
+      "inicial": "pt",
+      "esperadoFinal": "pt",
+      "trocasMaximas": 0,
+      "mensagens": [
+        "Revisei o documento do arquiteto e acho que falta explicar onde fica guardada a sessão do usuário.",
+        "Também não ficou claro o que acontece quando o servidor reinicia no meio de uma operação.",
+        "Hola, ¿puedes responder también en español para el equipo de Madrid? Gracias.",
+        "Voltando ao documento: você consegue atualizar a seção de sessão ainda hoje?"
+      ]
+    },
+    {
+      "id": "q04",
+      "descricao": "usuário que muda de fato de pt para en e continua em en: deve trocar",
+      "inicial": "pt",
+      "esperadoFinal": "en",
+      "trocasMaximas": 1,
+      "mensagens": [
+        "Preciso que você revise o módulo de autenticação antes do PR.",
+        "From now on I will write in English, my teammate who joined today does not read Portuguese.",
+        "Can you explain what is wrong with the refresh token test and how we should fix it?",
+        "I think the guard is running in the wrong order, but I am not sure about that.",
+        "Please also check whether the cookie is being set with the right path for the api.",
+        "Thanks, that was it. Let us move on to the reports page now.",
+        "The reports page should show the totals per category for the current month.",
+        "And there should be a way to export the table as a CSV file for the finance team."
+      ]
+    },
+    {
+      "id": "q05",
+      "descricao": "espanhol do começo ao fim: chega a es",
+      "inicial": null,
+      "esperadoFinal": "es",
+      "trocasMaximas": 1,
+      "mensagens": [
+        "Hola, quiero crear una aplicación para gestionar las reservas de mi restaurante.",
+        "Los clientes tienen que poder elegir el día, la hora y el número de personas.",
+        "También quiero que el sistema envíe un correo de confirmación después de cada reserva.",
+        "¿Puedes proponer las historias para la primera versión? Gracias.",
+        "Muy bien, entonces empezamos por el formulario de reserva."
+      ]
+    },
+    {
+      "id": "q06",
+      "descricao": "pt-BR só com código e log colados depois de uma frase: nada muda",
+      "inicial": "pt",
+      "esperadoFinal": "pt",
+      "trocasMaximas": 0,
+      "mensagens": [
+        "O engine caiu de novo, olha isso:",
+        "2026-09-20 08:14:03.221 [error] GenServer Engine.Agents.Criativo terminating\n** (RuntimeError) connection refused",
+        "```elixir\ndef handle_call({:user_message, text}, _from, state) do\n  {:reply, :ok, state}\nend\n```",
+        "ok"
+      ]
+    },
+    {
+      "id": "q07",
+      "descricao": "pt-BR técnico cheio de termos em inglês: não pode virar en",
+      "inicial": "pt",
+      "esperadoFinal": "pt",
+      "trocasMaximas": 0,
+      "mensagens": [
+        "O deploy falhou no step de build porque o pipeline não achou o cache.",
+        "Faz o rollback e abre um hotfix, mas não faz push direto na main.",
+        "Depois roda o smoke test no staging e me manda o link do dashboard.",
+        "O health check do container só testa a porta, precisa testar o banco também.",
+        "O worker está em crash loop, o Kubernetes já marcou como unhealthy."
+      ]
+    }
+  ]
+}

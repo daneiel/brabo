@@ -166,6 +166,9 @@ Source: each package's `package.json` and the root `Makefile`.
 |---|---|
 | `pnpm --filter scripts test` | `vitest run` |
 | `pnpm --filter scripts typecheck` | `tsc --noEmit` |
+| `pnpm --filter scripts idioma:medir` | `node idioma/medir.ts` |
+| `pnpm --filter scripts idioma:extrair` | `node idioma/extrair.ts` |
+| `pnpm --filter scripts idioma:rotular` | `node idioma/rotular.ts` |
 
 ## Makefile
 
@@ -191,4 +194,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-126 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+129 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

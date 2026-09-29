@@ -66,6 +66,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   grafo (`GRAPH_TEMPLATES_ENABLED`) precisa semear de novo
   (`scripts/dev/seed-prompts.ts`). O acréscimo custa 19 tokens de entrada por
   compactação pela estimativa do engine.
+
+- **scripts**: o instrumento que MEDE a heurística de idioma da AT-080 contra
+  corpus rotulado (AT-160) — `pnpm --filter @brabo/scripts idioma:medir`
+  imprime acerto por idioma e por caso, matriz de confusão, acerto por faixa
+  de confiança, varredura limiar × evidência mínima, as sequências com amostra
+  e histerese e o custo de CPU. O corpus SINTÉTICO é versionado
+  (`scripts/idioma/corpus-sintetico.jsonl`); o REAL sai do event log local por
+  `idioma:extrair` para `~/.cache/brabo/corpus-idioma/`, é rotulado por
+  `idioma:rotular` e nunca entra no repositório — os scripts recusam gravar
+  dentro do checkout, e o relatório não imprime texto de mensagem. Sem
+  dependência nova. Números e leitura em
+  [Measuring the language heuristic](docs/explanation/medicao-do-idioma.md).
+
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
