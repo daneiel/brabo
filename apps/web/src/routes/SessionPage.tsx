@@ -54,6 +54,7 @@ import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
 import { SessionTopbar } from './SessionTopbar';
+import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import { SessionFio } from './SessionFio';
 import { SessionComposer } from './SessionComposer';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
@@ -588,6 +589,9 @@ export function SessionPage({
         // do log. Até o ADR 0163 esta chamada só resolvia com o turno pronto
         // e era ela a rede de segurança: aqui havia `finalizarTurnoDoAgente()`.
         acompanharTurnoPeloLog(agentParaEnviar);
+        // RN-624: a mensagem é evidência nova — a barra relê o idioma e a
+        // pergunta da detecção, se houver.
+        void queryClient.invalidateQueries({ queryKey: chaveDoIdiomaDaSessao(projectId, sessionId) });
       } catch (erro) {
         cancelarTurnoOtimista();
         setOptimisticUser(null);

@@ -61,6 +61,12 @@ export interface SessionResponseLanguage {
   account: string;
   detected: string | null;
   interfaceLocale: UserLocale;
+  /**
+   * O idioma que as mensagens de quem vê apontam, quando a tela deve
+   * PERGUNTAR se ele vale para as respostas (RN-624) — `null` é "sem
+   * pergunta". A detecção nunca troca a preferência sozinha.
+   */
+  detectionQuestion: string | null;
 }
 
 export interface Workspace {

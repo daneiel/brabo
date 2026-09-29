@@ -1184,6 +1184,7 @@ reason in the URL.
 | DELETE | `/users/me/machine-device-keys/:deviceKeyId` | jwt |
 | GET | `/users/me/preferences` | jwt |
 | PATCH | `/users/me/preferences` | jwt |
+| POST | `/users/me/preferences/detected-language` | jwt |
 | GET | `/workspaces` | jwt |
 | POST | `/workspaces` | jwt |
 | DELETE | `/projects/:projectId` | role:maintainer |

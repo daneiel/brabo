@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
+  answerDetectedLanguage,
   getSessionResponseLanguage,
   mensagemDaApi,
   setSessionResponseLanguage,
@@ -13,6 +14,8 @@ import { roleAtLeast } from '../lib/roles';
 import {
   IDIOMA_AUTOMATICO,
   OPCAO_OUTRO_CODIGO,
+  QUERY_KEY_PREFERENCIAS,
+  chaveDoIdiomaDaSessao,
   nomeDoIdioma,
   opcoesDeIdioma,
 } from '../lib/idioma-da-resposta';
@@ -62,6 +65,16 @@ export function idiomaSemOverride(r: SessionResponseLanguage): string {
  * papel de WORKSPACE — a lacuna declarada das telas que não buscam
  * `project_members`. Abaixo dele o valor e a origem continuam na barra, o
  * seletor fica inerte e o motivo vem em texto.
+ *
+ * ## A pergunta da detecção (RN-624)
+ *
+ * Quando as mensagens de quem vê apontam outro idioma, a api manda
+ * `detectionQuestion` e a pergunta aparece AQUI, num cartão pequeno logo
+ * abaixo do indicador — o lugar onde o idioma já é mostrado e corrigido, sem
+ * modal e sem bloquear o composer. As duas respostas vão à api ("Usar" grava
+ * o detectado confirmado; "Não" grava a recusa, e o mesmo idioma não volta);
+ * "Agora não" só esconde o cartão nesta tela, sem gravar nada — a pergunta
+ * volta na próxima leitura. A detecção sozinha nunca troca nada.
  */
 export function SessionLanguageIndicator({
   projectId,
@@ -77,7 +90,9 @@ export function SessionLanguageIndicator({
   const podeTrocar = roleAtLeast(comPapel?.role, 'developer');
   const [digitando, setDigitando] = useState(false);
   const [codigo, setCodigo] = useState('');
-  const chave = ['session-response-language', projectId, sessionId];
+  const chave = chaveDoIdiomaDaSessao(projectId, sessionId);
+  // "Agora não": esconde o cartão para ESTE idioma nesta montagem da tela.
+  const [adiada, setAdiada] = useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
     queryKey: chave,
@@ -95,6 +110,25 @@ export function SessionLanguageIndicator({
     onError: (erro) => {
       showToast({
         title: t('session.error'),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    },
+  });
+
+  const responder = useMutation({
+    mutationFn: (input: { language: string; answer: 'confirm' | 'decline' }) =>
+      answerDetectedLanguage(input.language, input.answer),
+    onSuccess: (prefs) => {
+      queryClient.setQueryData(QUERY_KEY_PREFERENCIAS, prefs);
+      void queryClient.invalidateQueries({ queryKey: chave });
+    },
+    onError: (erro) => {
+      // 409 `deteccao_mudou` e qualquer outra recusa: a frase da api diz o
+      // quê, e a releitura tira a pergunta que deixou de valer.
+      void queryClient.invalidateQueries({ queryKey: chave });
+      showToast({
+        title: t('detection.error'),
         message: mensagemDaApi(erro),
         tone: 'danger',
       });
@@ -194,6 +228,55 @@ export function SessionLanguageIndicator({
           {t('session.accountLink')}
         </Link>
       </div>
+      {data.detectionQuestion && data.detectionQuestion !== adiada && (
+        <div
+          className={styles.pergunta}
+          role="group"
+          aria-label={t('detection.aria')}
+          data-testid="pergunta-do-idioma-detectado"
+        >
+          <p className={styles.textoDaPergunta}>
+            {t('detection.question', { idioma: nome(data.detectionQuestion) })}
+          </p>
+          <p className={styles.notaDaPergunta}>{t('detection.note')}</p>
+          <div className={styles.linha}>
+            <button
+              type="button"
+              className={styles.botaoPrimario}
+              disabled={responder.isPending}
+              onClick={() =>
+                responder.mutate({
+                  language: data.detectionQuestion!,
+                  answer: 'confirm',
+                })
+              }
+            >
+              {t('detection.confirm', { idioma: nome(data.detectionQuestion) })}
+            </button>
+            <button
+              type="button"
+              className={styles.botao}
+              disabled={responder.isPending}
+              onClick={() =>
+                responder.mutate({
+                  language: data.detectionQuestion!,
+                  answer: 'decline',
+                })
+              }
+            >
+              {t('detection.decline')}
+            </button>
+            <button
+              type="button"
+              className={styles.botaoDiscreto}
+              disabled={responder.isPending}
+              onClick={() => setAdiada(data.detectionQuestion)}
+            >
+              {t('detection.later')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

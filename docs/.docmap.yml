@@ -450,6 +450,10 @@ rules:
   - id: medicao-do-idioma
     watch:
       - "scripts/idioma/**"
+      # Desde a AT-163 (RN-624) a heurística mora na api e o instrumento a
+      # reexporta: mudar os marcadores, a limpeza ou os parâmetros provisórios
+      # muda o que a página afirma tanto quanto mudar o instrumento.
+      - "apps/api/src/domain/iam/heuristica-de-idioma.ts"
     docs: ["docs/explanation/medicao-do-idioma.md"]
     severity: warn
 

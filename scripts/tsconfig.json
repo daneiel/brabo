@@ -25,5 +25,10 @@
   // "dev/seed-prompts*.ts" nomeados explicitamente, não "dev/**/*.ts": o
   // diretório já tinha bootstrap.spec.ts fora do typecheck, e ampliar o
   // glob varreria esse arquivo de passagem — fora do escopo desta frente.
-  "include": ["ci/**/*.ts", "idioma/**/*.ts", "jev/**/*.ts", "dev/seed-prompts.ts", "dev/seed-prompts.spec.ts", "*.config.ts"]
+  //
+  // `idioma/` tem tsconfig PRÓPRIO (`idioma/tsconfig.json`, o segundo passo do
+  // `typecheck`): desde a AT-163 ele reexporta a heurística da API, que é um
+  // módulo CommonJS, e `verbatimModuleSyntax` aqui recusaria cada `export`
+  // dela. Ver o comentário daquele arquivo.
+  "include": ["ci/**/*.ts", "jev/**/*.ts", "dev/seed-prompts.ts", "dev/seed-prompts.spec.ts", "*.config.ts"]
 }

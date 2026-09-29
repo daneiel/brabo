@@ -1372,6 +1372,12 @@ const sidebar: SidebarsConfig = {
           label: "Writes the authenticated user's interface language and/or agent response language",
           className: "api-method patch",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/user-preferences-controller-answer-detected",
+          label: "Answers the detected-language question",
+          className: "api-method post",
+        },
       ],
     },
     {

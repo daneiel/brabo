@@ -12,6 +12,15 @@ export { IDIOMA_AUTOMATICO };
 export const QUERY_KEY_PREFERENCIAS = ['user-preferences'] as const;
 
 /**
+ * A queryKey do idioma das respostas de quem vê numa sessão (RN-620) — é ela
+ * que traz a pergunta da detecção (RN-624), então quem ENVIA uma mensagem a
+ * invalida: a mensagem nova é a evidência que pode fazer a pergunta aparecer.
+ */
+export function chaveDoIdiomaDaSessao(projectId: string, sessionId: string) {
+  return ['session-response-language', projectId, sessionId] as const;
+}
+
+/**
  * Os idiomas oferecidos direto no seletor. É SUGESTÃO de atalho, não a lista
  * aceita: "Outro código…" abre um campo para qualquer BCP-47, e o idioma
  * gravado que não está aqui aparece no seletor mesmo assim.

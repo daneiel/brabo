@@ -3,6 +3,7 @@
    origem é INFORMAÇÃO, não enfeite, então não vai para um `title`. */
 
 .indicador {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -70,4 +71,65 @@
 
 .link {
   color: var(--accent);
+}
+
+/* A pergunta da detecção (RN-624): um cartão pequeno ANCORADO abaixo do
+   indicador — fora do fluxo da barra de 60px, sem modal e sem cobrir o
+   composer. Aparece só quando a api manda `detectionQuestion`. */
+.pergunta {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  max-width: min(340px, 90vw);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-modal);
+}
+
+.textoDaPergunta {
+  margin: 0;
+  font-size: 13px;
+  white-space: normal;
+}
+
+.notaDaPergunta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: normal;
+}
+
+.botaoPrimario {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.botaoDiscreto {
+  height: 26px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.botaoPrimario:disabled,
+.botaoDiscreto:disabled {
+  cursor: default;
+  opacity: 0.6;
 }

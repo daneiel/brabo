@@ -703,9 +703,19 @@ erDiagram
   chunks ||--o{ rag_feedback : "the judged excerpt"
   projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
   sessions ||--o{ session_language_overrides : "response language pinned per person (RN-618)"
+  users ||--o{ detected_language_declines : "detected language the person said no to (RN-624)"
 ```
 
-55 tables in total. The most recent is `session_language_overrides`
+56 tables in total. The most recent is `detected_language_declines`
+([RN-624](business-rules.md#rn-624)): one row per person and language the
+person DECLINED when asked "we noticed you write in X — use X for the
+answers?", with the date. Its presence is what keeps the same question from
+coming back; confirming that language later deletes the row. The detection
+itself keeps no state — the sample is read from `session_events` through the
+partial index `session_events_evidencia_de_idioma_idx` (user actor, the two
+evidence types) and the hysteresis is recomputed —, so this table and the
+confirmed pair in `users` are all it writes, and only when the person answers.
+Before it, the most recent was `session_language_overrides`
 ([RN-618](business-rules.md#rn-618),
 [ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): the
 response language one person pinned in one session, keyed by the

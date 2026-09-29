@@ -3129,7 +3129,7 @@ export interface paths {
         };
         /**
          * The language agents answer YOU in, in this session
-         * @description Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain.
+         * @description Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain — and, when your recent messages point to another language and the screen should ask about it, `detectionQuestion` (RN-624).
          */
         get: operations["SessionResponseLanguageController_get"];
         /**
@@ -3487,6 +3487,26 @@ export interface paths {
          * @description Both fields are optional and independent — sending one never touches the other, and a body with neither is a 400. `locale` (the interface) stays closed to the `pt-BR`/`en` list. `responseLanguage` (RN-618) is `automatico` or any recognized BCP-47 code, stored canonical; an unrecognized code is a 400 and nothing in the body is written.
          */
         patch: operations["UserPreferencesController_update"];
+        trace?: never;
+    };
+    "/users/me/preferences/detected-language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answers the detected-language question
+         * @description The only way a detected language becomes a preference (RN-624): detection alone never changes anything. `confirm` writes `detectedLanguage` + `detectedLanguageConfirmedAt`; `decline` records the refusal so the same language is not asked again. Returns the preferences after the answer.
+         */
+        post: operations["UserPreferencesController_answerDetected"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/workspaces": {
@@ -4296,6 +4316,19 @@ export interface components {
             sugestao: string;
             /** @example 72 */
             confiancaPercent: number;
+        };
+        AnswerDetectedLanguageDto: {
+            /**
+             * @description The language the question was about — the `detectionQuestion` of `GET .../sessions/:sessionId/response-language`.
+             * @example es
+             */
+            language: string;
+            /**
+             * @description `confirm` stores it as your detected-and-confirmed language (it then answers you wherever your Account is on automatic); 409 `deteccao_mudou` when your messages no longer point to it. `decline` stores the refusal and this language is never asked again (confirming it later clears the refusal).
+             * @example confirm
+             * @enum {string}
+             */
+            answer: "confirm" | "decline";
         };
         AnswerStructuredQuestionDto: {
             /**
@@ -8774,6 +8807,11 @@ export interface components {
              * @enum {string}
              */
             interfaceLocale: "pt-BR" | "en";
+            /**
+             * @description The language YOUR recent messages point to, when the screen should ASK whether to use it for the answers (RN-624) — `null` means no question. Detection never changes the preference by itself: only answering `confirm` on `POST /users/me/preferences/detected-language` does. Never asked when the effective language comes from an explicit choice (this session or the Account), when it already is the detected one, or when you declined this language before. Best effort: a detection failure is `null`, never an error of this route.
+             * @example es
+             */
+            detectionQuestion: string | null;
         };
         SetAgentAutonomyDto: {
             /**
@@ -19117,6 +19155,57 @@ export interface operations {
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserPreferencesController_answerDetected: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerDetectedLanguageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPreferencesResponseDto"];
+                };
+            };
+            /** @description A code that is not a recognized BCP-47 language. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `deteccao_mudou`: on `confirm`, your recent messages no longer point to that language — nothing was written. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
