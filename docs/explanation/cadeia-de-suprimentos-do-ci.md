@@ -134,33 +134,43 @@ tool downloads and verifies on its own, and reproducing its checksum
 table by hand would be a copy that ages. Weaker than the scanner
 binaries, stated rather than implied.
 
-## Container images: digest, with the tag alongside
+## Container images: digest, with the tag inside the reference {#container-images-digest-with-the-tag-alongside}
 
-Third-party images are pinned by **digest**, in exactly the shape the
-actions use:
+Third-party images are pinned by **digest**, with the tag they came from
+written **inside the reference**, before the digest — `image:tag@sha256:<index>`
+([ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)):
 
 ```yaml
-image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
 ```
 
 ```dockerfile
-# 24.11.1-alpine3.21
-FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+FROM node:24.11.1-alpine3.21@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
 ```
 
-**In a Dockerfile the tag goes on the line above, and that is not taste.**
-Docker's parser only recognizes `#` at the *start* of a line, so
-`FROM alpine@sha256:… # 3.20` is not a commented `FROM`, it is a `FROM` with
-three arguments, and the build dies with *"FROM requires either one or three
-arguments"*. This was found the right way — the `images` job's `bake` step
-failed on the first push, in 27 seconds — and it is worth recording that
-`hadolint` had passed the same file: it has its own parser, and a linter
-agreeing is not the build agreeing.
+With both present, Docker pulls by the digest: the tag is information for
+whoever reads the line, and the digest decides the bytes.
 
-The comment is **one token**, with no spaces, in both shapes. That is what
-separates the tag from the *prose* already sitting above nearly every `FROM`
-in this repository — without it, "there is a comment above" would be satisfied
-by any paragraph.
+**Until ADR 0178 the tag lived in a comment** (`neo4j@sha256:…  # 5.26-community`,
+and in a Dockerfile on the line above), mirroring the actions. It moved because
+of a measurement (AT-139, 2026-09-27): Dependabot does not read that comment in
+any format, and a digest-only pin is "updated" to the digest of `latest` — which
+would have taken pgvector, neo4j and node to another major with the comment still
+claiming the old tag and the lint green. With the tag inline, Docker,
+Dependabot and a human all read the same tag. The CloudNativePG `imageName`
+already had this shape, for a different reason: its webhook refuses a
+digest-only reference, because it reads the Postgres version from the tag.
+
+A comment is still **allowed**, but only if it says the same thing: a comment
+that states one tag (a single token with a digit) different from the inline
+one fails the check — it is exactly the leftover a version bump would leave
+lying. **In a Dockerfile a comment at the end of the `FROM` line still fails**:
+Docker's parser only recognizes `#` at the *start* of a line, so
+`FROM alpine:3.20@sha256:… # 3.20` is a `FROM` with three arguments, and the
+build dies with *"FROM requires either one or three arguments"*. This was found
+the right way under ADR 0159 — the `images` job's `bake` step failed on the first
+push, in 27 seconds — and `hadolint` had passed the same file: a linter agreeing
+is not the build agreeing.
 
 This page used to say the opposite — tag pinning was "a deliberate stop,
 not an oversight," buying day-to-day reproducibility "without the
@@ -188,13 +198,14 @@ docker manifest inspect neo4j:5.26-community | head -3   # confirms it is an ind
 docker buildx imagetools inspect neo4j:5.26-community --format '{{.Manifest.Digest}}'
 ```
 
-The trailing `# <tag>` comment is **required**, for the same reason it is
-on actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j
-5.26. And, as with the actions, the rule has a mechanism rather than
-goodwill — `scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which
-fails on any `image:`/`imageName:`/`FROM` that is not a digest, on any
-digest with no tag comment, and on the same tag carrying two different
-digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
+The tag is **required**, for the same reason the version comment is on
+actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j 5.26. And,
+as with the actions, the rule has a mechanism rather than goodwill —
+`scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which fails on any
+`image:`/`imageName:`/`FROM` that is not a digest, on any digest with no
+inline tag (the old comment-only shape included), on a tag comment that
+disagrees with the inline tag, on a comment at the end of a `FROM`, and on
+the same inline tag carrying two different digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
 extension of it: `uses:` lives in workflow YAML with one syntax, images
 live in composes, kustomize manifests and Dockerfiles with three others,
 and one function answering both questions would answer both badly.
@@ -223,8 +234,14 @@ never matches `brabo-`, so it is born under the rule.
 **The price is real and is not paid here.** An image pinned by digest
 receives no security update until someone changes the digest by hand —
 the same debt the action SHAs carry. `.github/dependabot.yml` enables the
-`github-actions` ecosystem for that reason; the `docker` ecosystem is
-**not** enabled, and turning it on is a separate decision.
+`github-actions` ecosystem for that reason. The maintainer decided on
+2026-09-27 to enable the `docker` and `docker-compose` ecosystems too, and
+the inline tag of ADR 0178 is the half of that decision that is in place;
+the other half is **not enabled yet** and ADR 0178 says why: the decided
+step that would align the workflows' `services:` on the bot's PR cannot push
+with the `GITHUB_TOKEN`, which is never allowed to change `.github/workflows/`.
+Until that is decided, bumping a digest is the
+[runbook procedure](../runbook.md#subindo-imagem-de-terceiro).
 
 **A digest guarantees immutability, not availability.** The pin protects
 against the owner of a tag moving it; it does not protect against the
@@ -375,11 +392,12 @@ Declared, not fixed:
 - ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
   (above): all 39 third-party references — composes, kustomize manifests,
   Dockerfile `FROM` lines and the workflow `services:` — are pinned by
-  digest with the tag in a comment, and `scripts/ci/imagens-pinadas.ts`
-  fails the `lint` job on the next regression. What is **not** closed, and
-  is the price of the pin rather than a leftover: a digest receives no
-  security update until someone bumps it by hand, and Dependabot's
-  `docker` ecosystem is not enabled — a separate decision.
+  digest with the tag inside the reference (ADR 0178), and
+  `scripts/ci/imagens-pinadas.ts` fails the `lint` job on the next
+  regression. What is **not** closed, and is the price of the pin rather
+  than a leftover: a digest receives no security update until someone bumps
+  it by hand. Dependabot's `docker`/`docker-compose` ecosystems are decided
+  but not enabled — see ADR 0178 for what blocks them.
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
 - **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**

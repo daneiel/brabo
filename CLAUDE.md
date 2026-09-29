@@ -184,6 +184,7 @@ estado lido do repositório e não da conversa.
 | A barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) | RN-620 |
 | O idioma chega ao modelo por mensagem de sistema efêmera no fim de cada chamada (AT-164) | RN-622 |
 | O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
+| A tag da imagem de terceiro entra na referência, antes do digest; o Dependabot de imagem segue desligado (AT-139) | ADR 0178 |
 
 ## Estado atual e aberto
 
@@ -1083,23 +1084,28 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `scripts/ci/actions-pinadas.ts` reprova no job `lint` quem esquecer, e
   todo `curl` de binário passa por `sha256sum -c`. Desde o ADR 0159 essa
   regra tem uma IRMÃ, e o argumento é o mesmo palavra por palavra: toda
-  IMAGEM de terceiro é presa por DIGEST, com a tag num comentário ao lado
-  (`neo4j@sha256:…  # 5.26-community`), e o digest é o do ÍNDICE, nunca o de
+  IMAGEM de terceiro é presa por DIGEST, e o digest é o do ÍNDICE, nunca o de
   uma plataforma — pinar o manifesto de `linux/amd64` quebraria `linux-arm64`
-  sem aviso. Em DOCKERFILE o comentário vai na linha DE CIMA, e isso NÃO é
-  gosto: o parser do Docker só reconhece `#` no INÍCIO da linha, então
-  `FROM x@sha256:… # tag` é um `FROM` com TRÊS argumentos e o build morre —
-  aprendido errando, e o `hadolint` tinha passado nos cinco Dockerfiles (parser
-  próprio; linter concordar não é build concordar). O comentário é UM TOKEN,
-  sem espaço, nos dois formatos: é o que separa a tag da PROSA que já mora
-  acima de quase todo `FROM`. Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
+  sem aviso. Desde o ADR 0178 (AT-139) a TAG mora DENTRO da referência, antes
+  do digest — `neo4j:5.26-community@sha256:…`, e no Dockerfile
+  `FROM node:24.11.1-alpine3.21@sha256:… AS deps` —, e NÃO num comentário, que
+  era a forma do ADR 0159: o Dependabot não lê comentário em formato nenhum e
+  atualiza pin só de digest para o digest da `latest`, com o comentário
+  mentindo e o lint verde. Com os dois, o Docker puxa pelo digest. Comentário
+  ao lado é PERMITIDO só se disser a MESMA tag (um token com dígito que
+  diverge reprova), e em DOCKERFILE comentário no FIM da linha do `FROM`
+  continua proibido: o parser do Docker só reconhece `#` no INÍCIO da linha,
+  então `FROM x@sha256:… # tag` é um `FROM` com TRÊS argumentos e o build
+  morre — aprendido errando, e o `hadolint` tinha passado (parser próprio;
+  linter concordar não é build concordar). Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
   (compose E `FROM` de Dockerfile), `deploy/k8s/` e `.github/workflows/` —
   esta última é `services:` de job, ou seja, o MESMO runner que a regra das
   actions protege, alcançado pela outra porta, e foi o lugar que o próprio
   levantamento do `BRB-004` não tinha visto. `scripts/ci/imagens-pinadas.ts`
-  reprova no job `lint`, e reprova TRÊS coisas: referência mutável, digest
-  sem a tag em comentário, e a MESMA tag com dois digests diferentes — a
-  terceira existe porque `golden-set-rag.yml` PROMETE em comentário rodar a
+  reprova no job `lint`, e reprova: referência mutável, digest sem a tag
+  INLINE (inclusive a forma antiga, tag só no comentário), comentário que
+  diverge da tag inline, comentário no fim do `FROM`, e a MESMA tag inline com
+  dois digests diferentes — esta última existe porque `golden-set-rag.yml` PROMETE em comentário rodar a
   mesma versão do compose de dev (o piso do golden-set é chaveado por MODELO,
   não por ambiente), e com digest isso deixa de ser promessa. São DOIS
   scripts e não um: `uses:` mora em YAML de workflow com uma sintaxe, imagem
@@ -1113,8 +1119,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   A lista de exceções é por NOME e falha fechado: imagem de terceiro nova
   nunca casa com `brabo-`. Preço DECLARADO e não pago aqui: digest congela, e
   imagem congelada não recebe correção de segurança até alguém trocá-lo à mão
-  — o ecossistema `docker` do Dependabot NÃO está ligado, e ligá-lo é decisão
-  à parte. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
+  — o Dependabot `docker`/`docker-compose` foi DECIDIDO (27/09) e NÃO está
+  ligado: o passo decidido para alinhar os `services:` dos workflows no PR do
+  bot teria de empurrar mudança em `.github/workflows/`, e o `GITHUB_TOKEN`
+  nunca pode (não existe permissão `workflows` para ele) — a saída é do dono,
+  no ADR 0178. Não ligue o ecossistema sem ela: todo PR do bot que tocar
+  pgvector ou ollama nasce vermelho pela regra "mesma tag, dois digests". O
+  `imageName` do CNPG e a `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento
+  manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
   pelo mesmo motivo que a irmã não tem: as duas moram aqui e em
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
