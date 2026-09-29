@@ -16419,3 +16419,46 @@ valor ainda não chega aos agentes.
   `maintainer`: o valor fica, o controle fica inerte)
 - **Origem:** AT-243, sobre as decisões das AT-168 (resposta 8) e AT-169
   (resposta 1)
+
+### RN-620 — A barra da sessão mostra o idioma das respostas de QUEM VÊ, com a origem, e trocar ali é o override só daquela pessoa naquela sessão {#rn-620}
+
+1. **Ao lado do seletor de modelo, em outro escopo.** O modelo da barra é da
+   SESSÃO e vale para todos; o idioma é da PESSOA (`GET
+   .../sessions/:sessionId/response-language`, resolvido para quem chama,
+   [RN-618](#rn-618)). Trocar ali é o override por sessão — decisão do
+   mantenedor, AT-169 resposta 2 — e nunca mexe no de outro participante nem
+   na Conta.
+2. **Nunca o valor sem a origem** (a régua da [RN-470](business-rules/custo.md#rn-470)): "fixado
+   por você nesta sessão", "escolhido por você na Conta", "detectado pelas
+   suas mensagens e confirmado por você" e "o idioma da interface" são
+   quatro textos, e nenhum colapsa em outro. Carregando e falhou também têm
+   texto próprio — a falha não finge um idioma. O detectado nunca vira
+   afirmação sobre a pessoa ("você é brasileiro"), só sobre as mensagens
+   (AT-080).
+3. **"Seguir a Conta" solta o override** (`language: null`) e diz em QUE
+   idioma isso dá — a mesma cadeia sem o degrau da sessão, derivada no
+   cliente da cadeia que a rota já devolve, sem endpoint novo. "Outro
+   código…" abre um campo que só fixa no botão (RN-469), e a recusa da api
+   chega no toast com a frase dela. Um link leva à Conta, onde mora a
+   escolha que vale em todas as sessões.
+4. **Quem troca**: o mínimo do `PUT` (`developer`), por `roleAtLeast` sobre o
+   papel de WORKSPACE (a lacuna declarada das telas que não buscam
+   `project_members`). Abaixo dele o valor e a origem continuam na barra, o
+   seletor fica inerte e o motivo vem em texto.
+5. **O que a barra NÃO afirma**: até a AT-164 o idioma não chega ao modelo,
+   e a linha de origem DIZ "ainda não chega aos agentes". A linha trunca nos
+   60px da barra e leva o texto inteiro no `title` — o texto está na tela, o
+   `title` só devolve o que as reticências cortaram.
+
+- **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:66`
+  (`SessionLanguageIndicator`), `:32` (`idiomaSemOverride`), `:128`
+  (`origemPorExtenso`), `:172` (`podeTrocar`);
+  `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
+- **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
+  (efetivo com origem, o aviso e o link), `:112` (o detectado não vira
+  "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
+  Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`
+  (abaixo de `developer`), `:213` (leitura falhada), `:225` (a cadeia sem a
+  sessão)
+- **Origem:** AT-165, sobre as decisões das AT-169 (resposta 2) e AT-168
+  (resposta 7)
