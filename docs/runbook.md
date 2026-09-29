@@ -2516,9 +2516,16 @@ The proof is `apps/api/test/scripts/reprojetar-artefatos.spec.ts`: it builds a
 scenario with the forward projector on a real Postgres and a real disk, **wipes**
 the folder, reprojects, compares every path and content, and reprojects again.
 It runs on every PR. The command as this section tells you to run it in an
-incident — `node scripts/reprojetar-artefatos.js` inside the api **image** —
-has no proof yet: unlike the graph, it has no target in the scheduled cluster
-run.
+incident — `node scripts/reprojetar-artefatos.js` inside the api **image** — is
+proved by `make test-reprojecao-artefatos-k8s` (`deploy/k8s/test-reprojecao-artefatos.sh`,
+AT-198), the sibling of the graph's cluster target: it creates its own project
+with an `artifact.note` through the API, waits for the live projector to write
+it, deletes the agent's `docs/<agent>/` folder **inside the api pod**, runs the
+image's own script with `--project`, and requires the rebuilt file to have the
+**same sha256** as the one the live projector wrote — then runs it again and
+requires the same hash (idempotence). It runs in the scheduled
+`.github/workflows/propriedades.yml`, and like its sibling it depends on no
+other target.
 
 ### When the restore fails
 
@@ -2570,11 +2577,18 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
    that subgraph** in Neo4j, reprojects, and requires the same node and edge
    counts, then reprojects again. It uses no state left by the other targets and
    is **not** coupled to `test-restore` (the graph does not depend on a backup);
-6. only when **both** the restore and the deliberate break passed in the same
+6. runs `make test-reprojecao-artefatos-k8s` (AT-198, RN-590), the same proof
+   for the other derived projection — the `docs/` folder of the artifacts. It
+   creates its own project with an `artifact.note`, waits for the live
+   projector to write the file, **deletes the agent's folder inside the api
+   pod**, runs the image's `node scripts/reprojetar-artefatos.js --project`,
+   and requires the **same sha256**; then reprojects again and requires it
+   once more. It depends on no other target;
+7. only when **both** the restore and the deliberate break passed in the same
    run, writes `ultima-execucao-boa.json` (date, run, commit, restore duration)
    and uploads it as the `restore-ultima-execucao-boa` artifact (kept 90 days),
    and adds the line *Última execução boa do restore* to the run summary;
-7. writes each step's duration into the run summary.
+8. writes each step's duration into the run summary.
 
 A **second job**, `restore-compose` (AT-195), runs next to it on another
 runner — the production compose publishes 3000/4000/8088, the same ports the
@@ -2614,6 +2628,7 @@ free disk on `ubuntu-latest`):
 | `make test-restore` | 21 s |
 | `make test-restore-mutacao` | 31 s (run `35473548113`) |
 | `make test-reprojecao-k8s` | 16 s (run `35471428634`) |
+| `make test-reprojecao-artefatos-k8s` | 4 s (run `36498695123`, whole job 10 min 28 s) |
 | whole job | 12 min 56 s |
 
 (First fully green run, `34784563928`, on 2026-09-13.)
@@ -4412,7 +4427,7 @@ workflow in **schedule** does not have the trigger the cell claims
 | Restore for real during an incident | [Restoring for real](#restore-de-verdade) | steps 1–2: `make test-restore` (the same `brabo-restore`, the same queries as `docker/backup/restore.sh`); step 3, promoting `DATABASE_URL`: none, never exercised | weekly `.github/workflows/propriedades.yml` (steps 1–2); manual (step 3) |
 | Verify and recover the bare repos | [Recovering the bare repos](#restore-dos-bare-repos) | `scripts/ci/backup-lib.spec.ts` (the functions); `make test-restore-compose` (the verifying command, in the image); `--restaurar` in the image: none | every PR `.github/workflows/ci.yml` (the spec); weekly `.github/workflows/propriedades.yml`, job `restore-compose` (the verifying command); manual (`--restaurar`) |
 | Reproject the graph | [Losing the graph](#perda-do-grafo) | `make test-reprojecao` (`apps/api/test/scripts/reprojetar-grafo.spec.ts`, skipped on PRs, which have no Neo4j) and `make test-reprojecao-k8s` (`deploy/k8s/test-reprojecao.sh`) | weekly `.github/workflows/propriedades.yml` |
-| Reproject the artifact folder | [Losing the artifact folder](#perda-da-pasta-de-artefatos) | `apps/api/test/scripts/reprojetar-artefatos.spec.ts`; the command inside the api image: none | every PR `.github/workflows/ci.yml`; manual (the image path) |
+| Reproject the artifact folder | [Losing the artifact folder](#perda-da-pasta-de-artefatos) | `apps/api/test/scripts/reprojetar-artefatos.spec.ts` and `make test-reprojecao-artefatos-k8s` (`deploy/k8s/test-reprojecao-artefatos.sh`, the command inside the api image) | every PR `.github/workflows/ci.yml` (the spec); weekly `.github/workflows/propriedades.yml` (the image path) |
 | Rotate `AUTH_JWT_SECRET` | [`AUTH_JWT_SECRET`](#rotacao-do-auth-jwt-secret) | `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts` and `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Change `AUTH_TOKEN_PEPPER` | [`AUTH_TOKEN_PEPPER`](#troca-do-auth-token-pepper) | `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Rotate `BRABO_SERVICE_TOKEN` | [`BRABO_SERVICE_TOKEN`](#rotacao-do-brabo-service-token) | `apps/api/test/infrastructure/security/service-token.spec.ts`, `apps/api/test/interfaces/engine-service.guard.spec.ts`, `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`, `apps/engine/test/engine/runtime_service_token_test.exs`, `apps/broker/src/config.spec.ts` and `scripts/ci/previous-nos-composes.spec.ts` | every PR `.github/workflows/ci.yml` |

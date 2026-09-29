@@ -183,10 +183,11 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
+| `make test-reprojecao-artefatos-k8s` | Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-124 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+125 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
