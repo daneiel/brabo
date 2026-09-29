@@ -57,6 +57,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o critério de roteamento do binding de modelo **acorda no
+  OpenRouter** — a capability `routingPreference` passa a `true` nele, e só
+  nele (AT-158, [RN-583](docs/business-rules/custo.md#rn-583),
+  [ADR 0166](docs/adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md)).
+  Provado em 2026-09-29 pelo smoke com credencial real
+  (`openrouter-provider.roteamento.smoke.spec.ts`): em
+  `meta-llama/llama-3.3-70b-instruct`, `price` pousou na DeepInfra e
+  `throughput` na Groq. Efeito: `PUT .../model-binding` com
+  `routingPreference` para um modelo do OpenRouter deixa de responder 422, o
+  corpo da chamada leva `provider: { sort }`, e `token_usage.routing_preference`
+  passa a registrar o critério enviado. Os outros oito providers seguem `false`.
+  O smoke passou a exigir que `price` e `throughput` pousem em upstreams
+  DIFERENTES, e trocou o modelo default: o antigo devolvia o mesmo upstream
+  para qualquer critério e não provava nada.
+
 - **ci/docker/k8s**: a imagem de terceiro passa a levar a TAG dentro da
   referência, antes do digest — `neo4j:5.26-community@sha256:…`, e
   `FROM node:24.11.1-alpine3.21@sha256:… AS deps` no Dockerfile (AT-139,

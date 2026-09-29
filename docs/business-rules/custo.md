@@ -173,17 +173,27 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
    Mesma régua do preço congelado (ADR 0042).
 4. **Capability de PROVIDER, só com prova.**
    `LLMProviderCapabilities.routingPreference` é obrigatória nos nove, e é
-   `false` nos nove hoje — inclusive no OpenRouter, cujo fio (`provider: { sort
-   }`) está pronto mas não foi provado contra a API real (sem
-   `OPENROUTER_TEST_KEY` no ambiente). Enquanto for `false`, a feature é
-   DORMENTE: a rota recusa, a tela diz em texto que nenhum provider desta
-   instalação tem a opção provada, e nada muda no fio.
+   `true` SÓ no OpenRouter desde 2026-09-29 (AT-158): o smoke com credencial
+   real (`openrouter-provider.roteamento.smoke.spec.ts`) mostrou o critério
+   MUDANDO o upstream que serviu — em `meta-llama/llama-3.3-70b-instruct`,
+   `price` pousou na DeepInfra e `throughput` na Groq (`latency` foi Groq numa
+   medição e CoreWeave na outra), enquanto sem critério o hub alternou
+   Novita/DeepInfra. A prova é a DIFERENÇA, não o
+   aceite: o modelo do default antigo (`~deepseek/deepseek-v4-flash-latest`)
+   devolveu o MESMO upstream para os três critérios e sem critério, e isso não
+   distingue "o hub respeitou" de "não havia escolha". Os outros oito seguem
+   `false`, e para eles a feature continua DORMENTE: a rota recusa com 422, a
+   tela diz em texto que o provider não tem a opção provada, e nada muda no
+   fio. O que a prova NÃO afirma: qual upstream cada critério escolhe — isso
+   é decisão do hub e muda com o tempo.
 
 - **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
   `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:93`
-  (congela no metering)
+  (congela no metering),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:220` (`openrouterConfig`,
+  a capability provada)
 - **Test:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
   `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,

@@ -668,12 +668,16 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
   rodou real); `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` idem para git
-- A capability `routingPreference` (ADR 0166, RN-583) é `false` nos nove
-  providers, e a feature nasce DORMENTE: o fio do OpenRouter
-  (`provider: { sort }`) está pronto, mas virar a flag exige rodar
-  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`
-  (chave real com crédito) e citar a saída no PR — doc do hub não é prova.
-  Não "ligue de passagem"
+- A capability `routingPreference` (ADR 0166, RN-583) é `true` SÓ no
+  OpenRouter desde 2026-09-29 (AT-158), PROVADA:
+  `openrouter-provider.roteamento.smoke.spec.ts` rodou com credencial real e o
+  critério mudou o upstream que serviu (`meta-llama/llama-3.3-70b-instruct`:
+  `price` → DeepInfra, `throughput` → Groq). A prova é a DIFERENÇA entre
+  critérios, não o aceite do campo — o modelo antigo do smoke devolvia o mesmo
+  upstream para todos e não provava nada. Os outros oito seguem `false` e,
+  para eles, a feature segue DORMENTE (422 na rota). Ligar outro provider exige
+  o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
+  prova. Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
 - Binário standalone: DOIS dos QUATRO alvos chegam à Release. `v4.0.1` e
   `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
