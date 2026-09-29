@@ -361,6 +361,8 @@ export const updateProject = (
   input: {
     maxConsecutiveBlocked?: number;
     storyPromotion?: StoryPromotionMode;
+    // O idioma do projeto (RN-619) — `maintainer`, pela mesma rota.
+    language?: string;
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 

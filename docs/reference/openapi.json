@@ -14884,6 +14884,12 @@
             "type": "string",
             "example": "/home/you/projects/store",
             "description": "The folder's ABSOLUTE path, required when `executionMode` is `mounted` or `runner`, and refused when it is `container`. In BOTH of them only the FORMAT is validated now — absolute, no `..`, not the system root, not a system folder, not overlapping the Brabo checkout (RN-422/RN-423). `mounted` adds one rule: it must sit inside `BRABO_PROJECTS_BASE`, the single folder of your machine the Brabo containers can see (ADR 0141) — with no base configured the mode is not available on this installation and creation says so. Disk is touched later: by the runner in `runner`, and when Infra starts the container in `mounted` (RN-501, ADR 0142)."
+          },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "maxLength": 35,
+            "description": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language)."
           }
         },
         "required": [
@@ -19059,6 +19065,11 @@
             "nullable": true,
             "description": "The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API."
           },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "description": "The PROJECT's language (RN-619): the language of everything with no human author — shared artifacts (product brief, business rules, ADRs) and turns nobody typed (kickoff, dev agents, gates, commit messages, PR bodies). A canonical BCP-47 code, open list. A new project starts with its creator's effective response language (RN-618). Set through `PATCH /projects/:projectId` (`maintainer`). Not yet read by the engine — the per-turn guidance that consumes it is AT-164."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -19105,6 +19116,7 @@
           "workspacePath",
           "workspaceVerifiedAt",
           "mirrorPath",
+          "language",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
@@ -22691,6 +22703,12 @@
             ],
             "example": "manual",
             "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
+          },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "maxLength": 35,
+            "description": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language)."
           }
         }
       },

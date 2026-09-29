@@ -107,6 +107,9 @@ export interface Project {
   // maioria, e é por este campo que a tela decide não mostrar a linha de
   // espelho em vez de inventar uma ausência.
   mirrorPath: string | null;
+  // O idioma do PROJETO (RN-619): artefato compartilhado e turno sem autor
+  // humano. Código BCP-47 canônico; nunca "automático".
+  language: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -331,6 +331,26 @@
       "error": "Não foi possível salvar"
     }
   },
+  "projectLanguage": {
+    "title": "Idioma do projeto",
+    "eyebrow": "sem autor humano",
+    "subtitle": "O idioma do que ninguém digitou: os artefatos compartilhados (product brief, regras de negócio, ADRs) e os turnos sem autor (abertura dos agentes, dev agents, gates, mensagem de commit, corpo de PR). O que um agente responde a VOCÊ segue o seu idioma das respostas, na Conta.",
+    "notYetApplied": "Ainda não chega aos agentes: o idioma é gravado agora e passa a valer quando a orientação por turno entrar.",
+    "card": {
+      "title": "Idioma",
+      "hint": "Hoje: {{idioma}}."
+    },
+    "selectAria": "Idioma do projeto",
+    "otherCode": "Outro código…",
+    "otherLabel": "Código de idioma (BCP-47)",
+    "otherHint": "Ex.: pt-PT, es-MX, fr-CA. A api recusa código que não seja um idioma.",
+    "save": "Salvar",
+    "readOnly": "Só quem é maintainer ou owner do projeto troca o idioma dele. Você vê o valor, e o controle fica inerte.",
+    "toast": {
+      "saved": "Idioma do projeto salvo",
+      "error": "Não foi possível salvar o idioma do projeto"
+    }
+  },
   "credentials": {
     "title": "Credenciais de provider",
     "eyebrow": "write-only · por usuário",

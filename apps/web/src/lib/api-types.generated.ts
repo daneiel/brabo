@@ -5273,6 +5273,11 @@ export interface components {
              * @example /home/you/projects/store
              */
             workspacePath?: string;
+            /**
+             * @description The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language).
+             * @example pt-BR
+             */
+            language?: string;
         };
         CreateSessionDto: {
             /**
@@ -7390,6 +7395,11 @@ export interface components {
              * @example null
              */
             mirrorPath: Record<string, never> | null;
+            /**
+             * @description The PROJECT's language (RN-619): the language of everything with no human author — shared artifacts (product brief, business rules, ADRs) and turns nobody typed (kickoff, dev agents, gates, commit messages, PR bodies). A canonical BCP-47 code, open list. A new project starts with its creator's effective response language (RN-618). Set through `PATCH /projects/:projectId` (`maintainer`). Not yet read by the engine — the per-turn guidance that consumes it is AT-164.
+             * @example pt-BR
+             */
+            language: string;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
             /**
@@ -9280,6 +9290,11 @@ export interface components {
              * @enum {string}
              */
             storyPromotion?: "manual" | "auto";
+            /**
+             * @description The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language).
+             * @example pt-BR
+             */
+            language?: string;
         };
         UpdateUserPreferencesDto: {
             /**

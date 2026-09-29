@@ -331,6 +331,26 @@
       "error": "Could not save"
     }
   },
+  "projectLanguage": {
+    "title": "Project language",
+    "eyebrow": "no human author",
+    "subtitle": "The language of what nobody typed: shared artifacts (product brief, business rules, ADRs) and turns with no author (agents' opening, dev agents, gates, commit messages, PR bodies). What an agent answers YOU follows your response language, on the Account page.",
+    "notYetApplied": "Not sent to agents yet: the language is saved now and starts applying once the per-turn guidance ships.",
+    "card": {
+      "title": "Language",
+      "hint": "Today: {{idioma}}."
+    },
+    "selectAria": "Project language",
+    "otherCode": "Other code…",
+    "otherLabel": "Language code (BCP-47)",
+    "otherHint": "E.g. pt-PT, es-MX, fr-CA. The API refuses a code that is not a language.",
+    "save": "Save",
+    "readOnly": "Only a project maintainer or owner changes its language. You see the value, and the control stays inert.",
+    "toast": {
+      "saved": "Project language saved",
+      "error": "Could not save the project language"
+    }
+  },
   "credentials": {
     "title": "Provider credentials",
     "eyebrow": "write-only · per user",

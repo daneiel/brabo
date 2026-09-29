@@ -23,5 +23,19 @@
     "conta": "chosen by you on the Account page",
     "detectado": "detected from your messages and confirmed by you",
     "interface": "the interface language, because nothing was chosen or detected yet"
+  },
+  "session": {
+    "label": "Replies:",
+    "selectAria": "Response language in this session",
+    "followAccount": "Follow Account ({{idioma}})",
+    "otherLabel": "Language code (BCP-47) for this session",
+    "pin": "Pin",
+    "effective": "{{idioma}}, {{origem}}",
+    "notYetApplied": "not sent to agents yet",
+    "readOnly": "changing it here takes the developer role",
+    "accountLink": "Account",
+    "loading": "Response language…",
+    "loadError": "Response language unavailable",
+    "error": "Could not pin the language in this session"
   }
 }
