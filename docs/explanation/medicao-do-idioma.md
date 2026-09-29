@@ -274,8 +274,9 @@ C13 called `emit_artifact` in 20 of 20 conversations. No call failed.
 | `deepseek/deepseek-v4.1-flash` | 0 | 82/95 (86.3%), 8 indeterminate | **does not pass** |
 | `anthropic/claude-haiku-4.5` | 3 (all C05) | 81/95 (85.3%), 0 indeterminate | **does not pass** |
 
-The 13 DeepSeek misses are two groups, and **human review is pending** — the
-reading below is the agent's, not a human's:
+The 13 DeepSeek misses are two groups. The reading below was the agent's,
+made BEFORE the review; the review ([next section](#human-review-and-the-haiku-diagnosis-at-167-follow-up))
+corrected it — the 8 indeterminates are not all English prose:
 
 - the 8 indeterminates (C06 ×2, C12 ×6) read as English prose — the `ampliada`
   list scores English poorly ("Great starting point — …");
@@ -291,7 +292,8 @@ with the explicit `en` preference and Portuguese messages (C12) it answered in
 Portuguese in 10 of 10 treated answers, and it answered 3 of 5 Spanish messages
 in Spanish (C05). A hypothesis, not measured: for Anthropic models OpenRouter
 lifts the trailing `system` message into the top system prompt, where it loses
-the recency it has at the end of the list.
+the recency it has at the end of the list. (Measured afterwards, and **not
+confirmed**: see the diagnosis below.)
 
 The answers to review (every indeterminate or divergent one, every C11
 translation, and a deterministic 1-in-10 sample of the concordant) are 146 of
@@ -350,6 +352,200 @@ Not measured: cache savings as such, the product's full system prompt, real
 (threshold-triggered) compaction, a restart of the real engine, the tokenizer
 count of the artifact clause in Portuguese, and any fixed upstream.
 
-> **TODO(humano):** Review the 146 answers in `revisao.md` — in particular,
-> does C11's "English translation inside a Portuguese frame" count as correct?
-> That decides whether DeepSeek passes the AT-169 threshold.
+The 146 answers were reviewed by hand; the result, and the one decision that
+is still the owner's, are in the next section.
+
+## Human review and the Haiku diagnosis (AT-167 follow-up)
+
+Two offline-or-cheap follow-ups to the paid validation, both on the same run
+(`respostas.jsonl`, 560 judged answers): the human review of the 146 answers the
+classifier flagged (Part A, no spend), and the test of the "OpenRouter hoists the
+trailing `system` message" hypothesis for Haiku (Part B, US$ 0.1485). Neither
+changes the product.
+
+### Part A — the review of the 146
+
+Every one of the 146 answers in `revisao.md` was read, one by one, by the agent
+that wrote this section (not by a second human; the label file is kept for
+anyone who wants to contradict it). For each: the **real** language of the text
+the user reads, whether it is correct for the case, and a one-line reason. The
+files live outside git with the answers —
+`~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md` (the 146) and
+`amostra-lida.md` (the sample below). `pnpm --filter @brabo/scripts
+idioma:revisar` reads them and prints every table of this section; the labels
+are data, the arithmetic is code (`scripts/idioma/revisao.ts`, tested).
+
+The labels are four, because the reading found a fact the classifier cannot see:
+
+- `sim` / `nao`: the answer is / is not in the expected language;
+- `formulario`: the **prose** is in the expected language, but the questions of
+  the structured form (`ask_structured_questions`, the substance of a first
+  answer) came out in Portuguese for an author whose language is `en`;
+- `c11`: a translation into English inside a Portuguese frame — the owner's
+  decision, see below.
+
+| of the 146 | correct | incorrect | prose right, form in Portuguese | C11 (owner's decision) |
+|---|---|---|---|---|
+| all | 42 | 81 | 8 | 15 |
+| baseline arm (89) | 18 | 64 | 1 | 6 |
+| treated arm (57) | 24 | 17 | 7 | 9 |
+
+The 14 answers the classifier called **indeterminate** were, once read: 3
+English answers (Haiku's plain English translations of C11), 2 incorrect
+(DeepSeek C12, Portuguese and English sentences interleaved in the prose), 8
+English prose with the form in Portuguese, and 1 C11. So the agent's earlier
+sentence — "the 8 indeterminates read as English prose" — was half right: the
+prose was English, and so was **not** the form in 6 of the 8.
+
+**The classifier's error, measured.** On the 118 definitive verdicts
+(`pt`/`es`/`en`) among the 146 read answers, the reading contradicted **0**. The
+classifier never called an answer right that was wrong, nor wrong that was right;
+its only failures are the 3 "indeterminate" that were plain English. For the 414
+answers that were **not** flagged (all concordant with the expectation), a sample
+was read: 60 drawn with `random.Random(20260929).sample(range(414), 60)` over the
+answers in `respostas.jsonl` order, plus the 14 unflagged C06/C12 answers with
+expected `en` that the draw missed (they decide the threshold, so they were read
+whole) — 74 read, **0 divergent** (Wilson 95% upper bound 4.9%). Together with
+the 39 concordant answers that the 1-in-10 hash had already flagged and were
+read too, the random part is 0 in 99 (upper bound 3.7%): at most ~15 of the 414
+could be wrong, and the sample suggests none. Two slips seen in the sample are
+one-word insertions (`"What falta for us…"`, `"reminders automáticos"`) that
+do not change the language of the answer.
+
+What the classifier **cannot** see is the form: `clf=en` on an English answer
+did not tell that its questions were in Portuguese (it flagged those answers as
+indeterminate only when the mix was heavy). That is why the sample read the
+C06/C12 answers whole, and why the two readings below exist.
+
+### The threshold, recomputed with the reviewed labels
+
+Treated arm, C01–C04 and C06–C15 (n = 95), Spanish counted on the **real** language
+of every treated answer where pt-BR is expected (C05 included). Wilson 95%
+interval. Two independent readings: **C11** (the owner's, open) and **form**
+(prose right, form in Portuguese — the agent resolved it as a fact about what
+the user reads, and shows the other side so it can be contradicted).
+
+| model | C11 counts | form counts | hits | rate | 95% interval | Spanish (pt expected) | verdict |
+|---|---|---|---|---|---|---|---|
+| DeepSeek | yes | yes | 93/95 | 97.9% | 92.6–99.4% | 0 | passes |
+| DeepSeek | **yes** | **no** | 87/95 | 91.6% | 84.3–95.7% | 0 | does not pass |
+| DeepSeek | no | yes | 88/95 | 92.6% | 85.6–96.4% | 0 | does not pass |
+| DeepSeek | no | no | 82/95 | 86.3% | 78.0–91.8% | 0 | does not pass |
+| Haiku | yes | (any) | 85/95 | 89.5% | 81.7–94.2% | 3 (C05) | does not pass |
+| Haiku | no | (any) | 81/95 | 85.3% | 76.8–91.0% | 3 (C05) | does not pass |
+
+The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:
+
+- **Haiku fails in every reading**: 3 Spanish answers in C05 (the zero-Spanish
+  clause alone) and, with everything accepted, 85/95.
+- **DeepSeek passes in exactly one cell**: C11 accepted **and** English prose
+  with a Portuguese form accepted. Reject either one and it fails — by 4
+  answers if the form is rejected (87 of the 91 needed), by 3 if C11 is (88). Reject both and it
+  is the classifier's number, 82.
+- The C11 decision therefore only matters if the form is accepted. With the form
+  counted as a miss, DeepSeek fails whatever C11 is, and the finding to act on
+  is not C11 but the form: in the treated arm, 8 of DeepSeek's 15 C06+C12
+  answers carry Portuguese text inside an English answer (6 form-only, 2
+  interleaved), while 7 are clean English, forms included. The model can
+  write the form in English — it does so about half of the time.
+
+What C11 is, in the data. DeepSeek's 5 treated misses: 3 have the English
+translation quoted in a Portuguese frame ("Registrei a regra… A tradução que
+você pediu: > …"), and 2 have **no translation in the recorded text** — the run
+keeps only the last message of a turn, and these turns called `emit_artifact`
+first, so the translation was in an earlier message of the same turn (10 calls
+for 5 conversations, two per conversation), so the translation was presumably
+in an earlier message of the same turn, and was not kept. Both are counted as
+frame-only, i.e. as hits under "C11 counts". Haiku's 4 treated misses are an
+English translation with a Portuguese note or Portuguese alternatives around it.
+
+> **TODO(humano):** Does a translation into English inside a Portuguese frame
+> count as correct in C11? It decides the C11 axis of the table above:
+> **accepted** → DeepSeek 93/95 and passes (if English prose with a Portuguese
+> form is also accepted; 87/95 if not); **rejected** → DeepSeek 88/95 (or 82/95)
+> and fails. Haiku fails either way. Recommendation, in one sentence: accept it
+> — the orientation's exception covers only the requested translation and the
+> frame stays in the author's language, so rejecting it would penalise exactly
+> the behaviour the orientation is meant to produce. (The second question, the
+> form in Portuguese, is a product-scope question and is stated as a finding
+> above; it was not put to the owner because the agent resolved it as a fact —
+> what the user reads.)
+
+### Part B — is it the position of the orientation? (AT-279)
+
+The hypothesis: for Anthropic models OpenRouter lifts the trailing `system`
+message into the top system prompt, losing its recency. Test: C12 (author
+preference `en`, messages in pt-BR), `anthropic/claude-haiku-4.5`, first turn,
+5 rounds per position, the orientation text **read from the product** (it was
+`Respond in English (en), unless the user explicitly asks for another language
+in this message. Write project artifacts in pt-BR.`), only its position varied:
+
+1. `ultima-system` — as today (`idioma_da_resposta.ex:231`, a trailing
+   `role: "system"`);
+2. `system-fundido` — appended to the first `system` (persona + orientation);
+3. `sufixo-user` — suffix of the last `user` message, **no** `system` added;
+4. `ultima-system-e-sufixo-user` — the trailing `system` **plus** the same
+   sentence as a suffix.
+
+| position | classifier hits | read |
+|---|---|---|
+| 1 `ultima-system` (as today) | 0/5 | 5 Portuguese, forms included |
+| 2 `system-fundido` | 0/5 | 5 Portuguese |
+| 3 `sufixo-user` | 0/5 | 5 Portuguese |
+| 4 `ultima-system-e-sufixo-user` | 0/5 | 5 Portuguese |
+| control: 1, without the artifact clause | 0/5 | 5 Portuguese |
+| control: 3, without the artifact clause | 0/5 | 5 Portuguese |
+
+The four positions were read in full and the two controls read in part, and all
+30 answers were also checked for English function words (none in any): all 30
+are Portuguese, prose and form. The
+position-1 defect is **reproduced** (0/5, as the 0/10 of the paid run), and
+**no position corrects it** — not even the one where the orientation is inside
+the user's own last message and there is no trailing `system` at all. The
+hypothesis is **not confirmed**. The prompt-token counts show the text reached
+the model in every position (2 426, 2 427, 2 427 and 2 454 input tokens: +1 for
+the two single placements and +28 for the double), so this is not a dropped
+message. The control also excludes the suspect second sentence: the artifact
+clause ("Write project artifacts in pt-BR.", RN-623) is not the cause either
+(0/10 without it).
+
+What this does not exclude, and was not measured: the second turn (only the
+first was run, for budget — the paid run had the second turn wrong 5/5 as well);
+a stronger wording (the sentence says "unless the user explicitly asks", and
+Portuguese input may be read as that); the language of the persona itself
+(`CRIATIVO_INSTRUCTIONS` is Portuguese); and the upstream (all 30 calls were
+served by Amazon Bedrock, so an upstream effect cannot be separated). DeepSeek
+follows the same orientation in the same case — its treated C12 answers were
+English prose in 8 of 10 — which points at the model, not at the placement.
+
+**Proposed change: none about position.** The one place a position would be
+changed, if it had helped, is `Engine.Harness.IdiomaDaResposta.anexar/4`
+(`apps/engine/lib/engine/harness/idioma_da_resposta.ex:231`, the `messages ++
+[%{"role" => "system", …}]`), called from the two `llm_turn` paths of
+`apps/engine/lib/engine/sessions/engine_api_client.ex:591` and `:643`. It stays
+as it is. The next activity, if the owner wants Haiku to obey `en` over
+Portuguese input, is to test wording and persona language (the list above),
+with this same script.
+
+**Spend** (sum of each response's `usage.cost`, never the `/key` counter): US$
+0.0980 for the four positions (20 calls) and US$ 0.0505 for the two controls
+(10 calls) — **US$ 0.1485** of the US$ 0.20 ceiling, 30 calls, none failed.
+
+To reproduce Part B (the key file holds `OPENROUTER_TEST_KEY=…`; it is never
+printed; the output goes outside the checkout):
+
+```bash
+pnpm --filter @brabo/scripts idioma:diagnosticar \
+  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \
+  --turnos 1 --rodadas 5 --teto-usd 0.13 --concorrencia 4          # the four positions
+pnpm --filter @brabo/scripts idioma:diagnosticar \
+  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \
+  --turnos 1 --rodadas 5 --posicoes ultima-system,sufixo-user --sem-clausula \
+  --saida ~/.cache/brabo/validacao-idioma/<date>-diagnostico-haiku-sem-clausula \
+  --teto-usd 0.06 --concorrencia 4                                  # the controls
+pnpm --filter @brabo/scripts idioma:revisar                          # Part A tables
+```
+
+`--turnos N` and `--sem-clausula` exist only for this diagnosis; the product
+never places the orientation anywhere but last, and `posicionar` in
+`validacao.ts` is not used by it.

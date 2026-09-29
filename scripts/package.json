@@ -13,7 +13,9 @@
     "jev:replay": "node jev/replay.ts",
     "jev:analise": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts",
     "jev:menu": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts",
-    "idioma:validar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts"
+    "idioma:validar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts",
+    "idioma:diagnosticar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/diagnostico-haiku.ts",
+    "idioma:revisar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/revisao.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
