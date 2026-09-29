@@ -251,6 +251,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **scripts**: com o template do grafo ligado (`GRAPH_TEMPLATES_ENABLED`), o
+  sumarizador da compactação recebia os turnos em dobro, e os kickoffs do
+  Psicólogo e da Anamnese o log de eventos em dobro (AT-244,
+  [RN-413](docs/business-rules.md#rn-413)). `scripts/dev/seed-prompts.ts`
+  semeava como corpo tudo depois do front-matter, inclusive a seção
+  "## Variáveis" de cada `prompts/*.md` — documentação que cita os mesmos
+  placeholders, que o engine troca em todas as ocorrências. O seeder agora
+  corta o corpo nessa seção, nos quatro templates, e as versões subiram com o
+  mesmo texto de prompt. Instalação que já semeou segue com a versão antiga
+  até rodar o seed de novo; com a flag desligada (o default) nada muda.
+
 - **engine (segurança)**: `mint` sobe de 1.10.1 para 1.11.0, que fecha três
   advisories: EEF-CVE-2026-91043 (GHSA-9x8p-qrf4-jq7g — campos `cookie`
   indexados por HPACK numa resposta HTTP/2 escapavam de `max_header_list_size`
