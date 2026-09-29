@@ -92,10 +92,10 @@ Per message, candidate parameters:
 
 | label | n | `at080` correct | `at080` indeterminate | `ampliada` correct | `ampliada` indeterminate |
 |---|---|---|---|---|---|
-| pt | 53 | 26 (49.1%) | 27 | 30 (56.6%) | 23 |
+| pt | 56 | 26 (46.4%) | 30 | 30 (53.6%) | 26 |
 | es | 20 | 6 (30.0%) | 14 | 7 (35.0%) | 13 |
 | en | 14 | 6 (42.9%) | 8 | 6 (42.9%) | 8 |
-| und | 18 | 18 (100%) | 0 | 18 (100%) | 0 |
+| und | 15 | 15 (100%) | 0 | 15 (100%) | 0 |
 | mul | 5 | 5 (100%) | 0 | 5 (100%) | 0 |
 | other languages | 13 | 10 | 0 | 9 | 0 |
 
@@ -111,17 +111,23 @@ of switches, in both lists — including Portuguese with a long Spanish quotatio
 one whole Spanish message in the middle of Portuguese, and Portuguese dense with
 English jargon.
 
-CPU on this machine: `at080` 11.8 µs per message and 50 µs per evaluation of the
-10-message sample; `ampliada` 16.7 µs and 61 µs. It varies with the machine; the
+CPU on this machine: `at080` 11.7 µs per message and 49 µs per evaluation of the
+10-message sample; `ampliada` 16.8 µs and 60 µs. It varies with the machine; the
 order of magnitude is the point.
 
 ## What the numbers say
 
 - **With the `at080` list, the threshold and the margin never bind.** 66 of the
   67 items that score at all score for one language only (confidence = 1.0), so
-  sweeping the threshold from 0.5 to 1.0 changes nothing. The 20-word minimum is
-  the only knob that acts, and per message it throws away half of the Portuguese
-  (every short and typo message, most of the technical ones).
+  sweeping the threshold from 0.5 to 1.0 changes nothing. The word minimum is the
+  only knob that acts: per message, decidable items reach their language 42.2%
+  of the time at 20 words, 58.9% at 10 and 66.7% with no minimum — at 20 it
+  throws away every short and typo message and most of the technical ones.
+- **Dropping the minimum lets mixed text decide.** With no minimum, `at080` turns
+  three of the five mixed messages into `en` or `pt`, and `ampliada` also decides
+  two `und` items as `en` — unfenced code (`const total = itens.reduce(…)`) and
+  pnpm output (`ELIFECYCLE  Test failed. See above for more details.`) pass the
+  cleaning, which only knows fenced code and the log shapes AT-080 listed.
 - **The margin of 0.3 is redundant with the threshold of 0.8** in any list: with
   three languages, a winner at ≥ 0.8 is at least 0.6 above the second.
 - **The unit that matters is the sample, not the message** — in the sequences

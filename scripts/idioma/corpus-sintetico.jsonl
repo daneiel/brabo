@@ -88,14 +88,14 @@
 {"id": "s088", "idioma": "und", "caso": "curto-sem-idioma", "texto": "ok", "origem": "sintetico"}
 {"id": "s089", "idioma": "und", "caso": "curto-sem-idioma", "texto": "OK", "origem": "sintetico"}
 {"id": "s090", "idioma": "und", "caso": "curto-sem-idioma", "texto": "👍", "origem": "sintetico"}
-{"id": "s091", "idioma": "und", "caso": "curto-sem-idioma", "texto": "blz", "origem": "sintetico"}
+{"id": "s091", "idioma": "pt", "caso": "pt-curto", "texto": "blz", "origem": "sintetico"}
 {"id": "s092", "idioma": "und", "caso": "curto-sem-idioma", "texto": "?", "origem": "sintetico"}
 {"id": "s093", "idioma": "und", "caso": "curto-sem-idioma", "texto": "+1", "origem": "sintetico"}
 {"id": "s094", "idioma": "und", "caso": "curto-sem-idioma", "texto": "lgtm", "origem": "sintetico"}
-{"id": "s095", "idioma": "und", "caso": "curto-sem-idioma", "texto": "sim", "origem": "sintetico"}
+{"id": "s095", "idioma": "pt", "caso": "pt-curto", "texto": "sim", "origem": "sintetico"}
 {"id": "s096", "idioma": "und", "caso": "curto-sem-idioma", "texto": "ok ok", "origem": "sintetico"}
 {"id": "s097", "idioma": "und", "caso": "curto-sem-idioma", "texto": "1", "origem": "sintetico"}
-{"id": "s098", "idioma": "und", "caso": "curto-sem-idioma", "texto": "feito", "origem": "sintetico"}
+{"id": "s098", "idioma": "pt", "caso": "pt-curto", "texto": "feito", "origem": "sintetico"}
 {"id": "s099", "idioma": "und", "caso": "so-codigo", "texto": "```elixir\ndef handle_call({:user_message, text}, _from, state) do\n  {:reply, :ok, %{state | pending: [text | state.pending]}}\nend\n```", "origem": "sintetico"}
 {"id": "s100", "idioma": "und", "caso": "so-codigo", "texto": "```sql\nSELECT id, email FROM users WHERE created_at > now() - interval '7 days';\n```", "origem": "sintetico"}
 {"id": "s101", "idioma": "und", "caso": "so-codigo", "texto": "const total = itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0);", "origem": "sintetico"}
