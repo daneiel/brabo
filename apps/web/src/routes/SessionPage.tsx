@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  acceptHandoff,
-  activateExecution,
   cancelAgentTurn,
   confirmArchitectureReadiness,
   confirmReadiness,
@@ -14,15 +12,10 @@ import {
   getSessionModelBinding,
   listModels,
   mensagemDaApi,
-  promoteStories,
   renameSession,
-  requestManualHandoff,
-  returnStory,
   sendAgentMessage,
-  setAgentAutonomy,
   startAgent,
   transitionSession,
-  validateNecessity,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { useTurnoDoAgente } from '../lib/session-turno';
@@ -43,12 +36,8 @@ import {
 } from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
-import { AGENT_AUTONOMY_ALL_ACTIONS } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStrip } from '../components/TurnActivityStrip';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { Textarea } from '../components/ui/Textarea';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
@@ -68,6 +57,10 @@ import { SessionTopbar } from './SessionTopbar';
 import { SessionFio } from './SessionFio';
 import { SessionComposer } from './SessionComposer';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
+import { useRolagemDoFio } from '../lib/session-rolagem';
+import { usePromocaoDeHistorias } from '../lib/session-promocao';
+import { useAcoesDeHandoff } from '../lib/session-acoes-de-handoff';
+import { DevolverHistoriaModal } from './DevolverHistoriaModal';
 
 interface SessionPageProps {
   projectId: string;
@@ -95,16 +88,6 @@ export {
   ordemDaAcaoNaTimeline,
   turnoDoSeq,
 };
-
-/**
- * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
- * teste) não implementa o método; chamá-lo direto quebra qualquer teste que
- * monte a tela com eventos na lista. Nos navegadores de verdade o método
- * sempre existe, então a guarda nunca muda o comportamento visível.
- */
-function rolarParaOFim(el: HTMLElement | null) {
-  el?.scrollIntoView?.({ block: 'end' });
-}
 
 export function SessionPage({
   projectId,
@@ -145,46 +128,8 @@ export function SessionPage({
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
   // estado.
   const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
-  // Promoção inline de história (RN-126) — o mesmo mecanismo de
-  // `PromotionQueue` (ProjectBacklogTab.tsx), só que disparado a partir do
-  // card no fio em vez da aba Backlog. `promovendoStoryId` é o id em voo (só
-  // um por vez, como o resto da tela); `recusandoStory` abre o modal de
-  // motivo, espelhando o padrão do backlog.
-  const [promovendoStoryId, setPromovendoStoryId] = useState<string | null>(null);
-  const [recusandoStory, setRecusandoStory] = useState<{ id: string; title: string } | null>(null);
-  const [motivoRecusa, setMotivoRecusa] = useState('');
-  const [enviandoRecusa, setEnviandoRecusa] = useState(false);
-  // Carrossel de histórias (RN-148) — "Aprovar todas" promove o LOTE inteiro
-  // numa chamada só (`promoteStories` já é lote por natureza); estado
-  // separado de `promovendoStoryId` porque as duas ações podem existir na
-  // mesma tela (um slide promovendo sozinho enquanto o lote não foi
-  // acionado) e cada botão desabilita só o que é dele.
-  const [promovendoTodas, setPromovendoTodas] = useState(false);
-  // Ativação inline da execução, a partir do card de aceite do handoff pro
-  // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
-  const [ativandoExecucao, setAtivandoExecucao] = useState(false);
-  // Gate `necessidade-validada` (RN-406) — diferente de `streaming`
-  // (`handleReadiness`/`handleArchitectureReadiness`), esta confirmação NÃO
-  // é um turno do engine: é só um POST que grava o evento, mesmo padrão de
-  // `ativandoExecucao`.
-  const [validandoNecessidade, setValidandoNecessidade] = useState(false);
-  // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
-  // depois do envio (some junto com `offeredHandoff` ao ser aceito), então
-  // não precisa lembrar a escolha entre um handoff e outro.
-  const [manualHandoffTarget, setManualHandoffTarget] = useState('');
-  const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
-  // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
-  // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
-  // sem NENHUM scroll automático.
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
-  // não é ele que cresce; observar o container não veria nada.
-  const messagesInnerRef = useRef<HTMLDivElement | null>(null);
-  const abriuNoFimRef = useRef(false);
-
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   // RN-579: com o canal da sessão VIVO, os polls desta tela viram fallback
   // longo e quem diz quando buscar é o aviso do canal (`canal-vivo.ts`). A
@@ -237,6 +182,56 @@ export function SessionPage({
     turnoAgentRef,
   } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
 
+  // A promoção de histórias pelo fio (RN-126/RN-148) mora em
+  // `../lib/session-promocao` desde o PR 8 do ADR 0176.
+  const {
+    promovendoStoryId,
+    recusandoStory,
+    setRecusandoStory,
+    motivoRecusa,
+    setMotivoRecusa,
+    enviandoRecusa,
+    promovendoTodas,
+    handlePromoteStory,
+    handlePromoteAll,
+    handleReturnStory,
+  } = usePromocaoDeHistorias({
+    projectId,
+    sessionId,
+    queryClient,
+    showToast,
+    t,
+    iniciarTurnoDoAgente,
+    acompanharTurnoPeloLog,
+    finalizarTurnoDoAgente,
+  });
+
+  // As ações de handoff e execução que não são turno de conversa (RN-406,
+  // RN-440, RN-161, RN-137, RN-153) moram em `../lib/session-acoes-de-handoff`
+  // desde o PR 9 do ADR 0176.
+  const {
+    ativandoExecucao,
+    validandoNecessidade,
+    manualHandoffTarget,
+    setManualHandoffTarget,
+    enviandoHandoffManual,
+    handleValidateNecessity,
+    handleRequestManualHandoff,
+    handleAcceptHandoff,
+    handleActivateExecution,
+    handleActivateAutoMode,
+  } = useAcoesDeHandoff({
+    projectId,
+    sessionId,
+    queryClient,
+    showToast,
+    t,
+    podeFundirHandoffComExecucao,
+    iniciarTurnoDoAgente,
+    turnoAgentRef,
+    setTurnoViaCanal,
+  });
+
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
   // eventos já persistidos no meio do turno duplicava a bolha (o dado novo
   // renderiza ao lado do estado otimista/streaming que ainda está na tela).
@@ -255,66 +250,16 @@ export function SessionPage({
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
   const actions = actionsQuery.data?.items ?? [];
 
-  // Navegação de evidência (Fase 4b): rola até o evento assim que ele
-  // existir no DOM — depende do log estar aberto E dos eventos já terem
-  // chegado pelo poll, daí a dependência em `events.length`.
-  useEffect(() => {
-    if (!highlightEvent || !logOpen) return;
-    document
-      .getElementById(`event-${highlightEvent}`)
-      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [highlightEvent, logOpen, events.length]);
-
-  // Achado 10: a sessão abre sempre na ÚLTIMA mensagem. Roda uma vez, assim
-  // que a primeira leva de eventos chega — a navegação de evidência do
-  // Psicólogo (efeito acima) tem prioridade quando existe `highlightEvent`,
-  // e por isso este nem tenta rolar nesse caso.
-  useEffect(() => {
-    if (highlightEvent || abriuNoFimRef.current || events.length === 0) return;
-    rolarParaOFim(messagesEndRef.current);
-    abriuNoFimRef.current = true;
-  }, [highlightEvent, events.length]);
-
-  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
-  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
-  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
-  // e "o chat me arrasta".
-  const acompanharOFim = useCallback(() => {
-    if (!abriuNoFimRef.current) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const pertoDoFim =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
-  }, []);
-
-  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
-  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
-  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
-  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
-  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
-  // timeline.
-  useEffect(() => {
-    acompanharOFim();
-  }, [events.length, actions.length, streamingText, acompanharOFim]);
-
-  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
-  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
-  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
-  // card de aprovação), o Markdown reflowando, um diagrama renderizando
-  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
-  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
-  //
-  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
-  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
-  // — a guarda nunca muda o comportamento visível.
-  useEffect(() => {
-    const alvo = messagesInnerRef.current;
-    if (!alvo || typeof ResizeObserver === 'undefined') return;
-    const observador = new ResizeObserver(() => acompanharOFim());
-    observador.observe(alvo);
-    return () => observador.disconnect();
-  }, [acompanharOFim]);
+  // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
+  // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
+  // efeitos, chamados neste mesmo ponto.
+  const { messagesEndRef, scrollContainerRef, messagesInnerRef } = useRolagemDoFio({
+    highlightEvent,
+    logOpen,
+    events,
+    actions,
+    streamingText,
+  });
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
@@ -590,258 +535,6 @@ export function SessionPage({
         message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarArquitetura')),
         tone: 'danger',
       });
-    }
-  }
-
-  /**
-   * Gate `necessidade-validada` (RN-406, ADR 0095) — o usuário confirma que
-   * o `product_brief` que o Criativo consolidou reflete de verdade a
-   * necessidade de negócio. Diferente de `handleReadiness`/
-   * `handleArchitectureReadiness`, NÃO é um `GenServer.call` síncrono no
-   * engine (o handoff Criativo→PO já aconteceu dentro do próprio
-   * `confirm_readiness`): é só um POST que grava `necessity.validated`, sem
-   * turno pra esperar — por isso não usa `streaming`, e sim um loading
-   * próprio (`validandoNecessidade`), mesmo padrão de `handleActivateExecution`.
-   */
-  async function handleValidateNecessity() {
-    if (validandoNecessidade) return;
-    setValidandoNecessidade(true);
-    try {
-      await validateNecessity(projectId, sessionId);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: t('toasts.necessidadeValidada'), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroValidarNecessidade')),
-        tone: 'danger',
-      });
-    } finally {
-      setValidandoNecessidade(false);
-    }
-  }
-
-  // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
-  // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
-  // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
-  // existente (`offeredHandoff`) pega o handoff novo sozinho no próximo poll
-  // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
-  // resultado mais rápido, mas o handoff em si só passa a existir depois
-  // deste POST responder.
-  async function handleRequestManualHandoff() {
-    if (!manualHandoffTarget || enviandoHandoffManual) return;
-    setEnviandoHandoffManual(true);
-    try {
-      await requestManualHandoff(projectId, sessionId, manualHandoffTarget);
-      await queryClient.invalidateQueries({
-        queryKey: ['session-handoffs', projectId, sessionId],
-      });
-      setManualHandoffTarget('');
-      showToast({ title: t('toasts.handoffManualEnviado'), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroHandoffManual')),
-        tone: 'danger',
-      });
-    } finally {
-      setEnviandoHandoffManual(false);
-    }
-  }
-
-  async function handleAcceptHandoff(handoffId: string, toAgent: string) {
-    // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
-    // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
-    // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
-    // o handler perderia a corrida e o indicador nasceria sem saber quem é.
-    iniciarTurnoDoAgente(toAgent, { comStatus: false });
-    try {
-      await acceptHandoff(projectId, sessionId, handoffId);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      // O aceite ao Arquiteto (e ao Dev Lead, segunda porta) provisiona o
-      // repositório (RN-582) — as telas que perguntam por ele precisam saber.
-      queryClient.invalidateQueries({ queryKey: ['repository', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      // RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já
-      // pode ativar a execução (mesma exigência do backend em
-      // `POST .../execution/activate`) — encadear aqui poupa o segundo
-      // clique em "Ativar execução". `handleActivateExecution` trata o
-      // próprio erro (toast + `mensagemDaApi`) e não relança, então um
-      // 403/409 dela nunca cai neste `catch` como "não foi possível aceitar
-      // o handoff", que seria a frase ERRADA (o aceite já tinha funcionado).
-      // Quem só é `developer` mantém o fluxo de hoje: aceitar sem encadear,
-      // com "Ativar execução" continuando disponível como segundo botão
-      // enquanto o card seguir na tela.
-      if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
-        await handleActivateExecution();
-      }
-    } catch {
-      turnoAgentRef.current = null;
-      setTurnoViaCanal(false);
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
-    }
-  }
-
-  /**
-   * Atalho de ativação da execução, embutido no próprio card de aceite do
-   * handoff pro Dev Lead (RN-137) — MESMA `activateExecution` que a Visão
-   * Geral já chama, e não uma rota nova.
-   *
-   * `sessionId` viaja como `originSessionId` (RN-135/PR #266): sem ele a
-   * sessão de chat que trouxe o Dev Lead ficava `active` para sempre, mesmo
-   * com a execução (numa sessão SEPARADA) já tendo decolado sozinha por
-   * este atalho.
-   *
-   * Autorização: `POST .../execution/activate` continua exigindo
-   * `maintainer` no backend — DELIBERADAMENTE não alinhada ao `developer`
-   * que basta pra aceitar o handoff. Quem ativa vira `session.createdBy` da
-   * sessão de execução, e `ProposeActionUseCase` resolve o papel EFETIVO
-   * dos `git_commit`/`git_push`/`pr_open` dos dev agents a partir dele (ver
-   * o comentário em `ExecutionController#activate`) — soltar a exigência
-   * aqui inverteria essa resolução em silêncio: as PRs que a execução abre
-   * passariam de `auto_approve` para `require_approval` sempre que quem
-   * clicou for `developer`, e ninguém decidiu isso explicitamente. Quem não
-   * é maintainer recebe a frase real da api (`mensagemDaApi`, "Papel
-   * insuficiente para esta ação"), não um erro genérico.
-   *
-   * module_map: sem gate próprio aqui. Quando este card existe, o
-   * Arquiteto já o definiu — é o artefato que precede a oferta do handoff
-   * pro Dev Lead —, então replicar o `disabled={!hasModuleMap}` da Visão
-   * Geral travaria o botão à toa; o caso raro cai no catch abaixo.
-   */
-  async function handleActivateExecution() {
-    if (ativandoExecucao) return;
-    setAtivandoExecucao(true);
-    try {
-      await activateExecution(projectId, sessionId);
-      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroAtivarExecucao')),
-        tone: 'danger',
-      });
-    } finally {
-      setAtivandoExecucao(false);
-    }
-  }
-
-  // "Auto mode" (RN-153) — grava a curinga `actionType: "*"` de
-  // `agent_autonomy` pro agente que propôs a ação do card. NÃO aprova a ação
-  // em si (isso é o botão Aprovar); liga a autonomia pras PRÓXIMAS. Mesma
-  // `queryKey` (`agent-autonomy`) que a Visão Geral/Executores leem pro
-  // toggle do card do agente — é ele que serve de "desligar" depois.
-  async function handleActivateAutoMode(agentId: string) {
-    try {
-      await setAgentAutonomy(projectId, {
-        agentId,
-        actionType: AGENT_AUTONOMY_ALL_ACTIONS,
-        mode: 'auto_approve',
-      });
-      await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
-      showToast({ title: t('toasts.modoAutomaticoLigado'), message: agentId, tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroModoAutomatico')),
-        message: agentId,
-        tone: 'danger',
-      });
-    }
-  }
-
-  // Promoção inline (RN-126) — mesmos `promoteStories`/`returnStory` que
-  // `PromotionQueue` já chama; só o gatilho muda, do botão na aba Backlog
-  // pro card no fio. `promoteStories` é sempre lote (mesmo pra uma história),
-  // e a resposta traz `failed` com o motivo do domínio quando recusa — o
-  // toast reaproveita essa informação em vez de um "erro" genérico.
-  async function handlePromoteStory(storyId: string) {
-    if (promovendoStoryId || promovendoTodas) return;
-    setPromovendoStoryId(storyId);
-    try {
-      const r = await promoteStories(projectId, [storyId]);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      if (r.failed.length > 0) {
-        showToast({
-          title: t('toasts.erroPromover'),
-          message: r.failed[0]?.reason,
-          tone: 'danger',
-        });
-      } else {
-        showToast({ title: t('toasts.historiaPromovida'), tone: 'success' });
-      }
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistoria'), tone: 'danger' });
-    } finally {
-      setPromovendoStoryId(null);
-    }
-  }
-
-  // "Aprovar todas" do carrossel (RN-148) — uma chamada só de `promoteStories`
-  // com o LOTE inteiro, em vez de N chamadas em série. A resposta tem a mesma
-  // forma da unitária (`promoted`/`failed`), e o toast soma: sucesso total,
-  // parcial (com o motivo da primeira falha) ou falha total.
-  async function handlePromoteAll(storyIds: string[]) {
-    if (promovendoStoryId || promovendoTodas || storyIds.length === 0) return;
-    setPromovendoTodas(true);
-    try {
-      const r = await promoteStories(projectId, storyIds);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      if (r.failed.length === 0) {
-        showToast({
-          title: t('toasts.historiasPromovidas', { count: r.promoted.length }),
-          tone: 'success',
-        });
-      } else if (r.promoted.length > 0) {
-        showToast({
-          title: t('toasts.promovidasParcial', { promovidas: r.promoted.length, total: storyIds.length }),
-          message: r.failed[0]?.reason,
-          tone: 'warning',
-        });
-      } else {
-        showToast({
-          title: t('toasts.erroPromover'),
-          message: r.failed[0]?.reason,
-          tone: 'danger',
-        });
-      }
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistorias'), tone: 'danger' });
-    } finally {
-      setPromovendoTodas(false);
-    }
-  }
-
-  async function handleReturnStory() {
-    if (!recusandoStory || motivoRecusa.trim() === '' || enviandoRecusa) return;
-    setEnviandoRecusa(true);
-    // RN-174: devolver NÃO é só gravar a recusa — `ReturnStoryUseCase` chama
-    // `reviseStory`, que é um `handle_call({:revise, …})` no `po_server`, e
-    // esta chamada só resolve depois de o PO rodar o turno INTEIRO (reescrever
-    // a história). Sem armar o indicador, a tela ficava muda esse tempo todo.
-    //
-    // Quem reescreve é SEMPRE o PO (`reviseStory` → `po_server`), não o
-    // `activeAgent` do momento — é por ele que o log é lido depois do aceite.
-    iniciarTurnoDoAgente('po');
-    try {
-      await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
-      setRecusandoStory(null);
-      setMotivoRecusa('');
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
-      // ADR 0163 (RN-578): resolver é o ACEITE. Se o PO não estava de pé, a
-      // api engoliu a notificação e nenhum `working` novo foi gravado — o
-      // `idle` antigo é o mais recente, e a leitura do log fecha na hora.
-      acompanharTurnoPeloLog('po');
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
-      // Um erro que deixasse `streaming` ligado travaria o composer até o
-      // próximo turno.
-      finalizarTurnoDoAgente();
-    } finally {
-      setEnviandoRecusa(false);
     }
   }
 
@@ -1128,36 +821,14 @@ export function SessionPage({
         )}
       </div>
 
-      {/* Modal de motivo da devolução (RN-126) — mesmo padrão de
-          `PromotionQueue` em ProjectBacklogTab.tsx, disparado a partir do
-          card inline em vez da aba Backlog. */}
-      {recusandoStory && (
-        <Modal
-          title={t('modal.devolverTitulo', { titulo: recusandoStory.title })}
-          onClose={() => setRecusandoStory(null)}
-        >
-          <Textarea
-            label={t('modal.motivo')}
-            value={motivoRecusa}
-            onChange={(e) => setMotivoRecusa(e.target.value)}
-            hint={t('modal.motivoDica')}
-            placeholder={t('modal.motivoPlaceholder')}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <Button
-              variant="danger"
-              loading={enviandoRecusa}
-              disabled={motivoRecusa.trim() === ''}
-              onClick={handleReturnStory}
-            >
-              {t('modal.devolverAoPo')}
-            </Button>
-            <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
-              {t('modal.cancelar')}
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <DevolverHistoriaModal
+        recusandoStory={recusandoStory}
+        setRecusandoStory={setRecusandoStory}
+        motivoRecusa={motivoRecusa}
+        setMotivoRecusa={setMotivoRecusa}
+        enviandoRecusa={enviandoRecusa}
+        handleReturnStory={handleReturnStory}
+      />
     </div>
   );
 }
