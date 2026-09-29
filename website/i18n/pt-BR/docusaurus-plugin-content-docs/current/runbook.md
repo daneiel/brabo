@@ -1678,9 +1678,14 @@ mora em `test/infrastructure/security/envelope-encryption.service.spec.ts`.
 O `rewrap` também roda em qualquer ambiente: num de teste, o ciclo completo à
 mão cabe em poucos minutos.
 
-> **TODO(humano):** esta rotação já foi executada de verdade, em algum
-> ambiente? Nenhuma fonte registra uma execução com data, e isso muda se o spec
-> acima é rede de segurança ou a primeira prova.
+**Já rodou de verdade? Não.** Resposta do mantenedor (2026-09-27): esta
+rotação **nunca** foi executada num ambiente real. Desde a AT-146 existe o
+ENSAIO, no cluster, toda semana: `make test-rotacao-chave-mestra-k8s`
+(`deploy/k8s/test-rotacao-chave-mestra.sh`), o último alvo do
+`propriedades.yml`, roda os três passos desta página com o `ExternalSecret`, o
+restart da api e o `rewrap-deks.js` da imagem, e confere que todo envelope abre
+em cada passo. É ensaio num cluster descartável, não rotação de ambiente real.
+O detalhe está na versão em inglês desta página.
 
 ### Interação com o restore
 

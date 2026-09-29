@@ -2100,7 +2100,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (`apps/api/test/scripts/rewrap-deks.spec.ts`, contra Postgres de verdade e
   contra as duas tabelas) — e é por ela que `rewrap-deks.ts` tem o núcleo
   exportado (`reenvelopar`) com o `main()` sob `require.main === module`:
-  importar o script não pode rodar a rotação.
+  importar o script não pode rodar a rotação. A rotação NUNCA rodou em
+  ambiente real (mantenedor, 2026-09-27); desde a AT-146 ela tem um ENSAIO no
+  cluster, semanal e último alvo do `propriedades.yml`
+  (`make test-rotacao-chave-mestra-k8s`): os três passos do runbook pela fonte
+  do `ExternalSecret`, com restart da api e o `rewrap-deks.js` da imagem —
+  ensaio, não rotação de ambiente real.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
 
 ## Documentação é parte da definição de pronto (permanente)
