@@ -16423,11 +16423,9 @@ daquele turno. A Conta deixou de dizer que o valor "ainda não chega".
 
 **Quem consome, e o que sobra:** desde a [RN-622](#rn-622) o engine lê a
 coluna (`Engine.Projects.Project`, direto do Postgres) e a manda ao modelo em
-toda chamada de LLM de turno SEM autor humano. O que NÃO segue o idioma do
-projeto, declarado: o artefato compartilhado que um agente emite DURANTE um
-turno com autor humano (o product brief do Criativo, a regra de negócio, o ADR
-do Arquiteto) — ali a orientação é o idioma das respostas de quem escreveu, e
-a tela DIZ isso no lugar do aviso antigo.
+toda chamada de LLM de turno SEM autor humano, e desde a [RN-623](#rn-623)
+também como idioma do artefato compartilhado que um agente grava DURANTE um
+turno com autor humano — a divergência que esta regra declarava fechou.
 
 - **Código:** `apps/api/src/db/schema/iam.ts:227` (`language`);
   `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
@@ -16558,19 +16556,20 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   dispara — confirmar prontidão ao Criativo, aceitar handoff — sobem turno
   sem autor e caem no idioma do PROJETO: o product brief do
   `confirmReadiness` sai no idioma do projeto.
-- **Artefato de turno com autor** segue o idioma de QUEM ESCREVEU, não o do
-  projeto que a [RN-619](#rn-619) promete para artefato compartilhado. A tela
-  do projeto diz isso.
+- **Artefato de turno com autor**: esta regra o declarava seguindo o idioma de
+  quem escreveu; desde a [RN-623](#rn-623) a mesma mensagem ganha a cláusula
+  do artefato, no idioma do projeto.
 - **Não medido:** o tokenizador do DeepSeek e o da Anthropic; se a orientação
   basta contra o prompt de sistema em pt-BR é o que a validação paga da
   AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
   cache a cada troca de autor ou de idioma — cache não é observável hoje.
 
-- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:130`
-  (`anexar`), `:111` (`com_idioma_do_autor`), `:87` (`orientacao`), `:62`
-  (`@sem_orientacao`), `:146` (`idioma_do_turno`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:590`
-  (`IdiomaDaResposta`), `:642` (`IdiomaDaResposta`);
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:228`
+  (`anexar`), `:205` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
+  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
+  (`idioma_do_projeto`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
+  (`IdiomaDaResposta`), `:643` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
   (`idioma_da_resposta`);
@@ -16586,9 +16585,9 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
   vence o do projeto), `:134` (autor sem idioma resolvido: sem orientação),
   `:98` (a consulta que falha — caso de falha: lista intacta e log), `:93` (o
-  sumarizador fica fora), `:67` (o vigia do teto de 50 tokens), `:169` (ponta
+  sumarizador fica fora), `:67` (o vigia do teto de 50 tokens), `:340` (ponta
   a ponta: o idioma do autor no fim de cada chamada e fora do histórico),
-  `:196` (a fachada também anexa no `llm_turn/5`);
+  `:370` (a fachada também anexa no `llm_turn/5`);
   `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:402`
   (o comando leva o idioma até o modelo), `:414` (campo inválido: aceito, sem
   orientação);
@@ -16599,3 +16598,84 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (o campo viaja só quando resolvido)
 - **Origem:** AT-164, especificada na AT-081 e destravada pelas decisões das
   AT-168 e AT-169 (mantenedor, 2026-09-28); mecanismo verificado na AT-161
+
+### RN-623 — Num turno COM autor, a resposta é no idioma da pessoa e o ARTEFATO compartilhado é no idioma do PROJETO {#rn-623}
+
+A [RN-619](#rn-619) prometeu o idioma do projeto para o artefato
+compartilhado, e a [RN-622](#rn-622) pôs o idioma do AUTOR em todo turno com
+autor — então o que um agente gravava DURANTE a conversa com uma pessoa saía no
+idioma dela. Decisão do mantenedor (AT-168 resposta 8, AT-245): **o artefato
+segue o PROJETO**; a resposta de chat continua no idioma do autor.
+
+1. **O mecanismo é a mesma mensagem da RN-622, com uma segunda cláusula.**
+   Num turno com autor, quando a chamada leva ao menos uma ferramenta que
+   grava artefato compartilhado e o idioma do projeto (`projects.language`)
+   DIFERE do do autor, a orientação vira "Responda em português brasileiro
+   (pt-BR), salvo pedido… **Artefatos do projeto: em en.**" — no idioma do
+   texto base: a cláusula do `pt-BR` é em português, a dos outros em inglês
+   ("Write project artifacts in X."). Continua UMA mensagem `system` efêmera
+   no fim, montada pela fachada; quem decide é o conjunto de ferramentas que a
+   MESMA chamada leva ao modelo, que a fachada já tem.
+2. **Por que a orientação, e não a descrição da ferramenta.** A descrição
+   viaja em TODA chamada, em cada ferramenta, com os idiomas iguais ou não; a
+   cláusula existe só quando eles diferem, e mora no único lugar que já decide
+   o idioma. Sem acréscimo nenhum quando os idiomas são iguais, quando a
+   chamada não tem ferramenta de artefato, e em turno SEM autor (que já recebe
+   o idioma do projeto).
+3. **O que é artefato compartilhado** — o que a ferramenta PERSISTE é lido por
+   outras pessoas e pelos próximos agentes:
+   - `emit_artifact` (`business_rule`, `note`, `decision_record`) — Criativo,
+     PO, Arquiteto, Dev Lead, UX Designer, Staff;
+   - `create_epic`, `create_story`, `create_task` — PO;
+   - `create_module_map`, `assign_story_modules`, `choose_project_image`,
+     `create_c4_diagram`, `route_modules_to_infra`, `propose_adr` (o ADR de
+     `open_adr_pr`), `emit_insight` — Arquiteto;
+   - `propose_execution_plan`, `assess_implementability` — Dev Lead;
+   - `propose_prototype` — UX Designer; `propose_rfc` — Staff;
+   - `propose_infra_pr` — Infra Lead.
+   O product brief NÃO passa por aqui: ele é emitido pelo SERVIDOR no
+   `confirmReadiness`, que é turno sem autor e já sai no idioma do projeto
+   (como o handoff e o revise, que esta regra não muda).
+4. **O que NÃO é:** `ask_structured_questions` (é pergunta à PESSOA do
+   turno), `offer_handoff` (não leva texto), as de leitura (`listar_*`,
+   `rag_*`, `read_file`, `search_workspace`), `validate_infra_file` (só
+   valida) e as propostas de subir container (pedem decisão, não gravam
+   artefato). Os dev agents e os gates não têm turno com autor.
+5. **Falha nunca derruba o turno.** Ler o idioma do projeto que falha vira
+   `warning` e segue SÓ a orientação do autor — nunca sem orientação, nunca a
+   do projeto no lugar da da pessoa. Autor sem idioma resolvido segue sem
+   orientação, como na RN-622.
+6. **Custo** — o teto de 50 tokens de entrada da AT-169 vale para a mensagem
+   inteira. Medido com `gpt-tokenizer`, só o conteúdo, cl100k / o200k, sobre
+   todos os pares de `pt-BR`, `en`, `es`, `es-MX` e `zh-Hant-TW`: pior caso
+   `pt-BR` → `zh-Hant-TW` 42 / 36; `en` → `pt-BR` 26 / 26; genérico `es-MX` →
+   `zh-Hant-TW` 36 / 36. A cláusula só entra com os DOIS códigos na forma
+   canônica curta (`idioma[-Escrita][-Região]`, ex.: `pt-BR`, `zh-Hant-TW`,
+   `es-419`), porque é a FORMA que segura o teto: o pior dela (`pt-BR` → código
+   de 12 caracteres) mede 44 / 37, ~48 com a moldura da mensagem. Código fora
+   dessa forma fica só com a orientação do autor, e o log diz. O teste trava
+   todo par em 165 caracteres como vigia.
+
+**O que esta regra NÃO fecha, declarado:** a lista é por NOME de ferramenta —
+ferramenta nova que grave artefato entra nela no mesmo PR (o teste amarra
+cada nome a uma spec que existe, mas não descobre ferramenta nova). Se o
+modelo SEGUE as duas cláusulas na mesma mensagem é o que a validação paga da
+AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
+
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:174`
+  (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
+  (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
+  `:270` (`idioma_do_projeto_para_o_artefato`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
+  (`IdiomaDaResposta`), `:643` (`IdiomaDaResposta`);
+  `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
+- **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
+  (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
+  `:175` (código fora da forma curta: só o do autor, com log), `:190` (o vigia
+  do teto), `:204` (cada nome da lista é uma spec que existe), `:235` (autor
+  pt-BR, projeto en, numa mensagem só), `:259` (sem ferramenta de artefato:
+  só o autor), `:290` (idioma do projeto ilegível — caso de falha: só o do
+  autor, com log), `:316` (sem autor: nada muda), `:340` (ponta a ponta pelo
+  Criativo); `apps/web/src/routes/settings/idioma-do-projeto.test.tsx:84`
+- **Origem:** AT-245, sobre a decisão da AT-168 (resposta 8) e as do
+  mantenedor de 2026-09-29

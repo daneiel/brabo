@@ -580,14 +580,15 @@ defmodule Engine.Sessions.EngineApiClient do
   # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
   # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
   # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
-  # chamou: é efêmera por construção.
+  # chamou: é efêmera por construção. As `tools` vão junto porque é por elas
+  # que a orientação sabe se o agente pode gravar artefato do projeto (RN-623).
   def llm_turn(project_id, session_id, agent, messages, tools),
     do:
       impl().llm_turn(
         project_id,
         session_id,
         agent,
-        IdiomaDaResposta.anexar(messages, project_id, agent),
+        IdiomaDaResposta.anexar(messages, project_id, agent, tools),
         tools
       )
 
@@ -639,7 +640,7 @@ defmodule Engine.Sessions.EngineApiClient do
         project_id,
         session_id,
         agent,
-        IdiomaDaResposta.anexar(messages, project_id, agent),
+        IdiomaDaResposta.anexar(messages, project_id, agent, tools),
         tools,
         on_delta
       )

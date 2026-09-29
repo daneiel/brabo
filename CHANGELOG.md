@@ -57,6 +57,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine/web**: o artefato que um agente grava durante a conversa com uma
+  pessoa sai no idioma do PROJETO (AT-245,
+  [RN-623](docs/business-rules.md#rn-623)); a resposta de chat continua no
+  idioma de quem escreveu. Quando os dois idiomas diferem e a chamada leva uma
+  ferramenta que grava artefato compartilhado (regra de negócio, nota,
+  registro de decisão, épico/história/tarefa, mapa de módulos, imagem, C4,
+  roteamento, ADR, insight, plano de execução, protótipo, RFC, PR de infra), a
+  mesma mensagem de sistema ganha uma segunda frase ("Artefatos do projeto: em
+  en."). Idiomas iguais: nada muda. Custa até 42 tokens no pior caso real
+  medido (teto: 50). Se o idioma do projeto não puder ser lido, segue só o do
+  autor. A seção "Idioma do projeto" deixa de dizer que esses artefatos saem
+  no idioma da pessoa.
 - **api/engine/web**: o idioma escolhido CHEGA ao modelo (AT-164,
   [RN-622](docs/business-rules.md#rn-622)). Em toda chamada de LLM de um turno
   de agente, o engine acrescenta no FIM do contexto uma mensagem de sistema

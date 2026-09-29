@@ -335,7 +335,7 @@
     "title": "Project language",
     "eyebrow": "no human author",
     "subtitle": "The language of what nobody typed: shared artifacts (product brief, business rules, ADRs) and turns with no author (agents' opening, dev agents, gates, commit messages, PR bodies). What an agent answers YOU follows your response language, on the Account page.",
-    "artifactsGap": "Turns with no author already follow this language. Artifacts an agent emits while talking to a person still come out in that person's response language.",
+    "artifactsNote": "That includes what an agent writes as a shared artifact while talking to a person (business rules, stories, ADRs…): the answer is in that person's language, the artifact in this one.",
     "card": {
       "title": "Language",
       "hint": "Today: {{idioma}}."

@@ -151,6 +151,177 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
     end
   end
 
+  # RN-623 (AT-245): num turno COM autor, o artefato compartilhado segue o
+  # idioma do PROJETO; a resposta de chat continua no do autor.
+  describe "orientacao/2 — a cláusula do artefato" do
+    test "idiomas diferentes: a orientação diz os dois, no idioma do texto base" do
+      assert IdiomaDaResposta.orientacao("pt-BR", "en") ==
+               IdiomaDaResposta.orientacao("pt-BR") <> " Artefatos do projeto: em en."
+
+      assert IdiomaDaResposta.orientacao("en", "pt-BR") ==
+               IdiomaDaResposta.orientacao("en") <> " Write project artifacts in pt-BR."
+
+      assert IdiomaDaResposta.orientacao("es-MX", "zh-Hant-TW") =~
+               ~r/BCP-47 code es-MX.* Write project artifacts in zh-Hant-TW\.\z/
+    end
+
+    test "idiomas iguais (ou projeto sem idioma): só a do autor, sem acréscimo" do
+      assert IdiomaDaResposta.orientacao("pt-BR", "pt-BR") == IdiomaDaResposta.orientacao("pt-BR")
+      assert IdiomaDaResposta.orientacao("en", "EN") == IdiomaDaResposta.orientacao("en")
+      assert IdiomaDaResposta.orientacao("pt-BR", nil) == IdiomaDaResposta.orientacao("pt-BR")
+      assert IdiomaDaResposta.orientacao(nil, "en") == nil
+    end
+
+    test "código fora da forma curta: só a do autor, e o log diz por quê (o teto manda)" do
+      longo = "abcdefgh-12345678-12345678"
+
+      log =
+        capture_log(fn ->
+          assert IdiomaDaResposta.orientacao("pt-BR", longo) ==
+                   IdiomaDaResposta.orientacao("pt-BR")
+        end)
+
+      assert log =~ "cláusula do artefato ficou de fora"
+    end
+
+    # O vigia do teto da forma combinada: todo par da forma curta, inclusive o
+    # pior (códigos de 12 caracteres), cabe em 165 caracteres — medido em
+    # tokens no moduledoc.
+    test "todo par de códigos na forma curta cabe no vigia combinado" do
+      codigos = ["pt-BR", "en", "es", "es-MX", "zh-Hant-TW", "es-419", "tlh-Piqd-419"]
+
+      for autor <- codigos, projeto <- codigos do
+        texto = IdiomaDaResposta.orientacao(autor, projeto)
+
+        assert String.length(texto) <= IdiomaDaResposta.teto_de_caracteres_combinado(),
+               "#{autor} → #{projeto}"
+      end
+    end
+  end
+
+  # A lista é por NOME: uma ferramenta renomeada sairia dela calada. Cada nome
+  # tem de ser o de uma spec de verdade.
+  test "toda ferramenta de artefato da lista é o nome de uma spec que existe" do
+    alias Engine.Agents.{DevLeadTools, StaffTools, UxDesignerTools}
+    alias Engine.Harness.Tools
+    alias Engine.Infra.Tools.ProposeInfraPr
+
+    specs = [
+      Tools.EmitArtifact.spec(),
+      Tools.CreateEpic.spec(),
+      Tools.CreateStory.spec(),
+      Tools.CreateTask.spec(),
+      Tools.CreateModuleMap.spec(),
+      Tools.AssignStoryModules.spec(),
+      Tools.ChooseProjectImage.spec(),
+      Tools.CreateC4Diagram.spec(),
+      Tools.RouteModulesToInfra.spec(),
+      Tools.ProposeAdr.spec(),
+      Tools.EmitInsight.spec(),
+      DevLeadTools.spec(),
+      DevLeadTools.spec_assess_implementability(),
+      UxDesignerTools.spec(),
+      StaffTools.spec(),
+      ProposeInfraPr.spec()
+    ]
+
+    assert Enum.sort(Enum.map(specs, & &1.name)) ==
+             Enum.sort(IdiomaDaResposta.ferramentas_de_artefato())
+  end
+
+  describe "anexar/4 — turno COM autor numa chamada que grava artefato" do
+    @com_artefato [%{name: "ask_structured_questions"}, %{name: "emit_artifact"}]
+
+    test "autor pt-BR, projeto en: responde em pt-BR e escreve o artefato em en" do
+      project_id = projeto("en")
+
+      enviado =
+        IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+          IdiomaDaResposta.anexar(@historico, project_id, "criativo", @com_artefato)
+        end)
+
+      assert orientacao_enviada(enviado) == IdiomaDaResposta.orientacao("pt-BR", "en")
+      # Uma mensagem só: a cláusula não é uma segunda mensagem de sistema.
+      assert length(enviado) == length(@historico) + 1
+    end
+
+    test "mesmo idioma do projeto: a orientação de sempre, sem acréscimo" do
+      project_id = projeto("pt-BR")
+
+      enviado =
+        IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+          IdiomaDaResposta.anexar(@historico, project_id, "criativo", @com_artefato)
+        end)
+
+      assert orientacao_enviada(enviado) == IdiomaDaResposta.orientacao("pt-BR")
+    end
+
+    test "chamada sem ferramenta de artefato: só o idioma do autor" do
+      project_id = projeto("en")
+
+      enviado =
+        IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+          IdiomaDaResposta.anexar(@historico, project_id, "po", [
+            %{"name" => "listar_backlog"},
+            %{"function" => %{"name" => "ask_structured_questions"}}
+          ])
+        end)
+
+      assert orientacao_enviada(enviado) == IdiomaDaResposta.orientacao("pt-BR")
+    end
+
+    test "a ferramenta é reconhecida nos três formatos de spec" do
+      project_id = projeto("en")
+
+      for tool <- [
+            %{name: "create_story"},
+            %{"name" => "propose_adr"},
+            %{"function" => %{"name" => "propose_infra_pr"}}
+          ] do
+        enviado =
+          IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+            IdiomaDaResposta.anexar(@historico, project_id, "arquiteto", [tool])
+          end)
+
+        assert orientacao_enviada(enviado) =~ "Artefatos do projeto: em en.", inspect(tool)
+      end
+    end
+
+    test "o idioma do projeto ilegível não derruba nada: segue só o do autor, com log" do
+      project_id = projeto("en")
+      pai = self()
+
+      # O mesmo recurso do teste de falha acima: sem a conexão do Sandbox, a
+      # consulta levanta como um banco fora do ar.
+      Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
+
+      log =
+        capture_log(fn ->
+          spawn(fn ->
+            enviado =
+              IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+                IdiomaDaResposta.anexar(@historico, project_id, "criativo", @com_artefato)
+              end)
+
+            send(pai, {:enviado, enviado})
+          end)
+
+          assert_receive {:enviado, enviado}, 2_000
+          assert orientacao_enviada(enviado) == IdiomaDaResposta.orientacao("pt-BR")
+        end)
+
+      assert log =~ "segue só o idioma do autor"
+    end
+
+    test "turno SEM autor com ferramenta de artefato: só o idioma do projeto, como antes" do
+      project_id = projeto("en")
+
+      enviado = IdiomaDaResposta.anexar(@historico, project_id, "criativo", @com_artefato)
+
+      assert orientacao_enviada(enviado) == IdiomaDaResposta.orientacao("en")
+    end
+  end
+
   describe "ponta a ponta: comando → servidor → Task do turno → fachada" do
     setup do
       root = Path.join(System.tmp_dir!(), "brabo-idioma-#{System.unique_integer([:positive])}")
@@ -176,6 +347,9 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
 
       assert_received {:llm_turn_stream, "criativo", enviado, _tools}
       assert orientacao_enviada(enviado) =~ "português brasileiro"
+      # RN-623: o Criativo grava regra de negócio (`emit_artifact`), e o
+      # projeto é `en` — o artefato sai no idioma do projeto.
+      assert orientacao_enviada(enviado) =~ "Artefatos do projeto: em en."
 
       # Efêmera: nada da orientação entrou no histórico do agente.
       refute Enum.any?(final.messages, &(&1["content"] =~ "português brasileiro"))

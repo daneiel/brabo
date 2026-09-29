@@ -278,6 +278,14 @@ history. The api does nothing special with it — it is a system message like an
 other, and its input tokens are metered like the rest (18–29 per call measured
 with cl100k/o200k, under a 50-token ceiling).
 
+Since [RN-623](../business-rules.md#rn-623) the facade also reads the `tools`
+of the SAME call: in a turn with an author, when those tools include one that
+writes a shared project artifact and the project's language differs from the
+author's, the same message gains a second sentence ("Write project artifacts
+in X." / "Artefatos do projeto: em X."). Still one message, still ephemeral,
+up to 42 tokens in the worst real pair measured. The request body does not
+change.
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
