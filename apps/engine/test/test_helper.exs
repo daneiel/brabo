@@ -150,6 +150,13 @@ Engine.Repo.query!(
 # como na api: `nil` é o estado normal, não uma pendência.
 Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS mirror_path text")
 
+# RN-619/RN-622: o idioma do projeto, gravado pela api e LIDO aqui para a
+# orientação efêmera dos turnos sem autor. NULLABLE e sem default de
+# propósito (na api é NOT NULL, default 'pt-BR'): coluna nula é "sem
+# orientação", e é isso que mantém intactas as dezenas de specs que conferem a
+# lista EXATA de mensagens mandada ao modelo.
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS language text")
+
 # Mesmo motivo dos fixtures acima — project_containers também é gerenciada
 # pela api (Drizzle, schema "public", ADR 0081/0130/0134). O engine lê só
 # `status` (`Engine.Containers.ProjectContainerLifecycle.running?/1`, RN-492)

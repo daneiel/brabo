@@ -96,13 +96,13 @@ beforeEach(() => {
 });
 
 describe('SessionLanguageIndicator (RN-620)', () => {
-  it('mostra o efetivo COM a origem, o aviso de que ainda não chega aos agentes e o link para a Conta', async () => {
+  it('mostra o efetivo COM a origem e o link para a Conta — sem o aviso de "ainda não chega" (RN-622)', async () => {
     getSessionResponseLanguage.mockResolvedValue(PELA_INTERFACE);
     montar();
 
     const origem = await screen.findByTestId('origem-do-idioma');
     expect(origem.textContent).toMatch(/pt-BR.*o idioma da interface/);
-    expect(origem.textContent).toMatch(/ainda não chega aos agentes/);
+    expect(origem.textContent).not.toMatch(/ainda não chega aos agentes/);
     expect(screen.getByRole('link', { name: 'Conta' })).toHaveAttribute(
       'href',
       '/account',

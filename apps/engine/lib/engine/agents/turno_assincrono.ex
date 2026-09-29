@@ -106,8 +106,10 @@ defmodule Engine.Agents.TurnoAssincrono do
         # PRÓPRIO `Task` usa pra registrar a cadeia de ancestralidade — ver
         # `Ecto.Adapters.SQL.Sandbox`, que a lê para permitir a conexão do
         # dono do teste dentro da task) viaja pra dentro da task. Em
-        # produção não muda nada (não há nada scriptado no dicionário); nos
-        # testes dos quatro agentes é o que faz os fakes por
+        # produção é por aqui, e só por aqui, que o idioma do AUTOR da
+        # mensagem chega ao turno (RN-622: `IdiomaDaResposta.com_idioma_do_autor/2`
+        # o põe no dicionário durante o `handle_call` e o tira ao sair); nos
+        # testes dos agentes é também o que faz os fakes por
         # `Process.put(:fake_llm_turns, ...)` continuarem visíveis agora que
         # o turno roda num processo diferente do que chamou `handle_call`.
         heranca = copiar_dicionario()

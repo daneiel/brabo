@@ -50,8 +50,8 @@ export function idiomaSemOverride(r: SessionResponseLanguage): string {
  *
  * ## O que ele NÃO afirma
  *
- * Até a AT-164 o idioma não chega ao modelo, e a barra diz isso em texto —
- * nunca "os agentes respondem em X". Carregando, falhou e cada origem têm
+ * Desde a RN-622 o efetivo chega ao modelo nas mensagens de QUEM VÊ, e o
+ * aviso de "ainda não chega" saiu. Carregando, falhou e cada origem têm
  * textos próprios (RN-470): "interface" e "detectado" não viram "escolhido".
  * E nunca "você é brasileiro": o detectado se diz "detectado pelas suas
  * mensagens" (AT-080).
@@ -130,7 +130,6 @@ export function SessionLanguageIndicator({
       idioma: nome(data.language),
       origem: t(`origin.${data.origin}`),
     }),
-    t('session.notYetApplied'),
     ...(podeTrocar ? [] : [t('session.readOnly')]),
   ].join(' · ');
 

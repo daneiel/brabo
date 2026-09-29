@@ -45,6 +45,7 @@ defmodule Engine.Agents.UxDesignerServer do
     UxDesignerTools
   }
 
+  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "ux-designer"
@@ -76,8 +77,10 @@ defmodule Engine.Agents.UxDesignerServer do
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
 
   # --- Callbacks ---
 
@@ -134,6 +137,16 @@ defmodule Engine.Agents.UxDesignerServer do
   def terminate(_reason, state) do
     TurnoAssincrono.abandonar(state)
     :ok
+  end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  @impl true
+  def handle_call({:user_message, text, idioma}, from, state) do
+    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
+      handle_call({:user_message, text}, from, state)
+    end)
   end
 
   @impl true

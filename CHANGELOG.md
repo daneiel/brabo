@@ -57,6 +57,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/engine/web**: o idioma escolhido CHEGA ao modelo (AT-164,
+  [RN-622](docs/business-rules.md#rn-622)). Em toda chamada de LLM de um turno
+  de agente, o engine acrescenta no FIM do contexto uma mensagem de sistema
+  curta ("Responda em português brasileiro (pt-BR)…"), que não entra no
+  histórico nem no resumo. Na mensagem que alguém manda a um agente vale o
+  idioma das respostas DESSA pessoa naquela sessão; nos turnos sem autor
+  (abertura, dev agents, gates, commit, PR) vale o idioma do projeto. Custa de
+  18 a 29 tokens de entrada por chamada nos tokenizadores medidos (teto
+  decidido: 50). Se a resolução falha, o turno segue sem orientação. A Conta
+  e a barra da sessão deixam de dizer que o idioma "ainda não chega aos
+  agentes"; a seção do projeto passa a dizer só o que ainda não segue o idioma
+  dele (artefato emitido na conversa com uma pessoa). O chat sem agente fica
+  de fora.
 - **web**: a barra da sessão mostra, ao lado do seletor de modelo, o idioma
   em que os agentes respondem a QUEM VÊ e de onde ele veio — fixado nesta
   sessão, escolhido na Conta, detectado e confirmado, ou o idioma da interface

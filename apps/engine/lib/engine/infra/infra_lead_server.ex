@@ -108,6 +108,7 @@ defmodule Engine.Infra.InfraLeadServer do
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
   # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
   alias Engine.Runners.Registry, as: RunnerRegistry
+  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "infra"
@@ -142,8 +143,11 @@ defmodule Engine.Infra.InfraLeadServer do
   # mesmo número dos outros seis conversacionais, e deixou de competir com os
   # 225 s do `propose_action` de container (RN-605), que agora corre DENTRO da
   # Task, sem ninguém esperando síncrono.
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
+  #
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
 
   @doc "Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova."
   def correct(session_id, findings), do: GenServer.cast(via(session_id), {:correct, findings})
@@ -235,6 +239,16 @@ defmodule Engine.Infra.InfraLeadServer do
   def terminate(_reason, state) do
     TurnoAssincrono.abandonar(state)
     :ok
+  end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  @impl true
+  def handle_call({:user_message, text, idioma}, from, state) do
+    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
+      handle_call({:user_message, text}, from, state)
+    end)
   end
 
   @impl true
