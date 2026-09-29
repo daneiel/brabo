@@ -187,6 +187,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que o replay não enxerga em
   [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md).
 
+- **scripts**: a segunda rodada da medição do Jev (AT-237) —
+  `pnpm --filter @brabo/scripts jev:analise` — repete o replay com variantes de
+  `state`, classes de equivalência declaradas antes de rodar (o `terminal` que
+  só lê vale por `read_file`/`search_workspace`; o que executa não vale por
+  nada), divisão tuning × validação POR EXECUÇÃO do laço, top-2 e a cascata
+  "input original → equivalências → mensagem inicial do laço → …". A mensagem
+  inicial dos dev agents e dos gates, que nunca vai ao event log, é reconstruída
+  do código do engine. Resultado (validação, 160 passos com ferramenta, chave
+  de US$ 0,41 no total): top-1 **73% (66–79%)** por equivalência e 66% (58–73%)
+  pela régua estrita, abaixo da linha de base grátis "repetir a ferramenta
+  anterior" (82%); top-2 90% (84–94%); **90% de top-1 não foi atingido**. O gap
+  é ~1/5 régua, ~2/5 input que o replay não tinha e ~2/5 ritmo do agente (o Jev
+  nomeia a próxima etapa do fluxo, o agente fica mais um passo na atual). Nada
+  no produto muda. Tabelas, variantes tentadas e o gap classificado à mão em
+  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#second-round-2026-09-29-where-the-gap-is).
+
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o

@@ -12,7 +12,7 @@
  * Nada aqui toca a rede: `montarPedido` e `lerResposta` são puras; a chamada
  * mora em `replay.ts`.
  */
-import { RESPONDER_SEM_FERRAMENTA, type Catalogo, type EstadoDoJev } from './passos.ts';
+import { RESPONDER_SEM_FERRAMENTA, type Catalogo } from './passos.ts';
 
 export const ENDPOINT_DO_JEV = 'https://openrouter.ai/api/alpha/decisions';
 export const MODELO_DO_JEV = 'typesafe/jev-1.13';
@@ -20,17 +20,29 @@ export const PERGUNTA = 'ferramenta_do_passo';
 export const INSTRUCAO =
   'Qual ferramenta o agente deve chamar neste passo, dado o pedido, o contexto e os passos recentes? ' +
   `Escolha "${RESPONDER_SEM_FERRAMENTA}" se o agente deve responder em texto ou encerrar o turno.`;
+/**
+ * Variante da pergunta (2ª rodada): diz ao Jev como um agente de execução se
+ * comporta. Escrita a partir da mensagem inicial dos laços (`dev_agent_server.ex`:
+ * "escreva cada arquivo com write_file, rode a suíte com terminal, report_done
+ * só depois de vê-la passar") e da semântica das ferramentas, não de um número.
+ */
+export const INSTRUCAO_COM_FLUXO =
+  'Qual ferramenta o agente deve chamar neste passo, dado o pedido, o contexto e os passos recentes? ' +
+  'Agentes de execução trabalham em rajadas: costumam repetir a ferramenta do passo anterior (vários read_file ou ' +
+  'search_workspace para entender o código, vários write_file para criar os arquivos) e só mudam de ferramenta ' +
+  'quando a etapa acaba — de escrever para rodar a suíte com terminal, e da suíte passando para report_done ou ' +
+  `report_blocked. Escolha "${RESPONDER_SEM_FERRAMENTA}" se o agente deve responder em texto ou encerrar o turno.`;
 export const DESCRICAO_SEM_FERRAMENTA =
   'Nenhuma ferramenta: responder ao usuário em texto ou encerrar o turno.';
 
 export interface PedidoAoJev {
   model: string;
-  state: EstadoDoJev;
+  state: object;
   questions: Record<string, { type: 'choice'; instructions: string; criteria: Record<string, string> }>;
 }
 
 /** `criteria` = `{ nome: descrição }` do catálogo do agente + a opção reservada. */
-export function montarPedido(estado: EstadoDoJev, ferramentas: readonly string[], catalogo: Catalogo): PedidoAoJev {
+export function montarPedido(estado: object, ferramentas: readonly string[], catalogo: Catalogo, instrucao: string = INSTRUCAO): PedidoAoJev {
   if (ferramentas.includes(RESPONDER_SEM_FERRAMENTA)) {
     throw new Error(`colisao_de_nome: o catálogo tem ferramenta chamada ${RESPONDER_SEM_FERRAMENTA}`);
   }
@@ -40,7 +52,7 @@ export function montarPedido(estado: EstadoDoJev, ferramentas: readonly string[]
   return {
     model: MODELO_DO_JEV,
     state: estado,
-    questions: { [PERGUNTA]: { type: 'choice', instructions: INSTRUCAO, criteria } },
+    questions: { [PERGUNTA]: { type: 'choice', instructions: instrucao, criteria } },
   };
 }
 
