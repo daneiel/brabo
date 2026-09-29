@@ -408,6 +408,15 @@ to be born — and that mutation passed green. One limit stays declared:
 the inventory reads only **versioned** files (`git ls-files`), so an
 untracked file is invisible until `git add`.
 
+**`deploy/k8s/*.sh` became a source (AT-212, 2026-09-28).** The bootstrap
+and the property proofs read twenty-odd variables from the environment —
+cluster name, namespace, the smoke account, each proof's ceilings — and none
+was in the inventory. They are a `ferramenta` source, matched by the shell's
+**expansion with a default** (`${X:-…}`, `${X:=…}`, `${X:?…}`) and only by it:
+a bare `${X}` is almost always the script's own variable. Mutation: a new
+`${X:-x}` in `deploy/k8s/validate.sh`, staged, made `--check` fail with
+`DESATUAL` and a `SEM DESC.` line naming the variable and the file.
+
 **The environment ⚠️ is a gate (AT-211, 2026-09-27).** Until then what
 failed was only the **stale block**: once `docs:generate` rewrote it,
 the variable sat there with ⚠️ and `--check` passed —

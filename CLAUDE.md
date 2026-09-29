@@ -2199,7 +2199,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   e um inventário que nasce vazio não avisa, passa verde. As fontes moram em
   `scripts/docs/fontes-de-env.mjs`, provadas contra a árvore real pelo spec ao
   lado, e em `e2e/` o `.spec.ts` NÃO é filtrado: ali o spec É o código que lê
-  o ambiente (AT-124). E o ⚠️ é PORTÃO desde a AT-211, nas DUAS espécies de
+  o ambiente (AT-124). Os `deploy/k8s/*.sh` são fonte `ferramenta` desde a
+  AT-212, casados SÓ pela expansão com default (`${X:-…}`): `${X}` puro é
+  variável do próprio script. E o ⚠️ é PORTÃO desde a AT-211, nas DUAS espécies de
   fonte: o `docs:check` reprova toda variável sem descrição mesmo com o bloco
   regenerado (antes, regenerado, o ⚠️ ficava commitado e passava), nomeando a
   variável, o arquivo que a lê e a seção de `configuration.md` onde escrever

@@ -67,5 +67,18 @@ export function fontesDoInventarioDeEnv(arquivos) {
     ['e2e',
       [...arquivos('e2e/*.ts'), ...arquivos('e2e/**/*.ts')],
       /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
+    // Os scripts de `deploy/k8s/` (AT-212): o bootstrap e as provas do
+    // `propriedades.yml` leem do ambiente o nome do cluster, o namespace, a
+    // conta do smoke e os tetos de cada prova, e nenhuma dessas estava no
+    // inventário. São FERRAMENTA — quem roda é o CI e quem desenvolve, nunca o
+    // `.env` de uma instalação. Um glob só: todos moram direto na pasta, e
+    // `deploy/k8s/*.sh` não atravessa `/` para os manifests (que não leem
+    // ambiente; o `envsubst` não é usado). O padrão é a EXPANSÃO COM DEFAULT
+    // (`${X:-…}`, `${X:=…}`, `${X:?…}`) e só ela: é assim que um script de
+    // shell lê uma variável que VEM de fora; `${X}` puro é quase sempre
+    // variável do próprio script, e casá-lo afogaria o inventário.
+    ['deploy/k8s',
+      arquivos('deploy/k8s/*.sh'),
+      /\$\{([A-Z][A-Z_0-9]{2,}):?[-=?]/g, 'ferramenta'],
   ];
 }

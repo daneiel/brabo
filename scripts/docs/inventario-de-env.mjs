@@ -39,6 +39,7 @@ export const SECAO_POR_FONTE = {
   broker: '## Container broker',
   'api/scripts': '## Tooling variables (not product)',
   e2e: '## Tooling variables (not product)',
+  'deploy/k8s': '## Tooling variables (not product)',
 };
 
 /**
