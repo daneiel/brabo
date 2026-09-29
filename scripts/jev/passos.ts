@@ -62,6 +62,32 @@ export interface Chamada {
   /** Texto do `tool.result` pareado; `null` quando nenhum foi gravado. */
   resultado: string | null;
   ok: boolean | null;
+  /**
+   * O texto que o LAÇO recebeu quando o resultado não foi gravado como
+   * `tool.result`: comando de terminal que esperou aprovação volta ao dev agent
+   * pelo desfecho da `proposed_action` (`texto_do_desfecho/1`,
+   * `dev_agent_server.ex:457`), e o event log só guarda o desfecho na tabela.
+   * Reconstruído dali, no mesmo formato; `null` = não há desfecho liquidado.
+   */
+  resultadoReconstruido?: string | null;
+  acaoId?: string | null;
+}
+
+export interface Acao {
+  id: string;
+  status: string;
+  execution_result: { exitCode?: unknown; stdout?: unknown; stderr?: unknown } | null;
+  rejection_reason: string | null;
+}
+
+/** `dev_agent_server.ex:457-475` (`texto_do_desfecho/1`), o que o modelo lê no lugar de "pending". */
+export function textoDoDesfecho(a: Acao): string | null {
+  const exec = a.execution_result;
+  const s = (v: unknown, padrao = ''): string => (typeof v === 'string' ? v : v === undefined || v === null ? padrao : String(v));
+  if (a.status === 'executed' && exec) return `exit ${s(exec.exitCode, '?')}\n${s(exec.stdout)}`;
+  if (a.status === 'failed' && exec) return `falhou: ${s(exec.stderr)}${s(exec.stdout)}`;
+  if (a.status === 'denied') return `recusado pelo usuário: ${a.rejection_reason ?? 'sem motivo informado'}`;
+  return null;
 }
 
 export type Suspeita = 'sem_resultado' | 'ok_false' | 'falhou';
@@ -74,6 +100,12 @@ export interface Passo {
   /** Instante da linha de `token_usage` que abre o passo. */
   em: string;
   chamadas: Chamada[];
+  /**
+   * O texto (`agent.response`) que o modelo escreveu NESTE passo, antes das
+   * chamadas; `null` quando não gravou. Só serve como contexto dos passos
+   * SEGUINTES — o do próprio passo é resposta e nunca entra no `state` dele.
+   */
+  texto: string | null;
   /** Ferramentas distintas chamadas no passo, em ordem; `[]` = sem ferramenta. */
   rotulos: string[];
   /** Por que o rótulo pode estar errado (o modelo chamou e a ferramenta falhou). */
@@ -117,11 +149,21 @@ export function suspeitasDe(chamadas: readonly Chamada[]): Suspeita[] {
  * é o `tool.call` mais RECENTE ainda sem resultado (LIFO): a chamada que nunca
  * ganhou resultado não rouba o da seguinte, que é o defeito de parear em fila.
  */
-export function parearChamadas(eventos: readonly Evento[]): Map<string, Chamada[]> {
+export function parearChamadas(eventos: readonly Evento[], acoes: ReadonlyMap<string, Acao> = new Map()): Map<string, Chamada[]> {
   const porAtor = new Map<string, Chamada[]>();
   const abertas = new Map<string, Chamada[]>();
   const ordenados = [...eventos].sort((a, b) => (a.sessao === b.sessao ? a.seq - b.seq : a.sessao < b.sessao ? -1 : 1));
   for (const e of ordenados) {
+    if (e.tipo === 'proposed_action.created' && typeof e.payload.actionId === 'string') {
+      // A proposta é gravada logo depois do `tool.call` que a pediu: pertence à chamada mais recente do ator.
+      const ultima = (porAtor.get(`${e.sessao}|${e.ator}`) ?? []).at(-1);
+      if (ultima && ultima.acaoId === undefined) {
+        ultima.acaoId = e.payload.actionId;
+        const acao = acoes.get(e.payload.actionId);
+        ultima.resultadoReconstruido = acao ? textoDoDesfecho(acao) : null;
+      }
+      continue;
+    }
     if (e.tipo !== 'tool.call' && e.tipo !== 'tool.result') continue;
     const ferramenta = typeof e.payload.tool === 'string' ? e.payload.tool : '';
     const chaveAtor = `${e.sessao}|${e.ator}`;
@@ -151,8 +193,9 @@ export function montarPassos(
   eventos: readonly Evento[],
   usos: readonly LinhaDeUso[],
   catalogo: Catalogo,
+  acoes: ReadonlyMap<string, Acao> = new Map(),
 ): { passos: Passo[]; semFronteira: number; foraDoCatalogo: number } {
-  const chamadas = parearChamadas(eventos);
+  const chamadas = parearChamadas(eventos, acoes);
   const projetoDaSessao = new Map(eventos.map((e) => [e.sessao, e.projetoId]));
   const usosPorAtor = new Map<string, LinhaDeUso[]>();
   for (const u of usos) {
@@ -174,6 +217,10 @@ export function montarPassos(
       const dentro = doAtor.filter((c) => c.em > u.em && (fim === undefined || c.em <= fim));
       foraDoCatalogo += dentro.filter((c) => !cat.includes(c.ferramenta)).length;
       const rotulos = [...new Set(dentro.map((c) => c.ferramenta))];
+      const textos = eventos
+        .filter((e) => e.tipo === 'agent.response' && e.sessao === sessao && e.ator === ator && e.em > u.em && (fim === undefined || e.em <= fim))
+        .map((e) => (typeof e.payload.content === 'string' ? e.payload.content : ''))
+        .filter((t) => t !== '');
       passos.push({
         id: `${sessao}:${ator}:${i}`,
         sessao,
@@ -181,6 +228,7 @@ export function montarPassos(
         ator,
         em: u.em,
         chamadas: dentro,
+        texto: textos.length ? textos.join('\n') : null,
         rotulos,
         suspeitas: suspeitasDe(dentro),
       });

@@ -27,6 +27,8 @@ export interface Registro {
   tokensDeEntrada: number | null;
   /** O `id` da resposta (`gen-dec-…`), para conferir o custo em `GET /api/v1/generation`. */
   geracao?: string;
+  /** As probabilidades por opção (guardadas desde a 2ª rodada; a 1ª só guardou a escolha). */
+  probabilidades?: Record<string, number>;
   detalhe?: string;
 }
 

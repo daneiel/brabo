@@ -170,6 +170,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
 | `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
 | `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
+| `pnpm --filter scripts jev:analise` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts` |
 | `pnpm --filter scripts idioma:validar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts` |
 
 ## Makefile
@@ -196,4 +197,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-131 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+132 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

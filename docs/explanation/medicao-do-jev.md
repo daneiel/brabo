@@ -1,7 +1,7 @@
 ---
 id: medicao-do-jev
 title: Measuring the Jev tool router
-description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — and the agreement, confidence curve, latency and cost it produced on 2026-09-29, with the sample size and what the replay cannot see.
+description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see.
 ---
 
 # Measuring the Jev tool router
@@ -13,7 +13,9 @@ description: The replay that asks the Jev, for every agent step already recorded
 > specifies; the decisions it depends on are AT-236's.
 >
 > Measured on 2026-09-29 against the local dev instance (compose project
-> `brabo-dev`), repository at `d48f99f8ec`.
+> `brabo-dev`), repository at `d48f99f8ec`. The **second round** — variants of
+> the `state`, equivalence classes, a tuning/validation split, top-2 and the gap
+> by cause — is [further down](#second-round-2026-09-29-where-the-gap-is).
 
 ## What exists
 
@@ -27,7 +29,13 @@ stripping, no build step, **no new dependency**).
 | `passos.ts` | pure: event log → **steps**, and the `state` of each step |
 | `jev.ts` | pure: the request to the Decisions API and the reading of its answer |
 | `medicao.ts` | pure: agreement, Wilson intervals, the confidence curve, latency, cost, the Markdown report |
-| `replay.ts` | the CLI: three `SELECT`s, one request per step, a JSONL outside the checkout |
+| `replay.ts` | the CLI of the first round: three `SELECT`s, one request per step, a JSONL outside the checkout |
+| `dados.ts` | second round: the raw data (events, usage rows, tasks, stories, module maps, action outcomes) and the snapshot cache |
+| `equivalencia.ts` | second round: the equivalence classes E1–E3, fixed before running, and the classifier of terminal commands |
+| `kickoff.ts` | second round: the loop's first message of dev agents and gates, ported from the engine's Elixir (a spec checks the fixed text against the `.ex` files) |
+| `variantes.ts` | second round: the `state` variants and the run boundary; each field names its source in the engine |
+| `divisao.ts` | second round: the tuning/validation split, by run |
+| `cliente.ts`, `medicao2.ts`, `analise.ts` | second round: the call (keeps the probabilities), the top-k / cascade / per-cause tables, and the CLI `jev:analise` |
 
 ### Step, not tool call
 
@@ -200,6 +208,288 @@ format probes: about US$ 0.044, against a ceiling of US$ 2.00.
   `typesafe/jev-router` — a chat router, priced `-1`. The model sync would
   import it as an (inactive) chat model. Recorded here, not changed.
 
+## Second round (2026-09-29): where the gap is
+
+> Asked by the owner after the first round: repeat the measurement, try to reach
+> **at least 90%**, and say exactly where the gap is. **Not reached.** On
+> validation steps the Jev's top-1 is **73% by equivalence (95% CI 66–79%,
+> n = 160) and 66% strict (58–73%)**; its top-2 reaches 90% (84–94%). The rest
+> of this section is the protocol, the numbers, and a hand-read of the 43 top-1
+> errors that are left. Same instance, same caveat as the first round: one small
+> project, one day, one chat model; no gain of product is claimed (that is
+> AT-239). Repository at `bc7f4c0738`, branch `test/replay-do-jev-v2`.
+
+### Protocol (written before any run)
+
+- **Only what the product can produce at runtime, before the step.** Nothing
+  of the target step enters the `state`: not the tool it called, its arguments,
+  its result, nor the text the model wrote in that very step (`Passo.texto` is
+  read only from *earlier* steps; `variantes.spec.ts` asserts, for every
+  variant, that the target step's call, argument, result and text are absent).
+  Each new field has its source in the engine, quoted in the header of
+  `scripts/jev/variantes.ts`.
+- **Equivalence classes fixed in `scripts/jev/equivalencia.ts` before running**,
+  from the semantics of the tools, and reported next to the strict rule (the
+  one of the first round, so the 47% stays comparable). Three cumulative layers:
+  **E1** `terminal` whose command only reads/lists/searches (`ls`, `find`,
+  `cat`, `pwd`, `grep`, `head`, `git status/log/diff`… — a compound command
+  counts by its strongest segment, execution > writing > reading) ≡
+  `read_file`/`search_workspace`; **E2** `read_file` ≡ `search_workspace`;
+  **E3** `terminal` that writes a file (redirect, heredoc, `tee`, `sed -i`,
+  `cp`, `mv`, `touch`) ≡ `write_file`. Deliberately asymmetric: the Jev choosing
+  `terminal` only serves a `terminal` call, and a command that *executes*
+  (`npm`, `node`, `rm`, `mkdir`, `git commit`…) is equivalent to nothing but
+  `terminal`. **The headline is the full rule (E1+E2+E3), with the strict rule
+  beside it.** Nothing was reclassified after seeing a result; the 3 errors the
+  classes still get wrong are counted as such below.
+- **Tuning × validation by execution, not by step.** A group is one `ToolLoop`
+  run (a dev agent's task, one gate round) or, for conversational agents, the
+  agent's whole session. Groups are ordered by a hash of their name and each
+  goes to the half that has fewer steps so far — deterministic and blind to any
+  result. 328 eligible steps: **167 tuning, 161 validation** (n below counts
+  steps with a tool: 161 and 160). Variants were iterated on tuning only;
+  validation was asked afterwards, once per variant. **One incident, declared:**
+  after the first tuning runs I found that the Anamnese's `skip_proficiency` /
+  `emit_proficiency` also end the loop, and added them to the list of run
+  boundaries used to *build the state*. Using the corrected list for the split
+  too would have moved 154 of the 167 tuning steps to validation, so the split
+  keeps the list it had before the first request (`FERRAMENTAS_DE_FIM_DA_DIVISAO`)
+  and only the state uses the corrected one. The four state variants that depend
+  on the boundary were asked again on tuning (US$ 0.075, kept as `.descartado`
+  in the spend ledger).
+- **Frozen snapshot.** The dev database kept receiving steps from other work
+  during the session (335 usage rows at the end against 333 at the start); the
+  analysis runs on the snapshot of 333 rows and the events up to the same
+  sequence numbers (`--dados-cache`). The 26 steps new since the first round
+  (302 answered → 328 eligible) are all **Anamnese** steps of the tuning half.
+- **Spend ceiling** US$ 1.00 on the sum of `usage.cost`, checked before every
+  request against the accumulated total of the output directory (`.jsonl` and
+  `.descartado`). Spent: **US$ 0.414** in 4 604 requests (see "Latency and cost").
+
+### The sample
+
+| | tuning | validation |
+|---|---|---|
+| steps (with a tool / without) | 167 (161 / 6) | 161 (160 / 1) |
+| dev agents (`ToolLoop`) | `dev-piece-catalog` 37, `dev-retro-renderer` 26, `dev-input-keyboard` 25 | `dev-game-session` 38, `dev-scoring` 38, `dev-persistence` 34, `dev-board-engine` 24 |
+| gates and other `ToolLoop` | `anamnese` 32, `qa-automacao` 20, `appsec` 3 | `qa-estrategia` 16, `appsec` 3, `infra-workflows` 2, `anamnese` 2 |
+| conversational | `po` 8, `criativo` 5, `arquiteto` 5 | `infra` 2, `dev-lead` 1 |
+
+Validation is dominated by dev agents (134 of 160 steps with a tool) and by one
+gate (`qa-estrategia`, 16). The tuning half carries 32 Anamnese steps, which the
+Jev answers with `responder_sem_ferramenta` when the agent used
+`skip_proficiency` (30 of 32): without them tuning is 94/129 = 73% by
+equivalence, the same as validation.
+
+### Variants tried (all of them)
+
+`tokens` is the median input size; latency in ms (p50 / max), sequential
+requests from the maintainer's machine. Steps with a tool only.
+
+| variant | what it adds to the previous one | tuning strict → equivalence (top-2) | validation strict → equivalence (top-2) | tokens | latency |
+|---|---|---|---|---|---|
+| `original` | nothing — the first round's `state` | 39% → 48% (83%) | 49% → 58% (82%) | 1 687 | 322 / 780 |
+| `kickoff` | `pedido` = the loop's first message, rebuilt from the engine's code | 55% → 58% (89%) | 65% → 73% (91%) | 1 867 | 318 / 612 |
+| **`escopo`** | recent steps only from the current run (`ctx.messages` restarts at each `ToolLoop.run`) | **57% → 59% (89%)** | **66% → 73% (90%)** | 1 867 | 312 / 814 |
+| `resultados` | results/arguments up to 2 000 characters | 53% → 55% (91%) | 62% → 69% (88%) | 2 011 | 314 / 699 |
+| `texto` | the model's text from earlier steps | 53% → 55% (91%) | 64% → 73% (93%) | 2 090 | 315 / 685 |
+| `progresso` | derived counts (steps so far, calls per tool, last tool, tests run…) | 55% → 57% (91%) | 65% → 70% (93%) | 2 224 | 309 / 817 |
+| `trilha` | `escopo` + the run's whole tool sequence (names only) | 53% → 57% (91%) | 64% → 71% (89%) | 1 936 | 310 / 614 |
+| `fluxo` | `trilha` + a question that says agents work in bursts | 49% → 55% (92%) | 64% → 75% (93%) | 2 014 | 309 / 586 |
+| `enxuto` | `trilha` with only the last 2 calls | 50% → 54% (89%) | 63% → 74% (91%) | 1 429 | 307 / 920 |
+| `so_trilha` | `trilha` with no recent calls at all | 39% → 44% (80%) | 33% → 56% (83%) | 1 168 | 307 / 480 |
+| `acoes` | `escopo` + the result of commands that waited for approval (rebuilt from the action's outcome) | 50% → 53% (91%) | 53% → 61% (89%) | 2 333 | 348 / 1 352 |
+| `acoes_completo` | `acoes` + 2 000 characters + text + progress | 47% → 51% (92%) | 51% → 58% (92%) | 3 360 | 326 / 845 |
+
+The six rows from `original` to `progresso` (the cascade below) were written
+before the first request. The other six were written afterwards, in response to
+what tuning showed, and are an ordinary search on the tuning half: `trilha`,
+`fluxo`, `enxuto` and `so_trilha` try to give the Jev the pattern of the run in a
+form easier to read; `acoes` and `acoes_completo` came from seeing that many
+recent steps read `(sem resultado gravado)` (commands that waited for approval).
+
+The **winner is `escopo`**, chosen on tuning (best top-1, strict and by
+equivalence); validation was not used to choose. Two things to
+read in the table: the differences among `kickoff` … `progresso` are inside the
+confidence intervals (±7 points), so "more input" is not shown to hurt or help
+beyond the first step; and `fluxo` has the best validation number (75%) but sits
+below the winner on tuning (55% against 59%), which is why it was not the winner
+— picking it now would be picking on validation.
+
+Where each new field comes from in the engine (`apps/engine/lib/engine/…`):
+
+| field | source |
+|---|---|
+| `pedido` (dev) | `initial_message/2`, `dev/dev_agent_server.ex:481`; task and story titles from `tasks`/`stories` |
+| `pedido` (`qa-automacao`) | `initial_message/2`, `gates/qa_automacao_agent.ex:108`; task from the last `dev.awaiting_gate`, requirements from the story |
+| `pedido` (`qa-estrategia`, `appsec`) | `gates/qa_estrategia_agent.ex:93`, `gates/appsec_agent.ex:79`; **the story is not recoverable from the log**, so the message says so and carries the module map |
+| recent steps by run | `ToolLoop.Default.init/1` and `loop/1` (`harness/tool_loop.ex`): `messages` is built per `run` |
+| complete results, `texto` | the `tool` and `assistant` messages `loop/1` appends (`concluir_despacho/5`, `append(ctx, message)`); the log cuts results at 2 000 |
+| approved-command results (`acoes`) | `texto_do_desfecho/1`, `dev/dev_agent_server.ex:457`; the log has no `tool.result` for them, only `proposed_actions.execution_result` |
+| `progresso`, `trilha` | counts over the run's earlier calls in the same `messages` |
+
+Not ported, and said so in `kickoff.ts`: the Anamnese (its message is built
+from a log window and the member list, which the log does not keep),
+`infra-workflows` (context map), and the conversational agents (their `pedido` is
+still the last user message).
+
+### The cascade (validation, steps with a tool)
+
+Each row is the previous one plus one piece, on the same 160 steps.
+
+| step | n | top-1 (95% CI) | top-2 (95% CI) |
+|---|---|---|---|
+| input of the first round, strict rule | 160 | 78/160 = 49% (41–56%) | 118/160 = 74% (66–80%) |
+| + E1 terminal-read ≡ read | 160 | 92/160 = 57% (50–65%) | 125/160 = 78% (71–84%) |
+| + E2 `read_file` ≡ `search_workspace` | 160 | 93/160 = 58% (50–65%) | 131/160 = 82% (75–87%) |
+| + E3 writing terminal ≡ `write_file` | 160 | 93/160 = 58% (50–65%) | 131/160 = 82% (75–87%) |
+| + `pedido` = the loop's first message | 160 | 116/160 = 73% (65–79%) | 145/160 = 91% (85–94%) |
+| + recent steps of the current run only | 160 | 117/160 = 73% (66–79%) | 144/160 = 90% (84–94%) |
+| + results up to 2 000 characters | 160 | 110/160 = 69% (61–75%) | 141/160 = 88% (82–92%) |
+| + the model's text from earlier steps | 160 | 116/160 = 73% (65–79%) | 149/160 = 93% (88–96%) |
+| + derived counts | 160 | 112/160 = 70% (62–77%) | 148/160 = 93% (87–96%) |
+
+Two rows carry all the movement: the equivalences (+9 points) and the loop's
+first message (+15). After `escopo` nothing moves top-1 outside the interval,
+and the results rebuilt for approved commands (`acoes`) lower it. The 47% of the
+first round, on the same input, is 58% under the declared equivalences.
+
+### The headline
+
+Variant `escopo`, validation, 160 steps with a tool (plus 1 without, which the
+Jev got wrong):
+
+| | |
+|---|---|
+| **top-1, equivalence rule** | **117/160 = 73% (66–79%)** |
+| top-1, strict rule (comparable to the 47%) | 105/160 = 66% (58–73%) |
+| top-2 (menu restricted to 2), equivalence / strict | 144/160 = 90% (84–94%) / 134/160 = 84% (77–89%) |
+| top-3, equivalence | 148/160 = 93% (87–96%) |
+| baseline "repeat the previous tool" (free), equivalence / strict | 122/149 = 82% (75–87%) / 108/149 = 72% (65–79%) |
+| menu of 2 with no second call, {Jev's pick, previous tool}, equivalence / strict | 140/160 = 88% (81–92%) / 125/160 = 78% (71–84%) |
+| without the Anamnese (kickoff not rebuilt; paused in the product) | 115/158 = 73% (65–79%) |
+
+**The Jev does not beat the free baseline.** On the same validation steps
+"repeat the previous tool" gets 82% (72% strict), above the Jev's 73% (66%). Its
+one advantage shows in the union: offering the Jev's pick *and* the previous tool
+reaches 88% (78% strict), 15 points over the Jev alone, at no extra call. No
+configuration reaches 90% at top-1, and none has a lower bound at 90%.
+
+By agent (validation, equivalence): `dev-board-engine` 23/24 = 96% (80–99%),
+`dev-persistence` 28/34 = 82% (66–92%), `dev-scoring` 31/38 = 82% (67–91%),
+`dev-game-session` 28/38 = 74% (58–85%), **`qa-estrategia` 4/16 = 25% (10–49%)**,
+`appsec` 1/3, `infra` 0/2, `infra-workflows` 0/2, `dev-lead` 0/1 (`qa-estrategia`
+and `appsec` have their first message rebuilt but without the story; the other
+three do not have it rebuilt at all).
+
+The confidence still does not separate right from wrong:
+
+| threshold | menu restricted to 1 | right among the restricted (95% CI) |
+|---|---|---|
+| 0.00 | 155/160 | 117/155 = 75% (68–82%) |
+| 0.40 | 123/160 | 95/123 = 77% (69–84%) |
+| 0.60 | 55/160 | 44/55 = 80% (68–88%) |
+| 0.70 | 32/160 | 23/32 = 72% (55–84%) |
+| 0.80 | 16/160 | 8/16 = 50% (28–72%) |
+| 0.90 | 10/160 | 4/10 = 40% (17–69%) |
+
+Above 0.7 the accuracy *falls*: the confident errors are the ones described below
+(the Jev is sure that after writing the tests comes running them).
+
+### The gap, by cause
+
+The 82 validation errors of the first round's rule, and what each piece of the
+cascade did with them (steps with a tool, n = 160):
+
+| cause | steps | points | share of the gap |
+|---|---|---|---|
+| **ruler** — the Jev's choice was equivalent (E1–E3, declared in advance) | 15 | 9.4 | |
+| **ruler** — left over: the classes still miss a case (3 steps, below) | 3 | 1.9 | 22% (18 steps) |
+| **input** — the loop's first message (`kickoff`) | 23 | 14.4 | |
+| **input** — `escopo` | 1 | 0.6 | |
+| **input** — left over: first messages not rebuilt, or a result not in the log (7) | 7 | 4.4 | 38% (31 steps) |
+| **the agent's rhythm**, not a field of the state (below) | 29 | 18.1 | |
+| **the Jev diverges without the state justifying it** (4) | 4 | 2.5 | 40% (33 steps) |
+| total | 82 | 51.3 | |
+
+The 43 errors left after the last recovered piece were read one by one (not a
+sample): the state sent, the tools called, the model's own text of that step
+(which the Jev never sees) and the Jev's choice and confidence. Result:
+
+- **Ruler, 3.** `dev-board-engine` `terminal`→`search_workspace`: the agent's
+  command was a `find … | sort; ls; for f in docs/*; do …cat` — read-only, but
+  a `for` loop is not in the read-only list, so it is scored as execution. Two
+  more `read_file`→`terminal` where the agent had been reading through
+  `terminal` all along: equivalent under any reading, but the classes are
+  asymmetric on purpose and this was not re-scored.
+- **Input, 7.** Every error of `infra` (2 steps), `infra-workflows` (2) and
+  `dev-lead` (1) — five steps whose first message the port does not rebuild —
+  plus the two `report_done`→`terminal` where the last command's result
+  ("exit 0, the suite passed") is not in the log. The `acoes` variant rebuilds
+  those results and, overall, made the Jev *worse* (61%): shown a failing
+  sandbox, it says `report_blocked` where the agent kept trying.
+- **The agent's rhythm, 29.** The Jev names the *next stage* of the flow and the
+  agent stays one more step in the current one:
+  14 × `write_file`→`terminal` (the Jev: "the tests are written, run them", 8 of
+  them at confidence ≥ 0.6, up to 0.98; the agent wrote two or three more files
+  first), 12 × `qa-estrategia` `read/search`→`emit_plano_de_teste` (the Jev
+  jumps to the final tool of the kickoff at confidence 0.25–0.56; the agent
+  explored ~15 steps before emitting), 2 × `appsec` the same, 1 ×
+  `terminal`→`report_blocked` after a denied action. In every one of these the
+  Jev's choice is what a reader of the log would call the natural next step.
+  What decides "how many more files, how many more reads" is the model's plan,
+  which is in no field the product could hand the router — it exists, once, in
+  the very text of the step being predicted.
+- **The Jev diverges, 4.** `write_file`→`search_workspace` twice at confidence
+  0.25–0.26, `rag_search`→`terminal` twice (0.24, 0.59). These are the only steps
+  where the state does not explain the choice: 2.5% of the steps.
+
+So: of a 51-point distance from the first round's 49% to 100%, about **a fifth
+was the ruler, about two fifths was input the replay lacked** (and the
+recoverable part of it is recovered), **and two fifths is the agent's rhythm**,
+with **5% of the steps a plain Jev mistake**. What remains of the input is at
+most 4 points, and it is not what stands between 73% and 90%.
+
+### What would be needed for 90%, and what each piece is worth
+
+Steps of validation, 43 errors; 90% is 144/160, that is 27 more right answers.
+
+| piece | steps at most | note |
+|---|---|---|
+| finish the input port (Anamnese, `infra-workflows`, conversational first messages; the `qa-estrategia` story) | up to +7 → 79% | an upper bound: with the complete input the Jev has not been better here, and rebuilding results made it worse |
+| tighten the classes (`for` loops, terminal-as-read the other way) | +3 → 75% | it is ruler, not accuracy; deciding it after seeing the errors is what the protocol forbids, so it is not in the headline |
+| the agent's rhythm | up to +29 | not a state field; the only ways in are a **menu of 2 that includes the previous tool** (measured: 88%, 81–92%) or top-2 (90%, 84–94%) |
+
+Reading it as a product decision, which is AT-239's: a router that must *pick
+one* tool sits at about three quarters and below the free baseline; a router
+that *restricts the menu to two* reaches nine in ten, and the previous tool is as
+good a second name as the Jev's own second. This section does not claim either
+gain.
+
+### Latency and cost (variant `escopo`)
+
+| | |
+|---|---|
+| input tokens per request | p50 1 866, p95 2 557, max 3 220 (the first round: median 1 710, max 3 220) |
+| latency (328 requests, sequential) | p50 317 ms, p95 449 ms, max 814 ms; **0 above 2 000 ms** |
+| cost | US$ 0.0000769 per step (US$ 0.025233 for 328), and `GET /api/v1/generation` for each of the 328 ids sums to the same US$ 0.025233 (ratio 1.000) |
+| this whole round | US$ 0.414 by `usage.cost` — 12 variants, 3 of them twice on part of the tuning half — against a ceiling of US$ 1.00 |
+
+The richest variants cost more input (`acoes_completo`: median 3 360 tokens, about
+US$ 0.00014 per step against 0.00008) and buy nothing; the state that wins is also the
+cheap one. The 2 000 ms ceiling of AT-236 has room by a factor of two.
+
+### What this round still cannot see
+
+- The **story** of the two gates that run before any code (`qa-estrategia`,
+  `appsec`): the request that starts them is internal and not logged.
+- The first message of the **Anamnese**, `infra-workflows`, and the
+  conversational agents; and the system prompt behind `contexto`.
+- **Ground truth.** The label is still the tool the chat model called, and most
+  of the 29 rhythm errors are choices a human reader would call reasonable, which
+  is why top-2 and the union say more than top-1.
+- **Effect.** A restricted menu changes what the model does next; AT-239.
+
 ## Reproducing
 
 ```bash
@@ -225,3 +515,29 @@ The output (`$XDG_CACHE_HOME/brabo/replay-jev/respostas.jsonl`, else
 script refuses a destination inside it. The printed report has only counts and
 agent ids. The key is read from the environment (`OPENROUTER_TEST_KEY`) or from
 the file given, and is never printed or written.
+
+The second round has its own command, reading a frozen snapshot of the database
+(`--dados-cache`, outside the checkout) and writing one file per variant:
+
+```bash
+# the snapshot, once (the dev database keeps moving; every later run reads this file)
+pnpm --filter @brabo/scripts jev:analise -- --container brabo-dev-postgres-1 \
+  --dados-cache ~/.cache/brabo/replay-jev/dados.json --variante original --estimar
+
+# one variant, tuning half first; validation only when the choice is made
+pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-jev/dados.json \
+  --variante escopo --metade tuning --arquivo-de-chave ~/.config/brabo/openrouter-test.env
+pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-jev/dados.json \
+  --variante escopo --metade validacao --arquivo-de-chave ~/.config/brabo/openrouter-test.env
+
+# the tables of this section, and the wrong steps for reading by hand
+pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-jev/dados.json --relatorio --final escopo
+pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-jev/dados.json \
+  --variante escopo --metade validacao --dump-erros ~/.cache/brabo/replay-jev/v2/erros.txt
+```
+
+The snapshot of this round was taken from the database as it stood at
+2026-09-29 14:27 UTC, plus the `proposed_action.created` events and the
+`proposed_actions` outcomes of the same sessions; a fresh snapshot has more
+steps and a different split. The ceiling is on the **accumulated** spend of the
+output directory (`--teto-usd`, default US$ 1.00), not of one call.
