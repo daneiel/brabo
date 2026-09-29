@@ -57,6 +57,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci/docker/k8s**: a imagem de terceiro passa a levar a TAG dentro da
+  referência, antes do digest — `neo4j:5.26-community@sha256:…`, e
+  `FROM node:24.11.1-alpine3.21@sha256:… AS deps` no Dockerfile (AT-139,
+  [ADR 0178](docs/adr/0178-tag-inline-na-imagem-de-terceiro.md), sobre o ADR
+  0159). As 39 referências de `docker/`, `deploy/k8s/` e `.github/workflows/`
+  migraram com os MESMOS digests — nenhuma imagem muda de versão —, e os
+  comentários de tag saíram. `scripts/ci/imagens-pinadas.ts` passa a reprovar
+  digest sem tag inline (inclusive a forma antiga, com a tag só no
+  comentário), comentário que afirma outra tag e comentário no fim do `FROM`,
+  e a chave de "mesma tag, dois digests" passa a ser a tag da referência. O
+  Dependabot para imagens foi decidido e NÃO foi ligado aqui: o ADR diz o que
+  o bloqueia. Subir um digest continua sendo o procedimento do runbook, agora
+  na forma nova.
 - **engine/web**: o artefato que um agente grava durante a conversa com uma
   pessoa sai no idioma do PROJETO (AT-245,
   [RN-623](docs/business-rules.md#rn-623)); a resposta de chat continua no

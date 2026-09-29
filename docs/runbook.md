@@ -4277,25 +4277,28 @@ their own sidecar, leaving the engine image free of copyleft, stays open as an
 ## Bumping a third-party image {#subindo-imagem-de-terceiro}
 
 Every third-party image in `docker/`, `deploy/k8s/` and
-`.github/workflows/` is pinned **by digest**, with the tag it came from in a
-trailing comment ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md)):
+`.github/workflows/` is pinned **by digest**, with the tag it came from
+written **inside the reference**, before the digest
+([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md),
+[ADR 0178](adr/0178-tag-inline-na-imagem-de-terceiro.md)):
 
 ```yaml
-image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
 ```
 
-In a **Dockerfile** the tag goes on the line *above* — Docker's parser only
-takes `#` at the start of a line, and a trailing one makes the build fail with
-*"FROM requires either one or three arguments"*:
+A **Dockerfile** takes the same shape on the `FROM` line — never a comment at
+the end of it: Docker's parser only takes `#` at the start of a line, and a
+trailing one makes the build fail with *"FROM requires either one or three
+arguments"*:
 
 ```dockerfile
-# 3.20
-FROM alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
+FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
 ```
 
 That is a **freeze**, and the cost lands here: the image receives no security
-update until a person changes the digest. Dependabot's `docker` ecosystem is
-not enabled, so nothing proposes the bump for you.
+update until a person changes the digest. Dependabot's `docker` and
+`docker-compose` ecosystems are decided but **not enabled** (ADR 0178 says what
+blocks them), so nothing proposes the bump for you.
 
 To move one — say, `neo4j` from `5.26-community` to `5.27-community`:
 
@@ -4309,15 +4312,22 @@ docker manifest inspect neo4j:5.27-community | head -3
 # 2. Read the index digest.
 docker buildx imagetools inspect neo4j:5.27-community --format '{{.Manifest.Digest}}'
 
-# 3. Write `neo4j@<digest>  # 5.27-community` EVERYWHERE that tag appears.
-grep -rn 'neo4j@sha256' docker/ deploy/k8s/ .github/workflows/
+# 3. Write `neo4j:5.27-community@<digest>` EVERYWHERE the old reference appears.
+grep -rn 'neo4j:5.26-community@sha256' docker/ deploy/k8s/ .github/workflows/
 
 # 4. The lint proves it.
 node scripts/ci/imagens-pinadas.ts
 ```
 
-Step 3 is not optional bookkeeping: the check refuses **the same tag carrying
-two different digests**, because the dev compose and the CI service claiming
+Two images live outside those three trees and are bumped by this same
+procedure, by hand, whatever Dependabot ends up doing: the CloudNativePG
+`imageName` in `deploy/k8s/overlays/local/db/cluster.yaml` (no ecosystem
+reads that key) and the golden-set QA case image,
+`IMAGEM_DO_GOLDEN_SET_QA` in `apps/api/scripts/golden-set-qa-container.ts`
+(a TypeScript constant, read by `golden-set-qa.yml`).
+
+Step 3 is not optional bookkeeping: the check refuses **the same inline tag
+carrying two different digests**, because the dev compose and the CI service claiming
 the same version while running different bytes is how a green CI stops meaning
 anything.
 
