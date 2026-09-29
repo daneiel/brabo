@@ -91,11 +91,11 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
         <span className={styles.eyebrow}>{t('projectLanguage.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>{t('projectLanguage.subtitle')}</div>
-      {/* Desde a RN-622 os turnos SEM autor recebem este idioma. O que a
-          RN-619 promete para os artefatos compartilhados ainda não vale
-          quando o artefato nasce num turno COM autor (lá vale o idioma das
-          respostas da pessoa), e a tela diz isso em vez de afirmar o todo. */}
-      <div className={styles.subtitle}>{t('projectLanguage.artifactsGap')}</div>
+      {/* Desde a RN-623 o artefato compartilhado que um agente grava num
+          turno COM autor também sai neste idioma (a resposta continua no da
+          pessoa). A tela diz a divisão, para não parecer que trocar aqui muda
+          a conversa de cada um. */}
+      <div className={styles.subtitle}>{t('projectLanguage.artifactsNote')}</div>
       {!podeEditar && (
         <div className={styles.subtitle}>{t('projectLanguage.readOnly')}</div>
       )}

@@ -183,6 +183,7 @@ estado lido do repositório e não da conversa.
 | O projeto ganha idioma, o de artefato compartilhado e turno sem autor (AT-243) | ADR 0177, RN-619 |
 | A barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) | RN-620 |
 | O idioma chega ao modelo por mensagem de sistema efêmera no fim de cada chamada (AT-164) | RN-622 |
+| O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
 
 ## Estado atual e aberto
 
@@ -1884,6 +1885,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   SEM autor usa `projects.language`; o `context-manager` fica fora. Falha na
   resolução = turno SEM orientação, nunca queda e nunca o idioma do projeto no
   lugar do da pessoa. Teto de 50 tokens de entrada por chamada (AT-169).
+  Desde a RN-623 (AT-245), num turno COM autor cuja chamada leva ferramenta
+  que grava artefato compartilhado (`ferramentas_de_artefato/0`, lista por
+  NOME — ferramenta nova de artefato entra nela no mesmo PR), e com o idioma
+  do projeto DIFERENTE do do autor, a MESMA mensagem ganha a cláusula
+  "artefatos no idioma do projeto"; só com os dois códigos na forma curta
+  (`idioma[-Escrita][-Região]`), que é o que segura o teto. Não mova isso para
+  a descrição de cada ferramenta.
 - O clique que dispara turno de agente conversacional responde ao ACEITAR,
   nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
   devolve `{:reply, :ok, _}` assim que a Task sobe — DEPOIS de persistir

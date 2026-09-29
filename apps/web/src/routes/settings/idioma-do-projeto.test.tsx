@@ -81,14 +81,16 @@ beforeEach(() => {
 });
 
 describe('ProjectLanguageSection (RN-619)', () => {
-  it('mostra o idioma vigente e DIZ o que ainda não segue ele (os artefatos de turno com autor)', async () => {
+  it('mostra o idioma vigente e DIZ que o artefato de turno com autor também o segue', async () => {
     montar();
 
     expect(await screen.findByText(/Hoje: .*\(pt-BR\)/)).toBeInTheDocument();
-    // RN-622: os turnos sem autor já seguem o idioma do projeto; a lacuna que
-    // sobra é declarada, e o aviso antigo de "ainda não chega" saiu.
+    // RN-623: a lacuna que a RN-622 declarava fechou — o artefato gravado na
+    // conversa com uma pessoa sai no idioma do projeto, e a tela deixa de
+    // dizer o contrário.
     expect(screen.queryByText(/Ainda não chega aos agentes/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Os turnos sem autor já seguem este idioma/)).toBeInTheDocument();
+    expect(screen.queryByText(/ainda saem no idioma das respostas/)).not.toBeInTheDocument();
+    expect(screen.getByText(/a resposta sai no idioma dela, o artefato neste/)).toBeInTheDocument();
   });
 
   it('escolher um idioma NOMEADO salva no onChange, pela rota do projeto', async () => {
