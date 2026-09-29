@@ -1,4 +1,4 @@
-<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Measuring the language heuristic | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Measuring the language heuristic | Brabo"/><meta data-rh=true name=description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus — synthetic in the repository, real only on the owner's machine — and the numbers it produced on the synthetic corpus."/><meta data-rh=true property=og:description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus — synthetic in the repository, real only on the owner's machine — and the numbers it produced on the synthetic corpus."/><link data-rh=true rel=icon href=/brabo/dev/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/pt-BR/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma","name":"Measuring the language heuristic","position":1}]}</script><link rel=stylesheet href=/brabo/dev/assets/css/styles.4b02629e.css /><script src=/brabo/dev/assets/js/runtime~main.cc6cb8c4.js defer></script><script src=/brabo/dev/assets/js/main.97ff9766.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Measuring the language heuristic | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Measuring the language heuristic | Brabo"/><meta data-rh=true name=description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><meta data-rh=true property=og:description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><link data-rh=true rel=icon href=/brabo/dev/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/pt-BR/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma","name":"Measuring the language heuristic","position":1}]}</script><link rel=stylesheet href=/brabo/dev/assets/css/styles.4b02629e.css /><script src=/brabo/dev/assets/js/runtime~main.7a6cebda.js defer></script><script src=/brabo/dev/assets/js/main.4329a813.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
 <script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-73f")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/><div class=navbar__logo><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/dev/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/getting-started><span class=linkLabel_CzBh>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/reference/api/brabo-api><span class=categoryLinkLabel_jKch>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_JmCf"><div class=docItemContainer_GUvW><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/dev/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Measuring the language heuristic</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Measuring the language heuristic</h1></header>
@@ -262,4 +262,283 @@ served by a partial index on <code>session_events</code>: 0.056 ms against 13.5 
 sequential scan, measured over 200,000 events.</p>
 <p>To recalibrate: run the real corpus (<code>idioma:medir --real</code>), then change
 <code>PARAMETROS_PROVISORIOS</code> in the api — it is the only place the product reads
-them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-09-29T14:01:46.000Z itemprop=dateModified>Sep 29, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Measuring the Jev tool router</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">What exists</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">The two corpora, and where each one lives</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Running it</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Numbers on the synthetic corpus (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">What the numbers say</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">The product's provisional thresholds</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>Paid validation of the language orientation (AT-167, 2026-09-29)<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label="Direct link to Paid validation of the language orientation (AT-167, 2026-09-29)" title="Direct link to Paid validation of the language orientation (AT-167, 2026-09-29)" translate=no>​</a></h2>
+<blockquote>
+<p>The protocol is AT-082's, with the decisions of AT-169: budget US$ 5,
+5 rounds per case and arm, acceptance threshold "in the treated arm, <strong>zero</strong>
+Spanish answers where pt-BR is expected, and correct language <strong>≥ 95%</strong> in
+C01–C04 and C06–C15", model under test <code>deepseek/deepseek-v4.1-flash</code>,
+comparison model <code>anthropic/claude-haiku-4.5</code>, incremental cost ceiling
+50 input tokens per call. Code at <code>d48f99f8e</code> (the <code>dev</code> of 2026-09-29).</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>Where it runs, and what is (and is not) the product<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label="Direct link to Where it runs, and what is (and is not) the product" title="Direct link to Where it runs, and what is (and is not) the product" translate=no>​</a></h3>
+<p>A script outside the product, <code>scripts/idioma/validar.ts</code> (the pure part —
+matrix, judging, report — in <code>validacao.ts</code>, tested by <code>validacao.spec.ts</code>). It
+calls OpenRouter <strong>directly</strong> and writes nothing to the database. What the
+product sends to the model is <strong>read from the product's files at every run</strong>,
+never copied — the read throws, naming what it missed, if a file changes shape:</p>
+<ul>
+<li class="">the orientation (RN-622/623): <code>@textos</code>, the generic sentence, the artifact
+clause, <code>@forma_curta</code> and <code>@ferramentas_de_artefato</code> of
+<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code>, sent as the LAST
+message, <code>role: "system"</code>, in every call of a treated turn (tool iterations
+included) and never kept in the history;</li>
+<li class="">the summary prompt and its language sentence (RN-621) of
+<code>apps/engine/lib/engine/harness/context_manager.ex</code>;</li>
+<li class="">the Criativo persona (<code>CRIATIVO_INSTRUCTIONS</code>), its two tools with the real
+descriptions, and the tool results the product returns.</li>
+</ul>
+<p>Declared differences from the product: the system prompt is only the persona
+(no <code>ContextBuilder</code> layers); compaction is <strong>forced</strong> before the fifth turn
+of C04 (keeping the last two messages, the product's <code>keep_recent</code>), with the
+model under test as summarizer; resumption (C15) is the history rebuilt as
+text, the shape of <code>Engine.Agents.Reidratacao</code>; at most 4 model calls per
+turn (the Criativo allows 12); and <code>max_tokens</code> is capped at 4000 (the product
+sends none). The upstream provider was <strong>not</strong> fixed — recorded per call as a
+confounder. Baseline = the code before RN-621/622: no orientation <strong>and</strong> the
+old summary prompt (AT-169 answer 4: the validation measures the set, there is
+no isolated baseline of the old summary).</p>
+<p>The resolved language of each message's author is part of the case: <code>pt-BR</code>
+for Ana (C01–C05, C07–C11, C13–C15), <code>en</code> for Bob (C06 as a confirmed detected
+<code>en</code>, C12 as an explicit <code>en</code> preference writing Portuguese); project language
+<code>pt-BR</code>. C05 expects <strong>pt-BR</strong>: under AT-168 answer 4 detection only <em>asks</em>, so
+the author's resolved language stays pt-BR until confirmed.</p>
+<p>A first passo-zero run with <code>max_tokens</code> 1000 was <strong>discarded</strong>: DeepSeek's
+reasoning used the whole cap in 7 calls and the answer came back empty (two
+summaries became the product's fallback text). Its records are kept apart in
+the output folder; an empty answer now counts as <code>falha</code>, never
+<code>indeterminado</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>Step zero: not reproduced<a href=#step-zero-not-reproduced class=hash-link aria-label="Direct link to Step zero: not reproduced" title="Direct link to Step zero: not reproduced" translate=no>​</a></h3>
+<p>Baseline only, <code>deepseek/deepseek-v4.1-flash</code>, C01–C04, 5 rounds: <strong>0 Spanish
+answers in 35 judged answers</strong> (35 pt, 0 indeterminate). The 13/09 report
+(Spanish from Portuguese input) is <strong>not reproduced</strong>, so no improvement on
+<em>that</em> defect can be claimed from the treatment. The run continued because the
+AT-169 threshold is absolute on the treated arm and the other cases (C05, C06,
+C12, C16, C17) do show the baseline answering in the wrong language.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>Results by case × arm × model<a href=#results-by-case--arm--model class=hash-link aria-label="Direct link to Results by case × arm × model" title="Direct link to Results by case × arm × model" translate=no>​</a></h3>
+<p>First judge: the local classifier (<code>ampliada</code> list, candidate parameters) on
+the prose. "ok" = expected language; "wrong (es)" = another language (of which
+Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>case<th>DeepSeek baseline<th>DeepSeek treatment<th>Haiku baseline<th>Haiku treatment<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5, out of the 95% list)<td>1 ok, 4 wrong (4 es)<td>5 ok<td>0 ok, 5 wrong (5 es)<td>2 ok, 3 wrong (3 es)<tr><td>C06 (n=5)<td>2 ok, 2 wrong, 1 ind.<td>3 ok, 2 ind.<td>4 ok, 1 wrong<td>5 ok<tr><td>C07–C10 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C11 (n=10)<td>6 ok, 4 wrong<td>5 ok, 5 wrong<td>5 ok, 1 wrong, 4 ind.<td>6 ok, 4 wrong<tr><td>C12 (n=10)<td>0 ok, 10 wrong<td>4 ok, 6 ind.<td>0 ok, 10 wrong<td><strong>0 ok, 10 wrong</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14, C15 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C16 (n=20, out of the list)<td>10 ok, 10 wrong<td>19 ok, 1 ind.<td>10 ok, 10 wrong<td>18 ok, 2 wrong<tr><td>C17 (n=20, out of the list)<td>12 ok, 8 wrong<td>20 ok<td>16 ok, 4 wrong<td>20 ok</table>
+<p>C13 called <code>emit_artifact</code> in 20 of 20 conversations. No call failed.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>Against the threshold<a href=#against-the-threshold class=hash-link aria-label="Direct link to Against the threshold" title="Direct link to Against the threshold" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>model<th>Spanish where pt-BR expected (treated)<th>correct in C01–C04, C06–C15 (strict, classifier)<th>verdict by the classifier<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86.3%), 8 indeterminate<td><strong>does not pass</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3 (all C05)<td>81/95 (85.3%), 0 indeterminate<td><strong>does not pass</strong></table>
+<p>The 13 DeepSeek misses are two groups, and <strong>human review is pending</strong> — the
+reading below is the agent's, not a human's:</p>
+<ul>
+<li class="">the 8 indeterminates (C06 ×2, C12 ×6) read as English prose — the <code>ampliada</code>
+list scores English poorly ("Great starting point — …");</li>
+<li class="">the 5 C11 misses answer the translation request with the <strong>English
+translation inside a Portuguese frame</strong>, which the orientation allows ("unless
+the user explicitly asks … in this message" covers the translation, not the
+frame). The protocol's "translation in en" does not say which of the two is
+right.</li>
+</ul>
+<p>If the review accepts both groups, DeepSeek reaches 95/95 and <strong>passes</strong>; if it
+rejects C11, 90/95 (94.7%) and fails by one answer. Haiku <strong>fails either way</strong>:
+with the explicit <code>en</code> preference and Portuguese messages (C12) it answered in
+Portuguese in 10 of 10 treated answers, and it answered 3 of 5 Spanish messages
+in Spanish (C05). A hypothesis, not measured: for Anthropic models OpenRouter
+lifts the trailing <code>system</code> message into the top system prompt, where it loses
+the recency it has at the end of the list.</p>
+<p>The answers to review (every indeterminate or divergent one, every C11
+translation, and a deterministic 1-in-10 sample of the concordant) are 146 of
+560, listed in <code>revisao.md</code> in the output folder.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>Incremental cost of the orientation<a href=#incremental-cost-of-the-orientation class=hash-link aria-label="Direct link to Incremental cost of the orientation" title="Direct link to Incremental cost of the orientation" translate=no>​</a></h3>
+<p>Paired <code>prompt_tokens</code> of the <strong>first</strong> call of each conversation (identical
+input in both arms but the orientation), from OpenRouter's <code>usage</code>, never an
+estimate:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>model<th>orientation<th>pairs<th>Δ input tokens<tbody><tr><td>DeepSeek<td>pt-BR (108 characters)<td>75<td>32 (every pair)<tr><td>DeepSeek<td>en + artifact clause (128 characters)<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + artifact clause<td>15<td>27</table>
+<p>All under the 50-token ceiling. At catalog input price that is about
+US$ 0.0000096 per call on DeepSeek and US$ 0.00003 on Haiku — an upper bound,
+since DeepSeek served most of the input from cache (cached tokens are
+returned; the per-call cost with cache is inside <code>usage.cost</code>, not separated
+per message). The orientation goes in every call of a turn, so a turn with
+tool iterations pays it once per iteration.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>Spend<a href=#spend class=hash-link aria-label="Direct link to Spend" title="Direct link to Spend" translate=no>​</a></h3>
+<p>The cost of the validation is the sum of <code>usage.cost</code> of each response, kept
+per call in <code>chamadas.jsonl</code>: <strong>US$ 2.3071</strong> in total — US$ 2.2629 in the
+counted runs (DeepSeek 0.1526 baseline + 0.2133 treatment; Haiku 0.9526 +
+0.9443; 865 calls), US$ 0.0281 in the discarded step zero and US$ 0.0162 in a
+one-case smoke. The <code>GET /api/v1/key</code> counter moved from 1.8301 to 4.1578
+(Δ 2.3277) over the same period, but the key is shared with other paid lanes
+running at the same time and the counter lags, so that delta is context, not
+this validation's spend. Generation ids were not recorded, so the per-call cost
+was not cross-checked against <code>GET /api/v1/generation</code>. The product's own
+metering (<code>token_usage</code>) was not involved: the script bypasses the api.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>Reproducing<a href=#reproducing class=hash-link aria-label="Direct link to Reproducing" title="Direct link to Reproducing" translate=no>​</a></h3>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token comment" style="color:rgb(98, 114, 164)"># the key file holds OPENROUTER_TEST_KEY=…; the key is never printed</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--modelos</span><span class="token plain"> deepseek/deepseek-v4.1-flash </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--bracos</span><span class="token plain"> baseline </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--casos</span><span class="token plain"> C01,C02,C03,C04   </span><span class="token comment" style="color:rgb(98, 114, 164)"># step zero</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --pular-existentes --teto-usd </span><span class="token number">2.5</span><span class="token plain">                                                 </span><span class="token comment" style="color:rgb(98, 114, 164)"># everything else</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--relatorio</span><span class="token plain">                             </span><span class="token comment" style="color:rgb(98, 114, 164)"># report only</span><br/></div></code></pre></div></div>
+<p>Output goes to <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code> (else
+<code>~/.cache/…</code>), mode 600, and the script refuses a folder inside the checkout.
+<code>--teto-usd</code> stops before the call that would pass it, by the running sum of
+<code>usage.cost</code>.</p>
+<p>Not measured: cache savings as such, the product's full system prompt, real
+(threshold-triggered) compaction, a restart of the real engine, the tokenizer
+count of the artifact clause in Portuguese, and any fixed upstream.</p>
+<blockquote>
+<p><strong>TODO(humano):</strong> Review the 146 answers in <code>revisao.md</code> — in particular,
+does C11's "English translation inside a Portuguese frame" count as correct?
+That decides whether DeepSeek passes the AT-169 threshold.</p>
+</blockquote></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-09-29T14:16:35.000Z itemprop=dateModified>Sep 29, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Measuring the Jev tool router</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">What exists</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">The two corpora, and where each one lives</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Running it</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Numbers on the synthetic corpus (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">What the numbers say</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">The product's provisional thresholds</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">Paid validation of the language orientation (AT-167, 2026-09-29)</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">Where it runs, and what is (and is not) the product</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">Step zero: not reproduced</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">Results by case × arm × model</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">Against the threshold</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">Incremental cost of the orientation</a><li><a href=#spend class="table-of-contents__link toc-highlight">Spend</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">Reproducing</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
