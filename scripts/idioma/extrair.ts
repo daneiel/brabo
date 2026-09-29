@@ -24,6 +24,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { evidenciasDoAutor } from './heuristica.ts';
 import { corpusRealPadrao, dentroDoRepositorio, escreverCorpus, lerCorpus, type ItemDoCorpus } from './corpus.ts';
 
 export const CONSULTA = `SELECT json_build_object(
@@ -44,35 +45,16 @@ export interface Evento {
   payload: { text?: unknown; answers?: unknown };
 }
 
-/** Começo do texto que `AnswerStructuredQuestionUseCase` monta: `1. {label}: `. */
-const TEXTO_DO_FORMULARIO = /^1\. [^\n]*: /;
-
+/**
+ * A régua de O QUE é evidência (o eco do formulário pulado, só as respostas)
+ * mora na api desde a AT-163 — `evidenciasDoAutor`, a mesma que a detecção do
+ * produto usa. Aqui só se agrupa por sessão+autor, porque a consulta traz
+ * todos os autores de uma vez.
+ */
 export function montarItens(eventos: readonly Evento[]): ItemDoCorpus[] {
-  const itens: ItemDoCorpus[] = [];
-  // Por sessão+autor: o próximo chat.message é o eco do formulário?
-  const ecoPendente = new Set<string>();
-  for (const e of eventos) {
-    const chave = `${e.sessao}\u0000${e.ator}`;
-    if (e.tipo === 'chat.structured_question_answered') {
-      const respostas =
-        e.payload.answers && typeof e.payload.answers === 'object'
-          ? Object.values(e.payload.answers as Record<string, unknown>).filter((v): v is string => typeof v === 'string')
-          : [];
-      ecoPendente.add(chave);
-      if (respostas.length) {
-        itens.push(item(e, respostas.join('\n'), 'formulario'));
-      }
-      continue;
-    }
-    const texto = typeof e.payload.text === 'string' ? e.payload.text : '';
-    if (ecoPendente.has(chave)) {
-      ecoPendente.delete(chave);
-      if (TEXTO_DO_FORMULARIO.test(texto)) continue;
-    }
-    if (texto.trim() === '') continue;
-    itens.push(item(e, texto, 'chat'));
-  }
-  return itens;
+  return evidenciasDoAutor(eventos, (e) => `${e.sessao}\u0000${e.ator}`).map((ev) =>
+    item(ev.evento, ev.texto, ev.caso),
+  );
 }
 
 function item(e: Evento, texto: string, caso: string): ItemDoCorpus {

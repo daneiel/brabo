@@ -1,0 +1,20 @@
+{
+  // O instrumento de idioma (AT-160) mede a heurística que MORA NA API desde a
+  // AT-163 (RN-624) — `heuristica.ts` aqui só a reexporta de
+  // `apps/api/src/domain/iam/heuristica-de-idioma.ts`. Aquele arquivo é
+  // CommonJS (a api não tem `"type": "module"`), e com `verbatimModuleSyntax`
+  // o TypeScript recusa cada `export` num módulo CommonJS (TS1287). É a ÚNICA
+  // diferença para o `tsconfig.json` de `scripts/`: aqui ela sai, e
+  // `isolatedModules` fica no lugar, que é o que ainda cobra de cada arquivo
+  // o que o type stripping do Node precisa.
+  //
+  // A outra saída medida — a heurística como `.mts` na api — passava nos dois
+  // typechecks e no build, e quebrava todo `ts-node` da api
+  // (`openapi:export`, seed), que não resolve `.mjs` → `.mts`.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true
+  },
+  "include": ["**/*.ts"]
+}

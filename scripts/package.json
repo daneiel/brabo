@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "idioma:medir": "node idioma/medir.ts",
-    "idioma:extrair": "node idioma/extrair.ts",
-    "idioma:rotular": "node idioma/rotular.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p idioma",
+    "idioma:medir": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts",
+    "idioma:extrair": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts",
+    "idioma:rotular": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts",
     "jev:replay": "node jev/replay.ts"
   },
   "devDependencies": {
