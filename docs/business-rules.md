@@ -155,7 +155,7 @@ desired — N renaming events would push exactly what matters out of the
 - **Where:** `apps/web/src/lib/session-label.ts:61` (`rotuloDaSessao`),
   `apps/api/src/application/ports/session-repository.port.ts:52` (`rename`).
   Reachable both from inside the session
-  (`apps/web/src/routes/SessionPage.tsx:445`, `handleRename`) and from the
+  (`apps/web/src/routes/SessionPage.tsx:451`, `handleRename`) and from the
   project's list, without needing to open the session first
   (`apps/web/src/routes/ProjectSessionsTab.tsx:101`, `handleRenomear`) — both
   screens call the same `renameSession` and the same `rotuloDaSessao`.
@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:2000` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:696` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:1845` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:541` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -268,7 +268,7 @@ to "infra" today would silently fall through to the Creative agent; treating
 it as the composer's active agent would reopen that trap instead of closing
 one.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:462` (`activeAgent`),
+- **Where:** `apps/web/src/routes/SessionPage.tsx:316` (`activeAgent`),
   `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
@@ -296,7 +296,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:374` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:242` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5614,8 +5614,8 @@ si não muda.
   `apps/web/src/lib/atividade-do-turno.ts` (reducer);
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
-  `apps/web/src/routes/SessionPage.tsx:154` (`agruparNarracoesDoTurno`),
-  `SessionPage.tsx:351` (`turnoViaCanal`)
+  `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
+  `apps/web/src/routes/SessionPage.tsx:169` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14366,7 +14366,8 @@ depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
   `:318` (`acompanharTurnoPeloLog`), `:316`;
-  `apps/web/src/routes/SessionPage.tsx:1496`, `:1521`, `:1770`, `:1830`;
+  `apps/web/src/routes/SessionPage.tsx:503`, `:529`, `:590`;
+  `apps/web/src/lib/session-promocao.ts:141`;
   `apps/web/src/lib/recusa-do-agente.ts:17`
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:66`
   (aceite com a task viva), `:84` (`working` gravado antes do aceite), `:178`
@@ -14786,7 +14787,8 @@ repositório, não o de cada sessão, e não mudaram.
   (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
   também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
   (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;
-  `apps/web/src/routes/SessionPage.tsx:318`, `:964` e `:1616`;
+  `apps/web/src/routes/SessionPage.tsx:147`; `apps/web/src/routes/session-timeline-montagem.tsx:495`;
+  `apps/web/src/lib/session-acoes-de-handoff.ts:130`;
   `apps/engine/lib/engine/projects/project_repository.ex:74` (o texto da recusa
   da [RN-577](#rn-577), que nomeava o gatilho antigo e muda junto)
 - **Teste:**
@@ -15966,7 +15968,7 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   (`decisaoDaPoliticaDaAcao`), `:145` (`linhaDoEventoDePolitica`);
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
-  `apps/web/src/routes/SessionPage.tsx:1311` e
+  `apps/web/src/routes/session-timeline-montagem.tsx:825` e
   `apps/web/src/routes/ProjectApprovalsTab.tsx:452` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
@@ -16207,7 +16209,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:415`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/routes/SessionPage.tsx:497` (`offeredHandoff`)
+  `apps/web/src/lib/session-handoffs.ts:60` (`offeredHandoff`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a

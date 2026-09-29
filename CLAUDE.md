@@ -168,7 +168,6 @@ estado lido do repositório e não da conversa.
 | A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
 | O Infra Lead recusa a subida por estado, na ordem da `/containers` (AT-142) | RN-610 |
 | O Infra Lead conversa pelo composer, e o turno dele passa pelo `TurnoAssincrono` (AT-141) | ADR 0175, RN-617 |
-
 | O pepper do auth deixa de cair no `AUTH_JWT_SECRET`, e quem migra o define com o valor atual (AT-210, BREAKING) | RN-613 |
 | O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
 | O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
@@ -176,11 +175,10 @@ estado lido do repositório e não da conversa.
 | O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
 | O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação (AT-173) | ADR 0170 |
 | A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
-
 | A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
 | A remoção de membro de workspace nasce, protegida pela mesma cláusula, e a titularidade se transfere (AT-115) | ADR 0173, RN-615, RN-616 |
-
 | O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
+| `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava depois (AT-138, BRB-015) | ADR 0176 |
 
 ## Estado atual e aberto
 
