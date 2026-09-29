@@ -714,7 +714,10 @@ configuration, not an event — pinning again is an upsert, releasing is a
 `DELETE`. The same ADR adds `users.response_language` (`NULL` is "automatic")
 and the confirmed-detection pair `users.detected_language` /
 `detected_language_confirmed_at`, bound by a CHECK; `users.locale` stays the
-interface language, closed to `pt-BR`/`en`. Before it, the most recent was
+interface language, closed to `pt-BR`/`en`. And `projects.language`
+([RN-619](business-rules.md#rn-619)) is the language of what has no human
+author — shared artifacts and turns nobody typed —, always a concrete
+BCP-47 code. Before it, the most recent was
 `project_mirror_states`
 ([RN-517](business-rules.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per

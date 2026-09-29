@@ -16363,3 +16363,59 @@ agentes.
   digitado só salva no botão)
 - **Origem:** AT-162, sobre as decisões das AT-168 (respostas 1, 2, 3, 4 e 6)
   e AT-169 (resposta 2); especificação da AT-079
+
+### RN-619 — O projeto tem um idioma, o de tudo que não tem autor humano, e ele nasce do idioma de quem cria {#rn-619}
+
+1. **O que ele governa** (decisões do mantenedor: AT-168 resposta 8, AT-169
+   resposta 1): o idioma dos artefatos COMPARTILHADOS (product brief, regras
+   de negócio, ADRs) e dos turnos SEM autor humano (abertura por `kickoff`,
+   dev agents, gates, mensagem de commit, corpo de PR). O que um agente
+   responde a uma PESSOA continua sendo o idioma das respostas dela
+   ([RN-618](#rn-618)).
+2. **Sempre um idioma concreto.** `projects.language` é `NOT NULL`, código
+   BCP-47 canônico pela MESMA régua da RN-618 — mas sem "automático", que é
+   resolver pelas mensagens de uma pessoa e não cabe no que não tem pessoa.
+   `automatico` e código não reconhecido são 400, e o projeto não nasce (ou
+   não muda).
+3. **Projeto novo**: o `language` pedido na criação, canonicalizado; sem
+   pedido, o idioma EFETIVO das respostas de QUEM CRIA
+   (`ResolverIdiomaDaRespostaUseCase`, sem sessão: escolha da conta >
+   detectado confirmado > idioma da interface). A proposta da nota era o
+   `users.locale` de quem cria; a cadeia inteira foi escolhida porque quem
+   já disse em que idioma quer trabalhar não deveria ver o projeto nascer
+   em outro — e, sem escolha nem detecção, ela É o `users.locale`.
+4. **Projetos que já existiam**: a migração `0062_idioma_do_projeto` grava o
+   idioma do TITULAR do workspace (`workspaces.created_by`, de quem é a
+   credencial que os agentes gastam — RN-058/RN-616), pela mesma cadeia. Na
+   migração ninguém tinha escolha nem detecção ainda, então o valor é o
+   `users.locale` dele. O titular, e não "um owner" de `workspace_members`,
+   porque ele é UM só e a migração não pode escolher entre dois.
+5. **Quem troca**: `PATCH /projects/:projectId` com `language` (`maintainer`,
+   o mínimo da rota), e a seção "Idioma do projeto" em Configurações, com o
+   controle inerte e o motivo em texto para quem não alcança (RN-102). O
+   default `pt-BR` da coluna é só a rede de quem insere por fora do caso de
+   uso (seed, script, fixture).
+
+**Ainda sem consumidor, declarado:** o engine não lê a coluna. A AT-164 a lê
+(o engine já lê `projects` direto do Postgres por `Engine.Projects.Project`,
+e é ali que o campo entra) para os turnos sem autor; até lá a tela DIZ que o
+valor ainda não chega aos agentes.
+
+- **Código:** `apps/api/src/db/schema/iam.ts:227` (`language`);
+  `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
+  `apps/api/src/application/use-cases/iam/idioma-do-projeto.ts:13`
+  (`idiomaDoProjetoOuRecusa`);
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts:72`
+  (`language`); `apps/api/src/application/use-cases/iam/update-project.use-case.ts:18`
+  (`idiomaDoProjetoOuRecusa`);
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:219`
+  (`language`); `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
+- **Teste:** `apps/api/test/application/use-cases/iam/idioma-do-projeto.use-case.spec.ts:63`
+  (nasce com o idioma de quem cria), `:74` (a escolha da conta vence a
+  interface), `:100` (inválido e `automatico` — caso de falha, o projeto não
+  nasce), `:132` (PATCH inválido não muda nada), `:152` (a migração grava o
+  do titular); `apps/web/src/routes/settings/idioma-do-projeto.test.tsx:84`
+  (vigente e a declaração de que ainda não chega), `:122` (abaixo de
+  `maintainer`: o valor fica, o controle fica inerte)
+- **Origem:** AT-243, sobre as decisões das AT-168 (resposta 8) e AT-169
+  (resposta 1)
