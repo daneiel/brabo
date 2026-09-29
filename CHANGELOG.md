@@ -57,6 +57,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: o resumo da compactação de contexto passa a manter o idioma
+  original de cada turno e a não traduzir citações nem código (AT-166,
+  [RN-621](docs/business-rules.md#rn-621)). Antes o prompt do sumarizador,
+  em pt-BR, não falava de idioma, e uma conversa em outra língua voltava da
+  compactação traduzida. A frase vale no texto inline e no template
+  `prompts/context-manager-summarize.md` (versão `"2"`); quem usa o template do
+  grafo (`GRAPH_TEMPLATES_ENABLED`) precisa semear de novo
+  (`scripts/dev/seed-prompts.ts`). O acréscimo custa 19 tokens de entrada por
+  compactação pela estimativa do engine.
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o

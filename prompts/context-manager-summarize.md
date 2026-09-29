@@ -1,9 +1,9 @@
 ---
 name: context-manager-summarize
-version: "1"
+version: "2"
 ---
 
-Resuma concisamente os turnos abaixo, preservando decisões e fatos:
+Resuma concisamente os turnos abaixo, preservando decisões e fatos. Mantenha cada turno no idioma original; não traduza citações nem código.
 
 {{turnos}}
 

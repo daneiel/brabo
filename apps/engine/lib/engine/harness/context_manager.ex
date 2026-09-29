@@ -202,8 +202,25 @@ defmodule Engine.Harness.ContextManager.Default do
   # não do mecanismo.
   defp render_template(body, turnos), do: String.replace(body, "{{turnos}}", turnos)
 
+  # A frase de IDIOMA (RN-621, AT-166): o resumo entra como `system` no lugar
+  # dos turnos que substituiu, e um resumo que traduz tudo para a língua do
+  # prompt apaga o idioma em que a conversa acontecia — o modelo seguinte lê
+  # a memória em pt-BR e responde nela. Ela pede o idioma ORIGINAL de CADA
+  # turno (numa sessão com dois idiomas, os dois sobrevivem) e proíbe traduzir
+  # citação e código, que são texto literal. Mora aqui e no
+  # `prompts/context-manager-summarize.md`, as DUAS trilhas, e o teste confere
+  # que o template carrega a mesma frase e que ela cabe no teto de custo
+  # incremental decidido pelo mantenedor (50 tokens de entrada por chamada).
+  @instrucao_de_idioma "Mantenha cada turno no idioma original; não traduza citações nem código."
+
+  @doc false
+  # Exposta só para o teste do teto de custo e da paridade com o template.
+  def instrucao_de_idioma, do: @instrucao_de_idioma
+
   defp prompt_inline(turnos),
-    do: "Resuma concisamente os turnos abaixo, preservando decisões e fatos:\n\n#{turnos}"
+    do:
+      "Resuma concisamente os turnos abaixo, preservando decisões e fatos. " <>
+        "#{@instrucao_de_idioma}\n\n#{turnos}"
 
   # Conta `content` de TODA mensagem (inclui `role: "tool"`, cujo resultado
   # já viajava por este campo) MAIS a serialização JSON de `toolCalls` de

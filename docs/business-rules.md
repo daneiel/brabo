@@ -3987,6 +3987,10 @@ determinístico de quando o MODELO falha (`"(N turnos anteriores
 omitidos)"`) é outra coisa e NÃO passa por template nenhum: é comportamento
 de código, não texto de prompt, e o próprio `.md` do template declara isso.
 
+> **Desde a [RN-621](#rn-621)** o prompt de resumo, nas duas trilhas, pede que
+> cada turno mantenha o idioma original e que citação e código não se traduzam;
+> o template versionado subiu para a versão `"2"`.
+
 **Consumo do restante do grafo (`query_user_context` — hipóteses com
 evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
 entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
@@ -16225,3 +16229,65 @@ deu e com as quatro ferramentas.
   `scripts/ci/destinos-do-composer.spec.ts:174` (a guarda: `infra` é destino,
   com UMA cláusula que conversa)
 - **Origem:** AT-141 (decisão do mantenedor), aberta pela AT-098
+
+### RN-621 — O resumo da compactação mantém o idioma original de cada turno, e não traduz citação nem código {#rn-621}
+
+Quando o contexto de um agente passa do limiar, o `ContextManager` troca os
+turnos antigos por UM resumo, escrito por outra chamada de LLM (o ator
+`context-manager`) e reinserido como mensagem `system`. O prompt dessa chamada
+é pt-BR e não dizia nada sobre idioma: numa conversa em inglês, ou com dois
+idiomas, o resumo saía traduzido, e o modelo seguinte lia a própria memória na
+língua do prompt de resumo — o desvio de idioma que o épico de idioma persegue,
+nascido fora do turno do usuário. A orientação de idioma do turno não protege
+isto: ela nunca está em `messages`, então nunca é resumida, mas também nunca é
+vista pelo sumarizador.
+
+A regra é uma frase no prompt de resumo, nas DUAS trilhas (o texto inline e o
+template versionado `prompts/context-manager-summarize.md`, que sobe para a
+versão `"2"`):
+
+> Mantenha cada turno no idioma original; não traduza citações nem código.
+
+1. **O idioma é POR TURNO**, nunca um idioma da sessão: numa sessão com dois
+   autores de línguas diferentes, os dois sobrevivem ao resumo.
+2. **Citação e código são texto literal** e não se traduzem — um identificador
+   ou uma mensagem de erro traduzida no resumo deixa de ser encontrável.
+3. **A frase vem ANTES dos turnos**, para que o texto de um turno no fim do
+   prompt não seja lido como continuação dela.
+4. **Custo:** o acréscimo é de 76 bytes — 19 tokens pela heurística do engine
+   (bytes/4), no máximo 38 por uma régua pessimista de 1 token a cada 2 bytes —,
+   dentro do teto de 50 tokens de entrada por chamada decidido pelo mantenedor
+   para a orientação de idioma (AT-169, resposta 8). O teste reprova a frase que
+   passar dele pelas duas réguas.
+5. **Não é `agent_instructions`:** é texto de código e de template versionado,
+   fora do teto de `instruction_patch` ([RN-007](#rn-007)), porque o sumarizador
+   não é agente de projeto e não tem instrução por projeto.
+
+**Decidido sem linha de base, declarado:** o mantenedor decidiu mudar o prompt
+já, sem esperar a validação paga mostrar que o resumo em pt-BR desvia (AT-169,
+resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
+(orientação + resumo novo), sem medir o resumo antigo isolado.
+
+**O que esta regra NÃO fecha, declarado:**
+
+- **Com `graph_templates_enabled?` ligada, vale a versão ATIVA no grafo.** Uma
+  instalação que semeou a versão `"1"` continua mandando o prompt antigo até
+  rodar `scripts/dev/seed-prompts.ts` de novo — o hash do corpo mudou, então o
+  seeder cria a versão nova. Com a flag desligada (o default) vale o inline, que
+  já tem a frase.
+- **O fallback de quando o sumarizador falha** (`"(N turnos anteriores
+  omitidos)"`) não é resumo e não ganha a frase: não há texto de turno nele.
+- **A frase é pt-BR.** Ela pede o idioma de cada turno, não o do prompt; se um
+  modelo a obedece em conversa de outra língua é o que a validação da AT-167
+  mede.
+
+- **Código:** `apps/engine/lib/engine/harness/context_manager.ex:214`
+  (`@instrucao_de_idioma`), `:220` (`prompt_inline`), `:177` (`prompt`, a
+  escolha entre template e inline); `prompts/context-manager-summarize.md`
+- **Teste:** `apps/engine/test/engine/harness/context_manager_test.exs:417`
+  (caminho feliz: o prompt enviado ao sumarizador tem a frase, antes dos
+  turnos), `:433` (o teto de 50 tokens, pelas duas réguas), `:443` (o template
+  versionado carrega a MESMA frase), `:453` (falha do sumarizador: o fallback
+  não finge resumo nem ganha a frase)
+- **Origem:** AT-166, especificada na AT-081 e destravada pela AT-169
+  (decisões do mantenedor de 2026-09-28)
