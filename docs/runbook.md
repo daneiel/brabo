@@ -2623,8 +2623,15 @@ Measured on run `36371633435`: image build 190 s, compose up (smoke) 43 s,
 one per target, and a repeat failure of the same target **comments on the open
 issue** instead of opening another. The bootstrap has a title of its own: with
 the cluster down, the three targets are `skipped`, and a skipped scheduled run
-is the silence this exists to break. Close the issue when the proof passes
-again. It is **not** a gate and not a required check — nothing waits on it.
+is the silence this exists to break. **The first run in which the target
+passes closes its issue** with a comment naming that run (AT-212) — nobody has
+to remember to. Only a run on the **default branch** (the schedule, or a
+`workflow_dispatch` on it) touches issues: a red `workflow_dispatch` on a
+branch fails in its own run, logs a warning, and neither opens nor comments on
+the schedule's issue, and a green one on a branch closes nothing. Runs are
+queued **per ref** (`concurrency: propriedades-<ref>`): two dispatches on
+different branches run side by side, two on the same ref wait for each other.
+It is **not** a gate and not a required check — nothing waits on it.
 
 Measured on the runs that built the workflow (4 vCPUs, 15 GiB RAM, 87 GB of
 free disk on `ubuntu-latest`):

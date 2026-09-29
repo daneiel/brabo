@@ -1157,6 +1157,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **ci**: o **`propriedades.yml` enfileira por ref, a issue de prova vermelha
+  fecha sozinha, e rodada de branch não toca a issue do agendamento**
+  (AT-212). O grupo de `concurrency` passa de `propriedades` a
+  `propriedades-<ref>`: dois `workflow_dispatch` em branches diferentes rodam
+  lado a lado (antes o segundo ficava pendente e um terceiro o cancelava); no
+  mesmo ref continuam em fila. O alarme (`scripts/ci/alarmar-prova.sh`) roda
+  também no verde e FECHA, com comentário que nomeia a rodada, a issue aberta
+  do alvo que voltou a passar; e só a rodada do ramo padrão (perguntado ao
+  GitHub, porque o payload do `schedule` não traz o repositório) abre, comenta
+  ou fecha issue — a de branch avisa no log e para. Provado por
+  `scripts/ci/alarmar-prova.spec.ts`, com um `gh` de mentira no PATH.
+- **docs**: o **inventário de variáveis de ambiente passa a varrer
+  `deploy/k8s/*.sh`** (AT-212), como fonte `ferramenta`, pela expansão com
+  default; as 22 variáveis que o bootstrap e as provas leem ganharam
+  descrição em `configuration.md`. E o comentário do `bootstrap.sh` antes do
+  `kubectl wait` do seed deixa de dizer que o seed não é idempotente.
 - **deploy/k8s**: a **reprojeção do grafo no cluster exercita os quatro
   caminhos do tradutor** (AT-191, BRB-018). O cenário de
   `make test-reprojecao-k8s` passa de dois para quatro eventos: além da
