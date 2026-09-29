@@ -2594,11 +2594,18 @@ them on a schedule, in a k3d cluster on a GitHub-hosted runner:
    pod**, runs the image's `node scripts/reprojetar-artefatos.js --project`,
    and requires the **same sha256**; then reprojects again and requires it
    once more. It depends on no other target;
-7. only when **both** the restore and the deliberate break passed in the same
+7. runs `make test-rotacao-chave-mestra-k8s` (AT-146), **last**: the three steps
+   of the [master key rotation](#rotacao-da-chave-mestra) — both keys published
+   in the `brabo` source Secret, the `ExternalSecret` force-synced, the api
+   restarted, the image's `rewrap-deks.js`, the previous key removed and the api
+   restarted again — with every envelope checked to open at each step and a
+   credential decrypting to the same value at the end. It swaps the cluster's
+   master key and restarts the api, which is why nothing runs after it;
+8. only when **both** the restore and the deliberate break passed in the same
    run, writes `ultima-execucao-boa.json` (date, run, commit, restore duration)
    and uploads it as the `restore-ultima-execucao-boa` artifact (kept 90 days),
    and adds the line *Última execução boa do restore* to the run summary;
-8. writes each step's duration into the run summary.
+9. writes each step's duration into the run summary.
 
 A **second job**, `restore-compose` (AT-195), runs next to it on another
 runner — the production compose publishes 3000/4000/8088, the same ports the
@@ -2646,6 +2653,7 @@ free disk on `ubuntu-latest`):
 | `make test-restore-mutacao` | 31 s (run `35473548113`) |
 | `make test-reprojecao-k8s` | 16 s (run `35471428634`); 18 s with the four-event scenario (run `36498776825`) |
 | `make test-reprojecao-artefatos-k8s` | 4 s (run `36498695123`, whole job 10 min 28 s) |
+| `make test-rotacao-chave-mestra-k8s` | 47 s (run `36502355798`, whole job 12 min 10 s) |
 | whole job | 12 min 56 s |
 
 (First fully green run, `34784563928`, on 2026-09-13.)
@@ -3063,8 +3071,12 @@ Verification: the four steps were exercised against the External Secrets
 Operator chart pinned in `deploy/k8s/helm/charts.env` (0.19.2) in a throwaway
 k3d cluster, with the local `SecretStore`: the key appeared in
 `brabo-secrets` after the `force-sync` and disappeared after removal, with the
-`ExternalSecret` staying `SecretSynced`. That run is not automated; what runs on
-every PR is `scripts/ci/previous-nos-composes.spec.ts`, which fails if the
+`ExternalSecret` staying `SecretSynced`. Since AT-146 the same four steps run
+every week for `CREDENTIALS_MASTER_KEY`, inside the master key rehearsal
+(`make test-rotacao-chave-mestra-k8s`, see
+[Verifying without waiting for an incident](#rotacao-da-chave-mestra)) — the
+other `_PREVIOUS` keys still have no automated run. What runs on every PR is
+`scripts/ci/previous-nos-composes.spec.ts`, which fails if the
 `ExternalSecret` stops using `dataFrom.extract` or lists a `_PREVIOUS` in
 `data:`.
 
@@ -3301,9 +3313,42 @@ neither key works, and the case where the `key_id` label lies — lives in
 `rewrap` also runs in any environment: on a test one, the full cycle by hand
 fits in a few minutes.
 
-> **TODO(humano):** has this rotation ever actually been executed, in any
-> environment? No source records a run with a date, and that changes whether
-> the spec above is a safety net or the first proof.
+**Has it ever run for real? No.** The maintainer's answer (2026-09-27): this
+rotation has **never** been executed in a real environment. So the spec above
+is not a safety net under a practised procedure — until AT-146 it was the only
+proof, and it never touched the image, the `ExternalSecret` or an api restart.
+
+**The rehearsal, in the cluster, every week (AT-146).**
+`make test-rotacao-chave-mestra-k8s` (`deploy/k8s/test-rotacao-chave-mestra.sh`)
+runs the three steps of this page against the local cluster, with the same
+mechanics: it writes an LLM credential with a random value through the API
+and checks every envelope opens on today's key; **step 1** publishes the new
+key and the old one as `_PREVIOUS` in the `brabo` source Secret (the local
+stand-in for the provider — never `brabo-secrets` directly), forces the
+`ExternalSecret` sync, waits for `_PREVIOUS` to arrive, restarts the api and
+requires the rotation warning naming **both** fingerprints; **step 2** requires
+pending rows by the query above, runs the image's `node scripts/rewrap-deks.js`
+(`falhas=0`), requires **zero** pending, and runs it again (`nada a fazer`);
+**step 3** removes `_PREVIOUS` from the source, requires it to **disappear**
+from `brabo-secrets` after the sync, restarts the api, requires the boot line
+with the new fingerprint and no rotation warning, and checks every envelope
+opens with the new key alone — and that the credential from the start decrypts
+to the **same value** (compared by sha256 inside the pod; the value never
+leaves it). The verdict is the exit code. It is the **last** target of the
+scheduled `.github/workflows/propriedades.yml`, because it swaps a secret and
+restarts the api, and it leaves the cluster on the new key with no `_PREVIOUS`
+— a finished rotation, not a half-way one. First green run: `36502355798`
+(2026-09-29, 47 s).
+
+What the rehearsal does **not** cover, declared: `project_git_connections`
+rows (creating a git connection through the API validates a token against a
+real provider, and the proof cluster has no egress — the table is read by the
+verifier and by `rewrap`, usually with 0 rows; its envelope is the same code,
+proven on both tables by the spec above), and the staging/production secrets
+provider (here the source is the local Secret the overlay's `SecretStore`
+reads; the `ExternalSecret` and the operator are the real ones). It is a
+rehearsal in a throwaway cluster, **not** a rotation of any real environment:
+"never ran for real" stays true until someone rotates one.
 
 ### Interaction with restore
 
@@ -4448,9 +4493,9 @@ workflow in **schedule** does not have the trigger the cell claims
 | Rotate `AUTH_JWT_SECRET` | [`AUTH_JWT_SECRET`](#rotacao-do-auth-jwt-secret) | `apps/api/test/infrastructure/security/ed25519-access-token-issuer.spec.ts` and `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Change `AUTH_TOKEN_PEPPER` | [`AUTH_TOKEN_PEPPER`](#troca-do-auth-token-pepper) | `apps/api/test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Rotate `BRABO_SERVICE_TOKEN` | [`BRABO_SERVICE_TOKEN`](#rotacao-do-brabo-service-token) | `apps/api/test/infrastructure/security/service-token.spec.ts`, `apps/api/test/interfaces/engine-service.guard.spec.ts`, `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`, `apps/engine/test/engine/runtime_service_token_test.exs`, `apps/broker/src/config.spec.ts` and `scripts/ci/previous-nos-composes.spec.ts` | every PR `.github/workflows/ci.yml` |
-| Put and retire a `_PREVIOUS` in Kubernetes | [Doing it in Kubernetes](#rotacao-no-kubernetes) | `scripts/ci/previous-nos-composes.spec.ts` keeps the `ExternalSecret` on `dataFrom.extract` with no `_PREVIOUS` in `data:`; the sync through a real External Secrets Operator: none automated, exercised once by hand in a throwaway k3d | every PR `.github/workflows/ci.yml` (the spec); manual (the operator) |
+| Put and retire a `_PREVIOUS` in Kubernetes | [Doing it in Kubernetes](#rotacao-no-kubernetes) | `scripts/ci/previous-nos-composes.spec.ts` keeps the `ExternalSecret` on `dataFrom.extract` with no `_PREVIOUS` in `data:`; the sync through a real External Secrets Operator: `make test-rotacao-chave-mestra-k8s` (`deploy/k8s/test-rotacao-chave-mestra.sh`) adds and removes `CREDENTIALS_MASTER_KEY_PREVIOUS` through it; the other `_PREVIOUS` keys: none automated | every PR `.github/workflows/ci.yml` (the spec); weekly `.github/workflows/propriedades.yml` (the master key's `_PREVIOUS`); manual (the other keys) |
 | Unlock an account by SQL | [Account locked by lockout](#conta-travada-por-lockout) | **None.** The two queries were checked against the schema by reading; `apps/api/test/application/use-cases/auth/lockout.spec.ts` covers the lockout, not them | manual |
-| Rotate the master key | [Master key rotation](#rotacao-da-chave-mestra) | `apps/api/test/scripts/rewrap-deks.spec.ts` and `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Rotate the master key | [Master key rotation](#rotacao-da-chave-mestra) | `apps/api/test/scripts/rewrap-deks.spec.ts` and `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts`; the three steps in the cluster: `make test-rotacao-chave-mestra-k8s` (`deploy/k8s/test-rotacao-chave-mestra.sh`) | every PR `.github/workflows/ci.yml` (the specs); weekly `.github/workflows/propriedades.yml` (the rehearsal) |
 | Cut the spend in a cost incident | [Cost incident](#incidente-de-custo) | `apps/api/test/runbook/sql-do-incidente-de-custo.spec.ts` runs the section's SQL, in both languages, against the migrated schema; steps (b) and (d), on the screen: none | every PR `.github/workflows/ci.yml` |
 | Bring up observability without a cluster | [Local observability](#observabilidade-local) | `scripts/dev/observabilidade-pronta.mjs`, a self-check at the end of `pnpm dev:obs`, with no spec | manual |
 | Check the gate registry in the image | [Gate registry](#registro-de-gates) | `docker/smoke.sh` calls both routes against the production image; its gate functions by `scripts/ci/smoke-gates.spec.ts` | every PR `.github/workflows/ci.yml` |

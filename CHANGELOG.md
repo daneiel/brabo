@@ -1157,6 +1157,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **deploy/k8s**: **a rotação da chave mestra ganha um ensaio no cluster, toda
+  semana** (AT-146, BRB-010). Ela nunca tinha rodado em ambiente real (resposta
+  do mantenedor, 27/09), e só o spec da RN-562 a provava — sem imagem, sem
+  `ExternalSecret`, sem restart. `make test-rotacao-chave-mestra-k8s` roda os
+  três passos do runbook contra o cluster da prova: grava uma credencial pela
+  API, publica a chave nova e a anterior no Secret-fonte `brabo`, força o sync
+  do `ExternalSecret`, reinicia a api e exige o aviso com as duas impressões;
+  conta os pendentes pela consulta do runbook, roda o `rewrap-deks.js` da imagem
+  (`falhas=0`, zero pendentes, a segunda execução sem nada a fazer); remove a
+  anterior, exige que ela SUMA do `brabo-secrets`, reinicia e confere que todo
+  envelope abre só com a nova e que a credencial decifra no mesmo valor. Veredito
+  pelo código de saída; último passo do `propriedades.yml` (troca a chave e
+  reinicia a api). Verde na rodada `36502355798` (47 s). O `TODO(humano)` do
+  runbook ("a rotação já rodou de verdade?") vira a resposta: nunca.
 - **ci**: o **`propriedades.yml` enfileira por ref, a issue de prova vermelha
   fecha sozinha, e rodada de branch não toca a issue do agendamento**
   (AT-212). O grupo de `concurrency` passa de `propriedades` a

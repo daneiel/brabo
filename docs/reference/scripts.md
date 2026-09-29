@@ -184,10 +184,11 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
 | `make test-reprojecao-artefatos-k8s` | Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first) |
+| `make test-rotacao-chave-mestra-k8s` | Rehearses the master key rotation (three runbook steps) inside the local cluster (needs `make deploy-local` first; leaves the cluster on a new key) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-125 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+126 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
