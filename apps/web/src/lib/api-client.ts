@@ -79,6 +79,7 @@ import type {
   UserCredentialMetadata,
   UserLocale,
   UserPreferences,
+  SessionResponseLanguage,
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
@@ -360,6 +361,8 @@ export const updateProject = (
   input: {
     maxConsecutiveBlocked?: number;
     storyPromotion?: StoryPromotionMode;
+    // O idioma do projeto (RN-619) — `maintainer`, pela mesma rota.
+    language?: string;
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
@@ -1131,8 +1134,31 @@ export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
 // esperar o próximo refresh, nunca como fonte primária.
 export const getMyPreferences = () =>
   get<UserPreferences>('/users/me/preferences');
-export const updateMyPreferences = (input: { locale: UserLocale }) =>
-  patch<UserPreferences>('/users/me/preferences', input);
+// Os dois campos são independentes na api (RN-618): mandar só `locale` não
+// toca o idioma das respostas, e vice-versa.
+export const updateMyPreferences = (input: {
+  locale?: UserLocale;
+  responseLanguage?: string;
+}) => patch<UserPreferences>('/users/me/preferences', input);
+
+// O idioma das respostas de quem chama, numa sessão (RN-618). `language:
+// null` solta o override e volta a herdar da Conta.
+export const getSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+) =>
+  get<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+  );
+export const setSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+  language: string | null,
+) =>
+  put<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+    { language },
+  );
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

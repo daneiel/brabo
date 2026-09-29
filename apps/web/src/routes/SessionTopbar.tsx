@@ -10,6 +10,7 @@ import {
   setSessionModelBinding,
 } from '../lib/api-client';
 import { TokenMeter } from '../components/TokenMeter';
+import { SessionLanguageIndicator } from './SessionLanguageIndicator';
 import { ModelPicker } from '../components/ModelPicker';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -28,7 +29,8 @@ import styles from './SessionPage.module.css';
 /**
  * A barra do topo da tela de Sessão: a saída para o projeto, o ponto de
  * estado, o título que se renomeia no lugar (RN-098), o tipo (RN-097), o
- * seletor de modelo da sessão, o medidor de orçamento, o atalho de ideação,
+ * seletor de modelo da sessão, o idioma das respostas de quem vê (RN-620), o
+ * medidor de orçamento, o atalho de ideação,
  * "Encerrar" e o botão do painel lateral.
  *
  * Moveu de `SessionPage.tsx` no PR 3 do programa do ADR 0176, sem mudar uma
@@ -179,6 +181,10 @@ export function SessionTopbar({
           }
         />
       )}
+      {/* O idioma das respostas de QUEM VÊ (RN-620), ao lado do modelo mas
+          em outro escopo: o modelo é da sessão, o idioma é da pessoa — trocar
+          aqui é o override POR SESSÃO da RN-618, só dela. */}
+      <SessionLanguageIndicator projectId={projectId} sessionId={sessionId} />
       {budget && (
         <TokenMeter
           variant="live"

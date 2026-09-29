@@ -65,6 +65,7 @@ function projeto(i: number): Project {
   workspacePath: null,
   workspaceVerifiedAt: null,
   mirrorPath: null,
+  language: 'pt-BR',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

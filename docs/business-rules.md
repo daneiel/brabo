@@ -16291,3 +16291,174 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
   não finge resumo nem ganha a frase)
 - **Origem:** AT-166, especificada na AT-081 e destravada pela AT-169
   (decisões do mantenedor de 2026-09-28)
+
+## O idioma das respostas dos agentes (RN-618..620, ADR 0177)
+
+O épico EP-028 nasceu de uma conversa em português respondida em espanhol. As
+decisões do mantenedor de 2026-09-28 (AT-168, AT-169) fixaram onde o idioma
+das RESPOSTAS mora — conta, sessão e projeto — e a precedência entre as
+fontes. Nenhuma destas regras toca o idioma da INTERFACE ([RN-432](#rn-432)).
+
+### RN-618 — O idioma das respostas é da PESSOA: escolha na conta, override por sessão, e a precedência que termina sempre num idioma {#rn-618}
+
+1. **Lista aberta, forma canônica.** O idioma das respostas é qualquer código
+   BCP-47 cuja subtag de idioma o ICU da api reconheça, gravado canônico
+   (`pt-br` vira `pt-BR`) — nunca o enum `pt-BR`/`en` da interface, que
+   continua fechado. `und`, uso privado e texto livre são recusados com 400
+   que nomeia a regra.
+2. **Conta nova nasce no AUTOMÁTICO.** `users.response_language` é `NULL`
+   ("automático") até a pessoa escolher; a api mostra e aceita `automatico`
+   como o nome desse estado.
+3. **Interface e respostas são independentes.** `PATCH /users/me/preferences`
+   aceita `locale` e `responseLanguage` como OPCIONAIS; mandar um não toca o
+   outro, um corpo sem nenhum é 400, e um `responseLanguage` inválido recusa o
+   corpo INTEIRO antes de gravar qualquer campo.
+4. **O detectado só vale confirmado.** O idioma detectado pelas mensagens da
+   pessoa (a detecção é a AT-163) só entra em `users.detected_language` junto
+   com `detected_language_confirmed_at` — um CHECK recusa um sem o outro. A
+   detecção sozinha não troca nada.
+5. **Override por sessão é só de quem o fixou.**
+   `PUT projects/:projectId/sessions/:sessionId/response-language`
+   (`developer`, o papel de mandar mensagem a um agente — o override só muda
+   as respostas às mensagens da própria pessoa) fixa um idioma naquela sessão
+   para QUEM CHAMA; `language: null` (chave obrigatória) solta e volta a
+   herdar da conta. O `GET` (`viewer`) devolve o efetivo de quem chama. A
+   chave é o par sessão×usuário: outro participante da mesma sessão nunca é
+   afetado, e não há rota para ler ou mexer no de outra pessoa.
+6. **A precedência**, resolvida por pessoa e nunca por sessão: override da
+   sessão > escolha da conta > detectado confirmado > `users.locale`. Como
+   `users.locale` é `NOT NULL`, a cadeia sempre termina num idioma, e a origem
+   (`sessao`/`conta`/`detectado`/`interface`) viaja com ele. O pedido pontual
+   dentro de uma mensagem ("traduza para o inglês") não é degrau: quem o
+   atende é o modelo.
+
+**O que ainda NÃO acontece, declarado:** nenhum turno muda de comportamento.
+O transporte até o modelo é a AT-164, que chama
+`ResolverIdiomaDaRespostaUseCase` com o AUTOR da mensagem e a sessão; até lá a
+Conta grava, mostra o efetivo com a origem e DIZ que ainda não chega aos
+agentes.
+
+- **Código:** `apps/api/src/domain/iam/idioma-de-resposta.ts:56`
+  (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
+  `apps/api/src/db/schema/iam.ts:98` (`responseLanguage`), `:105`
+  (`detectedLanguage`), `:122` (`users_idioma_detectado_so_confirmado`);
+  `apps/api/src/db/schema/sessions.ts:120` (`sessionLanguageOverrides`);
+  `apps/api/src/application/use-cases/iam/resolver-idioma-da-resposta.use-case.ts:44`
+  (`ResolverIdiomaDaRespostaUseCase`);
+  `apps/api/src/application/use-cases/iam/update-user-preferences.use-case.ts:25`
+  (`idiomaDaRespostaOuRecusa`), `:47` (`UpdateUserPreferencesUseCase`);
+  `apps/api/src/application/use-cases/iam/idioma-da-resposta-na-sessao.use-case.ts:19`
+  (`IdiomaDaRespostaNaSessaoUseCase`);
+  `apps/web/src/routes/ResponseLanguageSection.tsx`
+- **Teste:** `apps/api/test/domain/iam/idioma-de-resposta.spec.ts:12` (a
+  régua, e o que ela recusa — caso de falha), `:40` (a precedência);
+  `apps/api/test/application/use-cases/iam/idioma-da-resposta.use-case.spec.ts:96`
+  (conta nova no automático), `:124` (grava canônico, não toca a interface),
+  `:158` (inválido não grava nada — caso de falha), `:188` (o override não
+  alcança o outro participante), `:209` (404 de sessão de outro projeto);
+  `apps/api/test/infrastructure/persistence/session-language-override.repository.spec.ts:73`
+  (o CHECK no banco), `:93` (upsert pelo par);
+  `apps/web/src/routes/ResponseLanguageSection.test.tsx:76` (efetivo com
+  origem, e a declaração de que ainda não chega aos agentes), `:115` (código
+  digitado só salva no botão)
+- **Origem:** AT-162, sobre as decisões das AT-168 (respostas 1, 2, 3, 4 e 6)
+  e AT-169 (resposta 2); especificação da AT-079
+
+### RN-619 — O projeto tem um idioma, o de tudo que não tem autor humano, e ele nasce do idioma de quem cria {#rn-619}
+
+1. **O que ele governa** (decisões do mantenedor: AT-168 resposta 8, AT-169
+   resposta 1): o idioma dos artefatos COMPARTILHADOS (product brief, regras
+   de negócio, ADRs) e dos turnos SEM autor humano (abertura por `kickoff`,
+   dev agents, gates, mensagem de commit, corpo de PR). O que um agente
+   responde a uma PESSOA continua sendo o idioma das respostas dela
+   ([RN-618](#rn-618)).
+2. **Sempre um idioma concreto.** `projects.language` é `NOT NULL`, código
+   BCP-47 canônico pela MESMA régua da RN-618 — mas sem "automático", que é
+   resolver pelas mensagens de uma pessoa e não cabe no que não tem pessoa.
+   `automatico` e código não reconhecido são 400, e o projeto não nasce (ou
+   não muda).
+3. **Projeto novo**: o `language` pedido na criação, canonicalizado; sem
+   pedido, o idioma EFETIVO das respostas de QUEM CRIA
+   (`ResolverIdiomaDaRespostaUseCase`, sem sessão: escolha da conta >
+   detectado confirmado > idioma da interface). A proposta da nota era o
+   `users.locale` de quem cria; a cadeia inteira foi escolhida porque quem
+   já disse em que idioma quer trabalhar não deveria ver o projeto nascer
+   em outro — e, sem escolha nem detecção, ela É o `users.locale`.
+4. **Projetos que já existiam**: a migração `0062_idioma_do_projeto` grava o
+   idioma do TITULAR do workspace (`workspaces.created_by`, de quem é a
+   credencial que os agentes gastam — RN-058/RN-616), pela mesma cadeia. Na
+   migração ninguém tinha escolha nem detecção ainda, então o valor é o
+   `users.locale` dele. O titular, e não "um owner" de `workspace_members`,
+   porque ele é UM só e a migração não pode escolher entre dois.
+5. **Quem troca**: `PATCH /projects/:projectId` com `language` (`maintainer`,
+   o mínimo da rota), e a seção "Idioma do projeto" em Configurações, com o
+   controle inerte e o motivo em texto para quem não alcança (RN-102). O
+   default `pt-BR` da coluna é só a rede de quem insere por fora do caso de
+   uso (seed, script, fixture).
+
+**Ainda sem consumidor, declarado:** o engine não lê a coluna. A AT-164 a lê
+(o engine já lê `projects` direto do Postgres por `Engine.Projects.Project`,
+e é ali que o campo entra) para os turnos sem autor; até lá a tela DIZ que o
+valor ainda não chega aos agentes.
+
+- **Código:** `apps/api/src/db/schema/iam.ts:227` (`language`);
+  `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
+  `apps/api/src/application/use-cases/iam/idioma-do-projeto.ts:13`
+  (`idiomaDoProjetoOuRecusa`);
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts:72`
+  (`language`); `apps/api/src/application/use-cases/iam/update-project.use-case.ts:18`
+  (`idiomaDoProjetoOuRecusa`);
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:219`
+  (`language`); `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
+- **Teste:** `apps/api/test/application/use-cases/iam/idioma-do-projeto.use-case.spec.ts:63`
+  (nasce com o idioma de quem cria), `:74` (a escolha da conta vence a
+  interface), `:100` (inválido e `automatico` — caso de falha, o projeto não
+  nasce), `:132` (PATCH inválido não muda nada), `:152` (a migração grava o
+  do titular); `apps/web/src/routes/settings/idioma-do-projeto.test.tsx:84`
+  (vigente e a declaração de que ainda não chega), `:122` (abaixo de
+  `maintainer`: o valor fica, o controle fica inerte)
+- **Origem:** AT-243, sobre as decisões das AT-168 (resposta 8) e AT-169
+  (resposta 1)
+
+### RN-620 — A barra da sessão mostra o idioma das respostas de QUEM VÊ, com a origem, e trocar ali é o override só daquela pessoa naquela sessão {#rn-620}
+
+1. **Ao lado do seletor de modelo, em outro escopo.** O modelo da barra é da
+   SESSÃO e vale para todos; o idioma é da PESSOA (`GET
+   .../sessions/:sessionId/response-language`, resolvido para quem chama,
+   [RN-618](#rn-618)). Trocar ali é o override por sessão — decisão do
+   mantenedor, AT-169 resposta 2 — e nunca mexe no de outro participante nem
+   na Conta.
+2. **Nunca o valor sem a origem** (a régua da [RN-470](business-rules/custo.md#rn-470)): "fixado
+   por você nesta sessão", "escolhido por você na Conta", "detectado pelas
+   suas mensagens e confirmado por você" e "o idioma da interface" são
+   quatro textos, e nenhum colapsa em outro. Carregando e falhou também têm
+   texto próprio — a falha não finge um idioma. O detectado nunca vira
+   afirmação sobre a pessoa ("você é brasileiro"), só sobre as mensagens
+   (AT-080).
+3. **"Seguir a Conta" solta o override** (`language: null`) e diz em QUE
+   idioma isso dá — a mesma cadeia sem o degrau da sessão, derivada no
+   cliente da cadeia que a rota já devolve, sem endpoint novo. "Outro
+   código…" abre um campo que só fixa no botão (RN-469), e a recusa da api
+   chega no toast com a frase dela. Um link leva à Conta, onde mora a
+   escolha que vale em todas as sessões.
+4. **Quem troca**: o mínimo do `PUT` (`developer`), por `roleAtLeast` sobre o
+   papel de WORKSPACE (a lacuna declarada das telas que não buscam
+   `project_members`). Abaixo dele o valor e a origem continuam na barra, o
+   seletor fica inerte e o motivo vem em texto.
+5. **O que a barra NÃO afirma**: até a AT-164 o idioma não chega ao modelo,
+   e a linha de origem DIZ "ainda não chega aos agentes". A linha trunca nos
+   60px da barra e leva o texto inteiro no `title` — o texto está na tela, o
+   `title` só devolve o que as reticências cortaram.
+
+- **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:66`
+  (`SessionLanguageIndicator`), `:32` (`idiomaSemOverride`), `:128`
+  (`origemPorExtenso`), `:172` (`podeTrocar`);
+  `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
+- **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
+  (efetivo com origem, o aviso e o link), `:112` (o detectado não vira
+  "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
+  Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`
+  (abaixo de `developer`), `:213` (leitura falhada), `:225` (a cadeia sem a
+  sessão)
+- **Origem:** AT-165, sobre as decisões das AT-169 (resposta 2) e AT-168
+  (resposta 7)

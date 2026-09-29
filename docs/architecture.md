@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 173 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 174 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -702,9 +702,23 @@ erDiagram
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
   projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
+  sessions ||--o{ session_language_overrides : "response language pinned per person (RN-618)"
 ```
 
-54 tables in total. The most recent is `project_mirror_states`
+55 tables in total. The most recent is `session_language_overrides`
+([RN-618](business-rules.md#rn-618),
+[ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): the
+response language one person pinned in one session, keyed by the
+`{session_id, user_id}` PAIR so two participants never touch each other. It is
+configuration, not an event — pinning again is an upsert, releasing is a
+`DELETE`. The same ADR adds `users.response_language` (`NULL` is "automatic")
+and the confirmed-detection pair `users.detected_language` /
+`detected_language_confirmed_at`, bound by a CHECK; `users.locale` stays the
+interface language, closed to `pt-BR`/`en`. And `projects.language`
+([RN-619](business-rules.md#rn-619)) is the language of what has no human
+author — shared artifacts and turns nobody typed —, always a concrete
+BCP-47 code. Before it, the most recent was
+`project_mirror_states`
 ([RN-517](business-rules.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
 project, `project_id` unique, holding what the LAST mirror round did — the last

@@ -9683,6 +9683,131 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/response-language": {
+      "get": {
+        "description": "Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain.",
+        "operationId": "SessionResponseLanguageController_get",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseLanguageResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the project."
+          },
+          "404": {
+            "description": "Project or session does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The language agents answer YOU in, in this session",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "put": {
+        "description": "Only for the caller, only in this session (RN-618) — the other participants and your Account choice are untouched. `null` goes back to inheriting from the Account.",
+        "operationId": "SessionResponseLanguageController_set",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSessionResponseLanguageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseLanguageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body without `language`, or a code that is not a recognized BCP-47 language."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the project."
+          },
+          "404": {
+            "description": "Project or session does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fixes (or releases) YOUR response language in this session",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/socket-ticket": {
       "post": {
         "description": "The ticket authenticates the session's Phoenix socket `session:<id>` `connect/3` on the engine — it is NOT the reused JWT. 30s TTL and single use: every reconnection (including automatic ones) requests a new ticket. `scope: \"heartbeat\"` requires the `viewer` role; `scope: \"terminal\"` requires `developer`, the same minimum role as terminal actions.",
@@ -10569,13 +10694,13 @@
             "bearer": []
           }
         ],
-        "summary": "Reads the authenticated user's language preference",
+        "summary": "Reads the authenticated user's interface language and agent response language",
         "tags": [
           "users"
         ]
       },
       "patch": {
-        "description": "Only `locale` for now — it's the only preference that exists. Closed to the `pt-BR`/`en` list; any other value is a 400.",
+        "description": "Both fields are optional and independent — sending one never touches the other, and a body with neither is a 400. `locale` (the interface) stays closed to the `pt-BR`/`en` list. `responseLanguage` (RN-618) is `automatico` or any recognized BCP-47 code, stored canonical; an unrecognized code is a 400 and nothing in the body is written.",
         "operationId": "UserPreferencesController_update",
         "parameters": [],
         "requestBody": {
@@ -10614,7 +10739,7 @@
             "bearer": []
           }
         ],
-        "summary": "Writes the authenticated user's language preference",
+        "summary": "Writes the authenticated user's interface language and/or agent response language",
         "tags": [
           "users"
         ]
@@ -14759,6 +14884,12 @@
             "type": "string",
             "example": "/home/you/projects/store",
             "description": "The folder's ABSOLUTE path, required when `executionMode` is `mounted` or `runner`, and refused when it is `container`. In BOTH of them only the FORMAT is validated now — absolute, no `..`, not the system root, not a system folder, not overlapping the Brabo checkout (RN-422/RN-423). `mounted` adds one rule: it must sit inside `BRABO_PROJECTS_BASE`, the single folder of your machine the Brabo containers can see (ADR 0141) — with no base configured the mode is not available on this installation and creation says so. Disk is touched later: by the runner in `runner`, and when Infra starts the container in `mounted` (RN-501, ADR 0142)."
+          },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "maxLength": 35,
+            "description": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language)."
           }
         },
         "required": [
@@ -16351,6 +16482,29 @@
           "causa",
           "estadoDaSessao",
           "analise"
+        ]
+      },
+      "IdiomaEfetivoResponseDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "pt-BR"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "sessao",
+              "conta",
+              "detectado",
+              "interface"
+            ],
+            "example": "interface"
+          }
+        },
+        "required": [
+          "language",
+          "origin"
         ]
       },
       "ImagemDecididaResponseDto": {
@@ -18911,6 +19065,11 @@
             "nullable": true,
             "description": "The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API."
           },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "description": "The PROJECT's language (RN-619): the language of everything with no human author — shared artifacts (product brief, business rules, ADRs) and turns nobody typed (kickoff, dev agents, gates, commit messages, PR bodies). A canonical BCP-47 code, open list. A new project starts with its creator's effective response language (RN-618). Set through `PATCH /projects/:projectId` (`maintainer`). Not yet read by the engine — the per-turn guidance that consumes it is AT-164."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -18957,6 +19116,7 @@
           "workspacePath",
           "workspaceVerifiedAt",
           "mirrorPath",
+          "language",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
@@ -21510,6 +21670,58 @@
           "traceParent"
         ]
       },
+      "SessionResponseLanguageResponseDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "description": "The effective language."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "sessao",
+              "conta",
+              "detectado",
+              "interface"
+            ],
+            "example": "interface",
+            "description": "Where `language` came from: `sessao` (fixed in this session) > `conta` (Account choice) > `detectado` (detected AND confirmed) > `interface` (the interface language)."
+          },
+          "sessionOverride": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "account": {
+            "type": "string",
+            "example": "automatico",
+            "description": "`automatico` or the code chosen on the Account."
+          },
+          "detected": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "interfaceLocale": {
+            "type": "string",
+            "enum": [
+              "pt-BR",
+              "en"
+            ],
+            "example": "pt-BR"
+          }
+        },
+        "required": [
+          "language",
+          "origin",
+          "sessionOverride",
+          "account",
+          "detected",
+          "interfaceLocale"
+        ]
+      },
       "SetAgentAutonomyDto": {
         "type": "object",
         "properties": {
@@ -21735,6 +21947,21 @@
           "allow",
           "deny",
           "ask"
+        ]
+      },
+      "SetSessionResponseLanguageDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "example": "en",
+            "maxLength": 35,
+            "description": "The language agents answer YOU in, in THIS session only (RN-618) — other participants are never affected. Any BCP-47 code the server recognizes, stored canonical. Send `null` (or `automatico`) — the key is REQUIRED — to go back to inheriting from your Account."
+          }
+        },
+        "required": [
+          "language"
         ]
       },
       "SkippedBindingResponseDto": {
@@ -22476,6 +22703,12 @@
             ],
             "example": "manual",
             "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
+          },
+          "language": {
+            "type": "string",
+            "example": "pt-BR",
+            "maxLength": 35,
+            "description": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language)."
           }
         }
       },
@@ -22490,11 +22723,14 @@
             ],
             "example": "en",
             "description": "The interface language. Closed to the list — not free-form BCP-47."
+          },
+          "responseLanguage": {
+            "type": "string",
+            "example": "es",
+            "maxLength": 35,
+            "description": "The language agents answer in (RN-618): `automatico` or ANY BCP-47 code whose language the server recognizes — an open list, unlike `locale`. Stored canonical (`pt-br` becomes `pt-BR`). An unrecognized code is a 400 that names the rule. Never changes `locale`."
           }
-        },
-        "required": [
-          "locale"
-        ]
+        }
       },
       "UpdateWorkspaceDto": {
         "type": "object",
@@ -22632,10 +22868,38 @@
               "en"
             ],
             "example": "pt-BR"
+          },
+          "responseLanguage": {
+            "type": "string",
+            "example": "automatico",
+            "description": "`automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page."
+          },
+          "detectedLanguage": {
+            "type": "string",
+            "nullable": true,
+            "example": null,
+            "description": "The language detected from your own messages AND confirmed by you — never an unconfirmed detection. `null` until a confirmation exists."
+          },
+          "detectedLanguageConfirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "effectiveResponseLanguage": {
+            "description": "What applies today OUTSIDE any session, and where it came from: account choice > confirmed detection > interface language.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IdiomaEfetivoResponseDto"
+              }
+            ]
           }
         },
         "required": [
-          "locale"
+          "locale",
+          "responseLanguage",
+          "detectedLanguage",
+          "detectedLanguageConfirmedAt",
+          "effectiveResponseLanguage"
         ]
       },
       "VerifyEmailDto": {

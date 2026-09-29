@@ -57,6 +57,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a barra da sessão mostra, ao lado do seletor de modelo, o idioma
+  em que os agentes respondem a QUEM VÊ e de onde ele veio — fixado nesta
+  sessão, escolhido na Conta, detectado e confirmado, ou o idioma da interface
+  (AT-165, [RN-620](docs/business-rules.md#rn-620)). Trocar ali fixa o idioma
+  só para você e só nesta sessão; "Seguir a Conta" solta, e um link leva à
+  Conta. A barra diz que o idioma ainda não chega aos agentes (AT-164).
+- **api/web**: o projeto ganha IDIOMA (AT-243, [RN-619](docs/business-rules.md#rn-619)),
+  o de tudo que não tem autor humano — artefatos compartilhados e turnos que
+  ninguém digitou. Qualquer código BCP-47 reconhecido, sempre concreto (sem
+  "automático"). Projeto novo nasce com o idioma efetivo das respostas de
+  quem cria; os que já existiam receberam o do titular do workspace. Troca
+  por `PATCH /projects/:projectId` (`maintainer`) e pela nova seção "Idioma
+  do projeto" em Configurações. O engine ainda não o lê (AT-164), e a tela
+  diz isso.
+- **api/web**: o idioma em que os AGENTES respondem vira preferência da conta,
+  separada do idioma da interface (AT-162, [RN-618](docs/business-rules.md#rn-618),
+  [ADR 0177](docs/adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)).
+  A Conta ganha a seção "Idioma das respostas": Automático (o default de toda
+  conta) ou QUALQUER código BCP-47 que a api reconheça — não só `pt-BR`/`en` —,
+  com o efetivo mostrado junto da origem (escolhido, detectado e confirmado, ou
+  o idioma da interface). `PATCH /users/me/preferences` aceita
+  `responseLanguage` ao lado de `locale`, os dois opcionais e independentes, e
+  `GET`/`PUT .../sessions/:sessionId/response-language` lê e fixa o idioma de
+  QUEM CHAMA só naquela sessão. Ainda não chega aos agentes — o transporte até
+  o modelo é a AT-164, e a tela diz isso.
 - **engine**: o resumo da compactação de contexto passa a manter o idioma
   original de cada turno e a não traduzir citações nem código (AT-166,
   [RN-621](docs/business-rules.md#rn-621)). Antes o prompt do sumarizador,
