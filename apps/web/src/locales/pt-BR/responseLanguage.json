@@ -1,0 +1,27 @@
+{
+  "account": {
+    "title": "Idioma das respostas",
+    "eyebrow": "agentes",
+    "subtitle": "Em que idioma os agentes respondem a você, em qualquer projeto e sessão. É separado do idioma da interface: trocar um não troca o outro. Numa sessão você ainda pode fixar outro idioma só para ela, na barra da sessão.",
+    "label": "Idioma das respostas dos agentes",
+    "automatic": "Automático",
+    "otherCode": "Outro código…",
+    "otherLabel": "Código de idioma (BCP-47)",
+    "otherHint": "Ex.: pt-PT, es-MX, fr-CA. A api recusa código que não seja um idioma.",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "saved": "Idioma das respostas salvo",
+    "error": "Não foi possível salvar o idioma das respostas",
+    "loading": "Carregando o idioma das respostas…",
+    "loadError": "Não foi possível ler o idioma das respostas.",
+    "effective": "Idioma efetivo das suas respostas: {{idioma}} — {{origem}}.",
+    "detectedNote": "Idioma detectado pelas suas mensagens e confirmado por você: {{idioma}}.",
+    "notYetApplied": "Ainda não chega aos agentes: o idioma é gravado e mostrado agora, e passa a valer nas respostas quando a orientação por turno entrar."
+  },
+  "origin": {
+    "sessao": "fixado por você nesta sessão",
+    "conta": "escolhido por você na Conta",
+    "detectado": "detectado pelas suas mensagens e confirmado por você",
+    "interface": "o idioma da interface, porque nada foi escolhido nem detectado ainda"
+  }
+}

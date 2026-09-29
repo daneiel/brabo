@@ -57,6 +57,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: o idioma em que os AGENTES respondem vira preferência da conta,
+  separada do idioma da interface (AT-162, [RN-618](docs/business-rules.md#rn-618),
+  [ADR 0177](docs/adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)).
+  A Conta ganha a seção "Idioma das respostas": Automático (o default de toda
+  conta) ou QUALQUER código BCP-47 que a api reconheça — não só `pt-BR`/`en` —,
+  com o efetivo mostrado junto da origem (escolhido, detectado e confirmado, ou
+  o idioma da interface). `PATCH /users/me/preferences` aceita
+  `responseLanguage` ao lado de `locale`, os dois opcionais e independentes, e
+  `GET`/`PUT .../sessions/:sessionId/response-language` lê e fixa o idioma de
+  QUEM CHAMA só naquela sessão. Ainda não chega aos agentes — o transporte até
+  o modelo é a AT-164, e a tela diz isso.
 - **engine**: o resumo da compactação de contexto passa a manter o idioma
   original de cada turno e a não traduzir citações nem código (AT-166,
   [RN-621](docs/business-rules.md#rn-621)). Antes o prompt do sumarizador,

@@ -179,6 +179,7 @@ estado lido do repositório e não da conversa.
 | A remoção de membro de workspace nasce, protegida pela mesma cláusula, e a titularidade se transfere (AT-115) | ADR 0173, RN-615, RN-616 |
 | O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
 | `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava depois (AT-138, BRB-015) | ADR 0176 |
+| O idioma das RESPOSTAS vira preferência da conta, com override por sessão, separado do `users.locale` (AT-162) | ADR 0177, RN-618 |
 
 ## Estado atual e aberto
 

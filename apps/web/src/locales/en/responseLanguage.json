@@ -1,0 +1,27 @@
+{
+  "account": {
+    "title": "Response language",
+    "eyebrow": "agents",
+    "subtitle": "The language agents answer you in, in every project and session. It is separate from the interface language: changing one never changes the other. In a session you can still pin another language just for it, from the session bar.",
+    "label": "Agents' response language",
+    "automatic": "Automatic",
+    "otherCode": "Other code…",
+    "otherLabel": "Language code (BCP-47)",
+    "otherHint": "E.g. pt-PT, es-MX, fr-CA. The API refuses a code that is not a language.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Response language saved",
+    "error": "Could not save the response language",
+    "loading": "Loading the response language…",
+    "loadError": "Could not read the response language.",
+    "effective": "Your effective response language: {{idioma}} — {{origem}}.",
+    "detectedNote": "Language detected from your messages and confirmed by you: {{idioma}}.",
+    "notYetApplied": "Not sent to agents yet: the language is saved and shown now, and starts applying to answers once the per-turn guidance ships."
+  },
+  "origin": {
+    "sessao": "pinned by you in this session",
+    "conta": "chosen by you on the Account page",
+    "detectado": "detected from your messages and confirmed by you",
+    "interface": "the interface language, because nothing was chosen or detected yet"
+  }
+}

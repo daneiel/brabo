@@ -7,6 +7,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { Select } from '../components/ui/Select';
 import styles from './AccountPage.module.css';
 import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
+import { ResponseLanguageSection } from './ResponseLanguageSection';
 
 const ROTULO: Record<Idioma, (t: (chave: string) => string) => string> = {
   'pt-BR': (t) => t('account.language.ptBR'),
@@ -26,7 +27,11 @@ const ROTULO: Record<Idioma, (t: (chave: string) => string) => string> = {
  * interface segue em pt-BR hardcoded até a extração em massa (etapa
  * separada, em paralelo).
  *
- * Desde a RN-611 a página tem uma segunda seção, pelo MESMO motivo de escopo:
+ * Desde a RN-618 a página tem, logo abaixo do idioma da interface, o idioma
+ * em que os AGENTES respondem (`ResponseLanguageSection`) — eixo separado, com
+ * lista aberta, pelo mesmo motivo de escopo: segue a pessoa entre projetos.
+ *
+ * Desde a RN-611 a página tem mais uma seção, pelo MESMO motivo de escopo:
  * as chaves de MÁQUINA do agente local (`MachineDeviceKeysSection`), que não
  * são de projeto nenhum e nascem antes do primeiro projeto existir.
  */
@@ -97,6 +102,8 @@ export function AccountPage() {
           </div>
         </div>
       </div>
+
+      <ResponseLanguageSection />
 
       <MachineDeviceKeysSection />
     </div>

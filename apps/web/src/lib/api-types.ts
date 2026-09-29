@@ -23,8 +23,44 @@ export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
  */
 export type UserLocale = 'pt-BR' | 'en';
 
+/**
+ * De onde veio o idioma em que os agentes respondem (RN-618) — a tela NOMEIA
+ * a origem, nunca mostra o valor sozinho (RN-620).
+ */
+export type OrigemDoIdiomaDaResposta =
+  | 'sessao'
+  | 'conta'
+  | 'detectado'
+  | 'interface';
+
+/** O valor da api para "sem escolha explícita" do idioma das respostas. */
+export const IDIOMA_AUTOMATICO = 'automatico';
+
 export interface UserPreferences {
   locale: UserLocale;
+  /** `'automatico'` ou um código BCP-47 canônico (RN-618). */
+  responseLanguage: string;
+  /** Detectado pelas mensagens E confirmado pela pessoa; `null` sem isso. */
+  detectedLanguage: string | null;
+  detectedLanguageConfirmedAt: string | null;
+  /** O que vale hoje FORA de sessão. */
+  effectiveResponseLanguage: {
+    language: string;
+    origin: OrigemDoIdiomaDaResposta;
+  };
+}
+
+/**
+ * O idioma das respostas de QUEM VÊ, numa sessão (RN-618) — a cadeia inteira,
+ * `GET/PUT .../sessions/:sessionId/response-language`.
+ */
+export interface SessionResponseLanguage {
+  language: string;
+  origin: OrigemDoIdiomaDaResposta;
+  sessionOverride: string | null;
+  account: string;
+  detected: string | null;
+  interfaceLocale: UserLocale;
 }
 
 export interface Workspace {

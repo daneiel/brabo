@@ -3120,6 +3120,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/response-language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The language agents answer YOU in, in this session
+         * @description Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain.
+         */
+        get: operations["SessionResponseLanguageController_get"];
+        /**
+         * Fixes (or releases) YOUR response language in this session
+         * @description Only for the caller, only in this session (RN-618) — the other participants and your Account choice are untouched. `null` goes back to inheriting from the Account.
+         */
+        put: operations["SessionResponseLanguageController_set"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/socket-ticket": {
         parameters: {
             query?: never;
@@ -3451,7 +3475,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads the authenticated user's language preference */
+        /** Reads the authenticated user's interface language and agent response language */
         get: operations["UserPreferencesController_get"];
         put?: never;
         post?: never;
@@ -3459,8 +3483,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Writes the authenticated user's language preference
-         * @description Only `locale` for now — it's the only preference that exists. Closed to the `pt-BR`/`en` list; any other value is a 400.
+         * Writes the authenticated user's interface language and/or agent response language
+         * @description Both fields are optional and independent — sending one never touches the other, and a body with neither is a 400. `locale` (the interface) stays closed to the `pt-BR`/`en` list. `responseLanguage` (RN-618) is `automatico` or any recognized BCP-47 code, stored canonical; an unrecognized code is a 400 and nothing in the body is written.
          */
         patch: operations["UserPreferencesController_update"];
         trace?: never;
@@ -6037,6 +6061,15 @@ export interface components {
             estadoDaSessao: string;
             /** @example The agent stopped responding after a 90s tool call. */
             analise: string;
+        };
+        IdiomaEfetivoResponseDto: {
+            /** @example pt-BR */
+            language: string;
+            /**
+             * @example interface
+             * @enum {string}
+             */
+            origin: "sessao" | "conta" | "detectado" | "interface";
         };
         ImagemDecididaResponseDto: {
             decisao: components["schemas"]["DecisaoDeImagemResponseDto"];
@@ -8705,6 +8738,33 @@ export interface components {
              */
             traceParent: Record<string, never> | null;
         };
+        SessionResponseLanguageResponseDto: {
+            /**
+             * @description The effective language.
+             * @example pt-BR
+             */
+            language: string;
+            /**
+             * @description Where `language` came from: `sessao` (fixed in this session) > `conta` (Account choice) > `detectado` (detected AND confirmed) > `interface` (the interface language).
+             * @example interface
+             * @enum {string}
+             */
+            origin: "sessao" | "conta" | "detectado" | "interface";
+            /** @example null */
+            sessionOverride: string | null;
+            /**
+             * @description `automatico` or the code chosen on the Account.
+             * @example automatico
+             */
+            account: string;
+            /** @example null */
+            detected: string | null;
+            /**
+             * @example pt-BR
+             * @enum {string}
+             */
+            interfaceLocale: "pt-BR" | "en";
+        };
         SetAgentAutonomyDto: {
             /**
              * @description Agent slug.
@@ -8814,6 +8874,13 @@ export interface components {
              *     ]
              */
             ask: string[];
+        };
+        SetSessionResponseLanguageDto: {
+            /**
+             * @description The language agents answer YOU in, in THIS session only (RN-618) — other participants are never affected. Any BCP-47 code the server recognizes, stored canonical. Send `null` (or `automatico`) — the key is REQUIRED — to go back to inheriting from your Account.
+             * @example en
+             */
+            language: string | null;
         };
         SkippedBindingResponseDto: {
             /**
@@ -9220,7 +9287,12 @@ export interface components {
              * @example en
              * @enum {string}
              */
-            locale: "pt-BR" | "en";
+            locale?: "pt-BR" | "en";
+            /**
+             * @description The language agents answer in (RN-618): `automatico` or ANY BCP-47 code whose language the server recognizes — an open list, unlike `locale`. Stored canonical (`pt-br` becomes `pt-BR`). An unrecognized code is a 400 that names the rule. Never changes `locale`.
+             * @example es
+             */
+            responseLanguage?: string;
         };
         UpdateWorkspaceDto: {
             /** @example Acme Corp */
@@ -9291,6 +9363,20 @@ export interface components {
              * @enum {string}
              */
             locale: "pt-BR" | "en";
+            /**
+             * @description `automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page.
+             * @example automatico
+             */
+            responseLanguage: string;
+            /**
+             * @description The language detected from your own messages AND confirmed by you — never an unconfirmed detection. `null` until a confirmation exists.
+             * @example null
+             */
+            detectedLanguage: string | null;
+            /** Format: date-time */
+            detectedLanguageConfirmedAt: string | null;
+            /** @description What applies today OUTSIDE any session, and where it came from: account choice > confirmed detection > interface language. */
+            effectiveResponseLanguage: components["schemas"]["IdiomaEfetivoResponseDto"];
         };
         VerifyEmailDto: {
             /** @description Single-use token received by email. */
@@ -18044,6 +18130,117 @@ export interface operations {
             };
             /** @description No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionResponseLanguageController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponseLanguageResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or session does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionResponseLanguageController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetSessionResponseLanguageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponseLanguageResponseDto"];
+                };
+            };
+            /** @description Body without `language`, or a code that is not a recognized BCP-47 language. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or session does not exist. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

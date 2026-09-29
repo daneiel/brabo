@@ -1218,6 +1218,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/session-response-language-controller-get",
+          label: "The language agents answer YOU in, in this session",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/session-response-language-controller-set",
+          label: "Fixes (or releases) YOUR response language in this session",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-issue-socket-ticket",
           label: "Issues an opaque, single-use ticket for the session's socket",
           className: "api-method post",
@@ -1351,13 +1363,13 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/user-preferences-controller-get",
-          label: "Reads the authenticated user's language preference",
+          label: "Reads the authenticated user's interface language and agent response language",
           className: "api-method get",
         },
         {
           type: "doc",
           id: "docs/reference/api/user-preferences-controller-update",
-          label: "Writes the authenticated user's language preference",
+          label: "Writes the authenticated user's interface language and/or agent response language",
           className: "api-method patch",
         },
       ],

@@ -1297,6 +1297,8 @@ reason in the URL.
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/psychologist/reanalyze` | role:maintainer |
 | POST | `/projects/:projectId/sessions/:sessionId/readiness` | role:developer |
+| GET | `/projects/:projectId/sessions/:sessionId/response-language` | role:viewer |
+| PUT | `/projects/:projectId/sessions/:sessionId/response-language` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/socket-ticket` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |

@@ -16291,3 +16291,75 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
   não finge resumo nem ganha a frase)
 - **Origem:** AT-166, especificada na AT-081 e destravada pela AT-169
   (decisões do mantenedor de 2026-09-28)
+
+## O idioma das respostas dos agentes (RN-618..620, ADR 0177)
+
+O épico EP-028 nasceu de uma conversa em português respondida em espanhol. As
+decisões do mantenedor de 2026-09-28 (AT-168, AT-169) fixaram onde o idioma
+das RESPOSTAS mora — conta, sessão e projeto — e a precedência entre as
+fontes. Nenhuma destas regras toca o idioma da INTERFACE ([RN-432](#rn-432)).
+
+### RN-618 — O idioma das respostas é da PESSOA: escolha na conta, override por sessão, e a precedência que termina sempre num idioma {#rn-618}
+
+1. **Lista aberta, forma canônica.** O idioma das respostas é qualquer código
+   BCP-47 cuja subtag de idioma o ICU da api reconheça, gravado canônico
+   (`pt-br` vira `pt-BR`) — nunca o enum `pt-BR`/`en` da interface, que
+   continua fechado. `und`, uso privado e texto livre são recusados com 400
+   que nomeia a regra.
+2. **Conta nova nasce no AUTOMÁTICO.** `users.response_language` é `NULL`
+   ("automático") até a pessoa escolher; a api mostra e aceita `automatico`
+   como o nome desse estado.
+3. **Interface e respostas são independentes.** `PATCH /users/me/preferences`
+   aceita `locale` e `responseLanguage` como OPCIONAIS; mandar um não toca o
+   outro, um corpo sem nenhum é 400, e um `responseLanguage` inválido recusa o
+   corpo INTEIRO antes de gravar qualquer campo.
+4. **O detectado só vale confirmado.** O idioma detectado pelas mensagens da
+   pessoa (a detecção é a AT-163) só entra em `users.detected_language` junto
+   com `detected_language_confirmed_at` — um CHECK recusa um sem o outro. A
+   detecção sozinha não troca nada.
+5. **Override por sessão é só de quem o fixou.**
+   `PUT projects/:projectId/sessions/:sessionId/response-language`
+   (`developer`, o papel de mandar mensagem a um agente — o override só muda
+   as respostas às mensagens da própria pessoa) fixa um idioma naquela sessão
+   para QUEM CHAMA; `language: null` (chave obrigatória) solta e volta a
+   herdar da conta. O `GET` (`viewer`) devolve o efetivo de quem chama. A
+   chave é o par sessão×usuário: outro participante da mesma sessão nunca é
+   afetado, e não há rota para ler ou mexer no de outra pessoa.
+6. **A precedência**, resolvida por pessoa e nunca por sessão: override da
+   sessão > escolha da conta > detectado confirmado > `users.locale`. Como
+   `users.locale` é `NOT NULL`, a cadeia sempre termina num idioma, e a origem
+   (`sessao`/`conta`/`detectado`/`interface`) viaja com ele. O pedido pontual
+   dentro de uma mensagem ("traduza para o inglês") não é degrau: quem o
+   atende é o modelo.
+
+**O que ainda NÃO acontece, declarado:** nenhum turno muda de comportamento.
+O transporte até o modelo é a AT-164, que chama
+`ResolverIdiomaDaRespostaUseCase` com o AUTOR da mensagem e a sessão; até lá a
+Conta grava, mostra o efetivo com a origem e DIZ que ainda não chega aos
+agentes.
+
+- **Código:** `apps/api/src/domain/iam/idioma-de-resposta.ts:56`
+  (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
+  `apps/api/src/db/schema/iam.ts:98` (`responseLanguage`), `:105`
+  (`detectedLanguage`), `:122` (`users_idioma_detectado_so_confirmado`);
+  `apps/api/src/db/schema/sessions.ts:120` (`sessionLanguageOverrides`);
+  `apps/api/src/application/use-cases/iam/resolver-idioma-da-resposta.use-case.ts:44`
+  (`ResolverIdiomaDaRespostaUseCase`);
+  `apps/api/src/application/use-cases/iam/update-user-preferences.use-case.ts:25`
+  (`idiomaDaRespostaOuRecusa`), `:47` (`UpdateUserPreferencesUseCase`);
+  `apps/api/src/application/use-cases/iam/idioma-da-resposta-na-sessao.use-case.ts:19`
+  (`IdiomaDaRespostaNaSessaoUseCase`);
+  `apps/web/src/routes/ResponseLanguageSection.tsx`
+- **Teste:** `apps/api/test/domain/iam/idioma-de-resposta.spec.ts:12` (a
+  régua, e o que ela recusa — caso de falha), `:40` (a precedência);
+  `apps/api/test/application/use-cases/iam/idioma-da-resposta.use-case.spec.ts:96`
+  (conta nova no automático), `:124` (grava canônico, não toca a interface),
+  `:158` (inválido não grava nada — caso de falha), `:188` (o override não
+  alcança o outro participante), `:209` (404 de sessão de outro projeto);
+  `apps/api/test/infrastructure/persistence/session-language-override.repository.spec.ts:73`
+  (o CHECK no banco), `:93` (upsert pelo par);
+  `apps/web/src/routes/ResponseLanguageSection.test.tsx:76` (efetivo com
+  origem, e a declaração de que ainda não chega aos agentes), `:115` (código
+  digitado só salva no botão)
+- **Origem:** AT-162, sobre as decisões das AT-168 (respostas 1, 2, 3, 4 e 6)
+  e AT-169 (resposta 2); especificação da AT-079
