@@ -267,6 +267,17 @@ conversational agents — which use only the streamed one — would fail at 15s 
 `%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
 a local model the turn fit within 15s and the defect didn't show up.
 
+#### The last message may be the language guidance ([RN-622](../business-rules.md#rn-622))
+
+The `messages` the engine sends to both paths may end with ONE extra
+`role: "system"` message — the response-language guidance, appended by the
+`EngineApiClient` facade on every call of an agent turn (the author's language
+for a turn someone typed, the project's language otherwise; never for the
+`context-manager` summarizer). It is ephemeral: it never enters the agent's
+history. The api does nothing special with it — it is a system message like any
+other, and its input tokens are metered like the rest (18–29 per call measured
+with cl100k/o200k, under a 50-token ceiling).
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
@@ -1207,7 +1218,7 @@ Twenty command routes, plus the health ones. Under `/internal` with `VerifyServi
 | POST | `/sessions` | starts the `SessionServer` |
 | POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
-| POST | `/sessions/:id/agent/message` | user message in the thread — **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)) |
+| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?}`. **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
 | POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
 | POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api; `202` on acceptance, `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |

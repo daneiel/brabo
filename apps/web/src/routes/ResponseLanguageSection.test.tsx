@@ -85,8 +85,8 @@ describe('ResponseLanguageSection (RN-618)', () => {
       (screen.getByLabelText('Idioma das respostas dos agentes') as HTMLSelectElement)
         .value,
     ).toBe('automatico');
-    // Até a AT-164 o valor não chega ao modelo, e a tela DIZ isso.
-    expect(screen.getByText(/Ainda não chega aos agentes/)).toBeInTheDocument();
+    // RN-622: o valor chega ao modelo, e o aviso de "ainda não chega" saiu.
+    expect(screen.queryByText(/Ainda não chega aos agentes/)).not.toBeInTheDocument();
   });
 
   it('escolher um idioma NOMEADO salva no onChange e só manda o idioma das respostas', async () => {

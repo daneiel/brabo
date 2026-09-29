@@ -81,11 +81,14 @@ beforeEach(() => {
 });
 
 describe('ProjectLanguageSection (RN-619)', () => {
-  it('mostra o idioma vigente e DIZ que ainda não chega aos agentes', async () => {
+  it('mostra o idioma vigente e DIZ o que ainda não segue ele (os artefatos de turno com autor)', async () => {
     montar();
 
     expect(await screen.findByText(/Hoje: .*\(pt-BR\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Ainda não chega aos agentes/)).toBeInTheDocument();
+    // RN-622: os turnos sem autor já seguem o idioma do projeto; a lacuna que
+    // sobra é declarada, e o aviso antigo de "ainda não chega" saiu.
+    expect(screen.queryByText(/Ainda não chega aos agentes/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Os turnos sem autor já seguem este idioma/)).toBeInTheDocument();
   });
 
   it('escolher um idioma NOMEADO salva no onChange, pela rota do projeto', async () => {

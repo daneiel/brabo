@@ -15,8 +15,7 @@
     "loading": "Carregando o idioma das respostas…",
     "loadError": "Não foi possível ler o idioma das respostas.",
     "effective": "Idioma efetivo das suas respostas: {{idioma}} — {{origem}}.",
-    "detectedNote": "Idioma detectado pelas suas mensagens e confirmado por você: {{idioma}}.",
-    "notYetApplied": "Ainda não chega aos agentes: o idioma é gravado e mostrado agora, e passa a valer nas respostas quando a orientação por turno entrar."
+    "detectedNote": "Idioma detectado pelas suas mensagens e confirmado por você: {{idioma}}."
   },
   "origin": {
     "sessao": "fixado por você nesta sessão",
@@ -31,7 +30,6 @@
     "otherLabel": "Código de idioma (BCP-47) para esta sessão",
     "pin": "Fixar",
     "effective": "{{idioma}}, {{origem}}",
-    "notYetApplied": "ainda não chega aos agentes",
     "readOnly": "trocar aqui pede papel developer",
     "accountLink": "Conta",
     "loading": "Idioma das respostas…",

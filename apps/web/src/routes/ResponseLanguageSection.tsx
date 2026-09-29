@@ -41,9 +41,10 @@ import styles from './AccountPage.module.css';
  * ## O que a tela diz
  *
  * O efetivo SEMPRE com a origem (RN-470): "automático" sozinho não diz em que
- * idioma o agente vai responder, e o valor sozinho não diz por quê. E a tela
- * DECLARA que o valor ainda não chega aos agentes: o transporte até o modelo é
- * a AT-164, e até lá afirmar "os agentes respondem em X" seria mentir.
+ * idioma o agente vai responder, e o valor sozinho não diz por quê. Desde a
+ * RN-622 o efetivo chega ao modelo em toda mensagem que a pessoa manda a um
+ * agente (orientação efêmera por turno), então a tela não carrega mais o
+ * aviso de que "ainda não chega".
  */
 export function ResponseLanguageSection() {
   const { t, i18n } = useTranslation('responseLanguage');
@@ -98,9 +99,6 @@ export function ResponseLanguageSection() {
         <span className={styles.eyebrow}>{t('account.eyebrow')}</span>
       </div>
       <p className={styles.sectionSubtitle}>{t('account.subtitle')}</p>
-      {/* Até a AT-164 nada disso chega ao modelo, e a tela não pode dizer
-          "os agentes respondem em X" antes de ser verdade. Sai com ela. */}
-      <p className={styles.sectionSubtitle}>{t('account.notYetApplied')}</p>
 
       <div className={styles.card}>
         <div className={styles.cardInfo}>

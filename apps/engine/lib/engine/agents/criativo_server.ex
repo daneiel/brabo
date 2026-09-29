@@ -51,6 +51,7 @@ defmodule Engine.Agents.CriativoServer do
   }
 
   alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
+  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
@@ -74,8 +75,10 @@ defmodule Engine.Agents.CriativoServer do
     do: {:via, Registry, {Engine.Sessions.Registry, "criativo:" <> session_id}}
 
   @doc "Roteia uma mensagem do usuário pro Criativo (turno streamado)."
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 120_000)
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 120_000)
 
   @doc "Confirmação de prontidão do usuário — dispara product_brief + handoff."
   def confirm_readiness(session_id),
@@ -111,6 +114,16 @@ defmodule Engine.Agents.CriativoServer do
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        turno_assincrono: nil
      }}
+  end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  @impl true
+  def handle_call({:user_message, text, idioma}, from, state) do
+    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
+      handle_call({:user_message, text}, from, state)
+    end)
   end
 
   # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste

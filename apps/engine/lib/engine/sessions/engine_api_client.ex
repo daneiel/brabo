@@ -4,6 +4,8 @@ defmodule Engine.Sessions.EngineApiClient do
   `Application.get_env(:engine, :engine_api_client, ...)`, sem Mox.
   """
 
+  alias Engine.Harness.IdiomaDaResposta
+
   @callback report_termination(
               project_id :: String.t(),
               session_id :: String.t(),
@@ -575,8 +577,19 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
+  # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
+  # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
+  # chamou: é efêmera por construção.
   def llm_turn(project_id, session_id, agent, messages, tools),
-    do: impl().llm_turn(project_id, session_id, agent, messages, tools)
+    do:
+      impl().llm_turn(
+        project_id,
+        session_id,
+        agent,
+        IdiomaDaResposta.anexar(messages, project_id, agent),
+        tools
+      )
 
   def propose_action(project_id, session_id, action_type, actor, payload),
     do:
@@ -621,7 +634,15 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().list_events(project_id, session_id, opts)
 
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
-    do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
+    do:
+      impl().llm_turn_stream(
+        project_id,
+        session_id,
+        agent,
+        IdiomaDaResposta.anexar(messages, project_id, agent),
+        tools,
+        on_delta
+      )
 
   def session_pending_work(session_id), do: impl().session_pending_work(session_id)
 

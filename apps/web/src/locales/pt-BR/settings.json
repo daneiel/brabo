@@ -335,7 +335,7 @@
     "title": "Idioma do projeto",
     "eyebrow": "sem autor humano",
     "subtitle": "O idioma do que ninguém digitou: os artefatos compartilhados (product brief, regras de negócio, ADRs) e os turnos sem autor (abertura dos agentes, dev agents, gates, mensagem de commit, corpo de PR). O que um agente responde a VOCÊ segue o seu idioma das respostas, na Conta.",
-    "notYetApplied": "Ainda não chega aos agentes: o idioma é gravado agora e passa a valer quando a orientação por turno entrar.",
+    "artifactsGap": "Os turnos sem autor já seguem este idioma. Os artefatos que um agente emite durante a conversa com uma pessoa ainda saem no idioma das respostas dela.",
     "card": {
       "title": "Idioma",
       "hint": "Hoje: {{idioma}}."

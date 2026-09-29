@@ -342,7 +342,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:293`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:337`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -9585,7 +9585,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:334`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:339`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:66` (`derrubar/3`);
@@ -13496,7 +13496,7 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:475`
+  dispatch de `container_start` consultando antes de propor), `:491`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14216,7 +14216,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:423`
+  `propose_infra_pr` perguntando antes do HALT), `:437`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14505,7 +14505,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:806` (`avisar_canal`);
+  `:607`, `:630`, `:827` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14685,8 +14685,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:866`
-  (`narrar_recusa_de_sessao_encerrada`), `:1141` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:879`
+  (`narrar_recusa_de_sessao_encerrada`), `:1162` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
@@ -14927,8 +14927,8 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
 - **Código:**
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:42`
   (`@agentes_de_conversa`), `:177` (a cláusula do Criativo), `:192` (a recusa
-  do `infra`), `:207` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
-  `:239` (`agente_ausente`), `:310` (o "Parar" sem agente);
+  do `infra`), `:254` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
+  `:283` (`agente_ausente`), `:310` (o "Parar" sem agente);
   `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
   (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:37`
   (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
@@ -15093,8 +15093,8 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:365`
-  (`recusar_mensagem/5`) e `:372` (`registrar_recusa_de_mensagem/3`)
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:419`
+  (`recusar_mensagem/5`) e `:420` (`registrar_recusa_de_mensagem/3`)
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
   (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
   não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
@@ -15385,8 +15385,8 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:257`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:610`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:744`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -15665,7 +15665,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1555` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1576` (`opcoes_do_propose_action`),
   `:1543` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -15827,10 +15827,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:591`
-  (`recusa_local_de_subida`), `:644` (`recusa_por_estado`), `:668`
-  (`recusa_ja_de_pe`), `:686` (`recusa_sem_imagem_decidida`), `:703`
-  (`recusa_pasta_nunca_confirmada`), `:714` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:605`
+  (`recusa_local_de_subida`), `:658` (`recusa_por_estado`), `:668`
+  (`recusa_ja_de_pe`), `:700` (`recusa_sem_imagem_decidida`), `:717`
+  (`recusa_pasta_nunca_confirmada`), `:728` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16227,14 +16227,14 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:145`
-  (`user_message`), `:165` (`TurnoOrfao.fechar_ao_subir`), `:201`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:149`
+  (`user_message`), `:169` (`TurnoOrfao.fechar_ao_subir`), `:201`
   (`handle_cast(:kickoff`), `:218` (`handle_cast({:correct`, a fila), `:228`
-  (`handle_cast(:cancel`), `:241` (`handle_call({:user_message`), `:250`
-  (`handle_info`), `:269` (`drenar_correcao_pendente`), `:316`
-  (`toolloop.limit_reached`), `:767` (`concluir`);
+  (`handle_cast(:cancel`), `:241` (`handle_call({:user_message`), `:264`
+  (`handle_info`), `:283` (`drenar_correcao_pendente`), `:330`
+  (`toolloop.limit_reached`), `:781` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:415`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:60` (`offeredHandoff`)
@@ -16318,7 +16318,7 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
 - **Origem:** AT-166, especificada na AT-081 e destravada pela AT-169
   (decisões do mantenedor de 2026-09-28)
 
-## O idioma das respostas dos agentes (RN-618..620, ADR 0177)
+## O idioma das respostas dos agentes (RN-618..620, RN-622, ADR 0177)
 
 O épico EP-028 nasceu de uma conversa em português respondida em espanhol. As
 decisões do mantenedor de 2026-09-28 (AT-168, AT-169) fixaram onde o idioma
@@ -16358,11 +16358,10 @@ fontes. Nenhuma destas regras toca o idioma da INTERFACE ([RN-432](#rn-432)).
    dentro de uma mensagem ("traduza para o inglês") não é degrau: quem o
    atende é o modelo.
 
-**O que ainda NÃO acontece, declarado:** nenhum turno muda de comportamento.
-O transporte até o modelo é a AT-164, que chama
-`ResolverIdiomaDaRespostaUseCase` com o AUTOR da mensagem e a sessão; até lá a
-Conta grava, mostra o efetivo com a origem e DIZ que ainda não chega aos
-agentes.
+**Quem consome:** desde a [RN-622](#rn-622) o efetivo chega ao modelo — a
+api chama `ResolverIdiomaDaRespostaUseCase` com o AUTOR de cada mensagem a um
+agente e a sessão, e o engine põe a orientação no fim de cada chamada de LLM
+daquele turno. A Conta deixou de dizer que o valor "ainda não chega".
 
 - **Código:** `apps/api/src/domain/iam/idioma-de-resposta.ts:56`
   (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
@@ -16385,7 +16384,7 @@ agentes.
   `apps/api/test/infrastructure/persistence/session-language-override.repository.spec.ts:73`
   (o CHECK no banco), `:93` (upsert pelo par);
   `apps/web/src/routes/ResponseLanguageSection.test.tsx:76` (efetivo com
-  origem, e a declaração de que ainda não chega aos agentes), `:115` (código
+  origem, sem o aviso antigo de "ainda não chega"), `:115` (código
   digitado só salva no botão)
 - **Origem:** AT-162, sobre as decisões das AT-168 (respostas 1, 2, 3, 4 e 6)
   e AT-169 (resposta 2); especificação da AT-079
@@ -16422,10 +16421,13 @@ agentes.
    default `pt-BR` da coluna é só a rede de quem insere por fora do caso de
    uso (seed, script, fixture).
 
-**Ainda sem consumidor, declarado:** o engine não lê a coluna. A AT-164 a lê
-(o engine já lê `projects` direto do Postgres por `Engine.Projects.Project`,
-e é ali que o campo entra) para os turnos sem autor; até lá a tela DIZ que o
-valor ainda não chega aos agentes.
+**Quem consome, e o que sobra:** desde a [RN-622](#rn-622) o engine lê a
+coluna (`Engine.Projects.Project`, direto do Postgres) e a manda ao modelo em
+toda chamada de LLM de turno SEM autor humano. O que NÃO segue o idioma do
+projeto, declarado: o artefato compartilhado que um agente emite DURANTE um
+turno com autor humano (o product brief do Criativo, a regra de negócio, o ADR
+do Arquiteto) — ali a orientação é o idioma das respostas de quem escreveu, e
+a tela DIZ isso no lugar do aviso antigo.
 
 - **Código:** `apps/api/src/db/schema/iam.ts:227` (`language`);
   `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
@@ -16441,7 +16443,7 @@ valor ainda não chega aos agentes.
   interface), `:100` (inválido e `automatico` — caso de falha, o projeto não
   nasce), `:132` (PATCH inválido não muda nada), `:152` (a migração grava o
   do titular); `apps/web/src/routes/settings/idioma-do-projeto.test.tsx:84`
-  (vigente e a declaração de que ainda não chega), `:122` (abaixo de
+  (vigente e a declaração do que ainda não segue ele), `:125` (abaixo de
   `maintainer`: o valor fica, o controle fica inerte)
 - **Origem:** AT-243, sobre as decisões das AT-168 (resposta 8) e AT-169
   (resposta 1)
@@ -16471,20 +16473,129 @@ valor ainda não chega aos agentes.
    papel de WORKSPACE (a lacuna declarada das telas que não buscam
    `project_members`). Abaixo dele o valor e a origem continuam na barra, o
    seletor fica inerte e o motivo vem em texto.
-5. **O que a barra NÃO afirma**: até a AT-164 o idioma não chega ao modelo,
-   e a linha de origem DIZ "ainda não chega aos agentes". A linha trunca nos
-   60px da barra e leva o texto inteiro no `title` — o texto está na tela, o
-   `title` só devolve o que as reticências cortaram.
+5. **O que a barra NÃO afirma**: nunca "os agentes respondem em X" como fato
+   sobre a pessoa — só o efetivo e a origem. Desde a [RN-622](#rn-622) esse
+   efetivo chega ao modelo nas mensagens de quem vê, e o aviso "ainda não
+   chega aos agentes" saiu da linha de origem. A linha trunca nos 60px da
+   barra e leva o texto inteiro no `title` — o texto está na tela, o `title`
+   só devolve o que as reticências cortaram.
 
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:66`
   (`SessionLanguageIndicator`), `:32` (`idiomaSemOverride`), `:128`
   (`origemPorExtenso`), `:172` (`podeTrocar`);
   `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
 - **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
-  (efetivo com origem, o aviso e o link), `:112` (o detectado não vira
+  (efetivo com origem e o link, sem o aviso antigo), `:112` (o detectado não vira
   "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
   Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`
   (abaixo de `developer`), `:213` (leitura falhada), `:225` (a cadeia sem a
   sessão)
 - **Origem:** AT-165, sobre as decisões das AT-169 (resposta 2) e AT-168
   (resposta 7)
+
+### RN-622 — O idioma chega ao modelo como a ÚLTIMA mensagem de cada chamada do turno, efêmera: o do AUTOR quando há um, o do PROJETO quando não há {#rn-622}
+
+As RN-618..620 decidiram EM QUE idioma o agente responde e mostraram isso na
+tela; nada disso chegava ao modelo. Esta regra é o transporte (AT-164, sobre a
+especificação da AT-081 e o mecanismo verificado por provider na AT-161).
+
+1. **Uma mensagem `role: "system"` no FIM da lista, a cada chamada de LLM do
+   turno** — inclusive as iterações de ferramenta —, e NUNCA no histórico:
+   ela não entra em `state.messages`, então não se acumula de turno em turno,
+   não é resumida pela compactação ([RN-621](#rn-621)) e some com o turno. No
+   OpenAI-compatível ela vai no fim da conversa; no Anthropic é içada para o
+   fim do `system` do topo (AT-161). Não é `agent_instructions`: é texto de
+   código, fora do teto de `instruction_patch` ([RN-007](#rn-007)).
+2. **Um lugar só.** Quem acrescenta é a fachada `EngineApiClient`
+   (`llm_turn/5` e `llm_turn_stream/6`), por onde passa TODA chamada de LLM do
+   engine — os sete conversacionais, o `ToolLoop` (dev agents e gates) e o
+   Infra Lead. Nenhum servidor monta a orientação.
+3. **Turno COM autor humano** (a mensagem que alguém digitou a um agente): a
+   api resolve o idioma DAQUELA pessoa naquela sessão
+   (`ResolverIdiomaDaRespostaUseCase`, [RN-618](#rn-618) — override da sessão
+   > conta > detectado confirmado > interface) e o manda no comando
+   `agent/message` como `idiomaDaResposta`, campo OPCIONAL. O servidor do
+   agente o põe no estado do TURNO durante o `handle_call`, e a Task do turno
+   o herda do dicionário de processo (`TurnoAssincrono`); o GenServer não o
+   guarda para o turno seguinte. Dois autores na mesma sessão recebem cada um
+   o seu.
+4. **Turno SEM autor humano** (kickoff, dev agents, gates, commit, corpo de
+   PR, a retomada do Dev Lead depois da aprovação): o idioma do PROJETO
+   ([RN-619](#rn-619)), lido de `projects.language` a cada chamada (decisão do
+   mantenedor, AT-169 resposta 1).
+5. **O sumarizador da compactação (`context-manager`) fica fora**: "responda
+   em X" traduziria o resumo, e preservar o idioma de cada turno nele é a
+   [RN-621](#rn-621).
+6. **Falha nunca derruba o turno.** A resolução que falha na api vira log e a
+   mensagem segue SEM `idiomaDaResposta`; turno com autor sem idioma segue
+   SEM orientação — nunca o do projeto no lugar do da pessoa. A leitura do
+   idioma do projeto que falha no engine vira `warning` e a chamada segue sem
+   orientação. Valor que não tem forma de código BCP-47 também não vira
+   orientação: nada que não seja um código é interpolado no prompt.
+7. **Os textos** são constantes de código, um por idioma: `pt-BR` ("Responda
+   em português brasileiro (pt-BR), salvo pedido explícito do usuário por
+   outro idioma nesta mensagem."), `en`, e um genérico em inglês que nomeia o
+   código BCP-47 para qualquer outro idioma da lista aberta (AT-168
+   resposta 2). O texto não depende do modelo: trocar de modelo no meio da
+   sessão não muda nada, e não há cascata por modelo nem caso especial de
+   DeepSeek.
+8. **Custo** — teto decidido de 50 tokens de ENTRADA por chamada (AT-169
+   resposta 8). Medido com `gpt-tokenizer`, só o conteúdo, cl100k / o200k:
+   `pt-BR` 29 / 23, `en` 18 / 18, genérico `es-MX` 26 / 26 e o PIOR caso (o
+   genérico com o código mais longo que a forma aceita) 42 / 42; a moldura
+   de mensagem soma ~4, então o pior caso fica em ~46. O teste trava o texto
+   em 160 caracteres como vigia do teto.
+9. **Medição:** o `chat.message` gravado pela api carrega `idiomaAlvo` e
+   `origem` quando a resolução deu certo — o evento é imutável e diz, para
+   sempre, o que foi pedido ao modelo naquele turno (AT-082).
+
+**O que esta regra NÃO fecha, declarado:**
+
+- **Chat humano sem agente** (`SendChatMessageUseCase`) fica fora, por
+  decisão do mantenedor (AT-169 resposta 3).
+- **Só a MENSAGEM a um agente carrega autor** (e a resposta ao formulário de
+  pergunta estruturada, que a reusa). Os outros comandos que uma pessoa
+  dispara — confirmar prontidão ao Criativo, aceitar handoff — sobem turno
+  sem autor e caem no idioma do PROJETO: o product brief do
+  `confirmReadiness` sai no idioma do projeto.
+- **Artefato de turno com autor** segue o idioma de QUEM ESCREVEU, não o do
+  projeto que a [RN-619](#rn-619) promete para artefato compartilhado. A tela
+  do projeto diz isso.
+- **Não medido:** o tokenizador do DeepSeek e o da Anthropic; se a orientação
+  basta contra o prompt de sistema em pt-BR é o que a validação paga da
+  AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
+  cache a cada troca de autor ou de idioma — cache não é observável hoje.
+
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:130`
+  (`anexar`), `:111` (`com_idioma_do_autor`), `:87` (`orientacao`), `:62`
+  (`@sem_orientacao`), `:146` (`idioma_do_turno`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:590`
+  (`IdiomaDaResposta`), `:642` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
+  (`idioma_da_resposta`);
+  `apps/engine/lib/engine/agents/criativo_server.ex:123` (`handle_call`, e a
+  MESMA cláusula nos outros seis);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:115`
+  (`copiar_dicionario`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:68`
+  (`resolverIdioma`), `:53` (`idiomaAlvo`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:183`
+  (`idiomaDaResposta`)
+- **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
+  (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
+  vence o do projeto), `:134` (autor sem idioma resolvido: sem orientação),
+  `:98` (a consulta que falha — caso de falha: lista intacta e log), `:93` (o
+  sumarizador fica fora), `:67` (o vigia do teto de 50 tokens), `:169` (ponta
+  a ponta: o idioma do autor no fim de cada chamada e fora do histórico),
+  `:196` (a fachada também anexa no `llm_turn/5`);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:402`
+  (o comando leva o idioma até o modelo), `:414` (campo inválido: aceito, sem
+  orientação);
+  `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:109`
+  (resolve pelo autor e pela sessão — o override da sessão vence), `:125` (a
+  resolução que falha não derruba a mensagem — caso de falha);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:528`
+  (o campo viaja só quando resolvido)
+- **Origem:** AT-164, especificada na AT-081 e destravada pelas decisões das
+  AT-168 e AT-169 (mantenedor, 2026-09-28); mecanismo verificado na AT-161

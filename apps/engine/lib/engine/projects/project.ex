@@ -38,6 +38,12 @@ defmodule Engine.Projects.Project do
     # join (`EngineWeb.TerminalChannel`) — o runner nunca o guarda em
     # configuração própria, ele o recebe por conexão (ADR 0147 ponto 4).
     field :mirror_path, :string
+    # O idioma do PROJETO (RN-619, código BCP-47 canônico gravado pela api) —
+    # o que vale nos turnos SEM autor humano (kickoff, dev agents, gates,
+    # commit, corpo de PR; AT-169 resposta 1). Lido SÓ por
+    # `Engine.Harness.IdiomaDaResposta` (RN-622), para a orientação efêmera
+    # que acompanha cada chamada de LLM desses turnos.
+    field :language, :string
   end
 
   @doc """
@@ -45,6 +51,28 @@ defmodule Engine.Projects.Project do
   """
   def get(project_id) do
     Repo.get(__MODULE__, project_id)
+  end
+
+  @doc """
+  O idioma do projeto (RN-619) para a orientação dos turnos sem autor
+  (RN-622). `{:ok, nil}` quando não há o que dizer — `project_id` sem forma de
+  UUID, projeto inexistente ou coluna nula (o fixture de teste do engine a
+  mantém nullable, como as outras colunas que o engine lê). `{:error, motivo}`
+  quando a CONSULTA falhou: quem chama segue sem orientação e loga, nunca
+  derruba o turno por causa disto.
+  """
+  def idioma(project_id) do
+    case Ecto.UUID.cast(project_id) do
+      :error ->
+        {:ok, nil}
+
+      {:ok, _} ->
+        {:ok, Repo.one(from p in __MODULE__, where: p.id == ^project_id, select: p.language)}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  catch
+    :exit, motivo -> {:error, inspect(motivo)}
   end
 
   @doc """

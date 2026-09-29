@@ -182,6 +182,7 @@ estado lido do repositório e não da conversa.
 | O idioma das RESPOSTAS vira preferência da conta, com override por sessão, separado do `users.locale` (AT-162) | ADR 0177, RN-618 |
 | O projeto ganha idioma, o de artefato compartilhado e turno sem autor (AT-243) | ADR 0177, RN-619 |
 | A barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) | RN-620 |
+| O idioma chega ao modelo por mensagem de sistema efêmera no fim de cada chamada (AT-164) | RN-622 |
 
 ## Estado atual e aberto
 
@@ -1873,6 +1874,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Lead suspenso grava na RETOMADA (`action_settled`), nunca na suspensão
   (RN-593).
   que o turno termina (RN-460).
+- O idioma chega ao modelo por UM caminho (RN-622): a fachada
+  `EngineApiClient` (`llm_turn/5`, `llm_turn_stream/6`) acrescenta, no FIM de
+  toda chamada de LLM, uma mensagem `system` EFÊMERA montada por
+  `Engine.Harness.IdiomaDaResposta` — nunca em `state.messages`, nunca em
+  `agent_instructions`, nunca por servidor. Turno COM autor usa o idioma que a
+  api resolveu para ele (`idiomaDaResposta` no `agent/message`, posto no
+  dicionário só durante o `handle_call` e herdado pela Task do turno); turno
+  SEM autor usa `projects.language`; o `context-manager` fica fora. Falha na
+  resolução = turno SEM orientação, nunca queda e nunca o idioma do projeto no
+  lugar do da pessoa. Teto de 50 tokens de entrada por chamada (AT-169).
 - O clique que dispara turno de agente conversacional responde ao ACEITAR,
   nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
   devolve `{:reply, :ok, _}` assim que a Task sobe — DEPOIS de persistir

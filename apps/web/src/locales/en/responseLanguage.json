@@ -15,8 +15,7 @@
     "loading": "Loading the response language…",
     "loadError": "Could not read the response language.",
     "effective": "Your effective response language: {{idioma}} — {{origem}}.",
-    "detectedNote": "Language detected from your messages and confirmed by you: {{idioma}}.",
-    "notYetApplied": "Not sent to agents yet: the language is saved and shown now, and starts applying to answers once the per-turn guidance ships."
+    "detectedNote": "Language detected from your messages and confirmed by you: {{idioma}}."
   },
   "origin": {
     "sessao": "pinned by you in this session",
@@ -31,7 +30,6 @@
     "otherLabel": "Language code (BCP-47) for this session",
     "pin": "Pin",
     "effective": "{{idioma}}, {{origem}}",
-    "notYetApplied": "not sent to agents yet",
     "readOnly": "changing it here takes the developer role",
     "accountLink": "Account",
     "loading": "Response language…",
