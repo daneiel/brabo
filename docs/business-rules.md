@@ -16318,7 +16318,7 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
 - **Origem:** AT-166, especificada na AT-081 e destravada pela AT-169
   (decisões do mantenedor de 2026-09-28)
 
-## O idioma das respostas dos agentes (RN-618..620, RN-622, ADR 0177)
+## O idioma das respostas dos agentes (RN-618..620, RN-622..624, ADR 0177)
 
 O épico EP-028 nasceu de uma conversa em português respondida em espanhol. As
 decisões do mantenedor de 2026-09-28 (AT-168, AT-169) fixaram onde o idioma
@@ -16340,7 +16340,7 @@ fontes. Nenhuma destas regras toca o idioma da INTERFACE ([RN-432](#rn-432)).
    outro, um corpo sem nenhum é 400, e um `responseLanguage` inválido recusa o
    corpo INTEIRO antes de gravar qualquer campo.
 4. **O detectado só vale confirmado.** O idioma detectado pelas mensagens da
-   pessoa (a detecção é a AT-163) só entra em `users.detected_language` junto
+   pessoa (a detecção é a [RN-624](#rn-624)) só entra em `users.detected_language` junto
    com `detected_language_confirmed_at` — um CHECK recusa um sem o outro. A
    detecção sozinha não troca nada.
 5. **Override por sessão é só de quem o fixou.**
@@ -16427,7 +16427,7 @@ toda chamada de LLM de turno SEM autor humano, e desde a [RN-623](#rn-623)
 também como idioma do artefato compartilhado que um agente grava DURANTE um
 turno com autor humano — a divergência que esta regra declarava fechou.
 
-- **Código:** `apps/api/src/db/schema/iam.ts:227` (`language`);
+- **Código:** `apps/api/src/db/schema/iam.ts:253` (`language`);
   `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
   `apps/api/src/application/use-cases/iam/idioma-do-projeto.ts:13`
   (`idiomaDoProjetoOuRecusa`);
@@ -16478,9 +16478,9 @@ turno com autor humano — a divergência que esta regra declarava fechou.
    barra e leva o texto inteiro no `title` — o texto está na tela, o `title`
    só devolve o que as reticências cortaram.
 
-- **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:66`
-  (`SessionLanguageIndicator`), `:32` (`idiomaSemOverride`), `:128`
-  (`origemPorExtenso`), `:172` (`podeTrocar`);
+- **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
+  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:162`
+  (`origemPorExtenso`), `:205` (`podeTrocar`);
   `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
 - **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
   (efetivo com origem e o link, sem o aviso antigo), `:112` (o detectado não vira
@@ -16679,3 +16679,114 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   Criativo); `apps/web/src/routes/settings/idioma-do-projeto.test.tsx:84`
 - **Origem:** AT-245, sobre a decisão da AT-168 (resposta 8) e as do
   mantenedor de 2026-09-29
+
+### RN-624 — A api detecta o idioma do autor pelas próprias mensagens e PERGUNTA; só o confirmado vira preferência {#rn-624}
+
+A [RN-618](#rn-618) deixou o degrau "detectado confirmado" pronto e vazio.
+Decisão do mantenedor (AT-168 respostas 4, 6 e 7): **detectar, PERGUNTAR se o
+idioma está certo, e o confirmado vira o padrão** — por pessoa, global, com a
+pergunta na tela onde o idioma já é mostrado e corrigido.
+
+1. **A régua é UMA, e mora na api.** A heurística da AT-080, medida pela
+   AT-160 (marcadores contrastivos de `pt`/`es`/`en`, a limpeza de código, log,
+   citação, URL e identificador), saiu de `scripts/idioma/` para
+   `apps/api/src/domain/iam/heuristica-de-idioma.ts`, e o instrumento a
+   REEXPORTA de lá — o que o produto roda é o que o instrumento mede. A regra
+   de O QUE é evidência (só ator `user`; no formulário, só as respostas, e o
+   eco com os rótulos do agente pulado) também é uma só, `evidenciasDoAutor`,
+   usada pela extração do corpus real e pela detecção. Local, sem LLM, sem
+   dependência nova.
+2. **A amostra é do event log, a histerese é refeita.** A detecção lê as 11
+   evidências mais recentes da pessoa em TODAS as sessões (a janela de 10 mais
+   a que a histerese refaz) e decide quando as DUAS últimas avaliações da
+   amostra apontam o mesmo idioma (`idiomaConcordante`). Não há estado de
+   detecção guardado: a avaliação da mensagem anterior é refeita com a janela
+   que terminava nela. A leitura é servida por um índice PARCIAL
+   (`session_events_evidencia_de_idioma_idx`, ator `user` e os dois tipos de
+   evidência): medido com 200 mil eventos, 0,056 ms pelo índice contra 13,5 ms
+   da varredura sem ele.
+3. **Os limiares são PROVISÓRIOS.** `PARAMETROS_PROVISORIOS` são os
+   candidatos da AT-080 com UMA diferença, a evidência mínima de 10 palavras e
+   não 20 — no corpus SINTÉTICO a 10 a cobertura dos decidíveis sobe de 42,2%
+   para 58,9% com os mesmos três erros (todos em língua fora das três). Lista
+   `at080`; limiar 0,8, margem 0,3, amostra 10 mensagens / 2.000 caracteres,
+   histerese 2. O corpus sintético foi escrito pela mesma mão que escreveu a
+   heurística: nenhum destes números está calibrado, e o dono os recalibra com
+   o corpus real (`pnpm --filter @brabo/scripts idioma:medir --real`), mudando
+   o objeto, que é o único lugar de onde a api os lê.
+4. **Quando pergunta.** `GET .../sessions/:sessionId/response-language`
+   devolve `detectionQuestion` com o idioma a perguntar, ou `null`. Não
+   pergunta quando: a detecção não concorda (texto curto, "ok", código, log,
+   misto); o efetivo vem de escolha EXPLÍCITA — override da sessão ou Conta —,
+   porque confirmar gravaria um degrau ABAIXO delas e a resposta não mudaria;
+   o detectado já é o efetivo, comparado pela SUBTAG (`pt` não diverge de
+   `pt-BR` — a heurística só sabe a língua); ou a pessoa já recusou esse
+   idioma.
+5. **A detecção nunca troca nada sozinha.** Só
+   `POST /users/me/preferences/detected-language` grava: `confirm` escreve o
+   par `detected_language` + `detected_language_confirmed_at` (o CHECK da
+   RN-618) e apaga a recusa antiga do mesmo idioma — e é 409
+   `deteccao_mudou`, sem gravar, quando as mensagens já não apontam o idioma
+   (a coluna diz "detectado" e não pode guardar o que a heurística não
+   detectou); `decline` grava a recusa em `detected_language_declines` (uma
+   linha por pessoa e idioma, com a data), e ESSE idioma não é perguntado de
+   novo. O que se guarda é o idioma e a decisão da pessoa — nunca país,
+   nacionalidade ou proficiência.
+6. **Onde a pergunta aparece.** Num cartão pequeno ancorado logo abaixo do
+   indicador de idioma da barra da sessão ([RN-620](#rn-620)): "Detectamos que
+   você escreve em espanhol (es) — usar espanhol (es) nas respostas?", com
+   "Usar", "Não" e "Agora não". Sem modal, sem cobrir o composer; "Agora não"
+   só esconde nesta tela, sem gravar, e a pergunta volta na próxima leitura.
+   Enviar mensagem (ou responder formulário) relê o indicador, porque a
+   mensagem nova é a evidência que pode fazer a pergunta aparecer.
+7. **Falha nunca bloqueia nada.** A detecção roda na LEITURA do idioma, e não
+   dentro de `SendAgentMessageUseCase`: a evidência já está no event log, a
+   pergunta sobrevive a recarregar a página e aparece em qualquer sessão, e o
+   envio da mensagem não passa por ela — não ganha latência e não tem como
+   falhar por ela. Na leitura, qualquer falha (banco, heurística) vira
+   `warning` e `detectionQuestion: null`; o idioma continua sendo mostrado.
+8. **Custo:** CPU medido no corpus sintético, nesta máquina — 11,6 µs para
+   limpar e classificar uma mensagem, 110 µs por detecção (11 mensagens, duas
+   avaliações), mais a leitura indexada do item 2. Zero token.
+
+**O que esta regra NÃO fecha, declarado:** a heurística conhece três línguas,
+e a lista de idiomas é aberta — galego e francês podem virar `es`/`pt` (os
+erros do sintético), e sob esta regra o custo é uma pergunta errada, que a
+pessoa recusa. Uma mensagem em espanhol numa janela portuguesa deixa a
+amostra indeterminada enquanto estiver nela (sem pergunta, sem troca). E o
+arquivo da heurística não pode ter `import`: o instrumento o executa por type
+stripping, e `scripts/idioma/` tem tsconfig próprio sem `verbatimModuleSyntax`
+para aceitar os `export` de um módulo CommonJS.
+
+- **Código:** `apps/api/src/domain/iam/heuristica-de-idioma.ts:175`
+  (`PARAMETROS_PROVISORIOS`), `:457` (`evidenciasDoAutor`), `:500`
+  (`mensagensNecessarias`), `:520` (`idiomaConcordante`);
+  `apps/api/src/domain/iam/deteccao-de-idioma.ts:43` (`idiomaAPerguntar`);
+  `apps/api/src/application/use-cases/iam/detectar-idioma-do-autor.use-case.ts:57`
+  (`DetectarIdiomaDoAutorUseCase`), `:66` (`detectar`), `:88` (`pergunta`),
+  `:123` (`responder`);
+  `apps/api/src/infrastructure/persistence/drizzle/deteccao-de-idioma.repository.ts:27`
+  (`ultimasEvidencias`), `:75` (`confirmar`);
+  `apps/api/src/db/schema/iam.ts:138` (`detectedLanguageDeclines`);
+  `apps/api/src/db/schema/sessions.ts:164`
+  (`session_events_evidencia_de_idioma_idx`);
+  `apps/api/src/interfaces/http/iam/session-response-language.controller.ts:66`
+  (`comPergunta`); `apps/api/src/interfaces/http/iam/user-preferences.controller.ts:94`
+  (`answerDetected`); `apps/web/src/routes/SessionLanguageIndicator.tsx`;
+  `scripts/idioma/heuristica.ts` (a reexportação)
+- **Teste:** `apps/api/test/domain/iam/deteccao-de-idioma.spec.ts:29` (os
+  provisórios), `:42` (duas avaliações concordam), `:48` (uma só não basta),
+  `:52` (indeterminado não aponta — caso de falha), `:77` (o eco do formulário
+  pulado), `:105`..`:158` (quando pergunta);
+  `apps/api/test/application/use-cases/iam/detectar-idioma-do-autor.use-case.spec.ts:109`
+  (pergunta sem gravar), `:116` (confirmar), `:131` (recusar não pergunta de
+  novo), `:142` (indeterminado não pergunta — caso de falha), `:148` (Conta
+  explícita), `:159` (erro na detecção vira "sem pergunta" — caso de falha),
+  `:169` (409 `deteccao_mudou`);
+  `apps/api/test/infrastructure/persistence/deteccao-de-idioma.repository.spec.ts:87`
+  (só o autor, todas as sessões), `:166` (o índice parcial), `:200` (o par e a
+  recusa apagada); `apps/web/src/routes/SessionLanguageIndicator.test.tsx:117`
+  ("Usar"), `:148` ("Não"), `:162` ("Agora não" não grava), `:172` (409 vira
+  toast)
+- **Origem:** AT-163, sobre as decisões da AT-168 (respostas 4, 6 e 7), a
+  especificação da AT-080 e a medição da AT-160

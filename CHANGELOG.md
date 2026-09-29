@@ -70,6 +70,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Dependabot para imagens foi decidido e NÃO foi ligado aqui: o ADR diz o que
   o bloqueia. Subir um digest continua sendo o procedimento do runbook, agora
   na forma nova.
+- **api/web**: a api detecta o idioma em que você escreve pelas suas próprias
+  mensagens e PERGUNTA antes de usá-lo (AT-163,
+  [RN-624](docs/business-rules.md#rn-624)): quando as suas mensagens recentes
+  apontam outro idioma e a sua Conta está no automático, a barra da sessão
+  mostra "Detectamos que você escreve em espanhol (es) — usar espanhol (es) nas
+  respostas?". "Usar" grava o idioma como detectado e confirmado; "Não" grava
+  a recusa e esse idioma não é perguntado de novo; "Agora não" só esconde. A
+  detecção sozinha não troca nada, é local (sem LLM) e não entra no caminho do
+  envio da mensagem. Rotas: `detectionQuestion` em
+  `GET .../sessions/:sessionId/response-language` e
+  `POST /users/me/preferences/detected-language`. Os limiares são
+  PROVISÓRIOS (corpus sintético da AT-160) até a calibração com o corpus real.
+  A heurística passou de `scripts/idioma/` para a api, e o instrumento a
+  reexporta. Migration `0063`: a tabela `detected_language_declines` e um
+  índice parcial em `session_events`.
 - **engine/web**: o artefato que um agente grava durante a conversa com uma
   pessoa sai no idioma do PROJETO (AT-245,
   [RN-623](docs/business-rules.md#rn-623)); a resposta de chat continua no

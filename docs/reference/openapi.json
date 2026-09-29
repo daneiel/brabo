@@ -9685,7 +9685,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/response-language": {
       "get": {
-        "description": "Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain.",
+        "description": "Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain — and, when your recent messages point to another language and the screen should ask about it, `detectionQuestion` (RN-624).",
         "operationId": "SessionResponseLanguageController_get",
         "parameters": [
           {
@@ -10740,6 +10740,56 @@
           }
         ],
         "summary": "Writes the authenticated user's interface language and/or agent response language",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/preferences/detected-language": {
+      "post": {
+        "description": "The only way a detected language becomes a preference (RN-624): detection alone never changes anything. `confirm` writes `detectedLanguage` + `detectedLanguageConfirmedAt`; `decline` records the refusal so the same language is not asked again. Returns the preferences after the answer.",
+        "operationId": "UserPreferencesController_answerDetected",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerDetectedLanguageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A code that is not a recognized BCP-47 language."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "409": {
+            "description": "`deteccao_mudou`: on `confirm`, your recent messages no longer point to that language — nothing was written."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Answers the detected-language question",
         "tags": [
           "users"
         ]
@@ -13027,6 +13077,30 @@
           "hipotese",
           "sugestao",
           "confiancaPercent"
+        ]
+      },
+      "AnswerDetectedLanguageDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "es",
+            "maxLength": 35,
+            "description": "The language the question was about — the `detectionQuestion` of `GET .../sessions/:sessionId/response-language`."
+          },
+          "answer": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "decline"
+            ],
+            "example": "confirm",
+            "description": "`confirm` stores it as your detected-and-confirmed language (it then answers you wherever your Account is on automatic); 409 `deteccao_mudou` when your messages no longer point to it. `decline` stores the refusal and this language is never asked again (confirming it later clears the refusal)."
+          }
+        },
+        "required": [
+          "language",
+          "answer"
         ]
       },
       "AnswerStructuredQuestionDto": {
@@ -21711,6 +21785,12 @@
               "en"
             ],
             "example": "pt-BR"
+          },
+          "detectionQuestion": {
+            "type": "string",
+            "nullable": true,
+            "example": "es",
+            "description": "The language YOUR recent messages point to, when the screen should ASK whether to use it for the answers (RN-624) — `null` means no question. Detection never changes the preference by itself: only answering `confirm` on `POST /users/me/preferences/detected-language` does. Never asked when the effective language comes from an explicit choice (this session or the Account), when it already is the detected one, or when you declined this language before. Best effort: a detection failure is `null`, never an error of this route."
           }
         },
         "required": [
@@ -21719,7 +21799,8 @@
           "sessionOverride",
           "account",
           "detected",
-          "interfaceLocale"
+          "interfaceLocale",
+          "detectionQuestion"
         ]
       },
       "SetAgentAutonomyDto": {

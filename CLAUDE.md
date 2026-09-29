@@ -185,6 +185,7 @@ estado lido do repositório e não da conversa.
 | O idioma chega ao modelo por mensagem de sistema efêmera no fim de cada chamada (AT-164) | RN-622 |
 | O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
 | A tag da imagem de terceiro entra na referência, antes do digest; o Dependabot de imagem segue desligado (AT-139) | ADR 0178 |
+| A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 
 ## Estado atual e aberto
 
@@ -1904,6 +1905,19 @@ o RACIOCÍNIO da triagem, que continua valendo.
   "artefatos no idioma do projeto"; só com os dois códigos na forma curta
   (`idioma[-Escrita][-Região]`), que é o que segura o teto. Não mova isso para
   a descrição de cada ferramenta.
+- O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
+  PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
+  resposta `confirm` grava `users.detected_language`; `decline` grava em
+  `detected_language_declines` e o idioma não volta a ser perguntado. A
+  detecção roda na LEITURA, fora do envio da mensagem, e falha vira "sem
+  pergunta". A heurística tem UMA casa,
+  `apps/api/src/domain/iam/heuristica-de-idioma.ts` — sem `import` de
+  propósito, porque `scripts/idioma/` a REEXPORTA (type stripping, com
+  tsconfig próprio sem `verbatimModuleSyntax`) para medir o mesmo código; não
+  a copie de volta para o instrumento, e não a transforme em `.mts` (quebra o
+  `ts-node` da api). Os limiares
+  (`PARAMETROS_PROVISORIOS`) são PROVISÓRIOS, do corpus sintético, até o dono
+  medir o real.
 - O clique que dispara turno de agente conversacional responde ao ACEITAR,
   nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
   devolve `{:reply, :ok, _}` assim que a Task sobe — DEPOIS de persistir

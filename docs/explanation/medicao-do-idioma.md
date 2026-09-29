@@ -7,20 +7,36 @@ description: The instrument that measures the AT-080 language-detection heuristi
 # Measuring the language heuristic
 
 > AT-160 (EP-028, HS-053). The heuristic being measured is the one the AT-080
-> specification proposed ("A — own heuristic, no dependency"). The numbers here
-> are what the AT-163 thresholds should come from; nothing in the product
-> imports this code yet.
+> specification proposed ("A — own heuristic, no dependency"). Since AT-163
+> ([RN-624](../business-rules.md#rn-624)) the product runs it: the api detects
+> the author's language with it and ASKS before anything changes. The
+> product's thresholds are **provisional** — see
+> [The product's provisional thresholds](#the-products-provisional-thresholds).
 
 ## What exists
 
-Everything lives in `scripts/idioma/` and runs with the repository's Node (type
-stripping, no build step). **No new dependency**: the heuristic is marker lists
-and regular expressions, and the extraction talks to Postgres through `psql`
-inside the database container.
+The instrument lives in `scripts/idioma/` and runs with the repository's Node
+(type stripping, no build step). **No new dependency**: the heuristic is marker
+lists and regular expressions, and the extraction talks to Postgres through
+`psql` inside the database container.
+
+The heuristic itself lives in the **api** —
+`apps/api/src/domain/iam/heuristica-de-idioma.ts` — and `scripts/idioma/heuristica.ts`
+only re-exports it, so the instrument measures exactly the code the product
+runs. That direction is forced: the api reaches neither `scripts/` nor any
+runtime package without a build step, and `packages/shared` is types only. The
+file has no imports, so Node runs it from `scripts/` by type stripping (the
+`idioma:*` commands silence the "typeless package" warning that comes with it),
+and `scripts/idioma/` has its own `tsconfig.json` — the only difference is
+turning `verbatimModuleSyntax` off, which rejects every `export` of a CommonJS
+module such as the api's. A `.mts` file was tried first: it passed both
+typechecks and the build, and broke every `ts-node` script of the api. The rule
+of *what is evidence* (`evidenciasDoAutor`) moved with the heuristic, and the
+real-corpus extraction uses the same one.
 
 | file | role |
 |---|---|
-| `heuristica.ts` | the AT-080 heuristic: cleaning, contrastive scoring, the candidate parameters, the 10-message sample and the hysteresis |
+| `heuristica.ts` | re-exports the api's heuristic: cleaning, contrastive scoring, the candidate and the provisional parameters, the 10-message sample, the hysteresis and the evidence rule |
 | `corpus-sintetico.jsonl` | the **versioned** synthetic corpus — every line hand-written for the instrument, `origem: "sintetico"` |
 | `sequencias-sinteticas.json` | synthetic conversations for the sample-and-hysteresis path |
 | `medicao.ts` / `medir.ts` | the instrument and its CLI |
@@ -142,3 +158,28 @@ order of magnitude is the point.
 
 These are synthetic numbers: the corpus was written by the same hand that wrote
 the heuristic. The thresholds of AT-163 should come from the real corpus.
+
+## The product's provisional thresholds
+
+AT-163 had to ship with *some* numbers before the real corpus exists, so the
+api reads `PARAMETROS_PROVISORIOS` — **provisional, not calibrated**, and
+declared so in [RN-624](../business-rules.md#rn-624):
+
+| parameter | provisional | AT-080 candidate | why |
+|---|---|---|---|
+| marker list | `at080` | — | `ampliada` gains 4 points in pt and gets German wrong twice; neither is validated by real data |
+| word minimum (over the sample) | **10** | 20 | coverage of decidable items 42.2% → 58.9% with the **same** three wrong verdicts (French, Galician, Dutch — languages outside the three); below 10, mixed text starts to decide |
+| threshold / margin | 0.8 / 0.3 | 0.8 / 0.3 | they never bind on the synthetic corpus, so there is no better number to pick yet |
+| sample | 10 messages / 2,000 characters | same | — |
+| hysteresis | 2 | 2 | — |
+
+The hysteresis is **recomputed, never stored**: the api reads the last 11
+pieces of evidence and asks whether the last two evaluations of the sample
+agree. CPU on this machine, synthetic corpus: 11.6 µs to clean and classify
+one message, 110 µs per detection (11 messages, two evaluations). The read is
+served by a partial index on `session_events`: 0.056 ms against 13.5 ms for a
+sequential scan, measured over 200,000 events.
+
+To recalibrate: run the real corpus (`idioma:medir --real`), then change
+`PARAMETROS_PROVISORIOS` in the api — it is the only place the product reads
+them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).

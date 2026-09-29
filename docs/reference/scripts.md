@@ -165,10 +165,10 @@ Source: each package's `package.json` and the root `Makefile`.
 | command | runs |
 |---|---|
 | `pnpm --filter scripts test` | `vitest run` |
-| `pnpm --filter scripts typecheck` | `tsc --noEmit` |
-| `pnpm --filter scripts idioma:medir` | `node idioma/medir.ts` |
-| `pnpm --filter scripts idioma:extrair` | `node idioma/extrair.ts` |
-| `pnpm --filter scripts idioma:rotular` | `node idioma/rotular.ts` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma` |
+| `pnpm --filter scripts idioma:medir` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts` |
+| `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
+| `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
 | `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
 
 ## Makefile
