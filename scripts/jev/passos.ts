@@ -52,6 +52,8 @@ export interface Catalogo {
   agentes: Record<string, string[]>;
   ferramentas: Record<string, string>;
   identidades: Record<string, string>;
+  /** Bytes da definição COMPLETA de cada ferramenta (`spec/0` serializado: nome, descrição e schema dos parâmetros). */
+  definicoes?: Record<string, number>;
 }
 
 export interface Chamada {

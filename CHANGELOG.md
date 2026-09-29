@@ -203,6 +203,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   no produto muda. Tabelas, variantes tentadas e o gap classificado à mão em
   [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#second-round-2026-09-29-where-the-gap-is).
 
+- **scripts**: o teste do MENU RESTRITO do Jev (AT-236/AT-238, EP-029) —
+  `pnpm --filter @brabo/scripts jev:menu`, OFFLINE sobre as respostas já
+  gravadas — mede cinco políticas escritas antes de rodar (P0 catálogo inteiro,
+  P1 top-2 do Jev, P2 {escolha, ferramenta anterior}, P3 = P2 com o catálogo
+  inteiro quando o Jev responde `responder_sem_ferramenta`, P4 até 3) por
+  cobertura (a ferramenta certa está DENTRO do menu), taxa de restrição,
+  ferramentas expostas e economia de definições. Resultado (validação, 160
+  passos com ferramenta): **nenhuma política chega a 90% com o limite inferior
+  do IC** — a melhor de 2 opções, P3, cobre **91% (85–94%)** e restringe 92% dos
+  passos, mas em 98 dos 160 o menu é de UMA só ferramenta; e cobertura é o TETO
+  da acurácia ponta a ponta (piso 62%, teto 91%), porque o modelo do agente
+  ainda escolhe entre as opções. Economia: 746 → 138 tokens de definição por
+  chamada (−81%). `catalogo.json` ganha `definicoes` (bytes do `spec/0` de cada
+  ferramenta). Nada no produto muda; o desenho do teste vivo (sombra pareada,
+  A/B por execução, guardas) está descrito e NÃO foi executado. Gasto: US$
+  0,0013. Tabelas em
+  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#menu-of-2-options-2026-09-29-restrict-instead-of-pick).
+
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
