@@ -10,7 +10,8 @@
     "idioma:medir": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts",
     "idioma:extrair": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts",
     "idioma:rotular": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts",
-    "jev:replay": "node jev/replay.ts"
+    "jev:replay": "node jev/replay.ts",
+    "idioma:validar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
