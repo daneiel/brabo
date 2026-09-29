@@ -87,7 +87,8 @@ inline = %{
 
 especificar = fn {mod, fun} ->
   s = apply(mod, fun, [])
-  {Map.get(s, :name) || Map.get(s, "name"), Map.get(s, :description) || Map.get(s, "description")}
+  {Map.get(s, :name) || Map.get(s, "name"), Map.get(s, :description) || Map.get(s, "description"),
+   byte_size(Jason.encode!(s))}
 end
 
 agentes =
@@ -97,7 +98,13 @@ agentes =
   )
 
 ferramentas =
-  agentes |> Map.values() |> List.flatten() |> Map.new(fn {n, d} -> {n, d} end)
+  agentes |> Map.values() |> List.flatten() |> Map.new(fn {n, d, _} -> {n, d} end)
+
+# O tamanho, em bytes, da definição COMPLETA (`spec/0` serializado: nome,
+# descrição e o schema dos parâmetros) — é o que o modelo do agente recebe por
+# ferramenta em cada chamada. Serve à conta de economia do menu restrito (AT-236).
+definicoes =
+  agentes |> Map.values() |> List.flatten() |> Map.new(fn {n, _, b} -> {n, b} end)
 
 identidades =
   Map.new(Map.keys(agentes), fn
@@ -114,6 +121,7 @@ IO.puts(
       fonte: "apps/engine (spec/0 de cada ferramenta; Engine.Harness.Agents.identity/1)",
       agentes: Map.new(agentes, fn {a, l} -> {a, Enum.map(l, &elem(&1, 0))} end),
       ferramentas: ferramentas,
+      definicoes: definicoes,
       identidades: identidades
     },
     pretty: true

@@ -12,6 +12,7 @@
     "idioma:rotular": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts",
     "jev:replay": "node jev/replay.ts",
     "jev:analise": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts",
+    "jev:menu": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts",
     "idioma:validar": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts"
   },
   "devDependencies": {

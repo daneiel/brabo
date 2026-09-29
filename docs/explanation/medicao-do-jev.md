@@ -490,6 +490,218 @@ cheap one. The 2 000 ms ceiling of AT-236 has room by a factor of two.
   is why top-2 and the union say more than top-1.
 - **Effect.** A restricted menu changes what the model does next; AT-239.
 
+## Menu of 2 options (2026-09-29): restrict instead of pick
+
+> Asked by the owner after the second round, where the Jev's top-1 (73%) missed
+> 90% but a menu of two ({the Jev's pick, the previous tool}) and the Jev's top-2
+> looked good: **test the menu of 2 options**. Only a result whose **lower bound
+> of the 95% interval is at least 90%** is a clear "yes". **It is not: no policy
+> reaches it.** The best 2-option policy, P3, covers **91% (85–94%)** of the
+> validation steps, that is, the right tool is inside the menu; the lower bound
+> is 85%, five points under the line. And this is *coverage*, a ceiling on the
+> end-to-end accuracy (see "The ceiling"), not the accuracy itself. Same
+> instance, same caveats as the earlier rounds; nothing here changes the product
+> (that is AT-239). Reproduce with `pnpm --filter @brabo/scripts jev:menu`.
+
+### Policies (written before running, in `scripts/jev/menu.ts`)
+
+A policy turns the Jev's answer into a restricted menu. The owner's decisions
+hold everywhere: the Jev only **restricts** the menu, and when it answers
+`responder_sem_ferramenta` the **whole** catalog stays (AT-236); ceiling of
+2 000 ms (0 of 328 requests went over it in the second round). Nothing was
+reclassified after seeing a result; `menu.spec.ts` fixes what each policy returns.
+
+| policy | menu |
+|---|---|
+| P0 | the whole catalog (anchor: 100% coverage, restricts nothing) |
+| P1 | the Jev's two most probable tools |
+| P2 | {the Jev's pick, the previous tool of the same run} |
+| P3 | P2, but if the Jev says `responder_sem_ferramenta` (or there is no previous tool) the menu is the whole catalog |
+| P4 | {the pick, the previous tool, the Jev's second} (up to 3; reference only) |
+
+Rules shared by all: an answer that failed (timeout, error, pick outside the
+options) leaves the whole catalog; a previous tool that is not in the agent's
+catalog is ignored; a menu that would come out empty is the whole catalog.
+
+**Coverage** = the fraction of steps with a tool in which the tool the agent
+really called is *inside* the menu — strict (same name) and by equivalence (the
+E1–E3 classes of the second round, so a menu with `read_file` covers a `terminal`
+that only reads). **Restriction rate** = the fraction of steps in which the menu
+is smaller than the agent's catalog: a policy that almost never restricts is
+trivially "100%" and useless, so coverage is also given *among the restricted
+steps*. Variant `escopo` (the winner of round two), validation half, 160 steps
+with a tool (1 more without).
+
+### The numbers (validation)
+
+| policy | coverage, equivalence (95% CI) | strict | restricts | coverage among the restricted | tools exposed, before → after | definition tokens per call, before → after |
+|---|---|---|---|---|---|---|
+| P0 | 160/160 = 100% (98–100%) | 100% | 0/160 = 0% | — | 7.4 → 7.4 | 746 → 746 |
+| P1 | 144/160 = 90% (84–94%) | 134/160 = 84% (77–89%) | 158/160 = 99% | 142/158 = 90% (84–94%) | 7.4 → 2.0 | 746 → 150 |
+| P2 | 143/160 = 89% (84–93%) | 128/160 = 80% (73–85%) | 157/160 = 98% | 140/157 = 89% (83–93%) | 7.4 → 1.3 | 746 → 102 |
+| **P3** | **145/160 = 91% (85–94%)** | 132/160 = 83% (76–88%) | 147/160 = 92% (87–95%) | 132/147 = 90% (84–94%) | 7.4 → 1.6 | 746 → 138 |
+| P4 | 149/160 = 93% (88–96%) | 142/160 = 89% (83–93%) | 158/160 = 99% | 147/158 = 93% (88–96%) | 7.4 → 2.2 | 746 → 166 |
+
+**Which is best.** P3 is the one to look at: the highest coverage of the
+2-option policies, it honours the owner's rule, and it restricts 92% of the
+steps. **Its lower bound is 85.1%; P1's is 84.4%, P2's 83.6%, P4's 88.1%.**
+P4 is closest to the line, but a menu of up to 3 is not the question that was
+asked. Every policy misses the "clear yes"; P1 and P3 land *on* 90% at the
+point estimate, the same "90% (84–94%)" the second round already had for top-2 —
+the previous tool adds nothing to coverage over the Jev's own second guess, it
+only makes the menu smaller (1.6 tools against 2.0).
+
+**Two things the table hides.**
+
+- **P3 offers a single tool in 98 of the 160 steps.** When the Jev's pick *is*
+  the previous tool, the menu has one name (P2: 108 of 160). Those menus cover
+  89 of 98 (91%). The other 49 restricted steps have a menu of two and cover 43
+  (88%). A "menu of 2" is, most of the time, a menu of 1 with no choice left to
+  the agent: it is forced.
+- **The interval is optimistic.** Wilson treats the 160 steps as independent,
+  and they are not: validation is **10 executions** (four dev agents' tasks, the
+  gates `qa-estrategia`, `appsec` and `infra-workflows`, and the Anamnese, Infra
+  and Dev Lead), and consecutive steps of a run share request, files and results.
+  With so few clusters the honest interval is wider than the ones printed. It does
+  not change the answer (a "no" gets no better), but a "yes" would not have been
+  earned by 160 steps either.
+
+### Tuning and the new steps
+
+| policy | tuning (161 steps) coverage, equivalence | restricts | new steps (36) coverage |
+|---|---|---|---|
+| P1 | 144/161 = 89% (84–93%) | 156/161 = 97% | 36/36 |
+| P2 | 143/161 = 89% (83–93%) | 127/161 = 79% | 36/36 (restricts 0) |
+| P3 | 147/161 = 91% (86–95%) | 115/161 = 71% | 36/36 (restricts 0) |
+| P4 | 148/161 = 92% (87–95%) | 156/161 = 97% | 36/36 |
+
+Tuning says the same as validation (P3 91%, lower bound 86%), as expected since
+none of the policies was tuned. It carries the 32 Anamnese steps, for which the
+Jev says `responder_sem_ferramenta` and P3 therefore leaves the whole catalog:
+71% restriction instead of 92%. **The 36 new steps** (the dev database went from
+333 to 369 usage rows after the snapshot) are **all Anamnese**, an agent that is
+paused in the product: the Jev answers "no tool" and P2/P3 open the whole
+catalog, so "36/36" is trivially true and says nothing about the menu. All steps
+together and without the Anamnese (287 with a tool; the tuning half already chose
+the variant, so this is *not* a clean validation): P1 89% (84–92%), P2 88%
+(84–91%), **P3 90% (86–93%)**, P4 92% (88–94%). More steps narrow the interval but
+the lower bound stays at 86%; with a true coverage near 91% it takes about three
+thousand steps for the lower bound to pass 90%, and what would help is a better
+router, not a larger sample.
+
+Sensitivity, not a choice: with any of the twelve `state` variants P2 covers
+88–91% and P3 89–92% of the validation steps, so the result does not hinge on
+`escopo` (P1 does: 82% with the original input, 93% with `texto` or `fluxo`).
+No variant has a lower bound at 90% either — the highest are P1 with `texto`
+(88%) and P3 with `enxuto` (87%) — and picking one after seeing this is exactly
+what the protocol forbids.
+
+### Where coverage fails
+
+P3, validation, the 15 steps outside the menu: `write_file` used while the menu
+was `terminal` (4), `read_file` while `terminal` (2), `report_done` while
+`terminal` (2), `write_file` while {`search_workspace`, `terminal`} (2), and five
+singles among the gates and the conversational agents (`emit_plano_de_teste`
+offered instead of `rag_search` or `search_workspace`, and the reverse). It is the
+rhythm gap of round two seen from the other side: the Jev names the next stage,
+the agent takes one more step in the current one — and an agent whose menu is
+`terminal` cannot write the file with the tool made for it. By agent (P3,
+equivalence): `dev-board-engine` 23/24 = 96% (80–99%), `dev-scoring` 35/38 = 92%
+(79–97%), `dev-persistence` 31/34 = 91% (77–97%), `qa-estrategia` 14/16 = 88%
+(64–97%), `dev-game-session` 32/38 = 84% (70–93%); the rest have fewer than four
+steps.
+
+### The ceiling: what coverage does not say
+
+**Coverage is a ceiling on the end-to-end accuracy, not the accuracy.** The menu
+contains the right tool; the agent's model still has to pick it among the
+options. The label ("the tool the chat model called") is the choice the agent
+made *from the whole catalog*, so a full menu is 100% by construction and a
+restricted one can only lose. What can be said without the product, for P3 on
+validation, splitting the 160 steps:
+
+- **99 (62%, 54–69%)**: every tool in the menu is right, so any pick of the agent
+  is right — the floor.
+- **46 are "disputed"**: exactly one of the options is right and the agent decides
+  alone — 28 only the previous tool, 18 only the Jev's pick. An agent that always
+  takes the previous tool ends at 127/160 = 79%; one that always takes the Jev's
+  pick, 117/160 = 73% (the round-two baselines again); one that flips a coin, 76%.
+  An agent that picks better than both, which is the whole bet, lands between 79%
+  and the 91% ceiling.
+- The other 15 are outside the menu: lost whatever the agent does.
+
+So the end-to-end range is 62% to 91%, and where it falls depends on how well the
+agent's model reads the *situation*, which the replay cannot see. **Only the live
+test (AT-239) answers it.**
+
+### Savings in tool definitions
+
+The catalog had the *description* of each tool (`catalogo.json`) and now also
+`definicoes`: the size in bytes of each tool's complete `spec/0` (name,
+description and parameter schema), serialized by the engine (`catalogo.exs`,
+rerun; the rest of the file did not change). Tokens are bytes divided by 4, the
+approximation the whole replay uses. On validation P3 goes from **746 to 138
+definition tokens per call — 608 tokens, 81% less**: a dev agent's eight tools
+weigh 3 068 bytes and a menu of two weighs about 500. P1 saves 596, P2 644
+(averages over the steps of the half; the tuning half saves less because the
+Anamnese keeps its whole catalog).
+
+What that is worth is another question. The Jev call itself reads ~1 870 tokens
+(US$ 0.0000769) on a much cheaper model than the agent's; the definition saving
+is 608 tokens of the agent's model per call. The break-even is an input price of
+US$ 0.126 per million tokens (0.0000769 / 608): above it the saving pays for the
+Jev call, ignoring cache. **The cache is the catch**: providers cache the request
+prefix, tool definitions come first, and a menu that changes from step to step
+changes the prefix — the saving may be paid back in cache misses. That is a live
+measurement, and the reason the test below records the cached-token ratio.
+
+### The live test (not run): design
+
+- **Question.** With P3 in front of the agent, does the agent's work get worse,
+  and by how much does it get cheaper? Not "is the tool in the menu" (that is this
+  section).
+- **Stage 1, shadow (cheap, before any user sees a menu).** For each step of a
+  held-out sample, ask the *agent's own model* twice on the same state, with the
+  whole catalog and with the P3 menu, and compare the tool it picks by the
+  equivalence rule. Metric: agreement between the two, with the lower bound of the
+  95% interval. To show a true agreement of 94% with the lower bound at 90% (80%
+  power): about **390 steps**, drawn from **at least 40 different executions** and
+  **more than one project** (this sample has 21 executions in one project),
+  interval by cluster (execution), not by step.
+- **Stage 2, live A/B, only if stage 1 passes.** Arms: control (whole catalog) and
+  P3, randomized **by execution**, never by step (a step's menu shapes the next
+  one). Primary metric: the execution reaches its gate without rework,
+  non-inferiority margin of 5 points; at 80% completion, one-sided 5% and 80%
+  power, about **790 executions per arm** (a margin of 10 points needs about 200).
+  At this project's volume (7 dev executions in the whole sample) it takes many
+  projects or weeks. Secondary: steps per execution, input tokens *including the
+  cached-token ratio*, cost per execution, latency added by the Jev (p50/p95,
+  ceiling of 2 000 ms), and the share of steps in which the Jev leaves the whole
+  catalog.
+- **Guards.** A kill-switch flag per project; fall back to the whole catalog on any
+  Jev failure or above the latency ceiling (already in every policy); a way for the
+  agent to ask for the full catalog when the menu does not hold what it needs
+  (a menu of one forces the tool, 61% of the steps here); an interim look at each
+  100 executions with a stop if the primary metric falls by more than the margin;
+  the Anamnese out of the sample (paused); the menu and the pick logged on every
+  step, so the analysis is a query, not a memory.
+
+### What this section still cannot see
+
+- The **agent's choice inside the menu**: the reason this is a ceiling.
+- **Dependence between steps**: 10 clusters in validation; the intervals are
+  step-level.
+- **Prompt cache** and **latency in the agent's loop**: not measured (the Jev call
+  is, p50 317 ms; its effect on the loop is not).
+- The **label**: still the tool the chat model called, and a restricted menu
+  changes what it does next.
+
+### Cost of this test
+
+One call, for the 36 new steps: **US$ 0.001275** by `usage.cost` (task ceiling
+US$ 0.30). The policies are offline over the answers already on disk. The
+accumulated spend of the output directory went from US$ 0.4136 to US$ 0.4149.
+
 ## Reproducing
 
 ```bash
@@ -541,3 +753,15 @@ The snapshot of this round was taken from the database as it stood at
 `proposed_actions` outcomes of the same sessions; a fresh snapshot has more
 steps and a different split. The ceiling is on the **accumulated** spend of the
 output directory (`--teto-usd`, default US$ 1.00), not of one call.
+
+The menu test is offline over those answers; only the 36 steps born after the
+snapshot call the network:
+
+```bash
+pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-jev/dados-d.json \
+  --variante escopo --metade ambas --arquivo-de-chave ~/.config/brabo/openrouter-test.env
+
+# --dados-base is the snapshot that fixed the split; what it did not know is "new"
+pnpm --filter @brabo/scripts jev:menu -- --dados-cache ~/.cache/brabo/replay-jev/dados-d.json \
+  --dados-base ~/.cache/brabo/replay-jev/dados-c.json --sensibilidade
+```
