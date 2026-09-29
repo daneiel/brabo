@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { answerStructuredQuestion, mensagemDaApi } from '../lib/api-client';
 import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
+import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
@@ -156,6 +157,8 @@ export function StructuredQuestionCard({
       // tratava "resolveu" como "o turno acabou".
       onTurnoAceito();
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      // RN-624: as respostas são evidência do idioma de quem respondeu.
+      void queryClient.invalidateQueries({ queryKey: chaveDoIdiomaDaSessao(projectId, sessionId) });
       showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
       onTurnoTerminado();

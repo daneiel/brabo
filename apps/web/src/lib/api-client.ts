@@ -1140,6 +1140,17 @@ export const updateMyPreferences = (input: {
   locale?: UserLocale;
   responseLanguage?: string;
 }) => patch<UserPreferences>('/users/me/preferences', input);
+// A resposta à pergunta da detecção (RN-624): `confirm` grava o detectado
+// CONFIRMADO; `decline` grava a recusa, e o mesmo idioma não é perguntado de
+// novo. 409 `deteccao_mudou` quando as mensagens já não apontam o idioma.
+export const answerDetectedLanguage = (
+  language: string,
+  answer: 'confirm' | 'decline',
+) =>
+  post<UserPreferences>('/users/me/preferences/detected-language', {
+    language,
+    answer,
+  });
 
 // O idioma das respostas de quem chama, numa sessão (RN-618). `language:
 // null` solta o override e volta a herdar da Conta.

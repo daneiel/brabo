@@ -35,5 +35,14 @@
     "loading": "Idioma das respostas…",
     "loadError": "Idioma das respostas indisponível",
     "error": "Não foi possível fixar o idioma nesta sessão"
+  },
+  "detection": {
+    "aria": "Pergunta sobre o idioma detectado",
+    "question": "Detectamos que você escreve em {{idioma}} — usar {{idioma}} nas respostas?",
+    "note": "Detectado pelas suas mensagens nesta conta. Nada muda até você responder.",
+    "confirm": "Usar {{idioma}}",
+    "decline": "Não",
+    "later": "Agora não",
+    "error": "Não foi possível gravar a resposta sobre o idioma detectado"
   }
 }

@@ -26,6 +26,7 @@ import {
 const getSessionResponseLanguage = vi.fn();
 const setSessionResponseLanguage = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
+const answerDetectedLanguage = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
@@ -49,6 +50,8 @@ vi.mock('../lib/api-client', async () => {
       getSessionResponseLanguage(...args),
     setSessionResponseLanguage: (...args: unknown[]) =>
       setSessionResponseLanguage(...args),
+    answerDetectedLanguage: (...args: unknown[]) =>
+      answerDetectedLanguage(...args),
   };
 });
 
@@ -59,6 +62,7 @@ const PELA_INTERFACE: SessionResponseLanguage = {
   account: 'automatico',
   detected: null,
   interfaceLocale: 'pt-BR',
+  detectionQuestion: null,
 };
 
 function montar(papel: string | undefined = 'developer') {
@@ -93,6 +97,96 @@ function montar(papel: string | undefined = 'developer') {
 beforeEach(() => {
   getSessionResponseLanguage.mockReset();
   setSessionResponseLanguage.mockReset();
+  answerDetectedLanguage.mockReset();
+});
+
+describe('a pergunta da detecção (RN-624)', () => {
+  const COM_PERGUNTA: SessionResponseLanguage = {
+    ...PELA_INTERFACE,
+    detectionQuestion: 'es',
+  };
+
+  it('sem `detectionQuestion` não há pergunta', async () => {
+    getSessionResponseLanguage.mockResolvedValue(PELA_INTERFACE);
+    montar();
+
+    await screen.findByTestId('origem-do-idioma');
+    expect(screen.queryByTestId('pergunta-do-idioma-detectado')).toBeNull();
+  });
+
+  it('pergunta pelo NOME do idioma e "Usar" grava o confirmado — a pergunta some na releitura', async () => {
+    getSessionResponseLanguage
+      .mockResolvedValueOnce(COM_PERGUNTA)
+      .mockResolvedValue({
+        ...PELA_INTERFACE,
+        language: 'es',
+        origin: 'detectado',
+        detected: 'es',
+      });
+    answerDetectedLanguage.mockResolvedValue({});
+    montar();
+
+    const pergunta = await screen.findByTestId('pergunta-do-idioma-detectado');
+    expect(pergunta.textContent).toMatch(
+      /Detectamos que você escreve em espanhol \(es\) — usar espanhol \(es\) nas respostas\?/,
+    );
+    expect(pergunta.textContent).toMatch(/Nada muda até você responder/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Usar espanhol (es)' }));
+
+    await waitFor(() =>
+      expect(answerDetectedLanguage).toHaveBeenCalledWith('es', 'confirm'),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('pergunta-do-idioma-detectado')).toBeNull(),
+    );
+    expect(screen.getByTestId('origem-do-idioma').textContent).toMatch(
+      /detectado pelas suas mensagens e confirmado por você/,
+    );
+  });
+
+  it('"Não" grava a RECUSA', async () => {
+    getSessionResponseLanguage
+      .mockResolvedValueOnce(COM_PERGUNTA)
+      .mockResolvedValue(PELA_INTERFACE);
+    answerDetectedLanguage.mockResolvedValue({});
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Não' }));
+
+    await waitFor(() =>
+      expect(answerDetectedLanguage).toHaveBeenCalledWith('es', 'decline'),
+    );
+  });
+
+  it('"Agora não" só esconde — não chama a api', async () => {
+    getSessionResponseLanguage.mockResolvedValue(COM_PERGUNTA);
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Agora não' }));
+
+    expect(screen.queryByTestId('pergunta-do-idioma-detectado')).toBeNull();
+    expect(answerDetectedLanguage).not.toHaveBeenCalled();
+  });
+
+  it('a recusa da api (409 `deteccao_mudou`) vira toast com a frase dela', async () => {
+    getSessionResponseLanguage.mockResolvedValue(COM_PERGUNTA);
+    answerDetectedLanguage.mockRejectedValue(
+      new ApiError(409, {
+        code: 'deteccao_mudou',
+        message: 'As suas mensagens não apontam mais "es"; nada foi gravado.',
+      }),
+    );
+    montar();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Usar espanhol (es)' }),
+    );
+
+    expect(
+      await screen.findByText(/não apontam mais "es"; nada foi gravado/),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('SessionLanguageIndicator (RN-620)', () => {

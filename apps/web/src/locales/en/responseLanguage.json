@@ -35,5 +35,14 @@
     "loading": "Response language…",
     "loadError": "Response language unavailable",
     "error": "Could not pin the language in this session"
+  },
+  "detection": {
+    "aria": "Question about the detected language",
+    "question": "We noticed you write in {{idioma}} — use {{idioma}} for the answers?",
+    "note": "Detected from your messages on this account. Nothing changes until you answer.",
+    "confirm": "Use {{idioma}}",
+    "decline": "No",
+    "later": "Not now",
+    "error": "Could not save your answer about the detected language"
   }
 }
