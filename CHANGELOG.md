@@ -1214,6 +1214,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `rollout-evidencia` em toda rodada que chegou à prova. Nada muda no que conta
   como adotada ou drenada, nem no teto de 120s.
 
+### Refatorações
+
+- **web**: `apps/web/src/routes/SessionPage.tsx` sai de 2 637 para **834
+  linhas** nos dez PRs mecânicos do
+  [ADR 0176](docs/adr/0176-sessionpage-abaixo-de-mil-linhas.md) (AT-138,
+  `BRB-015`), sem mudança de comportamento e sem editar nenhum dos 28
+  arquivos `SessionPage.*.test.tsx`: as passadas do fio (`session-fio.tsx`),
+  a montagem da timeline (`session-timeline-montagem.tsx`, chamada do mesmo
+  `useMemo` com as mesmas dependências), a barra do topo (`SessionTopbar`), o
+  conteúdo do fio (`SessionFio`), a faixa do composer (`SessionComposer`), as
+  derivações de handoff (`lib/session-handoffs.ts`), a rolagem
+  (`useRolagemDoFio`), a promoção de histórias (`usePromocaoDeHistorias` e
+  `DevolverHistoriaModal`) e as ações de handoff/execução
+  (`useAcoesDeHandoff`). E a dívida passa a ter TRAVA:
+  `SessionPage.teto.test.ts` reprova o arquivo com 1 000 linhas ou mais —
+  quem passar do teto tira um recorte, nunca sobe o número.
+
 ### Documentação
 
 - **docs**: o [ADR 0176](docs/adr/0176-sessionpage-abaixo-de-mil-linhas.md)
