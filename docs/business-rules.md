@@ -3824,11 +3824,35 @@ os templates do grafo (fonte `:graph` do `InstructionFiles`, precedência
 - **Onde:** `apps/api/src/application/use-cases/graph/upsert-prompt-template.use-case.ts`,
   `get-prompt-template.use-case.ts`; `apps/api/src/interfaces/http/internal/internal-graph.controller.ts`;
   `prompts/*.md`, `prompts/README.md`; `scripts/dev/seed-prompts.ts`
+  (`SECAO_DE_DOCUMENTACAO`, `corpoSemDocumentacao`, `parseFrontMatter`)
 - **Teste:** casos de uso com `GraphStore` mockado (upsert com mesmo hash
   não duplica) + teste de integração contra Neo4j real, pulando
   graciosamente quando indisponível; `scripts/dev/seed-prompts.spec.ts`
   (parsing de front-matter, hash determinístico, template malformado
-  reprova com mensagem clara)
+  reprova com mensagem clara; e, desde a AT-244, a varredura de TODO
+  `prompts/*.md`: o corpo semeado não tem a seção de documentação e cada
+  placeholder aparece nele uma vez só, e o sumarizador recebe os turnos uma
+  vez só pelo mesmo render do engine)
+
+> **Desde a AT-244** a seção "## Variáveis" de cada arquivo NÃO é semeada: o
+> corpo do template termina na linha `## Variáveis`, e o seeder descarta dela
+> em diante. Antes o corpo levava a seção inteira — documentação que cita os
+> mesmos `{{placeholders}}` do corpo —, e como cada consumidor troca TODAS as
+> ocorrências (`String.replace/3`), com `graph_templates_enabled?` ligada o
+> modelo recebia a documentação e o dado DUAS vezes: o sumarizador do
+> `ContextManager` os turnos em dobro, os kickoffs do Psicólogo e da Anamnese o
+> log de eventos em dobro, e a identidade do UX (atrás da
+> `graph_instruction_templates_enabled?`) a documentação em todo turno. Os
+> quatro arquivos tinham a forma; o corte mora no SEEDER, e não no render,
+> porque há um render por consumidor e a pergunta "o que é corpo" é sobre o
+> arquivo, que só o seeder lê. As versões subiram (`anamnese-kickoff` e
+> `ux-designer-identity` para `"2"`, `psychologist-kickoff` e
+> `context-manager-summarize` para `"3"`) com o MESMO texto de prompt. **Não
+> fecha sozinho numa instalação que já semeou**: a versão ATIVA no grafo segue
+> a antiga, com a documentação, até rodar `scripts/dev/seed-prompts.ts` de
+> novo — o hash do corpo mudou, então o seeder cria a versão nova e desativa a
+> anterior. Com as flags desligadas (o default) o defeito nunca existiu: vale o
+> texto inline, que nunca teve a seção.
 - **Origem:** decisão do dono do produto, inspirada no repositório
   [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
   (ver [ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md))
@@ -16274,7 +16298,9 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
   instalação que semeou a versão `"1"` continua mandando o prompt antigo até
   rodar `scripts/dev/seed-prompts.ts` de novo — o hash do corpo mudou, então o
   seeder cria a versão nova. Com a flag desligada (o default) vale o inline, que
-  já tem a frase.
+  já tem a frase. Semear de novo também tira do corpo a seção de documentação
+  que fazia o sumarizador receber os turnos em dobro (AT-244, ver
+  [RN-413](#rn-413)); o template está na versão `"3"`.
 - **O fallback de quando o sumarizador falha** (`"(N turnos anteriores
   omitidos)"`) não é resumo e não ganha a frase: não há texto de turno nele.
 - **A frase é pt-BR.** Ela pede o idioma de cada turno, não o do prompt; se um

@@ -1,6 +1,6 @@
 ---
 name: context-manager-summarize
-version: "2"
+version: "3"
 ---
 
 Resuma concisamente os turnos abaixo, preservando decisões e fatos. Mantenha cada turno no idioma original; não traduza citações nem código.
@@ -8,6 +8,12 @@ Resuma concisamente os turnos abaixo, preservando decisões e fatos. Mantenha ca
 {{turnos}}
 
 ## Variáveis
+
+Esta seção é documentação e NÃO é semeada: `scripts/dev/seed-prompts.ts`
+corta o corpo do template na linha `## Variáveis` (AT-244). A versão `"3"`
+tem o mesmo texto de prompt da anterior, sem esta seção — antes dela o modelo
+recebia a documentação junto, com cada placeholder citado aqui expandido de
+novo.
 
 Extraído de `apps/engine/lib/engine/harness/context_manager.ex`,
 função privada `summarize/2`, chamada por `maybe_compact/1` (o
