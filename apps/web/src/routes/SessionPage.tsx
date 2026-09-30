@@ -145,9 +145,9 @@ export function SessionPage({
   // (RN-102) — `roleAtLeast`, nunca lista à mão. O papel lido é o de WORKSPACE:
   // a tela não busca `project_members`, e a lacuna (RN-471) fica declarada.
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
-  // ADR 0183 (RN-650): reabrir pede `maintainer` no endpoint. Mesmo papel de
-  // WORKSPACE (a lacuna da RN-471 já declarada acima).
-  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'maintainer');
+  // ADR 0184 (RN-650): reabrir pede `developer` no endpoint, o de encerrar.
+  // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
+  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const [reabrindo, setReabrindo] = useState(false);
   // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
   // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
@@ -248,16 +248,13 @@ export function SessionPage({
     finalizarTurnoDoAgente,
   });
 
-  // As ações de handoff e execução que não são turno de conversa (RN-406,
-  // RN-440, RN-161, RN-137, RN-153) moram em `../lib/session-acoes-de-handoff`
+  // As ações de handoff e execução que não são turno de conversa (RN-440, RN-161, RN-137, RN-153) moram em `../lib/session-acoes-de-handoff`
   // desde o PR 9 do ADR 0176.
   const {
     ativandoExecucao,
-    validandoNecessidade,
     manualHandoffTarget,
     setManualHandoffTarget,
     enviandoHandoffManual,
-    handleValidateNecessity,
     handleRequestManualHandoff,
     handleAcceptHandoff,
     handleActivateExecution,
@@ -331,8 +328,7 @@ export function SessionPage({
   const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
   // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
-  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory` e
-  // `hasProductBrief` — moraram aqui até a extração do hook
+  // `arquitetoActive`, `hasBusinessRule` e `hasPromotedStory` — moraram aqui até a extração do hook
   // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
   // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
   // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
@@ -342,7 +338,6 @@ export function SessionPage({
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
-    hasProductBrief,
   } = useSessionReadiness(events, backlogQuery.data);
 
   // O destinatário da mensagem do composer é ESCOLHIDO, nunca derivado do log
@@ -380,7 +375,6 @@ export function SessionPage({
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
-    necessidadeJaValidada,
   } = useMemo(
     () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto),
     [events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto],
@@ -614,6 +608,13 @@ export function SessionPage({
       // pelo log. Até lá esta linha era `finalizarTurnoDoAgente()` (a rede de
       // segurança da RN-131), e a chamada só resolvia com o turno pronto.
       acompanharTurnoPeloLog('criativo');
+      // ADR 0185: o clique fechou a necessidade (RN-657) e aceita, em nome
+      // de quem clicou, o handoff ao PO que o turno oferecer (RN-658). É o
+      // gesto de chamar o PO — o mesmo que aceitar pelo card (RN-631) —, então
+      // o destinatário passa a ser ele; enquanto o PO não entra, a escolha
+      // não vale e o Criativo, opção única, segue recebendo.
+      escolherDestinatario('po');
+      showToast({ title: t('toasts.prontoRegistrado'), tone: 'success' });
     } catch (erro) {
       cancelarTurnoOtimista();
       if (avisarSessaoEncerrada(erro)) return;
@@ -944,10 +945,6 @@ export function SessionPage({
             arquiteturaJaDeclarada={arquiteturaJaDeclarada}
             handleArchitectureReadiness={handleArchitectureReadiness}
             hasPromotedStory={hasPromotedStory}
-            necessidadeJaValidada={necessidadeJaValidada}
-            validandoNecessidade={validandoNecessidade}
-            handleValidateNecessity={handleValidateNecessity}
-            hasProductBrief={hasProductBrief}
             handleActivate={handleActivate}
             podeReabrir={podeReabrir}
             reabrindo={reabrindo}

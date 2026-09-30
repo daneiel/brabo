@@ -1,8 +1,7 @@
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   clearAreaModelBinding,
-  getAreaModelBinding,
   getProjectModelBinding,
   getWorkspaceModelBinding,
   listModels,
@@ -22,6 +21,11 @@ import { CadeiaDeCascata, montarCadeia } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import {
+  invalidarBindingsResolvidos,
+  useBindingsResolvidos,
+} from '../../lib/bindings-resolvidos';
+import { AvisoDeBindingsNaoLidos, MarcaDeBindingNaoLido } from './LeituraDosBindings';
 
 /**
  * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
@@ -52,13 +56,9 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   });
 
   const areaKeys = Object.keys(AREAS);
-  const bindingQueries = useQueries({
-    queries: areaKeys.map((key) => ({
-      queryKey: ['area-binding', projectId, key],
-      queryFn: () => getAreaModelBinding(projectId, key),
-      staleTime: FRESCOR_DA_CONFIGURACAO_MS,
-    })),
-  });
+  // O lote de bindings resolvidos (RN-654) — a MESMA `queryKey` da tabela de
+  // agentes acima, então as duas seções custam uma requisição, não 20.
+  const bindings = useBindingsResolvidos(projectId);
 
   // Os DOIS níveis acima da área, para a cadeia da cascata. As chaves são as
   // MESMAS de `ModelsSection` — as duas seções vivem na mesma aba, e o React
@@ -92,17 +92,16 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const nomeDoModelo = (modelId: string) =>
     todosOsModelos.find((m) => m.id === modelId)?.displayName;
 
-  function invalidate(areaKey: string) {
-    queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
-    // Todo agente da área pode ter herdado o valor — a coluna Origem da
-    // tabela de cima também precisa reler.
-    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId] });
+  // Relê o lote inteiro (RN-654): todo agente da área pode ter herdado o
+  // valor, e a coluna Origem da tabela de cima lê o MESMO lote.
+  function invalidate() {
+    void invalidarBindingsResolvidos(queryClient, projectId);
   }
 
   async function handleSet(areaKey: string, model: Model) {
     try {
       await setAreaModelBinding(projectId, areaKey, model.id);
-      invalidate(areaKey);
+      invalidate();
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('areaModels.toast.saveError')),
@@ -125,7 +124,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
       await setAreaModelBinding(projectId, areaKey, modelId, {
         routingPreference,
       });
-      invalidate(areaKey);
+      invalidate();
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('roteamento.toast.saveError')),
@@ -137,7 +136,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   async function handleClear(areaKey: string) {
     try {
       await clearAreaModelBinding(projectId, areaKey);
-      invalidate(areaKey);
+      invalidate();
       showToast({
         title: t('areaModels.toast.reverted', { area: areaKey }),
         tone: 'success',
@@ -161,9 +160,16 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
         {!podeEditar && t('areaModels.subtitle.needsMaintainer')}
       </p>
 
-      {areaKeys.map((key, index) => {
+      {bindings.erro !== null && (
+        <AvisoDeBindingsNaoLidos
+          erro={bindings.erro}
+          tentarDeNovo={bindings.tentarDeNovo}
+        />
+      )}
+
+      {areaKeys.map((key) => {
         const area = AREAS[key];
-        const resolved = bindingQueries[index]?.data;
+        const resolved = bindings.daArea(key);
         const divergiuDoProjeto = resolved?.origin === 'area';
 
         return (
@@ -176,6 +182,11 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                     de ÁREA não tem escopo de agente na cascata
                     (`ResolveModelBindingUseCase`), então não há o caso ambíguo
                     que a tabela de agentes tem. */}
+                {resolved === undefined ? (
+                  // Sem resposta do lote, "sem padrão" seria afirmar o que não
+                  // se leu (RN-654).
+                  <MarcaDeBindingNaoLido falhou={bindings.erro !== null} />
+                ) : (
                 <CadeiaDeCascata
                   niveis={montarCadeia({
                     resolvido: resolved,
@@ -193,6 +204,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   rotuloSemModelo={t('areaModels.originChainNoModel')}
                   tituloSemModelo={t('areaModels.originChainNoModelTitle')}
                 />
+                )}
               </div>
               <div className={styles.ajusteHint}>
                 {t('areaModels.card.lead', { lead: nomeDoAgente(area.lead) })}

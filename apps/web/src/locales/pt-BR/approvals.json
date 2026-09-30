@@ -223,14 +223,13 @@
       "loadingQueue": "Carregando a fila…",
       "queueError": "Não foi possível carregar a fila de aprovações.",
       "empty": "Nenhuma aprovação pendente. O time está fluindo.",
-      "motivoForaDoRecorte": {
-        "porque": "a aba lê o log de uma sessão só, e o motivo mora no log da sessão que propôs a ação.",
-        "todas_zero": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
-        "todas_one": "O motivo da política desta ação não está entre os eventos que esta tela carregou: {{porque}}",
-        "todas_other": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_zero": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_one": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_other": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}"
+      "motivoNaoLido": {
+        "todas_zero": "Não foi possível ler o motivo da política destas {{count}} ações: a leitura do log da sessão que as propôs falhou.",
+        "todas_one": "Não foi possível ler o motivo da política desta ação: a leitura do log da sessão que a propôs falhou.",
+        "todas_other": "Não foi possível ler o motivo da política destas {{count}} ações: a leitura do log da sessão que as propôs falhou.",
+        "algumas_zero": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que as propôs falhou.",
+        "algumas_one": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que a propôs falhou.",
+        "algumas_other": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que as propôs falhou."
       }
     },
     "devPrs": {

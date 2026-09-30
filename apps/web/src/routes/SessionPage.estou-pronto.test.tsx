@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
 import { historicoFalso } from '../test/historico-de-eventos';
@@ -9,15 +9,15 @@ import { historicoFalso } from '../test/historico-de-eventos';
 import i18n from '../lib/i18n';
 
 /**
- * RN-406 — mirror de `SessionPage.readiness-arquitetura-exige-historia.test.tsx`,
- * agora para o botão "Confirmar necessidade validada" (gate
- * `necessidade-validada`, Criativo → PO): só habilita depois que o
- * `product_brief` já existe (consolidado por `confirm_readiness`) e some
- * assim que a necessidade já foi validada.
+ * ADR 0185 (AT-311/AT-312): um clique só — "Estou pronto — a necessidade está
+ * validada" — fecha a prontidão E o gate `necessidade-validada` (RN-657), e o
+ * handoff ao PO que o turno oferecer é aceito em nome de quem clicou
+ * (RN-658). O botão separado "Confirmar necessidade validada" (RN-406) saiu,
+ * e o gesto de chamar o PO faz dele o destinatário do composer (RN-631).
  */
 
 const getSession = vi.fn();
-const validateNecessity = vi.fn();
+const confirmReadiness = vi.fn();
 
 const CRIATIVO_ATIVO = {
   id: 'ev-criativo-ativo',
@@ -28,22 +28,13 @@ const CRIATIVO_ATIVO = {
   createdAt: '2026-08-17T12:00:00.000Z',
 };
 
-const PRODUCT_BRIEF = {
-  id: 'ev-product-brief',
+const REGRA = {
+  id: 'ev-regra',
   seq: 2,
-  type: 'artifact.product_brief',
+  type: 'artifact.business_rule',
   actor: { kind: 'agent', id: 'criativo' },
-  payload: { title: 'Product Brief', summary: 'resumo', rules: [] },
+  payload: { title: 'Só maiores de 18', description: 'Idade >= 18', origin: [1] },
   createdAt: '2026-08-17T12:01:00.000Z',
-};
-
-const NECESSIDADE_VALIDADA = {
-  id: 'ev-necessidade-validada',
-  seq: 3,
-  type: 'necessity.validated',
-  actor: { kind: 'user', id: 'user-1' },
-  payload: { productBriefId: 'ev-product-brief' },
-  createdAt: '2026-08-17T12:02:00.000Z',
 };
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({
@@ -95,8 +86,7 @@ vi.mock('../lib/api-client', async () => {
     approveAction: vi.fn(),
     approveAlwaysAction: vi.fn(),
     confirmArchitectureReadiness: vi.fn(),
-    confirmReadiness: vi.fn(),
-    validateNecessity: (...args: unknown[]) => validateNecessity(...args),
+    confirmReadiness: (...args: unknown[]) => confirmReadiness(...args),
     denyAction: vi.fn(),
     promoteStories: vi.fn(),
     returnStory: vi.fn(),
@@ -144,7 +134,8 @@ function montar() {
 beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
-  eventos.mockReturnValue({ items: [CRIATIVO_ATIVO] });
+  window.localStorage.clear();
+  eventos.mockReturnValue({ items: [CRIATIVO_ATIVO, REGRA] });
   getSession.mockResolvedValue(sessao());
 });
 
@@ -152,47 +143,45 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
-describe('SessionPage — "Confirmar necessidade validada" (RN-406)', () => {
-  it('sem product_brief ainda, o botão nasce desabilitado com a dica', async () => {
-    eventos.mockReturnValue({ items: [CRIATIVO_ATIVO] });
+const ROTULO = 'Estou pronto — a necessidade está validada';
+const CHAVE_DO_DESTINATARIO = `brabo.destinatario.${ID}`;
+
+describe('SessionPage — "Estou pronto — a necessidade está validada" (ADR 0185)', () => {
+  it('um clique só: chama a prontidão, avisa que a necessidade ficou validada e chama o PO', async () => {
+    confirmReadiness.mockResolvedValue({ ok: true });
     montar();
 
-    const botao = await screen.findByRole('button', {
-      name: 'Confirmar necessidade validada',
-    });
+    fireEvent.click(await screen.findByRole('button', { name: ROTULO }));
 
-    expect(botao).toBeDisabled();
-    expect(botao).toHaveAttribute(
-      'title',
-      'Confirme "Estou pronto para produzir" com o Criativo antes de validar a necessidade',
-    );
-  });
-
-  it('com o product_brief consolidado, o botão libera', async () => {
-    eventos.mockReturnValue({ items: [CRIATIVO_ATIVO, PRODUCT_BRIEF] });
-    montar();
-
-    const botao = await screen.findByRole('button', {
-      name: 'Confirmar necessidade validada',
-    });
-
-    expect(botao).not.toBeDisabled();
-    expect(botao).not.toHaveAttribute('title');
-  });
-
-  it('já validada, o botão some da tela', async () => {
-    eventos.mockReturnValue({
-      items: [CRIATIVO_ATIVO, PRODUCT_BRIEF, NECESSIDADE_VALIDADA],
-    });
-    montar();
-
-    // Espera a tela assentar (algum outro elemento do composer) antes de
-    // afirmar ausência — senão o "não encontrado" pode só ser "ainda não
-    // renderizou".
-    await screen.findByRole('button', { name: 'Enviar' });
-
+    await waitFor(() => expect(confirmReadiness).toHaveBeenCalledWith('proj-1', ID));
+    expect(
+      await screen.findByText(
+        'Necessidade validada. O PO entra quando o resumo do produto ficar pronto',
+      ),
+    ).toBeInTheDocument();
+    expect(window.localStorage.getItem(CHAVE_DO_DESTINATARIO)).toBe('po');
+    // O clique separado da RN-406 não existe mais.
     expect(
       screen.queryByRole('button', { name: 'Confirmar necessidade validada' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('recusa do engine (422 sem regra): nada é dito como validado e o destinatário não muda', async () => {
+    const { ApiError } = await import('../lib/api-client');
+    confirmReadiness.mockRejectedValue(
+      new ApiError(422, { message: 'ainda não há nenhuma regra de negócio registrada' }),
+    );
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: ROTULO }));
+
+    await waitFor(() => expect(confirmReadiness).toHaveBeenCalled());
+    await screen.findByText(/ainda não há nenhuma regra de negócio registrada/);
+    expect(
+      screen.queryByText(
+        'Necessidade validada. O PO entra quando o resumo do produto ficar pronto',
+      ),
+    ).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(CHAVE_DO_DESTINATARIO)).toBeNull();
   });
 });

@@ -9,8 +9,8 @@ import i18n from '../lib/i18n';
 
 /**
  * ADR 0183 (RN-650, AT-071): a sessão encerrada ganha "Reabrir sessão". O
- * botão só é acionável para quem alcança `maintainer` (`roleAtLeast`); abaixo
- * disso fica inerte e o motivo é dito em TEXTO.
+ * botão só é acionável para quem alcança `developer` (`roleAtLeast`, ADR 0184,
+ * AT-337); abaixo disso fica inerte e o motivo é dito em TEXTO.
  */
 
 const getSession = vi.fn();
@@ -19,7 +19,7 @@ const confirmReadiness = vi.fn();
 const transitionSession = vi.fn();
 const getProjectPendingActions = vi.fn();
 const reopenSession = vi.fn();
-const papel = vi.fn<() => string | undefined>(() => 'maintainer');
+const papel = vi.fn<() => string | undefined>(() => 'developer');
 
 const EVENTOS_CRIATIVO_ATIVO = [
   {
@@ -130,18 +130,18 @@ beforeEach(async () => {
   eventos.mockReturnValue({ items: EVENTOS_CRIATIVO_ATIVO });
   getSession.mockResolvedValue(sessao({ status: 'closed', closedAt: '2026-08-11T13:00:00.000Z' }));
   getProjectPendingActions.mockResolvedValue([]);
-  papel.mockReturnValue('maintainer');
+  papel.mockReturnValue('developer');
 });
 
 afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
-const EXIGE = 'Reabrir a sessão exige o papel maintainer neste workspace.';
+const EXIGE = 'Reabrir a sessão exige o papel developer neste workspace.';
 
 describe('SessionPage — reabrir sessão encerrada (RN-650)', () => {
   it.each(['closed', 'closed_abnormally'] as const)(
-    '%s com maintainer: o botão reabre pela rota própria e relê a sessão',
+    '%s com developer: o botão reabre pela rota própria e relê a sessão',
     async (status) => {
       getSession.mockResolvedValue(sessao({ status, closedAt: '2026-08-11T13:00:00.000Z' }));
       reopenSession.mockResolvedValue(sessao({ status: 'active' }));
@@ -164,14 +164,18 @@ describe('SessionPage — reabrir sessão encerrada (RN-650)', () => {
     },
   );
 
-  it('owner também alcança o mínimo (roleAtLeast, não lista à mão)', async () => {
-    papel.mockReturnValue('owner');
-    montar();
-    const botao = await screen.findByRole('button', { name: 'Reabrir sessão' });
-    await waitFor(() => expect(botao).toBeEnabled());
-  });
+  it.each(['maintainer', 'owner'])(
+    '%s também alcança o mínimo (roleAtLeast, não lista à mão)',
+    async (role) => {
+      papel.mockReturnValue(role);
+      montar();
+      const botao = await screen.findByRole('button', { name: 'Reabrir sessão' });
+      await waitFor(() => expect(botao).toBeEnabled());
+      expect(screen.queryByText(EXIGE)).not.toBeInTheDocument();
+    },
+  );
 
-  it.each(['developer', 'viewer', undefined])(
+  it.each(['viewer', undefined])(
     'papel %s: botão inerte, e o motivo dito em texto',
     async (role) => {
       papel.mockReturnValue(role);

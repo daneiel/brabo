@@ -248,6 +248,18 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     });
   });
 
+  // RN-659 (AT-313): o resumo diz com que promoção o projeto nasce, e a
+  // criação NÃO manda o campo — o valor é o default da coluna na api, uma
+  // fonte só (o payload exato do teste acima prova a ausência).
+  it('o Confirmar diz que o projeto nasce com promoção automática, e onde mudar', async () => {
+    await ateWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(screen.getByText('Promoção de histórias')).toBeTruthy();
+    expect(screen.getByText(/automática — o PO promove/)).toBeTruthy();
+    expect(screen.getByText(/muda em Configurações/)).toBeTruthy();
+  });
+
   it('Pasta montada manda o caminho digitado, e só ele', async () => {
     createProject.mockResolvedValue({ id: 'proj-1' });
     await ateWorkspaceComBase();

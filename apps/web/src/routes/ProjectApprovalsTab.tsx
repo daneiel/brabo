@@ -29,7 +29,7 @@ import {
   type Task,
 } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
-import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
+import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
 import { getRegistroDeGates } from '../lib/api-client';
 import { Button } from '../components/ui/Button';
@@ -297,18 +297,18 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   });
 
   const pending = (pendentesQuery.data ?? []).filter((a) => a.status === 'pending');
-  // O motivo da política mora no `proposed_action.created`, e a api não o
-  // expõe por ação (`proposed_actions` não o guarda, e a leitura de eventos
-  // não filtra por `actionId`) — medido na AT-333. A aba só o acha nos
-  // eventos que JÁ carregou; as que ficam sem ele são CONTADAS aqui.
-  const decisoesDaPolitica = new Map(
-    pending.map((a) => [a.id, decisaoDaPoliticaDaAcao(a.id, events)] as const),
+  // O motivo da política mora no `proposed_action.created`, e a ação não o
+  // guarda. Desde a AT-336 cada card tem o PRÓPRIO: o que o log carregado
+  // cobre sai dele, e o resto é lido pela ação (`?actionId=`, na sessão que
+  // a ação carrega). Enquanto a tela ainda carrega o próprio log (`null`),
+  // nada é pedido — ele responderia de graça as da sessão de trabalho.
+  const eventosProntos =
+    sessaoDeTrabalho && eventsQuery.isPending ? null : (eventsQuery.data?.items ?? []);
+  const { decisoes: decisoesDaPolitica, falhas: semMotivo } = useDecisoesDaPolitica(
+    projectId,
+    pending,
+    eventosProntos,
   );
-  // Antes de os eventos chegarem não há o que afirmar: a nota só conta com o
-  // log em mãos, senão diria "fora do recorte" sobre um recorte que nem veio.
-  const semMotivo = eventsQuery.data
-    ? [...decisoesDaPolitica.values()].filter((d) => d === null).length
-    : 0;
 
   function invalidateActions(sessoes: Iterable<string>) {
     // Por prefixo: a fila do projeto (esta aba, o contador do trilho, o
@@ -475,17 +475,15 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                     </EmptyState>
                   ) : (
                     <div className={styles.queue}>
+                      {/* AT-336: a nota sobra só para a leitura que FALHOU —
+                          o card dessa ação cala, e a lacuna é dita uma vez. */}
                       {semMotivo > 0 && (
-                        <p className={styles.notaDoRecorte} data-testid="motivo-fora-do-recorte">
+                        <p className={styles.notaDoRecorte} data-testid="motivo-nao-lido">
                           {t(
                             semMotivo === pending.length
-                              ? 'approvalsTab.pending.motivoForaDoRecorte.todas'
-                              : 'approvalsTab.pending.motivoForaDoRecorte.algumas',
-                            {
-                              count: semMotivo,
-                              total: pending.length,
-                              porque: t('approvalsTab.pending.motivoForaDoRecorte.porque'),
-                            },
+                              ? 'approvalsTab.pending.motivoNaoLido.todas'
+                              : 'approvalsTab.pending.motivoNaoLido.algumas',
+                            { count: semMotivo, total: pending.length },
                           )}
                         </p>
                       )}
@@ -494,13 +492,11 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                           key={action.id}
                           action={action}
                           detalheRecolhido
-                          // AT-148 (RN-614): a aba lê os eventos da sessão de
-                          // trabalho. Ação de OUTRA sessão, ou fora da janela
-                          // carregada, não tem o motivo aqui — e a lacuna é
-                          // dita UMA vez, no topo da fila (AT-333, RN-180),
-                          // nunca repetida por card: por isso `undefined`, o
-                          // estado em que o card cala, e não `null`.
-                          decisaoDaPolitica={decisoesDaPolitica.get(action.id) ?? undefined}
+                          // AT-336 (RN-614): o motivo DESTA ação, do log
+                          // carregado ou lido pela ação. Carregando ou com a
+                          // leitura falha, `undefined` — o card cala, e a
+                          // falha é dita UMA vez no topo da fila (RN-180).
+                          decisaoDaPolitica={decisoesDaPolitica.get(action.id)}
                           selectable
                           selected={selected.has(action.id)}
                           onToggleSelect={() => toggleSelect(action.id)}

@@ -120,6 +120,13 @@ become a real repository document.
 Validatable, but **not** emittable by tool. The Creative server emits it only
 after you confirm readiness — never through a model tool call.
 
+Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the click
+that asks for it — "I'm ready — the need is validated" — also records
+`necessity.validated` with `productBriefId: null`: the brief is the next
+`product_brief` after that `readiness.confirmed`, and the handoff that carries
+it to the PO is accepted on behalf of whoever clicked
+([RN-657](../business-rules.md#rn-657), [RN-658](../business-rules.md#rn-658)).
+
 ### `task_blocked` — server
 
 | field | required |

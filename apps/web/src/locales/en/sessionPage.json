@@ -53,12 +53,11 @@
     "placeholder": "Write a message… (Enter sends, Shift+Enter for a new line)",
     "enviar": "Send",
     "parar": "Stop",
-    "prontoParaProduzir": "I'm ready to build",
+    "prontoParaProduzir": "I'm ready — the need is validated",
+    "prontoParaProduzirExplica": "Closes readiness and the need validation, and calls the PO: it joins on its own once the Creative finishes the product brief",
     "prontoParaProduzirDesabilitado": "Capture at least one business rule with the Creative before confirming readiness",
     "confirmarArquitetura": "Confirm architecture ready",
     "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
-    "confirmarNecessidade": "Confirm need validated",
-    "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need",
     "destinatarioLabel": "To",
     "destinatarioPlaceholder": "Choose the agent…",
     "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
@@ -71,7 +70,7 @@
     "statusGenerico": "Session {{status}} — can't send messages.",
     "reabrir": "Reopen session",
     "reabrirExplicacao": "Reopening brings the session back to active with everything it already had: the conversation, the business rules, the answered questions and the offers between agents. The previous closing stays on record.",
-    "reabrirExigeMaintainer": "Reopening the session requires the maintainer role in this workspace."
+    "reabrirExigeDeveloper": "Reopening the session requires the developer role in this workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Gathering information...",
@@ -94,6 +93,8 @@
     "semMotivo": "no reason given"
   },
   "handoff": {
+    "aceiteAutomatico": "Accepted automatically: the backlog covers all {{regras}} business rules and the repository is local, so {{agente}} joined without a click.",
+    "aceiteAutomaticoFalhou": "The automatic accept of the handoff to {{agente}} failed: {{erro}}. Accept it from the offer card.",
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
@@ -131,8 +132,7 @@
     "erroIniciarIdeacao": "Could not start the ideation",
     "erroConfirmarProntidao": "Could not confirm readiness",
     "erroConfirmarArquitetura": "Could not confirm the architecture",
-    "necessidadeValidada": "Need validated",
-    "erroValidarNecessidade": "Could not validate the need",
+    "prontoRegistrado": "Need validated. The PO joins once the product brief is ready",
     "erroAceitarHandoff": "Could not accept the handoff",
     "handoffManualEnviado": "Handoff sent",
     "erroHandoffManual": "Could not send the handoff",

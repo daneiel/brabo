@@ -594,6 +594,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/model-bindings-controller-get-resolved-bindings",
+          label: "Resolves the model of several agents and areas in one read",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/models-controller-list",
           label: "Lists the models active IN THE PROJECT's WORKSPACE",
           className: "api-method get",
@@ -1419,6 +1425,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-remove",
           label: "Removes the workspace",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-members",
+          label: "Lists the workspace's members",
+          className: "api-method get",
         },
         {
           type: "doc",

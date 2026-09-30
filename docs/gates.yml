@@ -52,6 +52,8 @@ gates:
     # seguir — o handoff Criativo→PO já aconteceu dentro do próprio
     # `confirm_readiness` (RN-142), e esta confirmação é só o registro de que
     # um humano validou a necessidade, não um portão que bloqueia o PO.
+    # Desde o ADR 0185 (RN-657) o clique é o MESMO do "Estou pronto" — segue
+    # humano e segue `warn`.
     severidade: warn
     aprovacao_humana: true
     status: active

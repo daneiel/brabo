@@ -57,6 +57,68 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: **`developer` também reabre sessão encerrada** (AT-337,
+  [ADR 0184](docs/adr/0184-reabrir-sessao-decisoes-do-dono.md),
+  [RN-650](docs/business-rules.md#rn-650)). O dono decidiu os três padrões
+  provisórios do ADR 0183: `POST /projects/:projectId/sessions/:sessionId/reopen`
+  passa de `maintainer` para `developer` — o mesmo papel que encerra a sessão —,
+  e a tela libera "Reabrir sessão" a partir de `developer` (abaixo disso, o
+  `viewer` vê o botão inerte e o motivo em texto). Sem prazo e a recusa de
+  sessão com execução (409 `sessao_com_execucao`) ficam CONFIRMADOS.
+- **api/web**: **o fio da sessão nomeia quem entra no projeto pelo papel de
+  workspace** (AT-335, [RN-655](docs/business-rules.md#rn-655),
+  [RN-652](docs/business-rules.md#rn-652)). Nasce `GET
+  /workspaces/:workspaceId/members` (`viewer`, só id, nome, e-mail e papel), e
+  a Sessão compõe as duas listas, a de projeto antes da de workspace: a pessoa
+  que antes aparecia como "Outro membro" aparece pelo nome.
+- **api/web**: **cada cartão da aba Aprovações mostra o próprio motivo da
+  política** (AT-336, [RN-656](docs/business-rules.md#rn-656),
+  [RN-614](docs/business-rules.md#rn-614)). A leitura de eventos da sessão
+  ganha o filtro `actionId`, e a ação que o log carregado não cobre lê o
+  `proposed_action.created` dela, na sessão que a propôs — uma vez, porque
+  evento não muda. A nota única do topo da fila sobra só para a leitura que
+  falha.
+- **api/web**: **projeto novo nasce com promoção de histórias automática**
+  (AT-313, [RN-659](docs/business-rules.md#rn-659)). O default de
+  `projects.story_promotion` passa a `auto` (migration `0065`, só o DEFAULT da
+  coluna): cada história completa do PO já nasce pronta, sem um clique por
+  história. Projeto que já existe NÃO muda — quem nasceu `manual` continua
+  `manual`. O passo Confirmar da criação diz o valor e onde mudá-lo, e a seção
+  de Configurações diz que projeto novo nasce em Automática.
+
+- **api/engine/web**: **o handoff do PO ao Arquiteto é aceito sem clique
+  quando o backlog está coberto** (AT-314,
+  [ADR 0186](docs/adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md),
+  [RN-660](docs/business-rules.md#rn-660)). Com ao menos uma regra de negócio e
+  nenhuma sem história, repositório `local` (ou ainda por nascer) e nenhuma
+  conexão de git no projeto, o sistema aceita a oferta em nome de quem abriu a
+  sessão: o repositório nasce como sempre, antes de o Arquiteto entrar, e o fio
+  diz por que ele entrou. O aceite fica no log com o ator de sistema e o
+  critério; falha vira o evento novo `handoff.auto_accept_failed`, e a oferta
+  segue com o botão. Repositório remoto ou com credencial continua pedindo o
+  clique.
+
+- **web**: **o modo automático é oferecido em lote para o time no início da
+  execução** (AT-315, [RN-661](docs/business-rules.md#rn-661)). A aba Executores
+  ganha um cartão que liga o modo automático para os agentes escolhidos de uma
+  vez — o mesmo curinga e o mesmo endpoint do toggle por agente, só com o
+  clique, e com o desfecho por agente. O cartão diz o que o modo automático
+  NÃO libera (merge em branch protegida, push/PR/deploy, `sudo`/`doas`,
+  remover container, mudar instrução de agente, paralelizar); desligar segue no
+  card de cada agente.
+- **api/web**: **um clique só leva do Criativo ao PO** (AT-311/AT-312,
+  [ADR 0185](docs/adr/0185-estou-pronto-fecha-os-dois-gates.md),
+  [RN-657](docs/business-rules.md#rn-657), [RN-658](docs/business-rules.md#rn-658)).
+  O botão do Criativo passa a se chamar "Estou pronto — a necessidade está
+  validada" (en: "I'm ready — the need is validated") e fecha, no mesmo POST, a
+  prontidão e o gate `necessidade-validada` (`necessity.validated` com o
+  `product_brief` ainda por vir) — o botão separado "Confirmar necessidade
+  validada" sai da tela. E o handoff ao PO que o Criativo oferecer em seguida é
+  aceito em nome de quem clicou: os mesmos `handoff.accepted`/`agent.activated`
+  do card, com a pessoa como ator e a marca `implicito` no payload. Sessões com
+  "Estou pronto" anterior a esta versão seguem com o card de aceite; a rota
+  `validate-necessity` continua na api, sem consumidor na tela.
+
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
@@ -469,6 +531,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Desempenho
 
+- **api/web**: os modelos vigentes de todos os agentes e áreas vêm numa
+  leitura só (AT-334, [RN-654](docs/business-rules.md#rn-654)). Rota nova
+  `GET /projects/:projectId/model-bindings/resolved?agents=…&areas=…`
+  (`viewer`, como as rotas individuais), que devolve para cada chave
+  exatamente o que `GET .../agent-bindings/:slug` ou
+  `GET .../area-bindings/:key` devolveria — a mesma cascata, reusada chave a
+  chave. Chave malformada ou mais de 64 chaves é 400. As seções de modelo por
+  agente, por área e de melhores modelos da aba Configurações leem o lote por
+  uma chave só: a carga da aba cai de 49 para 30 requisições. A falha da
+  leitura aparece uma vez por seção, com a frase da api e "Tentar de novo", e
+  as linhas dizem "não lido" (ou "lendo…"), nunca "sem modelo".
 - **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
   chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
   router espera antes de trocar de tela — sem flash de fallback na navegação,
@@ -512,6 +585,38 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
+  3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
+  `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não
+  publicou — o `apk upgrade` do build não alcançava a correção). A base Node
+  passa de `node:24.11.1-alpine3.21` para **`node:24.21.0-alpine3.23`**
+  (OpenSSL `3.5.8-r0` já na base) e o runtime do web, que era
+  `nginx:1.27.5-alpine` (Alpine 3.21), para **`nginx:1.30.5-alpine`** (Alpine
+  3.24, OpenSSL `3.5.8-r0`), as duas por digest do ÍNDICE com a tag inline
+  (ADR 0178). Medido com Trivy 0.70.0 e as flags do `ci.yml`, sem exceção
+  nova: a base Node nova não tem nenhum HIGH/CRITICAL de SO com correção; a do
+  nginx tem um só, `libexpat` `2.8.4-r0` (`CVE-2026-93990`, corrigido em
+  `2.8.5-r0`), que depende do `apk upgrade` que o Dockerfile já roda. O Node
+  da imagem sobe de `24.11.1` para `24.21.0` (mesma linha maior); o
+  `NODE_VERSION` dos workflows segue em `24.11.1`. Nenhum pacote `apk` mudou
+  de nome (`git`, `docker-cli`).
+
+- **deps**: fecha os HIGH publicados em 30/09 que reprovavam o Trivy das
+  imagens de produção, só por `overrides` (nenhum código muda). **Produto**
+  (`pnpm-workspace.yaml`): `fast-uri` 3.1.6 → **3.1.8** (GHSA-qw65-cvwx-89v3,
+  GHSA-58mr-gqgx-xq4g) e `undici` 7.29.0 → **7.29.1** (GHSA-rfgv-xxqx-mfg5,
+  GHSA-w293-vg96-wgc3) sobem de TETO na faixa que já existia; entram
+  `brace-expansion` nas três linhas maiores da árvore (1.1.21, 2.1.7, 5.0.12 —
+  GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p) e `@grpc/grpc-js` **1.14.5**
+  (GHSA-m9gg-hp2v-232j). Dos quatro, só o `@grpc/grpc-js` chega à imagem da
+  api (`@opentelemetry/sdk-node` o arrasta); os outros três são de
+  desenvolvimento. Os alvos fecham também as moderadas da MESMA linha que
+  saíram junto. **Website** (lockfile próprio, ADR 0117): as mesmas faixas de
+  `fast-uri`, `undici` 7 e `brace-expansion` 1.x, mais `undici` 6 (**6.28.1**),
+  `joi` (**17.13.7**, GHSA-6h2x-m376-mqjq) e `image-size` (**2.0.4**) — este
+  era o HIGH "sem versão corrigida" declarado em `website/pnpm-workspace.yaml`,
+  e a 2.0.3 saiu em 14/09. Segue aberto, e escrito, só o `@faker-js/faker`.
+  `pnpm audit --audit-level high` fica limpo no produto.
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de
@@ -1754,6 +1859,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/explanation/documentation-workflow.md`.
 
 ### Testes
+
+- **e2e**: **o ciclo de um turno chega pelo canal da sessão numa terceira
+  origem** (AT-338, `e2e/testes/turno-pelo-canal.spec.ts`). Decisão do dono:
+  provar o canal com um turno que FALHA por falta de credencial — sem LLM e sem
+  custo. A semeadura vincula ao workspace um modelo de nuvem com tool calling
+  de um provider sem credencial do dono; o spec abre a sessão criativa com um
+  login próprio, envia uma mensagem ao Criativo e asserta os FRAMES do
+  WebSocket do tópico `session:<id>`: `agent.status: working`, `agent.error`
+  com origem `politica` e "Nenhuma credencial cadastrada", e `idle`, nessa
+  ordem; e a bolha de falha aparece pelo seletor estrutural novo
+  (`data-testid="falha-de-turno"`, `data-origem`). O `agent.delta` segue
+  declarado fora (`e2e/README.md`). A execução passa a gastar 4 logins, não 3.
 
 - **e2e**: **a aprovação inline ganha E2E de navegador** (AT-068,
   `e2e/testes/aprovacao-inline.spec.ts`). Uma `write_file` com ator `user`

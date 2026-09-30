@@ -174,6 +174,18 @@ the `message` is the sentence the agent reads as its tool result
 ([RN-636](../business-rules.md#rn-636)) — returns ANY pending offer to the
 target instead of replacing it.
 
+The Creative→PO offer that an "I'm ready — the need is validated" click asked
+for is ACCEPTED in the same call, on behalf of the person who clicked
+([RN-658](../business-rules.md#rn-658),
+[ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md)): the offer is
+`criativo` → `po`, from this session, carrying the `product_brief` born after
+the latest marked `readiness.confirmed`. The acceptance goes through the same
+`AcceptHandoffUseCase` as the card (same events, the person as actor, an
+`implicito` mark), and the response then carries `status: "accepted"`. The
+engine only matches `{:ok, _}`, so nothing changes on its side; a failed
+implicit acceptance never turns into an error for the engine — it becomes a
+durable `agent.error` and the offer is still returned.
+
 `GET /events` is what the seven conversational agents read when their process
 comes up over a session that already has a conversation, and what their
 kickoffs read to find the brief, the rules, the module map and the stories

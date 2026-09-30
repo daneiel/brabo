@@ -19,6 +19,7 @@ import type {
 } from '../../lib/api-types';
 import { ModelsSection } from './ModelsSection';
 import { AreaModelsSection } from './AreaModelsSection';
+import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
  * O critério de roteamento na tabela de agentes (ADR 0166, RN-583).
@@ -56,6 +57,9 @@ vi.mock('../../lib/api-client', async () => {
     getProject: (...args: unknown[]) => getProject(...args),
     listModels: (...args: unknown[]) => listModels(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     clearAgentModelBinding: vi.fn(),
     setAreaModelBinding: (...args: unknown[]) => setAreaModelBinding(...args),
