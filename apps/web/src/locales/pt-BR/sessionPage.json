@@ -24,7 +24,11 @@
     "iniciarIdeacao": "Iniciar ideação",
     "iniciarIdeacaoTitulo": "Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou",
     "encerrar": "Encerrar",
-    "alternarPainel": "Alternar painel de contexto"
+    "alternarPainel": "Alternar painel de contexto",
+    "ajustes": "Modelo e idioma",
+    "ajustesAria": "Modelo, idioma das respostas e orçamento desta sessão",
+    "perguntaDeIdiomaPendente": "há uma pergunta sobre o idioma das respostas",
+    "encerrarSessao": "Encerrar a sessão"
   },
   "convite": {
     "criativa": {

@@ -16492,12 +16492,29 @@ turno com autor humano — a divergência que esta regra declarava fechou.
    chega aos agentes" saiu da linha de origem. A linha trunca nos 60px da
    barra e leva o texto inteiro no `title` — o texto está na tela, o `title`
    só devolve o que as reticências cortaram.
+6. **Na barra estreita, o idioma MUDA de lugar e não some** (AT-317). A barra
+   se arruma pela PRÓPRIA largura (`modoDaBarra`, medida por
+   `ResizeObserver`; largura desconhecida é a barra completa): a partir de
+   1720px tudo fica em linha; abaixo disso modelo, idioma e orçamento viram UM
+   controle cujo gatilho resume o modelo e o código do idioma (abaixo de 920px
+   só o ícone, com nome acessível), e o painel dele traz o indicador inteiro
+   com a origem QUEBRANDO em vez de cortar. A pergunta da detecção
+   ([RN-624](#rn-624)) mora no painel, e enquanto existe o gatilho ganha uma
+   marca e o nome acessível a anuncia. O título da sessão é o único item que
+   encolhe (com piso e o nome inteiro no `title`), e os botões não quebram
+   linha — "Encerrar" vira ícone com nome acessível só na barra mínima.
 
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
-  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:162`
-  (`origemPorExtenso`), `:205` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
-- **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
+  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
+  (`origemPorExtenso`), `:219` (`podeTrocar`);
+  `apps/web/src/routes/SessionTopbar.tsx:228` (`SessionLanguageIndicator`),
+  `:115` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
+  `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
+- **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
+  1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
+  `:236` (barra mínima com nome acessível), `:256` (pergunta pendente marca o
+  controle), `:273` (leitura do idioma falhada — caso de falha);
+  `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
   (efetivo com origem e o link, sem o aviso antigo), `:112` (o detectado não vira
   "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
   Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`

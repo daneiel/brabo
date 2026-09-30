@@ -193,6 +193,7 @@ estado lido do repositório e não da conversa.
 | O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
 | Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 
 ## Estado atual e aberto
