@@ -54,6 +54,16 @@ export interface LocalizacaoDoProjeto {
   motivo?: string;
 }
 
+/**
+ * O dono da pasta do projeto, MEDIDO pela api (ADR 0180) — `null`/ausente
+ * quando ela não alcança a pasta ou o dono é root. Dado não confiável como o
+ * resto: quem o transforma em `--user` é `especificacaoValidada`.
+ */
+export interface UsuarioDaPasta {
+  uid: number;
+  gid: number;
+}
+
 export interface ContextoDoProjeto {
   projectId: string;
   projectSlug: string;
@@ -62,6 +72,8 @@ export interface ContextoDoProjeto {
   executionMode: string;
   /** O localizador discriminado da pasta (RN-503). */
   localizacao?: LocalizacaoDoProjeto | null;
+  /** O dono da pasta (ADR 0180). Nunca vem do corpo de um pedido ao broker. */
+  usuarioDaPasta?: UsuarioDaPasta | null;
   /** `null` enquanto o Arquiteto não decidiu (RN-105). */
   imagem: DecisaoDeImagemDaApi | null;
   /** Versão do artefato vigente — 0 quando não há decisão. */

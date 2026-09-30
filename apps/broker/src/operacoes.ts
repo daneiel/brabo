@@ -411,6 +411,9 @@ async function especificacaoDoProjeto(
     cpus: contexto.imagem.resources?.cpus,
     memoriaMb: contexto.imagem.resources?.memoryMb,
     pidsLimit: contexto.imagem.resources?.pidsLimit,
+    // ADR 0180: do contexto lido da api (o dono medido da pasta), nunca do
+    // corpo do pedido — `pedidoDeExecValidado` e o corpo de `start` não o têm.
+    usuario: contexto.usuarioDaPasta,
   });
 }
 

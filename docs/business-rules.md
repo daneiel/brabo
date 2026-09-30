@@ -16961,3 +16961,31 @@ AT-251/AT-253 passarem a consumir `roster.activatedAgents`.
   ("activatedAgents cobre ativações anteriores à janela de 200 eventos" e
   "activatedAgents é da sessão MAIS RECENTE: ativação de sessão antiga não vale")
 - **Origem:** AT-252
+
+### RN-627 — O container do projeto roda com o dono da pasta, medido pela api {#rn-627}
+
+Sob `--cap-drop ALL` o root do container não tem `CAP_DAC_OVERRIDE` e não
+escreve na pasta do projeto, que é do uid do operador: `npm install` dava
+`EACCES` para todo dev agent (AT-247, [ADR 0180](adr/0180-container-com-o-dono-da-pasta.md)).
+
+1. **A api mede, o broker compõe.** `container-spec` devolve `usuarioDaPasta`
+   (`stat` da pasta dos modos `container`/`mounted`; `null` se a pasta não é
+   alcançada, se o dono é root ou se o projeto é `runner`). O broker o copia
+   para `spec.usuario` e o adaptador emite `--user uid:gid` e `--env HOME=/tmp`.
+2. **Nunca vem de quem pede.** `start` não tem corpo e o corpo de `exec` ignora
+   campo extra; `exec` herda o usuário do container.
+3. **O broker revalida.** Inteiros em 1..2^31-1; `0` é recusado nomeando
+   `usuario.uid`/`usuario.gid` (root é o ausente, "como sempre").
+4. **Não afrouxa contenção**: `--cap-drop ALL`, um bind, rede de dois valores
+   e cinco operações continuam. Container já criado só muda ao ser recriado.
+
+- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+  `packages/docker-port/src/spec-de-container.ts:141` (`usuarioValidado`),
+  `apps/broker/src/operacoes.ts:385` (`especificacaoDoProjeto`),
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:110`
+  (`ObterSpecDeContainerUseCase`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (o `run` leva
+  `--user` e continua sem campo livre), `packages/docker-port/src/spec-de-container.spec.ts`
+  (`usuario`), `apps/broker/src/operacoes.spec.ts` ("o usuário do container"),
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+- **Origem:** AT-247

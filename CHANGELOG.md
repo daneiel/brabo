@@ -391,6 +391,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   varredura do event log e sem migration. Quem está ativo deixa de depender da
   janela de 200 eventos (AT-252, RN-630). O consumo na web fica para a AT-251 e
   a AT-253.
+
+- **broker**: o container do projeto passa a rodar com o **dono da pasta**
+  (`--user uid:gid`, medido pela api e revalidado pelo broker) em vez de root
+  sem capacidades, e o dev agent volta a escrever em `/work` — `npm install`
+  dava `EACCES` no uso real de 29/09 (AT-247, [ADR 0180](docs/adr/0180-container-com-o-dono-da-pasta.md),
+  [RN-627](docs/business-rules.md#rn-627)). Não abre porta de contenção;
+  container já criado só muda ao ser recriado.
+
 - **scripts**: com o template do grafo ligado (`GRAPH_TEMPLATES_ENABLED`), o
   sumarizador da compactação recebia os turnos em dobro, e os kickoffs do
   Psicólogo e da Anamnese o log de eventos em dobro (AT-244,
