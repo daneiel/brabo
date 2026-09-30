@@ -2244,6 +2244,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/model-bindings/resolved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolves the model of several agents and areas in one read
+         * @description Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped.
+         */
+        get: operations["ModelBindingsController_getResolvedBindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/models": {
         parameters: {
             query?: never;
@@ -4609,6 +4629,21 @@ export interface components {
             filesSkipped: number;
             chunksCreated: number;
             embedding: components["schemas"]["IndexEmbeddingResponseDto"];
+        };
+        BindingResolvidoDaChaveResponseDto: {
+            /**
+             * @description The agent slug or the area key, exactly as requested.
+             * @example dev-lead
+             */
+            key: string;
+            /** @description The SAME value the single-key route answers for this key — `null` when no level of the cascade has a model. */
+            binding: components["schemas"]["ResolvedBindingResponseDto"] | null;
+        };
+        BindingsResolvidosEmLoteResponseDto: {
+            /** @description One entry per requested agent, in the order requested. */
+            agents: components["schemas"]["BindingResolvidoDaChaveResponseDto"][];
+            /** @description One entry per requested area, in the order requested. */
+            areas: components["schemas"]["BindingResolvidoDaChaveResponseDto"][];
         };
         BlockTaskInternalDto: {
             /**
@@ -15470,6 +15505,67 @@ export interface operations {
                 };
             };
             /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Scope not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModelBindingsController_getResolvedBindings: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated agent slugs. */
+                agents?: string;
+                /** @description Comma-separated area keys. */
+                areas?: string;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingsResolvidosEmLoteResponseDto"];
+                };
+            };
+            /** @description A malformed key, or more keys than the batch cap. */
             400: {
                 headers: {
                     [name: string]: unknown;

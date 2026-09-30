@@ -31,6 +31,7 @@ import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import { CREDENCIAIS_DE_LLM } from '../lib/models';
 import type { Project, UserCredentialMetadata } from '../lib/api-types';
+import { loteSobreLeiturasPorChave } from '../test/lote-de-bindings';
 
 const getProject = vi.fn();
 const updateProject = vi.fn();
@@ -90,6 +91,9 @@ vi.mock('../lib/api-client', async () => {
     listProviderCapabilities: () => Promise.resolve([]),
     listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
     getProjectModelBinding: (...args: unknown[]) =>

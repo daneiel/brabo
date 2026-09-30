@@ -670,6 +670,19 @@ export interface ResolvedBinding {
   skipped: SkippedBinding[];
 }
 
+/** Uma chave do lote e o binding resolvido dela (RN-654). */
+export interface BindingResolvidoDaChave {
+  key: string;
+  /** O MESMO valor da rota individual — `null` sem modelo em nível nenhum. */
+  binding: ResolvedBinding | null;
+}
+
+/** `GET /projects/:projectId/model-bindings/resolved` (RN-654, AT-334). */
+export interface BindingsResolvidosEmLote {
+  agents: BindingResolvidoDaChave[];
+  areas: BindingResolvidoDaChave[];
+}
+
 // user_credentials guarda tanto chaves de LLM quanto tokens de git do
 // usuário (github/gitlab) — o endpoint de listagem mistura os dois.
 export type CredentialProviderName = LLMProviderName | 'github' | 'gitlab';

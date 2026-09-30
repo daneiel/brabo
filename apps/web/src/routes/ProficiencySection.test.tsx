@@ -67,6 +67,7 @@ vi.mock('../lib/api-client', () => ({
   // Object.entries e poluía o log com um erro que não é do teste.
   listModels: () => Promise.resolve({ local: {}, cloud: {} }),
   getAgentModelBinding: () => Promise.resolve(null),
+  getResolvedModelBindings: () => Promise.resolve({ agents: [], areas: [] }),
   setAgentModelBinding: () => Promise.resolve({}),
 }));
 
