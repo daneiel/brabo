@@ -448,6 +448,14 @@ The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:
   answers carry Portuguese text inside an English answer (6 form-only, 2
   interleaved), while 7 are clean English, forms included. The model can
   write the form in English — it does so about half of the time.
+  **Where it came from (AT-282, [RN-667](../business-rules.md#rn-667)):** the
+  tool's own description told the model the `label` was "o texto da pergunta,
+  **em pt-BR**" — a second, fixed language instruction outside the facade,
+  competing with the trailing orientation in every call. It now says "no
+  idioma da sua resposta" and names no language; the orientation itself is
+  unchanged. The after-measurement was **not run** (no OpenRouter key on the
+  machine that made the change) and is pending the owner — C06 and C12,
+  treated arm, 5 rounds, with the budget cap in the RN.
 
 What C11 is, in the data. DeepSeek's 5 treated misses: 3 have the English
 translation quoted in a Portuguese frame ("Registrei a regra… A tradução que

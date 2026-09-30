@@ -189,6 +189,9 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
+| O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
+| O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
 | O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
 | "Sempre permitir" aprova e grava o padrão na mesma transação; clique em ação já aprovada vira sucesso nomeado, e os tipos do teto (git tipado) deixam de oferecer o botão (AT-310/AT-320) | RN-642 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
@@ -220,6 +223,9 @@ estado lido do repositório e não da conversa.
 | O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
 | Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 | A Visão geral e a aba Executores leem os modelos do time pelo lote, e os cartões das pendências de outras sessões no chat mostram o motivo da política (AT-339/AT-340) | RN-654, RN-656 |
+| O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
+| A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
+| O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
 
 ## Estado atual e aberto
 
@@ -1125,7 +1131,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042); 9 providers (ADR 0043); o Jev
+  preço congelado no metering (ADR 0042) — que desde o ADR 0188 só é o
+  número quando a resposta NÃO traz o custo real: o `usage.cost` do
+  OpenRouter vence, com `price_implicit` marcando a linha (a MESMA coluna
+  do Jev) e o do catálogo ao lado em `catalog_cost_micros`, RN-665; 9 providers (ADR 0043); o Jev
   (`typesafe/jev-1.13`, Decisions API do OpenRouter) escolhe o menu de
   ferramentas de cada passo por uma porta PRÓPRIA, `ToolRouter`, fora do
   `LLMProviderRegistry` e do catálogo `models` (ADR 0179, RN-625): só com
@@ -1293,7 +1302,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma que existe custa caro. Não "limpe" essa lista.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
-  hotfix/ nasce de main. Formato funcao/descritivo,
+  hotfix/ nasce de main. Os AGENTES seguem a mesma régua desde a RN-664: o
+  worktree do dev agent nasce de `dev`, a PR dele e a de ADR miram `dev`, e o
+  gate julga o diff contra `dev` — os três juntos, nunca um só (o gate
+  julgaria um diff que não é o da PR); repositório sem `dev` falha nomeado,
+  sem queda para a default. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
   PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
   de barras), mas só quando o AUTOR é o próprio Dependabot
@@ -2015,7 +2028,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do projeto DIFERENTE do do autor, a MESMA mensagem ganha a cláusula
   "artefatos no idioma do projeto"; só com os dois códigos na forma curta
   (`idioma[-Escrita][-Região]`), que é o que segura o teto. Não mova isso para
-  a descrição de cada ferramenta.
+  a descrição de cada ferramenta. E descrição de ferramenta NUNCA nomeia idioma
+  (RN-667): o "em pt-BR" do `label` de `ask_structured_questions` era uma
+  segunda orientação, fixa, que punha o formulário em português para autor
+  `en`; ela diz "no idioma da sua resposta", e um teste reprova as 22
+  ferramentas do harness se alguma voltar a fixar um.
 - O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
   PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
   resposta `confirm` grava `users.detected_language`; `decline` grava em

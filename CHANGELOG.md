@@ -57,6 +57,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
+  [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
+  [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
+  custo real — no OpenRouter, `usage.cost` —, ele é o `cost_micros` gravado, o
+  que o turno devolve ao engine, o que os budgets somam e o que a aba Gastos
+  mostra; o preço de catálogo (ADR 0042) continua sendo o número onde a
+  resposta não diz o custo. A linha marca `price_implicit` (a coluna do Jev: o
+  preço gravado é `custo ÷ tokens`) e ganha, pela migration 0067,
+  `catalog_cost_micros` (o que o catálogo teria cobrado), `resolved_model_name`
+  (o modelo que a resposta diz ter servido) e `generation_id` (o `gen-…` para
+  conferir a cobrança).
+  Chamada BYOK cai no catálogo. **Budgets calibrados sobre o preço de catálogo
+  podem cruzar os limiares antes**: o uso real de 29/09 custou 1,85× a
+  estimativa.
+- **api**: **o metering lê o cache e o raciocínio** (AT-272,
+  [RN-666](docs/business-rules/custo.md#rn-666)). Cada linha de `token_usage`
+  grava `cached_input_tokens` (`prompt_tokens_details.cached_tokens`) e
+  `reasoning_tokens` (`completion_tokens_details.reasoning_tokens`) — partes
+  dos totais, nunca somadas a eles, `null` quando o provider não disse — e o
+  `medir-execucao.ts` passa a mostrar, por agente, quanto da entrada foi cache
+  lido, quanto da saída foi raciocínio e em quantas chamadas o custo é o real.
 - **api, engine**: o laço **pergunta ao Jev qual ferramenta** e o modelo do usuário
   vê só o menu que sobra (AT-238, [RN-625](docs/business-rules.md#rn-625),
   [ADR 0179](docs/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
@@ -613,6 +634,42 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
+  e do PO) deixa de sair em português para quem escolheu outro idioma de
+  resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
+  ferramenta mandava escrever as perguntas "em pt-BR" — uma segunda orientação
+  de idioma, fixa, que competia com a da RN-622: a validação paga da AT-167
+  achou, com autor `en`, prosa em inglês e formulário em português em 8 de 15
+  respostas do DeepSeek. Agora ela diz "no idioma da sua resposta" e não nomeia
+  idioma nenhum; a orientação efêmera fica byte a byte (zero token a mais nos
+  50 de teto), e a descrição custa +23/+19 tokens (cl100k/o200k). Um teste
+  reprova qualquer descrição de ferramenta do harness que volte a fixar idioma.
+  A medição paga do "depois" segue pendente do dono (comando na RN).
+- **engine/api**: a PR do dev agent mira **`dev`**, não `main` (AT-250,
+  [RN-664](docs/business-rules.md#rn-664)). O `pr_open` leva
+  `targetBranch: "dev"` e a api, sem o campo, completa com `dev` em vez da
+  branch default; a PR de ADR do Arquiteto nasce de `dev` e mira `dev`. Junto,
+  por decisão do dono, o working tree do projeto abre `dev`, o worktree de cada
+  dev agent nasce de `dev` (workspace antigo, parado na default, ganha a `dev`
+  local a partir de `origin/dev`) e o gate calcula o diff contra `dev` — o
+  contexto do QA diz "branch de trabalho dev". Repositório SEM `dev` (adotado
+  sem bootstrap) não cai para `main`: o working tree, o worktree, o diff e a
+  PR falham NOMEANDO a ausência — antes o working tree criava uma `dev` vazia
+  e a marcava pronta. A PR de infra (`open_infra_pr`) não mudou.
+- **engine**: o Infra Lead não anuncia mais subida de container que não fez
+  (AT-264, [RN-668](docs/business-rules.md#rn-668)). No uso real de 29/09 ele
+  disse que subiria o container "em paralelo" e nenhum `tool.call` de subida
+  veio depois. Duas causas no código: `propose_infra_pr` encerra o turno e
+  cortava o lote da resposta no meio — uma `propose_container_start` pedida na
+  MESMA resposta, depois da PR, sumia sem rastro —, e nada dizia no fio que a
+  subida não tinha acontecido. Agora o lote inteiro é despachado antes do
+  encerramento, e o turno que termina pela PR sem subida proposta (ou em que a
+  subida foi tentada, recusada e não refeita) fecha com uma frase do SERVIDOR
+  dizendo que a subida NÃO foi proposta, salvo container já registrado de pé.
+  O kickoff e a descrição de `propose_infra_pr` passam a dizer que a subida vem
+  antes da PR ou na mesma resposta. A subida continua proposta pelo modelo e
+  decidida por humano.
+
 - **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
   3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
   `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não
@@ -888,7 +945,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
   duplica o evento `backlog.task_status_changed`. O merge continua sendo do
   humano (AT-275, [RN-628](docs/business-rules.md#rn-628), [RN-418](docs/business-rules.md#rn-418));
-  a recusa de PR já mergeada (AT-249) fica de fora.
+  a recusa de PR já mergeada (AT-249) veio depois, na RN-663 (abaixo).
+
+- **api**: o merge de PR deixa de repetir. Propor `git_merge` de uma PR que já
+  foi mergeada responde 409 `pr_ja_mergeado`, e de uma PR com merge já proposto
+  e ainda sem desfecho, 409 `merge_ja_proposto` — nada é criado, e a tela mostra
+  a frase da api. Aprovar um merge pendente cuja PR outra proposta já mergeou
+  também é 409 `pr_ja_mergeado`, e a ação fica pendente para ser negada. O
+  provider `local` passa a recusar o merge repetido como o GitHub. Gate de
+  QA/SecOps pendente NÃO recusa: a aba PRs e o "Mergear" do chat avisam em
+  texto qual gate falta, e o botão segue ativo. O merge em branch protegida
+  continua manual (AT-249, [RN-663](docs/business-rules.md#rn-663),
+  [RN-418](docs/business-rules.md#rn-418)).
 
 - **engine**: o QA Lead não cai mais quando o `qa-automacao` suspende uma
   SEGUNDA vez esperando aprovação na retomada (AT-248,

@@ -52,7 +52,7 @@ the four `ChatStreamChunk` types.
 | --- | --- |
 | `text_delta` | a piece of generated text |
 | `tool_calls` | the model requested tools (single chunk, not incremental) |
-| `usage` | token count, with the `estimated` flag |
+| `usage` | token count, with the `estimated` flag; and, when the response says so, the real cost (`costMicros`), the model that served (`resolvedModel`), the response id (`generationId`) and the cached/reasoning PARTS of the token counts (`cachedInputTokens`, `reasoningTokens`, RN-666) — [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) |
 | `error` | failure classified by `code` — **never an exception** |
 
 A failure becomes a chunk, not an exception, because the turn has already spent
@@ -118,7 +118,7 @@ Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — 
 | `nvidia-nim` | yes | yes | no | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | yes | yes | yes | yes | no | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost` | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | yes | yes | yes | no | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
 | `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
@@ -285,6 +285,14 @@ provider registry. The "Update catalog" button on the curation screen calls the
 cost was already immutable before Phase 9c; what was missing was being
 **reproducible** — without the recorded price, `tokens × price = cost` would stop
 adding up the moment someone corrected the table.
+
+Since [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+([RN-665](../business-rules/custo.md#rn-665)) the catalog price is the number
+only when the response doesn't carry the real cost. When it does (OpenRouter's
+`usage.cost`), that is `cost_micros`, both price columns hold the IMPLICIT price
+(`cost ÷ tokens`, flagged by `price_implicit`), and what the catalog would have
+charged goes alongside in `catalog_cost_micros` — so `tokens × price = cost`
+still holds on every row, real or estimated.
 
 Every price change writes a row in `model_price_changes`, append-only,
 with the before/after pair and the origin (`manual` | `sync`). The pair is written
@@ -511,6 +519,13 @@ Quirks found and tested
   a string code is mapped by substring
   (`mapearCodigoDeFrame`) with `upstream` as a safe default — never silence, even
   for a code outside the map;
+- **Real cost in `usage.cost`** (ADR 0188, RN-665): the last stream frame
+  carries what the hub charged, in USD; `extrairCustoRealOpenRouter` turns it
+  into micro-USD and the metering records it as the number. With
+  `is_byok: true` the field is the hub's fee, not the inference, so it is NOT
+  read and the row falls back to the catalog. `model` (the dated version an
+  alias like `~deepseek/deepseek-flash-latest` resolved to) and `id` (`gen-…`)
+  are read by the base for every provider of the dialect;
 - **Connection test**: `GET /key` (official doc) validates the key without
   spending tokens on an actual chat call. It's the first `LLMCredentialConnectionTester`
   on the LLM side. Since [ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)

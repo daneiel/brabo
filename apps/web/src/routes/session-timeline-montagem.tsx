@@ -13,6 +13,7 @@ import type {
   StructuredQuestion,
   StructuredQuestionAnsweredPayload,
   StructuredQuestionPayload,
+  Task,
 } from '../lib/api-types';
 import type { useTurnoDoAgente } from '../lib/session-turno';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -38,6 +39,7 @@ import {
 import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
 import { StorySlide } from './StorySlide';
 import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
+import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
@@ -908,6 +910,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           sessionId={sessionId}
           pr={prAberta}
           podeDecidir={podeDecidir}
+          // AT-249 (RN-663): o gate que ainda falta, pela tarefa que a
+          // `pr_open` carrega — aviso, o botão segue ativo.
+          gatePendente={gatePendenteNoMerge(
+            tarefaDaAcao(action, backlogQuery.data),
+          )}
         />
       ) : null;
     // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
@@ -987,4 +994,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     titulo: t('turno.passosDoTurno'),
     trailing: (count) => t('turno.passosCount', { count }),
   });
+}
+
+/** A tarefa que a `pr_open` abriu (`storyTaskId` no payload), se o backlog carregado a tem. */
+function tarefaDaAcao(acao: ProposedAction, epics: Epic[] | undefined): Task | undefined {
+  const taskId = (acao.payload as { storyTaskId?: unknown } | null)?.storyTaskId;
+  if (typeof taskId !== 'string') return undefined;
+  for (const epic of epics ?? []) {
+    for (const story of epic.stories) {
+      const task = story.tasks.find((t) => t.id === taskId);
+      if (task) return task;
+    }
+  }
+  return undefined;
 }

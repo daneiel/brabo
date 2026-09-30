@@ -17792,7 +17792,7 @@
           "costMicros": {
             "type": "number",
             "example": 52700,
-            "description": "Cost in micro-USD."
+            "description": "Cost in micro-USD: the REAL cost the provider returned when it did (OpenRouter's `usage.cost`), otherwise the frozen catalog price (ADR 0188, RN-665)."
           },
           "estimated": {
             "type": "boolean",

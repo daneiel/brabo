@@ -275,7 +275,8 @@
     "mergeErrorTitle": "Não consegui propor o merge",
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate bloqueado — corrija antes de propor o merge.",
-    "mergeNoSession": "Sem sessão no projeto para propor a ação."
+    "mergeNoSession": "Sem sessão no projeto para propor a ação.",
+    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
   },
   "politica": {
     "motivo": "A política decidiu por: {{motivo}}",

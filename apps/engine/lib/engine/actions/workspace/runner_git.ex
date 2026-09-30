@@ -62,6 +62,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   """
 
   alias Engine.Actions.GitAuth
+  alias Engine.Projects.ProjectRepository
   alias Engine.Runners.{CredencialDeGit, RunnerReadiness, RunnerRouter}
 
   @timeout_ms 60_000
@@ -128,9 +129,15 @@ defmodule Engine.Actions.Workspace.RunnerGit do
     :ok
   end
 
-  @doc "Espelho de `Engine.Dev.WorktreeManager.add_worktree/3`, via o runner."
-  def add_worktree(project_id, work_dir, agent_id, task_slug) do
-    with :pronto <- RunnerReadiness.verificar(project_id) do
+  @doc """
+  Espelho de `Engine.Dev.WorktreeManager.add_worktree/4`, via o runner: a
+  branch nasce de `base` (a de trabalho, RN-664), com a MESMA garantia da base
+  local e a MESMA recusa nomeada quando nem `base` nem `origin/<base>` existem.
+  Sem `base` (`nil`), nasce do HEAD, como antes.
+  """
+  def add_worktree(project_id, work_dir, agent_id, task_slug, base \\ nil) do
+    with :pronto <- RunnerReadiness.verificar(project_id),
+         {:ok, ponto_de_partida} <- garantir_base(project_id, work_dir, base) do
       path = worktree_path(work_dir, agent_id)
       branch = "feature/#{task_slug}"
       _ = remove_worktree(project_id, work_dir, agent_id)
@@ -138,13 +145,55 @@ defmodule Engine.Actions.Workspace.RunnerGit do
       # `-B`, mesmo motivo do caminho local (`Engine.Dev.WorktreeManager`):
       # redefine a branch em vez de recusar quando ela já existe de uma
       # tentativa anterior da MESMA task.
-      case git(project_id, work_dir, "worktree add #{shq(path)} -B #{shq(branch)}") do
+      comando = "worktree add #{shq(path)} -B #{shq(branch)}" <> ponto_de_partida
+
+      case git(project_id, work_dir, comando) do
         {:ok, {0, _}} -> {:ok, %{path: path, branch: branch}}
         {:ok, {_status, out}} -> {:error, out}
         {:error, motivo} -> {:error, motivo}
       end
     else
       {:erro, motivo} -> {:error, RunnerReadiness.mensagem(motivo, project_id)}
+      {:error, _} = erro -> erro
+    end
+  end
+
+  defp garantir_base(_project_id, _work_dir, nil), do: {:ok, ""}
+
+  defp garantir_base(project_id, work_dir, base) do
+    cond do
+      ref?(project_id, work_dir, "refs/heads/#{base}") ->
+        {:ok, " " <> shq(base)}
+
+      ref?(project_id, work_dir, "refs/remotes/origin/#{base}") ->
+        case git(project_id, work_dir, "branch #{shq(base)} #{shq("origin/" <> base)}") do
+          {:ok, {0, _}} -> {:ok, " " <> shq(base)}
+          {:ok, {_status, out}} -> {:error, out}
+          {:error, motivo} -> {:error, motivo}
+        end
+
+      head_vazio_em?(project_id, work_dir, base) ->
+        {:ok, ""}
+
+      true ->
+        {:error,
+         ProjectRepository.mensagem_sem_branch_de_trabalho(
+           "nem #{base} nem origin/#{base} no working tree"
+         )}
+    end
+  end
+
+  defp ref?(project_id, work_dir, ref) do
+    match?({:ok, {0, _}}, git(project_id, work_dir, "rev-parse --verify --quiet #{shq(ref)}"))
+  end
+
+  defp head_vazio_em?(project_id, work_dir, base) do
+    case git(project_id, work_dir, "symbolic-ref HEAD") do
+      {:ok, {0, out}} ->
+        String.trim(out) == "refs/heads/#{base}" and not ref?(project_id, work_dir, "HEAD")
+
+      _ ->
+        false
     end
   end
 
@@ -219,10 +268,27 @@ defmodule Engine.Actions.Workspace.RunnerGit do
         :ok
 
       _ ->
-        # Bare repo provisionado mas nunca recebeu push (sem commits, sem
-        # origin/<branch> ainda) — mesmo fallback do caminho local: cria um
-        # branch local vazio válido.
-        git!(project_id, dir, "checkout -b #{shq(default_branch)}")
+        if remoto_vazio?(project_id, dir) do
+          # Bare repo provisionado mas nunca recebeu push (sem commits, sem
+          # origin/<branch> ainda) — mesmo fallback do caminho local: cria um
+          # branch local vazio válido.
+          git!(project_id, dir, "checkout -b #{shq(default_branch)}")
+        else
+          # RN-664 — mesma recusa do caminho local
+          # (`Engine.Actions.Workspace.init_from_bare!/4`): o remoto tem
+          # branches mas não a de trabalho, e nem uma `dev` vazia nem a default
+          # servem de base.
+          raise ProjectRepository.mensagem_sem_branch_de_trabalho(
+                  "o remoto não tem origin/#{default_branch}"
+                )
+        end
+    end
+  end
+
+  defp remoto_vazio?(project_id, dir) do
+    case git(project_id, dir, "branch -r") do
+      {:ok, {0, saida}} -> String.trim(saida) == ""
+      _ -> false
     end
   end
 

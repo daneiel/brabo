@@ -29,3 +29,10 @@
 .decisaoInline {
   max-width: 420px;
 }
+
+/* AT-249 (RN-663): o gate que ainda falta, em TEXTO — aviso, nunca trava. */
+.avisoDeGate {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--warning);
+}

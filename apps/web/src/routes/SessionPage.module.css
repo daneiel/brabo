@@ -1201,6 +1201,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
   margin-top: var(--space-2);
 }
 
@@ -1208,6 +1209,12 @@
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   color: var(--text-muted);
+}
+
+/* AT-249 (RN-663): o gate pendente, em TEXTO — aviso, o botão segue ativo. */
+.mergearAvisoDeGate {
+  font-size: var(--fs-meta);
+  color: var(--warning);
 }
 
 /*

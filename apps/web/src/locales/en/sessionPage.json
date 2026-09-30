@@ -220,7 +220,8 @@
     "propondo": "Proposing…",
     "semPapel": "Merging here needs the developer role on the project.",
     "nota": "Proposes the merge in this session; you confirm it on the card that appears — merging stays manual.",
-    "erroTitulo": "Could not propose the merge"
+    "erroTitulo": "Could not propose the merge",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
   },
   "fio": {
     "historico": {

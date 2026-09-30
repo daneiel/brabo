@@ -13533,7 +13533,7 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:491`
+  dispatch de `container_start` consultando antes de propor), `:534`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14253,7 +14253,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:437`
+  `propose_infra_pr` perguntando antes do HALT), `:480`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15428,7 +15428,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:508`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:567`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15522,7 +15522,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:744`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:805`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15961,10 +15961,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:605`
-  (`recusa_local_de_subida`), `:658` (`recusa_por_estado`), `:668`
-  (`recusa_ja_de_pe`), `:700` (`recusa_sem_imagem_decidida`), `:717`
-  (`recusa_pasta_nunca_confirmada`), `:728` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:652`
+  (`recusa_local_de_subida`), `:705` (`recusa_por_estado`), `:729`
+  (`recusa_ja_de_pe`), `:747` (`recusa_sem_imagem_decidida`), `:764`
+  (`recusa_pasta_nunca_confirmada`), `:775` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16384,12 +16384,12 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:149`
-  (`user_message`), `:169` (`TurnoOrfao.fechar_ao_subir`), `:201`
-  (`handle_cast(:kickoff`), `:218` (`handle_cast({:correct`, a fila), `:228`
-  (`handle_cast(:cancel`), `:241` (`handle_call({:user_message`), `:264`
-  (`handle_info`), `:283` (`drenar_correcao_pendente`), `:330`
-  (`toolloop.limit_reached`), `:781` (`concluir`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:160`
+  (`user_message`), `:180` (`TurnoOrfao.fechar_ao_subir`), `:216`
+  (`handle_cast(:kickoff`), `:233` (`handle_cast({:correct`, a fila), `:243`
+  (`handle_cast(:cancel`), `:259` (`handle_call({:user_message`), `:275`
+  (`handle_info`), `:294` (`drenar_correcao_pendente`), `:341`
+  (`toolloop.limit_reached`), `:828` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -16398,7 +16398,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1135` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1327` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -16854,6 +16854,63 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 - **Origem:** AT-245, sobre a decisão da AT-168 (resposta 8) e as do
   mantenedor de 2026-09-29
 
+### RN-667 — O formulário estruturado segue o idioma da resposta: a descrição da ferramenta não fixa idioma nenhum {#rn-667}
+
+A validação paga da AT-167 achou, para autor com preferência `en` (C06/C12),
+a chamada `ask_structured_questions` com a **prosa em inglês e as perguntas do
+formulário em português** — no DeepSeek tratado, 8 das 15 respostas de
+C06+C12. A causa é do produto, e mora num lugar só: a descrição da ferramenta
+dizia que `label` era "o texto da pergunta, **em pt-BR**". Era uma SEGUNDA
+orientação de idioma, fixa, fora da fachada da [RN-622](#rn-622), competindo
+com ela em toda chamada do Criativo e do PO (as duas usam a MESMA spec).
+
+1. **O mecanismo é tirar a orientação concorrente, não acrescentar outra.** A
+   descrição passou a dizer "o texto da pergunta, **no idioma da sua
+   resposta** (vale também para `options`)", e o exemplo, que segue em
+   português, é marcado "os textos seguem o idioma da sua resposta". Ela não
+   nomeia idioma NENHUM: QUAL é o idioma continua decidido só pela mensagem
+   efêmera de `Engine.Harness.IdiomaDaResposta`, e a fachada `EngineApiClient`
+   não muda.
+2. **A orientação da RN-622/623 fica byte a byte.** Zero token a mais nos 50
+   de teto. `ask_structured_questions` segue FORA de `@ferramentas_de_artefato`
+   (é pergunta à pessoa do turno, [RN-623](#rn-623) item 4), então autor `en`
+   num projeto `pt-BR` recebe as perguntas em inglês — e é o que se quer.
+3. **Custo, onde ele cai.** A descrição viaja em toda chamada que leva a
+   ferramenta, com qualquer autor: medido com `gpt-tokenizer`, só o texto que
+   mudou, +23 tokens em cl100k e +19 em o200k (a linha de `label` 18/17 → 29/27;
+   a do exemplo 8/6 → 20/15). Não é a orientação indo para a descrição — a
+   frase aponta para ela sem dizer idioma, e o que foi embora era justamente a
+   frase que dizia um.
+4. **Guarda.** Nenhuma descrição de ferramenta do harness (as 22 de
+   `Engine.Harness.Tools.*`) pode citar `pt-BR`, `(en)`, "in English", "em
+   português" ou "em inglês" — a do `emit_artifact`, que exige as CHAVES do
+   payload "em INGLÊS", fica de fora porque fala de contrato, não de texto para
+   a pessoa.
+
+**O que esta regra NÃO fecha, declarado:** a medição paga antes/depois
+**não rodou** (sem chave do OpenRouter na máquina da mudança) — o "antes" é o
+da AT-167 (DeepSeek tratado: 8 de 15 respostas de C06+C12 com o formulário em
+português), e o "depois" é **pendência do dono**:
+`pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env --bracos tratamento --casos C06,C12 --rodadas 5 --teto-usd 0.5 --saida ~/.cache/brabo/validacao-idioma/at-282`,
+seguido de `idioma:validar --relatorio --saida` na mesma pasta e da revisão do
+formulário (rótulo `formulario` do `idioma:revisar`). Teto sugerido US$ 0,50:
+o braço tratado inteiro custou US$ 0,21 (DeepSeek) e US$ 0,94 (Haiku) em
+17 casos, e estes são 2. O script lê a descrição do arquivo do produto, então
+mede o texto novo sem cópia. Se o formulário continuar em português com a
+descrição neutra, o passo seguinte é uma cláusula condicional na orientação
+(só quando a chamada leva `ask_structured_questions`), e ela tem de caber no
+pior caso da RN-623 (44 / 37), que já está a ~48 com a moldura.
+
+- **Código:** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex:193`
+  (`descricao`), `:44` (`spec`)
+- **Teste:** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs:199`
+  (a descrição manda seguir o idioma da resposta), `:207` (não nomeia idioma
+  — caso de falha: a forma antiga "em pt-BR" é reprovada pela mesma régua),
+  `:214` (nenhuma das ferramentas do harness fixa idioma);
+  `scripts/idioma/validacao.spec.ts:60` (a medição lê a descrição nova)
+- **Origem:** AT-282, da revisão humana da AT-167 (PR #750, 29/09); entrada
+  na rodada aprovada pelo mantenedor em 2026-09-30
+
 ### RN-624 — A api detecta o idioma do autor pelas próprias mensagens e PERGUNTA; só o confirmado vira preferência {#rn-624}
 
 A [RN-618](#rn-618) deixou o degrau "detectado confirmado" pronto e vazio.
@@ -17120,7 +17177,8 @@ api, o engine e todo teto ficam como estão.
    **a confirmação é a mesma e é do humano** — o merge em branch protegida
    continua `require_approval` incondicional ([RN-418](#rn-418)), sem auto-aprovar,
    sem "sempre permitir", sem o modo automático. O dedupe e as recusas da api
-   (PR já mergeada, tarefa sem gate — AT-249) chegam ao dono como a frase da api.
+   (PR já mergeada, merge já proposto — [RN-663](#rn-663)) chegam ao dono como
+   a frase da api; gate pendente não é recusa, é aviso em texto ao lado do botão.
 5. **O papel é o do ENDPOINT, e a lacuna é declarada.** Decidir ação e propor
    ação pedem `developer` (`actions.controller.ts`); a tela usa `roleAtLeast`
    sobre o papel de WORKSPACE, porque a Sessão não busca `project_members` — a
@@ -17295,8 +17353,9 @@ seguiram em `in_review` (AT-275).
    `backlog.task_status_changed` (`cause: 'pr_merged'`, `pullRequestId`,
    `actionId`), append-only, sem UPDATE em tabela de eventos. Sem migration.
 4. **Fronteira declarada (AT-249).** Esta regra NÃO recusa merge de PR já
-   mergeada nem consulta `gate_status`: a recusa "PR já mergeada e tarefa ainda
-   sem gate" é decisão pendente do dono e não foi implementada aqui.
+   mergeada nem consulta `gate_status`. A recusa da PR já mergeada (e da
+   proposta repetida) veio depois, na [RN-663](#rn-663), antes de o merge
+   chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:252`
   (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:287`
@@ -17396,7 +17455,7 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
-  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:232`
+  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:241`
   (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:29`
   (`TIPOS_SEM_SEMPRE_PERMITIR`), `:60` (`motivoDeRecusaDoSempreAprovar`),
   `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
@@ -18794,3 +18853,186 @@ faz merge nem push.
   (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
 - **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
 - **Origem:** AT-312 (levantamento da AT-309, passo 4)
+
+## A PR do dev agent mira `dev`, e o gate julga o diff dessa PR (RN-664)
+
+### RN-664 — O trabalho dos agentes nasce de `dev`, a PR deles mira `dev`, e o gate julga o diff contra `dev` — os três juntos {#rn-664}
+
+A política de branches do produto manda o trabalho nascer de `dev` (o bootstrap
+cria `dev` e `qa` a partir de `main`, [RN-582](#rn-582)), mas até aqui ninguém
+apontava os agentes para ela: o `pr_open` do dev agent não levava
+`targetBranch` e a api completava com `repo.defaultBranch` (`main`); a PR de
+ADR do Arquiteto nascia de `main` e mirava `main`; o working tree do projeto
+abria a `default_branch`; o gate calculava o diff contra ela; e o contexto do
+QA dizia "Repositório · branch main" (AT-250, item A4 do uso real de 29/09).
+Toda PR de agente pulava a esteira `dev → qa → main`.
+
+Decisão do dono (30/09): os TRÊS passam a usar `dev`, juntos — mudar só um
+deixaria o gate julgando um diff que não é o da PR. A branch de TRABALHO é
+`dev` e NÃO é a `default_branch` do provider (que segue sendo a que a promoção
+alcança por último e continua lida onde ela é a pergunta):
+
+- o working tree do projeto abre `dev` (`ensure_remoto/2` ignora o
+  `default_branch` do remoto para escolher a base), e o worktree de cada dev
+  agent nasce de `dev` EXPLICITAMENTE, não do HEAD — workspace inicializado
+  antes desta regra está parado na `default_branch` (a marca de pronto impede
+  re-inicializar) e ganha a `dev` local a partir de `origin/dev`, sem `fetch`
+  novo;
+- o `pr_open` do dev agent leva `targetBranch: "dev"` no payload, e a api, sem
+  o campo (ação proposta antes), completa com `dev` e não mais com a
+  `defaultBranch`; a PR de ADR nasce de `dev` e mira `dev`;
+- o diff do gate é `dev...HEAD`, e a linha de contexto do projeto diz
+  "Repositório · branch de trabalho dev".
+
+**Repositório SEM `dev`** (adotado sem bootstrap, ou bootstrap que não chegou a
+`create_dev_branch`): NÃO há queda para a `default_branch` — seria o agente
+trabalhando e o gate julgando sobre uma base que não é a da PR. Cada ponto
+falha NOMEADO, pelo comportamento que já tinha para branch ausente, com uma
+exceção nova: o working tree recusava nada e criava uma `dev` LOCAL VAZIA
+(o caminho do bare que nunca recebeu push), marcava pronto e nunca mais
+re-inicializava. Agora esse caminho só vale para o remoto SEM branch nenhuma;
+com branches e sem `origin/dev`, a inicialização levanta com a mensagem
+nomeada (`mensagem_sem_branch_de_trabalho/1`, "o repositório do projeto não
+tem a branch `dev`… crie a branch… e tente de novo") e o `.git` é desfeito
+(AT-112), então a próxima tentativa, com a `dev` criada, inicializa normal. O
+worktree recusa com a mesma mensagem quando não há `dev` nem `origin/dev`; o
+diff falha com o erro do git nomeando a revisão; o provider recusa a PR (e a
+criação da branch do ADR) nomeando a ref. O `infra` (`open_infra_pr`) NÃO
+mudou: segue nascendo e mirando a `defaultBranch`.
+
+O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
+`BRANCH_DE_TRABALHO` na api e `branch_de_trabalho/0` no engine.
+
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:165`
+  (`branch_de_trabalho`), `:176` (`branch_de_trabalho`), `:190`
+  (`mensagem_sem_branch_de_trabalho`);
+  `apps/engine/lib/engine/actions/workspace.ex:70` (`ensure_remoto`), `:224`
+  (`init_from_bare!`), `:272` (`remoto_vazio?`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:138` (`add_worktree`),
+  `:163` (`garantir_base`), `:288` (`remoto_vazio?`);
+  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
+  (`add_worktree`), `:86` (`garantir_base`);
+  `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
+  `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
+  `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
+  `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:138`
+  (`targetBranch`); `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:86`
+  (`fromRef`), `:99` (`targetBranch`)
+- **Teste:** `apps/engine/test/engine/gates/diff_test.exs:64` (o diff é só a
+  mudança do agente, nada da `main` — caminho feliz), `:73` (sem `dev` o diff
+  falha nomeando a revisão — caso de falha), `:91` (o contexto diz a branch de
+  trabalho); `apps/engine/test/engine/actions/workspace_test.exs:87`, `:98`,
+  `:110` (repositório adotado sem `dev`: recusa nomeada, `.git` desfeito, e
+  passa depois de criada a branch — caso de falha), `:130`;
+  `apps/engine/test/engine/dev/worktree_manager_test.exs:119`, `:127`
+  (workspace de antes da regra), `:147` (sem `dev` nem `origin/dev`);
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs:114`;
+  `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts:184`,
+  `:213`; `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts:143`,
+  `:151` (sem `dev`, `failed` com o motivo do provider)
+- **Origem:** AT-250 (item A4 da análise do uso real de 29/09), decisão do dono
+  de 30/09
+
+## O Infra Lead não anuncia subida que não fez (RN-668)
+
+### RN-668 — O que o turno do Infra Lead anuncia sobre a subida do container é decidido pelo código, não pelo texto do modelo {#rn-668}
+
+É a [RN-163](business-rules/autenticacao.md#rn-163) ("nada se anuncia que o
+código não vá executar") aplicada ao Infra Lead. No uso real de 29/09 (sessão
+`be70`, seq 282) ele escreveu que subiria o container "em paralelo" à PR de
+infra, e nenhum `tool.call` de subida veio depois (AT-264). Havia duas causas no
+código, e as duas fecham aqui:
+
+1. **O lote inteiro da resposta é despachado antes do encerramento.**
+   `propose_infra_pr` aceita encerra o turno sem nova ida ao modelo — é o único
+   ponto em que o CÓDIGO corta o laço com o modelo querendo continuar —, mas
+   ela parava o despacho no MEIO do lote: uma `propose_container_start` (ou
+   `container_start_via_runner`) pedida na MESMA resposta, depois da PR, sumia
+   sem `tool.call`, sem `tool.result` e sem aviso. Agora é a forma do Dev Lead
+   (`propose_execution_plan`): todas as chamadas da resposta rodam, e só depois
+   a PR aceita encerra o turno. Uma segunda `propose_infra_pr` na mesma resposta
+   é recusada com motivo (`tool.call` + `tool.result` com `ok: false`) — só a
+   primeira consolida com o Workflows.
+2. **O fecho do turno diz, com frase do SERVIDOR, quando a subida NÃO foi
+   proposta** — a forma do desfecho consolidado do Criativo (`encerrar/2`). A
+   decisão é pelo que o laço executou (alguma proposta de subida ACEITA pela api
+   neste turno?), nunca pelo que o modelo escreveu; não há leitura do texto
+   dele. Fala-se em dois casos: o turno terminou pela PR e nenhuma subida foi
+   proposta; ou uma subida foi tentada, recusada, e nenhuma proposta aceita veio
+   depois. Turno que nunca tocou na subida (uma pergunta, uma correção de gate)
+   não ganha frase nenhuma, e container já REGISTRADO `running`/`provisioning`
+   também não (a mesma leitura local de `recusa_ja_de_pe/2`, sem HTTP).
+
+O kickoff e a descrição de `propose_infra_pr` passam a dizer o que o código faz:
+a subida vem ANTES da PR ou na MESMA resposta, porque a PR encerra o turno. Isso
+é ajuda ao modelo, não a garantia — a garantia é o fecho do item 2.
+
+Nada aqui sobe container nem propõe subida: ela continua sendo `proposed_action`
+proposta pelo modelo e decidida por humano (RN-491), com as recusas por modo e
+estado intactas (RN-566/RN-610). A subida como passo do servidor é a AT-260, que
+depende de decisão do dono.
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:400`
+  (`dispatch_calls`), `:446` (`recusa_pr_repetida_no_lote`), `:858`
+  (`registrar_subida`), `:866` (`fechar_subida`), `:884`
+  (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
+  (a descrição da tool)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
+  (a subida pedida depois da PR na mesma resposta é despachada — caminho feliz),
+  `:1107` (a PR encerra o turno sem subida e o fio diz — caso de falha),
+  `:1147` (subida recusada e prometida, sem proposta: o fecho diz), `:1132`
+  (container já de pé: nada a dizer), `:1169` (recusa corrigida no turno: sem
+  frase), `:1190` (turno sem subida: sem frase), `:1199` (segunda
+  `propose_infra_pr` no lote é recusada)
+- **Origem:** AT-264 (uso real de 2026-09-29, item A18 da análise)
+
+### RN-663 — O merge de PR recusa a PR já mergeada e a proposta repetida; gate pendente é só aviso {#rn-663}
+
+O uso real de 29/09 mediu os dois buracos: a `pr-6` teve TRÊS `git_merge`
+`executed`, e a `pr-4` foi mergeada com a tarefa em `awaiting_qa`. A api não
+deduplicava `git_merge` por PR (só a tela, e só na mesma lista), e o
+`LocalGitProvider` devolvia a PR já mergeada sem erro — o executor gravava um
+segundo `executed` para o mesmo merge.
+
+1. **Proposta.** `git_merge` de uma PR que uma execução anterior já mergeou
+   (`executed` com `state: 'merged'`) é 409 `pr_ja_mergeado`; com uma proposta
+   VIVA da mesma PR (`pending`, `approved` ou `auto_approved`), 409
+   `merge_ja_proposto`. Nos dois, nada é criado. Negada ou falha não contam:
+   quem negou ou viu falhar pode tentar de novo. A comparação é pelo
+   `pullRequestId` do payload, no projeto inteiro (qualquer sessão).
+2. **Aprovação.** Aprovar um `git_merge` pendente cuja PR OUTRA proposta já
+   mergeou é 409 `pr_ja_mergeado`, antes de qualquer efeito, e a ação continua
+   `pending` para quem a vê negar. A irmã apenas VIVA não impede decidir esta.
+3. **Provider.** O `LocalGitProvider` recusa mergear PR já mergeada com
+   `GitPullRequestAlreadyMergedError`, e o target não se move — alinhado ao
+   GitHub, que recusa o merge repetido.
+4. **Gate pendente é AVISO, nunca recusa** (decisão do dono, 30/09). A aba PRs
+   e o "Mergear" do chat dizem em TEXTO qual gate falta (`qa-verificada` com
+   `awaiting_qa` ou gate ainda não aberto, `secops-segura` com
+   `awaiting_secops`), e o botão e o card seguem ativos. `awaiting_user`,
+   tarefa `done` e PR sem tarefa não avisam. O "gate bloqueado" (tarefa
+   `blocked`) continua como era.
+5. **Nenhum teto se move.** O merge em branch protegida segue
+   `require_approval` incondicional e humano ([RN-418](#rn-418), `decide.ts`):
+   esta regra só impede propor ou aprovar o que não há o que mergear.
+   Declarado: duas propostas simultâneas da mesma PR não são serializadas (não
+   há trava por PR), e é a regra 2 que segura a segunda.
+
+- **Código:** `apps/api/src/domain/actions/merge-de-pr.ts:56` (`recusaDeMerge`),
+  `:40` (`mergeouAPr`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:114` (`recusaDeMerge`);
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:268` (`recusaDeMerge`);
+  `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
+  `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:915` (`gatePendenteNoMerge`)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:572`
+  (`merge_ja_proposto`), `:595` (`pr_ja_mergeado` — caso de falha), `:627`
+  (negada não bloqueia, outra PR não colide — caminho feliz);
+  `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:414`;
+  `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
+  `apps/web/src/routes/ProjectPrsTab.test.tsx:266`, `:300`, `:315`;
+  `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
+  `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
+- **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)
