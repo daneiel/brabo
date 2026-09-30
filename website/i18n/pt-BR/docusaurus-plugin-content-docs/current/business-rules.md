@@ -2910,7 +2910,7 @@ intocados).
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`

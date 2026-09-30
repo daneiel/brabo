@@ -160,6 +160,20 @@ the sender.
 The engine never writes directly to the events table — it **asks** the api, which
 controls the `seq` and the atomicity with the outbox.
 
+`POST /handoffs` keeps **at most one `offered` handoff per (project, target)**
+([RN-635](../business-rules.md#rn-635),
+[ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). The answer is the CURRENT
+offer plus `desfecho`: `criado`, `substituiu_oferta` (the pending one became
+`superseded`, with a `handoff.superseded` event) or `ja_oferecido` (no new row —
+same session and no new artifact). A target already active in a non-closed
+session of the project is refused with **409** `reason: "agente_ja_ativo"`, and
+the `message` is the sentence the agent reads as its tool result
+(`Engine.Harness.Tools.OfferHandoff` passes it through verbatim;
+`FalhaDeTurno.origem/1` classifies it as `politica`). The optional body field
+`seAusente: true` — sent by AppSec through `create_handoff_if_absent/5`
+([RN-636](../business-rules.md#rn-636)) — returns ANY pending offer to the
+target instead of replacing it.
+
 `GET /events` is what the seven conversational agents read when their process
 comes up over a session that already has a conversation, and what their
 kickoffs read to find the brief, the rules, the module map and the stories

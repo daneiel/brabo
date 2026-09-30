@@ -2940,7 +2940,7 @@ chamador de verdade, em paralelo e uma vez só por story.
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
@@ -2953,8 +2953,12 @@ recusaria um `toAgent` que não resolve a um lead/agente-sem-área. Falha de UM
 alvo vira `agent.error` narrado por alvo (RN-116) — os outros dois handoffs
 já criados não são desfeitos.
 
+**Desde a [RN-636](#rn-636) os três são PERGUNTADOS, não mais sempre
+criados:** o destino que já tem oferta pendente ou já está ativo no projeto não
+recebe outra, e isso não é falha.
+
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:266` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:273` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -16568,8 +16572,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:205` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
-  (`IdiomaDaResposta`), `:643` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
+  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
   (`idioma_da_resposta`);
@@ -16666,8 +16670,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:270` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
-  (`IdiomaDaResposta`), `:643` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
+  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17020,3 +17024,101 @@ seguiram em `in_review` (AT-275).
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
   falho, PR sem tarefa)
 - **Origem:** AT-275
+
+### RN-635 — Uma oferta de handoff pendente por destino no projeto; a que deixa de valer vira `superseded` {#rn-635}
+
+`handoffs` só gravava `offered`/`accepted`, sem expiração, supersessão nem
+dedupe: duplo clique em "arquitetura pronta" dava 2× Infra e 2× Dev Lead, e
+oferta a agente já ativo ficava acionável para sempre (AT-291,
+[ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
+
+1. **No máximo UMA `offered` por (projeto, destino).** `decidirOferta` decide:
+   sem pendente, cria; pendente na MESMA sessão e sem artefato novo (o novo é
+   `null` ou igual), devolve a existente (`desfecho: ja_oferecido`, sem linha
+   nem evento); qualquer outro caso cria a nova e substitui a pendente
+   (`substituiu_oferta`) — devolver a antiga perderia o artefato novo, ou
+   deixaria quem pediu sem nada para aceitar na sessão em que está.
+2. **Quem substitui grava.** A linha vira `superseded` e nasce um evento
+   `handoff.superseded` (`handoffId`, `toAgent`, `motivo`, `substitutaId`) na
+   sessão da oferta VELHA, ator `system`, mesmo com a sessão encerrada. O
+   `handoff.offered` original não é tocado.
+3. **Serializado por destino.** `CreateHandoffUseCase` roda numa transação com
+   `pg_advisory_xact_lock` do par (projeto, destino): duas abas chegando juntas
+   produzem UMA linha. Duplicatas de antes convergem na próxima oferta ou
+   ativação, com evento; a migration não reescreve linha nenhuma.
+4. **Agente já ativo não recebe oferta:** 409 `reason: agente_ja_ativo`, sem
+   linha nem evento. Ativo = `agent.activated` numa sessão NÃO terminal do
+   projeto. A `message` é o texto que o modelo lê: `offer_handoff` a repassa
+   literal, e `FalhaDeTurno.origem/1` a classifica `politica`.
+5. **Ativar substitui.** `ActivateAgentUseCase` (aceite e ativação direta) e
+   `ActivateExecutionUseCase` (por `dev-<modulo>`) substituem, depois de
+   ativar, toda oferta pendente ao agente em qualquer sessão do projeto; a
+   aceita não é tocada, e ativação recusada não substitui nada.
+6. **"Arquitetura pronta" é idempotente.** `OfferInfraHandoffUseCase` não
+   aciona o destino (`infra`, `dev-lead`) que já tem oferta pendente ou está
+   ativo; com os dois assim, não grava nem chama o engine
+   (`desfecho: ja_oferecido`, `jaAtendidos` com o motivo de cada um).
+
+- **Onde:** `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
+  (`decidirOferta`), `:104` (`mensagemDeAgenteJaAtivo`);
+  `apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts:43`
+  (`sessaoOndeEstaAtivo`), `:71` (`substituir`), `:97`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts:109`
+  (`travarOfertasDoDestino`);
+  `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:94`
+  (`travarOfertasDoDestino`);
+  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:84`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:101`
+  (`jaAtendido`);
+  `apps/engine/lib/engine/harness/tools/offer_handoff.ex:58`
+  (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
+  (`agente_ja_ativo`); `apps/api/src/db/migrations/0064_ciclo_de_vida_do_handoff.sql`
+- **Teste:** `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
+  (contra Postgres: repetida na mesma sessão, duplo clique concorrente,
+  artefato novo, outra sessão encerrada, dado de antes do ADR, agente ativo e
+  ativo em sessão encerrada, ativação que substitui e ativação recusada);
+  `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+  ("ADR 0182: segundo clique…", "ADR 0182: só aciona o destino que falta…");
+  `apps/api/test/application/use-cases/agents/activate-agent.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  ("ciclo de vida do handoff");
+  `apps/engine/test/engine/harness/tools/offer_handoff_test.exs`;
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+- **Origem:** AT-291
+
+### RN-636 — O AppSec só oferece o threat model a quem ainda não recebeu oferta nem está ativo {#rn-636}
+
+O AppSec criava três ofertas por história com `run_design`, aos mesmos três
+destinos — N histórias, 3N ofertas pendentes (AT-292, que funde a AT-273 do
+vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
+
+1. **Pergunta no modo `seAusente`.** `criar_handoffs_appsec/3` chama
+   `EngineApiClient.create_handoff_if_absent/5`, que manda `seAusente: true` à
+   MESMA rota interna. A api decide sob o lock do destino ([RN-635](#rn-635)):
+   com oferta pendente em QUALQUER sessão do projeto, devolve a existente
+   (`desfecho: ja_oferecido`) e não a substitui; com o destino ativo, 409
+   `agente_ja_ativo`. Perguntar antes, pelo engine, seria corrida com outra
+   oferta.
+2. **"Já atendido" não é falha.** As duas respostas acima seguem sem
+   `agent.error`. Falha de verdade (5xx, rede) continua narrada por alvo, com
+   origem ([RN-116](business-rules/custo.md#rn-116), [RN-361](#rn-361)).
+3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
+   jeito; o que deixa de nascer é a oferta repetida.
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
+  (`criar_handoffs_appsec/3`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1002`
+  (`create_handoff_if_absent`);
+  `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
+  (`decidirOferta`)
+- **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
+  ("run_design (RN-636): destino com oferta pendente ou já ativo não recebe
+  outra, e isso não é erro", "run_design (RN-636): falha de verdade ao
+  oferecer segue narrada, só para aquele destino");
+  `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
+  ("`seAusente` (AppSec, RN-636)…")
+- **Origem:** AT-292, AT-273

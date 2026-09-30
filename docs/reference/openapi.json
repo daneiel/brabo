@@ -1749,7 +1749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HandoffResponseDto"
+                  "$ref": "#/components/schemas/OfertaDeHandoffResponseDto"
                 }
               }
             }
@@ -1762,6 +1762,9 @@
           },
           "404": {
             "description": "Session, project, or resource not found."
+          },
+          "409": {
+            "description": "`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project. The `message` is the text the agent reads as the tool result."
           }
         },
         "security": [
@@ -8648,7 +8651,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/arquiteto/handoff-infra": {
       "post": {
-        "description": "Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.",
+        "description": "Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends. Idempotent (ADR 0182, RN-635): a target that already has a pending offer or is active in the project is not triggered again, and with both like that nothing is recorded.",
         "operationId": "AgentsController_handoffInfra",
         "parameters": [
           {
@@ -8674,7 +8677,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "$ref": "#/components/schemas/ConfirmacaoDeArquiteturaResponseDto"
                 }
               }
             }
@@ -9290,7 +9293,7 @@
         ]
       },
       "post": {
-        "description": "Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400.",
+        "description": "Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400. At most one pending offer per (project, target): see `desfecho` (ADR 0182, RN-635).",
         "operationId": "AgentsController_requestManual",
         "parameters": [
           {
@@ -9326,7 +9329,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HandoffResponseDto"
+                  "$ref": "#/components/schemas/OfertaDeHandoffResponseDto"
                 }
               }
             }
@@ -9342,6 +9345,9 @@
           },
           "404": {
             "description": "Project, session, or handoff not found."
+          },
+          "409": {
+            "description": "`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project — no offer is created."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -12842,6 +12848,30 @@
           "outputTokens"
         ]
       },
+      "AlvoJaAtendidoResponseDto": {
+        "type": "object",
+        "properties": {
+          "toAgent": {
+            "type": "string",
+            "enum": [
+              "infra",
+              "dev-lead"
+            ],
+            "example": "infra"
+          },
+          "motivo": {
+            "type": "string",
+            "enum": [
+              "oferta_pendente",
+              "agente_ativo"
+            ]
+          }
+        },
+        "required": [
+          "toAgent",
+          "motivo"
+        ]
+      },
       "AnaliseDeTerminoResponseDto": {
         "type": "object",
         "properties": {
@@ -14418,6 +14448,37 @@
           "truncated"
         ]
       },
+      "ConfirmacaoDeArquiteturaResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true,
+            "enum": [
+              true
+            ]
+          },
+          "desfecho": {
+            "type": "string",
+            "enum": [
+              "confirmado",
+              "ja_oferecido"
+            ],
+            "description": "`confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab)."
+          },
+          "jaAtendidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlvoJaAtendidoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "desfecho",
+          "jaAtendidos"
+        ]
+      },
       "ConfirmProjectWorkspaceInternalDto": {
         "type": "object",
         "properties": {
@@ -14892,6 +14953,11 @@
             "type": "string",
             "example": "01JC4Z8QK3M7YV2N5T9B0PXHRB",
             "description": "ULID of the session_event for the artifact that motivated the handoff."
+          },
+          "seAusente": {
+            "type": "boolean",
+            "example": true,
+            "description": "Only if nobody got it yet (ADR 0182, RN-636): with a pending offer to the target in ANY session of the project, return it (`desfecho: ja_oferecido`) instead of replacing it. AppSec sends it."
           }
         },
         "required": [
@@ -16173,10 +16239,11 @@
               "offered",
               "accepted",
               "completed",
-              "rejected"
+              "rejected",
+              "superseded"
             ],
             "example": "offered",
-            "description": "This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives."
+            "description": "This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted."
           },
           "createdAt": {
             "type": "string",
@@ -18039,6 +18106,83 @@
           "estado",
           "imagem",
           "iniciadoEm"
+        ]
+      },
+      "OfertaDeHandoffResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HANDOFF00000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "fromAgent": {
+            "type": "string",
+            "example": "criativo",
+            "description": "Slug of the agent that passed the baton."
+          },
+          "toAgent": {
+            "type": "string",
+            "example": "po",
+            "description": "Slug of the receiving agent."
+          },
+          "artifactId": {
+            "type": "object",
+            "example": "01JC4Z0000ARTEFATO000000001",
+            "nullable": true,
+            "description": "Artifact that motivated the handoff (product_brief, module_map…)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "offered",
+              "accepted",
+              "completed",
+              "rejected",
+              "superseded"
+            ],
+            "example": "offered",
+            "description": "This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-24T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-24T10:05:00.000Z",
+            "format": "date-time"
+          },
+          "desfecho": {
+            "type": "string",
+            "enum": [
+              "criado",
+              "substituiu_oferta",
+              "ja_oferecido"
+            ],
+            "example": "criado",
+            "description": "`criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`)."
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "projectId",
+          "fromAgent",
+          "toAgent",
+          "artifactId",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "desfecho"
         ]
       },
       "OkResponseDto": {

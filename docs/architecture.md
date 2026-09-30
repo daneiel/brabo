@@ -493,7 +493,10 @@ port under `application/ports/`.
 table. `session_events` has `unique(session_id, seq)` and `seq` is dense per
 session — the restore test verifies there's no gap. State that needs to
 change (a hypothesis's lifecycle, a handoff's status) lives in its own
-mutable table, alongside the events.
+mutable table, alongside the events. A handoff offer that stops being the current one
+becomes `superseded` in that table and gets its own `handoff.superseded` event
+— never an edit of the `handoff.offered` that announced it ([ADR
+0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 **3. No LLM call outside the Harness.** It's not a convention: the engine
 has no LLM client. It asks the api, which does the metering.

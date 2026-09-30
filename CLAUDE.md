@@ -188,6 +188,7 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
 
 ## Estado atual e aberto
 

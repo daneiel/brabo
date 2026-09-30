@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/engine**: **o handoff deixa de repetir e de ficar obsoleto** (AT-291,
+  AT-292, [ADR 0182](docs/adr/0182-ciclo-de-vida-do-handoff.md),
+  [RN-635](docs/business-rules.md#rn-635), [RN-636](docs/business-rules.md#rn-636)).
+  Há no máximo UMA oferta pendente por destino no projeto: repetir a mesma
+  oferta na mesma sessão devolve a que já existe, e uma oferta com artefato
+  novo (ou vinda de outra sessão) substitui a anterior, que vira `superseded`
+  com o evento `handoff.superseded`. Ativar um agente, por qualquer caminho,
+  substitui as ofertas pendentes a ele, e oferecer a um agente já ativo no
+  projeto é recusado com 409 `agente_ja_ativo` — frase que o agente lê como
+  resultado da ferramenta. O duplo clique (ou a segunda aba) em "arquitetura
+  pronta" não duplica mais Infra nem Dev Lead, e o AppSec só oferece o threat
+  model a quem ainda não recebeu oferta nem está ativo. `GET .../handoffs`
+  passa a devolver o status `superseded`, e as rotas de criação devolvem
+  `desfecho`. Migration `0064` (só acrescenta o valor ao enum).
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
   O card de aprovação segura os botões enquanto a decisão está em voo e mostra
