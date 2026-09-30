@@ -18690,3 +18690,83 @@ faz merge nem push.
   (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
 - **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
 - **Origem:** AT-312 (levantamento da AT-309, passo 4)
+
+## A PR do dev agent mira `dev`, e o gate julga o diff dessa PR (RN-664)
+
+### RN-664 — O trabalho dos agentes nasce de `dev`, a PR deles mira `dev`, e o gate julga o diff contra `dev` — os três juntos {#rn-664}
+
+A política de branches do produto manda o trabalho nascer de `dev` (o bootstrap
+cria `dev` e `qa` a partir de `main`, [RN-582](#rn-582)), mas até aqui ninguém
+apontava os agentes para ela: o `pr_open` do dev agent não levava
+`targetBranch` e a api completava com `repo.defaultBranch` (`main`); a PR de
+ADR do Arquiteto nascia de `main` e mirava `main`; o working tree do projeto
+abria a `default_branch`; o gate calculava o diff contra ela; e o contexto do
+QA dizia "Repositório · branch main" (AT-250, item A4 do uso real de 29/09).
+Toda PR de agente pulava a esteira `dev → qa → main`.
+
+Decisão do dono (30/09): os TRÊS passam a usar `dev`, juntos — mudar só um
+deixaria o gate julgando um diff que não é o da PR. A branch de TRABALHO é
+`dev` e NÃO é a `default_branch` do provider (que segue sendo a que a promoção
+alcança por último e continua lida onde ela é a pergunta):
+
+- o working tree do projeto abre `dev` (`ensure_remoto/2` ignora o
+  `default_branch` do remoto para escolher a base), e o worktree de cada dev
+  agent nasce de `dev` EXPLICITAMENTE, não do HEAD — workspace inicializado
+  antes desta regra está parado na `default_branch` (a marca de pronto impede
+  re-inicializar) e ganha a `dev` local a partir de `origin/dev`, sem `fetch`
+  novo;
+- o `pr_open` do dev agent leva `targetBranch: "dev"` no payload, e a api, sem
+  o campo (ação proposta antes), completa com `dev` e não mais com a
+  `defaultBranch`; a PR de ADR nasce de `dev` e mira `dev`;
+- o diff do gate é `dev...HEAD`, e a linha de contexto do projeto diz
+  "Repositório · branch de trabalho dev".
+
+**Repositório SEM `dev`** (adotado sem bootstrap, ou bootstrap que não chegou a
+`create_dev_branch`): NÃO há queda para a `default_branch` — seria o agente
+trabalhando e o gate julgando sobre uma base que não é a da PR. Cada ponto
+falha NOMEADO, pelo comportamento que já tinha para branch ausente, com uma
+exceção nova: o working tree recusava nada e criava uma `dev` LOCAL VAZIA
+(o caminho do bare que nunca recebeu push), marcava pronto e nunca mais
+re-inicializava. Agora esse caminho só vale para o remoto SEM branch nenhuma;
+com branches e sem `origin/dev`, a inicialização levanta com a mensagem
+nomeada (`mensagem_sem_branch_de_trabalho/1`, "o repositório do projeto não
+tem a branch `dev`… crie a branch… e tente de novo") e o `.git` é desfeito
+(AT-112), então a próxima tentativa, com a `dev` criada, inicializa normal. O
+worktree recusa com a mesma mensagem quando não há `dev` nem `origin/dev`; o
+diff falha com o erro do git nomeando a revisão; o provider recusa a PR (e a
+criação da branch do ADR) nomeando a ref. O `infra` (`open_infra_pr`) NÃO
+mudou: segue nascendo e mirando a `defaultBranch`.
+
+O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
+`BRANCH_DE_TRABALHO` na api e `branch_de_trabalho/0` no engine.
+
+- **Código:** `apps/engine/lib/engine/projects/project_repository.ex:165`
+  (`branch_de_trabalho`), `:176` (`branch_de_trabalho`), `:190`
+  (`mensagem_sem_branch_de_trabalho`);
+  `apps/engine/lib/engine/actions/workspace.ex:70` (`ensure_remoto`), `:224`
+  (`init_from_bare!`), `:272` (`remoto_vazio?`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:138` (`add_worktree`),
+  `:163` (`garantir_base`), `:288` (`remoto_vazio?`);
+  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
+  (`add_worktree`), `:86` (`garantir_base`);
+  `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
+  `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
+  `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
+  `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:138`
+  (`targetBranch`); `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:86`
+  (`fromRef`), `:99` (`targetBranch`)
+- **Teste:** `apps/engine/test/engine/gates/diff_test.exs:64` (o diff é só a
+  mudança do agente, nada da `main` — caminho feliz), `:73` (sem `dev` o diff
+  falha nomeando a revisão — caso de falha), `:91` (o contexto diz a branch de
+  trabalho); `apps/engine/test/engine/actions/workspace_test.exs:87`, `:98`,
+  `:110` (repositório adotado sem `dev`: recusa nomeada, `.git` desfeito, e
+  passa depois de criada a branch — caso de falha), `:130`;
+  `apps/engine/test/engine/dev/worktree_manager_test.exs:119`, `:127`
+  (workspace de antes da regra), `:147` (sem `dev` nem `origin/dev`);
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs:114`;
+  `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts:184`,
+  `:213`; `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts:143`,
+  `:151` (sem `dev`, `failed` com o motivo do provider)
+- **Origem:** AT-250 (item A4 da análise do uso real de 29/09), decisão do dono
+  de 30/09

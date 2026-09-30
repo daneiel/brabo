@@ -146,4 +146,52 @@ defmodule Engine.Projects.ProjectRepository do
       %{provider: other} -> {:error, {:unsupported_provider, other}}
     end
   end
+
+  # RN-664 (AT-250) — a branch de TRABALHO. Não confundir com
+  # `default_branch`: aquela é a do provider (a que um clone abre, e a que a
+  # promoção alcança por último), esta é onde o trabalho dos agentes nasce e
+  # para onde as PRs deles vão — a política de branches do produto (trabalho
+  # nasce de `dev`), que o bootstrap cria (`bootstrap-steps.ts`). O mesmo valor
+  # mora na api como `BRANCH_DE_TRABALHO`
+  # (`apps/api/src/domain/actions/protected-branches.ts`); os dois mudam juntos.
+  @branch_de_trabalho "dev"
+
+  @doc """
+  A branch de trabalho dos agentes (RN-664): a base do workspace, a base do
+  worktree de cada dev agent, o alvo do `pr_open` e o lado esquerdo do diff
+  que o gate julga. Os TRÊS usam esta função, e mudam juntos — só um deles
+  mudando deixaria o gate julgando um diff que não é o da PR.
+  """
+  def branch_de_trabalho, do: @branch_de_trabalho
+
+  @doc """
+  `{:ok, "dev"}` quando o projeto tem repositório; `{:error, :not_found}`
+  quando nunca teve — o MESMO contrato de `default_branch/1`, para quem trocou
+  uma pela outra (`Engine.Gates.Diff`, `Engine.Harness.ProjectContext`).
+
+  Não pergunta se a branch EXISTE no repositório: quem precisa dela de verdade
+  (o workspace, o worktree, o `git diff`, o provider que abre a PR) falha
+  NOMEANDO a ausência — nunca cai em silêncio para `default_branch`.
+  """
+  def branch_de_trabalho(project_id) do
+    case Repo.get_by(__MODULE__, project_id: project_id) do
+      nil -> {:error, :not_found}
+      _repo -> {:ok, @branch_de_trabalho}
+    end
+  end
+
+  @doc """
+  A recusa NOMEADA de quando o repositório do projeto não tem a branch de
+  trabalho (RN-664) — repositório ADOTADO sem bootstrap, ou bootstrap que não
+  chegou ao passo `create_dev_branch`. Não há queda para a branch default:
+  trabalhar sobre ela e abrir a PR em `dev` seria julgar e propor um diff que
+  não é o da PR.
+  """
+  def mensagem_sem_branch_de_trabalho(onde) do
+    "o repositório do projeto não tem a branch `#{@branch_de_trabalho}` " <>
+      "(#{onde}) — o trabalho dos agentes nasce dela e as PRs deles miram " <>
+      "nela (RN-664), e não há queda para a branch default. Crie a branch " <>
+      "`#{@branch_de_trabalho}` no repositório (o plano de bootstrap do " <>
+      "projeto a cria) e tente de novo."
+  end
 end
