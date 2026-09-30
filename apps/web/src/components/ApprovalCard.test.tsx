@@ -625,7 +625,7 @@ describe('ApprovalCard', () => {
       expect(preview.textContent).toContain('linha 1');
       expect(preview.textContent).toContain('linha 25');
       expect(preview.textContent).not.toContain('linha 40');
-      expect(screen.getByText(/25 de 40 linha\(s\)/)).toBeTruthy();
+      expect(screen.getByText(/25 de 40 linhas/)).toBeTruthy();
     });
 
     it('write_file com content vazio mostra a mensagem de fallback, não um preview em branco', () => {

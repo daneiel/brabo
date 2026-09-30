@@ -199,6 +199,11 @@ estado lido do repositório e não da conversa.
 | A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 | O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
+| Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
+| Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
+| Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
+| Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
+| A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -713,9 +718,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `install.sh`, a lista do web) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
   depois de o Bun corrigir, nunca só trocar o label
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
-  fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
-  arquivo para inglês como idioma primário
+- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
+  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
+  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+  texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
+  de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
+  reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
+  texto só em pt-BR em `.ts` de `lib/` (o `classifyEvent` de `activity.ts`,
+  por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
+  RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
+  "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
+  plural por "(s)" em backlog/insights/approvals/sessionPage — os demais
+  namespaces ainda o têm
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
@@ -760,7 +774,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
-  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
+  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico.
+  Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
+  `.preload` que o router espera), e os painéis das abas do projeto também
+  (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de
+  toda tela vão em `codeSplitting.groups` do `vite.config.ts` por lista de
+  PERMITIDOS: um grupo genérico de `node_modules` puxaria `mermaid`/`xterm`
+  para o bundle inicial (AT-300)
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
   na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
   embutido no bundle) para executar comandos aprovados e terminal
@@ -1827,7 +1847,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   de Sessão: Executores e Visão geral também — passa pelo MESMO
   `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
   eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
-  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Dado de
+  CONFIGURAÇÃO (as seções de Configurações, o workspace/papel) nasce com
+  `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
+  poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
+  moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Guardado por
+  `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
@@ -1841,6 +1867,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (RN-578) NÃO vira fallback de 15s: ela é a rede contra o `agent.done`
   perdido, e o aviso pode se perder junto; o que o canal faz é ANTECIPÁ-LA
   (`avisoPedeVerificacaoDoTurno`, só o `agent.status` do agente acompanhado).
+- O que muda por TOKEN não mora no estado da `SessionPage` (RN-639, AT-301):
+  o texto em curso e a faixa de atividade ficam no store de
+  `lib/streaming-do-turno.ts`, assinado por `useSyncExternalStore` só por quem
+  os desenha (a bolha em `SessionFio.tsx`, `TurnActivityStripDoStore`), e a
+  página assina booleanos. Estado novo de streaming entra no store, nunca num
+  `useState` do `useTurnoDoAgente` — `SessionPage.streaming-isolado.test.tsx`
+  conta os renders da página e reprova o token que a re-renderiza.
 - Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
   contra uma asserção de string — é a mesma lição do `#` no `FROM` do
   Dockerfile ("linter concordar não é build concordar"), medida uma segunda

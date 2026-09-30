@@ -424,6 +424,49 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
   entra em backup — é derivada.
 
+### Desempenho
+
+- **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
+  chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
+  router espera antes de trocar de tela — sem flash de fallback na navegação,
+  e com recarga única quando um deploy novo some com o chunk velho); os doze
+  painéis das abas do projeto e o assistente de novo projeto também. O
+  fallback de rota (`CarregandoRota`) diz em texto que está carregando e só
+  aparece se o chunk demorar; o `Shell` segue estático. Vendors de toda tela
+  (`react`, `@tanstack/*`, `i18next`) em chunks próprios de hash estável
+  (`codeSplitting.groups` do Rolldown — o `manualChunks` do Rollup está
+  deprecado no Vite 8), com lista de PERMITIDOS para `mermaid`/`xterm`
+  continuarem só por `import()`. CSP intacta: nenhum script inline novo,
+  `theme-boot.js` e `config.js` como estavam. Medido no `pnpm --filter web
+  build` (KiB, gzip nível 9; "inicial" = entrada + `modulepreload` do
+  `index.html`):
+
+  | | antes | depois |
+  |---|---|---|
+  | JS inicial | 1107,1 (gzip 327,1) | 649,8 (gzip 211,1) |
+  | JS + CSS inicial | 1285,8 (gzip 356,6) | 668,7 (gzip 215,4) |
+  | maior chunk inicial | 1107,1 (`index`) | 215,5 (`i18n`, os JSON de locale) |
+  | total (`assets/*.js,css`) | 4914,4 em 103 arquivos (gzip 1361,9) | 4962,0 em 243 arquivos (gzip 1428,7) |
+
+  O total sobe ~1% pelo custo de fronteira de chunk; o que o navegador baixa
+  antes da primeira tela cai 41% (gzip -35%). O que resta de maior no inicial são
+  os 27 namespaces de locale dos DOIS idiomas, carregados `eager` por
+  `lib/i18n.ts` — fora desta mudança.
+- **web**: o streaming do turno não re-renderiza mais a tela de Sessão
+  (AT-301, [RN-639](docs/business-rules.md#rn-639)). O texto em curso e a
+  faixa de atividade saem do estado do `useTurnoDoAgente` para um store
+  externo (`lib/streaming-do-turno.ts`) assinado só pela bolha e pela faixa;
+  a página assina um booleano. Provado com contador de renders: vinte tokens
+  depois do primeiro, zero renders da página. Junto: `derivarHandoffsDaSessao`
+  sob `useMemo`, vazio ESTÁVEL (`VAZIO`) no lugar de `?? []` para eventos,
+  ações e handoffs (o `?? []` desfazia os memos de `useSessionReadiness`), e a
+  união das páginas do histórico (`useSessionEventHistory`) sob memo.
+- **web**: provisionamento e plano de adoção acompanham o bootstrap a 3 s, não
+  a 1 s, e os EVENTOS da sessão técnica param quando ele termina — antes
+  seguiam a 1 s com o repositório pronto (AT-302, RN-639). O `/status` passa
+  por `pollQueParaNoErro`: serviço que não responde deixa de ser perguntado
+  por timer.
+
 ### Correções
 
 - **web**: o fio da sessão deixou de esconder o começo da conversa e de
@@ -434,7 +477,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
   outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
   punham a resposta do Criativo acima da pergunta.
-
+- **web**: depois do login a interface passa a caber num telefone (AT-316,
+  [RN-643](docs/business-rules.md#rn-643)). Abaixo de 768px a sidebar vira uma
+  gaveta aberta pelo botão de menu do topo. Ela fecha ao navegar, no Esc, no X
+  e no fundo, e prende o foco enquanto aberta. O trilho do projeto vira uma
+  barra horizontal rolável acima do conteúdo, e a Visão geral empilha o time e
+  a atividade. A 390px, antes, a moldura fixa ocupava 444px e o conteúdo ficava
+  com 0 a 126px; agora o conteúdo tem a largura inteira e a página não rola de
+  lado. Nas Configurações, os textos cortados caíram de 114 para 33.
 - **web**: a barra do topo da Sessão não transborda mais (AT-317,
   [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo
   cobria "Respostas:", o seletor e a origem do idioma cortavam, "Iniciar
@@ -505,6 +555,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   a oferta pelo `handoffId`, e agente ativado fora da janela (o
   `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
   (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
+
+- **web**: percorrer a aba **Configurações** não derruba mais o projeto no
+  teto de 300 req/min do usuário (AT-321,
+  [RN-645](docs/business-rules.md#rn-645), extensão da
+  [RN-579](docs/business-rules.md#rn-579)). Dado de configuração vale um
+  minuto antes de ser buscado de novo: as seções não repetem o projeto, o
+  repositório e o workspace que a moldura já trouxe, e voltar à aba dentro do
+  minuto não refaz as 31 buscas dela (quem salva continua vendo o valor novo na
+  hora). O perfil de proficiência e o histórico de versões de instrução pararam
+  de pollar a 15s. E o sumário "Nesta página" deita numa faixa acima das seções
+  em qualquer largura: como quarta coluna ele deixava ~740px de conteúdo a
+  1440px e a tabela de modelos cortava os nomes; agora as seções ganham 208px.
+  O preço é o sumário não ficar mais grudado na tela ao rolar.
+- **web (i18n)**: os últimos textos fixos de tela saem do `.tsx` para
+  `locales/en` e `locales/pt-BR` (AT-289) — a sub-lista "todos os tokens do
+  projeto" da seção de tokens de acesso (título, subtítulo, cabeçalhos, estado,
+  rótulo de revogar e a data, que era sempre `pt-BR`) e o rótulo acessível do
+  filtro de estado da lista de PRs. Em `en`, o idioma default, a sub-lista
+  aparecia em português. No `pt-BR`, as abas "Backlog" e "Insights" passam a
+  "Histórias" e "Percepções" (e as frases que apontam para elas). Um teste novo
+  (`i18n-paridade.test.ts`) reprova chave que exista num idioma e falte no
+  outro, por namespace.
+- **web (i18n)**: a interface em pt-BR deixa de misturar inglês e jargão
+  interno (AT-326). "circuit breaker" vira "parada automática", "tasks
+  blocked"/"task" viram "tarefas bloqueadas"/"tarefa", "default" vira
+  "padrão"; nenhuma frase de tela cita mais número de RN ou ADR (nos dois
+  idiomas); o botão de aceitar handoff e os rótulos de lead/subagentes das
+  seções de área mostram o NOME do agente ("iniciar PO", "Lead: Dev Lead"), não
+  o id; a Conta deixa de afirmar que só ela está traduzida; e os plurais por
+  "(s)" de backlog, insights, aprovações e sessão viram plural do i18next.
+  "handoff", "gate", "binding", "LLM", "dev agent", "lead" e "runner" ficam,
+  por serem a linguagem ubíqua do glossário. `i18n-vocabulario.test.ts` trava
+  as três réguas.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

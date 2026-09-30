@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { corDoAgente } from '../lib/agents';
 import type { EstadoDaAtividadeDoTurno } from '../lib/atividade-do-turno';
+import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
 import { ChatIcon, TerminalIcon } from './ui/icons';
@@ -85,4 +86,18 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
       </div>
     </div>
   );
+}
+
+/**
+ * A faixa ligada ao store do turno (AT-301): é ESTE componente que assina a
+ * atividade, e não a `SessionPage` — um delta do canal re-renderiza a faixa, e
+ * nada acima dela. `TurnActivityStrip` continua recebendo o estado por prop, e
+ * os testes dela seguem sem store nenhum.
+ */
+export function TurnActivityStripDoStore({
+  store,
+  ...resto
+}: Omit<TurnActivityStripProps, 'estado'> & { store: StoreDoStreaming }) {
+  const estado = useAtividadeDoStreaming(store);
+  return <TurnActivityStrip estado={estado} {...resto} />;
 }

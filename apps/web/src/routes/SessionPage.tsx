@@ -39,7 +39,7 @@ import {
 import { emailDaSessao } from '../lib/auth';
 import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
-import { TurnActivityStrip } from '../components/TurnActivityStrip';
+import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
@@ -70,6 +70,14 @@ import { useRolagemDoFio } from '../lib/session-rolagem';
 import { usePromocaoDeHistorias } from '../lib/session-promocao';
 import { useAcoesDeHandoff } from '../lib/session-acoes-de-handoff';
 import { DevolverHistoriaModal } from './DevolverHistoriaModal';
+
+/**
+ * O vazio ESTÁVEL (AT-301): `?? []` cria um array novo a cada render, e todo
+ * `useMemo` que depende dele recalcula sempre — o memo vira custo sem ganho.
+ * Tipado como `never[]` para servir às três listas; congelado porque nenhum
+ * consumidor pode empurrar nele.
+ */
+const VAZIO: never[] = Object.freeze([]) as unknown as never[];
 
 interface SessionPageProps {
   projectId: string;
@@ -184,12 +192,11 @@ export function SessionPage({
   // de desfazer o arme, por que o efeito do canal Phoenix move inteiro).
   const {
     streaming,
-    streamingText,
+    streamingStore,
     streamingAgent,
     turnoViaCanal,
     statusAgent,
     pensandoVisivel,
-    atividadeDoTurno,
     optimisticUser,
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
@@ -261,7 +268,7 @@ export function SessionPage({
   // pausar o TIMER não perde dado, só evita buscar de novo o que a
   // invalidação busca de qualquer forma.
   const eventsQuery = useSessionEvents(projectId, sessionId, 3000, streaming);
-  const events = eventsQuery.data?.items ?? [];
+  const events = eventsQuery.data?.items ?? VAZIO;
   // AT-268: reabrir a sessão com um turno em curso — a faixa e o composer
   // travado voltam do log, em vez de nascerem do zero e do 409.
   useRetomarTurnoDoLog({
@@ -279,7 +286,7 @@ export function SessionPage({
   const citedEventQuery = useSessionEvent(projectId, sessionId, highlightEvent);
   const citedEvent = citedEventQuery.data;
   const actionsQuery = usePendingActions(projectId, sessionId, 3000);
-  const actions = actionsQuery.data?.items ?? [];
+  const actions = actionsQuery.data?.items ?? VAZIO;
 
   // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
   // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
@@ -289,11 +296,11 @@ export function SessionPage({
     logOpen,
     events,
     actions,
-    streamingText,
+    streamingStore,
   });
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
-  const handoffs = handoffsQuery.data ?? [];
+  const handoffs = handoffsQuery.data ?? VAZIO;
   // Quem já foi ativado na sessão PEDIDA, de fontes sem janela (RN-630,
   // RN-631): o resumo quando esta é a sessão mais recente, os handoffs desta
   // sessão e o gasto por agente dela. Somado à janela pelo destinatário do
@@ -347,11 +354,10 @@ export function SessionPage({
   }
 
   // As derivações de handoff (RN-136, RN-499, achado L, RN-406) moram em
-  // `../lib/session-handoffs` desde o PR 6 do ADR 0176 — puras, calculadas
-  // a cada render como antes.
-  //
-  // Memoizadas desde a RN-631: `ofertasAcionaveis` é uma lista nova a cada
-  // chamada, e entra nas dependências da montagem da timeline logo abaixo.
+  // `../lib/session-handoffs` desde o PR 6 do ADR 0176 — puras. Sob `useMemo`
+  // desde a AT-301 (varrem eventos e handoffs, e a página re-renderiza por
+  // motivos que não mudam nenhum dos dois) e desde a RN-631 (`ofertasAcionaveis`
+  // é uma lista nova a cada chamada e entra na montagem da timeline abaixo).
   const {
     activeFor,
     ofertasAcionaveis,
@@ -840,7 +846,7 @@ export function SessionPage({
                 optimisticUser={optimisticUser}
                 user={user}
                 turnoViaCanal={turnoViaCanal}
-                streamingText={streamingText}
+                streamingStore={streamingStore}
                 pensandoVisivel={pensandoVisivel}
                 streaming={streaming}
                 statusAgent={statusAgent}
@@ -871,8 +877,8 @@ export function SessionPage({
           />
 
           {turnoViaCanal && (
-            <TurnActivityStrip
-              estado={atividadeDoTurno}
+            <TurnActivityStripDoStore
+              store={streamingStore}
               agente={streamingAgent ?? statusAgent}
               pensandoVisivel={pensandoVisivel}
             />
@@ -919,7 +925,7 @@ export function SessionPage({
           <ContextAside
             projectId={projectId}
             sessionId={sessionId}
-            actions={actionsQuery.data?.items ?? []}
+            actions={actions}
             // O MESMO pausa-poll do fio (achados 2/7): o painel lê a mesma
             // query, e um segundo observador com timer próprio ressuscitaria
             // o poll que o turno em streaming pausa.

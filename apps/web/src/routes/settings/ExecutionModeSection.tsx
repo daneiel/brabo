@@ -22,6 +22,7 @@ import { RunnerOnboardingPanel } from '../../components/RunnerOnboardingPanel';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Onde o código do projeto mora — `container` (padrão), `mounted` (pasta do
@@ -212,6 +213,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   // A base é da INSTALAÇÃO e a rota pede `maintainer` — o mesmo mínimo da
   // conversão. Para quem não alcança esse mínimo a consulta nem sai: ela

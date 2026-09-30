@@ -149,7 +149,7 @@ describe('montarArvore', () => {
   it('`dev.started` não afirma task: ele sai ANTES do claim', () => {
     const { ramos } = montarArvore([evento('dev.started', agente('dev-backend'), {})]);
 
-    expect(ramos[0]).toMatchObject({ agora: 'procurando task', ativo: true });
+    expect(ramos[0]).toMatchObject({ agora: 'procurando tarefa', ativo: true });
   });
 
   /** O ativo da árvore é o `trabalhando` do painel — uma decisão, não duas. */
@@ -399,7 +399,7 @@ describe('rótulos da árvore no i18n (AT-134)', () => {
     const { ramos } = montarArvore([evento('dev.started', agente('dev-x'))], 'en');
     expect(ramos[0].agora).toBe('looking for a task');
     const { ramos: emPt } = montarArvore([evento('dev.started', agente('dev-x'))]);
-    expect(emPt[0].agora).toBe('procurando task');
+    expect(emPt[0].agora).toBe('procurando tarefa');
   });
 
   describe('em `en` (o idioma default, RN-425)', () => {

@@ -2,11 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { listAgentAreas, setAreaMaxParallel } from '../../lib/api-client';
 import type { AgentArea } from '../../lib/api-types';
+import { nomeDoAgente } from '../../lib/agents';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O teto de paralelismo de cada lead (FASE 14d — RN-083, ADR 0053).
@@ -34,6 +36,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
   const { data: areas } = useQuery({
     queryKey: ['agent-areas', projectId],
     queryFn: () => listAgentAreas(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const secao = useSecaoSalvavel<AgentArea, number>({
@@ -81,7 +84,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
                   {t('parallelism.card.title', { area: area.key })}
                 </div>
                 <div className={styles.ajusteHint}>
-                  {t('parallelism.card.lead', { lead: area.leadAgentId })}
+                  {t('parallelism.card.lead', { lead: nomeDoAgente(area.leadAgentId) })}
                   {area.members.length > 0
                     ? t('parallelism.card.membersCount', { count: area.members.length })
                     : t('parallelism.card.noMembersYet')}

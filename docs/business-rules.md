@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:791` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:797` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:617` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:623` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -305,7 +305,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5658,7 +5658,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:189` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14536,7 +14536,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
-  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
   (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
@@ -14995,7 +14995,7 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
   turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
-  sinais); `apps/web/src/lib/session-turno.ts:34` (`turnoTerminouNoLog`)
+  sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
   `agent.response` já está no log e nem `agent.done` nem `idle` saíram; depois
@@ -16896,15 +16896,15 @@ Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
 - **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
-  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:63`
+  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:130` (`podeDecidir`), `:267`
-  (`useRetomarTurnoDoLog`), `:864` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:274`
+  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17253,7 +17253,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:345`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:352`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
   (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -17332,7 +17332,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:186`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:278` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:332` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -17407,7 +17407,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:168` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:174` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -17672,7 +17672,7 @@ o do chat.
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:309` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:93` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
@@ -17698,3 +17698,188 @@ o do chat.
   `apps/web/src/routes/duas-abas.orcamento.test.tsx` (a rajada invalida a fila
   do projeto na aba Executores, dentro do orçamento da RN-632)
 - **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)
+
+## Acompanhar ao vivo sem martelar (RN-639)
+
+### RN-639 — O que muda por token não re-renderiza a tela, e o que acompanha o bootstrap polla a 3 s e para no fim {#rn-639}
+
+Três telas faziam trabalho que ninguém via (AT-301/AT-302). A tela de Sessão
+re-renderizava INTEIRA a cada token de um turno — o texto em curso morava em
+estado do hook chamado por ela. As telas de provisionamento e de adoção pollavam
+o status do bootstrap e os eventos da sessão técnica a 1 s, e os eventos nunca
+paravam, mesmo com o repositório pronto. E o `/status` batia para sempre num
+serviço que não respondia.
+
+1. **O texto em curso mora num store externo.** O texto do chat consultivo e a
+   faixa de atividade do turno ficam num store por sessão
+   (`criarStoreDoStreaming`), assinado por `useSyncExternalStore` só pelos dois
+   componentes que os desenham — a bolha do fio e a faixa. A página assina UMA
+   pergunta booleana (o turno já mostrou conteúdo?), que é o que o timer de
+   "pensando" ([RN-131](#rn-131)) precisa e que muda uma vez por turno. O
+   reducer da faixa é o mesmo; mudou quem guarda o estado.
+2. **O bootstrap é acompanhado a 3 s.** Status e eventos, nas duas telas.
+3. **E para no fim.** Status e eventos param quando o bootstrap converge
+   (`provisioned`) e quando a query erra (`pollQueParaNoErro`). A FALHA
+   (`provision_failed`) é terminal na adoção e NÃO no provisionamento: ali o
+   "Tentar novamente" dispara um bootstrap novo e a tela precisa ver o
+   progresso dele ([RN-477](#rn-477)).
+4. **O `/status` para no erro.** Serviço que responde — inclusive com 5xx, que
+   vira `status: 'error'` num corpo resolvido — segue a cada 5 s. Serviço que
+   não responde deixa de ser perguntado por timer; o foco da janela e a
+   remontagem perguntam de novo, e o primeiro sucesso retoma o ritmo.
+
+- **Onde:** `apps/web/src/lib/streaming-do-turno.ts:48` (`criarStoreDoStreaming`),
+  `apps/web/src/lib/streaming-do-turno.ts:98` (`useSemConteudoNoTurno`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
+  `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
+  `apps/web/src/routes/StatusPage.tsx:61` (`pollQueParaNoErro`)
+- **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
+  tokens depois do primeiro não re-renderizam a página; o fim do turno
+  re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
+  `apps/web/src/lib/poll-do-bootstrap.test.ts`,
+  `apps/web/src/routes/StatusPage.test.tsx`
+- **Origem:** AT-301, AT-302
+
+### RN-643 — Abaixo de 768px a sidebar vira gaveta e o trilho do projeto vira barra horizontal; a página nunca rola de lado {#rn-643}
+
+A auditoria visual da Rodada 29 (AT-290, achado S1) mediu que o produto não
+tinha layout móvel depois do login: a 390px a sidebar (264px) e o trilho do
+projeto (180px) continuavam FIXOS, somando 444px de moldura, e o conteúdo ficava
+com 0 a 126px ou estourava para a direita. Configurações chegou a 114 textos
+cortados (`validacao-visual.js`).
+
+**A regra:**
+
+1. **Um corte, uma fonte.** O breakpoint é `CONSULTA_MOVEL`
+   (`(max-width: 767px)`), lido por `useLayoutMovel`. Quem troca de layout lê
+   esse hook e aplica o desenho móvel por uma CLASSE; os módulos CSS não têm
+   `@media` próprio para isso. Assim o que o JS decide e o que o CSS desenha
+   não divergem num pixel de fronteira, e o teste de componente (jsdom, sem
+   CSS) prova o mesmo corte que o navegador aplica. Sem `matchMedia` o
+   layout é o de DESKTOP: o móvel só vale quando a consulta o afirma.
+2. **A sidebar vira gaveta.** Uma barra no topo traz o botão de menu
+   (`aria-expanded`, `aria-controls`) e a marca. A gaveta é um diálogo modal
+   (`role="dialog"`, `aria-modal`): ao abrir, o foco entra nela; o Tab não
+   sai; o Esc, o X e o fundo a fecham e devolvem o foco ao botão de menu.
+   Ela também fecha ao seguir qualquer link de dentro dela (as abas do projeto
+   mudam só o `?tab=`) e quando a rota muda por fora. Na gaveta a sidebar
+   aparece sempre EXPANDIDA, e o botão "Recolher menu" some: o colapso manual
+   ([RN-195](business-rules/autenticacao.md#rn-195)) é preferência do desktop, fica gravado e volta a valer
+   quando a janela cruza o corte de novo.
+3. **O trilho do projeto vira barra horizontal.** São as mesmas 12 folhas, na
+   mesma ordem, com os cabeçalhos de grupo inline e
+   `aria-orientation="horizontal"`. As setas que andam são esquerda e
+   direita, e a aba ativa é rolada para dentro da faixa visível. A barra rola
+   por DENTRO; a página não rola de lado. O corpo do projeto vira coluna (a
+   barra acima do painel), e a Visão geral empilha o time e a atividade em
+   vez de manter o trilho de 360px ao lado.
+
+**Medido** (390×844, tema escuro, seed da api, `validacao-visual.js` injetado):
+`scrollWidth` do documento = 390 em todas as telas autenticadas (dashboard, as
+12 abas, `/containers`, `/account`), e `<main>` com os 390px inteiros. Nas
+Configurações, `texto-cortado` caiu de 114 para 33. O resto é texto de
+componente (tabelas e rótulos das seções), assunto de tipografia e espaço, não
+de moldura. O `fora-da-viewport` que sobra na Visão geral e em Aprovações são
+abas da barra horizontal além da borda, onde a rolagem interna as alcança.
+
+**O que esta regra NÃO fecha:** a aba Código mantém o trilho de 48px do
+`CodeShell` e o editor em colunas; ela não foi desenhada para telefone. A
+tela de Sessão herda a moldura nova, mas a barra superior e o fio seguem com
+os achados X1–X3 da auditoria. Os dois lugares de navegação por abas (a
+gaveta e a barra) continuam existindo lado a lado, a mesma duplicação
+declarada no ADR 0126.
+
+- **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:413`
+  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
+  `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:80`
+  (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
+  (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
+  fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
+  gravado; cruzar o corte volta à sidebar fixa; e o caso de falha, sem
+  `matchMedia` não há menu nem diálogo);
+  `apps/web/src/routes/ProjectRail.test.tsx` ("barra horizontal no layout
+  móvel": tablist horizontal com as 12 abas e a ativa rolada para a faixa;
+  setas esquerda/direita com volta e a seta para baixo inerte; e o caso de
+  falha, desktop continua vertical e a seta direita não anda), sobre o mock
+  `apps/web/src/test/match-media.ts`
+- **Origem:** AT-316 (achado S1 da AT-290); não muda o ADR 0126, só dá ao
+  trilho uma forma para telas estreitas
+
+### RN-645 — Configuração não se busca de novo a cada montagem, não polla, e a aba Configurações tem três faixas de moldura, não quatro {#rn-645}
+
+O levantamento visual da Rodada 29 (achado G1, AT-321) percorreu as seções de
+Configurações em ~40s e a página inteira do projeto virou "Limite de
+requisições excedido" — o teto de 300 req/min é do USUÁRIO
+([RN-579](#rn-579)). O roteiro RECARREGAVA a página por seção, e uma carga da
+aba custava 55 requisições. Medido com as telas de verdade, o defeito tinha
+três partes, e nenhuma delas pede subir o teto:
+
+**A regra:**
+
+1. **Dado de CONFIGURAÇÃO vale um minuto** (`FRESCOR_DA_CONFIGURACAO_MS`). Com o
+   `staleTime: 0` do TanStack, toda observadora que MONTA depois da primeira
+   refaz a busca. As seções só montam depois que o projeto chega, então
+   `GET /projects/:id`, `GET /projects/:id/git/repository` e `GET /workspaces`
+   saíam DUAS vezes em toda carga; e trocar de aba e voltar remontava as 19
+   seções e refazia 31 buscas. Configuração só muda por MUTAÇÃO, e toda
+   mutação da aba invalida a própria chave — invalidar ignora `staleTime`,
+   então quem salva vê o valor novo na hora. O que o minuto atrasa é a mudança
+   feita por OUTRA pessoa, que segue chegando no foco da janela e na próxima
+   montagem depois do minuto. **Estado operacional fica fora** (ciclo de vida
+   do container, gasto por agente e por chave, chaves de dispositivo com
+   `lastUsedAt`, plano de bootstrap): ali a pergunta é "o que está de pé
+   agora".
+2. **Configuração não polla.** O perfil de proficiência e o histórico de
+   versões de instrução pollavam a 15s — 8 req/min contra o teto para duas
+   listas que só mudam pela própria seção (que invalida) ou por patch
+   aprovado.
+3. **O sumário DEITA acima das seções, em qualquer largura.** Como coluna
+   `sticky` ao lado delas ele era a quarta faixa vertical (sidebar 264 +
+   trilho 180 + sumário 208): a 1440px sobravam ~740px de conteúdo e a tabela
+   de modelos cortava o nome do agente em 79px e o do modelo em 91px (achado
+   G2). A coluna não tinha como pagar o próprio preço nem num monitor largo,
+   porque `.body` tem teto de 1040px (ADR 0078). Deitado, ele devolve os 208px
+   às seções; o preço é o que a janela estreita já pagava — perde-se o "onde
+   estou" GRUDADO na tela, não a navegação. Nenhum token mudou.
+
+**Números** (`configuracoes.orcamento.test.tsx`, `Shell` + `ProjectPage` na
+aba Configurações sobre um `fetch` que conta por rota; `dev` → esta regra):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| carga da aba (2,5s) | 53 | 50 |
+| um minuto parado na aba | 76 | 68 |
+| Configurações → Visão geral → volta (buscas de configuração) | 31 | 0 |
+
+Os "Depois" foram medidos sobre a mesma base do "Antes"; integrada a `dev` com a
+[RN-638](#rn-638) (a moldura lê a fila do projeto uma vez só), a carga ficou em
+49 e o minuto em 64, e são esses os tetos que o teste guarda.
+
+**O que esta regra NÃO fecha:** a carga continua em 50, e 20 delas são o
+binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota por chave
+(`GET projects/:projectId/agent-bindings/:agentSlug`) — cortá-las pede rota de
+LOTE na api, decisão à parte. Por isso RECARREGAR a página por seção, como o
+roteiro do levantamento fazia, ainda estoura o teto em ~6 cargas por minuto;
+navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
+minuto são todos da MOLDURA (o `Shell` polla `projects-summary` e
+`execution/session` a 5s e os eventos da sessão de execução a 3s), comuns a
+toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
+
+- **Código:** `apps/web/src/lib/query-policy.ts:111`
+  (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
+  (`useCurrentWorkspaceWithRole`), `:520` (`useProficiency`);
+  `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
+  (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
+  e `apps/web/src/components/ModelCatalogSection.tsx`;
+  `apps/web/src/routes/settings/sumario.module.css:36` (`.layout`, a faixa)
+- **Teste:** `apps/web/src/routes/configuracoes.orcamento.test.tsx` (a carga
+  busca cada recurso uma vez; um minuto sem poll de configuração; trocar de
+  aba e voltar sem buscas de configuração — os três reprovam na `dev` — e o
+  caso de falha: invalidar busca na hora, e passado o minuto a volta busca de
+  novo)
+- **Origem:** AT-321 (achados G1 e G2 do levantamento visual da Rodada 29;
+  extensão da [RN-579](#rn-579) e da [RN-632](#rn-632))

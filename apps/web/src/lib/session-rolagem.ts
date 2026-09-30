@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ProposedAction, SessionEvent } from './api-types';
+import type { StoreDoStreaming } from './streaming-do-turno';
 
 /**
  * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
@@ -28,13 +29,17 @@ export function useRolagemDoFio({
   logOpen,
   events,
   actions,
-  streamingText,
+  streamingStore,
 }: {
   highlightEvent: string | undefined;
   logOpen: boolean;
   events: SessionEvent[];
   actions: ProposedAction[];
-  streamingText: string;
+  /**
+   * O texto em curso vem como STORE desde a AT-301 — a página não re-renderiza
+   * por token, então ele não pode mais ser dependência de efeito aqui.
+   */
+  streamingStore: StoreDoStreaming;
 }) {
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
   // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
@@ -87,7 +92,33 @@ export function useRolagemDoFio({
   // timeline.
   useEffect(() => {
     acompanharOFim();
-  }, [events.length, actions.length, streamingText, acompanharOFim]);
+  }, [events.length, actions.length, acompanharOFim]);
+
+  // O texto do streaming (AT-301): em vez de dependência de efeito — que
+  // exigiria a página re-renderizar a cada token —, uma assinatura direta do
+  // store. O aviso chega ANTES de a bolha pintar o texto novo, então o
+  // acompanhamento vai para a volta seguinte do laço de eventos, depois do
+  // commit; só o TEXTO dispara (a faixa de atividade mora fora da área que
+  // rola), como a dependência antiga.
+  useEffect(() => {
+    let textoAnterior = streamingStore.ler().texto;
+    let pendente: ReturnType<typeof setTimeout> | null = null;
+    const cancelar = streamingStore.subscribe(() => {
+      const texto = streamingStore.ler().texto;
+      if (texto === textoAnterior) return;
+      textoAnterior = texto;
+      if (pendente === null) {
+        pendente = setTimeout(() => {
+          pendente = null;
+          acompanharOFim();
+        }, 0);
+      }
+    });
+    return () => {
+      cancelar();
+      if (pendente !== null) clearTimeout(pendente);
+    };
+  }, [streamingStore, acompanharOFim]);
 
   // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
   // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar

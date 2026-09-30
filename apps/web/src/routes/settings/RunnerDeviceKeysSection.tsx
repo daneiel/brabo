@@ -23,6 +23,7 @@ import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * As chaves de dispositivo do runner local — a TELA que a
@@ -111,6 +112,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
   const { data: membros } = useQuery({
     queryKey: ['members', projectId],
     queryFn: () => listProjectMembers(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: comPapel } = useCurrentWorkspaceWithRole();
   const meuId = userIdDaSessao();

@@ -163,7 +163,7 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
         <>
           <div className={styles.sectionSub}>
             {t('projectInsightsTab.summary', {
-              total: all.length,
+              count: all.length,
               pending: pending.length,
             })}
           </div>
@@ -187,9 +187,12 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     })}
                   </Link>
                   <span className={styles.analysisMeta}>
-                    {t('projectInsightsTab.analysisStrip.meta', {
-                      events: run.eventCountAtAnalysis,
-                      hypotheses: run.hypothesisCount,
+                    {t('projectInsightsTab.analysisStrip.metaEvents', {
+                      count: run.eventCountAtAnalysis,
+                    })}
+                    {' · '}
+                    {t('projectInsightsTab.analysisStrip.metaHypotheses', {
+                      count: run.hypothesisCount,
                     })}
                   </span>
                   <span className={styles.analysisCost}>

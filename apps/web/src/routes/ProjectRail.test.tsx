@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
 import navPtBR from '../locales/pt-BR/nav.json';
+import { simularLayoutMovel } from '../test/match-media';
 
 /**
  * Instância REAL de i18next, própria do teste (mesmo padrão de
@@ -283,5 +284,59 @@ describe('ProjectRail — navegação por teclado', () => {
 
     expect(document.activeElement).toBe(visaoGeral);
     expect(visaoGeral.getAttribute('aria-selected')).toBe('true');
+  });
+});
+
+/**
+ * RN-643 (AT-316): abaixo do breakpoint móvel o trilho vira BARRA horizontal
+ * rolável — as mesmas 12 folhas, o eixo do teclado girado junto.
+ */
+describe('ProjectRail — barra horizontal no layout móvel (RN-643)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('vira tablist HORIZONTAL com as 12 abas na mesma ordem, e traz a ativa para a faixa visível', () => {
+    largura = simularLayoutMovel(true);
+    const rolar = vi.fn();
+    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = rolar;
+
+    render(<Controlado inicial="settings" />);
+
+    const lista = screen.getByRole('tablist');
+    expect(lista).toHaveAttribute('aria-orientation', 'horizontal');
+    const abas = within(lista).getAllByRole('tab');
+    expect(abas.map((b) => b.textContent?.replace(/\d+$/, ''))).toEqual(ORDEM_ACHATADA);
+    expect(rolar).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(rolar.mock.contexts[0]).toBe(screen.getByRole('tab', { name: 'Configurações' }));
+  });
+
+  it('as setas esquerda/direita andam, com volta; a seta para baixo não faz nada ali', async () => {
+    largura = simularLayoutMovel(true);
+    const usuario = userEvent.setup();
+    render(<Controlado inicial="overview" />);
+
+    screen.getByRole('tab', { name: 'Visão geral' }).focus();
+    await usuario.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
+
+    await usuario.keyboard('{ArrowDown}');
+    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
+
+    await usuario.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Configurações' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('sem matchMedia (desktop) continua o trilho VERTICAL, e a seta direita não anda', async () => {
+    const usuario = userEvent.setup();
+    render(<Controlado inicial="overview" />);
+
+    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
+    screen.getByRole('tab', { name: 'Visão geral' }).focus();
+    await usuario.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Visão geral' })).toHaveAttribute('aria-selected', 'true');
   });
 });

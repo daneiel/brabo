@@ -10,7 +10,7 @@
   },
   "compartilhado": {
     "semTitulo": "(sem título)",
-    "verNoBacklog": "Ver no Backlog",
+    "verNoBacklog": "Ver em Histórias",
     "voce": "Você",
     "agenteGenerico": "agente"
   },
@@ -53,7 +53,7 @@
     "prontoParaProduzir": "Estou pronto para produzir",
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
-    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
+    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
     "confirmarNecessidade": "Confirmar necessidade validada",
     "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade",
     "destinatarioLabel": "Para",
@@ -69,7 +69,7 @@
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",
-    "respostaVazia": "Resposta vazia — evento anterior à RN-059, quando falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
+    "respostaVazia": "Resposta vazia — evento de uma versão antiga, em que falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
@@ -171,7 +171,8 @@
     "teto": "Este painel lê os <b>{{lidos}}</b> eventos já carregados desta sessão. Há <b>{{anteriores}}</b> anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e as outras seções crescem junto.",
     "regrasDeNegocio": "Regras de negócio",
     "nadaAinda": "Nada ainda.",
-    "origemRefs": "origem: {{count}} ref(s)",
+    "origemRefs_one": "origem: {{count}} referência",
+    "origemRefs_other": "origem: {{count}} referências",
     "paginaAnterior": "Página anterior de regras de negócio",
     "proximaPagina": "Próxima página de regras de negócio",
     "paginaDe": "{{atual}} de {{total}}",

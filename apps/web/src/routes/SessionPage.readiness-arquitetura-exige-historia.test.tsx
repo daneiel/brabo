@@ -174,7 +174,7 @@ describe('SessionPage — "Confirmar arquitetura pronta" exige história promovi
     expect(botao).toBeDisabled();
     expect(botao).toHaveAttribute(
       'title',
-      'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura',
+      'Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura',
     );
   });
 

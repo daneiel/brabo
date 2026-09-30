@@ -45,7 +45,8 @@
   "agentStatus": {
     "circuitBreaker": {
       "default": "circuit breaker triggered",
-      "withCount": "circuit breaker: {{count}} consecutive blocked tasks"
+      "withCount_one": "circuit breaker: {{count}} consecutive blocked task",
+      "withCount_other": "circuit breaker: {{count}} consecutive blocked tasks"
     },
     "delegation": {
       "completed": "completed the delegation",

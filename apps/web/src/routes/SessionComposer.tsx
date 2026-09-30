@@ -175,7 +175,7 @@ export function SessionComposer({
               variant="success"
               onClick={() => handleAcceptHandoff(oferta.id, oferta.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: oferta.toAgent })}
+              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta.toAgent) })}
             </Button>
           </div>
         ))}

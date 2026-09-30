@@ -125,7 +125,8 @@
     "details": {
       "title": "Detalhes",
       "rawPayloadTitle": "Payload cru",
-      "fieldCount": "{{count}} campo(s)"
+      "fieldCount_one": "{{count}} campo",
+      "fieldCount_other": "{{count}} campos"
     },
     "actions": {
       "approve": "Aprovar",
@@ -158,7 +159,8 @@
         "invalidPath": "O modelo não produziu um caminho válido para esta ação.",
         "invalidContent": "O modelo não produziu um conteúdo válido para esta ação.",
         "previewHeader": "preview do conteúdo",
-        "linesTruncated": "{{shown}} de {{count}} linha(s)"
+        "linesTruncated_one": "{{shown}} de {{count}} linha",
+        "linesTruncated_other": "{{shown}} de {{count}} linhas"
       },
       "prOpen": {
         "defaultTitle": "Pull request"

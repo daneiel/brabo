@@ -125,7 +125,8 @@
     "details": {
       "title": "Details",
       "rawPayloadTitle": "Raw payload",
-      "fieldCount": "{{count}} field(s)"
+      "fieldCount_one": "{{count}} field",
+      "fieldCount_other": "{{count}} fields"
     },
     "actions": {
       "approve": "Approve",
@@ -158,7 +159,8 @@
         "invalidPath": "The model didn't produce a valid path for this action.",
         "invalidContent": "The model didn't produce valid content for this action.",
         "previewHeader": "content preview",
-        "linesTruncated": "{{shown}} of {{count}} line(s)"
+        "linesTruncated_one": "{{shown}} of {{count}} line",
+        "linesTruncated_other": "{{shown}} of {{count}} lines"
       },
       "prOpen": {
         "defaultTitle": "Pull request"
