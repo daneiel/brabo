@@ -241,7 +241,7 @@ describe('RN-180 — o painel diz o que não está mostrando', () => {
   });
 });
 
-describe('RN-177 — o fio recolhe o histórico por origem', () => {
+describe('RN-177/RN-644 — o fio recolhe o histórico, na ordem', () => {
   /** Sete falas do PO, que viram sete entradas no fio. */
   function seteFalas() {
     return Array.from({ length: 7 }, (_, i) =>
@@ -254,7 +254,7 @@ describe('RN-177 — o fio recolhe o histórico por origem', () => {
     );
   }
 
-  it('as últimas 5 ficam abertas; o resto entra num colapso por origem', async () => {
+  it('as últimas 5 mensagens ficam abertas; o resto entra num colapso que diz o que contém', async () => {
     eventos.mockReturnValue({ items: seteFalas() });
 
     montar();
@@ -265,8 +265,8 @@ describe('RN-177 — o fio recolhe o histórico por origem', () => {
     // monta o que está fechado, então elas nem existem no DOM.
     expect(screen.queryByText('fala numero 1')).toBeNull();
 
-    const grupo = screen.getByRole('button', { name: /LLM/ });
-    expect(grupo.textContent).toContain('2');
+    const grupo = screen.getByRole('button', { name: /Antes das últimas 5 mensagens/ });
+    expect(grupo.textContent).toContain('2 mensagens');
     await userEvent.setup().click(grupo);
     expect(screen.getByText('fala numero 1')).toBeTruthy();
   });
@@ -278,7 +278,95 @@ describe('RN-177 — o fio recolhe o histórico por origem', () => {
     await screen.findByText('fala numero 4');
 
     expect(screen.getByText('fala numero 1')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Antes das últimas/ })).toBeNull();
+  });
+
+  /** Pergunta do usuário (abre o turno), resposta do Criativo e o bastão. */
+  function troca(n: number, seq: number, comCard: boolean): SessionEvent[] {
+    const itens = [
+      evento({
+        seq,
+        id: `q-${n}`,
+        type: 'chat.message',
+        actor: { kind: 'user', id: 'user-1' },
+        payload: { text: `pergunta ${n}` },
+      }),
+      evento({
+        seq: seq + 1,
+        id: `r-${n}`,
+        type: 'agent.response',
+        actor: { kind: 'agent', id: 'criativo' },
+        payload: { content: `resposta ${n}` },
+      }),
+    ];
+    if (comCard) {
+      itens.push(
+        evento({
+          seq: seq + 2,
+          id: `h-${n}`,
+          type: 'handoff.offered',
+          actor: { kind: 'agent', id: 'criativo' },
+          payload: { toAgent: 'po' },
+        }),
+        evento({
+          seq: seq + 3,
+          id: `s-${n}`,
+          type: 'backlog.story_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { title: `historia ${n}` },
+        }),
+      );
+    }
+    return itens;
+  }
+
+  /** `a` aparece ANTES de `b` no documento. */
+  function antes(a: HTMLElement, b: HTMLElement) {
+    return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  }
+
+  it('o caso medido (achado X3): cards intercalados NÃO contam, e a primeira troca fica aberta e na ordem', async () => {
+    // Duas mensagens e quatro cards: o corte antigo contava 8 entradas e
+    // escondia a primeira pergunta e a primeira resposta.
+    eventos.mockReturnValue({ items: [...troca(1, 1, true), ...troca(2, 5, true)] });
+
+    montar();
+    const pergunta = await screen.findByText('pergunta 1');
+    const resposta = screen.getByText('resposta 1');
+
+    expect(antes(pergunta, resposta)).toBe(true);
+    expect(screen.queryByRole('button', { name: /Antes das últimas/ })).toBeNull();
+  });
+
+  it('expandido, o histórico mantém a cronologia e o corte não separa a pergunta da resposta', async () => {
+    // Quatro trocas = oito mensagens. As 5 últimas começam na RESPOSTA 2, e o
+    // corte recua até a PERGUNTA 2 (a abertura do turno): ela nunca fica
+    // recolhida longe da resposta que gerou.
+    eventos.mockReturnValue({
+      items: [
+        ...troca(1, 1, true),
+        ...troca(2, 5, false),
+        ...troca(3, 7, false),
+        ...troca(4, 9, false),
+      ],
+    });
+
+    montar();
+    await screen.findByText('resposta 4');
+    expect(screen.getByText('pergunta 2')).toBeTruthy();
+    expect(screen.queryByText('pergunta 1')).toBeNull();
+
+    const grupo = screen.getByRole('button', { name: /Antes das últimas 5 mensagens/ });
+    // O recorte é declarado: quantas mensagens e quantas outras entradas.
+    expect(grupo.textContent).toContain('2 mensagens · 2 outras entradas');
+    // UM grupo só — nada de "LLM"/"Usuário" separados por origem.
     expect(screen.queryByRole('button', { name: /^LLM/ })).toBeNull();
+
+    await userEvent.setup().click(grupo);
+    const pergunta1 = screen.getByText('pergunta 1');
+    const resposta1 = screen.getByText('resposta 1');
+    expect(antes(pergunta1, resposta1)).toBe(true);
+    expect(antes(resposta1, screen.getByText('pergunta 2'))).toBe(true);
   });
 });
 

@@ -378,6 +378,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o fio da sessão deixou de esconder o começo da conversa e de
+  inverter a ordem ao expandir (AT-319, [RN-644](docs/business-rules.md#rn-644)).
+  O corte das últimas 5 conta só MENSAGENS (os cards de handoff, aprovação e
+  história não contam mais), recua até a abertura do turno para a pergunta
+  nunca ficar separada da resposta, e o histórico recolhido é um bloco só, em
+  ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
+  outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
+  punham a resposta do Criativo acima da pergunta.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

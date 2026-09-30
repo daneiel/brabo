@@ -193,5 +193,14 @@
     "semPapel": "Merging here needs the developer role on the project.",
     "nota": "Proposes the merge in this session; you confirm it on the card that appears — merging stays manual.",
     "erroTitulo": "Could not propose the merge"
+  },
+  "fio": {
+    "historico": {
+      "titulo_one": "Before the last message",
+      "titulo_other": "Before the last {{count}} messages",
+      "outrasCount_one": "{{count}} other entry",
+      "outrasCount_other": "{{count}} other entries",
+      "conteudoComOutras": "{{mensagens}} · {{outras}}"
+    }
   }
 }

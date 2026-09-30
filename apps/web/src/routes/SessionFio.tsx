@@ -1,17 +1,16 @@
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
-import { ROTULO_DA_ORIGEM } from '../lib/activity';
 import { Button } from '../components/ui/Button';
 import { Disclosure } from '../components/ui/Disclosure';
 import { ModelIcon, UserIcon } from '../components/ui/icons';
-import type { dividirFio } from './session-fio';
+import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
 import styles from './SessionPage.module.css';
 
 /**
  * O conteúdo do fio da Sessão, dentro da área que rola: o convite da sessão
- * que ainda não começou (RN-097/RN-104), o histórico recolhido por origem e as
- * entradas recentes (RN-177), a mensagem otimista do usuário e a bolha do chat
+ * que ainda não começou (RN-097/RN-104), o histórico recolhido e as
+ * entradas recentes (RN-177/RN-644), a mensagem otimista do usuário e a bolha do chat
  * consultivo em streaming (RN-131/RN-156). A sentinela do fim do fio e os refs
  * da rolagem ficam no `SessionPage`, que é quem rola.
  *
@@ -130,29 +129,37 @@ export function SessionFio({
         )
       )}
 
-      {/* RN-177 — o histórico recolhido POR ORIGEM, no topo do fio,
-          porque o fio é crescente. Nasce FECHADO: a conversa que
-          importa é a recente, e abrir tudo é o estado de hoje, que é
-          justamente o que o pedido apontou como ilegível numa sessão
-          longa. Cada origem é um `Disclosure` próprio — assim voltar a
-          ler só o que o usuário disse não obriga a reabrir também
-          todo o log de domínio. */}
-      {fio.historico.length > 0 && (
+      {/* RN-177/RN-644 — o histórico recolhido, no topo do fio, porque o
+          fio é crescente. Nasce FECHADO: a conversa que importa é a
+          recente. É UM bloco na ordem em que as coisas aconteceram (nunca
+          grupos por origem, que punham a resposta acima da pergunta), e o
+          cabeçalho DECLARA o recorte (RN-180): o que o corte conta (as
+          últimas N mensagens) e o que ficou dentro, mensagens e o resto
+          separados. */}
+      {fio.historico && (
         <div className={styles.fioHistorico}>
-          {fio.historico.map(({ origem, itens }) => (
-            <Disclosure
-              key={origem}
-              titulo={ROTULO_DA_ORIGEM[origem]}
-              trailing={itens.length}
-              classNameCabecalho={styles.fioHistoricoCabecalho}
-            >
-              <div className={styles.fioHistoricoRegiao}>
-                {itens.map((entry) => (
-                  <div key={entry.key}>{entry.node}</div>
-                ))}
-              </div>
-            </Disclosure>
-          ))}
+          <Disclosure
+            titulo={t('fio.historico.titulo', { count: FIO_RECENTES_ABERTAS })}
+            trailing={
+              fio.historico.outras > 0
+                ? t('fio.historico.conteudoComOutras', {
+                    mensagens: t('artefatos.mensagensCount', {
+                      count: fio.historico.mensagens,
+                    }),
+                    outras: t('fio.historico.outrasCount', {
+                      count: fio.historico.outras,
+                    }),
+                  })
+                : t('artefatos.mensagensCount', { count: fio.historico.mensagens })
+            }
+            classNameCabecalho={styles.fioHistoricoCabecalho}
+          >
+            <div className={styles.fioHistoricoRegiao}>
+              {fio.historico.itens.map((entry) => (
+                <div key={entry.key}>{entry.node}</div>
+              ))}
+            </div>
+          </Disclosure>
         </div>
       )}
 

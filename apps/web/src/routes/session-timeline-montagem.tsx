@@ -386,6 +386,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     if (event.type === 'chat.message') {
       const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         node: (
           <div
             className={styles.message}
@@ -422,6 +423,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
       );
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
           <StructuredQuestionCard
@@ -668,6 +670,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           ? payload.modelName
           : undefined;
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
         // entrada, e só ela, participa do colapso de "Passos do turno".

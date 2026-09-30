@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| O fio corta por mensagem, não parte a troca e recolhe o histórico na ordem (AT-319) | RN-644 |
 
 ## Estado atual e aberto
 
@@ -2091,8 +2092,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Evento tem DUAS classificações no cliente, e elas não se substituem:
   `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
   (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
-  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
-  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, e é o eixo dos
+  grupos do painel de log — o FIO não agrupa por origem desde a RN-644 (lá o
+  histórico recolhido é UM bloco cronológico e o corte conta MENSAGENS,
+  recuando até a abertura do turno); a precedência dos `if` é a regra (mecanismo
   vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
   `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
