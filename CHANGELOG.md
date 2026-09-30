@@ -532,13 +532,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que espera e tenta de novo no `EAGAIN` (consulta o fd ocioso a no máximo
   32 ms), e o `--self-test-pty` faz uma segunda volta depois de uma pausa —
   com o leitor antigo ela reprova também no Linux. Provado no binário
-  `linux-x64`; o `darwin-arm64` só o próximo ensaio da matriz prova.
+  `linux-x64` e, no ensaio da matriz, também no `darwin-arm64` e no
+  `linux-arm64`.
 
 - **runner**: o binário standalone de Windows deixa de sair com código 1 e
   `ENOENT` em `realpathSync` antes de fazer qualquer coisa (AT-343). O runner
   só reconhecia o caminho virtual do binário compilado de Linux/macOS
-  (`/$bunfs/root/`); o do Windows é `B:/~BUN/root/`. As duas formas passam a
-  ser reconhecidas, e no Windows o `--self-test-pty` usa `cmd.exe` no lugar de
+  (`/$bunfs/root/`); o do Windows é `B:/~BUN/root/` — e chega também sem os
+  dois-pontos (`B/~BUN/root/`) ou com o `~` codificado na URL. Todas passam a
+  ser reconhecidas, pelo `import.meta.url` OU pelo `argv[1]` nos dois lugares
+  que perguntam (o carregador do `node-pty` só olhava o primeiro e caía no
+  `import('node-pty')` comum, `Cannot find package`), e no Windows o `--self-test-pty` usa `cmd.exe` no lugar de
   `/bin/cat`. Provado por teste com os caminhos; só o ensaio da matriz no
   `windows-latest` prova o binário.
 

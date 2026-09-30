@@ -47,7 +47,7 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { NodePtyModule } from './pty.ts';
 import { garantirSpawnHelperExecutavel } from './spawn-helper.ts';
-import { ehCaminhoDoBinarioCompilado } from './binario-compilado.ts';
+import { rodandoComoBinarioCompilado as binarioCompilado } from './binario-compilado.ts';
 import { comLeitorDePtyProprio } from './leitor-de-pty.ts';
 
 /**
@@ -60,7 +60,7 @@ import { comLeitorDePtyProprio } from './leitor-de-pty.ts';
 function rodandoComoBinarioCompilado(): boolean {
   // As duas formas do caminho virtual — `/$bunfs/` e, no Windows,
   // `B:/~BUN/root/` (AT-343).
-  return ehCaminhoDoBinarioCompilado(import.meta.url);
+  return binarioCompilado(import.meta.url);
 }
 
 /**

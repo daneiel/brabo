@@ -30,7 +30,10 @@
  */
 
 import { realpathSync } from 'node:fs';
-import { ehCaminhoDoBinarioCompilado } from './binario-compilado.ts';
+import {
+  ehCaminhoDoBinarioCompilado,
+  rodandoComoBinarioCompilado,
+} from './binario-compilado.ts';
 import { ocorrenciasDoMarcador } from './auto-teste-pty.ts';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -1727,8 +1730,7 @@ async function rodarComoAgenteDeMaquina(
 // abaixo e morria com `ENOENT` antes de `main()`. As duas formas moram em
 // `ehCaminhoDoBinarioCompilado`, e `process.argv[1]` entra junto como segunda
 // testemunha.
-const invocadoComoBinarioCompilado =
-  ehCaminhoDoBinarioCompilado(import.meta.url) || ehCaminhoDoBinarioCompilado(process.argv[1]);
+const invocadoComoBinarioCompilado = rodandoComoBinarioCompilado(import.meta.url);
 if (
   invocadoComoBinarioCompilado ||
   (process.argv[1] &&

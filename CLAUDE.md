@@ -713,7 +713,9 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   por causas distintas. `win32-x64` saía com código 1 no uso sem argumentos:
   `ENOENT` em `realpathSync`, porque o runner só reconhecia o caminho virtual
   do binário compilado de Linux/macOS (`/$bunfs/`) e o do Windows é
-  `B:/~BUN/root/` (AT-343, `apps/runner/src/binario-compilado.ts`). `darwin-arm64`
+  `B:/~BUN/root/` — ou `B/~BUN/root/`, sem os dois-pontos (AT-343,
+  `apps/runner/src/binario-compilado.ts`, que o `index.ts` e o carregador do
+  `node-pty` perguntam pelas DUAS testemunhas, `import.meta.url` e `argv[1]`). `darwin-arm64`
   passou do `posix_spawnp failed` e reprovou no `--self-test-pty` com o
   marcador na saída UMA vez: é o oven-sh/bun#25822, MEDIDO — sob o Bun o
   `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro `EAGAIN` do
@@ -722,9 +724,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   tempo). Sob o Bun o runner lê o PTY com leitor próprio
   (`apps/runner/src/leitor-de-pty.ts`, AT-342), e o `--self-test-pty` ganhou
   uma segunda volta depois de uma pausa, que reprova o leitor antigo também no
-  Linux. Provado no binário `linux-x64` e em teste; os dois alvos NÃO estão
-  provados até o próximo ensaio da matriz, e o `win32-x64` pode ter defeito
-  seguinte (o self-test no Windows usa `cmd.exe` pelo ConPTY, nunca rodado). O
+  Linux. O segundo ensaio (run 36779817686) PROVOU o `darwin-arm64` e os dois
+  Linux; no `win32-x64` o uso passou e o `--self-test-pty` reprovou com
+  `Cannot find package 'node-pty'` (o carregador não reconhecia a forma sem
+  `:`), corrigido e NÃO provado até o próximo ensaio — o self-test no Windows
+  usa `cmd.exe` pelo ConPTY, que ainda nunca rodou. O
   quinto alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
   AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
   que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`
