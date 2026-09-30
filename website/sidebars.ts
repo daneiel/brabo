@@ -129,6 +129,7 @@ const sidebars: SidebarsConfig = {
         'explanation/fase-30-runner-por-maquina',
         'explanation/medicao-do-idioma',
         'explanation/medicao-do-jev',
+        'explanation/auditoria-visual-rodada-29',
       ],
     },
     {
