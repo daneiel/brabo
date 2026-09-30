@@ -12,6 +12,7 @@ import {
   type SuperficieDoPortao,
 } from '../../components/ContainerImageGate';
 import { Disclosure } from '../../components/ui/Disclosure';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
 import styles from './CodeDiffPanel.module.css';
@@ -186,20 +187,15 @@ export function PrListAndDiff({
 
   return (
     <div className={styles.painel}>
-      <div className={styles.filtros} role="tablist" aria-label={t('diff.filtersAriaLabel')}>
-        {FILTROS.map((f) => (
-          <button
-            key={f.chave}
-            type="button"
-            role="tab"
-            aria-selected={filtro === f.chave}
-            className={[styles.filtro, filtro === f.chave && styles.filtroAtivo].filter(Boolean).join(' ')}
-            onClick={() => setFiltro(f.chave)}
-          >
-            {t(f.chaveRotulo)}
-          </button>
-        ))}
-      </div>
+      {/* AT-327: o mesmo controle segmentado das abas Criativo e Chat. Antes
+          eram abas retangulares com `role="tab"` sem painel que controlassem. */}
+      <SegmentedControl
+        className={styles.filtros}
+        rotulo={t('diff.filtersAriaLabel')}
+        opcoes={FILTROS.map((f) => ({ valor: f.chave, rotulo: t(f.chaveRotulo) }))}
+        valor={filtro}
+        onChange={setFiltro}
+      />
 
       {listaQuery.isLoading && <div className={styles.estado}>{t('diff.loadingPrs')}</div>}
 

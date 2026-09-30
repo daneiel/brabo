@@ -3,6 +3,20 @@ import { useTranslation } from 'react-i18next';
 import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
 import { pollQueParaNoErro } from '../lib/query-policy';
+import { Button } from '../components/ui/Button';
+
+/**
+ * O instante do `/health` na língua de quem lê (AT-327): antes a coluna
+ * mostrava o ISO cru ("2026-09-30T04:23:31.743Z"). Valor que não é data
+ * válida não vira "Invalid Date": devolve `null`, e a célula diz que o
+ * serviço não informou.
+ */
+function formatarInstanteDoStatus(iso: string | undefined, idioma: string): string | null {
+  if (!iso) return null;
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return null;
+  return data.toLocaleString(idioma, { dateStyle: 'short', timeStyle: 'medium' });
+}
 
 function StatusRow({
   label,
@@ -11,6 +25,7 @@ function StatusRow({
   label: string;
   query: ReturnType<typeof useHealthQuery>;
 }) {
+  const { t, i18n } = useTranslation('dashboard');
   const { data, isLoading, isError } = query;
   const status: HealthStatus['status'] | 'checking' = isLoading
     ? 'checking'
@@ -34,7 +49,7 @@ function StatusRow({
           color: statusColor[status],
         }}
       >
-        {status}
+        {t(`status.state.${status}`)}
       </td>
       <td
         style={{
@@ -44,7 +59,9 @@ function StatusRow({
           fontSize: '0.85em',
         }}
       >
-        {data?.timestamp ?? '—'}
+        {isLoading
+          ? '…'
+          : (formatarInstanteDoStatus(data?.timestamp, i18n.language) ?? t('status.noTimestamp'))}
       </td>
     </tr>
   );
@@ -133,21 +150,10 @@ export function StatusPage({
         </tbody>
       </table>
       <p style={{ marginTop: 'var(--space-4)' }}>
-        <button
-          type="button"
-          onClick={() => irPara(voltarPara)}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            font: 'inherit',
-            fontSize: 13,
-            color: 'var(--accent)',
-            cursor: 'pointer',
-          }}
-        >
+        {/* AT-327: um botão de verdade, não um link de 33×20 px. */}
+        <Button variant="secondary" onClick={() => irPara(voltarPara)}>
           {t('status.back')}
-        </button>
+        </Button>
       </p>
     </main>
   );

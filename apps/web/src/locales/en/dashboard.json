@@ -28,13 +28,19 @@
     "columns": {
       "service": "Service",
       "status": "Status",
-      "lastCheck": "Last check"
+      "lastCheck": "Last checked"
     },
     "services": {
       "api": "api (NestJS)",
       "engine": "engine (Elixir/Phoenix)"
     },
-    "back": "Back"
+    "back": "Back",
+    "noTimestamp": "not reported",
+    "state": {
+      "ok": "up",
+      "error": "down",
+      "checking": "checking"
+    }
   },
   "projectCard": {
     "provider": {

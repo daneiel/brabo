@@ -131,13 +131,13 @@
     "kindCopy": {
       "criativa": {
         "title": "Creative",
-        "openButton": "+ New ideation",
+        "openButton": "New ideation",
         "confirmButton": "Open creative session",
         "empty": "No ideation yet. Open one for the Creative agent to work through the product's business rules with you."
       },
       "consultiva": {
         "title": "Chat",
-        "openButton": "+ New conversation",
+        "openButton": "New conversation",
         "confirmButton": "Open consultative session",
         "empty": "No conversation yet. Open one to ask questions and get context without activating any agent."
       }

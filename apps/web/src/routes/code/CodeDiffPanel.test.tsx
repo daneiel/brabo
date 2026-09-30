@@ -102,7 +102,7 @@ describe('CodeDiffPanel — lista de PRs', () => {
     getCodePullRequests.mockClear();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('tab', { name: 'Mescladas' }));
+    await user.click(screen.getByRole('button', { name: 'Mescladas' }));
 
     expect(getCodePullRequests).toHaveBeenCalledWith('p-1', { state: 'merged' });
     expect(await screen.findByText('Nenhuma PR mesclada neste repositório.')).toBeInTheDocument();

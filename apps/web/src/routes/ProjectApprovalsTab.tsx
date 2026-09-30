@@ -36,6 +36,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastProvider';
 import { AlertCircleIcon, CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
@@ -457,19 +458,16 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
               >
                 {() =>
                   pending.length === 0 ? (
-                    <div className={styles.vazioCard}>
-                      <span className={styles.vazioIcone}>
-                        <CheckIcon size={24} />
-                      </span>
-                      <p className={styles.vazioTexto}>{t('approvalsTab.pending.empty')}</p>
-                    </div>
+                    <EmptyState icone={<CheckIcon size={20} />} tom="sucesso">
+                      {t('approvalsTab.pending.empty')}
+                    </EmptyState>
                   ) : (
                     <div className={styles.queue}>
                       {pending.map((action) => (
                         <ApprovalCard
                           key={action.id}
                           action={action}
-                          variant="queue"
+                          detalheRecolhido
                           // AT-148 (RN-614): a aba lê os eventos da sessão de
                           // trabalho. Ação de OUTRA sessão, ou fora da janela
                           // carregada, sai `null` — e o card diz.

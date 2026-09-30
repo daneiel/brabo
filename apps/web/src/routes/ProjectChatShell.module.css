@@ -4,16 +4,9 @@
   gap: 16px;
 }
 
-/* Mesmo padrão visual dos pills de filtro de `ProjectSessionsTab.module.css`
-   — o controle segmentado é a mesma família de componente (grupo de botões
-   pill, um ativo por vez), só que decide QUAL painel monta em vez de
-   filtrar uma lista. */
-.segmentado {
-  display: flex;
-  gap: 8px;
-}
-
-/* A pílula de filtro é `ui/Chip` (AT-287). */
+/* Conversar/Buscar é `ui/SegmentedControl` (AT-327) — o mesmo controle dos
+   filtros da aba Criativo e das PRs, só que decide QUAL painel monta em vez
+   de filtrar uma lista. */
 
 .corpo {
   min-width: 0;

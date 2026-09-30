@@ -104,6 +104,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   e espaço pela escala `--fs-*`/`--space-*`, e raio que coincide com um degrau
   passa pelo token. `design-tintas.test.ts` e `design-escala.test.ts` reprovam
   a volta.
+- **web**: **o cartão de aprovação é um só nas quatro superfícies** (AT-322) —
+  só apresentação, nenhum endpoint nem teto muda. O `ApprovalCard` perde a
+  prop `variant`: o fio da sessão, a aba Aprovações, o painel "precisa de você"
+  e as pendências de outras sessões mostram os mesmos botões, com a largura
+  natural deles (esticar os dois primeiros fazia "Modo automático" cair de
+  linha a 1024px), e a mesma nota de "Sempre permitir" — antes só o fio a
+  mostrava. A única diferença entre superfícies é o detalhe nascer fechado onde
+  os cards se empilham (`detalheRecolhido`), e quem centraliza o card no fio
+  com teto de 560px passa a ser o contêiner (`.acaoNoFio`, RN-173). As notas
+  ficam curtas, em corpo de 12px em vez de mono, com o ícone de 14px alinhado
+  à primeira linha. O comando, a branch, o caminho e a imagem da frase
+  (`lib/aprovacoes.ts`, que continua a fonte única dela) saem em mono e sem
+  aspas: `trechosDaFraseDaAcao` devolve a frase em trechos de prosa e de
+  código, e `fraseDaAcao` segue devolvendo a string, agora sem as aspas retas.
+- **web**: **controle segmentado, estado vazio e CTA seguem um padrão só**
+  (AT-327) — só apresentação. Nascem `ui/SegmentedControl` (grupo rotulado de
+  `Chip`s, `aria-pressed`), usado nos filtros da aba Criativo, no
+  Conversar/Buscar do Chat e no filtro por estado das PRs — que deixa de ser
+  `role="tab"` sem painel —, e `ui/EmptyState` (caixa tracejada centralizada,
+  ícone e CTA opcionais), usado nos vazios de Sessões, Insights, Executores,
+  Arquitetura, Backlog, Aprovações e Dashboard. O CTA de criar é ícone + verbo
+  em toda parte ("Nova ideação", "Nova conversa", sem o "+" no texto). Insights
+  e Arquitetura começam no topo como as outras abas (perdem a margem de 28px de
+  seção). O `/status` mostra a hora formatada no idioma de quem lê em vez do
+  ISO cru, estados em palavras ("no ar"/"fora do ar"), "Última verificação" e
+  um botão "Voltar" de verdade. O botão desabilitado deixa de usar `opacity`:
+  texto `--text-muted` sobre `--surface-2` com contorno `--border-strong`, par
+  medido em `design-contraste.test.ts` nos dois temas ("Converter" inerte não
+  some mais no tema claro), e o secundário ganha contorno `--border-strong`.
 
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.

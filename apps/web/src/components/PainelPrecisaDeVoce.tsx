@@ -69,7 +69,7 @@ function focaveisDe(raiz: HTMLElement | null): HTMLElement[] {
  * anuncia PRESENÇA (um ponto) e não quantidade.
  *
  * E ele não executa nada. As duas filas acionáveis aqui (`aprovacoes`, `prs`)
- * renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`
+ * renderizam o MESMO `ApprovalCard` da aba de Aprovações (uma variante só, AT-322)
  * — os botões chamam os mesmos endpoints de decisão, que continuam passando
  * pelo pipeline inteiro. Isso importa em especial para `git_merge`: merge em
  * branch protegida é rebaixado a `require_approval` INCONDICIONALMENTE
@@ -298,7 +298,7 @@ export function PainelPrecisaDeVoce({
                       <div key={item.id} className={styles.linhaDeCard}>
                         <ApprovalCard
                           action={item.acao}
-                          variant="queue"
+                          detalheRecolhido
                           onApprove={() => aprovar(item)}
                           onDeny={() => negar(item)}
                           onAlwaysAllow={() => semprePermitir(item)}

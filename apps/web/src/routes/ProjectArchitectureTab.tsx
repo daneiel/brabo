@@ -8,6 +8,7 @@ import type { Architecture } from '../lib/api-types';
 // precisa continuar IDÊNTICA visualmente. Duplicar as classes só para ter
 // arquivo de CSS próprio abriria a porta para as duas versões divergirem.
 import { Card } from '../components/ui/Card';
+import { EmptyState } from '../components/ui/EmptyState';
 import styles from './ProjectOverviewTab.module.css';
 
 /**
@@ -46,10 +47,12 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
   const isEmpty = !moduleMap && adrs.length === 0 && pendencies.length === 0;
 
   return (
-    <div className={styles.arch}>
+    // AT-327: a aba começa no topo como as outras — `.arch` (margem de 28px)
+    // é de SEÇÃO que vem depois de outra, e deixava o título 29px abaixo.
+    <div>
       <div className={styles.sectionHeader}>{t('architectureTab.title')}</div>
       {isEmpty ? (
-        <div className={styles.sectionSub}>{t('architectureTab.emptyState')}</div>
+        <EmptyState>{t('architectureTab.emptyState')}</EmptyState>
       ) : (
         <>
           <div className={styles.archLabel}>
