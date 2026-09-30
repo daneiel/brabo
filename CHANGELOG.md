@@ -386,6 +386,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   agora a área continua suspensa e retoma a cada decisão. Resultado de
   subagente desconhecido vira bloqueio da task com origem `codigo`, nunca queda.
 
+- **api**: o resumo do projeto passa a devolver `roster.activatedAgents`, os
+  agentes ativados na sessão INTEIRA (o mais recente primeiro), lidos na mesma
+  varredura do event log e sem migration. Quem está ativo deixa de depender da
+  janela de 200 eventos (AT-252, RN-630). O consumo na web fica para a AT-251 e
+  a AT-253.
 - **scripts**: com o template do grafo ligado (`GRAPH_TEMPLATES_ENABLED`), o
   sumarizador da compactação recebia os turnos em dobro, e os kickoffs do
   Psicólogo e da Anamnese o log de eventos em dobro (AT-244,

@@ -8405,6 +8405,14 @@ export interface components {
              */
             delegatedSubagents: string[];
             /**
+             * @description Agents with at least one `agent.activated` in the session, most recently activated first (by `seq`), one entry per agent (RN-630). Covers the WHOLE session, not the 200-event window: the client sums it to the window and trusts it only when `latestSessionId` is the session it is reading.
+             * @example [
+             *       "arquiteto",
+             *       "infra"
+             *     ]
+             */
+            activatedAgents: string[];
+            /**
              * @description An `accepted` handoff to `infra` exists in the most recent session.
              * @example false
              */
