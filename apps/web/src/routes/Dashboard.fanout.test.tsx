@@ -88,6 +88,7 @@ function resumo(i: number): ProjectCardSummary {
       moduleNames: ['api', 'web'],
       gatesEverOpened: true,
       delegatedSubagents: ['qa-automacao'],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,

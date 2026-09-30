@@ -133,3 +133,28 @@
   cursor: default;
   opacity: 0.6;
 }
+
+/* Dentro do painel do controle agrupado da barra estreita (AT-317): há
+   largura e altura, então a origem QUEBRA em vez de cortar — cortar era o
+   defeito medido ("…o idioma da interfa…") — e a pergunta da detecção entra no
+   fluxo do painel, em vez de flutuar sobre ele. */
+.noPainel {
+  max-width: none;
+}
+
+.noPainel .seletor {
+  max-width: none;
+  flex: 1;
+}
+
+.noPainel .origem {
+  white-space: normal;
+  overflow: visible;
+}
+
+.noPainel .pergunta {
+  position: static;
+  width: auto;
+  max-width: none;
+  box-shadow: none;
+}

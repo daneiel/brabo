@@ -28,6 +28,9 @@ import type { ChaveDeAba } from './project-tabs';
  *   um minuto parado na aba ................. 76 → 68 (dois polls de config)
  *   Configurações → Visão geral → volta ..... 31 → 0 buscas de configuração
  *
+ * Integrada a `dev` depois da RN-638 (a moldura lê a fila do PROJETO uma vez
+ * só), a carga caiu para 49 e o minuto para 64 — os tetos abaixo são esses.
+ *
  * O "55" do levantamento é a mesma carga medida a 5s, com os dois primeiros
  * polls da moldura dentro. Dos 50 de agora, 20 são o binding RESOLVIDO de cada
  * agente e de cada área, uma rota por chave — cortá-los pede rota de LOTE na
@@ -220,7 +223,7 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     expect(porRota['GET /workspaces']).toBe(1);
     for (const [rota, n] of Object.entries(porRota)) expect([rota, n]).toEqual([rota, 1]);
     // `dev`: 53.
-    expect(total(porRota)).toBeLessThanOrEqual(50);
+    expect(total(porRota)).toBeLessThanOrEqual(49);
   }, 60_000);
 
   it('um minuto parado na aba: nenhum poll de configuração', async () => {
@@ -234,7 +237,7 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     expect(minuto['GET /projects/:id/instruction-versions'] ?? 0).toBe(0);
     expect(deConfiguracao(minuto)).toBe(0);
     // `dev`: 76. O que sobra é da moldura, igual em toda aba.
-    expect(total(minuto)).toBeLessThanOrEqual(68);
+    expect(total(minuto)).toBeLessThanOrEqual(64);
   }, 90_000);
 
   it('trocar de aba e voltar dentro do minuto não refaz as buscas de configuração', async () => {
