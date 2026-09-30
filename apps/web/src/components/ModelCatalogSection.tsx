@@ -30,6 +30,7 @@ import { Disclosure } from './ui/Disclosure';
 import { useToast } from './ui/ToastProvider';
 import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 
 /**
  * Curadoria do catálogo (Fase 9c, RN-043).
@@ -112,6 +113,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const { data: catalogo } = useQuery({
     queryKey: ['model-catalog', workspaceId],
     queryFn: () => listModelCatalog(workspaceId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const grupos = useMemo(
@@ -158,6 +160,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const { data: credenciais } = useQuery({
     queryKey: ['credentials'],
     queryFn: listCredentials,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   /**

@@ -4,7 +4,7 @@ import { getActiveExecutionSession, getArchitecture, getContainersOverview, getC
 import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
-import { pollQueParaNoErro } from './query-policy';
+import { FRESCOR_DA_CONFIGURACAO_MS, pollQueParaNoErro } from './query-policy';
 import { buscarAcoesDaSessao } from './acoes-da-sessao';
 // Com o canal da sessão VIVO, o poll da sessão vira fallback longo e quem diz
 // QUANDO buscar é o aviso do canal (RN-579, `canal-vivo.ts`).
@@ -18,6 +18,7 @@ export function useCurrentWorkspace() {
     queryKey: ['workspaces'],
     queryFn: listWorkspaces,
     select: (list) => list[0]?.workspace,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 
@@ -31,6 +32,7 @@ export function useCurrentWorkspaceWithRole() {
     queryKey: ['workspaces'],
     queryFn: listWorkspaces,
     select: (list) => list[0],
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 
@@ -516,12 +518,14 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
 
 // Perfil de proficiência do projeto (Fase 4b — Anamnese). Muda devagar
 // (só quando uma rodada periódica conclui), daí o poll lento.
-export function useProficiency(projectId: string | undefined, intervalMs = 15000) {
+// Sem poll (AT-321, RN-645): o perfil de proficiência é CONFIGURAÇÃO — só a
+// seção de Configurações o lê, e as duas mutações dela invalidam a chave.
+export function useProficiency(projectId: string | undefined) {
   return useQuery({
     queryKey: ['proficiency', projectId],
     queryFn: () => listProficiency(projectId!),
     enabled: !!projectId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 

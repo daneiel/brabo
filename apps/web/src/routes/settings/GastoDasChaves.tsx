@@ -3,6 +3,7 @@ import { getProject } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { CredentialSpendSection } from '../../components/CredentialSpendSection';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O relatório de gasto das chaves — só para o OWNER (RN-060).
@@ -15,6 +16,7 @@ export function GastoDasChaves({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: comPapel } = useCurrentWorkspaceWithRole();
 

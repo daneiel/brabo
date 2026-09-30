@@ -21,6 +21,7 @@ import { MarcaDeHeranca, useVoltarAHerdar } from './heranca';
 import { CadeiaDeCascata, montarCadeia } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
@@ -47,6 +48,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: modelsByCategory } = useQuery({
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const areaKeys = Object.keys(AREAS);
@@ -54,6 +56,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
     queries: areaKeys.map((key) => ({
       queryKey: ['area-binding', projectId, key],
       queryFn: () => getAreaModelBinding(projectId, key),
+      staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     })),
   });
 
@@ -63,6 +66,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: bindingDoProjeto } = useQuery({
     queryKey: ['project-model-binding', projectId],
     queryFn: () => getProjectModelBinding(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   // O workspace sai do par que esta seção JÁ consulta para decidir o papel —
   // buscar o projeto de novo só para ler `workspaceId` seria um round-trip a
@@ -71,6 +75,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: bindingDoWorkspace } = useQuery({
     queryKey: ['workspace-model-binding', workspaceId],
     queryFn: () => getWorkspaceModelBinding(workspaceId!),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(workspaceId),
   });
 

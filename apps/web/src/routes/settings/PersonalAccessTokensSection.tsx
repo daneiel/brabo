@@ -23,6 +23,7 @@ import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Personal Access Tokens do runner local (`brb_…`, ADR 0105) — cada usuário
@@ -42,6 +43,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   const { data: tokens } = useQuery({
     queryKey: ['pats', projectId],
     queryFn: () => listPersonalAccessTokens(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [name, setName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState('');
@@ -82,6 +84,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   const { data: todosOsTokens } = useQuery({
     queryKey: ['pats-admin', projectId],
     queryFn: () => listAllPersonalAccessTokens(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: podeGerenciarDeTodos,
   });
 

@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O teto de paralelismo de cada lead (FASE 14d — RN-083, ADR 0053).
@@ -34,6 +35,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
   const { data: areas } = useQuery({
     queryKey: ['agent-areas', projectId],
     queryFn: () => listAgentAreas(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const secao = useSecaoSalvavel<AgentArea, number>({
