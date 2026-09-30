@@ -219,6 +219,7 @@ estado lido do repositório e não da conversa.
 | O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
 | Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 | A Visão geral e a aba Executores leem os modelos do time pelo lote, e os cartões das pendências de outras sessões no chat mostram o motivo da política (AT-339/AT-340) | RN-654, RN-656 |
+| O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
 
 ## Estado atual e aberto
 
@@ -2008,7 +2009,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do projeto DIFERENTE do do autor, a MESMA mensagem ganha a cláusula
   "artefatos no idioma do projeto"; só com os dois códigos na forma curta
   (`idioma[-Escrita][-Região]`), que é o que segura o teto. Não mova isso para
-  a descrição de cada ferramenta.
+  a descrição de cada ferramenta. E descrição de ferramenta NUNCA nomeia idioma
+  (RN-667): o "em pt-BR" do `label` de `ask_structured_questions` era uma
+  segunda orientação, fixa, que punha o formulário em português para autor
+  `en`; ela diz "no idioma da sua resposta", e um teste reprova as 22
+  ferramentas do harness se alguma voltar a fixar um.
 - O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
   PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
   resposta `confirm` grava `users.detected_language`; `decline` grava em

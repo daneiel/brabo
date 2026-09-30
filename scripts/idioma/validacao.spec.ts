@@ -57,6 +57,14 @@ describe('os textos vêm do produto, não de uma cópia', () => {
     expect(f[0]?.function.description).not.toContain('#{');
   });
 
+  it('lê a descrição do formulário SEM idioma fixo, a que a medição depois da AT-282 envia (RN-667)', () => {
+    const perguntas = lerFerramentas(RAIZ_DO_REPOSITORIO)[1]?.function.description ?? '';
+    expect(perguntas).toContain('o texto da pergunta, no idioma da sua resposta');
+    expect(perguntas).not.toMatch(/pt-BR/);
+    // A forma de antes — a que a AT-167 mediu — é a que esta régua recusa.
+    expect('- `label` (string) — o texto da pergunta, em pt-BR').toMatch(/pt-BR/);
+  });
+
   it('LANÇA quando o texto do produto muda de forma, sem cair numa reserva', () => {
     expect(() => lerOrientacao('defmodule X do end', 'x.ex')).toThrow(/não achei @textos em x\.ex/);
   });

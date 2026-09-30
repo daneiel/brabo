@@ -598,6 +598,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
+  e do PO) deixa de sair em português para quem escolheu outro idioma de
+  resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
+  ferramenta mandava escrever as perguntas "em pt-BR" — uma segunda orientação
+  de idioma, fixa, que competia com a da RN-622: a validação paga da AT-167
+  achou, com autor `en`, prosa em inglês e formulário em português em 8 de 15
+  respostas do DeepSeek. Agora ela diz "no idioma da sua resposta" e não nomeia
+  idioma nenhum; a orientação efêmera fica byte a byte (zero token a mais nos
+  50 de teto), e a descrição custa +23/+19 tokens (cl100k/o200k). Um teste
+  reprova qualquer descrição de ferramenta do harness que volte a fixar idioma.
+  A medição paga do "depois" segue pendente do dono (comando na RN).
 - **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
   3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
   `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não

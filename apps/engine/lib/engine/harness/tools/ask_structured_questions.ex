@@ -24,6 +24,14 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
   uma lista de opções fechada por ESQUECIMENTO trava a conversa inteira, e o
   usuário não tem como destravá-la; uma lista aberta por engano só oferece um
   campo a mais. Só a lista genuinamente fechada — "Sim/Não" — declara `false`.
+
+  RN-667 — a descrição NÃO fixa idioma. Ela dizia que `label` era "em pt-BR",
+  e isso era uma SEGUNDA orientação de idioma, fora da fachada, competindo com
+  a da RN-622: para autor `en` o modelo escrevia a prosa em inglês e o
+  formulário em português (AT-167, AT-282). Os textos do formulário seguem "o
+  idioma da sua resposta", e quem decide QUAL é só a orientação efêmera de
+  `Engine.Harness.IdiomaDaResposta`. Não nomeie idioma aqui: a descrição viaja
+  em toda chamada, com qualquer autor.
   """
 
   @behaviour Engine.Harness.Tool
@@ -191,7 +199,8 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
 
     `questions` é uma lista de objetos com:
     - `id` (string, único dentro da lista) — identifica a pergunta na resposta
-    - `label` (string) — o texto da pergunta, em pt-BR
+    - `label` (string) — o texto da pergunta, no idioma da sua resposta (vale
+      também para `options`)
     - `type` (opcional, default "text") — "text" (campo curto), "textarea"
       (campo longo) ou "select" (lista de opções)
     - `options` (lista de strings) — OBRIGATÓRIO quando `type` é "select"
@@ -201,7 +210,7 @@ defmodule Engine.Harness.Tools.AskStructuredQuestions do
       oferece o campo de texto livre sozinho. Só declare `allowOther: false`
       quando a lista for genuinamente fechada (ex.: "Sim"/"Não").
 
-    Exemplo de chamada válida:
+    Exemplo de chamada válida (os textos seguem o idioma da sua resposta):
     {"questions": [
       {"id": "nome", "label": "Qual o nome do produto?", "type": "text"},
       {"id": "usuarios", "label": "Quem são os usuários?", "type": "textarea"},
