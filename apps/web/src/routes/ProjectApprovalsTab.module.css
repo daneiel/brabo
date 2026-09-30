@@ -69,6 +69,14 @@
 }
 
 /* Vazio de bloco secundário: uma linha, sem moldura. */
+/* A lacuna do motivo da política, dita UMA vez acima da fila (AT-333). */
+.notaDoRecorte {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
 .clean {
   padding: 24px 0;
   color: var(--text-muted);

@@ -68,7 +68,13 @@
   opacity: 0.22;
 }
 
-/* Brilho teal atrás do cabeçalho, cortado pelo `overflow` da tela. */
+/*
+ * Brilho de ACENTO atrás do cabeçalho, cortado pelo `overflow` da tela. Era
+ * `--success-soft`, que lia como a marca enquanto o acento era teal; no tema
+ * neutro terracota (ADR 0181) virou névoa verde atrás de uma página terracota
+ * (AT-332). `--accent-soft` existe nos dois temas, e o texto por cima continua
+ * medido em `design-contraste.test.ts` contra o pico do brilho.
+ */
 .brilho {
   position: absolute;
   top: -160px;
@@ -79,7 +85,7 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    var(--success-soft),
+    var(--accent-soft),
     transparent
   );
   pointer-events: none;

@@ -10,6 +10,7 @@
     "gitCommit": {
       "verb": "propõe alteração",
       "base": "Registra um commit",
+      "filesSuffix_zero": " de {{count}} arquivos",
       "filesSuffix_one": " de {{count}} arquivo",
       "filesSuffix_other": " de {{count}} arquivos",
       "pathSuffix": " do arquivo {{path}}",
@@ -72,6 +73,7 @@
       "verb": "abriu pull request de infra",
       "base": "Abre uma pull request de infraestrutura",
       "titled": " \"{{title}}\"",
+      "filesSuffix_zero": " com {{count}} arquivos",
       "filesSuffix_one": " com {{count}} arquivo",
       "filesSuffix_other": " com {{count}} arquivos"
     },
@@ -92,6 +94,7 @@
       "verb": "quer mais um agente em paralelo",
       "base": "Põe mais um agente para trabalhar em paralelo",
       "module": " no módulo {{module}}",
+      "activeCount_zero": " — a sessão já tem {{count}} agentes ativos para um teto de {{max}}",
       "activeCount_one": " — a sessão já tem {{count}} agente ativo para um teto de {{max}}",
       "activeCount_other": " — a sessão já tem {{count}} agentes ativos para um teto de {{max}}"
     },
@@ -105,8 +108,10 @@
     "proposeExecutionPlan": {
       "verb": "propõe o plano de execução",
       "base": "Aprova o plano de execução do Dev Lead",
+      "summaryCount_zero": " — {{count}} agentes em {{modules}}",
       "summaryCount_one": " — {{count}} agente em {{modules}}",
       "summaryCount_other": " — {{count}} agentes em {{modules}}",
+      "modulesCount_zero": "{{count}} módulos",
       "modulesCount_one": "{{count}} módulo",
       "modulesCount_other": "{{count}} módulos",
       "reasonSuffix": ": \"{{summary}}\"",
@@ -125,6 +130,7 @@
     "details": {
       "title": "Detalhes",
       "rawPayloadTitle": "Payload cru",
+      "fieldCount_zero": "{{count}} campos",
       "fieldCount_one": "{{count}} campo",
       "fieldCount_other": "{{count}} campos"
     },
@@ -159,6 +165,7 @@
         "invalidPath": "O modelo não produziu um caminho válido para esta ação.",
         "invalidContent": "O modelo não produziu um conteúdo válido para esta ação.",
         "previewHeader": "preview do conteúdo",
+        "linesTruncated_zero": "{{shown}} de {{count}} linhas",
         "linesTruncated_one": "{{shown}} de {{count}} linha",
         "linesTruncated_other": "{{shown}} de {{count}} linhas"
       },
@@ -205,7 +212,9 @@
     "pending": {
       "title": "Pendentes",
       "eyebrow": "ordenadas por urgência",
-      "selectedCount": "{{count}} selecionadas",
+      "selectedCount_zero": "{{count}} selecionadas",
+      "selectedCount_one": "{{count}} selecionada",
+      "selectedCount_other": "{{count}} selecionadas",
       "approveSelected": "Aprovar selecionados",
       "clear": "Limpar",
       "findingSession": "Procurando a sessão do projeto…",
@@ -213,7 +222,16 @@
       "noSession": "Nenhuma sessão ainda — as aprovações nascem do que os agentes propõem numa sessão.",
       "loadingQueue": "Carregando a fila…",
       "queueError": "Não foi possível carregar a fila de aprovações.",
-      "empty": "Nenhuma aprovação pendente. O time está fluindo."
+      "empty": "Nenhuma aprovação pendente. O time está fluindo.",
+      "motivoForaDoRecorte": {
+        "porque": "a aba lê o log de uma sessão só, e o motivo mora no log da sessão que propôs a ação.",
+        "todas_zero": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
+        "todas_one": "O motivo da política desta ação não está entre os eventos que esta tela carregou: {{porque}}",
+        "todas_other": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
+        "algumas_zero": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
+        "algumas_one": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
+        "algumas_other": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}"
+      }
     },
     "devPrs": {
       "title": "PRs em revisão",

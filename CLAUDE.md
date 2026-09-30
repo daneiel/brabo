@@ -209,6 +209,7 @@ estado lido do repositório e não da conversa.
 | Cada mensagem do fio aparece sob o ator do evento, nunca sob quem vê a tela (AT-329) | RN-652 |
 | Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
+| Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
 
 ## Estado atual e aberto
@@ -734,8 +735,10 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
   RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
   "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
-  plural por "(s)" em backlog/insights/approvals/sessionPage — os demais
-  namespaces ainda o têm
+  plural por "(s)" — em TODOS os namespaces e nos dois idiomas desde a
+  AT-331, que acrescentou `_zero` obrigatório ao lado de todo `_one` no pt-BR
+  (o CLDR do `pt` põe o 0 em `one`) e frase com `{{count}}` sem plural,
+  salvo invariante declarada no próprio teste
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`

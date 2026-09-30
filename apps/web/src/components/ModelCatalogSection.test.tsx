@@ -156,7 +156,7 @@ describe('ModelCatalogSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar catálogo' }));
 
-    expect(await screen.findByText(/2 novo\(s\)/)).toBeTruthy();
+    expect(await screen.findByText(/2 novos · /)).toBeTruthy();
     expect(screen.getByText('sem listagem de catálogo')).toBeTruthy();
     // "Falhou" sem a origem seria diagnóstico por eliminação (ADR 0020).
     expect(screen.getByText('falhou · origem infra')).toBeTruthy();

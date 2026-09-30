@@ -58,7 +58,7 @@ describe('RagCoveragePanel', () => {
     expect(screen.getByText(/\/\s*12/)).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText(/\/\s*5/)).toBeInTheDocument();
-    expect(screen.getByText(/240 chunk\(s\) no índice/)).toBeInTheDocument();
+    expect(screen.getByText(/240 chunks no índice/)).toBeInTheDocument();
   });
 
   it('CASO DE FALHA (degradação honesta): nunca escreve "reindexado há Xmin" — não existe esse dado (RN-237)', () => {

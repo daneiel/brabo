@@ -172,13 +172,13 @@ describe('ProjectApprovalsTab — fila e permissões', () => {
     fireEvent.click(caixa);
 
     await waitFor(() =>
-      expect(screen.getByText('1 selecionadas')).toBeInTheDocument(),
+      expect(screen.getByText('1 selecionada')).toBeInTheDocument(),
     );
     expect(screen.getByRole('button', { name: /Aprovar selecionados/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Limpar' }));
     await waitFor(() =>
-      expect(screen.queryByText('1 selecionadas')).not.toBeInTheDocument(),
+      expect(screen.queryByText('1 selecionada')).not.toBeInTheDocument(),
     );
   });
 
@@ -233,5 +233,52 @@ describe('ProjectApprovalsTab — a fila é a do PROJETO, não a da sessão mais
     expect(
       await screen.findByText('Nenhuma aprovação pendente. O time está fluindo.'),
     ).toBeInTheDocument();
+  });
+});
+
+describe('ProjectApprovalsTab — a lacuna do motivo da política é dita UMA vez (AT-333, RN-180)', () => {
+  function eventoCriado(actionId: string, seq: number) {
+    return {
+      id: `ev-${seq}`,
+      sessionId: 'sess-1',
+      seq,
+      type: 'proposed_action.created',
+      actor: { kind: 'agent', id: 'qa' },
+      payload: { actionId, actionType: 'git_commit', reason: 'default: require_approval' },
+      createdAt: '2026-08-02T00:00:00.000Z',
+    };
+  }
+
+  it('nenhuma ação com o motivo nos eventos: uma nota no topo, e nenhum card repete a frase', async () => {
+    getProjectPendingActions.mockResolvedValue([
+      acao({ id: 'a1', sessionId: 'sess-outra' }),
+      acao({ id: 'a2', sessionId: 'sess-outra', seq: 2 }),
+    ]);
+    montar();
+    const nota = await screen.findByTestId('motivo-fora-do-recorte');
+    expect(nota.textContent).toContain('destas 2 ações');
+    expect(screen.getAllByTestId('motivo-fora-do-recorte')).toHaveLength(1);
+    expect(screen.queryByTestId('motivo-da-politica')).toBeNull();
+    expect(screen.queryByText(/fora dos eventos carregados nesta tela/)).toBeNull();
+  });
+
+  it('parte com motivo: o card que o tem o mostra, e a nota conta só as outras', async () => {
+    getProjectPendingActions.mockResolvedValue([
+      acao({ id: 'a1' }),
+      acao({ id: 'a2', sessionId: 'sess-outra', seq: 2 }),
+    ]);
+    listSessionEvents.mockResolvedValue({ items: [eventoCriado('a1', 5)], nextCursor: null });
+    montar();
+    await waitFor(() => expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1));
+    expect(screen.getByTestId('motivo-da-politica').textContent).toContain('default: require_approval');
+    expect(screen.getByTestId('motivo-fora-do-recorte').textContent).toContain('de 1 das 2 ações abaixo');
+  });
+
+  it('todas com motivo: nota nenhuma', async () => {
+    getProjectPendingActions.mockResolvedValue([acao({ id: 'a1' })]);
+    listSessionEvents.mockResolvedValue({ items: [eventoCriado('a1', 5)], nextCursor: null });
+    montar();
+    await screen.findByTestId('motivo-da-politica');
+    expect(screen.queryByTestId('motivo-fora-do-recorte')).toBeNull();
   });
 });

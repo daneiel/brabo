@@ -297,6 +297,18 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   });
 
   const pending = (pendentesQuery.data ?? []).filter((a) => a.status === 'pending');
+  // O motivo da política mora no `proposed_action.created`, e a api não o
+  // expõe por ação (`proposed_actions` não o guarda, e a leitura de eventos
+  // não filtra por `actionId`) — medido na AT-333. A aba só o acha nos
+  // eventos que JÁ carregou; as que ficam sem ele são CONTADAS aqui.
+  const decisoesDaPolitica = new Map(
+    pending.map((a) => [a.id, decisaoDaPoliticaDaAcao(a.id, events)] as const),
+  );
+  // Antes de os eventos chegarem não há o que afirmar: a nota só conta com o
+  // log em mãos, senão diria "fora do recorte" sobre um recorte que nem veio.
+  const semMotivo = eventsQuery.data
+    ? [...decisoesDaPolitica.values()].filter((d) => d === null).length
+    : 0;
 
   function invalidateActions(sessoes: Iterable<string>) {
     // Por prefixo: a fila do projeto (esta aba, o contador do trilho, o
@@ -463,6 +475,20 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                     </EmptyState>
                   ) : (
                     <div className={styles.queue}>
+                      {semMotivo > 0 && (
+                        <p className={styles.notaDoRecorte} data-testid="motivo-fora-do-recorte">
+                          {t(
+                            semMotivo === pending.length
+                              ? 'approvalsTab.pending.motivoForaDoRecorte.todas'
+                              : 'approvalsTab.pending.motivoForaDoRecorte.algumas',
+                            {
+                              count: semMotivo,
+                              total: pending.length,
+                              porque: t('approvalsTab.pending.motivoForaDoRecorte.porque'),
+                            },
+                          )}
+                        </p>
+                      )}
                       {pending.map((action) => (
                         <ApprovalCard
                           key={action.id}
@@ -470,8 +496,11 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                           detalheRecolhido
                           // AT-148 (RN-614): a aba lê os eventos da sessão de
                           // trabalho. Ação de OUTRA sessão, ou fora da janela
-                          // carregada, sai `null` — e o card diz.
-                          decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
+                          // carregada, não tem o motivo aqui — e a lacuna é
+                          // dita UMA vez, no topo da fila (AT-333, RN-180),
+                          // nunca repetida por card: por isso `undefined`, o
+                          // estado em que o card cala, e não `null`.
+                          decisaoDaPolitica={decisoesDaPolitica.get(action.id) ?? undefined}
                           selectable
                           selected={selected.has(action.id)}
                           onToggleSelect={() => toggleSelect(action.id)}

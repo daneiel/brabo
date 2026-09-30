@@ -15,20 +15,25 @@
     "rules": "Sem regras de negócio ainda."
   },
   "coverage": {
+    "uncoveredBadge_zero": "{{count}} descobertas",
     "uncoveredBadge_one": "{{count}} descoberta",
     "uncoveredBadge_other": "{{count}} descobertas",
+    "coveredBy_zero": "coberta por {{count}} histórias",
     "coveredBy_one": "coberta por {{count}} história",
     "coveredBy_other": "coberta por {{count}} histórias",
     "uncovered": "descoberta — sem história"
   },
+  "ruleRefs_zero": "{{count}} regras de negócio vinculadas",
   "ruleRefs_one": "{{count}} regra de negócio vinculada",
   "ruleRefs_other": "{{count}} regras de negócio vinculadas",
   "promotionQueue": {
     "hint": "O PO terminou estas histórias e elas estão completas. Até você promover, nenhuma tarefa delas é pegável por um dev agent.",
+    "selectedCount_zero": "{{count}} selecionadas",
     "selectedCount_one": "{{count}} selecionada",
     "selectedCount_other": "{{count}} selecionadas",
     "promoteSelected": "Promover selecionadas",
     "selectAria": "Selecionar {{title}}",
+    "taskRefsSuffix_zero": " · {{count}} tarefas que ficam pegáveis",
     "taskRefsSuffix_one": " · {{count}} tarefa que fica pegável",
     "taskRefsSuffix_other": " · {{count}} tarefas que ficam pegáveis",
     "promote": "Promover",
@@ -40,10 +45,13 @@
     "returnConfirm": "Devolver ao PO",
     "cancel": "Cancelar",
     "toast": {
+      "promoted_zero": "{{count}} histórias promovidas",
       "promoted_one": "{{count}} história promovida",
       "promoted_other": "{{count}} histórias promovidas",
+      "partialPromoted_zero": "{{count}} promovidas",
       "partialPromoted_one": "{{count}} promovida",
       "partialPromoted_other": "{{count}} promovidas",
+      "partialFailed_zero": "{{count}} recusadas pelo domínio",
       "partialFailed_one": "{{count}} recusada pelo domínio",
       "partialFailed_other": "{{count}} recusadas pelo domínio",
       "promoteError": "Não foi possível promover",
@@ -52,6 +60,7 @@
     }
   },
   "epicNode": {
+    "storyCount_zero": "{{count}} histórias",
     "storyCount_one": "{{count}} história",
     "storyCount_other": "{{count}} histórias"
   },
