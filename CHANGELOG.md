@@ -431,6 +431,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   os três inteiros — o idioma com a origem por extenso e a pergunta da
   detecção, que marca o controle enquanto estiver pendente. Abaixo de 920px o
   controle e "Encerrar" ficam só com o ícone, com nome acessível.
+- **api**: "Sempre permitir" aprova a ação e grava o padrão na MESMA transação
+  (AT-310, [RN-642](docs/business-rules.md#rn-642)). Antes o padrão era
+  gravado primeiro, e um clique numa ação que já tinha saído de `pending`
+  (clique duplo, a mesma pendência em dois painéis, outra aba) devolvia 409
+  com o padrão já gravado e sem o evento `permission.granted` — 45 de 173
+  cliques no uso real de 29/09. Agora, ação já APROVADA é sucesso (201,
+  `desfecho: "ja_aprovada"`, sem executar de novo, gravando o padrão só se
+  ele faltar, com o evento); ação RECUSADA continua 409, com `reason:
+  "acao_ja_recusada"` e nenhum padrão gravado. A resposta de
+  `POST .../approve_always` ganha `desfecho` e `padraoGravado`. Os tetos
+  (`git push`/PR/deploy, `sudo`/`doas`, `container_remove`) não mudam.
+- **api/web**: "Sempre permitir" passa a recusar também os TIPOS do teto, e o
+  card deixa de oferecer o botão para eles (AT-320,
+  [RN-642](docs/business-rules.md#rn-642)). A api só recusava o `git push`
+  digitado no terminal; um `git_push` tipado gravava `GitPush()` em `allow`
+  e o card mostrava "libera este tipo de ação só para dev-api". Agora
+  `git_push`, `pr_open`, `git_merge`, `container_remove`, `instruction_patch`,
+  `parallelize` e `raise_max_parallel` respondem 400 com `reason:
+  "teto_do_sempre_permitir"`, sem gravar nada. A semeadura da ativação
+  (`git_commit`/`git_push`/`pr_open` automáticos por módulo) não muda.
 
 - **web**: o handoff manual não esconde mais "Estou pronto para produzir" nem
   "Confirmar arquitetura pronta" — ele era tomado pela prontidão declarada

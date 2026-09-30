@@ -1118,6 +1118,15 @@ reason in the URL.
   wildcard to a client that already knows it has `maintainer`/`owner` —
   but what actually guarantees the role is this same
   `@RequireRole('maintainer')`, unchanged.
+- **`POST .../actions/:actionId/approve_always` gained `desfecho` and
+  `padraoGravado` in the response, and the classification didn't change** —
+  still `role:developer` ([RN-642](business-rules.md#rn-642)). The approval
+  and the recorded pattern now share one transaction; clicking an action that
+  was already APPROVED answers `201` with `desfecho: "ja_aprovada"` instead of
+  `409`, and a DENIED action keeps answering `409` (`acao_ja_recusada`) with
+  nothing written. The RN-418 caps and `container_remove` are still refused
+  with `400` before any state is read, so the idempotent path can never write
+  a pattern the ceiling forbids.
 
 ## Table
 
