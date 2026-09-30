@@ -113,8 +113,8 @@
 
 .blockedReason {
   padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+  border: 1px solid var(--danger-panel-border);
+  background: var(--danger-panel);
   border-radius: var(--radius-md);
   font-family: var(--font-mono);
   font-size: 11px;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProjectChatTab } from './ProjectSessionsTab';
 import { ProjectRagTab } from './ProjectRagTab';
+import { Chip } from '../components/ui/Chip';
 import styles from './ProjectChatShell.module.css';
 
 type SegmentoDeChat = 'conversar' | 'buscar';
@@ -60,19 +61,9 @@ export function ProjectChatShell({ projectId }: { projectId: string }) {
         aria-label={t('chatShell.ariaLabel')}
       >
         {ORDEM_DOS_SEGMENTOS.map((chave) => (
-          <button
-            key={chave}
-            type="button"
-            className={
-              segmento === chave
-                ? `${styles.pill} ${styles.pillAtivo}`
-                : styles.pill
-            }
-            aria-pressed={segmento === chave}
-            onClick={() => setSegmento(chave)}
-          >
+          <Chip key={chave} pressed={segmento === chave} onClick={() => setSegmento(chave)}>
             {t(CHAVE_DO_SEGMENTO[chave])}
-          </button>
+          </Chip>
         ))}
       </div>
 

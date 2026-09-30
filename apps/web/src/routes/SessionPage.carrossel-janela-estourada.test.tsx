@@ -223,18 +223,16 @@ describe('SessionPage — carrossel de histórias sobrevive à janela de eventos
     montar();
 
     // A leva foi ancorada no `seq` sentinela mais antigo de todos — cai no
-    // histórico recolhido POR ORIGEM (RN-177), junto do resto do que saiu
-    // das últimas 5 entradas abertas. `Disclosure` nasce FECHADO e não monta
-    // os filhos (docstring do componente): é preciso abrir "Log de eventos"
-    // pra ele aparecer — o mesmo passo que uma pessoa faria na tela. Duas
-    // seções concorrem pelo mesmo nome acessível (o fio E o painel de
-    // contexto, RN-177 nos dois lugares) — a do FIO é a que mora dentro de
-    // `.fioHistorico`.
+    // histórico recolhido do fio (RN-177/RN-644), junto do resto do que ficou
+    // antes das últimas 5 mensagens abertas. `Disclosure` nasce FECHADO e não
+    // monta os filhos (docstring do componente): é preciso abrir o histórico
+    // pra ele aparecer — o mesmo passo que uma pessoa faria na tela. O do FIO
+    // é o que mora dentro de `.fioHistorico`.
     const cabecalhoDoFio = await waitFor(() => {
       const achado = Array.from(
         document.querySelectorAll<HTMLButtonElement>('button[class*="fioHistoricoCabecalho"]'),
-      ).find((el) => el.textContent?.includes('Log de eventos'));
-      if (!achado) throw new Error('cabeçalho "Log de eventos" do fio não encontrado');
+      ).find((el) => el.textContent?.includes('Antes das últimas'));
+      if (!achado) throw new Error('cabeçalho do histórico do fio não encontrado');
       return achado;
     });
     fireEvent.click(cabecalhoDoFio);

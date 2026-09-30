@@ -71,6 +71,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   sem token ganham um por tema, o véu do modal fica neutro e dois tokens que
   eram usados sem existir (`--surface-3`, `--radius-pill`) saem.
 
+- **web**: **uma tela, um vocabulário visual** (AT-285, AT-286, AT-287, AT-288)
+  — só apresentação, nenhuma lógica muda. Os ~110 `color-mix()` soltos viraram
+  tintas semânticas em `design/tokens.css` (`--<tom>-soft`/`-line`/`-panel`,
+  `--focus-ring`), misturadas com `transparent` para funcionarem sobre qualquer
+  base; os fundos de 10–18% viraram 12% e as bordas de 30–50% viraram 40%.
+  Nascem `ui/Card` (a superfície `--surface-1` com raio e padding da escala,
+  agora no `ApprovalCard`, na pergunta estruturada, no convite do chat, nas
+  regras do painel da sessão e nos cards de módulo) e `ui/Chip` (a pílula de
+  filtro que existia copiada nas abas Sessões, Chat e RAG); `ui/Badge` ganha
+  os tons `neutral` e `agent` e o tamanho `md` (branch, repositório,
+  dependência, economia de token e o badge do card de agente passam por ele);
+  `ui/Button` ganha `size="sm"` (28px) e `icon` (quadrado, raio `--r-sm`) —
+  barra de idioma da sessão, alternador do painel, paginador de regras,
+  revogar permissão e "novo projeto" da sidebar. Os meios-degraus de fonte
+  (10,5/11,5/12,5 px) somem de todo módulo, Sessão/Shell/trilho escrevem fonte
+  e espaço pela escala `--fs-*`/`--space-*`, e raio que coincide com um degrau
+  passa pelo token. `design-tintas.test.ts` e `design-escala.test.ts` reprovam
+  a volta.
+
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
   O card de aprovação segura os botões enquanto a decisão está em voo e mostra
@@ -434,6 +453,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   por timer.
 
 ### Correções
+
+- **web**: o fio da sessão deixou de esconder o começo da conversa e de
+  inverter a ordem ao expandir (AT-319, [RN-644](docs/business-rules.md#rn-644)).
+  O corte das últimas 5 conta só MENSAGENS (os cards de handoff, aprovação e
+  história não contam mais), recua até a abertura do turno para a pergunta
+  nunca ficar separada da resposta, e o histórico recolhido é um bloco só, em
+  ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
+  outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
+  punham a resposta do Criativo acima da pergunta.
 
 - **web**: a barra do topo da Sessão não transborda mais (AT-317,
   [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo

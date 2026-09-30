@@ -22,8 +22,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--agent-color) 18%, var(--surface-2));
-  border: 1px solid color-mix(in srgb, var(--agent-color) 45%, transparent);
+  background: color-mix(in srgb, var(--agent-color) var(--tint-avatar), var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--agent-color) var(--tint-line), transparent);
   color: var(--agent-color);
 }
 
@@ -44,17 +44,11 @@
 
 /* Selo "Lead" (área, Fase 8d) — mesma linguagem visual do .branch abaixo,
    sem competir com a cor de status. */
+/* Cor, tinta, borda e pílula vêm de `ui/Badge tone="agent"` (AT-287); aqui só
+   o que o badge do CARD tem de próprio: caixa alta. */
 .badge {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 9px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--agent-color);
-  background: color-mix(in srgb, var(--agent-color) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--agent-color) 34%, transparent);
-  border-radius: var(--radius-full);
-  padding: 1px 7px;
 }
 
 /* Card de subagente aninhado sob o lead da área (Fase 8d) — mesmos tokens,
@@ -67,7 +61,7 @@
 .card.compact .avatar {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
 }
 
 .card.compact .name {
@@ -94,8 +88,8 @@
   padding: 3px 8px;
   margin-top: 6px;
   color: var(--status-color);
-  background: color-mix(in srgb, var(--status-color) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--status-color) 34%, transparent);
+  background: color-mix(in srgb, var(--status-color) var(--tint-soft), transparent);
+  border: 1px solid color-mix(in srgb, var(--status-color) var(--tint-line), transparent);
 }
 
 .statusDot {

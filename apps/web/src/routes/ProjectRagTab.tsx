@@ -9,6 +9,7 @@ import { RagCitationCard } from '../components/rag/RagCitationCard';
 import { RagCoveragePanel } from '../components/rag/RagCoveragePanel';
 import { AttachLocalFolderModal } from '../components/rag/AttachLocalFolderModal';
 import { Button } from '../components/ui/Button';
+import { Chip } from '../components/ui/Chip';
 import { useToast } from '../components/ui/ToastProvider';
 import { AlertIcon, FolderIcon, SearchIcon } from '../components/ui/icons';
 import styles from './ProjectRagTab.module.css';
@@ -169,15 +170,14 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
         </div>
         <div className={styles.escoposFiltro} role="group" aria-label={t('rag.scopeFilterAriaLabel')}>
           {ORDEM_DOS_ESCOPOS.map((chave) => (
-            <button
+            <Chip
               key={chave}
-              type="button"
-              className={escopos.has(chave) ? `${styles.pill} ${styles.pillAtivo}` : styles.pill}
-              aria-pressed={escopos.has(chave)}
+              tone="violet"
+              pressed={escopos.has(chave)}
               onClick={() => alternarEscopo(chave)}
             >
               {t(CHAVE_DO_ESCOPO[chave])}
-            </button>
+            </Chip>
           ))}
           <span className={styles.escoposNota}>
             {escopos.size === 0

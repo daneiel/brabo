@@ -314,17 +314,19 @@ export function SessionTopbar({
         <StopSquareIcon size={15} />
         {modo !== 'minima' && t('topbar.encerrar')}
       </Button>
-      <button
+      {/* Aberto é `secondary` (fundo e borda), fechado é `ghost`: o controle diz
+          se o painel está aberto — antes ele tinha uma aparência só. */}
+      <Button
         type="button"
-        className={[styles.toggleAside, asideOpen && styles.toggleAsideOn]
-          .filter(Boolean)
-          .join(' ')}
+        icon
+        variant={asideOpen ? 'secondary' : 'ghost'}
+        className={styles.toggleAside}
         onClick={() => setAsideOpen((v) => !v)}
         aria-pressed={asideOpen}
         aria-label={t('topbar.alternarPainel')}
       >
         <LayoutSidebarIcon size={17} />
-      </button>
+      </Button>
     </div>
   );
 }
