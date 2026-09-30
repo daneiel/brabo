@@ -1476,6 +1476,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-set-tool-router",
+          label: "Turns the Jev tool routing on or off for the workspace",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-get-unread-events",
           label: "Unread events across multiple projects, in one call",
           className: "api-method post",

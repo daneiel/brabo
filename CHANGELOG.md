@@ -57,6 +57,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api, engine**: o laço **pergunta ao Jev qual ferramenta** e o modelo do usuário
+  vê só o menu que sobra (AT-238, [RN-625](docs/business-rules.md#rn-625),
+  [ADR 0179](docs/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
+  migration 0064). Só com provider OpenRouter, com duas ou mais ferramentas, e
+  **ligado por padrão** por workspace (`PUT workspaces/:id/tool-router`). A política é
+  a P3 da medição de 2026-09-29: menu = {escolha do Jev, ferramenta anterior da
+  execução}; `responder_sem_ferramenta` ou nenhuma anterior deixa o catálogo
+  inteiro. Critério de adoção baixado de 90% para **80%** por decisão do dono
+  (cobertura de menu 91%, 85,1–94%; top-1 do Jev 73%) — a validação real é a
+  AT-239. O Jev não aprova, não nega e não escolhe modelo; erro, timeout (2 s) ou
+  resposta inesperada caem no catálogo inteiro, com o motivo no evento
+  `tool_router.decided`. O gasto do Jev entra em `token_usage` (`estimated = false`,
+  custo real da resposta, preço implícito) no orçamento do próprio agente. Se o
+  menu restrito deixa o modelo sem ferramenta, o passo repete uma vez com o
+  catálogo inteiro. Novo: `TOOL_ROUTER_TIMEOUT_MS`. A tela ainda não mostra o passo.
 - **api**: o critério de roteamento do binding de modelo **acorda no
   OpenRouter** — a capability `routingPreference` passa a `true` nele, e só
   nele (AT-158, [RN-583](docs/business-rules/custo.md#rn-583),

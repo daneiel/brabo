@@ -12445,6 +12445,68 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/tool-router": {
+      "put": {
+        "description": "On by default. When on AND the turn model is from OpenRouter, an agent step with two or more tools first asks the Jev which tool fits, and the chat model is offered only that tool and the previous one. The Jev never approves or denies anything: an action that needs approval still does. Any failure of the Jev falls back to the whole catalog. Turning it off stops every call to the Jev, and its cost with them.",
+        "operationId": "WorkspacesController_setToolRouter",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetToolRouterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Turns the Jev tool routing on or off for the workspace",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/unread-events": {
       "post": {
         "description": "The bell's drawer, for the whole workspace (RN-091). Each cursor says up to which `seq` that project has already been read, and the response carries what came after that in each one's most recent session.\n\n**It's POST because it's the only verb with a BODY, not because it changes state.** The server doesn't know where each reader stopped: \"read up to here\" is a `seq` per project stored in the browser, and there is (deliberately) no mark-as-read endpoint. So the cutoff needs to TRAVEL in the request, and there are dozens of pairs — in a query string that becomes a long URL, which a proxy truncates, and would also put the user's project ids in access logs. The route is idempotent and has no side effect: it responds `200`, never `201`.\n\nReplaces one request PER PROJECT with the drawer open — 23 projects cost 286 req/min against a limit of 300.",
@@ -17103,6 +17165,14 @@
             "example": "llama3.2:3b",
             "nullable": true,
             "description": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model)."
+          },
+          "toolRouting": {
+            "description": "The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ToolRoutingResponseDto"
+              }
+            ]
           }
         },
         "required": [
@@ -21279,6 +21349,11 @@
               "additionalProperties": true
             },
             "description": "Tools offered to the model; `parameters` is JSON Schema."
+          },
+          "catalogoCompleto": {
+            "type": "boolean",
+            "example": true,
+            "description": "Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool."
           }
         },
         "required": [
@@ -22045,6 +22120,19 @@
           "language"
         ]
       },
+      "SetToolRouterDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Whether the Jev chooses the tool of each agent step. On by default; it only acts when the turn model is from OpenRouter."
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
       "SkippedBindingResponseDto": {
         "type": "object",
         "properties": {
@@ -22497,6 +22585,11 @@
               "type": "object",
               "additionalProperties": true
             }
+          },
+          "catalogoCompleto": {
+            "type": "boolean",
+            "example": true,
+            "description": "Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool."
           }
         },
         "required": [
@@ -22666,6 +22759,119 @@
           "id",
           "name",
           "arguments"
+        ]
+      },
+      "ToolRoutingResponseDto": {
+        "type": "object",
+        "properties": {
+          "modelo": {
+            "type": "string",
+            "example": "typesafe/jev-1.13"
+          },
+          "ofertadas": {
+            "type": "number",
+            "example": 9,
+            "description": "How many tools the agent had at this step."
+          },
+          "menuAntes": {
+            "description": "The tool names BEFORE the router.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "menuDepois": {
+            "description": "The tool names the chat model was offered (the whole catalog on any fall).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "escolha": {
+            "type": "object",
+            "nullable": true,
+            "example": "create_story"
+          },
+          "confianca": {
+            "type": "object",
+            "nullable": true,
+            "example": 0.91
+          },
+          "segunda": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "example": {
+              "opcao": "create_task",
+              "probabilidade": 0.06
+            }
+          },
+          "anterior": {
+            "type": "object",
+            "nullable": true,
+            "example": "read_file",
+            "description": "The previous tool of the same run."
+          },
+          "aplicado": {
+            "type": "boolean",
+            "description": "The Jev answered AND the menu came out smaller than the catalog."
+          },
+          "motivoDaQueda": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "timeout",
+              "erro_http",
+              "erro_de_rede",
+              "resposta_invalida",
+              "escolha_fora_das_opcoes",
+              "estado_grande",
+              "colisao_de_nome"
+            ]
+          },
+          "origemDaQueda": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "infra",
+              "modelo",
+              "codigo"
+            ]
+          },
+          "detalheDaQueda": {
+            "type": "object",
+            "nullable": true
+          },
+          "latenciaMs": {
+            "type": "number",
+            "example": 212
+          },
+          "custoMicros": {
+            "type": "number",
+            "example": 52,
+            "description": "REAL cost of the Jev answer (`usage.cost`), in micro-USD."
+          },
+          "gastoNaoRegistrado": {
+            "type": "boolean",
+            "description": "`true` when the Jev charged but the `token_usage` row could not be written."
+          }
+        },
+        "required": [
+          "modelo",
+          "ofertadas",
+          "menuAntes",
+          "menuDepois",
+          "escolha",
+          "confianca",
+          "segunda",
+          "anterior",
+          "aplicado",
+          "motivoDaQueda",
+          "origemDaQueda",
+          "detalheDaQueda",
+          "latenciaMs",
+          "custoMicros",
+          "gastoNaoRegistrado"
         ]
       },
       "TransferOwnershipDto": {
@@ -23073,6 +23279,11 @@
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
           },
+          "toolRouterEnabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the tool-routing step by the Jev (ADR 0179) runs for this workspace. On by default; it only acts when the turn model is from OpenRouter, so `true` on a workspace without OpenRouter does nothing."
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-20T09:12:00.000Z",
@@ -23089,6 +23300,7 @@
           "name",
           "slug",
           "createdBy",
+          "toolRouterEnabled",
           "createdAt",
           "updatedAt"
         ]
