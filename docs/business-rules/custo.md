@@ -2344,7 +2344,7 @@ continuam numa linha só. Quem quer a quebra por credencial tem a lista própria
 e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
 pergunta que as duas listas separadas já não respondam.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:123`
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:127`
   (`SpendDimension`),
   `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:245`
   (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,

@@ -14344,7 +14344,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:937`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:973`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14546,7 +14546,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:851` (`avisar_canal`);
+  `:607`, `:630`, `:887` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14726,8 +14726,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:903`
-  (`narrar_recusa_de_sessao_encerrada`), `:1197` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:939`
+  (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
@@ -15715,7 +15715,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1639` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1689` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15799,8 +15799,8 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1583` (`opcoes_do_propose_action`),
-  `:1543` (`@teto_do_propose_action_de_container_ms`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1633` (`opcoes_do_propose_action`),
+  `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
   reprodução, "(AT-234)": o pull de 45 s termina NOMEADO, `:457`; daemon fora
@@ -16584,7 +16584,7 @@ toda chamada de LLM de turno SEM autor humano, e desde a [RN-623](#rn-623)
 também como idioma do artefato compartilhado que um agente grava DURANTE um
 turno com autor humano — a divergência que esta regra declarava fechou.
 
-- **Código:** `apps/api/src/db/schema/iam.ts:253` (`language`);
+- **Código:** `apps/api/src/db/schema/iam.ts:257` (`language`);
   `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
   `apps/api/src/application/use-cases/iam/idioma-do-projeto.ts:13`
   (`idiomaDoProjetoOuRecusa`);
@@ -16743,7 +16743,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
   (`idioma_da_resposta`);
@@ -16841,7 +16841,7 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:270` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -16965,6 +16965,110 @@ para aceitar os `export` de um módulo CommonJS.
 - **Origem:** AT-163, sobre as decisões da AT-168 (respostas 4, 6 e 7), a
   especificação da AT-080 e a medição da AT-160
 
+### RN-625 — O laço pergunta ao Jev qual ferramenta, e o modelo do usuário vê só o menu que sobra; o Jev restringe e nunca decide {#rn-625}
+
+Decisão do mantenedor (AT-236, 2026-09-28) e, sobre o critério, de 2026-09-29:
+antes de cada chamada de chat de um agente, a api pergunta ao Jev
+(`typesafe/jev-1.13`, Decisions API do OpenRouter) qual ferramenta cabe no
+passo, e o provider de chat recebe só o **menu** que a política P3 tira dessa
+resposta. O mecanismo está no [ADR 0179](adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md);
+a decisão de adoção, com os números, também.
+
+1. **Quando.** Só com o provider do modelo do turno igual a `openrouter`, com
+   duas ou mais ferramentas no pedido, com agente no turno (fora a Anamnese e o
+   sumarizador da compactação), sem `catalogoCompleto` pedido pelo engine e com
+   o workspace ligado (`workspaces.tool_router_enabled`, padrão ligado,
+   `PUT workspaces/:workspaceId/tool-router`, `owner`). Qualquer condição falha:
+   nenhuma chamada, nenhum evento. Com provider ≠ `openrouter` nem o workspace é
+   lido. A chave é a do titular do workspace, a mesma do chat (RN-058).
+2. **A política é a P3 e só restringe.** Menu = {escolha do Jev, ferramenta
+   anterior da MESMA execução}. `responder_sem_ferramenta` do Jev, ou nenhuma
+   ferramenta anterior no catálogo do passo, deixa o catálogo INTEIRO. Não há
+   `tool_choice` (o modelo ainda pode responder em texto) e não há limiar de
+   confiança na v1: a confiança é gravada e é da AT-239 propor um. Critério de
+   adoção: **80%**, decisão do dono de 2026-09-29 — top-1 do Jev 73% (66–79),
+   cobertura de menu da P3 91% (85,1–94), top-2 90%; cobertura é o TETO da
+   acurácia ponta a ponta (62%–91% em replay), e a validação real é a AT-239.
+3. **O `state`** é o que o produto tem antes do passo, recortado das `messages`
+   que o engine já manda, sem leitura de banco: `agente` = o `agentId`;
+   `contexto` = o começo (1.500 caracteres) da mensagem `system` que o
+   `ToolLoop` põe na frente (`apps/engine/lib/engine/harness/tool_loop.ex:98`,
+   `system_msg`, montada por `system_prompt/1` em `:316`); `pedido` = a última
+   mensagem `user` — nos agentes de execução a mensagem inicial do laço
+   (`apps/engine/lib/engine/dev/dev_agent_server.ex:481`, `initial_message/2`,
+   ou a de correção em `:523`), nos conversacionais a fala da pessoa; e
+   `passos_recentes` = as 6 últimas chamadas de ferramenta depois dessa
+   mensagem, uma entrada por chamada, argumento e resultado cortados em 500
+   caracteres — o resultado vem da mensagem `tool` que o laço anexa
+   (`tool_loop.ex:293`, `concluir_despacho/5`, com `toolCallId`). A execução
+   corrente é "depois da última `user`" porque `ctx.messages` recomeça a cada
+   `ToolLoop.run`. Teto de 8 mil tokens; estourou, queda `estado_grande`.
+4. **O turno nunca falha por causa do Jev.** Erro HTTP, timeout (2.000 ms,
+   `TOOL_ROUTER_TIMEOUT_MS`), erro de rede, JSON inesperado, escolha fora das
+   opções, estado grande e colisão com o nome reservado: o provider recebe o
+   catálogo inteiro e o evento leva `motivoDaQueda` e `origemDaQueda`
+   (`infra`, `modelo` ou `codigo` — RN-059), nunca calado.
+5. **A política não muda.** O Jev não aprova, não nega e não escolhe modelo. A
+   ferramenta escolhida que exige aprovação continua exigindo; a chamada a uma
+   ferramenta fora do cardápio é despachada como sempre e o evento só registra
+   `foraDoCardapio`. O teto de iteração é o de antes (a chamada ao Jev não é uma
+   iteração).
+6. **Registro por passo.** O engine grava `tool_router.decided`, na fachada
+   `EngineApiClient` para todos os agentes, com menu antes e depois, escolha,
+   confiança, segunda opção, `aplicado`, queda, latência, custo real e
+   `foraDoCardapio`. A api grava UMA linha de `token_usage` do Jev: ator = o
+   próprio agente (o gasto entra no orçamento de área, ADR 0110), `modelName =
+   typesafe/jev-1.13`, `modelId` nulo, `estimated = false`, `costMicros` = o
+   `usage.cost` da resposta, preço por milhão IMPLÍCITO (`custo ÷ tokens`) com
+   `price_implicit = true` — mantém `tokens × preço = custo` da RN-044 sem
+   inventar preço de catálogo. Sem `usage.cost` na resposta não há linha. O gate
+   de orçamento não é reconsultado entre o Jev e o chat.
+7. **Sair do beco.** Menu restringido e o modelo responde sem chamar ferramenta
+   (nem em texto recuperável), sem erro do provider: a fachada repete o passo UMA
+   vez com `catalogoCompleto: true`, que pula o Jev. No stream, só se nada foi
+   escrito para a pessoa. Pede mais ferramentas, nunca uma que o agente não tinha.
+
+**O que esta regra NÃO fecha, declarado:** a tela (mostrar que o passo foi
+roteado, com a confiança, e a faixa "escolhendo ferramenta" pelo frame
+`tool_routing_started`) é de `apps/web`; o ganho é da AT-239; um timeout que o
+OpenRouter cobrou sem devolver `usage.cost` não entra em `token_usage`; o
+endpoint é ALPHA e o smoke manual
+(`jev-tool-router.smoke.spec.ts`, teto US$ 0,05) é quem acusa a mudança.
+
+- **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
+  `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
+  (`recortarEstado`), `:260` (`menuP3`);
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
+  (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:133`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:154`
+  (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
+  (`decidir`); `apps/api/src/db/schema/iam.ts:164` (`toolRouterEnabled`);
+  `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
+  `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
+  `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:611`
+  (`llm_turn`), `:678` (`llm_turn_stream`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
+  local)
+- **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
+  objeto), `:86` (forma inesperada vira queda — caso de falha), `:138` (o
+  `state`), `:210` (a P3);
+  `apps/api/test/infrastructure/llm/jev-tool-router.contract.spec.ts:60` (a
+  resposta gravada), `:121` (erro HTTP), `:130` (timeout), `:142` (rede),
+  `:149` e `:154` (JSON inesperado), `:163` (escolha fora das opções);
+  `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts:186`
+  (provider ≠ openrouter não chama), `:222` (workspace desligado), `:255`
+  (estado grande), `:277` (a P3), `:318` (sem ferramenta = catálogo inteiro),
+  `:331` (sem anterior = inteiro), `:352` (a política não muda), `:369` (as
+  quedas), `:456` (o metering, no orçamento de área);
+  `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:67` (o
+  evento), `:103` (a queda no evento), `:180` (sair do beco), `:288` (o custo no
+  laço), `:299` (a aprovação continua exigida), `:325` (o roteamento não conhece
+  a política)
+- **Origem:** AT-238, sobre a especificação da AT-235, as dezesseis decisões da
+  AT-236, a medição da AT-237/AT-280 e a decisão do dono de 2026-09-29 (critério
+  de 80%)
 ## Decidir no chat, onde o dono está (RN-626)
 
 ### RN-626 — O chat da sessão decide o que os agentes propuseram noutra sessão, mostra o turno que estava em curso e propõe o merge — sem mudar teto nenhum {#rn-626}
@@ -17646,7 +17750,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1002`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1038`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)

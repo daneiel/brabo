@@ -4068,6 +4068,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/tool-router": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Turns the Jev tool routing on or off for the workspace
+         * @description On by default. When on AND the turn model is from OpenRouter, an agent step with two or more tools first asks the Jev which tool fits, and the chat model is offered only that tool and the previous one. The Jev never approves or denies anything: an action that needs approval still does. Any failure of the Jev falls back to the whole catalog. Turning it off stops every call to the Jev, and its cost with them.
+         */
+        put: operations["WorkspacesController_setToolRouter"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/unread-events": {
         parameters: {
             query?: never;
@@ -6557,6 +6577,8 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
+            /** @description The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`. */
+            toolRouting?: components["schemas"]["ToolRoutingResponseDto"];
         };
         LlmTurnStreamEventResponseDto: {
             /**
@@ -8803,6 +8825,11 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+            /**
+             * @description Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.
+             * @example true
+             */
+            catalogoCompleto?: boolean;
         };
         RunnerDeviceKeyListResponseDto: {
             /** @example 01JC4Z0000CHAVE000000000001 */
@@ -9236,6 +9263,13 @@ export interface components {
              */
             language: string | null;
         };
+        SetToolRouterDto: {
+            /**
+             * @description Whether the Jev chooses the tool of each agent step. On by default; it only acts when the turn model is from OpenRouter.
+             * @example false
+             */
+            enabled: boolean;
+        };
         SkippedBindingResponseDto: {
             /**
              * @example agent
@@ -9491,6 +9525,11 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+            /**
+             * @description Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.
+             * @example true
+             */
+            catalogoCompleto?: boolean;
         };
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
@@ -9570,6 +9609,53 @@ export interface components {
             arguments: {
                 [key: string]: unknown;
             };
+        };
+        ToolRoutingResponseDto: {
+            /** @example typesafe/jev-1.13 */
+            modelo: string;
+            /**
+             * @description How many tools the agent had at this step.
+             * @example 9
+             */
+            ofertadas: number;
+            /** @description The tool names BEFORE the router. */
+            menuAntes: string[];
+            /** @description The tool names the chat model was offered (the whole catalog on any fall). */
+            menuDepois: string[];
+            /** @example create_story */
+            escolha: Record<string, never> | null;
+            /** @example 0.91 */
+            confianca: Record<string, never> | null;
+            /**
+             * @example {
+             *       "opcao": "create_task",
+             *       "probabilidade": 0.06
+             *     }
+             */
+            segunda: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description The previous tool of the same run.
+             * @example read_file
+             */
+            anterior: Record<string, never> | null;
+            /** @description The Jev answered AND the menu came out smaller than the catalog. */
+            aplicado: boolean;
+            /** @enum {string|null} */
+            motivoDaQueda: "timeout" | "erro_http" | "erro_de_rede" | "resposta_invalida" | "escolha_fora_das_opcoes" | "estado_grande" | "colisao_de_nome" | null;
+            /** @enum {string|null} */
+            origemDaQueda: "infra" | "modelo" | "codigo" | null;
+            detalheDaQueda: Record<string, never> | null;
+            /** @example 212 */
+            latenciaMs: number;
+            /**
+             * @description REAL cost of the Jev answer (`usage.cost`), in micro-USD.
+             * @example 52
+             */
+            custoMicros: number;
+            /** @description `true` when the Jev charged but the `token_usage` row could not be written. */
+            gastoNaoRegistrado: boolean;
         };
         TransferOwnershipDto: {
             /**
@@ -9793,6 +9879,11 @@ export interface components {
             slug: string;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
+            /**
+             * @description Whether the tool-routing step by the Jev (ADR 0179) runs for this workspace. On by default; it only acts when the turn model is from OpenRouter, so `true` on a workspace without OpenRouter does nothing.
+             * @example true
+             */
+            toolRouterEnabled: boolean;
             /**
              * Format: date-time
              * @example 2026-07-20T09:12:00.000Z
@@ -21293,6 +21384,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkspaceSummaryResponseDto"];
                 };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_setToolRouter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetToolRouterDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {

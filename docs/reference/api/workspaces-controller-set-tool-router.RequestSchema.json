@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"enabled":{"type":"boolean","example":false,"description":"Whether the Jev chooses the tool of each agent step. On by default; it only acts when the turn model is from OpenRouter."}},"required":["enabled"],"title":"SetToolRouterDto"}}}}}

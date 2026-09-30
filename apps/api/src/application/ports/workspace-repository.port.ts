@@ -45,6 +45,12 @@ export abstract class WorkspaceRepository {
     id: string,
     userId: string,
   ): Promise<Workspace | null>;
+  /** Liga/desliga o roteamento de ferramenta pelo Jev (ADR 0179); `null` se o workspace não existe. */
+  abstract setToolRouterEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<Workspace | null>;
+
   /**
    * Os membros do workspace com nome e e-mail (AT-335, RN-652). Só id, nome,
    * e-mail e papel — a mesma forma de `ProjectRepository.listMembers`.

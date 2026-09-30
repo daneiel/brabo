@@ -186,6 +186,7 @@ estado lido do repositório e não da conversa.
 | O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
 | A tag da imagem de terceiro entra na referência, antes do digest; o Dependabot de imagem segue desligado (AT-139) | ADR 0178 |
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
+| O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
@@ -1124,7 +1125,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
+  preço congelado no metering (ADR 0042); 9 providers (ADR 0043); o Jev
+  (`typesafe/jev-1.13`, Decisions API do OpenRouter) escolhe o menu de
+  ferramentas de cada passo por uma porta PRÓPRIA, `ToolRouter`, fora do
+  `LLMProviderRegistry` e do catálogo `models` (ADR 0179, RN-625): só com
+  provider OpenRouter, só RESTRINGE (P3), ligado por padrão por workspace, e
+  qualquer falha dele deixa o catálogo inteiro — o turno nunca falha por causa
+  dele, e ele não aprova, não nega nem escolhe modelo
 - Deploy: Kubernetes (k3d/kind em validação local). As cinco imagens de
   produção são PUBLICADAS no GHCR a cada tag final, públicas e por digest
   (ADR 0119; a quinta, o broker, desde o ADR 0162) — `.release/images.json`

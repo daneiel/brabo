@@ -63,6 +63,7 @@ defmodule Engine.Harness.ToolLoop.Default do
 
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Harness.Iteracoes
+  alias Engine.Harness.RoteamentoDeFerramenta
   alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
 
@@ -126,7 +127,11 @@ defmodule Engine.Harness.ToolLoop.Default do
 
     case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs) do
       {:ok, %{"message" => message} = resp} ->
-        cost = get_in(resp, ["usage", "costMicros"]) || 0
+        # O custo do chat MAIS o do Jev (ADR 0179): o orçamento local do laço
+        # gasta o que a api também registrou em `token_usage`.
+        cost =
+          (get_in(resp, ["usage", "costMicros"]) || 0) + RoteamentoDeFerramenta.custo_micros(resp)
+
         ctx = append(ctx, Map.put(message, :pinned, false))
         ctx = Map.update!(ctx, :tokens_spent_micros, &(&1 + cost))
         # A api devolve 200 com `error` no CORPO quando o provider falha — só
