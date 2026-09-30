@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O idioma do PROJETO ([RN-619](../../../../../docs/business-rules.md#rn-619)):
@@ -47,6 +48,7 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [salvando, setSalvando] = useState(false);
   const [digitando, setDigitando] = useState(false);

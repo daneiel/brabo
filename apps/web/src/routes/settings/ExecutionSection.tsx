@@ -8,6 +8,7 @@ import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
 
@@ -32,6 +33,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
