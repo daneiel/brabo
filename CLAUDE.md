@@ -727,8 +727,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   Linux. O segundo ensaio (run 36779817686) PROVOU o `darwin-arm64` e os dois
   Linux; no `win32-x64` o uso passou e o `--self-test-pty` reprovou com
   `Cannot find package 'node-pty'` (o carregador não reconhecia a forma sem
-  `:`), corrigido e NÃO provado até o próximo ensaio — o self-test no Windows
-  usa `cmd.exe` pelo ConPTY, que ainda nunca rodou. O
+  `:`), corrigido; no terceiro (run 36780804339) o `node-pty` carregou e só
+  as sequências iniciais do ConPTY chegaram, sem nem o prompt do `cmd.exe` —
+  o `win32-x64` segue NÃO provado. O auto-teste que reprova agora roda uma
+  SONDA (um segundo PTY com `cmd.exe /c echo`, que não depende de entrada) e
+  relata pedaços, saída do filho e eventos do stream de leitura, para o
+  próximo ensaio separar entrada de leitura; o veredito não muda. O
   quinto alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
   AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
   que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`

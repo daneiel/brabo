@@ -543,8 +543,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ser reconhecidas, pelo `import.meta.url` OU pelo `argv[1]` nos dois lugares
   que perguntam (o carregador do `node-pty` só olhava o primeiro e caía no
   `import('node-pty')` comum, `Cannot find package`), e no Windows o `--self-test-pty` usa `cmd.exe` no lugar de
-  `/bin/cat`. Provado por teste com os caminhos; só o ensaio da matriz no
-  `windows-latest` prova o binário.
+  `/bin/cat`. Quando o `--self-test-pty` reprova, ele passa a dizer por quê:
+  quantos pedaços de saída chegaram, se o filho saiu, e o resultado de uma
+  sonda num segundo PTY (`cmd.exe /c echo` ou `/bin/echo`) com os eventos do
+  stream de leitura — o veredito não muda. O uso sem argumentos foi provado no
+  `windows-latest`; o terminal do binário de Windows ainda não.
 
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).

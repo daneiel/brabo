@@ -1250,6 +1250,81 @@ const MARCADORES_DO_AUTO_TESTE_PTY = ['SELF_TEST_PTY_MARKER', 'SELF_TEST_PTY_SEG
 const PAUSA_ENTRE_VOLTAS_MS = 300;
 const TETO_DO_AUTO_TESTE_PTY_MS = 10_000;
 
+/**
+ * DIAGNÓSTICO de quando o auto-teste reprova — nunca muda o veredito, só diz
+ * o que houve, para o próximo ensaio da matriz responder de uma vez em vez de
+ * uma hipótese por rodada (AT-343: no `windows-latest` chegaram só as
+ * sequências iniciais do ConPTY, `\u001b[?9001h\u001b[?1004h`, e mais nada).
+ *
+ * Abre um SEGUNDO PTY com um filho que escreve sem ler nada
+ * (`cmd.exe /c echo <sonda>` no Windows, `/bin/echo <sonda>` fora dele) e
+ * relata: quantos pedaços de saída chegaram, se a sonda apareceu, se o filho
+ * saiu (e com que código) e o que o stream de leitura do `node-pty` emitiu
+ * (`error`/`end`/`close`). Com isso as hipóteses se separam:
+ * - sonda na saída → a LEITURA funciona, e o que falhou foi a ENTRADA (a
+ *   escrita no PTY do auto-teste nunca chegou ao filho);
+ * - filho saiu e nenhuma sonda → a leitura morreu depois do primeiro pedaço,
+ *   o mesmo defeito da AT-342 por outro caminho;
+ * - filho não saiu → o processo nem rodou até o fim dentro do teto.
+ */
+const MARCADOR_DA_SONDA_PTY = 'SELF_TEST_PTY_SONDA';
+const TETO_DA_SONDA_PTY_MS = 4_000;
+
+async function sondarPty(nodePty: NodePtyModule): Promise<string> {
+  const noWindows = process.platform === 'win32';
+  const [arquivo, argumentos] = noWindows
+    ? ['cmd.exe', ['/c', 'echo', MARCADOR_DA_SONDA_PTY]]
+    : ['/bin/echo', [MARCADOR_DA_SONDA_PTY]];
+  return await new Promise<string>((resolver) => {
+    let saida = '';
+    let pedacos = 0;
+    let saiu: string | null = null;
+    const eventosDoStream: string[] = [];
+    let processo: ReturnType<NodePtyModule['spawn']>;
+    try {
+      processo = nodePty.spawn(arquivo, argumentos, {
+        name: 'xterm-256color',
+        cols: 80,
+        rows: 24,
+        cwd: process.cwd(),
+        env: process.env as Record<string, string>,
+      });
+    } catch (erro) {
+      resolver(`sonda: spawn de ${arquivo} lançou: ${mensagemDeErro(erro)}`);
+      return;
+    }
+    const stream = (processo as unknown as { _socket?: NodeJS.EventEmitter })._socket;
+    for (const evento of ['error', 'end', 'close'] as const) {
+      stream?.on(evento, (erro?: unknown) => {
+        eventosDoStream.push(
+          evento === 'error' ? `error(${(erro as NodeJS.ErrnoException)?.code ?? mensagemDeErro(erro)})` : evento,
+        );
+      });
+    }
+    processo.onData((dado) => {
+      pedacos++;
+      saida += dado;
+    });
+    processo.onExit(({ exitCode }) => {
+      saiu = `saiu com ${exitCode}`;
+    });
+    setTimeout(() => {
+      try {
+        processo.kill();
+      } catch {
+        // já saiu
+      }
+      resolver(
+        `sonda (${arquivo} ${argumentos.join(' ')}): ${pedacos} pedaço(s), ` +
+          `sonda na saída: ${ocorrenciasDoMarcador(saida, MARCADOR_DA_SONDA_PTY) > 0 ? 'SIM' : 'NÃO'}, ` +
+          `filho: ${saiu ?? 'NÃO saiu no teto'}, ` +
+          `stream: ${eventosDoStream.length > 0 ? eventosDoStream.join(',') : 'nenhum evento'}, ` +
+          `saida=${JSON.stringify(saida)}`,
+      );
+    }, TETO_DA_SONDA_PTY_MS);
+  });
+}
+
 async function rodarAutoTestePty(): Promise<void> {
   const nodePty = await carregarNodePty();
   console.log('node-pty carregado com sucesso');
@@ -1259,16 +1334,23 @@ async function rodarAutoTestePty(): Promise<void> {
 
   const shellOriginal = process.env.SHELL;
   process.env.SHELL = noWindows ? 'cmd.exe' : '/bin/cat';
+  let falha: Error | null = null;
   try {
     await new Promise<void>((resolvePromise, rejeitar) => {
       let saida = '';
       let volta = 0;
+      let pedacos = 0;
+      let filhoSaiu = false;
+      const inicio = Date.now();
+      let ultimoPedacoMs: number | null = null;
       let concluido = false;
       let teto: ReturnType<typeof setTimeout> | undefined;
       const gerenciador = new GerenciadorDePty(
         process.cwd(),
         (_sessionRef, dataBase64) => {
           if (concluido) return;
+          pedacos++;
+          ultimoPedacoMs = Date.now() - inicio;
           saida += Buffer.from(dataBase64, 'base64').toString('utf8');
           const marcador = MARCADORES_DO_AUTO_TESTE_PTY[volta];
           if (marcador === undefined || ocorrenciasDoMarcador(saida, marcador) < 2) return;
@@ -1291,7 +1373,9 @@ async function rodarAutoTestePty(): Promise<void> {
           console.log(`SELF_TEST_PTY_OK: ${JSON.stringify(saida)}`);
           resolvePromise();
         },
-        () => {},
+        () => {
+          filhoSaiu = true;
+        },
         nodePty,
       );
       const resultado = gerenciador.abrir('self-test', 80, 24);
@@ -1309,13 +1393,22 @@ async function rodarAutoTestePty(): Promise<void> {
         rejeitar(
           new Error(
             `self-test-pty: timeout esperando o marcador ${MARCADORES_DO_AUTO_TESTE_PTY[volta]} ` +
-              `(volta ${volta + 1} de ${MARCADORES_DO_AUTO_TESTE_PTY.length}). saida=${JSON.stringify(saida)}`,
+              `(volta ${volta + 1} de ${MARCADORES_DO_AUTO_TESTE_PTY.length}). ` +
+              `${pedacos} pedaço(s) de saída, o último aos ${ultimoPedacoMs ?? '-'} ms; ` +
+              `filho ${filhoSaiu ? 'SAIU' : 'não saiu'}. saida=${JSON.stringify(saida)}`,
           ),
         );
       }, TETO_DO_AUTO_TESTE_PTY_MS);
     });
+  } catch (erro) {
+    falha = erro instanceof Error ? erro : new Error(String(erro));
   } finally {
     process.env.SHELL = shellOriginal;
+  }
+  if (falha) {
+    // O veredito já está dado; a sonda só acrescenta o porquê.
+    console.error(`self-test-pty: diagnóstico — ${await sondarPty(nodePty)}`);
+    throw falha;
   }
 }
 
