@@ -39,10 +39,25 @@ function motivoParaPular(): string | null {
   }
   try {
     execFileSync('systemd-analyze', ['--version'], { stdio: 'ignore' });
-    return null;
   } catch {
     return 'systemd-analyze não está no PATH desta máquina';
   }
+  // Binário presente não prova validador utilizável: num container sem
+  // gerenciador de usuário, `--user verify` morre ANTES de ler a unit
+  // ("Failed to initialize manager"). A sonda é uma unit sabidamente válida —
+  // se nem ela passa, o motivo é a máquina, e o teste PULA dizendo isso em vez
+  // de reprovar por ambiente (a mesma régua do modo de teste, mais abaixo).
+  const sonda = verificarNoSystemd(
+    'brabo-sonda-verify.service',
+    '[Service]\nExecStart=/bin/true\n',
+  );
+  if (sonda.codigo !== 0) {
+    return (
+      `\`systemd-analyze --user verify\` não valida nem uma unit mínima nesta máquina ` +
+      `(código ${sonda.codigo}): ${sonda.saida.split('\n').slice(0, 2).join(' | ')}`
+    );
+  }
+  return null;
 }
 
 const PULAR = motivoParaPular();
