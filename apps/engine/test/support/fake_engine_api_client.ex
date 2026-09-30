@@ -621,8 +621,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
+  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta, opts) do
     notify({:llm_turn_stream, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
     # chamada SSE de verdade presa no meio do stream. Existe só para provar
@@ -681,8 +684,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn(_project_id, _session_id, agent, messages, tools) do
+  def llm_turn(_project_id, _session_id, agent, messages, tools, opts) do
     notify({:llm_turn, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     cond do
       # Transporte quebrado (provider fora/timeout) — o ToolLoop guarda isso
