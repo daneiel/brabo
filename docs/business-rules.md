@@ -14815,6 +14815,8 @@ com a causa do fechamento anterior quando ela foi gravada.
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
   (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
   `apps/web/src/routes/SessionPage.tsx:145` (`podeReabrir`), `:533`
+
+  `apps/web/src/routes/SessionPage.tsx:147` (`podeReabrir`), `:538`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
 - **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
@@ -16996,6 +16998,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
+
+  `apps/web/src/routes/SessionPage.tsx:144` (`podeDecidir`), `:284`
   (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
@@ -17345,9 +17349,9 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
-  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:497`
+  (`handoffIdDoEvento`), `:505` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18179,3 +18183,48 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
   falha do desktop ou da faixa que cabe)
 - **Origem:** AT-328 (achado N1) e AT-330 (achados N3 a N8) da auditoria
   visual da Rodada 29; completa a [RN-643](#rn-643)
+
+## O autor de cada fala do fio é o ator do evento (RN-652)
+
+### RN-652 — `chat.message` é desenhado sob o ATOR do evento — pessoa, agente ou desconhecido —, nunca sob quem vê a tela {#rn-652}
+
+Até aqui todo `chat.message` saía com o nome e o avatar de quem estava logado:
+numa sessão compartilhada, a fala de outra pessoa aparecia com o SEU nome, e a
+de um agente com o seu e-mail (achado N2 da auditoria visual da Rodada 29,
+escondido enquanto o fio agrupava o histórico por origem). O autor sai agora do
+`actor` do evento, que a api grava com o id de quem mandou
+(`SendAgentMessageUseCase`, `SendChatMessageUseCase`) e que a rota genérica de
+anexar evento aceita de qualquer espécie. Os desfechos não se colapsam:
+
+1. **Quem vê** (`actor.id` igual ao `sub` do token; sem ele, pelo e-mail da
+   linha de membro) — o nome ou e-mail da linha de membro, senão o e-mail da
+   sessão, e só na falta dos dois "Você".
+2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, da
+   rota que JÁ existe, `GET projects/:id/members` (mínimo `viewer`), sob a
+   MESMA `queryKey` da aba de Configurações.
+3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro". É LACUNA
+   declarada: `project_members` só lista quem tem linha no projeto, e quem
+   entra só pelo papel de WORKSPACE não aparece ali; não há rota de leitura de
+   membros de workspace, e nenhuma foi inventada. A leitura que falha ou ainda
+   não chegou dá o mesmo desfecho, sem quebrar o fio.
+4. **Agente** — `nomeDoAgente` e o avatar/cor do agente, como `agent.response`.
+5. **Ator desconhecido** (ausente, sem id, `system` ou espécie fora de
+   pessoa/agente) — "Autor desconhecido", nunca "Você".
+
+A narração `backlog.story_promotion_returned`, que tinha o mesmo defeito
+(o nome de quem vê sobre quem devolveu a história), passa pela mesma função.
+A mensagem OTIMISTA do composer continua com o e-mail de quem vê — ela é
+sempre dele.
+
+- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:44` (`autorDaMensagem`);
+  `apps/web/src/lib/autoria-da-sessao.ts:18` (`useAutoriaDaSessao`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
+  `:405` (o `chat.message`), `:687` (a devolução de história);
+  `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
+- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:140`
+  (duas pessoas e um agente, cada mensagem sob o próprio autor — caminho
+  feliz), `:161` (ator desconhecido e pessoa fora dos membros com texto
+  próprio — caso de falha), `:179` (leitura de membros recusada);
+  `apps/web/src/lib/autor-da-mensagem.test.ts:58` (ator ausente, sem id ou de
+  espécie desconhecida nunca vira "você")
+- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)

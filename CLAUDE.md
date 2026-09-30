@@ -206,6 +206,7 @@ estado lido do repositório e não da conversa.
 | Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
 | No telefone a Sessão ganha gaveta de contexto e barra que quebra linha; tabelas viram cartões (AT-328/AT-330) | RN-651 |
 | A sidebar, o card do Dashboard e o painel de artefatos não se contradizem (AT-325) | RN-648 |
+| Cada mensagem do fio aparece sob o ator do evento, nunca sob quem vê a tela (AT-329) | RN-652 |
 | Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |

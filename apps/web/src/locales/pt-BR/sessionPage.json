@@ -12,7 +12,9 @@
     "semTitulo": "(sem título)",
     "verNoBacklog": "Ver em Histórias",
     "voce": "Você",
-    "agenteGenerico": "agente"
+    "agenteGenerico": "agente",
+    "outroMembro": "Outro membro",
+    "autorDesconhecido": "Autor desconhecido"
   },
   "topbar": {
     "voltarAoProjeto": "Voltar ao projeto",
