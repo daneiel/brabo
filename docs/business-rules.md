@@ -16854,6 +16854,63 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 - **Origem:** AT-245, sobre a decisão da AT-168 (resposta 8) e as do
   mantenedor de 2026-09-29
 
+### RN-667 — O formulário estruturado segue o idioma da resposta: a descrição da ferramenta não fixa idioma nenhum {#rn-667}
+
+A validação paga da AT-167 achou, para autor com preferência `en` (C06/C12),
+a chamada `ask_structured_questions` com a **prosa em inglês e as perguntas do
+formulário em português** — no DeepSeek tratado, 8 das 15 respostas de
+C06+C12. A causa é do produto, e mora num lugar só: a descrição da ferramenta
+dizia que `label` era "o texto da pergunta, **em pt-BR**". Era uma SEGUNDA
+orientação de idioma, fixa, fora da fachada da [RN-622](#rn-622), competindo
+com ela em toda chamada do Criativo e do PO (as duas usam a MESMA spec).
+
+1. **O mecanismo é tirar a orientação concorrente, não acrescentar outra.** A
+   descrição passou a dizer "o texto da pergunta, **no idioma da sua
+   resposta** (vale também para `options`)", e o exemplo, que segue em
+   português, é marcado "os textos seguem o idioma da sua resposta". Ela não
+   nomeia idioma NENHUM: QUAL é o idioma continua decidido só pela mensagem
+   efêmera de `Engine.Harness.IdiomaDaResposta`, e a fachada `EngineApiClient`
+   não muda.
+2. **A orientação da RN-622/623 fica byte a byte.** Zero token a mais nos 50
+   de teto. `ask_structured_questions` segue FORA de `@ferramentas_de_artefato`
+   (é pergunta à pessoa do turno, [RN-623](#rn-623) item 4), então autor `en`
+   num projeto `pt-BR` recebe as perguntas em inglês — e é o que se quer.
+3. **Custo, onde ele cai.** A descrição viaja em toda chamada que leva a
+   ferramenta, com qualquer autor: medido com `gpt-tokenizer`, só o texto que
+   mudou, +23 tokens em cl100k e +19 em o200k (a linha de `label` 18/17 → 29/27;
+   a do exemplo 8/6 → 20/15). Não é a orientação indo para a descrição — a
+   frase aponta para ela sem dizer idioma, e o que foi embora era justamente a
+   frase que dizia um.
+4. **Guarda.** Nenhuma descrição de ferramenta do harness (as 22 de
+   `Engine.Harness.Tools.*`) pode citar `pt-BR`, `(en)`, "in English", "em
+   português" ou "em inglês" — a do `emit_artifact`, que exige as CHAVES do
+   payload "em INGLÊS", fica de fora porque fala de contrato, não de texto para
+   a pessoa.
+
+**O que esta regra NÃO fecha, declarado:** a medição paga antes/depois
+**não rodou** (sem chave do OpenRouter na máquina da mudança) — o "antes" é o
+da AT-167 (DeepSeek tratado: 8 de 15 respostas de C06+C12 com o formulário em
+português), e o "depois" é **pendência do dono**:
+`pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env --bracos tratamento --casos C06,C12 --rodadas 5 --teto-usd 0.5 --saida ~/.cache/brabo/validacao-idioma/at-282`,
+seguido de `idioma:validar --relatorio --saida` na mesma pasta e da revisão do
+formulário (rótulo `formulario` do `idioma:revisar`). Teto sugerido US$ 0,50:
+o braço tratado inteiro custou US$ 0,21 (DeepSeek) e US$ 0,94 (Haiku) em
+17 casos, e estes são 2. O script lê a descrição do arquivo do produto, então
+mede o texto novo sem cópia. Se o formulário continuar em português com a
+descrição neutra, o passo seguinte é uma cláusula condicional na orientação
+(só quando a chamada leva `ask_structured_questions`), e ela tem de caber no
+pior caso da RN-623 (44 / 37), que já está a ~48 com a moldura.
+
+- **Código:** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex:193`
+  (`descricao`), `:44` (`spec`)
+- **Teste:** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs:199`
+  (a descrição manda seguir o idioma da resposta), `:207` (não nomeia idioma
+  — caso de falha: a forma antiga "em pt-BR" é reprovada pela mesma régua),
+  `:214` (nenhuma das ferramentas do harness fixa idioma);
+  `scripts/idioma/validacao.spec.ts:60` (a medição lê a descrição nova)
+- **Origem:** AT-282, da revisão humana da AT-167 (PR #750, 29/09); entrada
+  na rodada aprovada pelo mantenedor em 2026-09-30
+
 ### RN-624 — A api detecta o idioma do autor pelas próprias mensagens e PERGUNTA; só o confirmado vira preferência {#rn-624}
 
 A [RN-618](#rn-618) deixou o degrau "detectado confirmado" pronto e vazio.
