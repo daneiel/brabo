@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
+import { matchesGlob } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import picomatch from 'picomatch';
 import { describe, expect, it } from 'vitest';
 import { classificar, foraDeImagem, REGRAS_SEM_IMAGEM, type RegraSemImagem } from './diff-toca-imagem.ts';
 
@@ -116,9 +116,8 @@ function foraDoContexto(caminho: string): boolean {
     if (linha.length === 0 || linha.startsWith('#')) continue;
     const nega = linha.startsWith('!');
     const padrao = nega ? linha.slice(1) : linha;
-    const casa = picomatch(padrao, { dot: true });
     const partes = caminho.split('/');
-    const algumPrefixo = partes.some((_, i) => casa(partes.slice(0, i + 1).join('/')));
+    const algumPrefixo = partes.some((_, i) => matchesGlob(partes.slice(0, i + 1).join('/'), padrao));
     if (algumPrefixo) excluido = !nega;
   }
   return excluido;

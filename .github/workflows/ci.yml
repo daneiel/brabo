@@ -379,7 +379,7 @@ jobs:
       # números de antes, sem override. Teste que falhou num shard também
       # reprova aqui (o merge repete o desfecho de cada arquivo).
       - name: Piso de cobertura de api (shards agregados)
-        run: pnpm --filter api exec vitest --merge-reports=.vitest-reports --coverage
+        run: pnpm --filter api exec vitest run --merge-reports=.vitest-reports --coverage
 
   # AT-305: a mesma divisão para o web — sem banco, então sem serviço. O web
   # tinha a suíte de testes como a maior parte do job (125s de ~169s).
@@ -495,7 +495,7 @@ jobs:
       # números de antes, sem override. Teste que falhou num shard também
       # reprova aqui (o merge repete o desfecho de cada arquivo).
       - name: Piso de cobertura de web (shards agregados)
-        run: pnpm --filter web exec vitest --merge-reports=.vitest-reports --coverage
+        run: pnpm --filter web exec vitest run --merge-reports=.vitest-reports --coverage
 
   test-packages:
     name: Testes TS (pacotes)
