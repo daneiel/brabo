@@ -799,7 +799,7 @@ describe('RN-156 — indicador de 5s', () => {
     montar();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     act(() => {
       botaoAceitar.click();
@@ -848,7 +848,7 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     // alimenta —, e um `getByText` sem escopo bateria nos dois.
     expect(within(pill).getByText('PO')).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 
@@ -877,7 +877,7 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     expect(
       await screen.findByText('criou a história "Login com e-mail e senha"'),
     ).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 });

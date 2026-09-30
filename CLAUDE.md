@@ -202,6 +202,8 @@ estado lido do repositório e não da conversa.
 | Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
 | Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
 | Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
+| Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
+| A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -716,9 +718,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `install.sh`, a lista do web) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
   depois de o Bun corrigir, nunca só trocar o label
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
-  fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
-  arquivo para inglês como idioma primário
+- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
+  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
+  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+  texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
+  de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
+  reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
+  texto só em pt-BR em `.ts` de `lib/` (o `classifyEvent` de `activity.ts`,
+  por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
+  RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
+  "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
+  plural por "(s)" em backlog/insights/approvals/sessionPage — os demais
+  namespaces ainda o têm
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`

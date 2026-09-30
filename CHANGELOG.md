@@ -568,6 +568,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   em qualquer largura: como quarta coluna ele deixava ~740px de conteúdo a
   1440px e a tabela de modelos cortava os nomes; agora as seções ganham 208px.
   O preço é o sumário não ficar mais grudado na tela ao rolar.
+- **web (i18n)**: os últimos textos fixos de tela saem do `.tsx` para
+  `locales/en` e `locales/pt-BR` (AT-289) — a sub-lista "todos os tokens do
+  projeto" da seção de tokens de acesso (título, subtítulo, cabeçalhos, estado,
+  rótulo de revogar e a data, que era sempre `pt-BR`) e o rótulo acessível do
+  filtro de estado da lista de PRs. Em `en`, o idioma default, a sub-lista
+  aparecia em português. No `pt-BR`, as abas "Backlog" e "Insights" passam a
+  "Histórias" e "Percepções" (e as frases que apontam para elas). Um teste novo
+  (`i18n-paridade.test.ts`) reprova chave que exista num idioma e falte no
+  outro, por namespace.
+- **web (i18n)**: a interface em pt-BR deixa de misturar inglês e jargão
+  interno (AT-326). "circuit breaker" vira "parada automática", "tasks
+  blocked"/"task" viram "tarefas bloqueadas"/"tarefa", "default" vira
+  "padrão"; nenhuma frase de tela cita mais número de RN ou ADR (nos dois
+  idiomas); o botão de aceitar handoff e os rótulos de lead/subagentes das
+  seções de área mostram o NOME do agente ("iniciar PO", "Lead: Dev Lead"), não
+  o id; a Conta deixa de afirmar que só ela está traduzida; e os plurais por
+  "(s)" de backlog, insights, aprovações e sessão viram plural do i18next.
+  "handoff", "gate", "binding", "LLM", "dev agent", "lead" e "runner" ficam,
+  por serem a linguagem ubíqua do glossário. `i18n-vocabulario.test.ts` trava
+  as três réguas.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

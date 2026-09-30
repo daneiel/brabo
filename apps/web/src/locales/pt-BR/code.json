@@ -25,15 +25,15 @@
     },
     "checkStateError": "Não consegui consultar o estado do container.",
     "since": "desde",
-    "neverProvisioned": "Container do projeto: nunca provisionado (RN-267).",
+    "neverProvisioned": "Container do projeto: nunca provisionado.",
     "problemsEmpty": "Não há lint nem testes integrados rodando sobre o código deste projeto — nenhuma ferramenta de análise estática hoje escaneia o repositório gerido. Mostrar uma contagem de erros ou avisos aqui seria decoração, não estado: quando essa integração existir, esta aba passa a listar diagnósticos reais.",
-    "outputEmpty": "Não há stream de comando de build ou deploy AGREGADO nesta aba — o terminal interativo (aba Terminal) já tem a própria saída, dentro dele. `git push`, PR e deploy não saem pelo terminal de qualquer forma (RN-106): quando houver um pipeline de build ou deploy separado do terminal, a saída dele aparece aqui."
+    "outputEmpty": "Não há saída de comando de build ou deploy AGREGADO nesta aba — o terminal interativo (aba Terminal) já tem a própria saída, dentro dele. `git push`, PR e deploy não saem pelo terminal de qualquer forma: quando houver um pipeline de build ou deploy separado do terminal, a saída dele aparece aqui."
   },
   "branchPicker": {
     "noDefaultBranch": "sem branch padrão",
     "dropdownAriaLabel": "Selecionar branch",
-    "header_one": "{{count}} branch · comparada com a default",
-    "header_other": "{{count}} branches · comparadas com a default",
+    "header_one": "{{count}} branch · comparada com a branch padrão",
+    "header_other": "{{count}} branches · comparadas com a branch padrão",
     "headerPlaceholder": "branches",
     "loading": "Carregando branches…",
     "loadErrorFallback": "Não consegui carregar as branches.",
@@ -135,6 +135,7 @@
       "closed": "Fechadas",
       "all": "Todas"
     },
+    "filtersAriaLabel": "Filtrar por estado",
     "backToList": "Voltar à lista",
     "loadingDiff": "Carregando diff…",
     "diffErrorFallback": "Não consegui carregar o diff desta PR.",

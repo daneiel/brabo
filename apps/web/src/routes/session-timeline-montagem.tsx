@@ -490,7 +490,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               variant="success"
               onClick={() => handleAcceptHandoff(oferta!.id, oferta!.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: oferta!.toAgent })}
+              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta!.toAgent) })}
             </Button>
             {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                 precisa saber onde acompanhar depois (RN-125). As outras

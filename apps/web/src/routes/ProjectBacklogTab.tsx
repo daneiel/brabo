@@ -159,10 +159,9 @@ function PromotionQueue({
         // que "não deu", e a causa mais comum (módulo que saiu do module_map
         // entre a proposta e a decisão) não é adivinhável.
         showToast({
-          title: t('promotionQueue.toast.partial', {
-            promoted: r.promoted.length,
-            failed: r.failed.length,
-          }),
+          title: `${t('promotionQueue.toast.partialPromoted', {
+            count: r.promoted.length,
+          })}, ${t('promotionQueue.toast.partialFailed', { count: r.failed.length })}`,
           message: r.failed[0]?.reason,
           tone: 'warning',
         });

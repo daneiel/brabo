@@ -310,7 +310,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
 
     // O card do fio continua resolvendo pro DEV LEAD, não pro Infra.
     const botaoDevLead = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar dev-lead',
+      name: 'Aceitar handoff e iniciar Dev Lead',
     });
     // ...com o link de Executores que a RN-125 embutiu nele.
     expect(

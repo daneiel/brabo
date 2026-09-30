@@ -69,7 +69,7 @@
   },
   "mensagens": {
     "reunindoInformacoes": "Gathering information...",
-    "respostaVazia": "Empty response — event predating RN-059, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
+    "respostaVazia": "Empty response — event from an older version, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
     "modeloGerador": "Model that generated this response: {{modelName}}",
     "modeloNaoGravado": "This response was recorded without the model's name",
     "modeloNaoRegistrado": "model not recorded",
@@ -171,7 +171,8 @@
     "teto": "This panel reads the <b>{{lidos}}</b> events already loaded for this session. There are <b>{{anteriores}}</b> older ones — “Load older”, in the Event log, brings more, and the other sections grow along with it.",
     "regrasDeNegocio": "Business rules",
     "nadaAinda": "Nothing yet.",
-    "origemRefs": "origin: {{count}} ref(s)",
+    "origemRefs_one": "origin: {{count}} ref",
+    "origemRefs_other": "origin: {{count}} refs",
     "paginaAnterior": "Previous page of business rules",
     "proximaPagina": "Next page of business rules",
     "paginaDe": "{{atual}} of {{total}}",

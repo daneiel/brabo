@@ -167,25 +167,30 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   ];
 
   const colunasAdmin: TableColumn<PersonalAccessTokenAdminSummary>[] = [
-    { key: 'name', label: 'Nome', width: '2fr', render: (t) => t.name },
-    { key: 'userEmail', label: 'Dono', width: '2fr', render: (t) => t.userEmail },
+    { key: 'name', label: t('personalAccessTokens.admin.table.name'), width: '2fr', render: (tok) => tok.name },
+    {
+      key: 'userEmail',
+      label: t('personalAccessTokens.admin.table.owner'),
+      width: '2fr',
+      render: (tok) => tok.userEmail,
+    },
     {
       key: 'createdAt',
-      label: 'Criado',
+      label: t('personalAccessTokens.admin.table.created'),
       width: '1fr',
-      render: (t) => new Date(t.createdAt).toLocaleDateString('pt-BR'),
+      render: (tok) => new Date(tok.createdAt).toLocaleDateString(i18n.language),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('personalAccessTokens.admin.table.status'),
       width: '120px',
-      render: (t) =>
-        t.revokedAt ? (
-          <Badge tone="danger">revogado</Badge>
+      render: (tok) =>
+        tok.revokedAt ? (
+          <Badge tone="danger">{t('personalAccessTokens.admin.table.statusRevoked')}</Badge>
         ) : (
           <span className={styles.status}>
             <span className={styles.statusDot} />
-            ativo
+            {t('personalAccessTokens.admin.table.statusActive')}
           </span>
         ),
     },
@@ -193,14 +198,17 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       key: 'action',
       label: '',
       width: '56px',
-      render: (t) =>
-        t.revokedAt ? null : (
+      render: (tok) =>
+        tok.revokedAt ? null : (
           <button
             type="button"
-            aria-label={`Revogar ${t.name} (${t.userEmail})`}
-            title="Revogar"
+            aria-label={t('personalAccessTokens.admin.table.removeAria', {
+              name: tok.name,
+              email: tok.userEmail,
+            })}
+            title={t('personalAccessTokens.admin.table.removeTitle')}
             className={styles.remove}
-            onClick={() => handleRevokeComoMaintainer(t.id)}
+            onClick={() => handleRevokeComoMaintainer(tok.id)}
           >
             <TrashIcon size={14} />
           </button>
@@ -250,18 +258,15 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       {podeGerenciarDeTodos && (
         <div className={styles.section}>
           <div className={styles.sectionHead}>
-            <h2 className={styles.title}>Todos os tokens do projeto</h2>
-            <span className={styles.eyebrow}>maintainer · RN-427</span>
+            <h2 className={styles.title}>{t('personalAccessTokens.admin.title')}</h2>
+            <span className={styles.eyebrow}>{t('personalAccessTokens.admin.eyebrow')}</span>
           </div>
-          <p className={styles.subtitle}>
-            Resposta a incidente — revogue o token de qualquer usuário do
-            projeto, não só o seu.
-          </p>
+          <p className={styles.subtitle}>{t('personalAccessTokens.admin.subtitle')}</p>
           <Table
             columns={colunasAdmin}
             rows={todosOsTokens ?? []}
-            rowKey={(t) => t.id}
-            emptyMessage="Nenhum token de acesso emitido para este projeto."
+            rowKey={(tok) => tok.id}
+            emptyMessage={t('personalAccessTokens.admin.emptyMessage')}
           />
         </div>
       )}

@@ -49,7 +49,7 @@
     "title": "Melhores modelos por capacidade",
     "eyebrow": "curadoria · uso real · custo",
     "subtitle": {
-      "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (ADR 0042: curadoria é sempre manual); marque os usos no ",
+      "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (a curadoria é sempre manual); marque os usos no ",
       "link": "Catálogo de modelos",
       "after": ", mais abaixo."
     },
@@ -76,7 +76,7 @@
     "modeloDesconhecido": "modelo desconhecido",
     "titulo": {
       "vigente": "É deste nível que sai o modelo vigente ({{modelo}}).",
-      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no default do workspace. O Criativo usa {{modelo}}.",
+      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no padrão do workspace. O Criativo usa {{modelo}}.",
       "definido": "{{polo}} neste nível ({{modelo}}), mas um nível mais específico venceu.",
       "vazio": "{{polo}} neste nível.",
       "puladoIndisponivel": "A cascata DESCARTOU este nível: {{modelo}} sumiu do provider.",
@@ -93,7 +93,7 @@
       "intro": "A origem indica onde o valor é resolvido:",
       "mostSpecificWins": "O mais específico vence.",
       "areaWord": "área",
-      "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
+      "areaExplain": "é o padrão que o lead e os subagentes compartilham — configure em",
       "areaLink": "Modelo por área",
       "below": ", logo abaixo.",
       "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
@@ -198,17 +198,17 @@
   },
   "execution": {
     "title": "Execução",
-    "eyebrow": "circuit breaker do dev agent",
-    "subtitle": "Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
+    "eyebrow": "parada automática do dev agent",
+    "subtitle": "Parada automática dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
     "card": {
-      "title": "Tasks blocked seguidas até parar",
-      "hintDefault": "usa o default ({{default}})",
+      "title": "Tarefas bloqueadas seguidas até parar",
+      "hintDefault": "usa o padrão ({{default}})",
       "hintConfigured": "configurado para este projeto"
     },
     "save": "Salvar",
     "saving": "Salvando…",
     "toast": {
-      "success": "Teto do circuit breaker salvo",
+      "success": "Teto da parada automática salvo",
       "error": "Não foi possível salvar"
     }
   },
@@ -218,7 +218,7 @@
     "subtitle": "Muda ONDE o comando deste projeto executa — a pasta gerenciada, uma pasta sua montada por bind-mount, ou uma pasta sua conectada pelo runner.",
     "needsMaintainer": "Só quem é maintainer ou owner pode converter.",
     "warning": {
-      "refuses": "Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+      "refuses": "Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a tarefa travada) e tente de novo.",
       "carries": "A conversão leva a POLÍTICA do projeto: o permissions.json muda de lugar com allow/deny/ask intactos.",
       "leavesPath": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver em {{caminho}} — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois.",
       "leavesManaged": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver na pasta gerenciada deste projeto, no servidor — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois.",
@@ -319,7 +319,7 @@
     },
     "card": {
       "title": "Quem promove",
-      "hintManual": "O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.",
+      "hintManual": "O PO deixa a história completa e ela aguarda você na aba Histórias. Nenhuma tarefa dela é pegável até lá.",
       "hintAuto": "O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção."
     },
     "selectAria": "Quem promove histórias",
@@ -430,7 +430,7 @@
   },
   "personalAccessTokens": {
     "title": "Tokens de acesso",
-    "eyebrow": "Runner local · ADR 0105",
+    "eyebrow": "Runner local",
     "subtitle": {
       "before": "Um Personal Access Token autentica o ",
       "after": " nesta máquina, escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca aparece de novo depois de emitido."
@@ -458,6 +458,22 @@
       "removeTitle": "Revogar"
     },
     "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+    "admin": {
+      "title": "Todos os tokens do projeto",
+      "eyebrow": "maintainer",
+      "subtitle": "Resposta a incidente — revogue o token de qualquer usuário do projeto, não só o seu.",
+      "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+      "table": {
+        "name": "Nome",
+        "owner": "Dono",
+        "created": "Criado",
+        "status": "Status",
+        "statusRevoked": "revogado",
+        "statusActive": "ativo",
+        "removeAria": "Revogar {{name}} ({{email}})",
+        "removeTitle": "Revogar"
+      }
+    },
     "modal": {
       "title": "Token gerado",
       "bodyBefore": "Copie agora — este token não é recuperável depois de fechar esta janela. Use em ",
@@ -470,7 +486,7 @@
   },
   "runnerDeviceKeys": {
     "title": "Chaves de dispositivo",
-    "eyebrow": "Runner local · RN-519 · RN-561",
+    "eyebrow": "Runner local",
     "subtitle": "Uma chave de dispositivo autentica o brabo-runner sem token digitado à mão: o par Ed25519 nasce na sua máquina ou no seu navegador, e só a metade pública chega aqui. A lista é a das SUAS chaves que servem este projeto, inclusive as já revogadas — sumir com a linha faria esta tela afirmar que a chave nunca existiu.",
     "subtitleAlcance": "Uma chave de MÁQUINA atende todos os seus projetos em modo runner e por isso aparece na lista de todos eles: revogá-la derruba o agente local em todos, não só neste.",
     "subtitleNaoEBatimento": "Chave registrada não é agente rodando: ela prova que o dispositivo foi pareado um dia, nunca que o agente está de pé agora — quem sabe do agora é o terminal do projeto.",

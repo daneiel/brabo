@@ -142,7 +142,7 @@ describe('ProjectInsightsTab — aba própria (achado #15)', () => {
     montar();
 
     expect(
-      await screen.findByText(/2 hipótese\(s\) · 1 aguardando decisão/),
+      await screen.findByText(/2 hipóteses · 1 aguardando decisão/),
     ).toBeTruthy();
   });
 
@@ -177,7 +177,7 @@ describe('ProjectInsightsTab — aba própria (achado #15)', () => {
     montar();
 
     expect(await screen.findByText('triagem leve')).toBeTruthy();
-    expect(screen.getByText(/12 evento\(s\)/)).toBeTruthy();
+    expect(screen.getByText(/12 eventos/)).toBeTruthy();
   });
 });
 
