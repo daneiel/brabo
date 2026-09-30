@@ -44,6 +44,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import { nomeDoAgente } from '../lib/agents';
 import styles from './ProjectOverviewTab.module.css';
 
 interface ProjectOverviewTabProps {
@@ -189,7 +190,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     } catch {
       showToast({
         title: t('team.autonomyErrorTitle'),
-        message: `${agentId} · ${actionType}`,
+        message: `${nomeDoAgente(agentId)} · ${actionType}`,
         tone: 'danger',
       });
     }

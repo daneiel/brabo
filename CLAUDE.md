@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
+| A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -709,7 +710,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
   texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
   de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
-  reprova chave que exista num idioma e falte no outro
+  reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
+  texto só em pt-BR em `.ts` de `lib/` (o `classifyEvent` de `activity.ts`,
+  por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
+  RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
+  "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
+  plural por "(s)" em backlog/insights/approvals/sessionPage — os demais
+  namespaces ainda o têm
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`

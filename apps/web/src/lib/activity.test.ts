@@ -299,7 +299,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
 
     expect(c.bad).toBe(true);
     expect(c.color).toBe('var(--danger)');
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
     expect(c.text).toContain('3');
     expect(c.text).toContain('Rearme');
     expect(c.text).not.toContain('atividade em');
@@ -308,7 +308,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
   it('idle_tripped sem contador ainda diz o essencial', () => {
     const c = classifyEvent(ev('dev.idle_tripped', 'dev-api', {}));
     expect(c.bad).toBe(true);
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
   });
 
   it('awaiting_gate e rearmed deixam de cair no genérico', () => {

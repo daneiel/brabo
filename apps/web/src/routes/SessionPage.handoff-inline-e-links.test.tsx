@@ -174,7 +174,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // ...e o botão de aceitar existe UMA VEZ SÓ (não duplicado com a topbar).
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
 
@@ -213,7 +213,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // Só UM botão — o da oferta mais recente.
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
   });
@@ -281,7 +281,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
     montar();
 
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
 
     const link = screen.getByRole('link', {
@@ -319,7 +319,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
 
     montar();
 
-    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(
       screen.queryByRole('link', { name: /Acompanhe a execução em Executores/ }),
     ).not.toBeInTheDocument();

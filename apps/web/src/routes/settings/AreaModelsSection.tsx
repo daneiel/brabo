@@ -9,7 +9,7 @@ import {
   mensagemDaApi,
   setAreaModelBinding,
 } from '../../lib/api-client';
-import { AREAS } from '../../lib/agents';
+import { AREAS, nomeDoAgente } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
 import type { Model, RoutingPreference } from '../../lib/api-types';
@@ -190,9 +190,9 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                 />
               </div>
               <div className={styles.ajusteHint}>
-                {t('areaModels.card.lead', { lead: area.lead })}
+                {t('areaModels.card.lead', { lead: nomeDoAgente(area.lead) })}
                 {area.members.length > 0
-                  ? t('areaModels.card.subagents', { list: area.members.join(', ') })
+                  ? t('areaModels.card.subagents', { list: area.members.map((m) => nomeDoAgente(m)).join(', ') })
                   : t('areaModels.card.subagentsDynamic')}
               </div>
               <div className={styles.ajusteHint}>

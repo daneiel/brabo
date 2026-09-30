@@ -31,6 +31,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType } from '../lib/api-types';
+import { nomeDoAgente } from '../lib/agents';
 import styles from './ProjectOverviewTab.module.css';
 
 /**
@@ -189,7 +190,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
     } catch {
       showToast({
         title: t('tab.toast.autonomyError'),
-        message: `${agentId} · ${actionType}`,
+        message: `${nomeDoAgente(agentId)} · ${actionType}`,
         tone: 'danger',
       });
     }

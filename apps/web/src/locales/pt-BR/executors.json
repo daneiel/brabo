@@ -44,8 +44,9 @@
   },
   "agentStatus": {
     "circuitBreaker": {
-      "default": "circuit breaker disparado",
-      "withCount": "circuit breaker: {{count}} tasks blocked seguidas"
+      "default": "parada automática acionada",
+      "withCount_one": "parada automática: {{count}} tarefa bloqueada seguida",
+      "withCount_other": "parada automática: {{count}} tarefas bloqueadas seguidas"
     },
     "delegation": {
       "completed": "concluiu a delegação",
@@ -79,7 +80,7 @@
       "delegationCompleted": "subagente concluiu",
       "delegationFailed": "subagente falhou",
       "delegationDispensed": "dispensou a delegação",
-      "devStarted": "procurando task",
+      "devStarted": "procurando tarefa",
       "devWorking": "trabalhando",
       "devIdle": "ocioso",
       "devAwaitingApproval": "esperando sua aprovação",
@@ -87,7 +88,7 @@
       "devBlocked": "bloqueado",
       "devBlockedByContainer": "parado: o projeto não tem container de pé",
       "devError": "erro",
-      "devIdleTripped": "circuit breaker abriu",
+      "devIdleTripped": "parada automática acionada",
       "prGateChanged": "gate mudou"
     },
     "now": {

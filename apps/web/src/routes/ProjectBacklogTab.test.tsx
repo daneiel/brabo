@@ -132,7 +132,7 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
     await waitFor(() =>
       expect(promoteStories).toHaveBeenCalledWith('proj-1', ['story-1']),
     );
-    expect(await screen.findByText('1 história(s) promovida(s)')).toBeTruthy();
+    expect(await screen.findByText('1 história promovida')).toBeTruthy();
   });
 
   it('lote: seleciona duas e promove as duas de uma vez', async () => {
@@ -148,7 +148,7 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
     fireEvent.click(await screen.findByLabelText('Selecionar Cadastrar usuário'));
     fireEvent.click(screen.getByLabelText('Selecionar Login'));
 
-    expect(screen.getByText('2 selecionada(s)')).toBeTruthy();
+    expect(screen.getByText('2 selecionadas')).toBeTruthy();
     fireEvent.click(screen.getByText('Promover selecionadas'));
 
     await waitFor(() =>
@@ -177,7 +177,7 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
     fireEvent.click(screen.getByText('Promover selecionadas'));
 
     expect(
-      await screen.findByText('1 promovida(s), 1 recusada(s) pelo domínio'),
+      await screen.findByText('1 promovida, 1 recusada pelo domínio'),
     ).toBeTruthy();
     expect(screen.getByText('módulo `fantasma` não existe')).toBeTruthy();
   });
