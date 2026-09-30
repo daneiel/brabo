@@ -51,6 +51,7 @@ const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
+const getResolvedModelBindings = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
@@ -70,7 +71,10 @@ vi.mock('../lib/api-client', async () => {
     getArchitecture: (...args: unknown[]) => getArchitecture(...args),
     getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // A rota por agente segue na api; a aba não a lê mais (RN-654, AT-339), e
+    // o dublê existe para o teste PROVAR isso.
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    getResolvedModelBindings: (...args: unknown[]) => getResolvedModelBindings(...args),
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
@@ -229,6 +233,7 @@ beforeEach(() => {
   getSessionTokenUsage.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
+  getResolvedModelBindings.mockResolvedValue({ agents: [], areas: [] });
   listAgentAutonomy.mockResolvedValue([]);
   listWorkspaces.mockResolvedValue([
     {
@@ -449,5 +454,51 @@ describe('ProjectOverviewTab — sem repositório, não se oferece ativar (RN-58
     const botao = await screen.findByRole('button', { name: 'Ativar execução' });
     expect(botao).toBeEnabled();
     expect(screen.queryByText(/O projeto ainda não tem repositório/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * AT-339 (RN-654) — a Visão geral lê os bindings do roster no LOTE, e não
+ * numa rota por agente.
+ */
+describe('ProjectOverviewTab — bindings em lote (AT-339)', () => {
+  const MODELO = {
+    id: 'm-1',
+    provider: 'openrouter',
+    name: 'modelo-um',
+    displayName: 'Modelo Um',
+  };
+
+  it('mostra o modelo do agente a partir de UMA leitura em lote, sem rota por agente', async () => {
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockResolvedValue({
+      agents: [
+        {
+          key: 'criativo',
+          binding: { modelId: 'm-1', origin: 'agent', routingPreference: null, skipped: [] },
+        },
+      ],
+      areas: [],
+    });
+    montar();
+
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(await grid.findByText(/Modelo Um/)).toBeInTheDocument();
+    // O roster desta fixture é todo do catálogo (dev-backend inclusive), então
+    // uma chamada basta e nenhuma leitura de "extras" nasce.
+    expect(getResolvedModelBindings).toHaveBeenCalledTimes(1);
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('CASO DE FALHA: o lote recusado não vira modelo inventado nem uma rota por agente', async () => {
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockRejectedValue(new ApiError(500, 'falhou'));
+    montar();
+
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(await grid.findByText('Criativo')).toBeInTheDocument();
+    await vi.waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalled());
+    expect(grid.queryByText(/Modelo Um/)).not.toBeInTheDocument();
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
   });
 });

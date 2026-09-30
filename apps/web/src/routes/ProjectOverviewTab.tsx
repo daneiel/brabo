@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useArchitecture,
   useBacklog,
@@ -19,7 +20,6 @@ import {
   activateExecution,
   mensagemDaApi,
   requestParallelization,
-  getAgentModelBinding,
   getRepository,
   listAgentAutonomy,
   listModels,
@@ -139,12 +139,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const allModels = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
-  const bindingQueries = useQueries({
-    queries: roster.map((r) => ({
-      queryKey: ['agent-binding', projectId, r.id],
-      queryFn: () => getAgentModelBinding(projectId, r.id),
-    })),
-  });
+  // RN-654 (AT-339): os bindings do roster saem do LOTE, não de uma rota por
+  // agente — os do catálogo pela mesma chave da aba Configurações.
+  const bindingDoAgente = useBindingsDosAgentes(
+    projectId,
+    roster.map((r) => r.id),
+  );
   const { data: autonomyRules } = useQuery({
     queryKey: ['agent-autonomy', projectId],
     queryFn: () => listAgentAutonomy(projectId),
@@ -164,8 +164,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
 
   // Agrupamento por área vem de `groupRosterByArea` (lib/agent-status.ts,
   // compartilhado com o card do dashboard) — devolve ENTRADAS, não índices;
-  // `bindingQueries`/`tokenUsage` seguem indexados pela roster inteira, daí
-  // o `roster.indexOf(...)` na hora de renderizar (roster é sempre pequena).
+  // a grade acha cada entrada na roster inteira por `roster.indexOf(...)` na
+  // hora de renderizar (roster é sempre pequena).
   const rosterGroups = groupRosterByArea(roster);
 
   // Fase 4a — painel do time ao vivo: qualquer evento persistido (Dev/QA/
@@ -262,7 +262,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           roster={roster}
           groups={overviewGroups}
           events={events}
-          bindingQueries={bindingQueries}
+          bindingDoAgente={bindingDoAgente}
           allModels={allModels}
           tokenUsage={tokenUsage}
           autonomyRules={autonomyRules}
