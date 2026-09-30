@@ -213,7 +213,15 @@
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
-    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa."
+    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa.",
+    "motivoNaoLido": {
+      "todas_zero": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "todas_one": "Não foi possível ler o motivo da política deste card: a leitura do log da sessão que propôs a ação falhou.",
+      "todas_other": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_zero": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_one": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs a ação falhou.",
+      "algumas_other": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou."
+    }
   },
   "mergearNoChat": {
     "botao": "Mergear",
