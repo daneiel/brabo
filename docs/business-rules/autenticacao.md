@@ -2397,13 +2397,17 @@ ninguém previu cai em `eventos` — nunca some, nunca inventa categoria.
 crescente (o mais novo junto do composer), então as 5 últimas entradas ficam
 abertas em baixo e o histórico recolhido fica no TOPO. O corte é sobre a lista
 já agrupada por agente ([RN-138](../business-rules.md#rn-138)) — quem conta é o que o usuário vê, e
-um colapso de doze mensagens é UMA entrada na tela.
+um colapso de doze mensagens é UMA entrada na tela. **Revista no fio pela
+[RN-644](../business-rules.md#rn-644):** lá o corte conta só MENSAGENS, recua
+até a abertura do turno e o histórico é UM bloco cronológico, não grupos por
+origem (que punham a resposta acima da pergunta). O painel de log segue como
+descrito aqui.
 
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/session-fio.tsx:118` (o corte do fio), `:226`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:493` (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:501` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),

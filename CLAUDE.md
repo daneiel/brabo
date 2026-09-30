@@ -194,6 +194,7 @@ estado lido do repositório e não da conversa.
 | O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
 | Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| O fio corta por mensagem, não parte a troca e recolhe o histórico na ordem (AT-319) | RN-644 |
 | A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 
@@ -2104,8 +2105,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Evento tem DUAS classificações no cliente, e elas não se substituem:
   `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
   (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
-  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
-  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, e é o eixo dos
+  grupos do painel de log — o FIO não agrupa por origem desde a RN-644 (lá o
+  histórico recolhido é UM bloco cronológico e o corte conta MENSAGENS,
+  recuando até a abertura do turno); a precedência dos `if` é a regra (mecanismo
   vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
   `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
