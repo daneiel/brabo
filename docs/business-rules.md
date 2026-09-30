@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:775` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:791` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:601` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:617` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:134`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
@@ -5654,7 +5654,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:181` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:189` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -16252,7 +16252,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/lib/session-handoffs.ts:93` (`ofertasAcionaveis`)
+  `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
@@ -16882,8 +16882,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:122` (`podeDecidir`), `:258`
-  (`useRetomarTurnoDoLog`), `:848` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:130` (`podeDecidir`), `:267`
+  (`useRetomarTurnoDoLog`), `:864` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17125,14 +17125,14 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:153` (`agentesEmConversa`),
-  `:176` (`resolverDestinatario`), `:193` (`useDestinatarioDoChat`), `:100`
-  (`useAtivadosNaSessaoInteira`), `:134` (`ativadosSemJanela`);
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
+  `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
+  (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:333`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:345`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
-  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:47`
-  (`activeFor`), `:93` (`ofertasAcionaveis`), `:115` (`ofertasForaDaJanela`)
+  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
   por quê; opção única; handoff aceito fora da janela; resumo da mesma sessão
@@ -17147,6 +17147,72 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   "Aceitar"; o manual pendente não esconde a oferta seguinte; duas ao mesmo
   agente viram um botão)
 - **Origem:** AT-251, AT-253
+
+### RN-633 — O handoff manual não declara prontidão, e "já ativo" para a oferta é do projeto {#rn-633}
+
+Duas leituras da tela de Sessão deixavam o handoff obsoleto (AT-293, AT-294):
+
+1. **O handoff MANUAL não esconde "Estou pronto para produzir" nem "Confirmar
+   arquitetura pronta"** (AT-293). `prontidaoJaDeclarada` e
+   `arquiteturaJaDeclarada` perguntavam só "existe handoff saindo do
+   Criativo/Arquiteto?", e o handoff manual
+   ([ADR 0109](adr/0109-handoff-manual-a-agente-a-escolha.md),
+   [RN-441](#rn-441)) grava como `fromAgent` o ÚLTIMO agente ativado
+   (`request-manual-handoff.use-case.ts`): pedir um handoff manual ao Staff com
+   o Criativo ativo escondia o botão de prontidão sem prontidão nenhuma
+   declarada. O manual se reconhece pelo ATOR humano do `handoff.offered`
+   (casado pelo `handoffId`, [RN-631](#rn-631)) — o `Handoff` da api não
+   carrega o ator. Fora da janela de 200 o ator é desconhecido, e aí: para o
+   Criativo vale o `artifactId` (o handoff da prontidão leva o
+   `product_brief`, `criativo_server.ex`; o manual nunca leva artefato); para o
+   Arquiteto os dois automáticos não levam artefato, então o de origem
+   desconhecida segue contando, como antes. **Lacuna declarada:** a marca
+   durável seria o ator (ou uma marca de manual) no próprio `Handoff` da api;
+   não foi feita aqui (a api é da lane do ciclo de vida, ADR 0182).
+2. **Oferta a agente já ATIVO em outra sessão do projeto não é acionável**
+   (AT-294). "Ativo" era da SESSÃO: depois de "Ativar execução", o Dev Lead
+   roda na sessão de execução, e a oferta a ele na sessão do chat seguia com
+   "Aceitar". Agora a oferta (o card do fio, a faixa fora da janela e o card da
+   Infra) soma ao "já entrou nesta sessão" o `roster.activatedAgents` do
+   resumo, que é a sessão MAIS RECENTE do projeto — a de execução, depois de
+   ativada. `activeFor` continua sendo DESTA sessão, porque é ele que o
+   seletor do handoff manual usa. **Lacuna declarada:** sessões que não são
+   nem esta nem a mais recente não são vistas; fechar pede um agregado de
+   ativação POR PROJETO na api, que não existe.
+
+Nenhuma mudança de api nem de engine.
+
+- **Onde:** `apps/web/src/lib/session-handoffs.ts:41` (`origemDoHandoff`),
+  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:191`
+  (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:140`
+  (`useAtivosNoProjeto`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
+  (manual com o Criativo ativo não esconde "Estou pronto"; manual com o
+  Arquiteto ativo não esconde "Confirmar arquitetura pronta"; o handoff do
+  agente continua escondendo — caso de falha; fora da janela o do Criativo
+  com brief conta; Dev Lead ativo na sessão de execução deixa a oferta muda;
+  sem ele, a oferta segue acionável — caso de falha)
+- **Origem:** AT-293, AT-294
+
+### RN-634 — Depois de "Ativar execução", a tela vai à sessão de execução {#rn-634}
+
+A execução roda numa sessão NOVA (RN-135, RN-139), e a de chat de onde o
+clique partiu pode até fechar. O atalho "Ativar execução" do card do handoff
+ao Dev Lead (RN-137) — e a fusão com o aceite (RN-161) — deixava a pessoa na
+sessão de chat, olhando o lugar de onde o trabalho saiu (AT-295). Agora
+`handleActivateExecution` lê o `sessionId` que `POST .../execution/activate`
+devolve e leva a tela até ele, com o aviso "Levando você à sessão de
+execução.". Sem `sessionId` na resposta, com o mesmo id da sessão atual, ou
+sem quem navegue (a tela montada fora da rota), só o aviso de sempre, e a tela
+fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
+ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
+
+- **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:186`
+  (`handleActivateExecution`); `apps/web/src/router.tsx:278` (`irParaSessao`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
+  (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
+  falha; sem quem navegue, só avisa)
+- **Origem:** AT-295
 ### RN-632 — Leitura de PROJETO polla no ritmo de projeto, e toda tela que ouve o canal da sessão invalida pela MESMA janela {#rn-632}
 
 O uso real de 29/09 bateu o teto de 300 req/min do usuário ([RN-579](#rn-579))

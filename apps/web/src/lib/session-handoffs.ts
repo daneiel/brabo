@@ -28,10 +28,31 @@ export interface DerivacoesDeHandoff {
   necessidadeJaValidada: boolean;
 }
 
+/**
+ * De onde o handoff saiu (RN-633, AT-293): `manual` quando o
+ * `handoff.offered` dele foi gravado por uma PESSOA (o handoff manual, ADR
+ * 0109/RN-440 — `request-manual-handoff.use-case.ts` grava o ator humano e,
+ * como `fromAgent`, o ÚLTIMO agente ativado, não quem passou a bola);
+ * `agente` quando foi um agente; `desconhecida` quando o evento está fora da
+ * janela de 200 — o `Handoff` da api não carrega o ator.
+ */
+export type OrigemDoHandoff = 'manual' | 'agente' | 'desconhecida';
+
+export function origemDoHandoff(h: Handoff, events: readonly SessionEvent[]): OrigemDoHandoff {
+  const evento = events.find(
+    (e) =>
+      e.type === 'handoff.offered' &&
+      (e.payload as { handoffId?: string } | null)?.handoffId === h.id,
+  );
+  if (!evento) return 'desconhecida';
+  return evento.actor.kind === 'user' ? 'manual' : 'agente';
+}
+
 export function derivarHandoffsDaSessao(
   events: SessionEvent[],
   handoffs: Handoff[],
   ativadosNaSessaoInteira: readonly string[] = [],
+  ativosNoProjeto: readonly string[] = [],
 ): DerivacoesDeHandoff {
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
@@ -79,11 +100,17 @@ export function derivarHandoffsDaSessao(
   // oferta é o card do evento dela (casado pelo `handoffId`); duas pendentes
   // para o MESMO agente não viram dois botões iguais — vale a mais recente, e
   // aceitá-la ativa o agente, o que tira a outra daqui pelo `activeFor`.
+  // Desde a RN-633 (AT-294) "já ativo" para a OFERTA é do PROJETO, não da
+  // sessão: oferta a agente que já roda noutra sessão (o Dev Lead na sessão
+  // de execução, por exemplo) não é acionável aqui — aceitá-la ativaria um
+  // segundo. `activeFor` continua sendo DESTA sessão, porque é ele que o
+  // seletor do handoff manual usa.
+  const jaAtivo = (agent: string) => activeFor(agent) || ativosNoProjeto.includes(agent);
   const porDestino = new Map<string, Handoff>();
   for (const h of handoffs) {
     if (
       h.status === 'offered' &&
-      !activeFor(h.toAgent) &&
+      !jaAtivo(h.toAgent) &&
       h.toAgent !== 'infra' &&
       (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent)
     ) {
@@ -138,17 +165,32 @@ export function derivarHandoffsDaSessao(
   // predicado da linha acima — handoff já aceito (ou Infra já ativa nesta
   // sessão por qualquer outro caminho) não reabre convite nenhum.
   const handoffDaInfraOferecido = handoffs.find(
-    (h) => h.status === 'offered' && h.toAgent === 'infra' && !activeFor('infra'),
+    (h) => h.status === 'offered' && h.toAgent === 'infra' && !jaAtivo('infra'),
   );
 
   // A prontidão já foi declarada? (achado L) O handoff que sai do Criativo é a
   // consequência dela — existindo, o botão não tem mais o que oferecer.
-  const prontidaoJaDeclarada = handoffs.some((h) => h.fromAgent === 'criativo');
+  //
+  // Desde a RN-633 (AT-293) o handoff MANUAL não conta: ele grava como
+  // `fromAgent` o último agente ativado, e um manual pedido com o Criativo
+  // ativo escondia "Estou pronto" sem prontidão nenhuma declarada. O manual
+  // se reconhece pelo ator humano do evento; fora da janela o ator é
+  // desconhecido, e aí vale o `artifactId` — o handoff da prontidão leva o
+  // `product_brief` (`criativo_server.ex`), o manual nunca leva artefato.
+  const prontidaoJaDeclarada = handoffs.some((h) => {
+    if (h.fromAgent !== 'criativo') return false;
+    const origem = origemDoHandoff(h, events);
+    return origem === 'agente' || (origem === 'desconhecida' && h.artifactId !== null);
+  });
   // Espelho de `prontidaoJaDeclarada`, para o Arquiteto (problema 1):
   // `OfferInfraHandoffUseCase` oferece o handoff ao Infra (e ao Dev Lead) na
   // MESMA confirmação — a existência de QUALQUER handoff saindo do Arquiteto
-  // já prova que a confirmação aconteceu.
-  const arquiteturaJaDeclarada = handoffs.some((h) => h.fromAgent === 'arquiteto');
+  // já prova que a confirmação aconteceu. Salvo o MANUAL (RN-633): os dois
+  // automáticos não levam artefato, então aqui não há marca de reserva, e o
+  // de origem desconhecida (fora da janela) segue contando, como antes.
+  const arquiteturaJaDeclarada = handoffs.some(
+    (h) => h.fromAgent === 'arquiteto' && origemDoHandoff(h, events) !== 'manual',
+  );
 
   // A necessidade já foi validada? (RN-406) Diferente dos dois gates acima,
   // esta confirmação NÃO produz handoff — é só o registro
