@@ -57,6 +57,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: **um clique só leva do Criativo ao PO** (AT-311/AT-312,
+  [ADR 0185](docs/adr/0185-estou-pronto-fecha-os-dois-gates.md),
+  [RN-657](docs/business-rules.md#rn-657), [RN-658](docs/business-rules.md#rn-658)).
+  O botão do Criativo passa a se chamar "Estou pronto — a necessidade está
+  validada" (en: "I'm ready — the need is validated") e fecha, no mesmo POST, a
+  prontidão e o gate `necessidade-validada` (`necessity.validated` com o
+  `product_brief` ainda por vir) — o botão separado "Confirmar necessidade
+  validada" sai da tela. E o handoff ao PO que o Criativo oferecer em seguida é
+  aceito em nome de quem clicou: os mesmos `handoff.accepted`/`agent.activated`
+  do card, com a pessoa como ator e a marca `implicito` no payload. Sessões com
+  "Estou pronto" anterior a esta versão seguem com o card de aceite; a rota
+  `validate-necessity` continua na api, sem consumidor na tela.
+
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).

@@ -167,7 +167,7 @@ describe('SessionPage — 409 de conversa em sessão encerrada (AT-154)', () => 
     confirmReadiness.mockRejectedValue(RECUSA);
 
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: 'Estou pronto para produzir' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Estou pronto — a necessidade está validada' }));
 
     expect(await screen.findByText(FRASE)).toBeInTheDocument();
     expect(screen.queryByText('Não foi possível confirmar prontidão')).not.toBeInTheDocument();

@@ -211,6 +211,7 @@ estado lido do repositório e não da conversa.
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 | Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
+| Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 
 ## Estado atual e aberto
 

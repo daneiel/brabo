@@ -1721,7 +1721,7 @@
     },
     "/internal/sessions/{sessionId}/handoffs": {
       "post": {
-        "description": "Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent.",
+        "description": "Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent. The one exception is still a person's decision: the Creative→PO offer carrying the `product_brief` that an \"I'm ready — the need is validated\" click asked for is accepted on behalf of whoever clicked, with that person as the actor and `implicito` in the payload (RN-658, ADR 0185); the response then carries `status: accepted`.",
         "operationId": "InternalSessionsController_handoff",
         "parameters": [
           {
@@ -8731,7 +8731,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/criativo/validate-necessity": {
       "post": {
-        "description": "Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate.",
+        "description": "Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate. Since ADR 0185 (RN-657) the \"I'm ready — the need is validated\" click (`POST .../readiness`) records this event itself, and the web no longer calls this route; it stays for sessions whose readiness click predates that ADR.",
         "operationId": "AgentsController_validateNecessityHandoff",
         "parameters": [
           {

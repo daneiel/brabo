@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "29b03bb53da71b0b1183624da29ba1b6f42b870bca9e0e12eb43948a8e464053",
+  "openapiSha256": "e8314d428091f42b25080ccf2303ce89a142ee4704f1d403a899901325f66140",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -69,7 +69,7 @@
     "agents-controller-validate-necessity-handoff.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "agents-controller-validate-necessity-handoff.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "agents-controller-validate-necessity-handoff.StatusCodes.json": "6303853e7ff375b9466ce555c0fe0d6e426da200a2da18ce7198bc8d87aa98b5",
-    "agents-controller-validate-necessity-handoff.api.mdx": "f9e40543d25fa90c77f73cf3fce2dc02848baef7154d0c07959fa25eeaaa88a1",
+    "agents-controller-validate-necessity-handoff.api.mdx": "d082021a47b7652f06678ff5a88e2c1dceb6846de84e07586316f484f6bd4060",
     "anamnese-controller-all-versions.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "anamnese-controller-all-versions.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "anamnese-controller-all-versions.StatusCodes.json": "49238a49e7985118f0ffbc3e30e529164b7af65d77a0565c215e73686090f630",
@@ -458,7 +458,7 @@
     "internal-sessions-controller-handoff.ParamsDetails.json": "79c9c0d586794de1f5e38a4eed459e9ada1748283f464e89e5030d0cfbc4ec59",
     "internal-sessions-controller-handoff.RequestSchema.json": "7a77f3f9e8a9f656f288b56a7719e65e4d5b1a7d2c2f0ecfae06bc5b013e7646",
     "internal-sessions-controller-handoff.StatusCodes.json": "194245c32763f0f99a381fdef80cef0a3b494ad8c75a277b6a6d93215f1dad08",
-    "internal-sessions-controller-handoff.api.mdx": "b5a64acb94055d3c6343a1f68263a996386baa39d9d1091322c8ff3db2873d52",
+    "internal-sessions-controller-handoff.api.mdx": "9c7dce5ed180fcd379a2cd23ed1b2f5af4db40c0608f513d4c8a06347e2b3222",
     "internal-sessions-controller-hypotheses.ParamsDetails.json": "79c9c0d586794de1f5e38a4eed459e9ada1748283f464e89e5030d0cfbc4ec59",
     "internal-sessions-controller-hypotheses.RequestSchema.json": "33c0db48e1581eb9aca01f5adfdc281a3b7bb894da265479cd070104d1d53970",
     "internal-sessions-controller-hypotheses.StatusCodes.json": "23623fdb1290f8bbc2cf131a848d605afd2183ee3749b61ea66fe37be3a72ab5",

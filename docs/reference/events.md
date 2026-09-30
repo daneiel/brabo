@@ -88,7 +88,7 @@ the session's `kind` does not change. A session that already has
 | `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
 | `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the seven conversational agents (the Infra Lead since [RN-617](../business-rules.md#rn-617)), by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules.md#rn-589)). The same payload comes from the Infra Lead for every tool it dispatches inline, and from the Dev Lead when a suspended call is settled — never while it waits for approval ([RN-593](../business-rules.md#rn-593)) |
 | `handoff.offered` | one agent offered the work to another |
-| `handoff.accepted` | the recipient accepted |
+| `handoff.accepted` | the recipient accepted. The actor is always the person who accepted; when the acceptance was implicit in the "I'm ready" click ([RN-658](../business-rules.md#rn-658)), the payload — and that of the `agent.activated` that follows — also carries `implicito: { via: "readiness.confirmed", readinessEventId }` |
 | `handoff.superseded` | an `offered` handoff stopped being the current one and can no longer be accepted ([RN-635](../business-rules.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — the target was activated by any path; `nova_oferta` — a newer offer to the same target in the project replaced it) and `substitutaId` (the offer that replaced it, `null` for `agente_ativado`). Recorded by the `system` actor `handoff-lifecycle` in the session of the OLD offer, which may be closed — it is bookkeeping, not conversation, so RN-581 lets it in. The row's `status` becomes `superseded`; the event is the history |
 | `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
 
@@ -210,8 +210,8 @@ The schemas are closed: a missing field rejects the emission
 | type | when |
 |---|---|
 | `architecture.readiness_confirmed` | — |
-| `readiness.confirmed` | — |
-| `necessity.validated` | `necessidade-validada` gate (Creative → PO): the user confirms that the `product_brief` the Creative agent consolidated reflects the actual business need — a click separate from `readiness.confirmed`, never a model inference ([RN-406](../business-rules.md#rn-406), ADR 0095). `payload.productBriefId` references the validated `artifact.product_brief` |
+| `readiness.confirmed` | the user clicked "I'm ready — the need is validated" with the Creative. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the payload carries `necessidadeValidada: true` and `aceiteImplicitoDoPo: true`, the mark the implicit PO acceptance reads ([RN-658](../business-rules.md#rn-658)); older events carry `{}` |
+| `necessity.validated` | `necessidade-validada` gate (Creative → PO): a person — never a model inference — declares that the business need the Creative agent consolidated is right. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) it is recorded by the SAME click as `readiness.confirmed`, once the engine accepts the turn, with `productBriefId: null` (the brief comes from that turn), `via: "readiness.confirmed"` and `readinessEventId` ([RN-657](../business-rules.md#rn-657)). Events from the separate click of ADR 0095 ([RN-406](../business-rules.md#rn-406)) carry `productBriefId` pointing at the validated `artifact.product_brief` |
 
 ### Git and bootstrap
 
@@ -459,7 +459,7 @@ Extracted from the emission points: **93 identifiers**, of which **2** are not d
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
-- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub>
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
