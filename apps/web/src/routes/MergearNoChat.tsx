@@ -50,8 +50,8 @@ export function prAbertaDaAcao(
 /**
  * Já existe uma proposta de merge VIVA para esta PR nesta sessão? Pendente,
  * aprovada ou auto-aprovada contam — negada ou falha, não: nesses casos o dono
- * pode querer tentar de novo. É o dedupe do lado da tela; o lado da api
- * (AT-249: PR já mergeada, tarefa sem gate) segue sendo quem recusa de fato.
+ * pode querer tentar de novo. É o dedupe do lado da tela; quem recusa de fato
+ * é a api, em qualquer sessão (RN-663: `merge_ja_proposto`/`pr_ja_mergeado`).
  */
 export function jaHaMergeDaPr(acoes: readonly ProposedAction[], pullRequestId: string): boolean {
   return acoes.some(
@@ -68,6 +68,11 @@ interface MergearNoChatProps {
   pr: PrAbertaDaAcao;
   /** Papel alcança o mínimo do endpoint (`developer`)? Senão, inerte com motivo. */
   podeDecidir: boolean;
+  /**
+   * O gate que ainda não julgou a tarefa desta PR (`gatePendenteNoMerge`), ou
+   * `null`. AVISO, nunca trava (AT-249, RN-663): o botão segue ativo.
+   */
+  gatePendente?: string | null;
 }
 
 /**
@@ -81,7 +86,13 @@ interface MergearNoChatProps {
  * incondicional (RN-418, `decide.ts`), e este botão não passa por nenhuma
  * política, só cria a proposta que o teto manda esperar.
  */
-export function MergearNoChat({ projectId, sessionId, pr, podeDecidir }: MergearNoChatProps) {
+export function MergearNoChat({
+  projectId,
+  sessionId,
+  pr,
+  podeDecidir,
+  gatePendente = null,
+}: MergearNoChatProps) {
   const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -126,6 +137,11 @@ export function MergearNoChat({ projectId, sessionId, pr, podeDecidir }: Mergear
       <span className={styles.mergearNota} data-testid="mergear-nota">
         {podeDecidir ? t('mergearNoChat.nota') : t('mergearNoChat.semPapel')}
       </span>
+      {gatePendente && (
+        <span className={styles.mergearAvisoDeGate} data-testid="aviso-gate-pendente">
+          {t('mergearNoChat.gatePendente', { gate: gatePendente })}
+        </span>
+      )}
     </div>
   );
 }

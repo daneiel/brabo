@@ -17016,7 +17016,8 @@ api, o engine e todo teto ficam como estão.
    **a confirmação é a mesma e é do humano** — o merge em branch protegida
    continua `require_approval` incondicional ([RN-418](#rn-418)), sem auto-aprovar,
    sem "sempre permitir", sem o modo automático. O dedupe e as recusas da api
-   (PR já mergeada, tarefa sem gate — AT-249) chegam ao dono como a frase da api.
+   (PR já mergeada, merge já proposto — [RN-663](#rn-663)) chegam ao dono como
+   a frase da api; gate pendente não é recusa, é aviso em texto ao lado do botão.
 5. **O papel é o do ENDPOINT, e a lacuna é declarada.** Decidir ação e propor
    ação pedem `developer` (`actions.controller.ts`); a tela usa `roleAtLeast`
    sobre o papel de WORKSPACE, porque a Sessão não busca `project_members` — a
@@ -17191,8 +17192,9 @@ seguiram em `in_review` (AT-275).
    `backlog.task_status_changed` (`cause: 'pr_merged'`, `pullRequestId`,
    `actionId`), append-only, sem UPDATE em tabela de eventos. Sem migration.
 4. **Fronteira declarada (AT-249).** Esta regra NÃO recusa merge de PR já
-   mergeada nem consulta `gate_status`: a recusa "PR já mergeada e tarefa ainda
-   sem gate" é decisão pendente do dono e não foi implementada aqui.
+   mergeada nem consulta `gate_status`. A recusa da PR já mergeada (e da
+   proposta repetida) veio depois, na [RN-663](#rn-663), antes de o merge
+   chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:252`
   (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:287`
@@ -17292,7 +17294,7 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
-  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:232`
+  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:241`
   (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:29`
   (`TIPOS_SEM_SEMPRE_PERMITIR`), `:60` (`motivoDeRecusaDoSempreAprovar`),
   `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
@@ -18690,3 +18692,53 @@ faz merge nem push.
   (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
 - **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
 - **Origem:** AT-312 (levantamento da AT-309, passo 4)
+
+### RN-663 — O merge de PR recusa a PR já mergeada e a proposta repetida; gate pendente é só aviso {#rn-663}
+
+O uso real de 29/09 mediu os dois buracos: a `pr-6` teve TRÊS `git_merge`
+`executed`, e a `pr-4` foi mergeada com a tarefa em `awaiting_qa`. A api não
+deduplicava `git_merge` por PR (só a tela, e só na mesma lista), e o
+`LocalGitProvider` devolvia a PR já mergeada sem erro — o executor gravava um
+segundo `executed` para o mesmo merge.
+
+1. **Proposta.** `git_merge` de uma PR que uma execução anterior já mergeou
+   (`executed` com `state: 'merged'`) é 409 `pr_ja_mergeado`; com uma proposta
+   VIVA da mesma PR (`pending`, `approved` ou `auto_approved`), 409
+   `merge_ja_proposto`. Nos dois, nada é criado. Negada ou falha não contam:
+   quem negou ou viu falhar pode tentar de novo. A comparação é pelo
+   `pullRequestId` do payload, no projeto inteiro (qualquer sessão).
+2. **Aprovação.** Aprovar um `git_merge` pendente cuja PR OUTRA proposta já
+   mergeou é 409 `pr_ja_mergeado`, antes de qualquer efeito, e a ação continua
+   `pending` para quem a vê negar. A irmã apenas VIVA não impede decidir esta.
+3. **Provider.** O `LocalGitProvider` recusa mergear PR já mergeada com
+   `GitPullRequestAlreadyMergedError`, e o target não se move — alinhado ao
+   GitHub, que recusa o merge repetido.
+4. **Gate pendente é AVISO, nunca recusa** (decisão do dono, 30/09). A aba PRs
+   e o "Mergear" do chat dizem em TEXTO qual gate falta (`qa-verificada` com
+   `awaiting_qa` ou gate ainda não aberto, `secops-segura` com
+   `awaiting_secops`), e o botão e o card seguem ativos. `awaiting_user`,
+   tarefa `done` e PR sem tarefa não avisam. O "gate bloqueado" (tarefa
+   `blocked`) continua como era.
+5. **Nenhum teto se move.** O merge em branch protegida segue
+   `require_approval` incondicional e humano ([RN-418](#rn-418), `decide.ts`):
+   esta regra só impede propor ou aprovar o que não há o que mergear.
+   Declarado: duas propostas simultâneas da mesma PR não são serializadas (não
+   há trava por PR), e é a regra 2 que segura a segunda.
+
+- **Código:** `apps/api/src/domain/actions/merge-de-pr.ts:56` (`recusaDeMerge`),
+  `:40` (`mergeouAPr`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:114` (`recusaDeMerge`);
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:268` (`recusaDeMerge`);
+  `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
+  `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:915` (`gatePendenteNoMerge`)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:572`
+  (`merge_ja_proposto`), `:595` (`pr_ja_mergeado` — caso de falha), `:627`
+  (negada não bloqueia, outra PR não colide — caminho feliz);
+  `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:414`;
+  `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
+  `apps/web/src/routes/ProjectPrsTab.test.tsx:266`, `:300`, `:315`;
+  `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
+  `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
+- **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)

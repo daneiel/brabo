@@ -10,6 +10,7 @@ import {
 } from '../lib/api-client';
 import { useBacklog, useLatestSession, useProjectPendingActions } from '../lib/hooks';
 import { userIdDaSessao } from '../lib/auth';
+import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import type { CodePullRequestSummary, Epic, ProposedAction, Task } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline } from '../components/PrGateTimeline';
@@ -158,10 +159,21 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
         renderItemExtra={(pr) => {
           if (pr.state !== 'open') return null;
 
+          const task = taskDaBranch(backlogQuery.data, pr.sourceBranch);
+          // AT-249 (RN-663): gate pendente é AVISO, nunca trava — o botão e o
+          // card seguem ativos, e o texto diz qual gate falta.
+          const gatePendente = gatePendenteNoMerge(task);
+          const aviso = gatePendente ? (
+            <p className={styles.avisoDeGate} data-testid="aviso-gate-pendente">
+              {t('prsTab.gatePendente', { gate: gatePendente })}
+            </p>
+          ) : null;
+
           const acaoPendente = acaoDeMergeParaPr(mergeActionsQuery.data, pr);
           if (acaoPendente) {
             return (
               <div className={styles.decisaoInline}>
+                {aviso}
                 <ApprovalCard
                   action={acaoPendente}
                   detalheRecolhido
@@ -173,12 +185,12 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
             );
           }
 
-          const task = taskDaBranch(backlogQuery.data, pr.sourceBranch);
           const bloqueado = task?.blocked === true;
 
           return (
             <div className={styles.extraLinha}>
               {task && <PrGateTimeline task={task} verdicts={[]} />}
+              {aviso}
               <Button
                 variant="primary"
                 disabled={!latestSession || bloqueado}
