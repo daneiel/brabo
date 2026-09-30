@@ -53,7 +53,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>(
@@ -226,7 +229,7 @@ describe('AT-293 — o handoff MANUAL não declara prontidão (RN-633)', () => {
     ]);
 
     montar();
-    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(
       screen.queryByRole('button', { name: 'Estou pronto para produzir' }),
     ).not.toBeInTheDocument();
@@ -262,7 +265,7 @@ describe('AT-294 — oferta a agente ativo em OUTRA sessão do projeto não é a
     await waitFor(() => expect(getProjectsSummary).toHaveBeenCalled());
     await waitFor(() =>
       expect(
-        screen.queryByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+        screen.queryByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -274,7 +277,7 @@ describe('AT-294 — oferta a agente ativo em OUTRA sessão do projeto não é a
     montar();
     await waitFor(() => expect(getProjectsSummary).toHaveBeenCalled());
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
   });
 });

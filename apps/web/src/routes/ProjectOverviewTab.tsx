@@ -39,6 +39,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -46,6 +47,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import { Card } from '../components/ui/Card';
+import { nomeDoAgente } from '../lib/agents';
 import styles from './ProjectOverviewTab.module.css';
 
 interface ProjectOverviewTabProps {
@@ -54,6 +57,9 @@ interface ProjectOverviewTabProps {
 
 export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const { t } = useTranslation('overview');
+  // Layout móvel (RN-643): as duas regiões EMPILHAM e rolam juntas — o
+  // trilho de 360px ao lado do time não cabe numa tela de telefone.
+  const movel = useLayoutMovel();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
@@ -199,7 +205,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     } catch {
       showToast({
         title: t('team.autonomyErrorTitle'),
-        message: `${agentId} · ${actionType}`,
+        message: `${nomeDoAgente(agentId)} · ${actionType}`,
         tone: 'danger',
       });
     }
@@ -240,7 +246,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const waitingCount = overviewRoster.filter((r) => r.status === 'aguardando').length;
 
   return (
-    <div className={styles.layout}>
+    <div className={[styles.layout, movel && styles.layoutMovel].filter(Boolean).join(' ')}>
       <div className={styles.main}>
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
@@ -529,7 +535,7 @@ function ExecutionSection({
           ) : (
             <div className={styles.moduleGrid}>
               {[...agents.entries()].map(([agentId, a]) => (
-                <div key={agentId} className={styles.moduleCard}>
+                <Card key={agentId} radius="md" padding="sm">
                   <div className={styles.moduleName}>{agentId}</div>
                   <div className={styles.moduleStack}>
                     {t('executionSection.devAgentModule', { module: a.module })}
@@ -539,7 +545,7 @@ function ExecutionSection({
                       {t('executionSection.devAgentTask', { task: a.taskTitle })}
                     </div>
                   )}
-                  {a.branch && <div className={styles.depChip}>{a.branch}</div>}
+                  {a.branch && <Badge tone="neutral">{a.branch}</Badge>}
                   {a.iteration !== undefined && (
                     <div className={styles.moduleResp}>
                       {t('executionSection.devAgentProgress', {
@@ -548,7 +554,7 @@ function ExecutionSection({
                       })}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}

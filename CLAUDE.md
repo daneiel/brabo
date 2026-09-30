@@ -189,12 +189,29 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
+| "Sempre permitir" aprova e grava o padrão na mesma transação; clique em ação já aprovada vira sucesso nomeado, e os tipos do teto (git tipado) deixam de oferecer o botão (AT-310/AT-320) | RN-642 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
 | O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
 | O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
 | Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| O fio corta por mensagem, não parte a troca e recolhe o histórico na ordem (AT-319) | RN-644 |
+| A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
+| A aba PRs fala da lista de PRs, e Parar/Remover sem container dizem por quê (AT-323/AT-324) | RN-646 |
+| O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
+| A sessão encerrada pode ser reaberta, com o log intacto e o fechamento anterior como evento novo (AT-071) | ADR 0183, RN-649/650 |
+| Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
+| Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
+| Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
+| No telefone a Sessão ganha gaveta de contexto e barra que quebra linha; tabelas viram cartões (AT-328/AT-330) | RN-651 |
+| A sidebar, o card do Dashboard e o painel de artefatos não se contradizem (AT-325) | RN-648 |
+| Cada mensagem do fio aparece sob o ator do evento, nunca sob quem vê a tela (AT-329) | RN-652 |
+| Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
+| A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
+| Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
+| O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
 
 ## Estado atual e aberto
 
@@ -633,7 +650,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Dívida de contraste do tema ESCURO travada por número (ADR 0074)
 - Gasto de embedding fora do metering (corte declarado do ADR 0075)
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
@@ -710,9 +726,20 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `install.sh`, a lista do web) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
   depois de o Bun corrigir, nunca só trocar o label
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
-  fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
-  arquivo para inglês como idioma primário
+- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
+  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
+  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+  texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
+  de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
+  reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
+  texto só em pt-BR em `.ts` de `lib/` (o `classifyEvent` de `activity.ts`,
+  por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
+  RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
+  "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
+  plural por "(s)" — em TODOS os namespaces e nos dois idiomas desde a
+  AT-331, que acrescentou `_zero` obrigatório ao lado de todo `_one` no pt-BR
+  (o CLDR do `pt` põe o 0 em `one`) e frase com `{{count}}` sem plural,
+  salvo invariante declarada no próprio teste
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
@@ -757,7 +784,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
-  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
+  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico.
+  Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
+  `.preload` que o router espera), e os painéis das abas do projeto também
+  (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de
+  toda tela vão em `codeSplitting.groups` do `vite.config.ts` por lista de
+  PERMITIDOS: um grupo genérico de `node_modules` puxaria `mermaid`/`xterm`
+  para o bundle inicial (AT-300)
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
   na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
   embutido no bundle) para executar comandos aprovados e terminal
@@ -1417,6 +1450,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
   continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
   em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
+  para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
+  transição genérica continua recusando `closed → active`, e `closing →
+  active` segue proibido por qualquer caminho. Não ponha `active` em
+  `ALLOWED_TRANSITIONS` dos terminais. O fechamento anterior vira o evento NOVO
+  `session.reopened` (a coluna é limpa, o evento guarda quando e por quê), o
+  `kind` não muda, e sessão com `execution.activated` NÃO reabre (409
+  `sessao_com_execucao`); papel `maintainer`, sem prazo e essa recusa são
+  padrão provisório à espera do dono. O `SessionLifecycleWorker` ignora o
+  fechamento que a reabertura já desfez (lê o `status` da sessão).
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
   evento `execution.activated` é o ESTADO de execução, e continua sendo
@@ -1830,7 +1873,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   de Sessão: Executores e Visão geral também — passa pelo MESMO
   `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
   eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
-  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Dado de
+  CONFIGURAÇÃO (as seções de Configurações, o workspace/papel) nasce com
+  `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
+  poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
+  moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Guardado por
+  `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
@@ -1844,6 +1893,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (RN-578) NÃO vira fallback de 15s: ela é a rede contra o `agent.done`
   perdido, e o aviso pode se perder junto; o que o canal faz é ANTECIPÁ-LA
   (`avisoPedeVerificacaoDoTurno`, só o `agent.status` do agente acompanhado).
+- O que muda por TOKEN não mora no estado da `SessionPage` (RN-639, AT-301):
+  o texto em curso e a faixa de atividade ficam no store de
+  `lib/streaming-do-turno.ts`, assinado por `useSyncExternalStore` só por quem
+  os desenha (a bolha em `SessionFio.tsx`, `TurnActivityStripDoStore`), e a
+  página assina booleanos. Estado novo de streaming entra no store, nunca num
+  `useState` do `useTurnoDoAgente` — `SessionPage.streaming-isolado.test.tsx`
+  conta os renders da página e reprova o token que a re-renderiza.
 - Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
   contra uma asserção de string — é a mesma lição do `#` no `FROM` do
   Dockerfile ("linter concordar não é build concordar"), medida uma segunda
@@ -2110,8 +2166,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Evento tem DUAS classificações no cliente, e elas não se substituem:
   `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
   (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
-  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
-  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, e é o eixo dos
+  grupos do painel de log — o FIO não agrupa por origem desde a RN-644 (lá o
+  histórico recolhido é UM bloco cronológico e o corte conta MENSAGENS,
+  recuando até a abertura do turno); a precedência dos `if` é a regra (mecanismo
   vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
   `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -2150,9 +2208,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ARQUIVO e não script inline — a imagem serve sob `script-src 'self'`, e
   inline passa em dev e é bloqueado em produção. A preferência mora em
   `localStorage['brabo.theme']` e a API é `apps/web/src/lib/tema.ts`;
-  nenhum componente escreve o atributo por conta própria. Dívida de
-  contraste é do tema ESCURO e está travada por número — não afrouxe um
-  piso para passar, e não deixe o claro nascer pior que o primário.
+  nenhum componente escreve o atributo por conta própria. Desde o ADR 0181
+  (RN-640) a paleta é NEUTRA (escuro preto, claro branco, acento terracota) e
+  NÃO há dívida de contraste: os cinco pares que o escuro devia desde a FASE 16
+  são PISO nos dois temas. Não afrouxe um piso para passar, não reabra dívida
+  "registrada", e não deixe o claro nascer pior que o primário. Cor que sai do
+  CSS (Mermaid, xterm, minimapa) cai em `lib/tokens-padrao.ts`, conferido
+  contra o `:root` por teste — não escreva fallback em hex no chamador; cor de
+  agente é `var(--token)`; e `var(--x)` sem declaração reprova
+  (`design-tokens-existentes.test.ts`).
 - O handoff estabelece a INTENÇÃO; a medição estabelece o NÚMERO, e o
   produto estabelece o MECANISMO. Já valeu três vezes: as fontes (ADR
   0036), o boot de tema inline e cinco dos oito `--syn-*` que reprovam
@@ -2165,7 +2229,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   três telas de decisão (Aprovações, chat da sessão, Insights) a
   consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
   `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
-  nasce colapsado (RN-096).
+  nasce colapsado (RN-096). Valor de CÓDIGO na frase (comando, branch,
+  caminho, imagem) entra por `codigo()`, nunca entre aspas: o card o desenha
+  em mono por `trechosDaFraseDaAcao` (AT-322). O `ApprovalCard` tem UMA
+  variante nas quatro superfícies — não reintroduza prop de aparência por
+  tela; a largura é do contêiner e só o colapso inicial varia
+  (`detalheRecolhido`).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs. Desde a
   RN-563 (ADR 0158) o envelope carrega `key_id` — a IMPRESSÃO DIGITAL

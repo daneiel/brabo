@@ -299,7 +299,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
 
     expect(c.bad).toBe(true);
     expect(c.color).toBe('var(--danger)');
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
     expect(c.text).toContain('3');
     expect(c.text).toContain('Rearme');
     expect(c.text).not.toContain('atividade em');
@@ -308,7 +308,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
   it('idle_tripped sem contador ainda diz o essencial', () => {
     const c = classifyEvent(ev('dev.idle_tripped', 'dev-api', {}));
     expect(c.bad).toBe(true);
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
   });
 
   it('awaiting_gate e rearmed deixam de cair no genérico', () => {
@@ -448,5 +448,25 @@ describe('classifyEvent — épico sem história (RN-165)', () => {
     expect(c.bad).toBe(true);
     expect(c.text).toContain('sem nenhuma história');
     expect(c.text).not.toContain('()');
+  });
+});
+
+describe('classifyEvent — reabertura de sessão (ADR 0183, RN-649)', () => {
+  it('diz que a sessão foi reaberta e por que ela tinha fechado', () => {
+    const c = classifyEvent(
+      ev('session.reopened', 'user-1', {
+        from: 'closed',
+        to: 'active',
+        closedAt: '2026-09-13T16:46:36.000Z',
+        terminationReason: 'heartbeat_timeout',
+      }),
+    );
+    expect(c.kind).toBe('session');
+    expect(c.text).toBe('sessão reaberta (tinha fechado por heartbeat_timeout)');
+  });
+
+  it('sem causa gravada, não inventa uma', () => {
+    const c = classifyEvent(ev('session.reopened', 'user-1', { terminationReason: null }));
+    expect(c.text).toBe('sessão reaberta');
   });
 });

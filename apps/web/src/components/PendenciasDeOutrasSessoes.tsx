@@ -121,7 +121,6 @@ export function PendenciasDeOutrasSessoes({
               <ApprovalCard
                 key={acao.id}
                 action={acao}
-                variant="chat"
                 // AT-318: detalhe fechado — empilhados, os detalhes abertos
                 // deixavam um card à vista de três.
                 detalheRecolhido

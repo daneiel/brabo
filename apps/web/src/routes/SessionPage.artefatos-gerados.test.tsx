@@ -63,7 +63,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -173,10 +176,12 @@ afterAll(() => {
 });
 
 describe('SessionPage — ContextAside: artefatos gerados agrupados por agente (RN-159)', () => {
-  it('sem nenhum artefato: painel some pra "Nada ainda", com contagem zero', async () => {
+  it('sem nenhum artefato: o vazio diz o que a seção conta, com contagem zero (RN-648)', async () => {
     montar();
     const regiao = await regiaoDeArtefatos();
-    expect(regiao.getByText('Nada ainda.')).toBeInTheDocument();
+    expect(
+      regiao.getByText('Nenhuma PR nem item de backlog nesta sessão ainda.'),
+    ).toBeInTheDocument();
     expect((await screen.findByRole('button', { name: /Artefatos gerados/ }))).toHaveTextContent('0');
   });
 
@@ -264,6 +269,51 @@ describe('SessionPage — ContextAside: artefatos gerados agrupados por agente (
     expect(
       screen.getByRole('link', { name: /Formulário de login/ }),
     ).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+  });
+
+  /**
+   * RN-648 (AT-325) — o levantamento visual achou "Artefatos gerados 3" sobre
+   * um único grupo "PO 1": o cabeçalho contava a árvore e o grupo, só as
+   * raízes. Os dois contam na MESMA unidade agora, e a soma dos grupos é o
+   * cabeçalho.
+   */
+  it('o contador do grupo conta a árvore, como o do cabeçalho: a soma dos grupos É o cabeçalho', async () => {
+    actionsMock.mockReturnValue({ items: [acaoPr()] });
+    eventos.mockReturnValue({
+      items: [
+        {
+          id: 'ev-epic',
+          seq: 1,
+          type: 'backlog.epic_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { epicId: 'epic-1', title: 'Autenticação' },
+          createdAt: '2026-08-10T12:00:00.000Z',
+        },
+        {
+          id: 'ev-story',
+          seq: 2,
+          type: 'backlog.story_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { storyId: 'story-1', epicId: 'epic-1', title: 'Login com e-mail' },
+          createdAt: '2026-08-10T12:00:01.000Z',
+        },
+        {
+          id: 'ev-task',
+          seq: 3,
+          type: 'backlog.task_created',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { taskId: 'task-1', storyId: 'story-1', title: 'Formulário de login' },
+          createdAt: '2026-08-10T12:00:02.000Z',
+        },
+      ],
+    });
+
+    montar();
+    const cabecalho = await screen.findByRole('button', { name: /Artefatos gerados/ });
+    expect(cabecalho).toHaveTextContent(/4$/);
+    const regiao = await regiaoDeArtefatos();
+    expect(regiao.getByRole('button', { name: /PO/ })).toHaveTextContent(/3$/);
+    expect(regiao.getByRole('button', { name: /Dev Backend/ })).toHaveTextContent(/1$/);
   });
 
   /**

@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next';
 import { Disclosure } from '../components/ui/Disclosure';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { corDoAgente, nomeDoAgente } from '../lib/agents';
-import { agruparPorOrigem, type OrigemDeEvento } from '../lib/activity';
+import type { OrigemDeEvento } from '../lib/activity';
 import type { Handoff, ProposedAction } from '../lib/api-types';
 import type { TimelineEntry } from '../lib/session-timeline';
 import styles from './SessionPage.module.css';
@@ -12,7 +12,7 @@ import styles from './SessionPage.module.css';
  * As passadas de APRESENTAÇÃO do fio da sessão que rodam depois de a timeline
  * estar montada e ordenada: o colapso de "Passos do turno", o colapso por
  * agente que passou o bastão (RN-138) e o corte entre o histórico recolhido
- * por origem e as entradas recentes (RN-177). Moraram em `SessionPage.tsx`
+ * e as entradas recentes (RN-177, revista pela RN-644). Moraram em `SessionPage.tsx`
  * até o PR 1 do programa do ADR 0176, que as moveu sem mudar uma linha de
  * lógica: as duas que eram corpo de `useMemo` viraram funções chamadas DE
  * DENTRO do mesmo `useMemo`, com as mesmas dependências — quem decide QUANDO
@@ -111,9 +111,10 @@ export function agruparNarracoesDoTurno(
 }
 
 /**
- * Quantas entradas do fio ficam ABERTAS antes de o resto virar histórico
- * recolhido por origem (RN-177). Mesmo número do painel de log, e pelo mesmo
- * pedido: "mantém as últimas 5 mensagens".
+ * Quantas MENSAGENS do fio ficam ABERTAS antes de o resto virar histórico
+ * recolhido (RN-177, revista pela RN-644). Mesmo número do painel de log, e
+ * pelo mesmo pedido: "mantém as últimas 5 mensagens" — e desde a RN-644 são
+ * MENSAGENS de fato (`TimelineEntry.mensagem`), não entradas quaisquer.
  */
 export const FIO_RECENTES_ABERTAS = 5;
 
@@ -122,6 +123,10 @@ export interface EntradaDoFio {
   key: string;
   node: ReactNode;
   origem: OrigemDeEvento;
+  /** O turno da entrada (RN-172) — o corte do fio nunca parte um turno. */
+  turno: number;
+  /** Conta no corte das últimas {@link FIO_RECENTES_ABERTAS} (RN-644). */
+  mensagem: boolean;
 }
 
 // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
@@ -133,6 +138,16 @@ export interface EntradaDoFio {
 // atrás de um clique). Entradas sem `agentId` (usuário, divisores/cards de
 // transição) sempre quebram a sequência corrente, exatamente como uma
 // troca de agente quebra.
+function entradaSimples(e: TimelineEntry): EntradaDoFio {
+  return {
+    key: String(e.seq),
+    node: e.node,
+    origem: e.origem,
+    turno: e.turno,
+    mensagem: e.mensagem === true,
+  };
+}
+
 export function agruparTimelinePorAgente(
   timeline: TimelineEntry[],
   handoffs: Handoff[],
@@ -163,6 +178,10 @@ export function agruparTimelinePorAgente(
         // Um colapso por agente é, por construção, fala de agente — mesmo
         // quando o que ele contém veio de origens diferentes.
         origem: 'agente',
+        turno: grupo[0].turno,
+        // É UMA entrada na tela: conta como uma mensagem se tiver ao menos
+        // uma dentro, pela régua de "quem conta é o que o usuário vê".
+        mensagem: grupo.some((e) => e.mensagem === true),
         node: (
           <div style={corDoAgente(agentId)}>
             <Disclosure
@@ -187,7 +206,7 @@ export function agruparTimelinePorAgente(
       });
     } else {
       for (const e of corrente) {
-        resultado.push({ key: String(e.seq), node: e.node, origem: e.origem });
+        resultado.push(entradaSimples(e));
       }
     }
     corrente = [];
@@ -202,7 +221,7 @@ export function agruparTimelinePorAgente(
     if (entry.agentId) {
       corrente = [entry];
     } else {
-      resultado.push({ key: String(entry.seq), node: entry.node, origem: entry.origem });
+      resultado.push(entradaSimples(entry));
     }
   }
   fecharCorrente();
@@ -210,32 +229,65 @@ export function agruparTimelinePorAgente(
   return resultado;
 }
 
+/** O histórico recolhido do fio, e o que ele declara conter (RN-180). */
+export interface HistoricoDoFio {
+  /** As entradas recolhidas, em ORDEM CRONOLÓGICA — a mesma do fio. */
+  itens: EntradaDoFio[];
+  /** Quantas delas são mensagem (a unidade do corte). */
+  mensagens: number;
+  /** Quantas NÃO são (cards de handoff, aprovação, divisores…). */
+  outras: number;
+}
+
 /**
- * RN-177 no FIO: as últimas {@link FIO_RECENTES_ABERTAS} entradas ficam
- * abertas e tudo que veio antes vira histórico recolhido POR ORIGEM.
+ * RN-177 no FIO, revista pela RN-644: as últimas {@link FIO_RECENTES_ABERTAS}
+ * MENSAGENS ficam abertas, e tudo que veio antes vira UM histórico recolhido,
+ * na ordem em que aconteceu.
  *
- * O fio é CRESCENTE (o mais novo em baixo, junto do composer), então aqui o
- * histórico fica no TOPO — é a mesma regra do painel de log com o eixo
- * invertido, e não uma segunda decisão.
+ * O fio é CRESCENTE (o mais novo em baixo, junto do composer), então o
+ * histórico fica no TOPO. Três regras, cada uma fechando um defeito medido no
+ * levantamento visual da Rodada 29 (achado X3):
  *
- * O corte é sobre a lista JÁ agrupada por agente (RN-138): quem conta é o
- * que o usuário vê, e um colapso de doze mensagens é UMA entrada na tela.
- * Contar entradas cruas faria "as últimas 5" esconderem a conversa inteira
- * atrás de um agrupamento.
+ * 1. O corte conta só MENSAGENS (`mensagem`). Card de handoff e de aprovação
+ *    contavam, e numa conversa curta empurravam a primeira pergunta e a
+ *    primeira resposta para o histórico. Não-mensagem posterior ao corte fica
+ *    aberta junto com as mensagens em volta dela.
+ * 2. O corte nunca parte um TURNO (RN-172): ele recua até a abertura do turno
+ *    da mensagem que o marcou, então a pergunta do usuário fica sempre junto
+ *    da resposta que a seguiu — as abertas podem ser mais de cinco, nunca
+ *    uma troca pela metade. O prólogo (turno `0`) não tem abertura e não recua.
+ * 3. O histórico é UM bloco cronológico, e não grupos POR ORIGEM: agrupar por
+ *    origem reordenava pela ordem das origens, e "LLM" vinha antes de
+ *    "Usuário", pondo a resposta do Criativo ACIMA da pergunta que a gerou.
+ *    O painel de log continua agrupando por origem (`agruparPorOrigem`) —
+ *    lá o eixo é a camada, aqui é a conversa.
+ *
+ * O corte é sobre a lista JÁ agrupada por agente (RN-138): um colapso de doze
+ * mensagens é UMA entrada na tela e conta como uma.
  */
 export function dividirFio(timelineAgrupada: EntradaDoFio[]): {
-  historico: { origem: OrigemDeEvento; itens: EntradaDoFio[] }[];
+  historico: HistoricoDoFio | null;
   recentes: EntradaDoFio[];
 } {
-  if (timelineAgrupada.length <= FIO_RECENTES_ABERTAS) {
-    return { historico: [], recentes: timelineAgrupada };
+  const indicesDeMensagem: number[] = [];
+  timelineAgrupada.forEach((e, i) => {
+    if (e.mensagem) indicesDeMensagem.push(i);
+  });
+  if (indicesDeMensagem.length <= FIO_RECENTES_ABERTAS) {
+    return { historico: null, recentes: timelineAgrupada };
   }
-  const corte = timelineAgrupada.length - FIO_RECENTES_ABERTAS;
+  let corte = indicesDeMensagem[indicesDeMensagem.length - FIO_RECENTES_ABERTAS];
+  const turno = timelineAgrupada[corte].turno;
+  if (turno !== 0) {
+    while (corte > 0 && timelineAgrupada[corte - 1].turno === turno) corte--;
+  }
+  if (corte === 0) {
+    return { historico: null, recentes: timelineAgrupada };
+  }
+  const itens = timelineAgrupada.slice(0, corte);
+  const mensagens = itens.filter((e) => e.mensagem).length;
   return {
-    historico: agruparPorOrigem(
-      timelineAgrupada.slice(0, corte),
-      (item) => item.origem,
-    ),
+    historico: { itens, mensagens, outras: itens.length - mensagens },
     recentes: timelineAgrupada.slice(corte),
   };
 }

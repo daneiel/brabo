@@ -40,6 +40,7 @@ import {
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { useAplicacaoEmLote } from './aplicar-a-todos';
 import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -87,18 +88,21 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: modelsByCategory } = useQuery({
     // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
     // um cache global devolveria a curadoria de outro workspace.
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const bindingQueries = useQueries({
     queries: AGENT_LIST.map((agent) => ({
       queryKey: ['agent-binding', projectId, agent.key],
       queryFn: () => getAgentModelBinding(projectId, agent.key),
+      staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     })),
   });
 
@@ -109,6 +113,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     queries: areaKeys.map((key) => ({
       queryKey: ['area-binding', projectId, key],
       queryFn: () => getAreaModelBinding(projectId, key),
+      staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     })),
   });
   const bindingDaAreaPorChave = new Map(
@@ -120,10 +125,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   const { data: bindingDoProjeto } = useQuery({
     queryKey: ['project-model-binding', projectId],
     queryFn: () => getProjectModelBinding(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: bindingDoWorkspace } = useQuery({
     queryKey: ['workspace-model-binding', project?.workspaceId],
     queryFn: () => getWorkspaceModelBinding(project!.workspaceId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(project?.workspaceId),
   });
 
@@ -439,6 +446,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'model',
+      largaNoMovel: true,
       label: t('modelsSection.columns.model'),
       width: '1.7fr',
       render: (agent) => {
@@ -500,6 +508,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       // Larga o suficiente para a CADEIA (`settings/cascata.tsx`) caber em uma
       // ou duas linhas. Era `0.8fr` quando a célula tinha uma palavra só; as
       // proporções do handoff descreviam aquela célula, não esta.
+      largaNoMovel: true,
       label: t('modelsSection.columns.origin'),
       width: '1.75fr',
       render: (agent) => {

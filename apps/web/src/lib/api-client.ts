@@ -621,6 +621,12 @@ export const transitionSession = (
   sessionId: string,
   status: 'active' | 'closing' | 'closed' | 'closed_abnormally',
 ) => post<Session>(`/projects/${projectId}/sessions/${sessionId}/transition`, { status });
+/**
+ * Reabre uma sessão `closed`/`closed_abnormally` (ADR 0183, RN-649/650). Rota
+ * própria, e não a de transição: pede `maintainer` e grava `session.reopened`.
+ */
+export const reopenSession = (projectId: string, sessionId: string) =>
+  post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,

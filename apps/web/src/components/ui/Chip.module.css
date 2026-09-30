@@ -1,0 +1,41 @@
+/* O chip de filtro (AT-287). Ver `Chip.tsx`. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  /* Piso de alvo de toque da WCAG 2.2 AA, que `scripts/dev/validacao-visual.js`
+     cobra. */
+  min-height: 24px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: var(--space-1) calc(var(--space-2) + var(--space-1));
+  cursor: pointer;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.chip:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pressed {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.pressed.violet {
+  border-color: var(--violet);
+}

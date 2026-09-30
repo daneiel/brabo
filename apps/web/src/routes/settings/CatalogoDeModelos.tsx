@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getProject } from '../../lib/api-client';
 import { ModelCatalogSection } from '../../components/ModelCatalogSection';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O catálogo é global, mas a curadoria pende do workspace: é de lá que o
@@ -12,6 +13,7 @@ export function CatalogoDeModelos({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   if (!project) return null;
   // `semMoldura`: `ModelCatalogSection` já desenha o próprio `.section`, e é

@@ -53,7 +53,10 @@ vi.mock('../lib/chat-stream', () => ({
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),

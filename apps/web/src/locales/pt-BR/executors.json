@@ -1,7 +1,9 @@
 {
   "tab": {
     "title": "Executores",
-    "summary": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_zero": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_one": "{{count}} agente · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_other": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
     "subtitle": "Dev agent e QA — quem implementa e quem verifica. O resto do time está na Visão geral.",
     "sessionError": {
       "title": "Não foi possível descobrir a sessão de execução deste projeto."
@@ -39,13 +41,16 @@
   },
   "teamGrid": {
     "leadBadge": "Lead",
+    "subspecialty_zero": "{{count}} subespecialidades",
     "subspecialty_one": "{{count}} subespecialidade",
     "subspecialty_other": "{{count}} subespecialidades"
   },
   "agentStatus": {
     "circuitBreaker": {
-      "default": "circuit breaker disparado",
-      "withCount": "circuit breaker: {{count}} tasks blocked seguidas"
+      "default": "parada automática acionada",
+      "withCount_zero": "parada automática: {{count}} tarefas bloqueadas seguidas",
+      "withCount_one": "parada automática: {{count}} tarefa bloqueada seguida",
+      "withCount_other": "parada automática: {{count}} tarefas bloqueadas seguidas"
     },
     "delegation": {
       "completed": "concluiu a delegação",
@@ -55,7 +60,9 @@
   },
   "timelineTree": {
     "empty": "Nenhum agente entrou em ação nesta sessão ainda.",
-    "newSinceLastVisit": "{{count}} marco(s) novo(s) desde a última vez",
+    "newSinceLastVisit_zero": "{{count}} marcos novos desde a última vez",
+    "newSinceLastVisit_one": "{{count}} marco novo desde a última vez",
+    "newSinceLastVisit_other": "{{count}} marcos novos desde a última vez",
     "iteration": "iteração {{n}}",
     "marker": {
       "args": "argumentos",
@@ -79,7 +86,7 @@
       "delegationCompleted": "subagente concluiu",
       "delegationFailed": "subagente falhou",
       "delegationDispensed": "dispensou a delegação",
-      "devStarted": "procurando task",
+      "devStarted": "procurando tarefa",
       "devWorking": "trabalhando",
       "devIdle": "ocioso",
       "devAwaitingApproval": "esperando sua aprovação",
@@ -87,7 +94,7 @@
       "devBlocked": "bloqueado",
       "devBlockedByContainer": "parado: o projeto não tem container de pé",
       "devError": "erro",
-      "devIdleTripped": "circuit breaker abriu",
+      "devIdleTripped": "parada automática acionada",
       "prGateChanged": "gate mudou"
     },
     "now": {

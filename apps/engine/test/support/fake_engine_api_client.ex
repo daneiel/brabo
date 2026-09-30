@@ -148,6 +148,29 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # ADR 0182 (RN-636): o modo do AppSec. A resposta por destino é scriptável
+  # via `Process.put(:fake_handoff_if_absent, %{"infra" => resposta})`, onde
+  # `resposta` é o `{:ok, mapa}`/`{:error, motivo}` devolvido; destino ausente
+  # do mapa responde como oferta criada.
+  @impl true
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id) do
+    notify({:handoff_if_absent, project_id, session_id, from_agent, to_agent, artifact_id})
+
+    Process.get(:fake_handoff_if_absent, %{})
+    |> Map.get(
+      to_agent,
+      {:ok,
+       %{
+         "id" => "ho-#{to_agent}",
+         "fromAgent" => from_agent,
+         "toAgent" => to_agent,
+         "artifactId" => artifact_id,
+         "status" => "offered",
+         "desfecho" => "criado"
+       }}
+    )
+  end
+
   @impl true
   def create_epic(_project_id, _session_id, fields) do
     notify({:epic_created, fields})

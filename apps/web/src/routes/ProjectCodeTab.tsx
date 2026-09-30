@@ -89,7 +89,7 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     return (
       <div className={styles.estadoPagina}>
         <ErroDeCarregamento
-          titulo={t('projectCodeTab.checkGateError')}
+          titulo={t('projectCodeTab.checkGateError', { aba: t('nav:tabs.code.label') })}
           erro={containerQuery.error}
           onTentarDeNovo={() => void containerQuery.refetch()}
         />

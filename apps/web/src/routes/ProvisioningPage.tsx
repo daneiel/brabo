@@ -12,6 +12,11 @@ import {
   provisionRepository,
 } from '../lib/api-client';
 import { useSessionEvents } from '../lib/hooks';
+import {
+  INTERVALO_DO_BOOTSTRAP_MS,
+  bootstrapTerminou,
+  pollDoBootstrap,
+} from '../lib/poll-do-bootstrap';
 import { BOOTSTRAP_STEPS, deriveStepStates } from '../lib/bootstrap';
 import { BootstrapSteps } from '../components/BootstrapSteps';
 import { Button } from '../components/ui/Button';
@@ -31,6 +36,9 @@ import styles from './ProvisioningPage.module.css';
  * cobre um provider lento sem virar espera infinita.
  */
 const TETO_MS = 180_000;
+
+/** A falha NÃO para o poll aqui: o "Tentar novamente" precisa ver o bootstrap novo. */
+const acompanharBootstrap = pollDoBootstrap({ paraNaFalha: false });
 
 interface ProvisioningPageProps {
   projectId: string;
@@ -69,10 +77,10 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
   const bootstrapQuery = useQuery({
     queryKey: ['bootstrap', projectId],
     queryFn: () => getBootstrapStatus(projectId),
-    // Para de pollar só quando converge; enquanto provisioning/null/failed
-    // continua (assim o "Tentar novamente" retoma o progresso ao vivo).
-    refetchInterval: (query) =>
-      query.state.data?.status === 'provisioned' || expirou ? false : 1000,
+    // Para de pollar quando converge, quando o teto de espera estoura ou
+    // quando a query erra; enquanto provisioning/null/failed continua (assim o
+    // "Tentar novamente" retoma o progresso ao vivo). 3 s desde a AT-302.
+    refetchInterval: (query) => (expirou ? false : acompanharBootstrap(query)),
   });
 
   const status = bootstrapQuery.data?.status ?? null;
@@ -80,7 +88,13 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
   const failedStep = bootstrapQuery.data?.failedStep ?? null;
   const lastError = bootstrapQuery.data?.lastError ?? null;
 
-  const eventsQuery = useSessionEvents(projectId, sessionId, 1000);
+  const eventsQuery = useSessionEvents(
+    projectId,
+    sessionId,
+    INTERVALO_DO_BOOTSTRAP_MS,
+    // Convergiu (ou a espera estourou): não há passo novo a ver.
+    bootstrapTerminou(status, { paraNaFalha: false }) || expirou,
+  );
   const events = eventsQuery.data?.items ?? [];
   const stepStates = deriveStepStates(events);
 

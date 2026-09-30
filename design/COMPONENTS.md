@@ -131,6 +131,28 @@ diferentes.
 - **ghost**: bg transparent, texto `var(--text-secondary)`, sem border.
   Hover: bg `var(--surface-2)`, texto `var(--text-primary)`.
 
+**Denso e só-ícone** (AT-287): `size="sm"` é o botão de 28px (`font-size:
+var(--fs-sm)`) para linha de tabela, painel lateral e barra de idioma; `icon` é
+o **botão de ícone** do handoff — quadrado (36px, ou 28px com `sm`), raio
+`--r-sm` (7px), nome acessível por `aria-label`. Botão cru (`<button>` com
+módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do trilho
+(`role="tab"`), cabeçalho de disclosure, item de navegação, título editável.
+
+## Card, Chip e Badge (AT-286, AT-287)
+
+- **`ui/Card`**: `var(--surface-1)` + `1px solid var(--border)` + raio
+  `--r-lg` (ou `--r-md` com `radius="md"`, o card denso de grade/fio), padding
+  `none|sm|md|lg` (0 / 12 / 16 / 24px). `recorta` é `overflow:hidden`, para
+  quem pinta região colada na borda (`ApprovalCard`). Layout de fora (margem,
+  largura) é do chamador, por `className`. Painel, trilho e cabeçalho fixo NÃO
+  são card — continuam `surface-1` no próprio módulo.
+- **`ui/Chip`**: a pílula de FILTRO, interativa (`<button aria-pressed>`), mono
+  `--fs-sm`, ligada = borda `--accent` (ou `--violet`) sobre `--surface-2`.
+- **`ui/Badge`**: o par NÃO interativo (`<span>`). Tons `success|warning|
+  danger|accent|muted`, mais `neutral` (texto `--text-secondary`: badge cujo
+  texto é conteúdo, como nome de branch) e `agent` (cor herdada de
+  `--agent-color`). `size="md"` é o de 11px; `square` é o retângulo de tabela.
+
 ## AgentCard
 
 Avatar geométrico (ícone SVG outline distinto por agente, não foto/letra)
@@ -306,8 +328,8 @@ Tabs / Toasts / Modal)
   hover `var(--surface-1)`, colunas separadas por `border-left`.
 - **Inputs/selects**: fundo `var(--surface-0)`/`var(--surface-1)`, border
   `var(--border)`, radius 8px, padding `8-11px 12-13px`. Focus:
-  `border-color: var(--accent)` + `box-shadow: 0 0 0 3px color-mix(in srgb,
-  var(--accent) 22%, transparent)`. Select custom com chevron SVG
+  `border-color: var(--accent)` + `box-shadow: 0 0 0 3px var(--focus-ring)`
+  (o acento a 22% sobre `transparent`, AT-285). Select custom com chevron SVG
   posicionado absoluto (nunca a seta nativa do browser — `appearance:none`).
 - **Tabs**: sem fundo, `border-bottom:2px solid transparent`, ativo =
   `border-color: var(--accent)` + `color: var(--text-primary)` +

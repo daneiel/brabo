@@ -17,16 +17,19 @@ import {
   type ResumoDeAprovacoes,
 } from '../lib/approvals';
 import { Button } from '../components/ui/Button';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
-import { PencilIcon } from '../components/ui/icons';
+import { PencilIcon, PlusIcon } from '../components/ui/icons';
 import { LIMITE_DO_NOME, hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import { Destaque } from '../components/SpendCharts';
 import { formatarUsd } from '../components/CredentialSpendSection';
+import { useLayoutMovel } from '../lib/layout-movel';
 import type { Session, SessionKind, SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
 
@@ -140,6 +143,10 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   const executionSessionQuery = useActiveExecutionSession(
     kind === 'criativa' ? projectId : undefined,
   );
+  // AT-330 (achado N7): em 390px a linha cabia status, aprovações e data ao
+  // lado do nome, e o nome — o que IDENTIFICA a sessão — ficava com 0px. No
+  // móvel ele ganha a primeira linha inteira e o resto desce para a segunda.
+  const movel = useLayoutMovel();
   const [creating, setCreating] = useState(false);
   const [abrindoForm, setAbrindoForm] = useState(false);
   const [nome, setNome] = useState('');
@@ -276,11 +283,20 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           <span className={styles.subtitleTipo}>{tipo.explicacao}</span>
         </div>
         <Button
+          className={styles.acaoDoCabecalho}
           onClick={() => setAbrindoForm((v) => !v)}
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
         >
-          {abrindoForm ? t('sessionsTab.cancelButton') : t(copy.abrir)}
+          {/* AT-327: o CTA de criar é ícone + verbo, como "Novo projeto" no
+              Dashboard — nunca o caractere "+" dentro do texto. */}
+          {abrindoForm ? (
+            t('sessionsTab.cancelButton')
+          ) : (
+            <>
+              <PlusIcon size={14} /> {t(copy.abrir)}
+            </>
+          )}
         </Button>
       </div>
 
@@ -311,33 +327,23 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       )}
 
       {kind === 'criativa' && sessionsQuery.data && doKind.length > 0 && (
-        <div className={styles.filtros} role="group" aria-label={t('sessionsTab.filterGroupAriaLabel')}>
-          {ORDEM_DOS_FILTROS.map((chave) => (
-            <button
-              key={chave}
-              type="button"
-              className={
-                filtro === chave
-                  ? `${styles.pill} ${styles.pillAtivo}`
-                  : styles.pill
-              }
-              aria-pressed={filtro === chave}
-              onClick={() => setFiltro(chave)}
-            >
-              {t(CHAVE_DO_FILTRO[chave])}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          className={styles.filtros}
+          rotulo={t('sessionsTab.filterGroupAriaLabel')}
+          opcoes={ORDEM_DOS_FILTROS.map((chave) => ({ valor: chave, rotulo: t(CHAVE_DO_FILTRO[chave]) }))}
+          valor={filtro}
+          onChange={setFiltro}
+        />
       )}
 
       {totalDaAba.total > 0 && (
         <div className={styles.subtitle}>
-          {t('sessionsTab.summaryLine', {
-            total: totalDaAba.total,
-            decided: totalDaAba.decididasPorVoce,
-            autoApproved: totalDaAba.autoAprovadas,
-            pending: totalDaAba.pendentes,
-          })}
+          {[
+            t('sessionsTab.contagem.acoesPropostas', { count: totalDaAba.total }),
+            t('sessionsTab.contagem.decididasPorVoce', { count: totalDaAba.decididasPorVoce }),
+            t('sessionsTab.contagem.autoAprovadas', { count: totalDaAba.autoAprovadas }),
+            t('sessionsTab.contagem.aguardando', { count: totalDaAba.pendentes }),
+          ].join(' · ')}
         </div>
       )}
 
@@ -357,7 +363,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           <Skeleton height={44} />
         </div>
       ) : sorted.length === 0 ? (
-        <div className={styles.empty}>
+        <EmptyState>
           {/* Vazio por FILTRO (há sessões, nenhuma no pill escolhido) é uma
               frase diferente de vazio por AUSÊNCIA — dizer "nenhuma ideação
               ainda" com sessões fechadas escondidas atrás do pill "Ativas"
@@ -365,9 +371,12 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           {kind === 'criativa' && filtro !== 'todas' && doKind.length > 0
             ? t('sessionsTab.filterEmpty')
             : t(copy.vazio)}
-        </div>
+        </EmptyState>
       ) : (
-        <div className={styles.list}>
+        <div
+          className={[styles.list, movel && styles.listaMovel].filter(Boolean).join(' ')}
+          data-layout={movel ? 'movel' : undefined}
+        >
           {sorted.map((session, indice) => {
             const resumo = resumoDe(indice);
             return (
@@ -435,15 +444,16 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                         : styles.rowApprovals
                     }
                   >
-                    {resumo.pendentes > 0
-                      ? t('sessionsTab.approvalsPending', {
-                          pending: resumo.pendentes,
-                          decided: resumo.decididasPorVoce,
-                        })
-                      : t('sessionsTab.approvalsDecided', {
-                          decided: resumo.decididasPorVoce,
-                          auto: resumo.autoAprovadas,
-                        })}
+                    {(resumo.pendentes > 0
+                      ? [
+                          t('sessionsTab.contagem.aguardando', { count: resumo.pendentes }),
+                          t('sessionsTab.contagem.decididasPorVoce', { count: resumo.decididasPorVoce }),
+                        ]
+                      : [
+                          t('sessionsTab.contagem.decididasPorVoce', { count: resumo.decididasPorVoce }),
+                          t('sessionsTab.contagem.auto', { count: resumo.autoAprovadas }),
+                        ]
+                    ).join(' · ')}
                   </span>
                 )}
                 <span className={styles.rowDate}>{new Date(session.createdAt).toLocaleString('pt-BR')}</span>

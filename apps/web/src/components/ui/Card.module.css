@@ -1,0 +1,32 @@
+/* O card do design system (AT-286). Ver `Card.tsx`. */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.radiusMd {
+  border-radius: var(--r-md);
+}
+
+.recorta {
+  overflow: hidden;
+}
+
+.padNone {
+  padding: 0;
+}
+
+/* 12px: meio-degrau entre `--space-2` e `--space-3`, o padding do card denso
+   de grade que o handoff desenha (módulo, linha de lista). */
+.padSm {
+  padding: calc(var(--space-2) + var(--space-1));
+}
+
+.padMd {
+  padding: var(--space-3);
+}
+
+.padLg {
+  padding: var(--space-4);
+}

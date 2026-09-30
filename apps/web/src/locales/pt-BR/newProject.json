@@ -103,6 +103,7 @@
     "visibilityLabel": "Visibilidade",
     "managedFolder": "pasta gerenciada pelo Brabo",
     "bootstrapAdoptValue": "nada roda sem sua aprovação",
+    "bootstrapStepsValue_zero": "{{count}} passos de Gitflow",
     "bootstrapStepsValue_one": "{{count}} passo de Gitflow",
     "bootstrapStepsValue_other": "{{count}} passos de Gitflow",
     "unknownProvider": "—"

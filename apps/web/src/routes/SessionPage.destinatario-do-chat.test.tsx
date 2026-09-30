@@ -54,7 +54,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -342,7 +345,7 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
     ]);
 
     const { container } = montar();
-    const botao = await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    const botao = await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(container.querySelector('[data-oferta-fora-da-janela="h-po"]')).not.toBeNull();
     fireEvent.click(botao);
     await waitFor(() => expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'h-po'));
@@ -371,11 +374,11 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
     const { container } = montar();
     // O botão do PO existe UMA vez, no card do fio.
     expect(
-      await screen.findAllByRole('button', { name: 'Aceitar handoff e iniciar po' }),
+      await screen.findAllByRole('button', { name: 'Aceitar handoff e iniciar PO' }),
     ).toHaveLength(1);
     expect(container.querySelector('[data-oferta-fora-da-janela]')).toBeNull();
     expect(
-      screen.queryByRole('button', { name: 'Aceitar handoff e iniciar ux-designer' }),
+      screen.queryByRole('button', { name: 'Aceitar handoff e iniciar UX Designer' }),
     ).not.toBeInTheDocument();
   });
 

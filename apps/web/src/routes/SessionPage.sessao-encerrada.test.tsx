@@ -63,7 +63,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => undefined,
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -155,8 +158,9 @@ describe('SessionPage — 409 de conversa em sessão encerrada (AT-154)', () => 
     expect(
       screen.getByLabelText('Sua mensagem não enviada') as HTMLTextAreaElement,
     ).toHaveValue('minha resposta importante');
-    // Não promete o que não existe.
-    expect(screen.queryByText(/reabrir/i)).not.toBeInTheDocument();
+    // Desde o ADR 0183 (RN-650) reabrir EXISTE, mas só como o botão da faixa —
+    // e inerte aqui, onde o papel não foi lido (`roleAtLeast` de `undefined`).
+    expect(screen.getByRole('button', { name: 'Reabrir sessão' })).toBeDisabled();
   });
 
   it('confirmar prontidão: mesma frase, e não o erro genérico', async () => {

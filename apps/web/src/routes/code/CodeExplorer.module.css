@@ -44,7 +44,7 @@
   border-left: 2px solid transparent;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   text-align: left;
   cursor: pointer;
 }
@@ -54,7 +54,7 @@
 }
 
 .linhaAtiva {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
   border-left-color: var(--accent);
   color: var(--text-primary);
 }

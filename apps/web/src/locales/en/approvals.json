@@ -125,7 +125,8 @@
     "details": {
       "title": "Details",
       "rawPayloadTitle": "Raw payload",
-      "fieldCount": "{{count}} field(s)"
+      "fieldCount_one": "{{count}} field",
+      "fieldCount_other": "{{count}} fields"
     },
     "actions": {
       "approve": "Approve",
@@ -134,9 +135,9 @@
       "autoMode": "Auto mode"
     },
     "notes": {
-      "alwaysAllow": "\"Always allow\" records the rule in .brabo/permissions.json",
-      "alwaysAllowScoped": "\"Always allow\" releases this action type only for {{agent}} — not for the project's other agents",
-      "autoMode": "\"Auto mode\" lets {{actor}} run any command without asking, even outside the project folder — git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision, and anything in deny stays denied. You can turn it off later from the agent's card.",
+      "alwaysAllow": "Always allow: records the rule in the project's .brabo/permissions.json.",
+      "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
+      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."
     },
     "decided": {
@@ -158,7 +159,8 @@
         "invalidPath": "The model didn't produce a valid path for this action.",
         "invalidContent": "The model didn't produce valid content for this action.",
         "previewHeader": "content preview",
-        "linesTruncated": "{{shown}} of {{count}} line(s)"
+        "linesTruncated_one": "{{shown}} of {{count}} line",
+        "linesTruncated_other": "{{shown}} of {{count}} lines"
       },
       "prOpen": {
         "defaultTitle": "Pull request"
@@ -211,7 +213,14 @@
       "noSession": "No session yet — approvals come from what agents propose in a session.",
       "loadingQueue": "Loading the queue…",
       "queueError": "Couldn't load the approval queue.",
-      "empty": "No pending approvals. The team is flowing."
+      "empty": "No pending approvals. The team is flowing.",
+      "motivoForaDoRecorte": {
+        "porque": "this tab reads one session's log, and the reason lives in the log of the session that proposed the action.",
+        "todas_one": "The policy reason for this action is not among the events this screen loaded: {{porque}}",
+        "todas_other": "The policy reason for these {{count}} actions is not among the events this screen loaded: {{porque}}",
+        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}",
+        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}"
+      }
     },
     "devPrs": {
       "title": "PRs in review",

@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:791` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:823` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:617` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:649` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -304,8 +304,11 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
+- **Where:** `apps/web/src/lib/hooks.ts:221` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
+
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:280` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -2949,7 +2952,7 @@ chamador de verdade, em paralelo e uma vez só por story.
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
@@ -2962,8 +2965,12 @@ recusaria um `toAgent` que não resolve a um lead/agente-sem-área. Falha de UM
 alvo vira `agent.error` narrado por alvo (RN-116) — os outros dois handoffs
 já criados não são desfeitos.
 
+**Desde a [RN-636](#rn-636) os três são PERGUNTADOS, não mais sempre
+criados:** o destino que já tem oferta pendente ou já está ativo no projeto não
+recebe outra, e isso não é falha.
+
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:266` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:273` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -5654,7 +5661,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:189` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:207` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -5885,7 +5892,8 @@ apareceria duas vezes na mesma lista, sob dois títulos. Fica no grupo mais
 específico (`prs`).
 
 **Nunca executa.** As duas filas acionáveis no painel (`aprovacoes`, `prs`)
-renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`,
+renderizam o MESMO `ApprovalCard` da aba de Aprovações (uma variante só desde
+a AT-322, com o detalhe recolhido),
 e os botões chamam os mesmos endpoints de decisão — o painel é um ATALHO para
 a decisão, nunca um substituto dela. Isso importa em especial para
 `git_merge`: merge em branch protegida é rebaixado a `require_approval`
@@ -14318,7 +14326,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:950`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:973`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14520,7 +14528,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:864` (`avisar_canal`);
+  `:607`, `:630`, `:887` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14532,7 +14540,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
-  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
   (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
@@ -14700,18 +14708,18 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:916`
-  (`narrar_recusa_de_sessao_encerrada`), `:1199` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:939`
+  (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
-  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
   (sessão encerrada recusa `chat.message` com 409 nomeado — caso de falha),
   `:167` (sem evento e sem `seq` consumido), `:183` (Psicólogo e Anamnese
   continuam entrando), `:211` (decisão sobre ação continua entrando), `:223`
-  (sessão ativa aceita — caminho feliz), `:235` (`closing` aceita), `:249`
+  (sessão ativa aceita — caminho feliz), `:244` (`closing` aceita), `:258`
   (`SendAgentMessage` não chama o engine), `:263` (nenhum handoff órfão),
   `:276` (o aceite não ativa ninguém), `:309` (a ativação não sobe o
   agente); `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts:478`
@@ -14729,6 +14737,96 @@ fechada seguem mostrando a mensagem da api.
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
 - **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
   8h e causa própria; sessão encerrada recusa conversa, nomeado)
+
+## A sessão encerrada pode ser reaberta (RN-649/RN-650)
+
+### RN-649 — Sessão `closed`/`closed_abnormally` reabre para `active` com o log intacto, e o fechamento anterior vira evento novo {#rn-649}
+
+A [RN-001](#rn-001) dizia que os estados terminais não têm saída. Desde o
+[ADR 0183](adr/0183-reabrir-sessao-encerrada.md) há UMA, e só uma: a
+reabertura, de `closed` ou `closed_abnormally` para `active`, por caminho
+próprio. A transição GENÉRICA continua recusando `closed → active` com 409, e
+`closing → active` segue proibido por qualquer caminho.
+
+1. **O que volta é a sessão inteira.** O event log não é tocado — a conversa,
+   as regras de negócio, as perguntas respondidas, as ofertas e aceites de
+   handoff. Um agente conversacional parado no fechamento volta pelo
+   `start_agent` idempotente na primeira mensagem e reconstrói o histórico
+   ([RN-580](#rn-580)). A conversa volta a entrar porque a recusa da
+   [RN-581](#rn-581) lê o estado da sessão, que agora é `active`.
+2. **O fechamento anterior não se apaga.** A linha de `sessions` perde
+   `closed_at` e `termination_reason`; o evento NOVO `session.reopened`, no
+   mesmo `seq` ([RN-002](#rn-002)) e com o ator humano que reabriu, carrega
+   `{from, to, closedAt, terminationReason}`. Nenhum evento é editado nem
+   renumerado, e o `kind` não muda ([RN-097](#rn-097)).
+3. **Sessão com execução não reabre** — 409 `sessao_com_execucao`. Reabrir uma
+   sessão com `execution.activated` a devolveria a `findActiveExecutionSession`
+   ([RN-139](business-rules/autenticacao.md#rn-139)). Padrão provisório à
+   espera do dono, declarado no ADR.
+4. **Sem prazo.** Toda sessão encerrada é reabrível (padrão provisório).
+5. **O engine é chamado antes da transação**, como na ativação: falha dele
+   deixa a sessão encerrada, sem evento. Outro estado que não terminal é 409
+   `sessao_nao_encerrada`.
+6. **O fechamento que a reabertura desfez não para a sessão viva.** O
+   `SessionLifecycleWorker` lê o `status` da sessão e ignora, com log, o job de
+   `session.closed`/`session.closed_abnormally` de uma sessão que a api já diz
+   não-terminal.
+7. **A segunda análise automática do Psicólogo fica bloqueada** pelo
+   `alreadyAnalyzed` que já existia; o reprocessamento manual segue. A segunda
+   consolidação do grafo estende a janela da mesma `Interacao`.
+
+- **Onde:** `apps/api/src/domain/sessions/session-state-machine.ts:66`
+  (`canReopen`), `:70` (`assertReopen`);
+  `apps/api/src/domain/sessions/reabertura-de-sessao.ts:24`
+  (`SessaoComExecucaoNaoReabreError`), `:44`
+  (`garantirQueSessaoSemExecucaoReabre`), `:58` (`payloadDaReabertura`);
+  `apps/api/src/application/use-cases/sessions/reopen-session.use-case.ts:53`
+  (`execute`), `:96` (`garantirQuePodeReabrir`);
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:59`
+  (`encerrar_se_ainda_encerrada`);
+  `apps/engine/lib/engine/sessions/project_session.ex:48` (`status`)
+- **Teste:** `apps/api/test/domain/sessions/session-state-machine.spec.ts:56`
+  (só terminais reabrem; `closing` nunca volta);
+  `apps/api/test/application/use-cases/sessions/reopen-session.use-case.spec.ts:121`
+  (`closed` reabre, log preservado, `session.reopened` com o fechamento
+  anterior — caminho feliz), `:151` (`closed_abnormally`), `:163` (a conversa
+  volta a entrar), `:186` (`closing` é 409 sem engine nem evento — caso de
+  falha), `:208` (sessão com execução é 409 `sessao_com_execucao`), `:239`
+  (engine fora do ar: nada muda);
+  `apps/engine/test/engine/workers/session_lifecycle_worker_test.exs:66`
+  (fechamento de sessão já `active` não para o processo), `:82` (fechamento de
+  sessão `closed` para, como sempre)
+- **Origem:** AT-071 (HS-048), sobre o `exp001`
+
+### RN-650 — Reabrir é `maintainer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
+
+`POST projects/:projectId/sessions/:sessionId/reopen` exige `maintainer` — um
+degrau acima da transição genérica (`developer`), porque religa gasto de token
+numa sessão que alguém deu por terminada. Responde 200 com a sessão. Padrão
+provisório à espera do dono (ADR 0183).
+
+Na tela de Sessão, a faixa da sessão encerrada mostra "Reabrir sessão" com uma
+frase do que volta. Abaixo de `maintainer` (`roleAtLeast`, papel de WORKSPACE —
+a lacuna da [RN-471](#rn-471) já declarada na tela) o botão fica inerte e o
+motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vira
+toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
+com a causa do fechamento anterior quando ela foi gravada.
+
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
+  (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:145` (`podeReabrir`), `:533`
+
+  `apps/web/src/routes/SessionPage.tsx:147` (`podeReabrir`), `:538`
+  (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
+  `apps/web/src/lib/activity.ts:633` (a frase do fio)
+- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
+  (`maintainer`, e a transição genérica segue `developer`), `:30` (200);
+  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:140` (maintainer
+  reabre pela rota própria — caminho feliz), `:164` (owner também), `:171`
+  (developer/viewer/sem papel: inerte com o motivo em texto — caso de falha),
+  `:184` (recusa da api vira toast), `:206` (sessão ativa não oferece);
+  `apps/web/src/lib/activity.test.ts` ("reabertura de sessão")
+- **Origem:** AT-071
 
 ## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
 
@@ -14991,7 +15089,7 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
   turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
-  sinais); `apps/web/src/lib/session-turno.ts:34` (`turnoTerminouNoLog`)
+  sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
   `agent.response` já está no log e nem `agent.done` nem `idle` saíram; depois
@@ -15350,7 +15448,7 @@ decidir se passam a consultá-lo é decisão à parte, fora desta regra.
 
 - **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
   (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
-  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:137`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:147`
   (`sessaoMaisRecente`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
   (vínculo e não nome; técnica de outro projeto não marca),
@@ -15596,7 +15694,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1655` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1689` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15680,8 +15778,8 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1599` (`opcoes_do_propose_action`),
-  `:1543` (`@teto_do_propose_action_de_container_ms`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1633` (`opcoes_do_propose_action`),
+  `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
   reprodução, "(AT-234)": o pull de 45 s termina NOMEADO, `:457`; daemon fora
@@ -15996,6 +16094,19 @@ mais recente) e não achou o evento na janela carregada diz *"fora dos eventos
 carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
 `ApprovalCard` — hipótese do Psicólogo não é `proposed_action`.
 
+**Desde a AT-333, a fila da aba Aprovações diz a lacuna UMA vez.** A fila é a
+do PROJETO ([RN-638](#rn-638)) e os eventos são os de UMA sessão, então ali o
+*"fora dos eventos carregados"* saía em quase todo card — verdade repetida por
+card, a ferramenta se explicando. A api não expõe o motivo por ação (a ação
+não o guarda, e a leitura de eventos não filtra por `actionId`: medido), e
+buscar sem janela exigiria endpoint novo. A aba passa então a CONTAR as
+pendentes sem o evento e a dizer, numa nota acima da fila, quantas são e por
+quê (*"destas N ações"*, ou *"de N das M ações abaixo"*), no molde da
+[RN-180](business-rules/autenticacao.md#rn-180); o card dessas cala (o estado "tela que não lê"), e o card
+cujo evento está carregado continua mostrando a frase. A nota só conta com o
+log em mãos: antes de os eventos chegarem ela não afirma nada. O chat da
+sessão segue com os três estados por card — ali o recorte é o do próprio fio.
+
 **Ausente não é "sem motivo", e o absoluto nunca aparece.** Evento anterior à
 RN-567 diz *"motivo da política não registrado"*; `terminal` anterior à RN-609
 diz *"raiz do escopo não registrada"*; outro tipo, sem `scopeRoot`, não fala de
@@ -16012,13 +16123,16 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
   `apps/web/src/routes/session-timeline-montagem.tsx:825` e
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:452` (quem passa o dado)
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:304` (`decisoesDaPolitica`, a
+  contagem da nota da AT-333) e `:503` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
   sem vazar caminho), `:114` (os dois idiomas), `:144` (a linha do log É a
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
-  usa a mesma função, e os três estados)
-- **Origem:** AT-148 (EP-025/HS-043)
+  usa a mesma função, e os três estados);
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:239` (a nota dita uma vez,
+  parcial e ausente — AT-333)
+- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333
 
 ---
 
@@ -16492,12 +16606,29 @@ turno com autor humano — a divergência que esta regra declarava fechou.
    chega aos agentes" saiu da linha de origem. A linha trunca nos 60px da
    barra e leva o texto inteiro no `title` — o texto está na tela, o `title`
    só devolve o que as reticências cortaram.
+6. **Na barra estreita, o idioma MUDA de lugar e não some** (AT-317). A barra
+   se arruma pela PRÓPRIA largura (`modoDaBarra`, medida por
+   `ResizeObserver`; largura desconhecida é a barra completa): a partir de
+   1720px tudo fica em linha; abaixo disso modelo, idioma e orçamento viram UM
+   controle cujo gatilho resume o modelo e o código do idioma (abaixo de 920px
+   só o ícone, com nome acessível), e o painel dele traz o indicador inteiro
+   com a origem QUEBRANDO em vez de cortar. A pergunta da detecção
+   ([RN-624](#rn-624)) mora no painel, e enquanto existe o gatilho ganha uma
+   marca e o nome acessível a anuncia. O título da sessão é o único item que
+   encolhe (com piso e o nome inteiro no `title`), e os botões não quebram
+   linha — "Encerrar" vira ícone com nome acessível só na barra mínima.
 
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
-  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:162`
-  (`origemPorExtenso`), `:205` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
-- **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
+  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
+  (`origemPorExtenso`), `:219` (`podeTrocar`);
+  `apps/web/src/routes/SessionTopbar.tsx:243` (`SessionLanguageIndicator`),
+  `:116` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
+  `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
+- **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
+  1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
+  `:236` (barra mínima com nome acessível), `:256` (pergunta pendente marca o
+  controle), `:273` (leitura do idioma falhada — caso de falha);
+  `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
   (efetivo com origem e o link, sem o aviso antigo), `:112` (o detectado não vira
   "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
   Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`
@@ -16583,8 +16714,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:205` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
-  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
+  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
   (`idioma_da_resposta`);
@@ -16681,8 +16812,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:270` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:591`
-  (`IdiomaDaResposta`), `:661` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
+  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -16888,8 +17019,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:593`
-  (`llm_turn`), `:660` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:611`
+  (`llm_turn`), `:678` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -16978,16 +17109,18 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
-  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:63`
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:224` (`decidir`, a
+  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:130` (`podeDecidir`), `:267`
-  (`useRetomarTurnoDoLog`), `:864` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
+
+  `apps/web/src/routes/SessionPage.tsx:144` (`podeDecidir`), `:284`
+  (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17145,6 +17278,109 @@ seguiram em `in_review` (AT-275).
   falho, PR sem tarefa)
 - **Origem:** AT-275
 
+### RN-640 — A paleta neutra fecha a dívida de contraste, e cor da UI só vem de token {#rn-640}
+
+O tema escuro deixa de ser azul-petróleo e vira preto neutro com o acento
+terracota suave; o claro vira o neutro da mesma família (ADR 0181). O mecanismo
+da [RN-184](business-rules/autenticacao.md#rn-184) não muda — os pares são
+medidos nos dois temas, com o mesmo piso —; o que muda é o que se cobra:
+
+1. **A dívida do escuro virou piso.** Os cinco pares que a RN-184 deixava
+   travados por número (3,89 / 3,10 / 3,88 / 3,88 / 4,41) passam 4,5:1 nos dois
+   temas, e o teste reprova quem os devolver para baixo — não "registra" mais.
+   O valor final saiu da MEDIÇÃO: o `--text-muted` do rascunho (`#71717a`)
+   repetia a dívida e foi recusado (`#86868f` no escuro, `#696972` no claro), e
+   o muted continua ABAIXO do `--text-secondary` nas três superfícies, o que o
+   teste também cobra.
+2. **O texto sobre fundo sólido de marca/estado passa AA.** `--on-accent` do
+   escuro é o preto neutro (5,61:1 sobre o acento, 7,25:1 no hover, 7,65:1
+   sobre `--success`, 5,24:1 sobre `--danger`); a "exceção conhecida" do botão
+   primário deixa de existir, e o matiz do acento continua terracota (10°–30°)
+   nos dois temas.
+3. **Cor da UI só vem de token.** Quem pinta por biblioteca de runtime (Mermaid,
+   xterm, minimapa) lê o token do tema ativo e, sem ele, cai no padrão de
+   `TOKENS_PADRAO` — uma cópia do `:root` que o teste confere contra
+   `design/tokens.css`. Cor de agente é sempre `var(--token)`; os três agentes
+   sem semântico têm `--agent-*` por tema, medidos a 3:1. E nenhum módulo CSS
+   usa `var(--x)` que ninguém declara.
+
+- **Onde:** `design/tokens.css:118`, `design/tokens.css:126`,
+  `apps/web/src/lib/tokens-padrao.ts:50` (`lerTokenDoTema`),
+  `apps/web/src/lib/agents.ts:90`
+- **Teste:** `apps/web/src/lib/contraste.test.ts` ("a antiga dívida de
+  contraste agora é piso"), `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts` ("o botão primário — a exceção que
+  deixou de existir"), `apps/web/src/lib/tokens-padrao.test.ts`,
+  `apps/web/src/lib/agents.test.ts` ("cor de agente vem do design system"),
+  `apps/web/src/design-tokens-existentes.test.ts`
+- **ADR:** [0181](adr/0181-tema-preto-neutro.md)
+- **Origem:** AT-283, AT-284
+
+### RN-642 — "Sempre permitir" aprova e grava o padrão na MESMA transação; clique em ação já aprovada é sucesso nomeado {#rn-642}
+
+No uso real de 29/09, 45 de 173 cliques em "Sempre permitir" devolveram 409
+(AT-310): o padrão era gravado ANTES de aprovar, e uma ação que já tinha saído
+de `pending` (clique duplo, a mesma pendência em dois painéis, outra aba)
+lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
+
+1. **Mesma transação, depois da transição.** `ApproveActionUseCase` aceita um
+   `aoAprovar` que roda DENTRO da transação da decisão, depois de
+   `assertTransition` passar e antes da execução; é por ele que o padrão
+   (`permissions.json/allow` ou `agent_autonomy`, [RN-509](#rn-509)) e o
+   `permission.granted` são gravados. "Aprovar antes, gravar depois" em
+   transações separadas foi recusado: trocaria o defeito por ação aprovada (e
+   até executada) com o padrão falhando depois. `agent_autonomy` e o evento são
+   atômicos com a decisão; o `permissions.json` é arquivo e não entra em
+   transação — ele só é escrito depois de a transição ser válida, e falhar ao
+   escrevê-lo desfaz a aprovação. Sobra, declarada, a janela de o COMMIT falhar
+   depois do arquivo escrito.
+2. **O evento acompanha a gravação, e só ela.** Padrão que já existe não é
+   regravado nem narrado de novo (`padraoGravado: false`).
+3. **Ação já aprovada é sucesso nomeado.** Se a transição é recusada porque a
+   ação já está `approved`/`auto_approved`/`executed`/`failed`, a resposta é
+   201 com `desfecho: 'ja_aprovada'` (o caminho normal devolve `'aprovada'`),
+   sem executar de novo, gravando o padrão só se ele faltar — com o evento.
+   Transição inválida vinda da EXECUÇÃO, depois de a decisão ter sido
+   confirmada, NÃO vira `ja_aprovada`: propaga como sempre.
+4. **Ação RECUSADA continua 409, nomeado** (`reason: 'acao_ja_recusada'`), sem
+   gravar padrão nem evento: liberar para sempre o que alguém acabou de recusar
+   não é idempotência.
+5. **Tetos intactos.** `git push`/PR/deploy, `sudo`/`doas`
+   (`motivoDeRecusaSempreAprovar`, [RN-418](#rn-418)) e `container_remove`
+   continuam recusados com 400 ANTES de qualquer leitura de estado — inclusive
+   com a ação já aprovada. O padrão continua o EXATO da ação (a generalização
+   por verbo é a AT-257, fora daqui).
+6. **Os TIPOS do teto também (AT-320).** Medido na auditoria de 30/09: a api
+   só recusava o `git push` DIGITADO no terminal; o `git_push` TIPADO passava e
+   gravava `GitPush()` em `allow` (ou autonomia do módulo), e o `ApprovalCard`
+   oferecia o botão. `TIPOS_SEM_SEMPRE_PERMITIR` é a lista ÚNICA — `git_push`,
+   `pr_open`, `git_merge` (inteiro: o padrão `GitMerge()` valeria para todo
+   destino), `container_remove`, `instruction_patch`, `parallelize`,
+   `raise_max_parallel` — e `motivoDeRecusaDoSempreAprovar` julga terminal pelo
+   comando e o resto pelo tipo. A recusa é 400 com `reason:
+   'teto_do_sempre_permitir'` e `actionType`. A web esconde o botão pela cópia
+   em `apps/web/src/lib/sempre-permitir.ts`, conferida contra a da api por
+   teste; comando de terminal segue com o botão (repetir o parser na tela
+   seria segunda régua) e recebe a recusa da api. NÃO muda `decide()` nem a
+   semeadura: `DEV_AUTO_GIT_ACTIONS` continua dando `auto_approve` a
+   `git_commit`/`git_push`/`pr_open` de cada `dev-<modulo>` na ativação — o
+   que fecha é o CLIQUE criar autonomia nova para esses tipos.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
+  (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
+  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:232`
+  (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:29`
+  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:60` (`motivoDeRecusaDoSempreAprovar`),
+  `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
+- **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
+  ("ordem e idempotência (RN-642)": clique duplo, cliques concorrentes, ação
+  aprovada por outro caminho, recusada → 409 nomeado sem padrão, padrão que
+  falha desfaz a aprovação, tetos com a ação já aprovada; "tipos do teto
+  (AT-320)"), `apps/api/test/domain/actions/sempre-permitir.spec.ts`,
+  `apps/web/src/lib/sempre-permitir.test.ts` (a cópia do web igual à da api),
+  `apps/web/src/components/ApprovalCard.test.tsx` (git tipado sem o botão)
+- **Origem:** AT-310, AT-320
+
 ### RN-631 — O destinatário do chat é escolhido e visível, e a oferta de handoff é casada pelo `handoffId` {#rn-631}
 
 O destinatário da mensagem do composer era DERIVADO: "o `agent.activated` mais
@@ -17232,10 +17468,10 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:345`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
-  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:497`
+  (`handoffIdDoEvento`), `:505` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -17312,7 +17548,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:186`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:278` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:332` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -17382,12 +17618,12 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:119`
-  (`useProjectSessions`), `:148` (`useLatestSession`);
+  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:168` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:174` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -17398,6 +17634,150 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
 - **Origem:** AT-278 (extensão da [RN-579](#rn-579); não muda a RN-108 — o
   ticket de uso único e a reconexão manual seguem como estão)
 
+### RN-635 — Uma oferta de handoff pendente por destino no projeto; a que deixa de valer vira `superseded` {#rn-635}
+
+`handoffs` só gravava `offered`/`accepted`, sem expiração, supersessão nem
+dedupe: duplo clique em "arquitetura pronta" dava 2× Infra e 2× Dev Lead, e
+oferta a agente já ativo ficava acionável para sempre (AT-291,
+[ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
+
+1. **No máximo UMA `offered` por (projeto, destino).** `decidirOferta` decide:
+   sem pendente, cria; pendente na MESMA sessão e sem artefato novo (o novo é
+   `null` ou igual), devolve a existente (`desfecho: ja_oferecido`, sem linha
+   nem evento); qualquer outro caso cria a nova e substitui a pendente
+   (`substituiu_oferta`) — devolver a antiga perderia o artefato novo, ou
+   deixaria quem pediu sem nada para aceitar na sessão em que está.
+2. **Quem substitui grava.** A linha vira `superseded` e nasce um evento
+   `handoff.superseded` (`handoffId`, `toAgent`, `motivo`, `substitutaId`) na
+   sessão da oferta VELHA, ator `system`, mesmo com a sessão encerrada. O
+   `handoff.offered` original não é tocado.
+3. **Serializado por destino.** `CreateHandoffUseCase` roda numa transação com
+   `pg_advisory_xact_lock` do par (projeto, destino): duas abas chegando juntas
+   produzem UMA linha. Duplicatas de antes convergem na próxima oferta ou
+   ativação, com evento; a migration não reescreve linha nenhuma.
+4. **Agente já ativo não recebe oferta:** 409 `reason: agente_ja_ativo`, sem
+   linha nem evento. Ativo = `agent.activated` numa sessão NÃO terminal do
+   projeto. A `message` é o texto que o modelo lê: `offer_handoff` a repassa
+   literal, e `FalhaDeTurno.origem/1` a classifica `politica`.
+5. **Ativar substitui.** `ActivateAgentUseCase` (aceite e ativação direta) e
+   `ActivateExecutionUseCase` (por `dev-<modulo>`) substituem, depois de
+   ativar, toda oferta pendente ao agente em qualquer sessão do projeto; a
+   aceita não é tocada, e ativação recusada não substitui nada.
+6. **"Arquitetura pronta" é idempotente.** `OfferInfraHandoffUseCase` não
+   aciona o destino (`infra`, `dev-lead`) que já tem oferta pendente ou está
+   ativo; com os dois assim, não grava nem chama o engine
+   (`desfecho: ja_oferecido`, `jaAtendidos` com o motivo de cada um).
+
+- **Onde:** `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
+  (`decidirOferta`), `:104` (`mensagemDeAgenteJaAtivo`);
+  `apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts:43`
+  (`sessaoOndeEstaAtivo`), `:71` (`substituir`), `:97`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/agents/create-handoff.use-case.ts:109`
+  (`travarOfertasDoDestino`);
+  `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:94`
+  (`travarOfertasDoDestino`);
+  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:84`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
+  (`substituirOfertasAoAtivar`);
+  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:101`
+  (`jaAtendido`);
+  `apps/engine/lib/engine/harness/tools/offer_handoff.ex:58`
+  (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
+  (`agente_ja_ativo`); `apps/api/src/db/migrations/0064_ciclo_de_vida_do_handoff.sql`
+- **Teste:** `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
+  (contra Postgres: repetida na mesma sessão, duplo clique concorrente,
+  artefato novo, outra sessão encerrada, dado de antes do ADR, agente ativo e
+  ativo em sessão encerrada, ativação que substitui e ativação recusada);
+  `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+  ("ADR 0182: segundo clique…", "ADR 0182: só aciona o destino que falta…");
+  `apps/api/test/application/use-cases/agents/activate-agent.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  ("ciclo de vida do handoff");
+  `apps/engine/test/engine/harness/tools/offer_handoff_test.exs`;
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs`;
+  `apps/web/src/lib/session-handoffs.test.ts` (a tela: `superseded` não vira
+  card acionável no fio, na faixa fora da janela nem no card da Infra)
+- **Origem:** AT-291
+
+### RN-636 — O AppSec só oferece o threat model a quem ainda não recebeu oferta nem está ativo {#rn-636}
+
+O AppSec criava três ofertas por história com `run_design`, aos mesmos três
+destinos — N histórias, 3N ofertas pendentes (AT-292, que funde a AT-273 do
+vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
+
+1. **Pergunta no modo `seAusente`.** `criar_handoffs_appsec/3` chama
+   `EngineApiClient.create_handoff_if_absent/5`, que manda `seAusente: true` à
+   MESMA rota interna. A api decide sob o lock do destino ([RN-635](#rn-635)):
+   com oferta pendente em QUALQUER sessão do projeto, devolve a existente
+   (`desfecho: ja_oferecido`) e não a substitui; com o destino ativo, 409
+   `agente_ja_ativo`. Perguntar antes, pelo engine, seria corrida com outra
+   oferta.
+2. **"Já atendido" não é falha.** As duas respostas acima seguem sem
+   `agent.error`. Falha de verdade (5xx, rede) continua narrada por alvo, com
+   origem ([RN-116](business-rules/custo.md#rn-116), [RN-361](#rn-361)).
+3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
+   jeito; o que deixa de nascer é a oferta repetida.
+
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
+  (`criar_handoffs_appsec/3`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1038`
+  (`create_handoff_if_absent`);
+  `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
+  (`decidirOferta`)
+- **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
+  ("run_design (RN-636): destino com oferta pendente ou já ativo não recebe
+  outra, e isso não é erro", "run_design (RN-636): falha de verdade ao
+  oferecer segue narrada, só para aquele destino");
+  `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
+  ("`seAusente` (AppSec, RN-636)…")
+- **Origem:** AT-292, AT-273
+
+### RN-644 — O fio corta por MENSAGEM, nunca parte uma troca e recolhe o histórico na ordem em que aconteceu {#rn-644}
+
+O levantamento visual da Rodada 29 (achado X3, AT-319) mediu três defeitos no
+corte do fio da [RN-177](business-rules/autenticacao.md#rn-177), todos na mesma
+função: (1) as "últimas 5" contavam **entradas**, e os cards de handoff, de
+aprovação e de história contavam como uma mensagem cada — numa conversa curta,
+a primeira pergunta e a primeira resposta iam para o histórico recolhido; (2) o
+corte caía onde a contagem mandava, podendo deixar a pergunta recolhida e a
+resposta aberta; (3) o histórico era agrupado **por origem**, na ordem das
+origens, e o grupo "LLM" vinha antes de "Usuário" — expandido, a resposta do
+Criativo aparecia ACIMA da pergunta que a gerou.
+
+**A regra, no fio (o painel de log NÃO muda — lá o eixo é a camada):**
+
+1. **O corte conta MENSAGENS**: `chat.message`, `agent.response` e
+   `chat.structured_question` (`TimelineEntry.mensagem`). Card e divisor não
+   contam; os que vêm depois do corte ficam abertos com as mensagens em volta.
+   Um colapso por agente ([RN-138](#rn-138)) e um "Passos do turno" continuam
+   sendo UMA entrada, e contam como uma mensagem.
+2. **O corte nunca parte um turno** ([RN-172](business-rules/autenticacao.md#rn-172)): ele recua até a
+   abertura do turno da mensagem que o marcou, então a pergunta fica sempre
+   junto da resposta. Por isso as abertas podem passar de cinco — nunca uma
+   troca pela metade. O prólogo (turno `0`) não tem abertura e não recua; se
+   recuar chegar ao início, não há histórico.
+3. **O histórico é UM bloco, em ordem cronológica**, e DECLARA o recorte
+   ([RN-180](business-rules/autenticacao.md#rn-180)): o título diz o que o corte conta ("Antes das últimas 5
+   mensagens") e o `trailing` separa o que ficou dentro ("2 mensagens · 2
+   outras entradas"). O rótulo "LLM" sai do fio junto com os grupos por origem.
+
+**O que se perdeu, declarado:** reabrir só o que o usuário disse, sem reabrir o
+resto, era a razão dos grupos por origem no fio. Ela não sobrevive à ordem
+cronológica — o painel de log segue oferecendo esse recorte.
+
+- **Código:** `apps/web/src/routes/session-fio.tsx:119` (`FIO_RECENTES_ABERTAS`),
+  `:268` (`dividirFio`), `:141` (`entradaSimples`);
+  `apps/web/src/lib/session-timeline.ts:67` (`mensagem`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:389`, `:426`, `:673` (as
+  três mensagens); `apps/web/src/routes/SessionFio.tsx:139` (o bloco único)
+- **Teste:** `apps/web/src/routes/session-fio.test.ts` (cards não contam, o
+  corte recua até a abertura, ordem do fio, e o caso de falha do turno maior
+  que o corte); `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-177/RN-644": o caso medido com cards intercalados, e o
+  histórico expandido na ordem)
+- **Origem:** AT-319, achado X3 do levantamento visual "antes" da Rodada 29
 ### RN-637 — A tela lê a CAUDA das ações da sessão, e a pendente antiga volta junto {#rn-637}
 
 `GET /projects/:projectId/sessions/:sessionId/actions` ordenava por `seq`
@@ -17436,7 +17816,7 @@ novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
   `apps/api/src/application/ports/proposed-action-repository.port.ts`
   (`ListProposedActionsOptions`);
   `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
-  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:420`
+  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:432`
   (`usePendingActions`)
 - **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
   (sem `latest` a pendente nova fica de fora — o defeito; com `latest` ela
@@ -17507,15 +17887,15 @@ o do chat.
 - **Código:** `apps/web/src/routes/ProjectPage.tsx:82` (o contador),
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
-  (`sessaoDeTrabalho`), `:309` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:93` (`pendentesDoProjeto`);
+  (`sessaoDeTrabalho`), `:322` (`handleApprove`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
-  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:438`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:450`
   (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
   (`acoesPendentes`)
 - **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
@@ -17534,3 +17914,437 @@ o do chat.
   `apps/web/src/routes/duas-abas.orcamento.test.tsx` (a rajada invalida a fila
   do projeto na aba Executores, dentro do orçamento da RN-632)
 - **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)
+
+### RN-646 — Bloqueio e controle inerte dizem o motivo de QUEM está na tela: a aba PRs fala da lista de PRs, e Parar/Remover sem container dizem que não há container {#rn-646}
+
+Duas telas mostravam um estado certo com o texto de outro lugar (AT-323,
+AT-324 — achados P1 e K1/K2 do levantamento visual da Rodada 29).
+
+**A aba PRs e o portão da imagem.** O bloqueio é REAL e fica: a lista de PRs e
+o diff passam pelo MESMO funil da aba Código (`ReadProjectCodeUseCase.alvo` →
+`portaoDoContainer`), então sem imagem decidida (RN-105, nos três modos pela
+[RN-494](#rn-494)) a api responde 409 também ali — medido, não suposto. O que
+estava errado era o texto: a aba PRs mostrava "A aba Code ainda não está
+liberada", falando de OUTRA aba e com um nome ("Code") que não é o do trilho
+("Código"). Agora `ContainerImageGateNotice` recebe a SUPERFÍCIE bloqueada
+(`'code' | 'prs'`), a aba PRs diz "A lista de PRs ainda não está liberada" e
+explica que lê o repositório pelo mesmo caminho da aba Código; e o nome das
+abas no texto vem de `nav:tabs.*.label`, a MESMA fonte do trilho — nunca um
+literal, que é como "Code" e "Código" divergiram. A nota da aba PRs NÃO
+promete liberar sozinha: a aba Código pergunta o estado e revalida, a lista de
+PRs só descobre o 409 quando a query falha.
+
+**`/containers` sem container.** Parar e Remover já eram `disabled` com
+`registrado: null` ([RN-521](#rn-521), "nunca provisionado") e com `removed`,
+mas nada dizia por quê, e a variante `danger` do `Button` não tinha estado
+desabilitado — "Remover" saía em vermelho cheio, igual ao ativo. Agora a linha
+diz o motivo UMA vez em texto (`Nunca provisionado: não há container para
+parar nem remover.` / `Container removido: …`), e `.danger:disabled` ganha a
+mesma opacidade das outras variantes. Linha com container de pé não ganha
+texto nenhum.
+
+**O motivo longo da falta de broker.** O texto que nomeia `BROKER_URL` tinha
+nove linhas e triplicava a altura da linha da tabela. A célula mostra agora UMA
+frase curta num `<summary>`, e o texto longo (que continua nomeando a variável,
+para o operador) abre sob demanda no `<details>` — nativo e acessível por
+teclado, nunca `title` num botão desabilitado (ADR 0064). Quando a MESMA falta
+de broker trava subir E parar/remover, é UMA linha só ("subir, parar e remover
+só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
+
+- **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
+  (`ContainerImageGateNotice`), `:42` (`bloco`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
+  `apps/web/src/routes/ContainersPage.tsx:242` (`semContainer`), `:257`
+  (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
+  (`.danger:disabled`)
+- **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira
+  o estado dedicado, com o texto da aba PRs e não o da aba Código", "409 no
+  diff aberto por id também usa o texto da aba PRs", e o caso de falha: 500
+  continua banner com "Tentar de novo"); `apps/web/src/routes/ProjectCodeTab.test.tsx`
+  e `apps/web/src/routes/code/CodeDiffPanel.test.tsx` (a aba Código diz
+  "Código"); `apps/web/src/routes/ContainersPage.test.tsx`, bloco "Parar/Remover
+  sem container e o motivo curto (AT-324)" (nunca provisionado, removido, o
+  caso de falha "container de pé: nenhum motivo", o `<details>` fechado com
+  `BROKER_URL` só dentro dele, e a linha única quando o broker trava as três)
+- **Origem:** AT-323, AT-324. Não muda o portão da RN-105/RN-494 (a lista de
+  PRs segue bloqueada sem imagem decidida — se ela DEVE escapar do portão é
+  decisão do dono), nem a régua de subida da RN-521/RN-574.
+
+### RN-648 — A sidebar, o card do Dashboard e o painel de artefatos não se contradizem: cada estado vazio diz QUAL sessão leu, e contador e lista contam na mesma unidade {#rn-648}
+
+Três telas afirmavam "nada" ao lado de uma tela que mostrava algo (AT-325 —
+achados S2/D2/X6 do levantamento visual da AT-290). A reprodução com o engine
+real não foi possível neste ambiente (o egress bloqueia `repo.hex.pm` e o
+Alpine, e nenhuma imagem compila); as três contradições foram MEDIDAS no
+código e provadas por testes que falham antes da correção. A do Dashboard
+nasceu, no levantamento, de um 500 do stub do engine no resumo do workspace —
+mas o texto que a transformou em "sem atividade" é do web, e com o engine real
+qualquer falha do resumo produziria o mesmo.
+
+**A sidebar lia a sessão de EXECUÇÃO, e só ela.** O bloco Atividades
+(RN-198) pedia os eventos da sessão de execução vigente
+(`useActiveExecutionSession`). Num projeto só com sessões de conversa ela é
+`null`, a lista vinha vazia, e a sidebar dizia "Nenhum agente entrou em ação
+ainda" ao lado de uma Visão geral com o Criativo aguardando. Agora: com
+execução vigente, a sidebar continua lendo ELA (os dev agents e as instâncias
+`-2` são o que o agrupamento da RN-198 existe para mostrar, e a `queryKey` é a
+da aba Executores); SEM execução, lê a MESMA sessão da Visão geral e do card do
+Dashboard — a mais recente de trabalho (`useLatestSession`, a regra de
+`sessaoMaisRecente`). Os estados que colapsavam no mesmo texto se separam
+([RN-470](business-rules/custo.md#rn-470)): carregando (nada é afirmado), erro (texto próprio),
+projeto sem sessão ("Este projeto ainda não tem sessão."), e a sessão lida sem
+agente, com o texto NOMEANDO qual ("…na sessão de execução…" /
+"…na sessão mais recente…"). A lista de sessões só é pedida sem execução, e com
+o frescor de um ciclo de projeto (`frescorMs` em `useProjectSessions`): quando
+a sidebar a habilita a moldura do projeto já a trouxe, e o orçamento de
+requisições da [RN-632](#rn-632)/[RN-645](#rn-645) não cresce.
+
+**O card do Dashboard tinha um texto para quatro estados.** "Sem atividade
+ainda" saía com o resumo do workspace CARREGANDO, com ele FALHADO (o caso do
+levantamento: o resumo respondia 500 e o card de um projeto com dezesseis
+eventos dizia que não havia nenhum), com o projeto SEM sessão e com a sessão
+mais recente vazia. Agora são quatro textos: "carregando atividade…",
+"atividade indisponível", "Nenhuma sessão ainda" e "Sem atividade na sessão
+mais recente ainda". A linha continua lendo a sessão mais recente de trabalho
+(`latestSessionId`), a mesma da Visão geral e da sidebar sem execução — a api
+não mudou.
+
+**"Artefatos gerados 3" sobre um único grupo "PO 1".** O cabeçalho da seção
+contava a ÁRVORE do backlog (épico, história e tarefa: 3) e o grupo por agente
+contava só as RAÍZES (1). Os dois contam agora na mesma unidade — cada item
+carrega `quantos` (1, mais os descendentes quando é raiz do backlog), o
+cabeçalho é a soma dos itens e cada grupo é a soma dos seus, então a soma dos
+grupos É o cabeçalho, por construção. E o vazio da seção diz o que ela conta
+("Nenhuma PR nem item de backlog nesta sessão ainda.") em vez do "Nada ainda."
+genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia negar
+que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
+muda.
+
+- **Código:** `apps/web/src/routes/Shell.tsx:534` (`execucao`), `:542`
+  (`origemDaAtividade`), `:549` (`estadoDaAtividade`);
+  `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
+  `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
+  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:237`
+  (`totalDeArtefatos`)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
+  execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
+  de execução e o vazio diz qual; projeto sem sessão; e o caso de falha, a
+  lista de sessões que falha vira erro nomeado e nunca "nenhum agente");
+  `apps/web/src/routes/Dashboard.test.tsx` ("Dashboard — linha de atividade do
+  card (RN-648)": o resumo que falhou diz "indisponível", carregando não afirma,
+  sem sessão × sessão vazia têm textos diferentes, e com evento nenhum vazio
+  aparece); `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx` (a
+  soma dos grupos é o cabeçalho; o vazio diz o que conta);
+  `apps/web/src/routes/configuracoes.orcamento.test.tsx` e
+  `apps/web/src/routes/duas-abas.orcamento.test.tsx` seguem nos tetos
+- **Origem:** AT-325 (achados S2/D2/X6 da AT-290). Não muda o escopo da
+  [RN-159](business-rules/autenticacao.md#rn-159) nem o resumo do workspace ([RN-090](#rn-090)); estende a
+  [RN-198](business-rules/autenticacao.md#rn-198) (qual sessão a sidebar lê) e aplica a [RN-470](business-rules/custo.md#rn-470)
+
+## Acompanhar ao vivo sem martelar (RN-639)
+
+### RN-639 — O que muda por token não re-renderiza a tela, e o que acompanha o bootstrap polla a 3 s e para no fim {#rn-639}
+
+Três telas faziam trabalho que ninguém via (AT-301/AT-302). A tela de Sessão
+re-renderizava INTEIRA a cada token de um turno — o texto em curso morava em
+estado do hook chamado por ela. As telas de provisionamento e de adoção pollavam
+o status do bootstrap e os eventos da sessão técnica a 1 s, e os eventos nunca
+paravam, mesmo com o repositório pronto. E o `/status` batia para sempre num
+serviço que não respondia.
+
+1. **O texto em curso mora num store externo.** O texto do chat consultivo e a
+   faixa de atividade do turno ficam num store por sessão
+   (`criarStoreDoStreaming`), assinado por `useSyncExternalStore` só pelos dois
+   componentes que os desenham — a bolha do fio e a faixa. A página assina UMA
+   pergunta booleana (o turno já mostrou conteúdo?), que é o que o timer de
+   "pensando" ([RN-131](#rn-131)) precisa e que muda uma vez por turno. O
+   reducer da faixa é o mesmo; mudou quem guarda o estado.
+2. **O bootstrap é acompanhado a 3 s.** Status e eventos, nas duas telas.
+3. **E para no fim.** Status e eventos param quando o bootstrap converge
+   (`provisioned`) e quando a query erra (`pollQueParaNoErro`). A FALHA
+   (`provision_failed`) é terminal na adoção e NÃO no provisionamento: ali o
+   "Tentar novamente" dispara um bootstrap novo e a tela precisa ver o
+   progresso dele ([RN-477](#rn-477)).
+4. **O `/status` para no erro.** Serviço que responde — inclusive com 5xx, que
+   vira `status: 'error'` num corpo resolvido — segue a cada 5 s. Serviço que
+   não responde deixa de ser perguntado por timer; o foco da janela e a
+   remontagem perguntam de novo, e o primeiro sucesso retoma o ritmo.
+
+- **Onde:** `apps/web/src/lib/streaming-do-turno.ts:48` (`criarStoreDoStreaming`),
+  `apps/web/src/lib/streaming-do-turno.ts:98` (`useSemConteudoNoTurno`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
+  `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
+  `apps/web/src/routes/StatusPage.tsx:78` (`pollQueParaNoErro`)
+- **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
+  tokens depois do primeiro não re-renderizam a página; o fim do turno
+  re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
+  `apps/web/src/lib/poll-do-bootstrap.test.ts`,
+  `apps/web/src/routes/StatusPage.test.tsx`
+- **Origem:** AT-301, AT-302
+
+### RN-643 — Abaixo de 768px a sidebar vira gaveta e o trilho do projeto vira barra horizontal; a página nunca rola de lado {#rn-643}
+
+A auditoria visual da Rodada 29 (AT-290, achado S1) mediu que o produto não
+tinha layout móvel depois do login: a 390px a sidebar (264px) e o trilho do
+projeto (180px) continuavam FIXOS, somando 444px de moldura, e o conteúdo ficava
+com 0 a 126px ou estourava para a direita. Configurações chegou a 114 textos
+cortados (`validacao-visual.js`).
+
+**A regra:**
+
+1. **Um corte, uma fonte.** O breakpoint é `CONSULTA_MOVEL`
+   (`(max-width: 767px)`), lido por `useLayoutMovel`. Quem troca de layout lê
+   esse hook e aplica o desenho móvel por uma CLASSE; os módulos CSS não têm
+   `@media` próprio para isso. Assim o que o JS decide e o que o CSS desenha
+   não divergem num pixel de fronteira, e o teste de componente (jsdom, sem
+   CSS) prova o mesmo corte que o navegador aplica. Sem `matchMedia` o
+   layout é o de DESKTOP: o móvel só vale quando a consulta o afirma.
+2. **A sidebar vira gaveta.** Uma barra no topo traz o botão de menu
+   (`aria-expanded`, `aria-controls`) e a marca. A gaveta é um diálogo modal
+   (`role="dialog"`, `aria-modal`): ao abrir, o foco entra nela; o Tab não
+   sai; o Esc, o X e o fundo a fecham e devolvem o foco ao botão de menu.
+   Ela também fecha ao seguir qualquer link de dentro dela (as abas do projeto
+   mudam só o `?tab=`) e quando a rota muda por fora. Na gaveta a sidebar
+   aparece sempre EXPANDIDA, e o botão "Recolher menu" some: o colapso manual
+   ([RN-195](business-rules/autenticacao.md#rn-195)) é preferência do desktop, fica gravado e volta a valer
+   quando a janela cruza o corte de novo.
+3. **O trilho do projeto vira barra horizontal.** São as mesmas 12 folhas, na
+   mesma ordem, com os cabeçalhos de grupo inline e
+   `aria-orientation="horizontal"`. As setas que andam são esquerda e
+   direita, e a aba ativa é rolada para dentro da faixa visível. A barra rola
+   por DENTRO; a página não rola de lado. O corpo do projeto vira coluna (a
+   barra acima do painel), e a Visão geral empilha o time e a atividade em
+   vez de manter o trilho de 360px ao lado.
+
+**Medido** (390×844, tema escuro, seed da api, `validacao-visual.js` injetado):
+`scrollWidth` do documento = 390 em todas as telas autenticadas (dashboard, as
+12 abas, `/containers`, `/account`), e `<main>` com os 390px inteiros. Nas
+Configurações, `texto-cortado` caiu de 114 para 33. O resto é texto de
+componente (tabelas e rótulos das seções), assunto de tipografia e espaço, não
+de moldura. O `fora-da-viewport` que sobra na Visão geral e em Aprovações são
+abas da barra horizontal além da borda, onde a rolagem interna as alcança.
+
+**O que esta regra NÃO fecha:** a aba Código mantém o trilho de 48px do
+`CodeShell` e o editor em colunas; ela não foi desenhada para telefone. A
+tela de Sessão herda a moldura nova, mas a barra superior e o fio seguem com
+os achados X1–X3 da auditoria. Os dois lugares de navegação por abas (a
+gaveta e a barra) continuam existindo lado a lado, a mesma duplicação
+declarada no ADR 0126.
+
+- **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
+  (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
+  `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:89`
+  (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
+  (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
+  fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
+  gravado; cruzar o corte volta à sidebar fixa; e o caso de falha, sem
+  `matchMedia` não há menu nem diálogo);
+  `apps/web/src/routes/ProjectRail.test.tsx` ("barra horizontal no layout
+  móvel": tablist horizontal com as 12 abas e a ativa rolada para a faixa;
+  setas esquerda/direita com volta e a seta para baixo inerte; e o caso de
+  falha, desktop continua vertical e a seta direita não anda), sobre o mock
+  `apps/web/src/test/match-media.ts`
+- **Origem:** AT-316 (achado S1 da AT-290); não muda o ADR 0126, só dá ao
+  trilho uma forma para telas estreitas
+
+### RN-645 — Configuração não se busca de novo a cada montagem, não polla, e a aba Configurações tem três faixas de moldura, não quatro {#rn-645}
+
+O levantamento visual da Rodada 29 (achado G1, AT-321) percorreu as seções de
+Configurações em ~40s e a página inteira do projeto virou "Limite de
+requisições excedido" — o teto de 300 req/min é do USUÁRIO
+([RN-579](#rn-579)). O roteiro RECARREGAVA a página por seção, e uma carga da
+aba custava 55 requisições. Medido com as telas de verdade, o defeito tinha
+três partes, e nenhuma delas pede subir o teto:
+
+**A regra:**
+
+1. **Dado de CONFIGURAÇÃO vale um minuto** (`FRESCOR_DA_CONFIGURACAO_MS`). Com o
+   `staleTime: 0` do TanStack, toda observadora que MONTA depois da primeira
+   refaz a busca. As seções só montam depois que o projeto chega, então
+   `GET /projects/:id`, `GET /projects/:id/git/repository` e `GET /workspaces`
+   saíam DUAS vezes em toda carga; e trocar de aba e voltar remontava as 19
+   seções e refazia 31 buscas. Configuração só muda por MUTAÇÃO, e toda
+   mutação da aba invalida a própria chave — invalidar ignora `staleTime`,
+   então quem salva vê o valor novo na hora. O que o minuto atrasa é a mudança
+   feita por OUTRA pessoa, que segue chegando no foco da janela e na próxima
+   montagem depois do minuto. **Estado operacional fica fora** (ciclo de vida
+   do container, gasto por agente e por chave, chaves de dispositivo com
+   `lastUsedAt`, plano de bootstrap): ali a pergunta é "o que está de pé
+   agora".
+2. **Configuração não polla.** O perfil de proficiência e o histórico de
+   versões de instrução pollavam a 15s — 8 req/min contra o teto para duas
+   listas que só mudam pela própria seção (que invalida) ou por patch
+   aprovado.
+3. **O sumário DEITA acima das seções, em qualquer largura.** Como coluna
+   `sticky` ao lado delas ele era a quarta faixa vertical (sidebar 264 +
+   trilho 180 + sumário 208): a 1440px sobravam ~740px de conteúdo e a tabela
+   de modelos cortava o nome do agente em 79px e o do modelo em 91px (achado
+   G2). A coluna não tinha como pagar o próprio preço nem num monitor largo,
+   porque `.body` tem teto de 1040px (ADR 0078). Deitado, ele devolve os 208px
+   às seções; o preço é o que a janela estreita já pagava — perde-se o "onde
+   estou" GRUDADO na tela, não a navegação. Nenhum token mudou.
+
+**Números** (`configuracoes.orcamento.test.tsx`, `Shell` + `ProjectPage` na
+aba Configurações sobre um `fetch` que conta por rota; `dev` → esta regra):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| carga da aba (2,5s) | 53 | 50 |
+| um minuto parado na aba | 76 | 68 |
+| Configurações → Visão geral → volta (buscas de configuração) | 31 | 0 |
+
+Os "Depois" foram medidos sobre a mesma base do "Antes"; integrada a `dev` com a
+[RN-638](#rn-638) (a moldura lê a fila do projeto uma vez só), a carga ficou em
+49 e o minuto em 64, e são esses os tetos que o teste guarda.
+
+**O que esta regra NÃO fecha:** a carga continua em 50, e 20 delas são o
+binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota por chave
+(`GET projects/:projectId/agent-bindings/:agentSlug`) — cortá-las pede rota de
+LOTE na api, decisão à parte. Por isso RECARREGAR a página por seção, como o
+roteiro do levantamento fazia, ainda estoura o teto em ~6 cargas por minuto;
+navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
+minuto são todos da MOLDURA (o `Shell` polla `projects-summary` e
+`execution/session` a 5s e os eventos da sessão de execução a 3s), comuns a
+toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
+
+- **Código:** `apps/web/src/lib/query-policy.ts:111`
+  (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
+  (`useCurrentWorkspaceWithRole`), `:530` (`useProficiency`);
+  `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
+  (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
+  e `apps/web/src/components/ModelCatalogSection.tsx`;
+  `apps/web/src/routes/settings/sumario.module.css:36` (`.layout`, a faixa)
+- **Teste:** `apps/web/src/routes/configuracoes.orcamento.test.tsx` (a carga
+  busca cada recurso uma vez; um minuto sem poll de configuração; trocar de
+  aba e voltar sem buscas de configuração — os três reprovam na `dev` — e o
+  caso de falha: invalidar busca na hora, e passado o minuto a volta busca de
+  novo)
+- **Origem:** AT-321 (achados G1 e G2 do levantamento visual da Rodada 29;
+  extensão da [RN-579](#rn-579) e da [RN-632](#rn-632))
+
+### RN-651 — No telefone, o painel da Sessão é gaveta, a barra quebra linha, e a tabela vira cartões {#rn-651}
+
+A auditoria visual "depois" da Rodada 29
+(`docs/explanation/auditoria-visual-rodada-29.md`, achados N1 e N3 a N8) mediu,
+a 390px, o que a [RN-643](#rn-643) não tinha alcançado: na Sessão o painel
+"Contexto da sessão" mantinha ~320px e deixava ~70px ao fio (uma palavra por
+linha), e a barra jogava "Iniciar ideação" e "Encerrar" para fora da borda; em
+`/containers` sete colunas em fração sobrepunham os cabeçalhos e cortavam as
+ações; em "Modelos por agente" o nome do agente tinha 6px e o seletor 0px; o
+`/status` rolava de lado (413px); a busca do Dashboard virava "Bus"; o nome da
+sessão na lista do Criativo tinha 0px; e o trilho móvel deixava a aba ativa
+cortada, sem sinal de que rolava.
+
+**A regra** (o corte é o mesmo `useLayoutMovel` da [RN-643](#rn-643), e o
+desenho vem por CLASSE ou atributo que o componente põe, nunca por `@media`):
+
+1. **O painel de contexto da Sessão nasce FECHADO no telefone** e abre como
+   GAVETA sobre o fio, pela direita: diálogo modal com o nome do painel, foco
+   no X ao abrir, Esc, X e fundo fecham e devolvem o foco a quem abriu. No
+   desktop ele nasce aberto ao lado do fio, como sempre. Cruzar o corte volta
+   ao padrão do lado novo — um painel aberto no desktop não reaparece
+   espremendo o fio no telefone. A exceção é a navegação que VEM ao painel
+   (`highlightEvent`, o chip de evidência do Psicólogo): aí ele nasce aberto
+   também no telefone.
+2. **A barra da Sessão quebra linha, nunca corta.** Saída, estado, título e o
+   alternador do painel ficam na primeira linha; tipo, ajustes, "Iniciar
+   ideação" e "Encerrar" descem, e descem de novo se precisar. O que a barra
+   mostra continua decidido pela largura dela ([RN-620](#rn-620) item 6).
+3. **Toda `Table` vira pilha de cartões no telefone.** Cada linha é um cartão
+   e cada célula leva o rótulo da coluna ao lado do valor; o cabeçalho some.
+   Coluna sem rótulo, ou marcada `largaNoMovel` (um seletor, um bloco de
+   ações), ocupa a largura do cartão com o rótulo em cima.
+4. **A página não rola de lado, e o que identifica a linha não some.** O
+   `/status` rola a tabela por dentro de um invólucro próprio; a busca do
+   Dashboard ganha linha inteira; a linha da lista de sessões quebra com o nome
+   em cima, inteiro.
+5. **O trilho móvel acompanha a aba ativa e diz que rola.** A ativa é trazida
+   para a faixa ao montar, ao trocar, quando o CONTEÚDO do trilho muda (os
+   contadores chegam depois e alargam as abas anteriores) e quando as fontes
+   terminam de carregar — nunca a cada render, senão quem rolou a faixa à mão
+   seria puxado de volta. A borda que esconde abas esmaece
+   (`data-rola-inicio`/`data-rola-fim`).
+
+**Medido** (390×844, os dois temas, api nativa com o seed, `validacao-visual.js`
+injetado): `scrollWidth` 390 em todas as sete telas; zero `texto-cortado` no
+Dashboard, na lista do Criativo, na Sessão (com e sem a gaveta), em
+`/containers` e no `/status`; nas Configurações os 33 caíram para zero, e a aba
+ativa do trilho ficou inteira dentro da faixa nas três abas medidas.
+
+**O que esta regra NÃO fecha:** na barra mínima "Encerrar" continua só com o
+ícone e o nome acessível (a [RN-620](#rn-620) decide isso pela largura da
+barra). O alternador do painel sobe para a linha do título só na PINTURA
+(`order`): a ordem do Tab segue a do DOM. O `fora-da-viewport` que o
+verificador ainda relata nas Configurações e em Aprovações são ícones decorativos com
+`position: absolute` dentro de controles abaixo da dobra, não algo cortado.
+
+- **Código:** `apps/web/src/lib/painel-de-contexto.ts:16`
+  (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
+  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:122`
+  (`movel`); `apps/web/src/components/ui/Table.tsx:13` (`largaNoMovel`),
+  `:28` (`movel`); `apps/web/src/routes/ProjectRail.tsx:103` (`conteudo`),
+  `:124` (`bordas`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
+  `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
+- **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
+  nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e
+  fundo fecham; a barra quebra antes das ações; e o caso de falha, no desktop o
+  painel fica ao lado do fio sem gaveta nem quebra; cruzar o corte fecha o
+  painel); `apps/web/src/components/ui/Table.test.tsx` ("layout estreito");
+  `apps/web/src/routes/ContainersPage.test.tsx`,
+  `apps/web/src/routes/settings/modelos-por-agente-no-movel.test.tsx`,
+  `apps/web/src/routes/StatusPage.test.tsx`,
+  `apps/web/src/routes/Dashboard.test.tsx`,
+  `apps/web/src/routes/ProjectSessionsTab.test.tsx` e
+  `apps/web/src/routes/ProjectRail.test.tsx` (cada um com o móvel e o caso de
+  falha do desktop ou da faixa que cabe)
+- **Origem:** AT-328 (achado N1) e AT-330 (achados N3 a N8) da auditoria
+  visual da Rodada 29; completa a [RN-643](#rn-643)
+
+## O autor de cada fala do fio é o ator do evento (RN-652)
+
+### RN-652 — `chat.message` é desenhado sob o ATOR do evento — pessoa, agente ou desconhecido —, nunca sob quem vê a tela {#rn-652}
+
+Até aqui todo `chat.message` saía com o nome e o avatar de quem estava logado:
+numa sessão compartilhada, a fala de outra pessoa aparecia com o SEU nome, e a
+de um agente com o seu e-mail (achado N2 da auditoria visual da Rodada 29,
+escondido enquanto o fio agrupava o histórico por origem). O autor sai agora do
+`actor` do evento, que a api grava com o id de quem mandou
+(`SendAgentMessageUseCase`, `SendChatMessageUseCase`) e que a rota genérica de
+anexar evento aceita de qualquer espécie. Os desfechos não se colapsam:
+
+1. **Quem vê** (`actor.id` igual ao `sub` do token; sem ele, pelo e-mail da
+   linha de membro) — o nome ou e-mail da linha de membro, senão o e-mail da
+   sessão, e só na falta dos dois "Você".
+2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, da
+   rota que JÁ existe, `GET projects/:id/members` (mínimo `viewer`), sob a
+   MESMA `queryKey` da aba de Configurações.
+3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro". É LACUNA
+   declarada: `project_members` só lista quem tem linha no projeto, e quem
+   entra só pelo papel de WORKSPACE não aparece ali; não há rota de leitura de
+   membros de workspace, e nenhuma foi inventada. A leitura que falha ou ainda
+   não chegou dá o mesmo desfecho, sem quebrar o fio.
+4. **Agente** — `nomeDoAgente` e o avatar/cor do agente, como `agent.response`.
+5. **Ator desconhecido** (ausente, sem id, `system` ou espécie fora de
+   pessoa/agente) — "Autor desconhecido", nunca "Você".
+
+A narração `backlog.story_promotion_returned`, que tinha o mesmo defeito
+(o nome de quem vê sobre quem devolveu a história), passa pela mesma função.
+A mensagem OTIMISTA do composer continua com o e-mail de quem vê — ela é
+sempre dele.
+
+- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:44` (`autorDaMensagem`);
+  `apps/web/src/lib/autoria-da-sessao.ts:18` (`useAutoriaDaSessao`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
+  `:405` (o `chat.message`), `:687` (a devolução de história);
+  `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
+- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:140`
+  (duas pessoas e um agente, cada mensagem sob o próprio autor — caminho
+  feliz), `:161` (ator desconhecido e pessoa fora dos membros com texto
+  próprio — caso de falha), `:179` (leitura de membros recusada);
+  `apps/web/src/lib/autor-da-mensagem.test.ts:58` (ator ausente, sem id ou de
+  espécie desconhecida nunca vira "você")
+- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)

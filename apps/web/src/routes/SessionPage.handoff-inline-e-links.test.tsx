@@ -73,7 +73,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -174,7 +177,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // ...e o botão de aceitar existe UMA VEZ SÓ (não duplicado com a topbar).
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
 
@@ -214,7 +217,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // Só UM botão — o da oferta mais recente.
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
   });
@@ -282,7 +285,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
     montar();
 
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
 
     const link = screen.getByRole('link', {
@@ -320,7 +323,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
 
     montar();
 
-    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(
       screen.queryByRole('link', { name: /Acompanhe a execução em Executores/ }),
     ).not.toBeInTheDocument();
@@ -350,7 +353,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou o épico "Autenticação de usuários"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 
@@ -381,7 +384,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou a história "Login com e-mail e senha"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 });

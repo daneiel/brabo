@@ -122,6 +122,24 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Mesmo `create_handoff/5`, no modo "só se ninguém recebeu ainda" (ADR 0182,
+  RN-636): com oferta pendente ao destino em QUALQUER sessão do projeto, a api
+  devolve a existente (`"desfecho" => "ja_oferecido"`) em vez de substituí-la;
+  com o destino já ativo no projeto, recusa com 409 `agente_ja_ativo`. É o
+  modo do AppSec, que oferece um parecer por história aos mesmos destinos. A
+  decisão mora na api, sob o lock do destino — perguntar antes, daqui, seria
+  corrida com outra oferta.
+  """
+  @callback create_handoff_if_absent(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              from_agent :: String.t(),
+              to_agent :: String.t(),
+              artifact_id :: String.t() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Ferramentas do PO (create_epic/create_story/create_task) — criam linhas de
   backlog na api (nunca SQL direto). `fields` é o corpo camelCase da linha;
   retornam `{:ok, %{"id" => ...}}` (a story também traz `"status"`) ou
@@ -690,6 +708,11 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
       |> avisar_canal(session_id, "handoff.offered", from_agent)
 
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id),
+    do:
+      impl().create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id)
+      |> avisar_canal(session_id, "handoff.offered", from_agent)
+
   def create_epic(project_id, session_id, fields),
     do:
       impl().create_epic(project_id, session_id, fields)
@@ -1008,6 +1031,17 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       fromAgent: from_agent,
       toAgent: to_agent,
       artifactId: artifact_id
+    })
+  end
+
+  @impl true
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id) do
+    post_returning("/internal/sessions/#{session_id}/handoffs", %{
+      projectId: project_id,
+      fromAgent: from_agent,
+      toAgent: to_agent,
+      artifactId: artifact_id,
+      seAusente: true
     })
   end
 

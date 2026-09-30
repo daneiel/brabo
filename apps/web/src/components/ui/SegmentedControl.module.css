@@ -1,0 +1,7 @@
+/* O controle segmentado (AT-327). Ver `SegmentedControl.tsx`. A pílula é o
+   `ui/Chip`; aqui só o arranjo — o espaço em volta é de quem chama. */
+.grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

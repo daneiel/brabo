@@ -12,6 +12,7 @@ import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Cor de cada uso na tabela de "melhores modelos por capacidade" — só
@@ -59,10 +60,12 @@ export function MelhoresModelosPorCapacidadeSection({
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: catalogo } = useQuery({
     queryKey: ['model-catalog', project?.workspaceId],
     queryFn: () => listModelCatalog(project!.workspaceId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(project?.workspaceId),
   });
   // MESMA queryKey que `ModelsSection` usa para o binding de cada agente —
@@ -72,6 +75,7 @@ export function MelhoresModelosPorCapacidadeSection({
     queries: AGENT_LIST.map((agent) => ({
       queryKey: ['agent-binding', projectId, agent.key],
       queryFn: () => getAgentModelBinding(projectId, agent.key),
+      staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     })),
   });
 

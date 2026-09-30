@@ -461,7 +461,7 @@ describe('ExecutionSection', () => {
     getProject.mockResolvedValue(project({ maxConsecutiveBlocked: null }));
     montar();
 
-    expect(await screen.findByText(/usa o default \(3\)/)).toBeTruthy();
+    expect(await screen.findByText(/usa o padrão \(3\)/)).toBeTruthy();
     expect(screen.getByDisplayValue('3')).toBeTruthy();
   });
 
@@ -488,7 +488,7 @@ describe('ExecutionSection', () => {
         maxConsecutiveBlocked: 7,
       }),
     );
-    expect(await screen.findByText('Teto do circuit breaker salvo')).toBeTruthy();
+    expect(await screen.findByText('Teto da parada automática salvo')).toBeTruthy();
   });
 
   it('valor inválido (zero, negativo, fracionário): botão desabilitado, nada é salvo', async () => {
@@ -1112,7 +1112,7 @@ describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', 
     expect(await screen.findByText('Área Dev')).toBeInTheDocument();
     expect(screen.getByText('Área QA')).toBeInTheDocument();
     expect(screen.getByText('Área Infra')).toBeInTheDocument();
-    expect(screen.getByText(/Lead: dev-lead/)).toBeInTheDocument();
+    expect(screen.getByText(/Lead: Dev Lead/)).toBeInTheDocument();
   });
 
   it('área SEM padrão próprio não mostra "Voltar a herdar"', async () => {

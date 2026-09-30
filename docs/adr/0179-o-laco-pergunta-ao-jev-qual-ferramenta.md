@@ -141,7 +141,7 @@ OpenRouter cobra (preço de catálogo, sem cache nem raciocínio); o do Jev não
 sofre disso, porque usa o custo que a resposta devolve.
 
 **9. O desligador é do WORKSPACE** (resposta 3), coluna
-`workspaces.tool_router_enabled`, padrão ligado, migration 0064, alterada por
+`workspaces.tool_router_enabled`, padrão ligado, migration 0066, alterada por
 `PUT workspaces/:workspaceId/tool-router` (`owner`, o dono da chave que paga).
 A api lê a flag do próprio banco no caminho do turno; o engine não lê nada e não
 faz HTTP a mais. Desligado, nenhuma chamada ao Jev sai e nenhum evento nasce. A

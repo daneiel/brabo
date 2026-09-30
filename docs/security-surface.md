@@ -1076,6 +1076,18 @@ reason in the URL.
   handoff exists and its status, which any `viewer` of the project already reads
   through `GET .../sessions/:sessionId/handoffs`; it never names a session or
   a user.
+- **Offering a handoff to an agent already active in the project is `409`
+  `agente_ja_ativo`, and the classification didn't change** — the human route
+  `POST .../sessions/:sessionId/handoffs` stays `role:developer` and the
+  internal one stays `engine-service` ([RN-635](business-rules.md#rn-635),
+  [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)). Unlike the refusal above,
+  this one DOES name a session: the message says in which session of the same
+  project the target is active, because it is the text the agent reads as its
+  tool result and the pointer a person needs to go talk to it. Any `viewer` of
+  the project already lists its sessions and reads `agent.activated` in each,
+  so nothing crosses a project boundary. The same routes now answer with the
+  CURRENT offer instead of always a new row (`desfecho`), and the internal one
+  accepts `seAusente` — a switch that can only make the call write LESS.
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
@@ -1136,6 +1148,15 @@ reason in the URL.
   menu and nothing else: it cannot approve, deny, or widen anything, and a
   call the model makes outside the menu still becomes a Proposed Action under
   the same policy. Any failure of the call falls to the whole catalog.
+- **`POST .../actions/:actionId/approve_always` gained `desfecho` and
+  `padraoGravado` in the response, and the classification didn't change** —
+  still `role:developer` ([RN-642](business-rules.md#rn-642)). The approval
+  and the recorded pattern now share one transaction; clicking an action that
+  was already APPROVED answers `201` with `desfecho: "ja_aprovada"` instead of
+  `409`, and a DENIED action keeps answering `409` (`acao_ja_recusada`) with
+  nothing written. The RN-418 caps and `container_remove` are still refused
+  with `400` before any state is read, so the idempotent path can never write
+  a pattern the ceiling forbids.
 
 ## Table
 
@@ -1339,6 +1360,7 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:maintainer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |

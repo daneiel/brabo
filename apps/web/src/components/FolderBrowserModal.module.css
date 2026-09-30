@@ -46,7 +46,7 @@
 }
 
 .atalhoItem:hover:not(:disabled) {
-  background: var(--surface-3, var(--surface-1));
+  background: var(--surface-1);
 }
 
 .atalhoItem:disabled {
@@ -89,12 +89,12 @@
   color: var(--text-secondary);
   cursor: pointer;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font: inherit;
 }
 
 .segmento:hover:not(:disabled) {
-  background: var(--surface-3, var(--surface-2));
+  background: var(--surface-2);
   color: var(--text-primary);
 }
 
@@ -144,12 +144,12 @@
 
 /* Pasta selecionada por UM clique (não navegou ainda — duplo clique entra). */
 .itemSelecionado {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
 .itemSelecionado:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: var(--accent-soft);
 }
 
 /* Arquivo: aparece na listagem (o protocolo devolve os dois), mas nunca é
@@ -197,7 +197,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: var(--surface-3, var(--surface-1));
+  background: var(--surface-1);
   color: var(--accent);
   margin-bottom: 4px;
 }

@@ -1,17 +1,18 @@
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
-import { ROTULO_DA_ORIGEM } from '../lib/activity';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
 import { ModelIcon, UserIcon } from '../components/ui/icons';
-import type { dividirFio } from './session-fio';
+import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
+import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
 import styles from './SessionPage.module.css';
 
 /**
  * O conteúdo do fio da Sessão, dentro da área que rola: o convite da sessão
- * que ainda não começou (RN-097/RN-104), o histórico recolhido por origem e as
- * entradas recentes (RN-177), a mensagem otimista do usuário e a bolha do chat
+ * que ainda não começou (RN-097/RN-104), o histórico recolhido e as
+ * entradas recentes (RN-177/RN-644), a mensagem otimista do usuário e a bolha do chat
  * consultivo em streaming (RN-131/RN-156). A sentinela do fim do fio e os refs
  * da rolagem ficam no `SessionPage`, que é quem rola.
  *
@@ -30,7 +31,12 @@ export interface SessionFioProps {
   optimisticUser: string | null;
   user: { name: string | null };
   turnoViaCanal: boolean;
-  streamingText: string;
+  /**
+   * O texto em curso vem como STORE, não como string (AT-301): só a bolha
+   * (`BolhaDoStreaming`, abaixo) o assina, e um token re-renderiza a bolha —
+   * não o fio, e muito menos a `SessionPage`.
+   */
+  streamingStore: StoreDoStreaming;
   pensandoVisivel: boolean;
   streaming: boolean;
   statusAgent: string | null;
@@ -48,7 +54,7 @@ export function SessionFio({
   optimisticUser,
   user,
   turnoViaCanal,
-  streamingText,
+  streamingStore,
   pensandoVisivel,
   streaming,
   statusAgent,
@@ -66,7 +72,7 @@ export function SessionFio({
           nunca o teriam. */}
       {conviteVisivel && (
         sessaoCriativa ? (
-          <div className={styles.convite}>
+          <Card padding="lg" className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -108,9 +114,9 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </div>
+          </Card>
         ) : (
-          <div className={styles.convite}>
+          <Card padding="lg" className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -126,33 +132,41 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </div>
+          </Card>
         )
       )}
 
-      {/* RN-177 — o histórico recolhido POR ORIGEM, no topo do fio,
-          porque o fio é crescente. Nasce FECHADO: a conversa que
-          importa é a recente, e abrir tudo é o estado de hoje, que é
-          justamente o que o pedido apontou como ilegível numa sessão
-          longa. Cada origem é um `Disclosure` próprio — assim voltar a
-          ler só o que o usuário disse não obriga a reabrir também
-          todo o log de domínio. */}
-      {fio.historico.length > 0 && (
+      {/* RN-177/RN-644 — o histórico recolhido, no topo do fio, porque o
+          fio é crescente. Nasce FECHADO: a conversa que importa é a
+          recente. É UM bloco na ordem em que as coisas aconteceram (nunca
+          grupos por origem, que punham a resposta acima da pergunta), e o
+          cabeçalho DECLARA o recorte (RN-180): o que o corte conta (as
+          últimas N mensagens) e o que ficou dentro, mensagens e o resto
+          separados. */}
+      {fio.historico && (
         <div className={styles.fioHistorico}>
-          {fio.historico.map(({ origem, itens }) => (
-            <Disclosure
-              key={origem}
-              titulo={ROTULO_DA_ORIGEM[origem]}
-              trailing={itens.length}
-              classNameCabecalho={styles.fioHistoricoCabecalho}
-            >
-              <div className={styles.fioHistoricoRegiao}>
-                {itens.map((entry) => (
-                  <div key={entry.key}>{entry.node}</div>
-                ))}
-              </div>
-            </Disclosure>
-          ))}
+          <Disclosure
+            titulo={t('fio.historico.titulo', { count: FIO_RECENTES_ABERTAS })}
+            trailing={
+              fio.historico.outras > 0
+                ? t('fio.historico.conteudoComOutras', {
+                    mensagens: t('artefatos.mensagensCount', {
+                      count: fio.historico.mensagens,
+                    }),
+                    outras: t('fio.historico.outrasCount', {
+                      count: fio.historico.outras,
+                    }),
+                  })
+                : t('artefatos.mensagensCount', { count: fio.historico.mensagens })
+            }
+            classNameCabecalho={styles.fioHistoricoCabecalho}
+          >
+            <div className={styles.fioHistoricoRegiao}>
+              {fio.historico.itens.map((entry) => (
+                <div key={entry.key}>{entry.node}</div>
+              ))}
+            </div>
+          </Disclosure>
         </div>
       )}
 
@@ -195,54 +209,87 @@ export function SessionFio({
           turno de agente conversacional narra pela faixa de
           atividade (`TurnActivityStrip`, logo abaixo do fio), nunca
           pelos dois ao mesmo tempo. */}
-      {!turnoViaCanal && (streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
-        <div
-          className={styles.message}
-          style={
-            {
-              ['--msg-color' as string]:
-                agenteExibido?.color ?? 'var(--accent)',
-            } as CSSProperties
-          }
-        >
-          <span className={styles.avatar}>
-            {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
-          </span>
-          <div className={styles.messageBody}>
-            <div className={styles.messageHeader}>
-              {/*
-                Quem fala é o AGENTE (achado C). O modelo é detalhe de
-                execução e aparecia aqui como se fosse o interlocutor —
-                depois trocava para o agente quando o evento persistido
-                chegava, o que também mudava o nome na cara do usuário.
-                Sem o agente no delta, degrada para "agente" genérico,
-                nunca para o nome do modelo.
-
-                RN-156: "Reunindo informações..." só antes de haver
-                texto — é o que deixa explícito que o silêncio é
-                trabalho em curso, não ausência de resposta (achado
-                B). Frase fixa, sem o nome do agente interpolado: o
-                nome já aparece no cabeçalho assim que o streaming
-                real começa, e repeti-lo aqui não ajudava a leitura.
-              */}
-              <span className={styles.messageName}>
-                {streamingText
-                  ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
-                  : t('mensagens.reunindoInformacoes')}
-              </span>
-            </div>
-            {streamingText ? (
-              <div className={styles.bubble}>{streamingText}</div>
-            ) : (
-              <div className={styles.typing}>
-                <span className={styles.typingDot} />
-                <span className={styles.typingDot} />
-                <span className={styles.typingDot} />
-              </div>
-            )}
-          </div>
-        </div>
+      {!turnoViaCanal && (
+        <BolhaDoStreaming
+          store={streamingStore}
+          pensandoVisivel={pensandoVisivel}
+          streaming={streaming}
+          statusAgent={statusAgent}
+          agenteExibido={agenteExibido}
+        />
       )}
     </>
+  );
+}
+
+/**
+ * A bolha do chat consultivo em streaming — o ÚNICO leitor do texto em curso
+ * (AT-301). Mesmo JSX e mesma condição de antes (RN-131: "tem texto OU já
+ * passou o prazo"), só que o texto sai do store por `useSyncExternalStore`:
+ * um delta re-renderiza isto, e nada acima.
+ */
+function BolhaDoStreaming({
+  store,
+  pensandoVisivel,
+  streaming,
+  statusAgent,
+  agenteExibido,
+}: {
+  store: StoreDoStreaming;
+  pensandoVisivel: boolean;
+  streaming: boolean;
+  statusAgent: string | null;
+  agenteExibido: SessionFioProps['agenteExibido'];
+}) {
+  const { t } = useTranslation('sessionPage');
+  const streamingText = useTextoDoStreaming(store);
+  if (!(streamingText || (pensandoVisivel && (streaming || statusAgent)))) return null;
+  return (
+    <div
+      className={styles.message}
+      style={
+        {
+          ['--msg-color' as string]:
+            agenteExibido?.color ?? 'var(--accent)',
+        } as CSSProperties
+      }
+    >
+      <span className={styles.avatar}>
+        {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
+      </span>
+      <div className={styles.messageBody}>
+        <div className={styles.messageHeader}>
+          {/*
+            Quem fala é o AGENTE (achado C). O modelo é detalhe de
+            execução e aparecia aqui como se fosse o interlocutor —
+            depois trocava para o agente quando o evento persistido
+            chegava, o que também mudava o nome na cara do usuário.
+            Sem o agente no delta, degrada para "agente" genérico,
+            nunca para o nome do modelo.
+
+            RN-156: "Reunindo informações..." só antes de haver
+            texto — é o que deixa explícito que o silêncio é
+            trabalho em curso, não ausência de resposta (achado
+            B). Frase fixa, sem o nome do agente interpolado: o
+            nome já aparece no cabeçalho assim que o streaming
+            real começa, e repeti-lo aqui não ajudava a leitura.
+          */}
+          <span className={styles.messageName}>
+            {streamingText
+              ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+              : t('mensagens.reunindoInformacoes')}
+          </span>
+        </div>
+        {streamingText ? (
+          <div className={styles.bubble}>{streamingText}</div>
+        ) : (
+          <div className={styles.typing}>
+            <span className={styles.typingDot} />
+            <span className={styles.typingDot} />
+            <span className={styles.typingDot} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

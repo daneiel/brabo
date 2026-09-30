@@ -40,6 +40,7 @@ import { StorySlide } from './StorySlide';
 import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { agruparNarracoesDoTurno } from './session-fio';
+import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -60,7 +61,11 @@ export interface ContextoDaTimeline {
   projectId: string;
   sessionId: string;
   t: TFunction<'sessionPage'>;
-  user: { name: string | null };
+  /**
+   * De onde sai o AUTOR de uma fala humana (RN-652): quem vê e os membros do
+   * projeto. Nunca o nome de quem vê aplicado a toda mensagem.
+   */
+  autoria: ContextoDeAutoria;
   queryClient: QueryClient;
   invalidateActions: () => void;
   ofertasAcionaveis: Handoff[];
@@ -98,7 +103,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     projectId,
     sessionId,
     t,
-    user,
+    autoria,
     queryClient,
     invalidateActions,
     ofertasAcionaveis,
@@ -121,6 +126,23 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     finalizarTurnoDoAgente,
   } = ctx;
   const items: TimelineEntry[] = [];
+  // O rótulo de cada desfecho de `autorDaMensagem` (RN-652). "Você" só quando
+  // o ator É quem vê e não há nome nem e-mail; o desconhecido tem frase
+  // própria, e a pessoa que a tela não sabe nomear também.
+  const rotuloDoAutor = (autor: ReturnType<typeof autorDaMensagem>): string => {
+    switch (autor.tipo) {
+      case 'voce':
+        return autor.nome ?? t('compartilhado.voce');
+      case 'membro':
+        return autor.nome;
+      case 'outroMembro':
+        return t('compartilhado.outroMembro');
+      case 'agente':
+        return nomeDoAgente(autor.id);
+      case 'desconhecido':
+        return t('compartilhado.autorDesconhecido');
+    }
+  };
   // As fronteiras de turno (RN-172), calculadas UMA vez para a sessão
   // inteira — é o que impede um desfecho de escorregar para o turno de
   // baixo.
@@ -378,19 +400,39 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
 
     if (event.type === 'chat.message') {
       const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
+      // RN-652 (AT-329): o autor é o ATOR do evento — pessoa, agente ou
+      // desconhecido —, nunca quem está vendo a tela.
+      const autor = autorDaMensagem(event.actor, autoria);
+      const deAgente = autor.tipo === 'agente';
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         node: (
           <div
             className={styles.message}
             key={event.id}
-            style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+            data-autor={autor.tipo}
+            style={
+              deAgente
+                ? corDoAgente(autor.id)
+                : ({ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties)
+            }
           >
-            <span className={[styles.avatar, styles.user].join(' ')}>
-              <UserIcon size={15} />
-            </span>
+            {deAgente ? (
+              <span className={styles.avatar}>
+                <ModelIcon size={15} />
+              </span>
+            ) : (
+              <span
+                className={[styles.avatar, autor.tipo !== 'desconhecido' && styles.user]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <UserIcon size={15} />
+              </span>
+            )}
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
-                <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+                <span className={styles.messageName}>{rotuloDoAutor(autor)}</span>
               </div>
               <div className={styles.bubble}>{text}</div>
             </div>
@@ -415,6 +457,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
       );
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
           <StructuredQuestionCard
@@ -488,7 +531,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               variant="success"
               onClick={() => handleAcceptHandoff(oferta!.id, oferta!.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: oferta!.toAgent })}
+              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta!.toAgent) })}
             </Button>
             {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                 precisa saber onde acompanhar depois (RN-125). As outras
@@ -640,7 +683,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             </span>
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
-                <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+                <span className={styles.messageName}>
+                  {rotuloDoAutor(autorDaMensagem(event.actor, autoria))}
+                </span>
                 <span className={styles.messageMeta}>{t('historia.devolveuAoPo')}</span>
               </div>
               <div className={styles.bubble}>
@@ -672,6 +717,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           ? payload.modelName
           : undefined;
       empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
         // entrada, e só ela, participa do colapso de "Passos do turno".
@@ -838,10 +884,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // `token_usage` não se liga à ação. Quem propôs já está no card, em
       // negrito, e é o AGENTE — que é o que não muda.
       node: (
-        <div key={action.id}>
+        // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
+        // com teto de 560px no fio é este contêiner (RN-173).
+        <div key={action.id} className={styles.acaoNoFio}>
         <ApprovalCard
           action={action}
-          variant="chat"
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
           // AT-256: devolve a promessa (o card segura os botões e diz a frase
           // da api) e refaz a lista MESMO na recusa — um 409 quer dizer que a

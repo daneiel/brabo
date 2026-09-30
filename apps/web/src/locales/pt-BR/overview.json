@@ -26,7 +26,9 @@
   },
   "team": {
     "title": "Time de agentes",
-    "summary": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_zero": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_one": "{{count}} agente · {{working}} trabalhando · {{waiting}} aguardando",
+    "summary_other": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
     "autonomyErrorTitle": "Não foi possível mudar a autonomia",
     "rearmSuccess": "Agente rearmado",
     "rearmErrorTitle": "Não foi possível rearmar o agente"
@@ -51,6 +53,7 @@
     "runnerRessalvaNunca": "Nenhum runner conectou a este projeto ainda. Instale e rode o `brabo-runner` pela aba Código.",
     "espelho": "espelho",
     "espelhoNunca": "nunca sincronizou",
+    "espelhoValor_zero": "{{count}} arquivos copiados em {{data}}",
     "espelhoValor_one": "{{count}} arquivo copiado em {{data}}",
     "espelhoValor_other": "{{count}} arquivos copiados em {{data}}",
     "espelhoSemNovidade": "sincronizou em {{data}} — nada a copiar",
@@ -62,12 +65,15 @@
     "espelhoDestinoTrocado": "O destino mudou depois desta rodada: ela escreveu em {{destino}}. Reconecte o brabo-runner para o novo valer.",
     "modelosLocais": "modelos locais",
     "modelosLocaisNenhum": "nenhum modelo do Ollama ativo no workspace",
+    "modelosLocaisValor_zero": "{{count}} do Ollama, ativos no workspace",
     "modelosLocaisValor_one": "{{count}} do Ollama, ativo no workspace",
     "modelosLocaisValor_other": "{{count}} do Ollama, ativos no workspace"
   },
   "activity": {
     "title": "Atividade",
-    "count": "{{count}} eventos",
+    "count_zero": "{{count}} eventos",
+    "count_one": "{{count}} evento",
+    "count_other": "{{count}} eventos",
     "loadErrorTitle": "Não foi possível carregar a atividade."
   },
   "executionSection": {
@@ -81,9 +87,9 @@
     "devAgentsLabel": "Dev agents",
     "spinningUp": "Subindo os agentes…",
     "devAgentModule": "módulo: {{module}}",
-    "devAgentTask": "task: {{task}}",
+    "devAgentTask": "tarefa: {{task}}",
     "devAgentProgress": "iteração {{iteration}} · custo {{cost}}",
-    "blockedTasksLabel": "Tasks bloqueadas",
+    "blockedTasksLabel": "Tarefas bloqueadas",
     "noDiagnosis": "sem diagnóstico",
     "unblock": "Desbloquear",
     "suggestionBefore": "Há tarefas independentes em ",
@@ -94,15 +100,18 @@
     "pullRequestFallback": "PR",
     "errorTitle": "Erro",
     "activateError": "Não foi possível ativar a execução",
-    "unblockError": "Não foi possível desbloquear a task",
+    "unblockError": "Não foi possível desbloquear a tarefa",
     "authorizationNeededTitle": "Precisa da sua autorização",
-    "authorizationNeededMessage": "A sessão já tem {{count}} agente(s), o teto do lead é {{max}}. O pedido está em Aprovações.",
+    "authorizationNeededMessage_zero": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
+    "authorizationNeededMessage_one": "A sessão já tem {{count}} agente, o teto do lead é {{max}}. O pedido está em Aprovações.",
+    "authorizationNeededMessage_other": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "requestDeniedTitle": "Pedido recusado",
     "requestError": "Não foi possível pedir"
   },
   "architectureSummary": {
     "title": "Arquitetura",
     "emptyState": "Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.",
+    "summary_zero": "{{count}} módulos mapeados, diagrama C4 {{status}}.",
     "summary_one": "{{count}} módulo mapeado, diagrama C4 {{status}}.",
     "summary_other": "{{count}} módulos mapeados, diagrama C4 {{status}}.",
     "statusGenerated": "gerado",

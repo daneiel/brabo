@@ -329,8 +329,8 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--danger)',
       bad: true,
       text:
-        `${actorLabel} PAROU — circuit breaker` +
-        (n ? `: ${n} tasks bloqueadas seguidas` : '') +
+        `${actorLabel} PAROU — parada automática` +
+        (n ? `: ${n} ${n === '1' ? 'tarefa bloqueada seguida' : 'tarefas bloqueadas seguidas'}` : '') +
         '. Rearme no painel do time para retomar.',
     };
   }
@@ -626,6 +626,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
           : type === 'anamnese.run_completed'
             ? 'rodada da Anamnese concluída'
             : `atividade em ${actorLabel}`,
+    };
+  }
+  // ADR 0183 (RN-649): o fechamento anterior mora no payload, não numa linha
+  // apagada — a frase diz a causa quando ela foi gravada.
+  if (type === 'session.reopened') {
+    const causa = payloadField(payload, 'terminationReason');
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `sessão reaberta${causa ? ` (tinha fechado por ${causa})` : ''}`,
     };
   }
   if (type === 'architecture.readiness_confirmed') {

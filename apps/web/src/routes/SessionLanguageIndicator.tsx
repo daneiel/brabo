@@ -20,6 +20,7 @@ import {
   opcoesDeIdioma,
 } from '../lib/idioma-da-resposta';
 import { useToast } from '../components/ui/ToastProvider';
+import { Button } from '../components/ui/Button';
 import styles from './SessionLanguageIndicator.module.css';
 
 /** Valor do `<option>` de "seguir a Conta" — soltar o override. */
@@ -79,9 +80,17 @@ export function idiomaSemOverride(r: SessionResponseLanguage): string {
 export function SessionLanguageIndicator({
   projectId,
   sessionId,
+  modo = 'barra',
 }: {
   projectId: string;
   sessionId: string;
+  /**
+   * `barra`: em linha nos 60px da barra, a origem numa linha com reticências.
+   * `painel`: dentro do painel do controle agrupado da barra estreita
+   * (AT-317) — a origem QUEBRA em vez de cortar, e a pergunta da detecção
+   * entra no fluxo em vez de flutuar sob o indicador.
+   */
+  modo?: 'barra' | 'painel';
 }) {
   const { t, i18n } = useTranslation('responseLanguage');
   const queryClient = useQueryClient();
@@ -168,7 +177,13 @@ export function SessionLanguageIndicator({
   ].join(' · ');
 
   return (
-    <div className={styles.indicador} data-testid="idioma-da-sessao">
+    <div
+      className={[styles.indicador, modo === 'painel' && styles.noPainel]
+        .filter(Boolean)
+        .join(' ')}
+      data-testid="idioma-da-sessao"
+      data-modo={modo}
+    >
       <div className={styles.linha}>
         <span className={styles.rotulo}>{t('session.label')}</span>
         {digitando ? (
@@ -190,13 +205,14 @@ export function SessionLanguageIndicator({
                 if (e.key === 'Escape') setDigitando(false);
               }}
             />
-            <button
+            <Button
               type="submit"
-              className={styles.botao}
+              size="sm"
+              variant="secondary"
               disabled={!codigo.trim() || fixar.isPending}
             >
               {t('session.pin')}
-            </button>
+            </Button>
           </form>
         ) : (
           <select
@@ -240,9 +256,10 @@ export function SessionLanguageIndicator({
           </p>
           <p className={styles.notaDaPergunta}>{t('detection.note')}</p>
           <div className={styles.linha}>
-            <button
+            <Button
               type="button"
-              className={styles.botaoPrimario}
+              size="sm"
+              variant="primary"
               disabled={responder.isPending}
               onClick={() =>
                 responder.mutate({
@@ -252,10 +269,11 @@ export function SessionLanguageIndicator({
               }
             >
               {t('detection.confirm', { idioma: nome(data.detectionQuestion) })}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={styles.botao}
+              size="sm"
+              variant="secondary"
               disabled={responder.isPending}
               onClick={() =>
                 responder.mutate({
@@ -265,15 +283,16 @@ export function SessionLanguageIndicator({
               }
             >
               {t('detection.decline')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={styles.botaoDiscreto}
+              size="sm"
+              variant="ghost"
               disabled={responder.isPending}
               onClick={() => setAdiada(data.detectionQuestion)}
             >
               {t('detection.later')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

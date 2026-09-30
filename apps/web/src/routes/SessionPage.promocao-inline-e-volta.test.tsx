@@ -77,7 +77,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   listSessionEvents: (...args: unknown[]) => cauda(...args),
@@ -176,7 +179,7 @@ describe('SessionPage — item 2: promoção de história inline no fio (RN-126)
     expect(screen.getByRole('button', { name: 'Promover' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Devolver' })).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 

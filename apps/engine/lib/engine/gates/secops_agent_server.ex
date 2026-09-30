@@ -263,10 +263,26 @@ defmodule Engine.Gates.SecOpsAgentServer do
     end
   end
 
+  # RN-636 (ADR 0182): o AppSec só oferece a quem ainda NÃO recebeu oferta
+  # pendente nem está ativo no projeto. Antes eram três ofertas por história
+  # com `run_design`, aos mesmos três destinos, empilhadas na tela. A pergunta
+  # é feita à api no modo `create_handoff_if_absent/5` — sob o lock do destino,
+  # onde não há corrida com outra oferta — e as duas respostas "já atendido"
+  # NÃO são falha: nenhuma vira `agent.error`. O threat model continua gravado
+  # como artefato de qualquer jeito; o que deixa de existir é a oferta repetida.
   defp criar_handoffs_appsec(project_id, session_id, artifact_id) do
     Enum.each(@appsec_handoff_targets, fn to_agent ->
-      case EngineApiClient.create_handoff(project_id, session_id, "appsec", to_agent, artifact_id) do
+      case EngineApiClient.create_handoff_if_absent(
+             project_id,
+             session_id,
+             "appsec",
+             to_agent,
+             artifact_id
+           ) do
         {:ok, _handoff} ->
+          :ok
+
+        {:error, {409, %{"reason" => "agente_ja_ativo"}}} ->
           :ok
 
         {:error, reason} ->

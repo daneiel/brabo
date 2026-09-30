@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
+import { act, render, screen, fireEvent } from '@testing-library/react';
+import { simularLayoutMovel } from '../test/match-media';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
 import { ApiError } from '../lib/api-client';
@@ -7,7 +8,7 @@ import { ApiError } from '../lib/api-client';
 // sem `I18nextProvider` próprio (mesmo padrão de `ProjectExecutorsTab.test.tsx`)
 // — `changeLanguage('pt-BR')` mantém as asserções abaixo no texto de sempre.
 import i18n from '../lib/i18n';
-import type { Project, WorkspaceSummary } from '../lib/api-types';
+import type { Project, ProjectCardSummary, WorkspaceSummary } from '../lib/api-types';
 
 const PROJECT: Project = {
   id: 'project-1',
@@ -30,6 +31,33 @@ const SUMMARY: WorkspaceSummary = { activeProjects: 1, agentCount: 2, spentMicro
 
 const useProjectsMock = vi.fn();
 const useWorkspaceSummaryMock = vi.fn();
+const useProjectsSummaryMock = vi.fn();
+
+function cardDoProjeto(over: Partial<ProjectCardSummary> = {}): ProjectCardSummary {
+  return {
+    projectId: PROJECT.id,
+    provider: 'local',
+    provisioningStatus: 'provisioned',
+    budget: null,
+    latestSessionId: 'sess-1',
+    latestSeq: 0,
+    lastEvent: null,
+    storiesAwaitingPromotion: 0,
+    pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
+    roster: {
+      executionActivated: false,
+      moduleNames: [],
+      gatesEverOpened: false,
+      delegatedSubagents: [],
+      activatedAgents: [],
+      infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
+    },
+    ...over,
+  };
+}
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
@@ -39,7 +67,7 @@ vi.mock('../lib/hooks', () => ({
   useCurrentWorkspace: () => ({ data: { id: 'ws-1', name: 'Acme', slug: 'acme' } }),
   useProjects: () => useProjectsMock(),
   useWorkspaceSummary: () => useWorkspaceSummaryMock(),
-  useProjectsSummary: () => ({ data: [], isLoading: false }),
+  useProjectsSummary: () => useProjectsSummaryMock(),
 }));
 
 vi.mock('../lib/notifications', () => ({
@@ -83,6 +111,8 @@ beforeEach(async () => {
   useProjectsMock.mockReset();
   useWorkspaceSummaryMock.mockReset();
   useWorkspaceSummaryMock.mockReturnValue({ data: SUMMARY, isError: false });
+  useProjectsSummaryMock.mockReset();
+  useProjectsSummaryMock.mockReturnValue({ data: [], isLoading: false });
 });
 
 describe('Dashboard — estados', () => {
@@ -154,5 +184,113 @@ describe('Dashboard — estados', () => {
 
     expect(screen.getByText('resumo indisponível')).toBeInTheDocument();
     expect(screen.getByText('Core API')).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-648 (AT-325) — a linha de atividade do card tinha UM texto ("Sem atividade
+ * ainda") para quatro estados, e o levantamento visual o achou num projeto com
+ * três sessões e dezesseis eventos: o resumo do workspace tinha FALHADO. A
+ * linha lê a sessão mais recente, a mesma da Visão geral e da sidebar.
+ */
+describe('Dashboard — linha de atividade do card (RN-648)', () => {
+  it('o resumo que falhou diz "indisponível", nunca "sem atividade"', () => {
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    useProjectsSummaryMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+
+    renderDashboard();
+
+    expect(screen.getByText('atividade indisponível')).toBeInTheDocument();
+    expect(screen.queryByText(/Sem atividade/)).toBeNull();
+  });
+
+  it('enquanto o resumo carrega, o card não afirma nada sobre atividade', () => {
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    useProjectsSummaryMock.mockReturnValue({ data: undefined, isLoading: true });
+
+    renderDashboard();
+
+    expect(screen.getByText('carregando atividade…')).toBeInTheDocument();
+    expect(screen.queryByText(/Sem atividade/)).toBeNull();
+  });
+
+  it('projeto sem sessão nenhuma e sessão mais recente vazia têm textos diferentes', () => {
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    useProjectsSummaryMock.mockReturnValue({
+      data: [cardDoProjeto({ latestSessionId: null })],
+      isLoading: false,
+    });
+    const { unmount } = renderDashboard();
+    expect(screen.getByText('Nenhuma sessão ainda')).toBeInTheDocument();
+    unmount();
+
+    useProjectsSummaryMock.mockReturnValue({
+      data: [cardDoProjeto({ latestSessionId: 'sess-1', lastEvent: null })],
+      isLoading: false,
+    });
+    renderDashboard();
+    expect(screen.getByText('Sem atividade na sessão mais recente ainda')).toBeInTheDocument();
+  });
+
+  it('com evento na sessão mais recente, mostra o evento e não o vazio', () => {
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    useProjectsSummaryMock.mockReturnValue({
+      data: [
+        cardDoProjeto({
+          lastEvent: {
+            id: 'ev-1',
+            sessionId: 'sess-1',
+            seq: 3,
+            type: 'agent.response',
+            actor: { kind: 'agent', id: 'criativo' },
+            payload: { content: 'oi' },
+            createdAt: new Date().toISOString(),
+          } as ProjectCardSummary['lastEvent'],
+        }),
+      ],
+      isLoading: false,
+    });
+
+    renderDashboard();
+
+    expect(screen.queryByText(/Sem atividade/)).toBeNull();
+    expect(screen.queryByText('Nenhuma sessão ainda')).toBeNull();
+  });
+});
+
+/**
+ * AT-330 (achado N6 da auditoria da Rodada 29): em 390px a busca encolhia para
+ * "Bus" e "Novo projeto" quebrava em duas linhas. No móvel a barra se arruma
+ * em duas linhas, com a busca inteira embaixo.
+ */
+describe('Dashboard — layout estreito (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  it('no móvel, a barra vira de duas linhas, com a busca e o botão inteiros', () => {
+    largura = simularLayoutMovel(true);
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    renderDashboard();
+
+    const busca = screen.getByTestId('busca-de-projetos');
+    const barra = busca.parentElement as HTMLElement;
+    expect(barra).toHaveAttribute('data-layout', 'movel');
+    expect(screen.getByPlaceholderText('Buscar projetos…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Novo projeto/ })).toBeInTheDocument();
+  });
+
+  it('no desktop, a barra continua de uma linha — e cruzar o corte a rearruma', () => {
+    largura = simularLayoutMovel(false);
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    renderDashboard();
+
+    const barra = screen.getByTestId('busca-de-projetos').parentElement as HTMLElement;
+    expect(barra).not.toHaveAttribute('data-layout');
+
+    act(() => largura!.mudar(true));
+    expect(barra).toHaveAttribute('data-layout', 'movel');
   });
 });

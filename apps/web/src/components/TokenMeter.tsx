@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { AlertIcon, ArrowUpIcon } from './ui/icons';
 import { brlFmt, numberFmt, usdFmt } from '../lib/currency';
+import { Badge } from './ui/Badge';
 import styles from './TokenMeter.module.css';
 
 export type TokenMeterVariant = 'default' | 'compact' | 'live';
@@ -187,10 +188,10 @@ export function TokenMeter({
       )}
 
       {!compact && savingsPct !== undefined && savingsPct > 0 && (
-        <span className={styles.savingsBadge}>
+        <Badge tone="success" square size="md" className={styles.savingsBadge}>
           <ArrowUpIcon size={12} />
           {t('tokenMeter.savingsPct', { pct: savingsPct })}
-        </span>
+        </Badge>
       )}
 
       {compact && (

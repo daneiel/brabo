@@ -1,7 +1,9 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(3, 10, 14, 0.64);
+  /* Token por tema desde a AT-284 (ADR 0181) — era o petróleo de antes em
+     transparência, solto aqui. */
+  background: var(--overlay);
   backdrop-filter: blur(2.5px);
   display: flex;
   align-items: center;
@@ -81,7 +83,7 @@
 .close:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 0;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 @media (forced-colors: active) {

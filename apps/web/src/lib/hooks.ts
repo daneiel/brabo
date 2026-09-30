@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { getActiveExecutionSession, getArchitecture, getContainersOverview, getCoverage, getProjectPendingActions, getProjectsStatus, getProjectsSummary, getPsychologistStatus, getSessionEvent, getWorkspaceSummary, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
-import { pollQueParaNoErro } from './query-policy';
+import { FRESCOR_DA_CONFIGURACAO_MS, pollQueParaNoErro } from './query-policy';
 import { buscarAcoesDaSessao } from './acoes-da-sessao';
 // Com o canal da sessão VIVO, o poll da sessão vira fallback longo e quem diz
 // QUANDO buscar é o aviso do canal (RN-579, `canal-vivo.ts`).
 import { INTERVALO_DO_PROJETO_MS, intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
+import { useUniaoDePaginasDeEventos } from './uniao-de-paginas';
 
 // App opera sobre o primeiro workspace do usuário — sem UI de troca de
 // workspace ainda (nunca especificado nos mockups, ver design/COMPONENTS.md).
@@ -17,6 +18,7 @@ export function useCurrentWorkspace() {
     queryKey: ['workspaces'],
     queryFn: listWorkspaces,
     select: (list) => list[0]?.workspace,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 
@@ -30,6 +32,7 @@ export function useCurrentWorkspaceWithRole() {
     queryKey: ['workspaces'],
     queryFn: listWorkspaces,
     select: (list) => list[0],
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 
@@ -116,15 +119,21 @@ export function useContainersOverview(
  * `intervalMs: false` é para quem só precisa do dado no CLIQUE: a página de
  * containers monta uma linha por projeto, e uma linha em poll era uma
  * requisição a cada 5s POR PROJETO do workspace.
+ *
+ * `frescorMs` é o `staleTime` DESTA observadora (RN-648): quem só passa a ler
+ * a lista depois que outra tela já a trouxe (a sidebar, que a habilita quando
+ * descobre que não há execução) não a busca de novo por montar depois.
  */
 export function useProjectSessions(
   projectId: string | undefined,
   intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+  frescorMs?: number,
 ) {
   return useQuery({
     queryKey: ['sessions', projectId],
     queryFn: () => listSessions(projectId!),
     enabled: !!projectId,
+    ...(frescorMs ? { staleTime: frescorMs } : {}),
     refetchInterval: intervalMs === false ? false : pollQueParaNoErro(intervalMs),
   });
 }
@@ -149,8 +158,9 @@ export function sessaoMaisRecente<T extends { createdAt: string; technical: bool
 export function useLatestSession(
   projectId: string | undefined,
   intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+  frescorMs?: number,
 ) {
-  const sessionsQuery = useProjectSessions(projectId, intervalMs);
+  const sessionsQuery = useProjectSessions(projectId, intervalMs, frescorMs);
   const latest = sessionsQuery.data ? sessaoMaisRecente(sessionsQuery.data) : undefined;
   return { ...sessionsQuery, latest };
 }
@@ -333,16 +343,18 @@ export function useSessionEventHistory(
   });
 
   // Deduplicação por `id` + ordenação por `seq`: as páginas podem se sobrepor
-  // (ver a nota sobre lacunas acima) e chegam fora de ordem entre si.
-  const porId = new Map(
-    antigas
-      .flatMap((q) => q.data?.items ?? [])
-      .concat(cauda.data?.items ?? [])
-      .map((e) => [e.id, e] as const),
-  );
-  const todos = [...porId.values()].sort((a, b) => a.seq - b.seq);
+  // (ver a nota sobre lacunas acima) e chegam fora de ordem entre si. Sob memo
+  // desde a AT-301 (`lib/uniao-de-paginas.ts`): recalcula quando uma página
+  // muda, não a cada render de quem chama.
+  const todos = useUniaoDePaginasDeEventos([
+    ...antigas.map((q) => q.data?.items),
+    cauda.data?.items,
+  ]);
 
-  const events = todos.slice(Math.max(0, todos.length - janela));
+  const events = useMemo(
+    () => todos.slice(Math.max(0, todos.length - janela)),
+    [todos, janela],
+  );
   const menorSeqBaixado = todos[0]?.seq ?? 0;
   const menorCursor = cursores.length > 0 ? cursores[cursores.length - 1] : null;
 
@@ -513,12 +525,14 @@ export function useInfraArtifacts(projectId: string | undefined, intervalMs = 30
 
 // Perfil de proficiência do projeto (Fase 4b — Anamnese). Muda devagar
 // (só quando uma rodada periódica conclui), daí o poll lento.
-export function useProficiency(projectId: string | undefined, intervalMs = 15000) {
+// Sem poll (AT-321, RN-645): o perfil de proficiência é CONFIGURAÇÃO — só a
+// seção de Configurações o lê, e as duas mutações dela invalidam a chave.
+export function useProficiency(projectId: string | undefined) {
   return useQuery({
     queryKey: ['proficiency', projectId],
     queryFn: () => listProficiency(projectId!),
     enabled: !!projectId,
-    refetchInterval: pollQueParaNoErro(intervalMs),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 }
 

@@ -45,7 +45,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -167,7 +170,7 @@ describe('SessionPage — o handoff manual tem Aceitar e não esconde as ofertas
 
     montar();
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' }),
     );
     await waitFor(() =>
       expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'h-manual'),
@@ -192,10 +195,10 @@ describe('SessionPage — o handoff manual tem Aceitar e não esconde as ofertas
 
     montar();
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar staff' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Staff' }),
     ).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Aceitar handoff e iniciar arquiteto' }),
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar Arquiteto' }),
     );
     await waitFor(() =>
       expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'h-arq'),
@@ -217,7 +220,7 @@ describe('SessionPage — o handoff manual tem Aceitar e não esconde as ofertas
 
     montar();
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
     fireEvent.click(botoes[0]!);

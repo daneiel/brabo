@@ -193,6 +193,12 @@ CREATE TABLE IF NOT EXISTS public.sessions (
 )
 """)
 
+# `status` (ADR 0183, RN-649): o `SessionLifecycleWorker` o lê para ignorar o
+# fechamento que uma reabertura já desfez. `ADD COLUMN IF NOT EXISTS` porque o
+# banco de teste sobrevive entre rodadas e o `CREATE` acima não altera tabela
+# que já existe.
+Engine.Repo.query!("ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS status text")
+
 # Mesmo motivo dos fixtures acima — session_socket_tickets também é
 # gerenciada pela api (Drizzle, schema "public"). RN-108: é o que
 # Engine.Sessions.SocketTicket lê e consome pra autenticar connect/3 de

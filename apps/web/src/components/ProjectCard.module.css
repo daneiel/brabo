@@ -26,7 +26,7 @@
   border-color: var(--accent);
   outline: 2px solid transparent;
   outline-offset: 0;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 @media (forced-colors: active) {
@@ -91,11 +91,11 @@
   position: relative;
   width: 26px;
   height: 26px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--agent-color) 20%, var(--surface-2));
+  background: color-mix(in srgb, var(--agent-color) var(--tint-avatar), var(--surface-2));
   color: var(--agent-color);
   box-shadow: 0 0 0 2px var(--surface-1);
   margin-left: -6px;
@@ -122,7 +122,7 @@
 .avatarOverflow {
   width: 26px;
   height: 26px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;

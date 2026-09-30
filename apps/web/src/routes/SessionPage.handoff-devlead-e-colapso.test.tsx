@@ -83,7 +83,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', async () => {
   // `ApiError`/`mensagemDaApi` REAIS (problema 2, autorização): é a frase da
@@ -232,11 +235,11 @@ describe('SessionPage — problema 1: prioridade do handoff pro Dev Lead sobre I
 
     // O card acionável é o do Dev Lead...
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
     // ...e o de Infra NUNCA aparece como botão nesta tela.
     expect(
-      screen.queryByRole('button', { name: /Aceitar handoff e iniciar infra/ }),
+      screen.queryByRole('button', { name: /Aceitar handoff e iniciar Infra/ }),
     ).not.toBeInTheDocument();
 
     // Os dois continuam NARRADOS no fio (a frase de passagem de bastão).
@@ -331,7 +334,7 @@ describe('SessionPage — problema 2: "Ativar execução" inline no card do Dev 
 
     expect(await screen.findByRole('button', { name: 'Ativar execução' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /Acompanhe a execução em Executores/ }),
@@ -393,7 +396,7 @@ describe('SessionPage — problema 4: fusão handoff + execução por papel efet
     montarComCardDevLead();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar dev-lead',
+      name: 'Aceitar handoff e iniciar Dev Lead',
     });
     fireEvent.click(botaoAceitar);
 
@@ -413,7 +416,7 @@ describe('SessionPage — problema 4: fusão handoff + execução por papel efet
     montarComCardDevLead();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     );
 
     await waitFor(() => {
@@ -427,7 +430,7 @@ describe('SessionPage — problema 4: fusão handoff + execução por papel efet
     montarComCardDevLead();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar dev-lead',
+      name: 'Aceitar handoff e iniciar Dev Lead',
     });
     // O segundo botão continua ali, do jeito que já era antes da fusão —
     // ninguém que só tem `developer` perde a capacidade de aceitar.
@@ -448,7 +451,7 @@ describe('SessionPage — problema 4: fusão handoff + execução por papel efet
     montarComCardDevLead();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     );
 
     await waitFor(() => {
@@ -646,7 +649,7 @@ describe('SessionPage — card do Dev Lead sem repositório (RN-582)', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ativar execução' })).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
   });
 
@@ -666,7 +669,7 @@ describe('SessionPage — card do Dev Lead sem repositório (RN-582)', () => {
     const consultasAntes = getRepository.mock.calls.length;
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      screen.getByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     );
 
     await waitFor(() => {

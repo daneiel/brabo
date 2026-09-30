@@ -2736,7 +2736,7 @@ export interface paths {
         put?: never;
         /**
          * Approves the action and records the pattern in permissions.json
-         * @description Besides releasing this action, it adds the corresponding pattern to the project's `allow` list — future matching actions come out `auto_approved` without asking. A pattern already in `deny` stays blocked.
+         * @description Besides releasing this action, it adds the corresponding pattern to the project's `allow` list — future matching actions come out `auto_approved` without asking. A pattern already in `deny` stays blocked. The approval and the pattern are recorded in the same transaction. Clicking an action that was already APPROVED is idempotent success (`desfecho: ja_aprovada`), recording the pattern only if it is missing.
          */
         post: operations["ActionsController_approveAlways"];
         delete?: never;
@@ -2876,7 +2876,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the architecture is ready and offers the handoff to Infra
-         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.
+         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends. Idempotent (ADR 0182, RN-635): a target that already has a pending offer or is active in the project is not triggered again, and with both like that nothing is recorded.
          */
         post: operations["AgentsController_handoffInfra"];
         delete?: never;
@@ -3025,7 +3025,7 @@ export interface paths {
         put?: never;
         /**
          * Manually offers a handoff to a chosen agent
-         * @description Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400.
+         * @description Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400. At most one pending offer per (project, target): see `desfecho` (ADR 0182, RN-635).
          */
         post: operations["AgentsController_requestManual"];
         delete?: never;
@@ -3114,6 +3114,26 @@ export interface paths {
          * @description It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.
          */
         post: operations["AgentsController_readiness"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/sessions/{sessionId}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopens a closed session, keeping everything it had
+         * @description Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit.
+         */
+        post: operations["SessionsController_reopen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4244,6 +4264,15 @@ export interface components {
             /** @example 14200 */
             outputTokens: number;
         };
+        AlvoJaAtendidoResponseDto: {
+            /**
+             * @example infra
+             * @enum {string}
+             */
+            toAgent: "infra" | "dev-lead";
+            /** @enum {string} */
+            motivo: "oferta_pendente" | "agente_ativo";
+        };
         AnaliseDeTerminoResponseDto: {
             /**
              * @description The ORIGIN of the failure, never deduced by elimination (lesson from ADR 0020).
@@ -4410,6 +4439,91 @@ export interface components {
             payload: {
                 [key: string]: unknown;
             };
+        };
+        ApproveAlwaysResponseDto: {
+            /**
+             * @description ULID of the action.
+             * @example 01JC4Z8QK3M7YV2N5T9B0PXHRC
+             */
+            id: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /**
+             * @description Order of the action within the session; used as a cursor in listings.
+             * @example 7
+             */
+            seq: number;
+            /**
+             * @description What the action would do. `git_push` and `git_merge` require `maintainer`.
+             * @example terminal
+             * @enum {string}
+             */
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            /**
+             * @description Parameters of the action, specific to the `actionType`.
+             * @example {
+             *       "command": "pnpm test"
+             *     }
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description State in the pipeline. `auto_approved` is distinct from `approved` on purpose: the log needs to distinguish what a person decided from what the policy released.
+             * @example pending
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "denied" | "auto_approved" | "executed" | "failed";
+            /**
+             * @description What `permissions.json` decided for this action. `deny` ALWAYS wins over `allow` — not even the agent's autonomy overrides it.
+             * @example require_approval
+             * @enum {string}
+             */
+            resolvedPolicy: "auto_approve" | "require_approval" | "deny";
+            /** @description Who proposed it. */
+            actor: components["schemas"]["ActorResponseDto"];
+            /**
+             * @description Id of the user who approved or denied it. Never an agent.
+             * @example null
+             */
+            decidedBy: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example null
+             */
+            decidedAt: Record<string, never> | null;
+            /** @example null */
+            rejectionReason: Record<string, never> | null;
+            /**
+             * @description Execution result, with a shape specific to each `actionType` — output and exit code for terminal, PR number and URL for the git types. `null` while the action has not been executed.
+             * @example null
+             */
+            executionResult: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:33:10.900Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:33:10.900Z
+             */
+            updatedAt: string;
+            /**
+             * @description `aprovada`: this click approved the action. `ja_aprovada`: the action had already left `pending` by an approval (a previous click, another person, or the policy) — idempotent success, not an error. A DENIED action is still 409 `acao_ja_recusada`.
+             * @example aprovada
+             * @enum {string}
+             */
+            desfecho: "aprovada" | "ja_aprovada";
+            /**
+             * @description Whether this click recorded the pattern (and its `permission.granted` event). `false` means it already existed; nothing was written.
+             * @example true
+             */
+            padraoGravado: boolean;
         };
         ArchitecturePendencyResponseDto: {
             /** @example 01JC4Z0000HISTORIA000000001 */
@@ -5037,6 +5151,19 @@ export interface components {
              */
             truncated: boolean;
         };
+        ConfirmacaoDeArquiteturaResponseDto: {
+            /**
+             * @example true
+             * @enum {boolean}
+             */
+            ok: true;
+            /**
+             * @description `confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab).
+             * @enum {string}
+             */
+            desfecho: "confirmado" | "ja_oferecido";
+            jaAtendidos: components["schemas"]["AlvoJaAtendidoResponseDto"][];
+        };
         ConfirmProjectWorkspaceInternalDto: {
             /**
              * @description Absolute path confirmed by the runner ON THE HOST — the source of truth (RN-423). Re-validated LEXICALLY here before writing; invalid is 400, never written.
@@ -5279,6 +5406,11 @@ export interface components {
              * @example 01JC4Z8QK3M7YV2N5T9B0PXHRB
              */
             artifactId?: string;
+            /**
+             * @description Only if nobody got it yet (ADR 0182, RN-636): with a pending offer to the target in ANY session of the project, return it (`desfecho: ja_oferecido`) instead of replacing it. AppSec sends it.
+             * @example true
+             */
+            seAusente?: boolean;
         };
         CreateModuleMapInternalDto: {
             /**
@@ -5935,11 +6067,11 @@ export interface components {
              */
             artifactId: Record<string, never> | null;
             /**
-             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives.
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
              * @example offered
              * @enum {string}
              */
-            status: "offered" | "accepted" | "completed" | "rejected";
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
             /**
              * Format: date-time
              * @example 2026-07-24T10:00:00.000Z
@@ -6905,6 +7037,51 @@ export interface components {
              * @description `null` when the container has never started.
              */
             iniciadoEm: Record<string, never> | null;
+        };
+        OfertaDeHandoffResponseDto: {
+            /** @example 01JC4Z0000HANDOFF00000000001 */
+            id: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Slug of the agent that passed the baton.
+             * @example criativo
+             */
+            fromAgent: string;
+            /**
+             * @description Slug of the receiving agent.
+             * @example po
+             */
+            toAgent: string;
+            /**
+             * @description Artifact that motivated the handoff (product_brief, module_map…).
+             * @example 01JC4Z0000ARTEFATO000000001
+             */
+            artifactId: Record<string, never> | null;
+            /**
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
+             * @example offered
+             * @enum {string}
+             */
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:05:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description `criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`).
+             * @example criado
+             * @enum {string}
+             */
+            desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
         };
         OkResponseDto: {
             /**
@@ -11067,7 +11244,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. */
@@ -11086,6 +11263,13 @@ export interface operations {
             };
             /** @description Session, project, or resource not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project. The `message` is the text the agent reads as the tool result. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16969,7 +17153,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposedActionResponseDto"];
+                    "application/json": components["schemas"]["ApproveAlwaysResponseDto"];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -16993,7 +17177,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The action was already decided or executed. */
+            /** @description The action was already DENIED (`reason: acao_ja_recusada`); no pattern is recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -17413,7 +17597,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OkResponseDto"];
+                    "application/json": components["schemas"]["ConfirmacaoDeArquiteturaResponseDto"];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -17974,7 +18158,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
@@ -18000,6 +18184,13 @@ export interface operations {
             };
             /** @description Project, session, or handoff not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project — no offer is created. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18293,6 +18484,63 @@ export interface operations {
             };
             /** @description No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionsController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or session does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session is not closed (`reason: sessao_nao_encerrada`), or it activated execution (`reason: sessao_com_execucao`). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

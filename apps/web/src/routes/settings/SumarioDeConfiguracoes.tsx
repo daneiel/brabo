@@ -19,6 +19,10 @@ import styles from './sumario.module.css';
  * de conteúdo, repartindo a largura máxima que `.body` já tinha
  * (`ProjectPage.module.css`): a moldura da tela não cresce um pixel.
  *
+ * E dentro dela ele DEITA, numa faixa acima das seções (AT-321, RN-645): como
+ * coluna ao lado delas ele era, na prática, a quarta faixa vertical que este
+ * parágrafo recusa, e levava 208 dos ~948px de conteúdo a 1440px.
+ *
  * ## O que ele lista
  *
  * Só o que está no DOM. As entradas vêm do REGISTRO

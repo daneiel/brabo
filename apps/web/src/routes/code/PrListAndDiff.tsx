@@ -7,8 +7,12 @@ import {
   isContainerImageGateError,
   mensagemDaApi,
 } from '../../lib/api-client';
-import { ContainerImageGateNotice } from '../../components/ContainerImageGate';
+import {
+  ContainerImageGateNotice,
+  type SuperficieDoPortao,
+} from '../../components/ContainerImageGate';
 import { Disclosure } from '../../components/ui/Disclosure';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
 import styles from './CodeDiffPanel.module.css';
@@ -47,6 +51,12 @@ export interface PrListAndDiffProps {
    * (e um clique nele também dispararia o clique da linha).
    */
   renderItemExtra?: (pr: CodePullRequestSummary) => ReactNode;
+  /**
+   * De qual aba este componente é consumido — decide o TEXTO do bloqueio do
+   * portão da imagem (AT-323, RN-646). Ausente é a aba Código, o
+   * comportamento de sempre; a aba PRs passa `'prs'`.
+   */
+  superficie?: SuperficieDoPortao;
 }
 
 /**
@@ -76,7 +86,11 @@ export interface PrListAndDiffProps {
  * estado que só se resolve quando o Arquiteto decide, nunca clicando de
  * novo.
  */
-export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps) {
+export function PrListAndDiff({
+  projectId,
+  renderItemExtra,
+  superficie = 'code',
+}: PrListAndDiffProps) {
   const { t } = useTranslation('code');
   const [filtro, setFiltro] = useState<CodePullRequestState | 'all'>('open');
   const [idDigitado, setIdDigitado] = useState('');
@@ -127,7 +141,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
         {diffQuery.isError &&
           (isContainerImageGateError(diffQuery.error) ? (
-            <ContainerImageGateNotice />
+            <ContainerImageGateNotice superficie={superficie} />
           ) : (
             <div className={styles.estadoErro} role="alert">
               <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
@@ -173,26 +187,21 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
   return (
     <div className={styles.painel}>
-      <div className={styles.filtros} role="tablist" aria-label="Filtrar por estado">
-        {FILTROS.map((f) => (
-          <button
-            key={f.chave}
-            type="button"
-            role="tab"
-            aria-selected={filtro === f.chave}
-            className={[styles.filtro, filtro === f.chave && styles.filtroAtivo].filter(Boolean).join(' ')}
-            onClick={() => setFiltro(f.chave)}
-          >
-            {t(f.chaveRotulo)}
-          </button>
-        ))}
-      </div>
+      {/* AT-327: o mesmo controle segmentado das abas Criativo e Chat. Antes
+          eram abas retangulares com `role="tab"` sem painel que controlassem. */}
+      <SegmentedControl
+        className={styles.filtros}
+        rotulo={t('diff.filtersAriaLabel')}
+        opcoes={FILTROS.map((f) => ({ valor: f.chave, rotulo: t(f.chaveRotulo) }))}
+        valor={filtro}
+        onChange={setFiltro}
+      />
 
       {listaQuery.isLoading && <div className={styles.estado}>{t('diff.loadingPrs')}</div>}
 
       {listaQuery.isError &&
         (isContainerImageGateError(listaQuery.error) ? (
-          <ContainerImageGateNotice />
+          <ContainerImageGateNotice superficie={superficie} />
         ) : (
           <div className={styles.estadoErro} role="alert">
             <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>
