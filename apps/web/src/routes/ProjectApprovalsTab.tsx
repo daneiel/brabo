@@ -9,7 +9,17 @@ import {
   setAgentAutonomy,
   setProjectPermissions,
 } from '../lib/api-client';
-import { useBacklog, useCurrentWorkspaceWithRole, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import {
+  useActiveExecutionSession,
+  useBacklog,
+  useCurrentWorkspaceWithRole,
+  useInfraArtifacts,
+  useLatestSession,
+  usePendingActions,
+  useProjectPendingActions,
+  useSessionEvents,
+} from '../lib/hooks';
+import type { ProposedAction } from '../lib/api-types';
 import {
   AGENT_AUTONOMY_ALL_ACTIONS,
   type CoverageMatrixRow,
@@ -94,8 +104,17 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const { t } = useTranslation('approvals');
   const sessionsQuery = useLatestSession(projectId);
   const latestSession = sessionsQuery.latest;
-  const actionsQuery = usePendingActions(projectId, latestSession?.id);
-  const eventsQuery = useSessionEvents(projectId, latestSession?.id);
+  // AT-297 (RN-638): a fila de decisão é a do PROJETO, em qualquer sessão —
+  // era a da sessão criada por último, e uma ideação aberta depois da
+  // execução escondia as pendentes dos dev agents. Cada card decide pela
+  // sessão que a PRÓPRIA ação carrega.
+  const pendentesQuery = useProjectPendingActions(projectId);
+  // Os blocos de PR e gate leem eventos e ações de UMA sessão: a de execução
+  // vigente (onde QA/SecOps/dev agents escrevem), e só sem ela a mais recente.
+  const { session: sessaoDeExecucao } = useActiveExecutionSession(projectId);
+  const sessaoDeTrabalho = sessaoDeExecucao ?? latestSession;
+  const actionsQuery = usePendingActions(projectId, sessaoDeTrabalho?.id);
+  const eventsQuery = useSessionEvents(projectId, sessaoDeTrabalho?.id);
   const backlogQuery = useBacklog(projectId);
   const infraQuery = useInfraArtifacts(projectId);
   const epics = backlogQuery.data;
@@ -276,26 +295,28 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     staleTime: 60 * 60 * 1000,
   });
 
-  const pending = (actionsQuery.data?.items ?? []).filter((a) => a.status === 'pending');
+  const pending = (pendentesQuery.data ?? []).filter((a) => a.status === 'pending');
 
-  function invalidateActions() {
-    queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, latestSession?.id] });
+  function invalidateActions(sessoes: Iterable<string>) {
+    // Por prefixo: a fila do projeto (esta aba, o contador do trilho, o
+    // painel) e o recorte `git_merge` da aba PRs.
+    queryClient.invalidateQueries({ queryKey: ['project-pending-actions', projectId] });
+    for (const sessionId of new Set(sessoes)) {
+      queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
+    }
   }
 
-  async function handleApprove(actionId: string) {
-    if (!latestSession) return;
-    await approveAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleApprove(action: ProposedAction) {
+    await approveAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
   }
-  async function handleDeny(actionId: string) {
-    if (!latestSession) return;
-    await denyAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleDeny(action: ProposedAction) {
+    await denyAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
   }
-  async function handleAlwaysAllow(actionId: string) {
-    if (!latestSession) return;
-    await approveAlwaysAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleAlwaysAllow(action: ProposedAction) {
+    await approveAlwaysAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -332,10 +353,10 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   }
 
   async function approveSelected() {
-    if (!latestSession) return;
-    await Promise.all(Array.from(selected).map((id) => approveAction(projectId, latestSession.id, id)));
+    const escolhidas = pending.filter((a) => selected.has(a.id));
+    await Promise.all(escolhidas.map((a) => approveAction(projectId, a.sessionId, a.id)));
     setSelected(new Set());
-    invalidateActions();
+    invalidateActions(escolhidas.map((a) => a.sessionId));
   }
 
   async function revokeRule(row: PermissionRow) {
@@ -430,7 +451,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
               <div className={styles.clean}>{t('approvalsTab.pending.noSession')}</div>
             ) : (
               <BlocoDeDados
-                query={actionsQuery}
+                query={pendentesQuery}
                 titulo={t('approvalsTab.pending.queueError')}
                 carregando={t('approvalsTab.pending.loadingQueue')}
               >
@@ -449,16 +470,16 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                           key={action.id}
                           action={action}
                           variant="queue"
-                          // AT-148 (RN-614): a aba já lê os eventos da
-                          // sessão mais recente — a mesma de onde vêm estas
-                          // ações. Fora da janela carregada, o card diz.
+                          // AT-148 (RN-614): a aba lê os eventos da sessão de
+                          // trabalho. Ação de OUTRA sessão, ou fora da janela
+                          // carregada, sai `null` — e o card diz.
                           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
                           selectable
                           selected={selected.has(action.id)}
                           onToggleSelect={() => toggleSelect(action.id)}
-                          onApprove={() => handleApprove(action.id)}
-                          onDeny={() => handleDeny(action.id)}
-                          onAlwaysAllow={() => handleAlwaysAllow(action.id)}
+                          onApprove={() => handleApprove(action)}
+                          onDeny={() => handleDeny(action)}
+                          onAlwaysAllow={() => handleAlwaysAllow(action)}
                           onActivateAutoMode={
                             podeAtivarAutoMode && action.actor.kind === 'agent'
                               ? () => handleActivateAutoMode(action.actor.id)

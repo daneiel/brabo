@@ -188,6 +188,14 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
+| O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
+| O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
+| O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
+| Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
+| Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
+| A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 
 ## Estado atual e aberto
 
@@ -626,7 +634,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Dívida de contraste do tema ESCURO travada por número (ADR 0074)
 - Gasto de embedding fora do metering (corte declarado do ADR 0075)
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
@@ -1809,7 +1816,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
   passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
   aviso SEM janela só troca poll por rajada. O número é guardado por
-  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Leitura
+  de PROJETO (lista de sessões, contadores do trilho) nenhum canal avisa, e
+  polla no ritmo de projeto, `INTERVALO_DO_PROJETO_MS` (15s, incondicional);
+  quem só precisa do dado no CLIQUE não polla (`useLatestSession(id, false)`,
+  as linhas de `/containers`); e TODA tela que ouve `session:<id>` — não só a
+  de Sessão: Executores e Visão geral também — passa pelo MESMO
+  `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
+  eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
@@ -1991,6 +2006,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
   incluído); reabrir a sessão retoma do log o turno em curso, sem fila de
   mensagem (essa é decisão pendente do dono).
+  Quem pergunta "o que espera decisão" — contador do trilho, painel, aba
+  Aprovações, roster da Visão geral/Executores/Código — lê a fila do PROJETO
+  (`useProjectPendingActions`, chave `['project-pending-actions', projectId]`),
+  NUNCA a sessão mais recente (RN-638), e cada card decide pelo `sessionId` da
+  PRÓPRIA ação; o aviso `proposed_action.*` de qualquer canal invalida essa
+  chave. A leitura de ações por SESSÃO é a CAUDA (`latest`) mais as pendentes
+  quando a cauda vem cheia (RN-637) — nunca a primeira página.
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
@@ -2122,9 +2144,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ARQUIVO e não script inline — a imagem serve sob `script-src 'self'`, e
   inline passa em dev e é bloqueado em produção. A preferência mora em
   `localStorage['brabo.theme']` e a API é `apps/web/src/lib/tema.ts`;
-  nenhum componente escreve o atributo por conta própria. Dívida de
-  contraste é do tema ESCURO e está travada por número — não afrouxe um
-  piso para passar, e não deixe o claro nascer pior que o primário.
+  nenhum componente escreve o atributo por conta própria. Desde o ADR 0181
+  (RN-640) a paleta é NEUTRA (escuro preto, claro branco, acento terracota) e
+  NÃO há dívida de contraste: os cinco pares que o escuro devia desde a FASE 16
+  são PISO nos dois temas. Não afrouxe um piso para passar, não reabra dívida
+  "registrada", e não deixe o claro nascer pior que o primário. Cor que sai do
+  CSS (Mermaid, xterm, minimapa) cai em `lib/tokens-padrao.ts`, conferido
+  contra o `:root` por teste — não escreva fallback em hex no chamador; cor de
+  agente é `var(--token)`; e `var(--x)` sem declaração reprova
+  (`design-tokens-existentes.test.ts`).
 - O handoff estabelece a INTENÇÃO; a medição estabelece o NÚMERO, e o
   produto estabelece o MECANISMO. Já valeu três vezes: as fontes (ADR
   0036), o boot de tema inline e cinco dos oito `--syn-*` que reprovam
@@ -2169,6 +2197,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `ExternalSecret`, com restart da api e o `rewrap-deks.js` da imagem —
   ensaio, não rotação de ambiente real.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
+- Subagentes das rodadas do backlog têm DUAS definições em `.claude/agents/`,
+  por esforço de raciocínio (decisão do dono, 30/09): `analista` (esforço
+  MÉDIO, somente leitura) levanta requisitos e mede antes de uma atividade, e
+  `executor` (esforço BAIXO) executa a atividade já especificada. Não troque
+  os papéis: esforço médio é só para raciocínio de levantamento.
 
 ## Documentação é parte da definição de pronto (permanente)
 - Ao alterar código, consulte docs/.docmap.yml e atualize os docs

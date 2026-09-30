@@ -19,8 +19,9 @@ import { describe, expect, it } from 'vitest';
  *
  * Os destinos são DERIVADOS da fonte, nunca copiados:
  * - `AGENTES_DE_CHAT` (`apps/web/src/lib/session-readiness.ts`) é quem o
- *   composer endereça (`activeAgent`), e os literais `agentParaEnviar = '…'` de
- *   `SessionPage.tsx` são o fallback dele (o Criativo, na sessão criativa);
+ *   composer pode endereçar (as opções do seletor de destinatário, RN-631), e
+ *   `DESTINATARIO_DA_SESSAO_CRIATIVA` (`session-destinatario.ts`) é a opção
+ *   que a sessão criativa oferece antes de qualquer ativação (o Criativo);
  * - `AgentKey` (`apps/web/src/lib/agents.ts`) é o universo: o formulário de
  *   perguntas estruturadas responde ao ATOR que perguntou (`agent={event.actor.id}`),
  *   e o ator pode ser qualquer agente do roster.
@@ -58,8 +59,8 @@ const agentesDeChat = literaisEntreAspasSimples(
 );
 
 const fallbacksDoComposer = [
-  ...ler('apps/web/src/routes/SessionPage.tsx').matchAll(
-    /agentParaEnviar = '([^']+)'/g,
+  ...ler('apps/web/src/lib/session-destinatario.ts').matchAll(
+    /export const DESTINATARIO_DA_SESSAO_CRIATIVA = '([^']+)'/g,
   ),
 ].map((m) => m[1]!);
 

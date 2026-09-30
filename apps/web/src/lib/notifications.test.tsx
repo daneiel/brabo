@@ -92,6 +92,7 @@ function resumo(latestSeq: number): ProjectCardSummary {
       moduleNames: [],
       gatesEverOpened: false,
       delegatedSubagents: [],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,

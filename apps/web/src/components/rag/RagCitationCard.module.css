@@ -115,7 +115,7 @@
   padding: 2px 8px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--r-pill);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   font-weight: 600;

@@ -26,11 +26,11 @@ const noop = () => {};
 const def = {
   arquiteto: { key: 'arquiteto' as const, name: 'Arquiteto', initials: 'AR', role: 'Design técnico e decisões estruturais', color: 'var(--accent)', icon: StackIcon },
   devBackend: { key: 'dev-backend' as const, name: 'Dev Backend', initials: 'BE', role: 'Implementação de API e domínio', color: 'var(--success)', icon: CodeIcon },
-  devFrontend: { key: 'dev-frontend' as const, name: 'Dev Frontend', initials: 'FE', role: 'Implementação de interface', color: '#5EBEB1', icon: LayoutSidebarIcon },
+  devFrontend: { key: 'dev-frontend' as const, name: 'Dev Frontend', initials: 'FE', role: 'Implementação de interface', color: 'var(--agent-frontend)', icon: LayoutSidebarIcon },
   qa: { key: 'qa' as const, name: 'QA', initials: 'QA', role: 'Verificação e testes', color: 'var(--danger)', icon: PermissionIcon },
   qaAutomacao: { key: 'qa-automacao' as const, name: 'QA de Automação', initials: 'QA', role: 'Suite automatizada', color: 'var(--danger)', icon: PermissionIcon },
   qaPerf: { key: 'qa-performance-seguranca' as const, name: 'QA de Performance e Segurança', initials: 'QP', role: 'Carga e superfície', color: 'var(--danger)', icon: PermissionIcon },
-  secops: { key: 'secops' as const, name: 'SecOps', initials: 'SO', role: 'Segurança e conformidade', color: '#8AA6AE', icon: LockIcon },
+  secops: { key: 'secops' as const, name: 'SecOps', initials: 'SO', role: 'Segurança e conformidade', color: 'var(--agent-secops)', icon: LockIcon },
   infra: { key: 'infra' as const, name: 'Infra', initials: 'IN', role: 'Provisionamento e operação', color: 'var(--warning)', icon: ServerIcon },
 };
 

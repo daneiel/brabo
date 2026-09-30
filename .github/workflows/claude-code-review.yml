@@ -10,6 +10,13 @@ on:
     #   - "src/**/*.js"
     #   - "src/**/*.jsx"
 
+# AT-306: push seguido de push no mesmo PR cancela a revisão anterior — ela
+# revisaria um HEAD que já não existe, gastando token para um comentário velho.
+# O grupo é por PR (número), não por ref, porque é o PR que se revisa.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     # PR aberto por BOT não é revisado, e o teste é o `type` do autor — nunca
@@ -53,6 +60,10 @@ jobs:
       !endsWith(github.event.pull_request.user.login, '[bot]')
 
     runs-on: ubuntu-latest
+    # AT-306: sem teto, uma revisão pendurada (modelo sem resposta, ferramenta
+    # esperando) segurava o runner pelas 6h do default. Revisão que passa de
+    # 30min não é mais revisão útil do PR, é custo.
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read

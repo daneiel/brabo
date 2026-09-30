@@ -187,10 +187,13 @@
  * `--text-secondary` e não `--text-muted`, que era o valor até a Fase 7.
  *
  * O texto de apoio é TEXTO, e a 12px vale a exigência de 4.5:1 do WCAG AA.
- * `--text-muted` sobre um card `--surface-1` dá 3.89:1 — reprova, e reprovava
- * silenciosamente nas cinco telas fora de auth também. `--text-secondary` dá
- * 8.00:1. O tom cinza continua distinguindo apoio de conteúdo; só deixa de
- * distinguir por ilegibilidade. Guardado em `design-contraste.test.ts`.
+ * `--text-muted` sobre um card `--surface-1` dava 3.89:1 no escuro
+ * azul-petróleo — reprovava, e reprovava silenciosamente nas cinco telas fora
+ * de auth também. Desde o ADR 0181 o muted passa (5.10:1 no escuro neutro), e
+ * mesmo assim o `.hint` FICA no `--text-secondary` (7.17:1): texto de apoio é
+ * lido, não varrido, e o muted é o degrau de metadado. A escolha deixou de ser
+ * por contraste e passou a ser por hierarquia. Guardado em
+ * `design-contraste.test.ts`.
  */
 .hint {
   font-family: var(--font-body);
