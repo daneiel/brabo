@@ -351,6 +351,16 @@ changes are additive:
 The turn never fails because of the router: every error falls to the whole
 catalog, with the reason in `toolRouting`. No route was added or removed.
 
+#### `usage.costMicros` is the real cost when the provider says it ([RN-665](../business-rules/custo.md#rn-665))
+
+Since [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) the `usage.costMicros`
+that both paths return — and that the engine sums into the area budget — is
+the REAL cost the provider returned, when it returned one (today only
+OpenRouter's `usage.cost`, and never on a BYOK call). Otherwise it is the
+frozen catalog price, as before ([ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+The field name and shape do not change; what changes is the number the engine
+receives for the same call, which can be higher than the catalog one.
+
 #### Spend reports do NOT go through here
 
 Metering is written on **this** path: each `/llm-turn` writes a row to
