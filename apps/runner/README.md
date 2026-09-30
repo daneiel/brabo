@@ -284,6 +284,26 @@ pnpm --filter runner start -- --project <projectId> --dir <pasta-absoluta> --tok
 Requer **Node.js 22.6 ou mais recente** (o *type stripping* nativo de `.ts`
 que este caminho usa só existe a partir daí).
 
+### macOS: o `spawn-helper` do `node-pty` ganha o bit de execução no startup (AT-114)
+
+O tarball do `node-pty@1.1.0` traz `prebuilds/darwin-<arch>/spawn-helper` com
+modo `0644`, e nem o `pnpm install` nem o `npm install` o marcam executável. O
+`node-pty` EXECUTA esse arquivo a cada terminal aberto; sem o bit, o erro é
+`posix_spawnp failed` — o mesmo de arquivo ausente. Por isso, sob **Node** (pelo
+fonte, como acima, e pelo pacote `npm install -g`), o runner confere o
+`spawn-helper` ao carregar o `node-pty` (`src/spawn-helper.ts`): só em macOS,
+idempotente (já executável não é tocado), procurando na MESMA ordem do
+`node-pty` (`build/Release`, `build/Debug`, `prebuilds/darwin-<arch>`). Se o
+bit falta, ele o acrescenta e diz isso no `stderr`. Se o `spawn-helper` (ou o
+`pty.node`) não existe, ou se o `chmod` é recusado — uma instalação global de
+outro dono —, o runner PARA com erro nomeando o caminho e o conserto
+(`chmod +x "<caminho>"`), em vez de falhar no primeiro terminal. Sob `pnpm` o
+arquivo é hardlink do store, então o `chmod` vale também para o store.
+
+O binário standalone não depende disso: ele embute o conteúdo do
+`spawn-helper` e o extrai com `0755` (`native-pty-loader.ts`). E isto não é o
+bug do Bun (oven-sh/bun#25822), que reprova o binário mesmo com o bit certo.
+
 ## Chave de dispositivo pelo terminal (`device-key create | finish`)
 
 O par Ed25519 pode nascer **nesta máquina**, sem passar pelo navegador (ADR
