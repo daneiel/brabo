@@ -841,10 +841,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // `token_usage` não se liga à ação. Quem propôs já está no card, em
       // negrito, e é o AGENTE — que é o que não muda.
       node: (
-        <div key={action.id}>
+        // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
+        // com teto de 560px no fio é este contêiner (RN-173).
+        <div key={action.id} className={styles.acaoNoFio}>
         <ApprovalCard
           action={action}
-          variant="chat"
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
           // AT-256: devolve a promessa (o card segura os botões e diz a frase
           // da api) e refaz a lista MESMO na recusa — um 409 quer dizer que a

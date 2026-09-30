@@ -164,7 +164,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
               <div className={styles.decisaoInline}>
                 <ApprovalCard
                   action={acaoPendente}
-                  variant="queue"
+                  detalheRecolhido
                   onApprove={() => aprovar(acaoPendente)}
                   onDeny={() => negar(acaoPendente)}
                   onAlwaysAllow={() => sempreAprovar(acaoPendente)}

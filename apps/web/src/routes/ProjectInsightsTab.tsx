@@ -20,6 +20,7 @@ import { idCurtoDaSessao } from '../lib/session-label';
 import { HypothesisCard } from '../components/HypothesisCard';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastProvider';
 // Mesmo módulo de estilo da Visão geral, de propósito: a seção saiu de lá
 // inteira (achado #15) e precisa continuar idêntica. Duplicar as classes só
@@ -135,7 +136,9 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.arch}>
+    // AT-327: a aba começa no topo como as outras — `.arch` (margem de 28px)
+    // é de SEÇÃO que vem depois de outra, e deixava o título 29px abaixo.
+    <div>
       <div className={styles.sectionHeader}>{t('projectInsightsTab.header')}</div>
       {/* Os três estados da RN-088, com o ERRO antes do vazio: `data ?? []`
           seguido de `length === 0` fazia a api respondendo 429 dizer "sem
@@ -152,13 +155,13 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       ) : hypothesesQuery.data === undefined ? (
         <div className={styles.sectionSub}>{t('projectInsightsTab.loading')}</div>
       ) : all.length === 0 ? (
-        <div className={styles.sectionSub}>
+        <EmptyState>
           {t(
             pausadoConhecido
               ? 'projectInsightsTab.emptyPaused'
               : 'projectInsightsTab.empty',
           )}
-        </div>
+        </EmptyState>
       ) : (
         <>
           <div className={styles.sectionSub}>

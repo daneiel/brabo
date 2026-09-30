@@ -20,6 +20,11 @@ vi.mock('../lib/health', () => ({
 }));
 
 const { StatusPage } = await import('./StatusPage');
+const { default: i18n } = await import('../lib/i18n');
+
+function instante(iso: string) {
+  return new Date(iso).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'medium' });
+}
 
 function chamadasPara(url: string) {
   return fetchHealth.mock.calls.filter(([u]) => u === url).length;
@@ -47,7 +52,7 @@ describe('StatusPage — poll que para no erro (AT-302)', () => {
         <StatusPage irPara={() => {}} voltarPara="/login" />
       </QueryClientProvider>,
     );
-    await screen.findByText('2026-09-30T00:00:00Z');
+    await screen.findByText(instante('2026-09-30T00:00:00Z'));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(16_000);
@@ -57,5 +62,41 @@ describe('StatusPage — poll que para no erro (AT-302)', () => {
     expect(chamadasPara('http://engine.test')).toBeGreaterThanOrEqual(4);
     // Falha: a api não respondeu UMA vez, e ninguém insistiu por timer.
     expect(chamadasPara('http://api.test')).toBe(1);
+  });
+});
+
+describe('StatusPage — data e rótulos na língua de quem lê (AT-327)', () => {
+  it('o instante sai formatado, nunca o ISO cru, e o estado é palavra, não enum', async () => {
+    await i18n.changeLanguage('pt-BR');
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <StatusPage irPara={() => {}} voltarPara="/login" />
+      </QueryClientProvider>,
+    );
+    await screen.findByText(instante('2026-09-30T00:00:00Z'));
+    expect(screen.queryByText('2026-09-30T00:00:00Z')).toBeNull();
+    expect(screen.getByText('Última verificação')).toBeInTheDocument();
+    expect(screen.getByText('no ar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+  });
+
+  it('caso de falha: instante inválido ou ausente diz "não informado", nunca "Invalid Date"', async () => {
+    await i18n.changeLanguage('pt-BR');
+    fetchHealth.mockImplementation((url: string) =>
+      Promise.resolve({
+        service: url,
+        status: 'ok',
+        timestamp: url === 'http://api.test' ? 'lixo' : undefined,
+      }),
+    );
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <StatusPage irPara={() => {}} voltarPara="/login" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findAllByText('não informado')).toHaveLength(2);
+    expect(screen.queryByText(/Invalid Date/)).toBeNull();
   });
 });

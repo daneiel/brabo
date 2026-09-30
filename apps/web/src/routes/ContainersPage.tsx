@@ -206,7 +206,7 @@ function AcoesDoContainer({
     return (
       <ApprovalCard
         action={item.acaoPendente}
-        variant="queue"
+        detalheRecolhido
         onApprove={() => void aprovar()}
         onDeny={() => void negar()}
         onAlwaysAllow={() => void sempreAprovar()}

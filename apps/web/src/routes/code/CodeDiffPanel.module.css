@@ -54,31 +54,9 @@
   color: var(--text-muted);
 }
 
+/* O filtro por estado é `ui/SegmentedControl` (AT-327); aqui só o espaço. */
 .filtros {
-  display: flex;
-  gap: 4px;
   margin-bottom: 10px;
-}
-
-.filtro {
-  height: 26px;
-  padding: 0 10px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.filtro:hover {
-  color: var(--text-secondary);
-}
-
-.filtroAtivo {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
 }
 
 .listaPr {

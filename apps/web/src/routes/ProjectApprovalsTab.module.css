@@ -79,29 +79,7 @@
  * O vazio da FILA é o estado que o desenho desenhou: moldura tracejada, tile de
  * 48px com o check em teal e uma frase que diz o que isso significa.
  */
-.vazioCard {
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  padding: 44px 24px;
-  text-align: center;
-}
-
-.vazioIcone {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-  background: var(--success-soft);
-  display: grid;
-  place-items: center;
-  margin: 0 auto 14px;
-  color: var(--success);
-}
-
-.vazioTexto {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-}
+/* O vazio da fila é `ui/EmptyState` com `tom="sucesso"` (AT-327). */
 
 .banner {
   display: flex;

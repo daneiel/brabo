@@ -26,13 +26,7 @@
   margin-bottom: 12px;
 }
 
-.empty {
-  font-size: 13px;
-  color: var(--text-muted);
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-}
+/* O vazio é `ui/EmptyState` (AT-327). */
 
 /* --- Aguardando sua promoção (Fase 12c — RN-048) --- */
 

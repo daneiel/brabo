@@ -140,6 +140,14 @@ describe.each([
     expect(contraste(tema.onAccent, tema.danger)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
+  it('botão desabilitado: --text-muted sobre --surface-2, sem opacidade (AT-327)', () => {
+    // `Button.module.css`: o desabilitado de `primary`/`secondary`/`success`.
+    // Era `--text-muted` com `opacity: 0.6` — "Converter" inerte bege sobre
+    // bege no claro. Sem a opacidade o par é medível, e o piso é o de TEXTO:
+    // inerte ainda tem de dizer o que seria.
+    expect(contraste(tema.textMuted, tema.surface2)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+
   it('sidebar: dots de status (verde/âmbar/vermelho/cinza) sobre --surface-1 — 3:1 (gráfico de UI)', () => {
     for (const cor of [tema.success, tema.warning, tema.danger, tema.textMuted]) {
       expect(contraste(cor, tema.surface1)).toBeGreaterThanOrEqual(AA_GRANDE_OU_UI);

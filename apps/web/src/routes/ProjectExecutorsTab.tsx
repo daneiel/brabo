@@ -31,6 +31,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
@@ -309,7 +310,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
               <Skeleton width={220} height={18} />
             </div>
           ) : executorGroups.length === 0 ? (
-            <div className={styles.sectionSub}>{t('tab.noExecutors')}</div>
+            <EmptyState>{t('tab.noExecutors')}</EmptyState>
           ) : (
             <AgentTeamGrid
               roster={roster}

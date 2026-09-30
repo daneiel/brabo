@@ -5889,7 +5889,8 @@ apareceria duas vezes na mesma lista, sob dois títulos. Fica no grupo mais
 específico (`prs`).
 
 **Nunca executa.** As duas filas acionáveis no painel (`aprovacoes`, `prs`)
-renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`,
+renderizam o MESMO `ApprovalCard` da aba de Aprovações (uma variante só desde
+a AT-322, com o detalhe recolhido),
 e os botões chamam os mesmos endpoints de decisão — o painel é um ATALHO para
 a decisão, nunca um substituto dela. Isso importa em especial para
 `git_merge`: merge em branch protegida é rebaixado a `require_approval`
@@ -16895,7 +16896,7 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:224` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
@@ -17859,7 +17860,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:61` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:78` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,

@@ -381,7 +381,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
     montarAba(ProjectCriativoTab);
     await screen.findByText('Criativo');
 
-    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
 
     // O `fieldset` de tipo da FASE 20 não existe mais nesta tela: escolher de
     // novo seria oferecer a chance de contradizer a aba em que se está.
@@ -397,7 +397,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
 
     montarAba(ProjectCriativoTab);
     await screen.findByText('Criativo');
-    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
     fireEvent.change(screen.getByLabelText('Nome (opcional)'), {
       target: { value: 'Onboarding' },
     });
@@ -418,7 +418,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
 
     montarAba(ProjectChatTab);
     await screen.findByText('Chat');
-    fireEvent.click(screen.getByRole('button', { name: '+ Nova conversa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nova conversa' }));
     fireEvent.change(screen.getByLabelText('Nome (opcional)'), {
       target: { value: '   ' },
     });
@@ -449,7 +449,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
 
     montarAba(ProjectCriativoTab);
     await screen.findByText('Criativo');
-    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Abrir sessão criativa' }),
     );
@@ -474,7 +474,7 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
 
     montarAba(ProjectCriativoTab);
     await screen.findByText('Criativo');
-    fireEvent.click(screen.getByRole('button', { name: '+ Nova ideação' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Abrir sessão criativa' }),
     );

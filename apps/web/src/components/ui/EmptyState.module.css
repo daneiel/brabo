@@ -1,0 +1,41 @@
+/* O estado vazio (AT-327). Ver `EmptyState.tsx`. */
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.icone {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.icone.sucesso {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.texto {
+  max-width: 480px;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.texto > p {
+  margin: 0;
+}
+
+.acao {
+  margin-top: var(--space-1);
+}

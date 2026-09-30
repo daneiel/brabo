@@ -1128,3 +1128,18 @@
   font-size: var(--fs-meta);
   color: var(--text-muted);
 }
+
+/*
+ * RN-173 + AT-322 — a ação pedida no FIO da sessão. O card de aprovação é UM
+ * só em toda superfície e preenche o contêiner; é este contêiner que o
+ * centraliza com teto de 560px, como `.handoffCard`/`.handoffDivider`. Sem
+ * ele o card era o único item da timeline a ocupar os 780px da coluna — e
+ * recuar 45px como as bolhas seria errado: o card não é fala de ninguém, é uma
+ * decisão pedida ao usuário. 560px, mais que os 480px do formulário de
+ * perguntas: aqui cabem diff e saída de terminal.
+ */
+.acaoNoFio {
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+}

@@ -206,6 +206,7 @@ estado lido do repositório e não da conversa.
 | A sidebar, o card do Dashboard e o painel de artefatos não se contradizem (AT-325) | RN-648 |
 | Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
+| O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
 
 ## Estado atual e aberto
 
@@ -2205,7 +2206,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   três telas de decisão (Aprovações, chat da sessão, Insights) a
   consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
   `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
-  nasce colapsado (RN-096).
+  nasce colapsado (RN-096). Valor de CÓDIGO na frase (comando, branch,
+  caminho, imagem) entra por `codigo()`, nunca entre aspas: o card o desenha
+  em mono por `trechosDaFraseDaAcao` (AT-322). O `ApprovalCard` tem UMA
+  variante nas quatro superfícies — não reintroduza prop de aparência por
+  tela; a largura é do contêiner e só o colapso inicial varia
+  (`detalheRecolhido`).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs. Desde a
   RN-563 (ADR 0158) o envelope carrega `key_id` — a IMPRESSÃO DIGITAL
