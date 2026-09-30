@@ -286,6 +286,22 @@ export interface ChatUsageChunk {
    * `undefined` quando o provider não é hub ou não informou.
    */
   upstreamProvider?: string;
+  /**
+   * O CUSTO REAL que o provider disse ter cobrado por esta chamada, em
+   * micro-USD (ADR 0188, RN-665) — no OpenRouter, `usage.cost`. Quando vem,
+   * ele É o custo gravado e mostrado; o preço do catálogo (ADR 0042) fica só
+   * para quando não vem. `undefined` = o provider não disse (ou disse algo que
+   * não é o custo inteiro — ver o hook `extrairCustoReal`).
+   */
+  costMicros?: number;
+  /**
+   * O modelo que a RESPOSTA diz ter servido (`model` do frame) — num hub, o
+   * alias pedido (`~deepseek/deepseek-flash-latest`) resolve para uma versão
+   * datada, e é ela que o custo real cobra (RN-665).
+   */
+  resolvedModel?: string;
+  /** O `id` que o provider deu à resposta (`gen-…` no OpenRouter), para conferir depois. */
+  generationId?: string;
 }
 
 export interface ChatErrorChunk {

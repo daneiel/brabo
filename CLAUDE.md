@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
 | "Sempre permitir" aprova e grava o padrão na mesma transação; clique em ação já aprovada vira sucesso nomeado, e os tipos do teto (git tipado) deixam de oferecer o botão (AT-310/AT-320) | RN-642 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
@@ -1125,7 +1126,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042); 9 providers (ADR 0043); o Jev
+  preço congelado no metering (ADR 0042) — que desde o ADR 0188 só é o
+  número quando a resposta NÃO traz o custo real: o `usage.cost` do
+  OpenRouter vence, com `price_implicit` marcando a linha (a MESMA coluna
+  do Jev) e o do catálogo ao lado em `catalog_cost_micros`, RN-665; 9 providers (ADR 0043); o Jev
   (`typesafe/jev-1.13`, Decisions API do OpenRouter) escolhe o menu de
   ferramentas de cada passo por uma porta PRÓPRIA, `ToolRouter`, fora do
   `LLMProviderRegistry` e do catálogo `models` (ADR 0179, RN-625): só com

@@ -126,7 +126,7 @@ Anthropic can't omit the count, because `usage` is mandatory in its
 protocol's `message_start`. The three responses are in
 [docs/reference/llm-providers.md](../reference/llm-providers.md#normalized-divergences).
 
-- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:167`
 - **Test:** `test/contract/llm-provider.contract.ts` (scenario
   `sem_usage`, run against the three providers)
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
@@ -144,9 +144,60 @@ In metrics the `upstream_provider` label repeats the provider itself when
 there's no hub, so `sum by (upstream_provider)` keeps summing the whole
 cost.
 
-- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:58`
+- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:66`
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+
+### RN-665 — O custo real que o provider devolve é o número do metering; o catálogo fica onde ele não vem {#rn-665}
+
+Decisão do dono (30/09): **o custo real vira o número**. Quando a resposta de
+uma chamada de LLM diz quanto o provider cobrou — no OpenRouter, `usage.cost`
+no frame final do stream —, esse valor é o `token_usage.cost_micros` da linha,
+o que o turno devolve ao engine (e o laço soma ao orçamento local), o que
+incrementa os budgets de projeto, sessão e área, e o que os relatórios de
+gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
+[ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+
+1. **Uma regra, três caminhos.** `RunLlmTurnUseCase`, `StreamLlmTurnUseCase`
+   e `SendChatMessageUseCase` passam pela mesma `custoDaChamada`; não há
+   segunda régua.
+2. **Preço implícito, marcado.** Com custo real, as duas colunas de preço
+   gravam `custo ÷ tokens` (o mesmo valor: o provider devolve UM custo) e
+   `price_implicit = true` — o que mantém `tokens × preço = custo`
+   ([RN-044](#rn-044)) sem fingir um preço de tabela. Sem custo real,
+   `price_implicit = false` e as colunas são as do catálogo.
+3. **O catálogo ao lado.** `catalog_cost_micros` grava o que o preço de
+   catálogo teria cobrado, só nas linhas cujo número é o real (`null` nas
+   outras) — é a distância entre estimativa e fatura, por linha.
+4. **`estimated` segue falando dos TOKENS** ([RN-041](#rn-041)). A linha
+   com custo real tem `estimated = false` porque o custo só chega com o
+   `usage` do provider; quem marca o CUSTO como real é `price_implicit`.
+5. **O que a resposta disse sobre si é gravado.** `resolved_model_name` (o
+   `model` do frame — o alias resolvido) e `generation_id` (o `id`, `gen-…` no
+   OpenRouter), por todo provider do dialeto. `model_name` continua sendo o do
+   catálogo, a dimensão dos relatórios.
+6. **Só quem provou lê o custo.** O hook `extrairCustoReal` existe só no
+   OpenRouter; provider sem ele ignora um `usage.cost` presente. Custo que não
+   é número finito e não negativo é "não disse" (zero de verdade é custo real),
+   e com `is_byok: true` o custo NÃO é lido: é a taxa do hub, e a inferência é
+   cobrada por fora — a linha cai no catálogo.
+
+- **Where:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:194` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:211` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:222` (`custoDaChamada`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:266` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),
+  `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
+- **Test:** `test/domain/llm/custo-da-chamada.spec.ts`,
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
+  gravada: custo, modelo resolvido, id; BYOK; sem `cost`; provider sem o
+  hook), `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`,
+  `test/application/use-cases/llm/send-chat-message.use-case.spec.ts`; com
+  credencial, o smoke manual `openrouter-provider.smoke.spec.ts`
+- **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+  (AT-270)
 
 ### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
 
@@ -190,9 +241,9 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
 - **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
   `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
-  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:93`
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:109`
   (congela no metering),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:220` (`openrouterConfig`,
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:245` (`openrouterConfig`,
   a capability provada)
 - **Test:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
@@ -374,7 +425,7 @@ already exercised. A provider that declares `false` and still exposes
 the method **refuses the call** before touching the network.
 
 - **Where:** `apps/api/src/infrastructure/llm/ollama-provider.ts:73`,
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:302`
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:316`
 - **Test:** `test/contract/llm-provider.contract.ts`,
   `test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`,
   `test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts`
@@ -2344,9 +2395,9 @@ continuam numa linha só. Quem quer a quebra por credencial tem a lista própria
 e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
 pergunta que as duas listas separadas já não respondam.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:127`
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:133`
   (`SpendDimension`),
-  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:245`
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:251`
   (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
@@ -2377,8 +2428,8 @@ chegar ao handler.
 nasce alcançável pelas duas audiências, e tirá-la do alcance do membro vira ato
 explícito **neste ponto** — nunca um esquecimento em outro arquivo.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:107`
-  (as duas sobrecargas), `:138` (`SpendDimensionDoAtor`), `:154`/`:164` (os dois
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:117`
+  (as duas sobrecargas), `:143` (`SpendDimensionDoAtor`), `:159`/`:169` (os dois
   escopos), `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
