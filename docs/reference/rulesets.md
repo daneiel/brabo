@@ -137,10 +137,64 @@ warm yet; the same number fills both columns until it is.
 | `Check de promoção` | `promotion-check.yml` | 9s | 9s |
 | `Backmerge gate` | `backmerge-gate.yml` | 7s | 7s |
 
-**`ci.yml` is already 100% parallel** — none of its jobs have `needs:`.
-There's no serial graph to untangle, and the full PR verdict costs the
-SLOWEST job, not the sum (which is ~12min of CPU). Anyone wanting to
-shorten the PR has two targets, and only two:
+**After AT-303..306 (free changes only, no paid runner).** The names in the
+table above did **not** change — a renamed required check locks every PR —
+and the numbers above are the BEFORE. What changed underneath:
+
+- **`Build, scan e smoke das imagens de produção` skips its heavy steps when
+  the diff doesn't touch an image** (AT-303). The first step classifies the
+  PR's diff with `scripts/ci/diff-toca-imagem.ts` (an allow-list of what
+  never enters an image, the smoke or the E2E: `docs/` except
+  `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
+  except `ci.yml`, root `*.md` except `THIRD_PARTY_NOTICES.md`, `design/*.md`;
+  the spec proves the list against the real Dockerfiles, by mutation). Bake,
+  Trivy, broker, smoke and E2E carry `if:` **per step**, and the job always
+  finishes — green, saying why in the job summary. Never `paths:` on the
+  trigger nor `if:` on the job: both would leave the required check pending
+  or pasted with a stale verdict. In doubt (empty diff, HEAD that isn't the
+  PR's merge commit, `git diff` failing) it runs everything.
+- **The same job caches the Playwright browser, the `e2e/` pnpm store and
+  the Trivy database** (AT-304) — see
+  [what the images job caches](../explanation/cadeia-de-suprimentos-do-ci.md#images-job-caches).
+- **`Testes TS (api)` and `Testes TS (web)` became AGGREGATORS of two shards
+  each** (AT-305). The jobs `Testes TS (api) — shard N/2` and `Testes TS
+  (web) — shard N/2` run half the files each with coverage but with the floor
+  zeroed, and write a vitest `blob` report; the aggregator — which keeps the
+  required name — checks both shards ended `success`, that both reports
+  arrived, and runs `vitest --merge-reports --coverage`, which applies the
+  UNCHANGED `coverage.thresholds` of `vitest.config.ts`/`vite.config.ts` to
+  the merged coverage (measured locally: merged coverage identical to the
+  single-run one). The aggregator has `if: always()` on purpose: without
+  it a red shard would make it `skipped`, and `skipped` counts as green for
+  a required check. The shard names are **not** required checks and must
+  not be listed in a ruleset. Typecheck runs in shard 1 only.
+- `claude-code-review.yml` got `concurrency` (cancel-in-progress, per PR) and
+  `timeout-minutes: 30`; `docs-check.yml` got `timeout-minutes` on both jobs
+  (AT-306).
+
+| check | before, cold | before, warm | after, cold | after, warm | after, docs-only PR |
+|---|---|---|---|---|---|
+| `Build, scan e smoke das imagens de produção` | 295s | 109s | TODO(humano) | TODO(humano) | TODO(humano) |
+| `Testes TS (api)` (shards + aggregator, wall clock) | 177s | 177s | TODO(humano) | TODO(humano) | — |
+| `Testes TS (web)` (shards + aggregator, wall clock) | 169s | 169s | TODO(humano) | TODO(humano) | — |
+
+> **TODO(humano):** fill the "after" columns from this PR's own runs (cold:
+> the first push; warm: a re-run of the same commit; docs-only: a PR that
+> only touches `docs/`), and then move the numbers into the main table.
+
+**Consequence for the `edited` criterion below:** the images job now
+depends on the BASE too (the diff is taken against it), while `ci.yml` still
+doesn't re-run on `edited`. The only unsafe direction is a PR that skipped
+its images against one base and is then retargeted to a base where its diff
+would touch an image — rare, since promotions run from permanent-branch
+heads (whose diff always touches something) and retargets usually shrink the
+diff. The next push re-classifies.
+
+**`ci.yml` is parallel except for the two aggregators** — `test-api` and
+`test-web` `need` their shards, nothing else has `needs:`.
+The full PR verdict costs the SLOWEST chain, not the sum (which is ~12min of
+CPU). Before AT-303..305, anyone wanting to shorten the PR had two targets,
+and only two:
 
 - **cold cache: the images job**, where 195s of the 295s are the
   `docker buildx bake` — the single largest item in all of CI, 3× the
@@ -282,7 +336,7 @@ shorten the PR has two targets, and only two:
 >
 > | the check depends on… | needs `edited`? | who |
 > |---|---|---|
-> | only the HEAD | no | `ci.yml` — tests the commit, and the base doesn't change the result |
+> | only the HEAD | no | `ci.yml` — tests the commit, and the base doesn't change the result (except the images job's skip decision since AT-303 — see "Consequence for the `edited` criterion" above) |
 > | the BASE, or the PR's BODY | **yes** | `pr-police`, `approval-ladder`, `promotion-check`, `backmerge-gate`, `docs-check` |
 >
 > In `docs-check` it's both: the drift compares a range that starts at the

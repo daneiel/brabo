@@ -134,6 +134,34 @@ tool downloads and verifies on its own, and reproducing its checksum
 table by hand would be a copy that ages. Weaker than the scanner
 binaries, stated rather than implied.
 
+## What the images job caches, and what the cache cannot change {#images-job-caches}
+
+Since AT-304 the `images` job of `ci.yml` keeps three things between runs
+with `actions/cache` (pinned by SHA like every other action), and each one
+was chosen so that the cache saves time without moving a verdict:
+
+| cache | key | what decides the content |
+|---|---|---|
+| the Playwright browser (`~/.cache/ms-playwright`) | exact `@playwright/test` version + hash of `e2e/pnpm-lock.yaml` | the lockfile pin above — a new Playwright is a new key, never a stale hit |
+| the `e2e/` pnpm store (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash of `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, which still checks every tarball's integrity against the lockfile |
+| the Trivy vulnerability database (`/tmp/trivy-cache/seed/db`) | Trivy version + UTC day, restoring the latest earlier day | **Trivy itself**: `--download-db-only` still runs, reads the database's own `NextUpdate`, and downloads again when it has passed |
+
+The last row is the one that could have loosened a gate, and it doesn't:
+the cache only *seeds* the directory, and freshness is judged by the same
+rule Trivy applies on a laptop. What the cache removes is the ~110 MB
+download from the registry on every run — which was also the source of the
+occasional `TOOMANYREQUESTS` failure. `release.yml` does not use this cache:
+a tag scans with a database it downloads itself.
+
+The browser cache holds **only** the browser. The system libraries that
+`--with-deps` installs go into the runner's apt, which no directory cache
+can hold, so a warm run still installs them (`playwright install-deps`).
+
+Scope is GitHub's, not ours: `ci.yml` only runs on `pull_request`, so these
+caches are written in the PR's own scope and read back by that PR's later
+pushes (and from the base branch's scope, which this workflow never writes).
+A PR cannot seed another PR's cache.
+
 ## Container images: digest, with the tag inside the reference {#container-images-digest-with-the-tag-alongside}
 
 Third-party images are pinned by **digest**, with the tag they came from
