@@ -6604,7 +6604,7 @@ export interface components {
             /** @example 340 */
             outputTokens: number;
             /**
-             * @description Cost in micro-USD.
+             * @description Cost in micro-USD: the REAL cost the provider returned when it did (OpenRouter's `usage.cost`), otherwise the frozen catalog price (ADR 0188, RN-665).
              * @example 52700
              */
             costMicros: number;

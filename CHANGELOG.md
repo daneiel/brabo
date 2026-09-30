@@ -57,6 +57,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
+  [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
+  [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
+  custo real — no OpenRouter, `usage.cost` —, ele é o `cost_micros` gravado, o
+  que o turno devolve ao engine, o que os budgets somam e o que a aba Gastos
+  mostra; o preço de catálogo (ADR 0042) continua sendo o número onde a
+  resposta não diz o custo. A linha marca `price_implicit` (a coluna do Jev: o
+  preço gravado é `custo ÷ tokens`) e ganha, pela migration 0067,
+  `catalog_cost_micros` (o que o catálogo teria cobrado), `resolved_model_name`
+  (o modelo que a resposta diz ter servido) e `generation_id` (o `gen-…` para
+  conferir a cobrança).
+  Chamada BYOK cai no catálogo. **Budgets calibrados sobre o preço de catálogo
+  podem cruzar os limiares antes**: o uso real de 29/09 custou 1,85× a
+  estimativa.
+- **api**: **o metering lê o cache e o raciocínio** (AT-272,
+  [RN-666](docs/business-rules/custo.md#rn-666)). Cada linha de `token_usage`
+  grava `cached_input_tokens` (`prompt_tokens_details.cached_tokens`) e
+  `reasoning_tokens` (`completion_tokens_details.reasoning_tokens`) — partes
+  dos totais, nunca somadas a eles, `null` quando o provider não disse — e o
+  `medir-execucao.ts` passa a mostrar, por agente, quanto da entrada foi cache
+  lido, quanto da saída foi raciocínio e em quantas chamadas o custo é o real.
 - **api, engine**: o laço **pergunta ao Jev qual ferramenta** e o modelo do usuário
   vê só o menu que sobra (AT-238, [RN-625](docs/business-rules.md#rn-625),
   [ADR 0179](docs/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
