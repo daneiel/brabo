@@ -315,7 +315,7 @@ describe('Shell — marca', () => {
  * lacuna.
  */
 describe('Shell — novo projeto na sidebar', () => {
-  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', () => {
+  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', async () => {
     estado.pathname = '/projects/project-1';
 
     renderShell();
@@ -324,7 +324,8 @@ describe('Shell — novo projeto na sidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo projeto' }));
 
-    expect(screen.getByTestId('wizard-stub')).toBeInTheDocument();
+    // O assistente é carregado sob demanda (AT-300): o stub chega num tick.
+    expect(await screen.findByTestId('wizard-stub')).toBeInTheDocument();
   });
 
   it('também aparece no dashboard — as duas entradas convivem, uma na topbar (Dashboard) e outra na sidebar (aqui)', () => {

@@ -188,8 +188,9 @@ describe('abas do projeto derivam de um registro só', () => {
         await screen.findByRole('tab', { name: new RegExp(`^${escapado}$`) }),
       ).toBeInTheDocument();
       // Ponto 4: o render. Uma cadeia de `&&` sem esta chave mostraria o
-      // cabeçalho do projeto e um corpo vazio.
-      expect(screen.getByText(`painel de ${key}`)).toBeInTheDocument();
+      // cabeçalho do projeto e um corpo vazio. `findBy` porque o painel é um
+      // chunk carregado sob demanda (AT-300) e chega depois do trilho.
+      expect(await screen.findByText(`painel de ${key}`)).toBeInTheDocument();
     },
   );
 

@@ -1,17 +1,37 @@
-import type { ComponentType } from 'react';
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import i18n from '../lib/i18n';
-import { ProjectOverviewTab } from './ProjectOverviewTab';
-import { ProjectCriativoTab } from './ProjectSessionsTab';
-import { ProjectChatShell } from './ProjectChatShell';
-import { ProjectCodeTab } from './ProjectCodeTab';
-import { ProjectPrsTab } from './ProjectPrsTab';
-import { ProjectExecutorsTab } from './ProjectExecutorsTab';
-import { ProjectBacklogTab } from './ProjectBacklogTab';
-import { ProjectArchitectureTab } from './ProjectArchitectureTab';
-import { ProjectApprovalsTab } from './ProjectApprovalsTab';
-import { ProjectInsightsTab } from './ProjectInsightsTab';
-import { ProjectSpendTab } from './ProjectSpendTab';
-import { ProjectSettingsTab } from './ProjectSettingsTab';
+
+/**
+ * Cada painel é um chunk próprio (AT-300). Este registro é importado pelo
+ * `Shell` e pelo router — os dois estáticos, no bundle inicial —, e enquanto
+ * ele importava os doze painéis direto, as doze abas iam junto para quem só
+ * abriu o login. O registro precisa das CHAVES e dos RÓTULOS cedo; o painel só
+ * quando a aba abre, e quem espera por ele é o `Suspense` de `ProjectPage`.
+ */
+type Painel = ComponentType<{ projectId: string }>;
+
+function painel<K extends string>(
+  importar: () => Promise<Record<K, Painel>>,
+  nome: K,
+): LazyExoticComponent<Painel> {
+  return lazy(() => importar().then((m) => ({ default: m[nome] })));
+}
+
+const ProjectOverviewTab = painel(() => import('./ProjectOverviewTab'), 'ProjectOverviewTab');
+const ProjectCriativoTab = painel(() => import('./ProjectSessionsTab'), 'ProjectCriativoTab');
+const ProjectChatShell = painel(() => import('./ProjectChatShell'), 'ProjectChatShell');
+const ProjectCodeTab = painel(() => import('./ProjectCodeTab'), 'ProjectCodeTab');
+const ProjectPrsTab = painel(() => import('./ProjectPrsTab'), 'ProjectPrsTab');
+const ProjectExecutorsTab = painel(() => import('./ProjectExecutorsTab'), 'ProjectExecutorsTab');
+const ProjectBacklogTab = painel(() => import('./ProjectBacklogTab'), 'ProjectBacklogTab');
+const ProjectArchitectureTab = painel(
+  () => import('./ProjectArchitectureTab'),
+  'ProjectArchitectureTab',
+);
+const ProjectApprovalsTab = painel(() => import('./ProjectApprovalsTab'), 'ProjectApprovalsTab');
+const ProjectInsightsTab = painel(() => import('./ProjectInsightsTab'), 'ProjectInsightsTab');
+const ProjectSpendTab = painel(() => import('./ProjectSpendTab'), 'ProjectSpendTab');
+const ProjectSettingsTab = painel(() => import('./ProjectSettingsTab'), 'ProjectSettingsTab');
 
 /**
  * As abas do projeto, num registro só.
@@ -94,7 +114,7 @@ export interface AbaDoProjeto {
    */
   label: string;
   /** O painel. Toda aba recebe o mesmo e único prop. */
-  component: ComponentType<{ projectId: string }>;
+  component: Painel | LazyExoticComponent<Painel>;
   /**
    * De onde sai o selo numérico, quando existe. Devolver `undefined` esconde o
    * selo — zero pendência não é informação, é ruído.

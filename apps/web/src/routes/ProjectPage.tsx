@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
@@ -16,6 +16,7 @@ import { PainelPrecisaDeVoce } from '../components/PainelPrecisaDeVoce';
 import { montarFilas } from '../lib/precisa-de-voce';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
+import { CarregandoRota } from '../components/CarregandoRota';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
@@ -278,7 +279,12 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
           <ContextoDeSecaoInicial.Provider value={initialSection}>
-            <PainelDaAba projectId={projectId} />
+            {/* Cada painel é um chunk próprio (AT-300): o `Suspense` fica AQUI,
+                em volta só do painel, para que trocar de aba nunca apague o
+                cabeçalho e o trilho enquanto o chunk chega. */}
+            <Suspense fallback={<CarregandoRota />}>
+              <PainelDaAba projectId={projectId} />
+            </Suspense>
           </ContextoDeSecaoInicial.Provider>
         </div>
       </div>

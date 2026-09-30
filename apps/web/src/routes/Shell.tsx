@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
@@ -52,7 +52,11 @@ import {
   UserIcon,
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
-import { NewProjectWizard } from './NewProjectWizard';
+// O assistente de novo projeto é um chunk próprio (AT-300): ele só abre por
+// clique, e trazia para o bundle inicial o navegador de pastas inteiro.
+const NewProjectWizard = lazy(() =>
+  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
+);
 import styles from './Shell.module.css';
 
 // Iniciais do e-mail (não há campo de nome no JWT nem endpoint de perfil —
@@ -706,7 +710,12 @@ export function Shell() {
       </main>
 
       {wizardOpen && workspace && (
-        <NewProjectWizard workspaceId={workspace.id} onClose={() => setWizardOpen(false)} />
+        // Fallback nulo: o assistente é um modal por cima da tela, e o clique
+        // que o abre já é a resposta visível; um esqueleto no meio do layout
+        // piscaria no lugar errado.
+        <Suspense fallback={null}>
+          <NewProjectWizard workspaceId={workspace.id} onClose={() => setWizardOpen(false)} />
+        </Suspense>
       )}
     </div>
   );

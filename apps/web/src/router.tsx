@@ -3,26 +3,15 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
 } from '@tanstack/react-router';
+import type { JSX } from 'react';
 import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
-import { Dashboard } from './routes/Dashboard';
-import { ProjectPage } from './routes/ProjectPage';
 import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
 import { resolverChaveDeSecao, type ChaveDeSecao } from './routes/settings/sumario';
-import { SessionPage } from './routes/SessionPage';
-import { ProvisioningPage } from './routes/ProvisioningPage';
-import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
-import { GitErrorPage } from './routes/GitErrorPage';
-import { StatusPage } from './routes/StatusPage';
-import { LoginPage } from './routes/LoginPage';
-import { RegisterPage } from './routes/RegisterPage';
-import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
-import { SetPasswordPage } from './routes/SetPasswordPage';
-import { VerifyEmailPage } from './routes/VerifyEmailPage';
-import { AccountPage } from './routes/AccountPage';
-import { ContainersPage } from './routes/ContainersPage';
+import { CarregandoRota } from './components/CarregandoRota';
 import {
   definirSenha,
   entrar,
@@ -31,6 +20,69 @@ import {
   temSessao,
   verificarEmail,
 } from './lib/auth';
+
+/**
+ * Code-splitting por rota (AT-300).
+ *
+ * Até aqui as catorze telas eram importadas ESTATICAMENTE, e o bundle inicial
+ * carregava todas elas — inclusive a Sessão inteira para quem só abriu o login.
+ * Cada tela agora é um chunk próprio, por `lazyRouteComponent` (do TanStack, e
+ * não `React.lazy`) por dois motivos medidos no código do router:
+ *
+ * 1. o router chama o `.preload()` do componente DURANTE o carregamento da
+ *    rota, então a navegação espera o chunk antes de trocar de tela — o
+ *    `pendingComponent` só aparece se o chunk demorar, nunca como flash;
+ * 2. chunk que sumiu (deploy novo com o navegador ainda na versão velha)
+ *    recarrega a página UMA vez em vez de quebrar a tela.
+ *
+ * O `Shell` continua estático: é a moldura de toda tela autenticada, e
+ * dividi-lo só trocaria um request por outro no primeiro paint.
+ */
+const DashboardLazy = lazyRouteComponent(() => import('./routes/Dashboard'), 'Dashboard');
+const ProjectPageLazy = lazyRouteComponent(() => import('./routes/ProjectPage'), 'ProjectPage');
+const SessionPageLazy = lazyRouteComponent(() => import('./routes/SessionPage'), 'SessionPage');
+const ProvisioningPageLazy = lazyRouteComponent(
+  () => import('./routes/ProvisioningPage'),
+  'ProvisioningPage',
+);
+const AdoptionPlanPageLazy = lazyRouteComponent(
+  () => import('./routes/AdoptionPlanPage'),
+  'AdoptionPlanPage',
+);
+const GitErrorPageLazy = lazyRouteComponent(() => import('./routes/GitErrorPage'), 'GitErrorPage');
+const StatusPageLazy = lazyRouteComponent(() => import('./routes/StatusPage'), 'StatusPage');
+const LoginPageLazy = lazyRouteComponent(() => import('./routes/LoginPage'), 'LoginPage');
+const RegisterPageLazy = lazyRouteComponent(() => import('./routes/RegisterPage'), 'RegisterPage');
+const ForgotPasswordPageLazy = lazyRouteComponent(
+  () => import('./routes/ForgotPasswordPage'),
+  'ForgotPasswordPage',
+);
+const SetPasswordPageLazy = lazyRouteComponent(
+  () => import('./routes/SetPasswordPage'),
+  'SetPasswordPage',
+);
+const VerifyEmailPageLazy = lazyRouteComponent(
+  () => import('./routes/VerifyEmailPage'),
+  'VerifyEmailPage',
+);
+const AccountPageLazy = lazyRouteComponent(() => import('./routes/AccountPage'), 'AccountPage');
+const ContainersPageLazy = lazyRouteComponent(
+  () => import('./routes/ContainersPage'),
+  'ContainersPage',
+);
+
+/**
+ * As rotas que leem params/search montam a tela dentro de um closure — e um
+ * closure não tem `.preload`, então o router não saberia que há chunk a
+ * esperar e a tela suspenderia no render (fallback visível a cada navegação).
+ * `comCarga` pendura no closure o `.preload` da tela que ele renderiza.
+ */
+function comCarga(
+  tela: { preload?: () => Promise<void> },
+  render: () => JSX.Element,
+): (() => JSX.Element) & { preload?: () => Promise<void> } {
+  return Object.assign(render, { preload: tela.preload });
+}
 
 /**
  * Duas camadas sob a raiz (Fase 7a — o corte).
@@ -117,26 +169,28 @@ const loginRoute = createRoute({
     oauthError: search.oauth_error === '1',
     proxima: typeof search.proxima === 'string' ? search.proxima : undefined,
   }),
-  component: () => {
+  component: comCarga(LoginPageLazy, () => {
     const { oauthError } = loginRoute.useSearch();
     return (
-      <LoginPage onEntrar={entrar} irPara={irPara} erroOAuth={oauthError} />
+      <LoginPageLazy onEntrar={entrar} irPara={irPara} erroOAuth={oauthError} />
     );
-  },
+  }),
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/registrar',
-  component: () => <RegisterPage onRegistrar={registrar} irPara={irPara} />,
+  component: comCarga(RegisterPageLazy, () => (
+    <RegisterPageLazy onRegistrar={registrar} irPara={irPara} />
+  )),
 });
 
 const forgotRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/esqueci-senha',
-  component: () => (
-    <ForgotPasswordPage onPedir={pedirRedefinicao} irPara={irPara} />
-  ),
+  component: comCarga(ForgotPasswordPageLazy, () => (
+    <ForgotPasswordPageLazy onPedir={pedirRedefinicao} irPara={irPara} />
+  )),
 });
 
 interface SetPasswordSearch {
@@ -149,12 +203,12 @@ const setPasswordRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): SetPasswordSearch => ({
     token: typeof search.token === 'string' ? search.token : undefined,
   }),
-  component: () => {
+  component: comCarga(SetPasswordPageLazy, () => {
     const { token } = setPasswordRoute.useSearch();
     return (
-      <SetPasswordPage token={token} onDefinir={definirSenha} irPara={irPara} />
+      <SetPasswordPageLazy token={token} onDefinir={definirSenha} irPara={irPara} />
     );
-  },
+  }),
 });
 
 interface VerifyEmailSearch {
@@ -172,18 +226,18 @@ const verifyEmailRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): VerifyEmailSearch => ({
     token: typeof search.token === 'string' ? search.token : undefined,
   }),
-  component: () => {
+  component: comCarga(VerifyEmailPageLazy, () => {
     const { token } = verifyEmailRoute.useSearch();
     return (
-      <VerifyEmailPage token={token} onVerificar={verificarEmail} irPara={irPara} />
+      <VerifyEmailPageLazy token={token} onVerificar={verificarEmail} irPara={irPara} />
     );
-  },
+  }),
 });
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayout,
   path: '/',
-  component: Dashboard,
+  component: DashboardLazy,
 });
 
 // Fora do escopo de projeto de propósito (fundação de i18n, Onda 6a):
@@ -191,7 +245,7 @@ const indexRoute = createRoute({
 const accountRoute = createRoute({
   getParentRoute: () => appLayout,
   path: '/account',
-  component: AccountPage,
+  component: AccountPageLazy,
 });
 
 // A página global de containers (ADR 0136, RN-495) — mesmo nível hierárquico
@@ -199,7 +253,7 @@ const accountRoute = createRoute({
 const containersRoute = createRoute({
   getParentRoute: () => appLayout,
   path: '/containers',
-  component: ContainersPage,
+  component: ContainersPageLazy,
 });
 
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
@@ -232,7 +286,7 @@ const projectRoute = createRoute({
     tab: resolverChaveDeAba(search.tab),
     section: resolverChaveDeSecao(search.section),
   }),
-  component: () => {
+  component: comCarga(ProjectPageLazy, () => {
     const { projectId } = projectRoute.useParams();
     const { tab, section } = projectRoute.useSearch();
     // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
@@ -240,13 +294,13 @@ const projectRoute = createRoute({
     // registro de abas existe para não repetir: um link que a URL aceita e a
     // tela ignora.
     return (
-      <ProjectPage
+      <ProjectPageLazy
         projectId={projectId}
         initialTab={tab ?? (section ? 'settings' : undefined)}
         initialSection={section}
       />
     );
-  },
+  }),
 });
 
 // Fase 4b — Psicólogo: `highlightEvent` vem dos chips de evidência da
@@ -265,17 +319,17 @@ const sessionRoute = createRoute({
         ? search.highlightEvent
         : undefined,
   }),
-  component: () => {
+  component: comCarga(SessionPageLazy, () => {
     const { projectId, sessionId } = sessionRoute.useParams();
     const { highlightEvent } = sessionRoute.useSearch();
     return (
-      <SessionPage
+      <SessionPageLazy
         projectId={projectId}
         sessionId={sessionId}
         highlightEvent={highlightEvent}
       />
     );
-  },
+  }),
 });
 
 const GIT_PROVIDERS: GitProviderName[] = ['local', 'github', 'gitlab'];
@@ -292,11 +346,11 @@ const provisioningRoute = createRoute({
       ? (search.provider as GitProviderName)
       : 'local',
   }),
-  component: () => {
+  component: comCarga(ProvisioningPageLazy, () => {
     const { projectId } = provisioningRoute.useParams();
     const { provider } = provisioningRoute.useSearch();
-    return <ProvisioningPage projectId={projectId} provider={provider} />;
-  },
+    return <ProvisioningPageLazy projectId={projectId} provider={provider} />;
+  }),
 });
 
 interface AdoptionSearch {
@@ -313,17 +367,17 @@ const adoptionRoute = createRoute({
       : 'local',
     externalId: typeof search.externalId === 'string' ? search.externalId : '',
   }),
-  component: () => {
+  component: comCarga(AdoptionPlanPageLazy, () => {
     const { projectId } = adoptionRoute.useParams();
     const { provider, externalId } = adoptionRoute.useSearch();
     return (
-      <AdoptionPlanPage
+      <AdoptionPlanPageLazy
         projectId={projectId}
         provider={provider}
         externalId={externalId}
       />
     );
-  },
+  }),
 });
 
 interface GitErrorSearch {
@@ -338,18 +392,18 @@ const gitErrorRoute = createRoute({
     projectId: typeof search.projectId === 'string' ? search.projectId : undefined,
     provider: typeof search.provider === 'string' ? search.provider : undefined,
   }),
-  component: () => {
+  component: comCarga(GitErrorPageLazy, () => {
     const { provider } = gitErrorRoute.useSearch();
-    return <GitErrorPage provider={provider} />;
-  },
+    return <GitErrorPageLazy provider={provider} />;
+  }),
 });
 
 const statusRoute = createRoute({
   getParentRoute: () => publicLayout,
   path: '/status',
-  component: () => (
-    <StatusPage irPara={irPara} voltarPara={temSessao() ? '/' : '/login'} />
-  ),
+  component: comCarga(StatusPageLazy, () => (
+    <StatusPageLazy irPara={irPara} voltarPara={temSessao() ? '/' : '/login'} />
+  )),
 });
 
 const routeTree = rootRoute.addChildren([
@@ -377,7 +431,14 @@ const routeTree = rootRoute.addChildren([
   publicLayout.addChildren([statusRoute]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  // O fallback de TODA rota cujo chunk ainda não chegou (AT-300). É por
+  // existir um `defaultPendingComponent` que o router envolve cada rota num
+  // `Suspense` PRÓPRIO — então o que some enquanto a tela carrega é só o
+  // miolo, e o `Shell` (trilho, sidebar) fica de pé.
+  defaultPendingComponent: CarregandoRota,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {
