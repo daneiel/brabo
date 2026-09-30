@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
 
 ## Estado atual e aberto
 
@@ -1818,7 +1819,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   de Sessão: Executores e Visão geral também — passa pelo MESMO
   `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
   eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
-  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Dado de
+  CONFIGURAÇÃO (as seções de Configurações, o workspace/papel) nasce com
+  `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
+  poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
+  moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Guardado por
+  `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
