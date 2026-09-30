@@ -210,11 +210,11 @@ describe('abas do projeto derivam de um registro só', () => {
       'Executores',
       'Criativo',
       'Chat',
-      'Insights',
+      'Percepções',
       'Código',
       'PRs',
       'Aprovações',
-      'Backlog',
+      'Histórias',
       'Arquitetura',
       'Gastos',
       'Configurações',
@@ -293,9 +293,9 @@ describe('abas do projeto derivam de um registro só', () => {
 
     // Aprovações (1) e Insights (1) mostram cada uma o seu, lado a lado.
     expect(await screen.findByRole('tab', { name: /^Aprovações\s*1$/ })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /^Insights\s*1$/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Percepções\s*1$/ })).toBeInTheDocument();
     // Fila vazia continua sem selo: zero é ruído, não informação.
-    expect(screen.getByRole('tab', { name: 'Backlog' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Histórias' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Código' })).toBeInTheDocument();
     // E o cabeçalho do grupo é só o nome — nenhum número junto dele.
     expect(screen.getByText('Dev').textContent).toBe('Dev');

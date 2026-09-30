@@ -10,7 +10,7 @@
   },
   "compartilhado": {
     "semTitulo": "(sem título)",
-    "verNoBacklog": "Ver no Backlog",
+    "verNoBacklog": "Ver em Histórias",
     "voce": "Você",
     "agenteGenerico": "agente"
   },
@@ -49,7 +49,7 @@
     "prontoParaProduzir": "Estou pronto para produzir",
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
-    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
+    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
     "confirmarNecessidade": "Confirmar necessidade validada",
     "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
   },

@@ -135,6 +135,7 @@
       "closed": "Closed",
       "all": "All"
     },
+    "filtersAriaLabel": "Filter by state",
     "backToList": "Back to list",
     "loadingDiff": "Loading diff…",
     "diffErrorFallback": "Could not load this PR's diff.",

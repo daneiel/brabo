@@ -188,6 +188,7 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -703,9 +704,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `install.sh`, a lista do web) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
   depois de o Bun corrigir, nunca só trocar o label
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
-  fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
-  arquivo para inglês como idioma primário
+- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
+  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
+  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+  texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
+  de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
+  reprova chave que exista num idioma e falte no outro
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`

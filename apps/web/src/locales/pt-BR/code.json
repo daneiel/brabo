@@ -135,6 +135,7 @@
       "closed": "Fechadas",
       "all": "Todas"
     },
+    "filtersAriaLabel": "Filtrar por estado",
     "backToList": "Voltar à lista",
     "loadingDiff": "Carregando diff…",
     "diffErrorFallback": "Não consegui carregar o diff desta PR.",

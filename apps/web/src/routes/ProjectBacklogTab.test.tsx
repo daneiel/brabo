@@ -109,7 +109,7 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
     ]);
     montar();
 
-    expect(await screen.findByText('Backlog')).toBeTruthy();
+    expect(await screen.findByText('Histórias')).toBeTruthy();
     expect(screen.queryByText('Aguardando sua promoção')).toBeNull();
   });
 

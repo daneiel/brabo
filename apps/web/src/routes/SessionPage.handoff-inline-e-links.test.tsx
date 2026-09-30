@@ -349,7 +349,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou o épico "Autenticação de usuários"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 
@@ -380,7 +380,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou a história "Login com e-mail e senha"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 });

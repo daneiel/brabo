@@ -378,6 +378,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web (i18n)**: os últimos textos fixos de tela saem do `.tsx` para
+  `locales/en` e `locales/pt-BR` (AT-289) — a sub-lista "todos os tokens do
+  projeto" da seção de tokens de acesso (título, subtítulo, cabeçalhos, estado,
+  rótulo de revogar e a data, que era sempre `pt-BR`) e o rótulo acessível do
+  filtro de estado da lista de PRs. Em `en`, o idioma default, a sub-lista
+  aparecia em português. No `pt-BR`, as abas "Backlog" e "Insights" passam a
+  "Histórias" e "Percepções" (e as frases que apontam para elas). Um teste novo
+  (`i18n-paridade.test.ts`) reprova chave que exista num idioma e falte no
+  outro, por namespace.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

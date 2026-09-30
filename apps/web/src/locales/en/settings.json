@@ -458,6 +458,22 @@
       "removeTitle": "Revoke"
     },
     "emptyMessage": "No access token issued for this project.",
+    "admin": {
+      "title": "All project tokens",
+      "eyebrow": "maintainer · RN-427",
+      "subtitle": "Incident response — revoke any user's token in this project, not just your own.",
+      "emptyMessage": "No access token issued for this project.",
+      "table": {
+        "name": "Name",
+        "owner": "Owner",
+        "created": "Created",
+        "status": "Status",
+        "statusRevoked": "revoked",
+        "statusActive": "active",
+        "removeAria": "Revoke {{name}} ({{email}})",
+        "removeTitle": "Revoke"
+      }
+    },
     "modal": {
       "title": "Token generated",
       "bodyBefore": "Copy it now — this token can't be recovered after closing this window. Use it in ",
