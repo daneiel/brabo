@@ -13533,7 +13533,7 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:491`
+  dispatch de `container_start` consultando antes de propor), `:534`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14253,7 +14253,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:437`
+  `propose_infra_pr` perguntando antes do HALT), `:480`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15428,7 +15428,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:508`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:567`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15522,7 +15522,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:744`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:805`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15961,10 +15961,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:605`
-  (`recusa_local_de_subida`), `:658` (`recusa_por_estado`), `:668`
-  (`recusa_ja_de_pe`), `:700` (`recusa_sem_imagem_decidida`), `:717`
-  (`recusa_pasta_nunca_confirmada`), `:728` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:652`
+  (`recusa_local_de_subida`), `:705` (`recusa_por_estado`), `:729`
+  (`recusa_ja_de_pe`), `:747` (`recusa_sem_imagem_decidida`), `:764`
+  (`recusa_pasta_nunca_confirmada`), `:775` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16384,12 +16384,12 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:149`
-  (`user_message`), `:169` (`TurnoOrfao.fechar_ao_subir`), `:201`
-  (`handle_cast(:kickoff`), `:218` (`handle_cast({:correct`, a fila), `:228`
-  (`handle_cast(:cancel`), `:241` (`handle_call({:user_message`), `:264`
-  (`handle_info`), `:283` (`drenar_correcao_pendente`), `:330`
-  (`toolloop.limit_reached`), `:781` (`concluir`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:160`
+  (`user_message`), `:180` (`TurnoOrfao.fechar_ao_subir`), `:216`
+  (`handle_cast(:kickoff`), `:233` (`handle_cast({:correct`, a fila), `:243`
+  (`handle_cast(:cancel`), `:259` (`handle_call({:user_message`), `:275`
+  (`handle_info`), `:294` (`drenar_correcao_pendente`), `:341`
+  (`toolloop.limit_reached`), `:828` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -16398,7 +16398,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1135` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1327` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -18794,3 +18794,56 @@ faz merge nem push.
   (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
 - **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
 - **Origem:** AT-312 (levantamento da AT-309, passo 4)
+
+## O Infra Lead não anuncia subida que não fez (RN-668)
+
+### RN-668 — O que o turno do Infra Lead anuncia sobre a subida do container é decidido pelo código, não pelo texto do modelo {#rn-668}
+
+É a [RN-163](business-rules/autenticacao.md#rn-163) ("nada se anuncia que o
+código não vá executar") aplicada ao Infra Lead. No uso real de 29/09 (sessão
+`be70`, seq 282) ele escreveu que subiria o container "em paralelo" à PR de
+infra, e nenhum `tool.call` de subida veio depois (AT-264). Havia duas causas no
+código, e as duas fecham aqui:
+
+1. **O lote inteiro da resposta é despachado antes do encerramento.**
+   `propose_infra_pr` aceita encerra o turno sem nova ida ao modelo — é o único
+   ponto em que o CÓDIGO corta o laço com o modelo querendo continuar —, mas
+   ela parava o despacho no MEIO do lote: uma `propose_container_start` (ou
+   `container_start_via_runner`) pedida na MESMA resposta, depois da PR, sumia
+   sem `tool.call`, sem `tool.result` e sem aviso. Agora é a forma do Dev Lead
+   (`propose_execution_plan`): todas as chamadas da resposta rodam, e só depois
+   a PR aceita encerra o turno. Uma segunda `propose_infra_pr` na mesma resposta
+   é recusada com motivo (`tool.call` + `tool.result` com `ok: false`) — só a
+   primeira consolida com o Workflows.
+2. **O fecho do turno diz, com frase do SERVIDOR, quando a subida NÃO foi
+   proposta** — a forma do desfecho consolidado do Criativo (`encerrar/2`). A
+   decisão é pelo que o laço executou (alguma proposta de subida ACEITA pela api
+   neste turno?), nunca pelo que o modelo escreveu; não há leitura do texto
+   dele. Fala-se em dois casos: o turno terminou pela PR e nenhuma subida foi
+   proposta; ou uma subida foi tentada, recusada, e nenhuma proposta aceita veio
+   depois. Turno que nunca tocou na subida (uma pergunta, uma correção de gate)
+   não ganha frase nenhuma, e container já REGISTRADO `running`/`provisioning`
+   também não (a mesma leitura local de `recusa_ja_de_pe/2`, sem HTTP).
+
+O kickoff e a descrição de `propose_infra_pr` passam a dizer o que o código faz:
+a subida vem ANTES da PR ou na MESMA resposta, porque a PR encerra o turno. Isso
+é ajuda ao modelo, não a garantia — a garantia é o fecho do item 2.
+
+Nada aqui sobe container nem propõe subida: ela continua sendo `proposed_action`
+proposta pelo modelo e decidida por humano (RN-491), com as recusas por modo e
+estado intactas (RN-566/RN-610). A subida como passo do servidor é a AT-260, que
+depende de decisão do dono.
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:400`
+  (`dispatch_calls`), `:446` (`recusa_pr_repetida_no_lote`), `:858`
+  (`registrar_subida`), `:866` (`fechar_subida`), `:884`
+  (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
+  (a descrição da tool)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
+  (a subida pedida depois da PR na mesma resposta é despachada — caminho feliz),
+  `:1107` (a PR encerra o turno sem subida e o fio diz — caso de falha),
+  `:1147` (subida recusada e prometida, sem proposta: o fecho diz), `:1132`
+  (container já de pé: nada a dizer), `:1169` (recusa corrigida no turno: sem
+  frase), `:1190` (turno sem subida: sem frase), `:1199` (segunda
+  `propose_infra_pr` no lote é recusada)
+- **Origem:** AT-264 (uso real de 2026-09-29, item A18 da análise)

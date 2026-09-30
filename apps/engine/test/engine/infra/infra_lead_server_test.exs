@@ -1029,6 +1029,198 @@ defmodule Engine.Infra.InfraLeadServerTest do
   # RN-617 (ADR 0175, AT-141): o Infra Lead vira o SÉTIMO conversacional. Antes
   # o turno dele inteiro rodava DENTRO do `handle_call`: o clique esperava o
   # turno, "Parar" nunca era atendido e uma segunda mensagem ficava na fila.
+  # --- RN-668 (AT-264): a Infra não anuncia subida que não fez ---
+
+  defp lote(calls, content \\ "") do
+    %{
+      "message" => %{
+        "role" => "assistant",
+        "content" => content,
+        "toolCalls" =>
+          for {name, args} <- calls do
+            %{
+              "id" => "tc-#{name}-#{System.unique_integer([:positive])}",
+              "name" => name,
+              "arguments" => args
+            }
+          end
+      },
+      "usage" => %{"estimated" => true},
+      "error" => nil
+    }
+  end
+
+  defp contexto_sem_modulos do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+  end
+
+  # As `agent.response` gravadas até aqui, na ordem.
+  defp respostas_gravadas(acc \\ []) do
+    receive do
+      {:event_appended, _pid, _sid, %{type: "agent.response", payload: %{content: c}}} ->
+        respostas_gravadas([c | acc])
+
+      {:event_appended, _pid, _sid, _outro} ->
+        respostas_gravadas(acc)
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  describe "a subida anunciada é a que o código fez (RN-668)" do
+    test "subida pedida DEPOIS de propose_infra_pr na mesma resposta é despachada, não descartada",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      contexto_sem_modulos()
+      Process.put(:fake_propose_action, %{"id" => "pa-lote", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        lote(
+          [
+            {"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}},
+            {"propose_container_start",
+             %{"imagem" => "node:22-bookworm-slim", "rationale" => "candidata do Arquiteto"}}
+          ],
+          "Proponho a PR e subo o container em paralelo."
+        )
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      # Antes da RN-668 o `reduce_while` parava na PR e esta chamada sumia
+      # sem `tool.call` nenhum.
+      assert_received {:propose_action, "container_start", %{kind: "agent", id: "infra"}, payload}
+
+      assert payload.imagem == "node:22-bookworm-slim"
+
+      assert_received {:event_appended, _pid, _sid,
+                       %{type: "tool.call", payload: %{tool: "propose_container_start"}}}
+
+      # A subida FOI proposta: o fecho não diz que não foi.
+      refute Enum.any?(respostas_gravadas(), &(&1 =~ "NÃO foi proposta"))
+    end
+
+    test "PR que encerra o turno sem subida: o SERVIDOR diz que a subida não foi proposta",
+         %{state: state} do
+      insert_project!(state.project_id, "mounted")
+      contexto_sem_modulos()
+
+      Process.put(:fake_llm_turns, [
+        lote(
+          [{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}],
+          "Proponho a PR; a subida do container vai em paralelo."
+        )
+      ])
+
+      assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:propose_action, "container_start", _, _}
+
+      respostas = respostas_gravadas()
+      # A última palavra do fio é a do servidor, não a promessa do modelo.
+      assert List.last(respostas) =~ "subida do container NÃO foi proposta"
+      assert List.last(respostas) =~ "encerra o meu turno"
+
+      # O marcador do turno não vaza para o state do servidor.
+      refute Map.has_key?(new_state, :subida_do_turno)
+    end
+
+    test "PR que encerra o turno com o container já REGISTRADO de pé: nada a dizer sobre subida",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "running")
+      contexto_sem_modulos()
+
+      Process.put(:fake_llm_turns, [
+        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute Enum.any?(respostas_gravadas(), &(&1 =~ "NÃO foi proposta"))
+    end
+
+    test "subida recusada e nunca refeita: o fecho diz que não foi proposta, apesar da promessa",
+         %{state: state} do
+      # be70: `container_start_via_runner` recusada por modo (`mounted`) e, em
+      # seguida, o modelo PROMETE subir — sem chamar `propose_container_start`.
+      insert_project!(state.project_id, "mounted")
+      contexto_sem_modulos()
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("container_start_via_runner", %{"rationale" => "subir"}),
+        FakeEngineApiClient.final_response("Vou subir o container em paralelo.")
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:propose_action, _, _, _}
+
+      respostas = respostas_gravadas()
+      assert "Vou subir o container em paralelo." in respostas
+      assert List.last(respostas) =~ "subida do container NÃO foi proposta"
+      assert List.last(respostas) =~ "`container_start_via_runner` foi recusada"
+    end
+
+    test "recusa corrigida no mesmo turno (a subida foi proposta depois): sem frase de fecho",
+         %{state: state} do
+      insert_project!(state.project_id, "mounted")
+      contexto_sem_modulos()
+      Process.put(:fake_propose_action, %{"id" => "pa-corrigida", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("container_start_via_runner", %{"rationale" => "subir"}),
+        tool_turn("propose_container_start", %{
+          "imagem" => "node:22-bookworm-slim",
+          "rationale" => "a recusa apontou esta"
+        }),
+        FakeEngineApiClient.final_response("proposta a subida")
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert_received {:propose_action, "container_start", _, _}
+      refute Enum.any?(respostas_gravadas(), &(&1 =~ "NÃO foi proposta"))
+    end
+
+    test "turno que nunca tocou na subida não ganha frase nenhuma", %{state: state} do
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("só conversa")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert respostas_gravadas() == ["só conversa"]
+    end
+
+    test "segunda propose_infra_pr na mesma resposta é recusada com motivo, só a primeira consolida",
+         %{state: state} do
+      contexto_sem_modulos()
+
+      Process.put(:fake_llm_turns, [
+        lote([
+          {"propose_infra_pr", %{"title" => "primeira", "files" => dockerfile_files()}},
+          {"propose_infra_pr", %{"title" => "segunda", "files" => dockerfile_files()}}
+        ])
+      ])
+
+      assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert_received {:event_appended, _pid, _sid,
+                       %{type: "tool.result", payload: %{tool: "propose_infra_pr", ok: false} = r}}
+
+      assert r.erro =~ "já foi chamada nesta mesma resposta"
+
+      assert Enum.find(
+               new_state.messages,
+               &(&1["name"] == "propose_infra_pr" and &1["content"] =~ "já foi chamada")
+             )
+    end
+  end
+
   describe "o turno pelo TurnoAssincrono (RN-617)" do
     test "aceite imediato: responde :ok com o turno AINDA rodando, e o working já gravado",
          %{state: state} do
