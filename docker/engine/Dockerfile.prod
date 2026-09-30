@@ -57,6 +57,13 @@ ARG ACTIONLINT_VERSION=1.7.12
 ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
 ARG SEMGREP_VERSION=1.171.0
 ARG YAMLLINT_VERSION=1.38.0
+# PyJWT acima do que o semgrep declara. O semgrep prende `pyjwt~=2.13.0` até o
+# último release publicado (1.178.0, medido em 2026-09-30), e a 2.13.0 tem seis
+# CVEs (um CRITICAL, GHSA de bypass de autenticação e forja de token) corrigidos
+# na 2.14.0. Os gates só chamam `semgrep scan`, que não toca JWT; a prova de que
+# a troca não quebra o scan é o `semgrep scan` de verdade no fim deste estágio.
+# Sai daqui quando o semgrep aceitar PyJWT >= 2.14.
+ARG PYJWT_VERSION=2.15.1
 
 # libstdc++/ncurses/openssl: exigidas pelo ERTS embarcado.
 # git: Engine.Actions.Workspace deriva o working tree do bare repo.
@@ -119,7 +126,9 @@ RUN apk add --no-cache --virtual .fetch curl tar \
 # .trivyignore, com o critério de reavaliação escrito lá.
 # hadolint ignore=DL3013
 RUN pip install --no-cache-dir --break-system-packages \
-      "semgrep==${SEMGREP_VERSION}" "yamllint==${YAMLLINT_VERSION}"
+      "semgrep==${SEMGREP_VERSION}" "yamllint==${YAMLLINT_VERSION}" \
+ && pip install --no-cache-dir --break-system-packages --no-deps \
+      "PyJWT==${PYJWT_VERSION}"
 
 # Prova, no build, que todo binário de que os gates dependem está presente e
 # executável. Se algum passo acima degradar silenciosamente, o build para aqui.
