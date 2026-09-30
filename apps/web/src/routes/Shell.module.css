@@ -30,13 +30,13 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 16px 18px;
+  padding: var(--space-3) 18px;
   border-bottom: 1px solid var(--border);
 }
 
 .colapsado .brand {
   justify-content: center;
-  padding: 16px 0;
+  padding: var(--space-3) 0;
 }
 
 /*
@@ -70,12 +70,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 8px 6px 12px;
+  padding: 14px var(--space-2) 6px 12px;
 }
 
 .navLabel {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -88,29 +88,7 @@
  * 22px, abaixo até do piso de 24px da WCAG 2.2 AA 2.5.8 que
  * `scripts/dev/validacao-visual.js` mede.
  */
-.newProjectButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.newProjectButton:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-
-.newProjectButton:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
+/* "Novo projeto" é `ui/Button icon size="sm" variant="ghost"` (AT-287). */
 
 /*
  * Envolve Projetos + Atividades — a única região que rola. Marca e rodapé
@@ -130,7 +108,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 
 .projetoBloco {
@@ -141,11 +119,11 @@
 .navItem {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px 4px 4px;
+  gap: var(--space-1);
+  padding: var(--space-1) 6px var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .navItem.active {
@@ -188,8 +166,8 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 4px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
   color: inherit;
   text-decoration: none;
@@ -227,12 +205,12 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  margin: 0 8px 8px;
+  margin: 0 var(--space-2) var(--space-2);
   padding: 10px;
   border-radius: var(--radius-md);
   border-left: 2px solid var(--danger);
   background: var(--surface-2);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--text-secondary);
 }
@@ -250,7 +228,7 @@
   padding: 0;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-primary);
   text-decoration: underline;
 }
@@ -279,7 +257,7 @@
  */
 .navDesempate {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -298,11 +276,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 5px 8px;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   text-decoration: none;
 }
 
@@ -322,18 +300,18 @@
 
 .atividadesSecao {
   border-top: 1px solid var(--border);
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
 }
 
 .atividadesVazio {
   margin: 0;
-  padding: 4px 12px 8px;
-  font-size: 12px;
+  padding: var(--space-1) 12px var(--space-2);
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .grupoAgente {
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 
 .grupoCabecalho {
@@ -341,7 +319,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 4px;
+  padding: 6px var(--space-1);
   border: none;
   background: transparent;
   border-radius: var(--radius-md);
@@ -366,7 +344,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   font-weight: 500;
 }
 
@@ -378,7 +356,7 @@
 
 .contagem {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -404,7 +382,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px;
+  padding: var(--space-1);
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
@@ -412,7 +390,7 @@
   cursor: pointer;
   text-align: left;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
 }
 
 .instanciaCabecalho:hover {
@@ -431,7 +409,7 @@
 .marcos {
   list-style: none;
   margin: 0;
-  padding: 2px 0 4px 22px;
+  padding: 2px 0 var(--space-1) 22px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -443,13 +421,13 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
 .marcoVazio {
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   padding: 2px 0;
 }
@@ -460,7 +438,7 @@
 
 .marcoDetalhe {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -504,7 +482,7 @@
   background: var(--surface-2);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -525,7 +503,7 @@
 }
 
 .trilhaItemAtividades {
-  margin-top: 8px;
+  margin-top: var(--space-2);
   border-color: var(--border-strong);
   border-style: dashed;
   color: var(--text-secondary);
@@ -535,7 +513,7 @@
 
 .footer {
   border-top: 1px solid var(--border);
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -554,7 +532,7 @@
   background: transparent;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   cursor: pointer;
   width: 100%;
 }
@@ -604,7 +582,7 @@
   background: var(--accent);
   color: var(--on-accent);
   font-family: var(--font-heading);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 
@@ -616,7 +594,7 @@
 }
 
 .userName {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -632,7 +610,7 @@
  */
 .userRole {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-secondary);
 }
 
@@ -645,7 +623,7 @@
   background: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   border-radius: var(--radius-md);
   width: 100%;
 }

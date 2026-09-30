@@ -28,6 +28,7 @@ import {
 } from './project-tabs';
 import { ContextoDeSecaoInicial } from './settings/secao-inicial';
 import type { ChaveDeSecao } from './settings/sumario';
+import { Badge } from '../components/ui/Badge';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
@@ -225,9 +226,9 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
               <div className={styles.titleRow}>
                 <h1 className={styles.name}>{project.name}</h1>
                 {repository && (
-                  <span className={styles.repoChip}>
+                  <Badge square size="md" className={styles.repoChip}>
                     {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
-                  </span>
+                  </Badge>
                 )}
               </div>
               <div className={styles.meta}>

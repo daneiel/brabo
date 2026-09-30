@@ -402,15 +402,18 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
       // carrega o padrão porque "Revogar" sozinho, repetido por linha, não diz
       // revogar o quê.
       render: (r) => (
-        <button
+        <Button
           type="button"
+          icon
+          size="sm"
+          variant="secondary"
           className={styles.revoke}
           title={t('approvalsTab.permissions.revoke')}
           aria-label={t('approvalsTab.permissions.revokeAriaLabel', { pattern: r.pattern })}
           onClick={() => revokeRule(r)}
         >
           <TrashIcon size={14} />
-        </button>
+        </Button>
       ),
     },
   ];

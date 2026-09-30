@@ -14,6 +14,8 @@ import type { BusinessRulePayload, ProposedAction, SessionEvent } from '../lib/a
 import { ActivityFeed } from '../components/ActivityFeed';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { EventItem } from '../components/EventItem';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Disclosure } from '../components/ui/Disclosure';
@@ -298,7 +300,7 @@ export function ContextAside({
               {regrasDaPagina.map((e) => {
                 const rule = e.payload as BusinessRulePayload;
                 return (
-                  <div key={e.id} className={styles.ruleCard}>
+                  <Card key={e.id} radius="md" padding="sm" className={styles.ruleCard}>
                     <div className={styles.ruleTitle}>{rule.title}</div>
                     <div className={styles.ruleDescription}>{rule.description}</div>
                     <div className={styles.ruleOrigin}>
@@ -306,7 +308,7 @@ export function ContextAside({
                         count: Array.isArray(rule.origin) ? rule.origin.length : 0,
                       })}
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
               {/* O paginador só existe quando há o que paginar: com 5 ou menos
@@ -314,27 +316,31 @@ export function ContextAside({
                   na coluna mais estreita da tela. */}
               {totalDePaginas > 1 && (
                 <div className={styles.asidePager}>
-                  <button
+                  <Button
                     type="button"
-                    className={styles.asidePagerBotao}
+                    icon
+                    size="sm"
+                    variant="secondary"
                     onClick={() => setPaginaDeRegras(Math.max(0, pagina - 1))}
                     disabled={pagina === 0}
                     aria-label={t('aside.paginaAnterior')}
                   >
                     ‹
-                  </button>
+                  </Button>
                   <span className={styles.asidePagerTexto}>
                     {t('aside.paginaDe', { atual: pagina + 1, total: totalDePaginas })}
                   </span>
-                  <button
+                  <Button
                     type="button"
-                    className={styles.asidePagerBotao}
+                    icon
+                    size="sm"
+                    variant="secondary"
                     onClick={() => setPaginaDeRegras(Math.min(totalDePaginas - 1, pagina + 1))}
                     disabled={pagina >= totalDePaginas - 1}
                     aria-label={t('aside.proximaPagina')}
                   >
                     ›
-                  </button>
+                  </Button>
                 </div>
               )}
             </>

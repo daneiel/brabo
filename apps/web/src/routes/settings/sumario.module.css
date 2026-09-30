@@ -115,7 +115,7 @@
 
 .itemAtivo,
 .itemAtivo:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
 }
@@ -125,7 +125,7 @@
 .item:focus-visible {
   outline: 2px solid transparent;
   outline-offset: -2px;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: inset 0 0 0 2px var(--focus-ring-inset);
 }
 
 @media (forced-colors: active) {

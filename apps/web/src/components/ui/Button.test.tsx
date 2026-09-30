@@ -62,6 +62,31 @@ describe('Button', () => {
       expect(botao).toHaveClass(styles.fullWidth);
       expect(botao).not.toHaveClass(styles.lg);
     });
+
+    it('sm aplica o botão denso de 28px, e só ele (AT-287)', () => {
+      render(<Button size="sm">Fixar</Button>);
+      const botao = screen.getByRole('button');
+      expect(botao).toHaveClass(styles.sm);
+      expect(botao).not.toHaveClass(styles.lg);
+      expect(botao).not.toHaveClass(styles.icon);
+    });
+
+    it('icon é o quadrado só de ícone, e o nome acessível vem de quem chama', () => {
+      render(
+        <Button icon size="sm" variant="ghost" aria-label="Próxima página">
+          ›
+        </Button>,
+      );
+      const botao = screen.getByRole('button', { name: 'Próxima página' });
+      expect(botao).toHaveClass(styles.icon, styles.sm, styles.ghost);
+    });
+
+    it('o default não é quadrado nem denso', () => {
+      render(<Button>Salvar</Button>);
+      const botao = screen.getByRole('button');
+      expect(botao).not.toHaveClass(styles.icon);
+      expect(botao).not.toHaveClass(styles.sm);
+    });
   });
 
   describe('loading', () => {

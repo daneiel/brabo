@@ -97,14 +97,9 @@
 }
 
 /* `github · privado` — o que o repositório É, ao lado do nome. */
+/* `ui/Badge square size="md"` (AT-287); aqui só o comportamento na linha do
+   título. */
 .repoChip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 7px;
-  white-space: nowrap;
   flex-shrink: 0;
 }
 

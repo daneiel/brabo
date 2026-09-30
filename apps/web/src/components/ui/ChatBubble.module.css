@@ -33,8 +33,8 @@
   align-items: center;
   justify-content: center;
   color: var(--msg-color);
-  background: color-mix(in srgb, var(--msg-color) 16%, var(--surface-2));
-  border: 1px solid color-mix(in srgb, var(--msg-color) 50%, transparent);
+  background: color-mix(in srgb, var(--msg-color) var(--tint-avatar), var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--msg-color) var(--tint-line), transparent);
 }
 
 .messageBody {

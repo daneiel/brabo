@@ -53,6 +53,7 @@ import {
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { NewProjectWizard } from './NewProjectWizard';
+import { Button } from '../components/ui/Button';
 import styles from './Shell.module.css';
 
 // Iniciais do e-mail (não há campo de nome no JWT nem endpoint de perfil —
@@ -500,15 +501,17 @@ export function Shell() {
           <div className={styles.corpo}>
             <div className={styles.navLabelRow}>
               <span className={styles.navLabel}>{t('sidebar.nav.projectsLabel')}</span>
-              <button
+              <Button
                 type="button"
-                className={styles.newProjectButton}
+                icon
+                size="sm"
+                variant="ghost"
                 onClick={() => setWizardOpen(true)}
                 title={t('sidebar.nav.newProject')}
                 aria-label={t('sidebar.nav.newProject')}
               >
                 <PlusIcon size={16} />
-              </button>
+              </Button>
             </div>
             <nav className={styles.nav}>
               {/* A lista falhou: a sidebar DIZ, em vez de ficar vazia como se o

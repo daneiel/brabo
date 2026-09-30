@@ -2736,7 +2736,7 @@ export interface paths {
         put?: never;
         /**
          * Approves the action and records the pattern in permissions.json
-         * @description Besides releasing this action, it adds the corresponding pattern to the project's `allow` list — future matching actions come out `auto_approved` without asking. A pattern already in `deny` stays blocked.
+         * @description Besides releasing this action, it adds the corresponding pattern to the project's `allow` list — future matching actions come out `auto_approved` without asking. A pattern already in `deny` stays blocked. The approval and the pattern are recorded in the same transaction. Clicking an action that was already APPROVED is idempotent success (`desfecho: ja_aprovada`), recording the pattern only if it is missing.
          */
         post: operations["ActionsController_approveAlways"];
         delete?: never;
@@ -4399,6 +4399,91 @@ export interface components {
             payload: {
                 [key: string]: unknown;
             };
+        };
+        ApproveAlwaysResponseDto: {
+            /**
+             * @description ULID of the action.
+             * @example 01JC4Z8QK3M7YV2N5T9B0PXHRC
+             */
+            id: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /**
+             * @description Order of the action within the session; used as a cursor in listings.
+             * @example 7
+             */
+            seq: number;
+            /**
+             * @description What the action would do. `git_push` and `git_merge` require `maintainer`.
+             * @example terminal
+             * @enum {string}
+             */
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            /**
+             * @description Parameters of the action, specific to the `actionType`.
+             * @example {
+             *       "command": "pnpm test"
+             *     }
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description State in the pipeline. `auto_approved` is distinct from `approved` on purpose: the log needs to distinguish what a person decided from what the policy released.
+             * @example pending
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "denied" | "auto_approved" | "executed" | "failed";
+            /**
+             * @description What `permissions.json` decided for this action. `deny` ALWAYS wins over `allow` — not even the agent's autonomy overrides it.
+             * @example require_approval
+             * @enum {string}
+             */
+            resolvedPolicy: "auto_approve" | "require_approval" | "deny";
+            /** @description Who proposed it. */
+            actor: components["schemas"]["ActorResponseDto"];
+            /**
+             * @description Id of the user who approved or denied it. Never an agent.
+             * @example null
+             */
+            decidedBy: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example null
+             */
+            decidedAt: Record<string, never> | null;
+            /** @example null */
+            rejectionReason: Record<string, never> | null;
+            /**
+             * @description Execution result, with a shape specific to each `actionType` — output and exit code for terminal, PR number and URL for the git types. `null` while the action has not been executed.
+             * @example null
+             */
+            executionResult: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:33:10.900Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T14:33:10.900Z
+             */
+            updatedAt: string;
+            /**
+             * @description `aprovada`: this click approved the action. `ja_aprovada`: the action had already left `pending` by an approval (a previous click, another person, or the policy) — idempotent success, not an error. A DENIED action is still 409 `acao_ja_recusada`.
+             * @example aprovada
+             * @enum {string}
+             */
+            desfecho: "aprovada" | "ja_aprovada";
+            /**
+             * @description Whether this click recorded the pattern (and its `permission.granted` event). `false` means it already existed; nothing was written.
+             * @example true
+             */
+            padraoGravado: boolean;
         };
         ArchitecturePendencyResponseDto: {
             /** @example 01JC4Z0000HISTORIA000000001 */
@@ -16957,7 +17042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposedActionResponseDto"];
+                    "application/json": components["schemas"]["ApproveAlwaysResponseDto"];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -16981,7 +17066,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The action was already decided or executed. */
+            /** @description The action was already DENIED (`reason: acao_ja_recusada`); no pattern is recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;

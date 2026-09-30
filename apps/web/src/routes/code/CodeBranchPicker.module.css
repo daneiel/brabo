@@ -10,7 +10,7 @@
   padding: 0 10px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   color: var(--success);
   cursor: pointer;
 }
@@ -25,7 +25,7 @@
 
 .triggerLabel {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-primary);
   max-width: 220px;
   overflow: hidden;
@@ -146,7 +146,7 @@
 }
 
 .opcaoSelecionada {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .ponto {
@@ -186,7 +186,7 @@
 .nome {
   min-width: 0;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -203,7 +203,7 @@
   flex-shrink: 0;
   padding: 8px 12px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   border-top: 1px solid var(--border);
 }
@@ -233,7 +233,7 @@
 .inputManual:focus-visible {
   outline: none;
   border-color: var(--border-strong);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .botaoIr {

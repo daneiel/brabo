@@ -11,6 +11,7 @@ import {
 } from '../lib/decisao-da-politica';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { Disclosure } from './ui/Disclosure';
 import {
   AlertIcon,
@@ -21,6 +22,7 @@ import {
   TerminalIcon,
   TrashIcon,
 } from './ui/icons';
+import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -238,13 +240,11 @@ export function ApprovalCard({
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
-  // `container_remove` entrou no MESMO teto absoluto de `instruction_patch`
-  // (ADR 0136, RN-495) — a api recusa (400) gravar o padrão de "sempre
-  // permitir" pra ele, então mostrar o botão prometeria um efeito que o
-  // clique não produz.
-  const podeSemprePermitir =
-    action.actionType !== 'instruction_patch' &&
-    action.actionType !== 'container_remove';
+  // Tipos do teto (git tipado, `container_remove`, `instruction_patch`,
+  // paralelismo — AT-320): a api recusa (400) gravar o padrão de "sempre
+  // permitir" pra eles, então mostrar o botão prometeria um efeito que o
+  // clique não produz. A lista é a da api, conferida por teste.
+  const podeSemprePermitir = podeOferecerSemprePermitir(action.actionType);
   // Mesma regra de `ehDevDeModulo`/`DEV_LEAD` em
   // `apps/api/src/domain/agents/agent-areas.ts` (RN-507) — sem cópia gerada
   // pro web porque só ESTE componente precisa saber, e só pra trocar o
@@ -276,7 +276,9 @@ export function ApprovalCard({
   const detalheAberto = temCorpoProprio && variant === 'chat' && isPending && !detalheRecolhido;
 
   return (
-    <div
+    <Card
+      padding="none"
+      recorta
       className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
         .filter(Boolean)
         .join(' ')}
@@ -412,7 +414,7 @@ export function ApprovalCard({
       ) : (
         <DecidedLine action={action} />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -599,11 +601,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
       <div className={styles.body}>
         <div className={styles.prTitle}>{title}</div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source}</span>
+          <Badge tone="neutral" square size="md">{source}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target}</span>
+          <Badge tone="neutral" square size="md">{target}</Badge>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
       </div>
@@ -625,11 +627,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
               : t('approvalCard.body.gitMerge.defaultTitle'))}
         </div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{source ?? '?'}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{target ?? '?'}</Badge>
         </div>
       </div>
     );
@@ -651,9 +653,9 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.prTitle}>
           {agent}
           {typeof fromVersion === 'number' && (
-            <span className={styles.branchPill} style={{ marginLeft: 8 }}>
+            <Badge tone="neutral" square size="md" style={{ marginLeft: 8 }}>
               v{fromVersion} → v{fromVersion + 1}
-            </span>
+            </Badge>
           )}
         </div>
         {/* Badge de origem: qual hipótese aceita do Psicólogo gerou este
