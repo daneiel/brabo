@@ -35,6 +35,10 @@ interface ArtefatoGerado {
   actorId: string;
   node: ReactNode;
   ordenacao: number;
+  /** Quantos artefatos este item representa: 1, mais os descendentes quando é
+   *  uma raiz do backlog (RN-179). É a unidade do contador do cabeçalho E do
+   *  de cada grupo — as duas somas saem daqui (RN-648). */
+  quantos: number;
 }
 
 /** `pr_open` (PR de dev) e `open_adr_pr` (PR de ADR do Arquiteto) — os dois
@@ -183,6 +187,7 @@ export function ContextAside({
       key: `pr-${a.id}`,
       actorId: a.actor.id,
       ordenacao: ordemDaAcaoNaTimeline(a, events),
+      quantos: 1,
       node: url ? (
         <a
           key={`pr-${a.id}`}
@@ -214,6 +219,7 @@ export function ContextAside({
       key: `backlog-${raiz.evento.id}`,
       actorId: raiz.evento.actor.id,
       ordenacao: raiz.evento.seq,
+      quantos: 1 + totalDeDescendentes(raiz),
       node: <ItemDeBacklog key={`backlog-${raiz.evento.id}`} projectId={projectId} no={raiz} />,
     });
   }
@@ -223,10 +229,12 @@ export function ContextAside({
 
   // O contador do cabeçalho conta a ÁRVORE inteira, não só as raízes: dizer
   // "3" com dezoito tarefas dentro seria o mesmo tipo de número que não
-  // corresponde a nada que a RN-151 tirou da sidebar.
-  const totalDeArtefatos =
-    artefatos.length +
-    arvoreDeBacklog.reduce((soma, r) => soma + totalDeDescendentes(r), 0);
+  // corresponde a nada que a RN-151 tirou da sidebar. RN-648 (AT-325): o do
+  // GRUPO conta na MESMA unidade (`quantos`) — antes ele contava só raízes, e
+  // o painel dizia "Artefatos gerados 3" sobre um único grupo "PO 1" (um
+  // épico com a história e a tarefa dentro). Agora a soma dos grupos É o
+  // cabeçalho, por construção.
+  const totalDeArtefatos = artefatos.reduce((soma, a) => soma + a.quantos, 0);
 
   // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
   // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
@@ -360,7 +368,10 @@ export function ContextAside({
           classNameCabecalho={styles.asideHeader}
         >
           {gruposDeArtefatos.length === 0 ? (
-            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
+            // RN-648: o vazio diz O QUE esta seção conta (PR e backlog,
+            // RN-159). "Nada ainda" ao lado de um brief ou de uma regra da
+            // mesma sessão parecia negar que eles existissem.
+            <div className={styles.asideEmpty}>{t('aside.artefatosVazio')}</div>
           ) : (
             gruposDeArtefatos.map(({ actorId, itens }) => (
               <div key={actorId} style={corDoAgente(actorId)}>
@@ -371,7 +382,7 @@ export function ContextAside({
                       {nomeDoAgente(actorId)}
                     </span>
                   }
-                  trailing={itens.length}
+                  trailing={itens.reduce((soma, item) => soma + item.quantos, 0)}
                   classNameCabecalho={styles.agentGroupCabecalho}
                   className={styles.agentGroup}
                 >

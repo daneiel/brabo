@@ -119,15 +119,21 @@ export function useContainersOverview(
  * `intervalMs: false` é para quem só precisa do dado no CLIQUE: a página de
  * containers monta uma linha por projeto, e uma linha em poll era uma
  * requisição a cada 5s POR PROJETO do workspace.
+ *
+ * `frescorMs` é o `staleTime` DESTA observadora (RN-648): quem só passa a ler
+ * a lista depois que outra tela já a trouxe (a sidebar, que a habilita quando
+ * descobre que não há execução) não a busca de novo por montar depois.
  */
 export function useProjectSessions(
   projectId: string | undefined,
   intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+  frescorMs?: number,
 ) {
   return useQuery({
     queryKey: ['sessions', projectId],
     queryFn: () => listSessions(projectId!),
     enabled: !!projectId,
+    ...(frescorMs ? { staleTime: frescorMs } : {}),
     refetchInterval: intervalMs === false ? false : pollQueParaNoErro(intervalMs),
   });
 }
@@ -152,8 +158,9 @@ export function sessaoMaisRecente<T extends { createdAt: string; technical: bool
 export function useLatestSession(
   projectId: string | undefined,
   intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+  frescorMs?: number,
 ) {
-  const sessionsQuery = useProjectSessions(projectId, intervalMs);
+  const sessionsQuery = useProjectSessions(projectId, intervalMs, frescorMs);
   const latest = sessionsQuery.data ? sessaoMaisRecente(sessionsQuery.data) : undefined;
   return { ...sessionsQuery, latest };
 }

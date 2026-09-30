@@ -20,6 +20,7 @@ import {
   useProjects,
   useProjectsStatus,
   useProjectsSummary,
+  useLatestSession,
   useSessionEvents,
 } from '../lib/hooks';
 import {
@@ -34,6 +35,7 @@ import { AGENTS } from '../lib/agents';
 import { agruparPorInstancia, montarArvore, type GrupoDeAgente, type RamoDeAgente } from '../lib/timeline-tree';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { useLayoutMovel } from '../lib/layout-movel';
+import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { useTranslation } from 'react-i18next';
 import {
@@ -517,13 +519,43 @@ export function Shell() {
   // O handoff não diz se "Atividades" agrega TODOS os projetos ou só o
   // aberto; agregar todos exigiria uma consulta de eventos POR projeto — a
   // mesma classe de N+1 que a RN-090/091 fechou no dashboard. Decisão: fica
-  // escopada ao projeto da rota atual, reusando o MESMO par de hooks
-  // (`useActiveExecutionSession` + `useSessionEvents`) que
-  // `AgentTimelineTree` já usa em `SessionPage` — mesma `queryKey`, sem
-  // requisição nova quando as duas telas estão montadas juntas.
-  const { session: execSession } = useActiveExecutionSession(currentProject?.id);
-  const { data: eventsPage } = useSessionEvents(currentProject?.id, execSession?.id);
+  // escopada ao projeto da rota atual.
+  //
+  // QUAL sessão (RN-648, AT-325): a de EXECUÇÃO vigente quando existe — é ela
+  // que tem os dev agents e as instâncias `-2` que o agrupamento da RN-198
+  // existe para mostrar, com a MESMA `queryKey` da aba Executores —, e,
+  // quando NÃO existe execução, a MESMA sessão da Visão geral e do card do
+  // Dashboard (a mais recente de trabalho, `useLatestSession`). Antes a
+  // segunda metade não existia: num projeto só com sessões de conversa a
+  // sessão lida era `null`, e a sidebar dizia "nenhum agente entrou em ação"
+  // ao lado de uma Visão geral com o Criativo aguardando. A lista de sessões
+  // só é pedida nesse caso, e com o frescor de um ciclo de projeto: quando a
+  // sidebar a habilita, a moldura do projeto já a trouxe.
+  const execucao = useActiveExecutionSession(currentProject?.id);
+  const semExecucao = !!currentProject && execucao.session === null;
+  const sessoes = useLatestSession(
+    semExecucao ? currentProject.id : undefined,
+    INTERVALO_DO_PROJETO_MS,
+    INTERVALO_DO_PROJETO_MS,
+  );
+  const sessaoDaAtividade = execucao.session ?? (semExecucao ? sessoes.latest : undefined);
+  const origemDaAtividade: 'execucao' | 'recente' = execucao.session ? 'execucao' : 'recente';
+  const eventosDaAtividade = useSessionEvents(currentProject?.id, sessaoDaAtividade?.id);
+  const eventsPage = eventosDaAtividade.data;
   const events = useMemo(() => eventsPage?.items ?? [], [eventsPage]);
+  // Os estados que antes caíam todos em "nenhum agente" (RN-470): lendo,
+  // falhou, projeto sem sessão, e — só então — a sessão lida sem agente, com
+  // o texto dizendo QUAL sessão foi lida.
+  const estadoDaAtividade: 'carregando' | 'erro' | 'sem-sessao' | 'pronto' =
+    execucao.isError || (semExecucao && sessoes.isError) || eventosDaAtividade.isError
+      ? 'erro'
+      : execucao.isPending || (semExecucao && sessoes.isPending)
+        ? 'carregando'
+        : !sessaoDaAtividade
+          ? 'sem-sessao'
+          : eventosDaAtividade.isPending
+            ? 'carregando'
+            : 'pronto';
   // `language` na dependência: os rótulos da árvore saem traduzidos de
   // `montarArvore` (AT-134), e trocar o idioma tem de refazê-los.
   const { ramos } = useMemo(() => montarArvore(events, language), [events, language]);
@@ -789,8 +821,20 @@ export function Shell() {
               {!currentProject && (
                 <p className={styles.atividadesVazio}>{t('sidebar.activities.openProjectHint')}</p>
               )}
-              {currentProject && grupos.length === 0 && (
-                <p className={styles.atividadesVazio}>{t('sidebar.activities.empty')}</p>
+              {currentProject && estadoDaAtividade === 'erro' && (
+                <p className={styles.atividadesVazio} data-testid="atividades-erro">
+                  {t('sidebar.activities.loadError')}
+                </p>
+              )}
+              {currentProject && estadoDaAtividade === 'sem-sessao' && (
+                <p className={styles.atividadesVazio}>{t('sidebar.activities.noSession')}</p>
+              )}
+              {currentProject && estadoDaAtividade === 'pronto' && grupos.length === 0 && (
+                <p className={styles.atividadesVazio}>
+                  {origemDaAtividade === 'execucao'
+                    ? t('sidebar.activities.emptyExecution')
+                    : t('sidebar.activities.empty')}
+                </p>
               )}
               {currentProject &&
                 grupos.map((grupo) => (

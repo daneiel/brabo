@@ -555,6 +555,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   a oferta pelo `handoffId`, e agente ativado fora da janela (o
   `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
   (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
+- **web**: a sidebar, o card do Dashboard e o painel "Contexto da sessão"
+  deixam de se contradizer (AT-325, [RN-648](docs/business-rules.md#rn-648)).
+  Sem sessão de execução, o bloco Atividades da sidebar lê a mesma sessão da
+  Visão geral (antes dizia "Nenhum agente entrou em ação" com o Criativo
+  trabalhando); carregando, erro, projeto sem sessão e sessão vazia ganham
+  textos próprios, e o vazio diz qual sessão leu. O card do Dashboard separa
+  "carregando atividade…", "atividade indisponível" (o resumo que falhou dizia
+  "Sem atividade ainda"), "Nenhuma sessão ainda" e "Sem atividade na sessão
+  mais recente ainda". E em "Artefatos gerados" o contador de cada agente conta
+  a árvore do backlog, como o do cabeçalho — a soma dos grupos é o total —, e o
+  vazio diz que a seção conta PRs e itens de backlog.
 - **web**: a aba PRs sem imagem decidida deixa de mostrar "A aba Code ainda não
   está liberada" — diz "A lista de PRs ainda não está liberada" e por quê; o
   nome da aba no texto passa a vir do mesmo rótulo do trilho ("Código"/"Code")

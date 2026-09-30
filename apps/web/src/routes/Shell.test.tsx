@@ -58,6 +58,12 @@ const estado = vi.hoisted(() => ({
   // os eventos dela — só usados nos testes que miram a seção.
   execSession: null as { id: string } | null,
   sessionEvents: [] as unknown[],
+  // RN-648: a sessão que a Visão geral lê (a mais recente) e os eventos POR
+  // sessão — o mock de `useSessionEvents` responde pela sessão PEDIDA, senão
+  // ler a sessão errada passaria despercebido.
+  latestSession: undefined as { id: string } | undefined,
+  latestSessionQuery: {} as Record<string, unknown>,
+  eventosPorSessao: {} as Record<string, unknown[]>,
 }));
 
 const PROJECT: Project = {
@@ -119,8 +125,27 @@ vi.mock('../lib/hooks', () => ({
   useProjectsSummary: () => ({ data: estado.summaries }),
   // Atividades (RN-198) — só o projeto CORRENTE (`pathname`) as consulta;
   // vazio por padrão é suficiente para os testes que não miram a seção.
-  useActiveExecutionSession: () => ({ session: estado.execSession }),
-  useSessionEvents: () => ({ data: { items: estado.sessionEvents, nextCursor: null } }),
+  useActiveExecutionSession: () => ({
+    session: estado.execSession,
+    isPending: false,
+    isError: false,
+  }),
+  // A sidebar só pede a lista de sessões quando NÃO há execução (RN-648):
+  // `projectId` indefinido é a query desligada, e o mock responde como ela.
+  useLatestSession: (projectId: string | undefined) => ({
+    latest: projectId ? estado.latestSession : undefined,
+    isPending: false,
+    isError: false,
+    ...estado.latestSessionQuery,
+  }),
+  useSessionEvents: (_projectId: string | undefined, sessionId: string | undefined) => ({
+    data: {
+      items: sessionId ? (estado.eventosPorSessao[sessionId] ?? estado.sessionEvents) : [],
+      nextCursor: null,
+    },
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -169,6 +194,9 @@ beforeEach(() => {
   estado.pathname = '/';
   estado.execSession = null;
   estado.sessionEvents = [];
+  estado.latestSession = undefined;
+  estado.latestSessionQuery = {};
+  estado.eventosPorSessao = {};
   document.documentElement.removeAttribute('data-theme');
 });
 
@@ -447,13 +475,98 @@ describe('Shell — Atividades', () => {
     ).toBeInTheDocument();
   });
 
-  it('dentro de um projeto sem nenhum evento de agente, diz que ninguém entrou em ação', () => {
+  it('dentro de um projeto cuja sessão mais recente não tem evento de agente, diz isso nomeando a sessão', () => {
     estado.pathname = `/projects/${PROJECT.id}`;
-    estado.sessionEvents = [];
+    estado.latestSession = { id: 's-vazia' };
+    estado.eventosPorSessao = { 's-vazia': [] };
 
     renderShell();
 
-    expect(screen.getByText('Nenhum agente entrou em ação ainda.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nenhum agente entrou em ação na sessão mais recente ainda.'),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * RN-648 (AT-325) — a contradição do levantamento visual: projeto só com
+   * sessões de CONVERSA (nenhuma de execução), o Criativo agindo na sessão que
+   * a Visão geral lê, e a sidebar dizendo que nenhum agente entrou em ação.
+   * Ela lia a sessão de EXECUÇÃO, que ali é `null`.
+   */
+  it('lê a MESMA sessão da Visão geral: sem execução, o Criativo da sessão mais recente aparece', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.execSession = null;
+    estado.latestSession = { id: 's-criativa' };
+    estado.eventosPorSessao = {
+      's-criativa': [
+        {
+          id: 'ev-1',
+          sessionId: 's-criativa',
+          seq: 1,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'criativo' },
+          payload: { content: 'Vamos lá' },
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    renderShell();
+
+    expect(screen.getByTestId('atividades-grupo-criativo')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
+  });
+
+  it('com execução vigente, lê a sessão de EXECUÇÃO (a da aba Executores), e o vazio diz qual', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.execSession = { id: 's-exec' };
+    estado.latestSession = { id: 's-criativa' };
+    estado.eventosPorSessao = {
+      's-exec': [
+        {
+          id: 'ev-dev',
+          sessionId: 's-exec',
+          seq: 4,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'dev-backend' },
+          payload: { content: 'feito' },
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      's-criativa': [],
+    };
+
+    const { unmount } = renderShell();
+    expect(screen.getByTestId('atividades-grupo-dev-backend')).toBeInTheDocument();
+    unmount();
+
+    estado.eventosPorSessao = { 's-exec': [], 's-criativa': [] };
+    renderShell();
+    expect(
+      screen.getByText('Nenhum agente entrou em ação na sessão de execução ainda.'),
+    ).toBeInTheDocument();
+  });
+
+  it('projeto sem sessão nenhuma diz isso, e não que nenhum agente agiu', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.latestSession = undefined;
+
+    renderShell();
+
+    expect(screen.getByText('Este projeto ainda não tem sessão.')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
+  });
+
+  it('falha ao listar as sessões vira erro nomeado, nunca "nenhum agente"', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.latestSessionQuery = { isError: true };
+
+    renderShell();
+
+    expect(screen.getByTestId('atividades-erro')).toHaveTextContent(
+      'Não foi possível carregar as atividades.',
+    );
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
   });
 });
 

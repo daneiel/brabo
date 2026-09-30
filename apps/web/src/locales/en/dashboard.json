@@ -15,7 +15,10 @@
     "noSearchResults": "No projects found for \"{{search}}\"."
   },
   "activity": {
-    "none": "No activity yet"
+    "noSession": "No session yet",
+    "latestSessionEmpty": "No activity in the latest session yet",
+    "loading": "loading activity…",
+    "unavailable": "activity unavailable"
   },
   "gitError": {
     "title": "Could not provision the repository",

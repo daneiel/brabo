@@ -21,7 +21,10 @@
     "activities": {
       "label": "Atividades",
       "openProjectHint": "Abra um projeto para ver as atividades dos agentes.",
-      "empty": "Nenhum agente entrou em ação ainda.",
+      "empty": "Nenhum agente entrou em ação na sessão mais recente ainda.",
+      "emptyExecution": "Nenhum agente entrou em ação na sessão de execução ainda.",
+      "noSession": "Este projeto ainda não tem sessão.",
+      "loadError": "Não foi possível carregar as atividades.",
       "noMarksYet": "sem marcos ainda",
       "instancesCount_one": "{{count}} instância",
       "instancesCount_other": "{{count}} instâncias"

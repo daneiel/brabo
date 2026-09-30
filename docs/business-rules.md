@@ -304,7 +304,7 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
-- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
+- **Where:** `apps/web/src/lib/hooks.ts:221` (`useSessionEvents`),
   `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
@@ -15354,7 +15354,7 @@ decidir se passam a consultá-lo é decisão à parte, fora desta regra.
 
 - **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
   (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
-  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:137`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:147`
   (`sessaoMaisRecente`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
   (vínculo e não nome; técnica de outro projeto não marca),
@@ -17402,8 +17402,8 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:119`
-  (`useProjectSessions`), `:148` (`useLatestSession`);
+  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
@@ -17600,7 +17600,7 @@ novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
   `apps/api/src/application/ports/proposed-action-repository.port.ts`
   (`ListProposedActionsOptions`);
   `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
-  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:420`
+  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:432`
   (`usePendingActions`)
 - **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
   (sem `latest` a pendente nova fica de fora — o defeito; com `latest` ela
@@ -17679,7 +17679,7 @@ o do chat.
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
-  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:438`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:450`
   (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
   (`acoesPendentes`)
 - **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
@@ -17753,6 +17753,77 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
 - **Origem:** AT-323, AT-324. Não muda o portão da RN-105/RN-494 (a lista de
   PRs segue bloqueada sem imagem decidida — se ela DEVE escapar do portão é
   decisão do dono), nem a régua de subida da RN-521/RN-574.
+
+### RN-648 — A sidebar, o card do Dashboard e o painel de artefatos não se contradizem: cada estado vazio diz QUAL sessão leu, e contador e lista contam na mesma unidade {#rn-648}
+
+Três telas afirmavam "nada" ao lado de uma tela que mostrava algo (AT-325 —
+achados S2/D2/X6 do levantamento visual da AT-290). A reprodução com o engine
+real não foi possível neste ambiente (o egress bloqueia `repo.hex.pm` e o
+Alpine, e nenhuma imagem compila); as três contradições foram MEDIDAS no
+código e provadas por testes que falham antes da correção. A do Dashboard
+nasceu, no levantamento, de um 500 do stub do engine no resumo do workspace —
+mas o texto que a transformou em "sem atividade" é do web, e com o engine real
+qualquer falha do resumo produziria o mesmo.
+
+**A sidebar lia a sessão de EXECUÇÃO, e só ela.** O bloco Atividades
+(RN-198) pedia os eventos da sessão de execução vigente
+(`useActiveExecutionSession`). Num projeto só com sessões de conversa ela é
+`null`, a lista vinha vazia, e a sidebar dizia "Nenhum agente entrou em ação
+ainda" ao lado de uma Visão geral com o Criativo aguardando. Agora: com
+execução vigente, a sidebar continua lendo ELA (os dev agents e as instâncias
+`-2` são o que o agrupamento da RN-198 existe para mostrar, e a `queryKey` é a
+da aba Executores); SEM execução, lê a MESMA sessão da Visão geral e do card do
+Dashboard — a mais recente de trabalho (`useLatestSession`, a regra de
+`sessaoMaisRecente`). Os estados que colapsavam no mesmo texto se separam
+([RN-470](business-rules/custo.md#rn-470)): carregando (nada é afirmado), erro (texto próprio),
+projeto sem sessão ("Este projeto ainda não tem sessão."), e a sessão lida sem
+agente, com o texto NOMEANDO qual ("…na sessão de execução…" /
+"…na sessão mais recente…"). A lista de sessões só é pedida sem execução, e com
+o frescor de um ciclo de projeto (`frescorMs` em `useProjectSessions`): quando
+a sidebar a habilita a moldura do projeto já a trouxe, e o orçamento de
+requisições da [RN-632](#rn-632)/[RN-645](#rn-645) não cresce.
+
+**O card do Dashboard tinha um texto para quatro estados.** "Sem atividade
+ainda" saía com o resumo do workspace CARREGANDO, com ele FALHADO (o caso do
+levantamento: o resumo respondia 500 e o card de um projeto com dezesseis
+eventos dizia que não havia nenhum), com o projeto SEM sessão e com a sessão
+mais recente vazia. Agora são quatro textos: "carregando atividade…",
+"atividade indisponível", "Nenhuma sessão ainda" e "Sem atividade na sessão
+mais recente ainda". A linha continua lendo a sessão mais recente de trabalho
+(`latestSessionId`), a mesma da Visão geral e da sidebar sem execução — a api
+não mudou.
+
+**"Artefatos gerados 3" sobre um único grupo "PO 1".** O cabeçalho da seção
+contava a ÁRVORE do backlog (épico, história e tarefa: 3) e o grupo por agente
+contava só as RAÍZES (1). Os dois contam agora na mesma unidade — cada item
+carrega `quantos` (1, mais os descendentes quando é raiz do backlog), o
+cabeçalho é a soma dos itens e cada grupo é a soma dos seus, então a soma dos
+grupos É o cabeçalho, por construção. E o vazio da seção diz o que ela conta
+("Nenhuma PR nem item de backlog nesta sessão ainda.") em vez do "Nada ainda."
+genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia negar
+que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
+muda.
+
+- **Código:** `apps/web/src/routes/Shell.tsx:534` (`execucao`), `:542`
+  (`origemDaAtividade`), `:549` (`estadoDaAtividade`);
+  `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
+  `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
+  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:237`
+  (`totalDeArtefatos`)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
+  execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
+  de execução e o vazio diz qual; projeto sem sessão; e o caso de falha, a
+  lista de sessões que falha vira erro nomeado e nunca "nenhum agente");
+  `apps/web/src/routes/Dashboard.test.tsx` ("Dashboard — linha de atividade do
+  card (RN-648)": o resumo que falhou diz "indisponível", carregando não afirma,
+  sem sessão × sessão vazia têm textos diferentes, e com evento nenhum vazio
+  aparece); `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx` (a
+  soma dos grupos é o cabeçalho; o vazio diz o que conta);
+  `apps/web/src/routes/configuracoes.orcamento.test.tsx` e
+  `apps/web/src/routes/duas-abas.orcamento.test.tsx` seguem nos tetos
+- **Origem:** AT-325 (achados S2/D2/X6 da AT-290). Não muda o escopo da
+  [RN-159](business-rules/autenticacao.md#rn-159) nem o resumo do workspace ([RN-090](#rn-090)); estende a
+  [RN-198](business-rules/autenticacao.md#rn-198) (qual sessão a sidebar lê) e aplica a [RN-470](business-rules/custo.md#rn-470)
 
 ## Acompanhar ao vivo sem martelar (RN-639)
 
@@ -17846,8 +17917,8 @@ gaveta e a barra) continuam existindo lado a lado, a mesma duplicação
 declarada no ADR 0126.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:413`
-  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
+  (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:80`
   (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
@@ -17926,7 +17997,7 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
 
 - **Código:** `apps/web/src/lib/query-policy.ts:111`
   (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
-  (`useCurrentWorkspaceWithRole`), `:520` (`useProficiency`);
+  (`useCurrentWorkspaceWithRole`), `:530` (`useProficiency`);
   `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
   (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
   e `apps/web/src/components/ModelCatalogSection.tsx`;

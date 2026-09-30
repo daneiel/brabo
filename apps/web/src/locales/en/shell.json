@@ -21,7 +21,10 @@
     "activities": {
       "label": "Activity",
       "openProjectHint": "Open a project to see agent activity.",
-      "empty": "No agent has done anything yet.",
+      "empty": "No agent has acted in the latest session yet.",
+      "emptyExecution": "No agent has acted in the execution session yet.",
+      "noSession": "This project has no session yet.",
+      "loadError": "Could not load the activity.",
       "noMarksYet": "no milestones yet",
       "instancesCount_one": "{{count}} instance",
       "instancesCount_other": "{{count}} instances"

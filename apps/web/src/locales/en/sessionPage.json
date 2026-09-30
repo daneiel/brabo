@@ -177,6 +177,7 @@
     "proximaPagina": "Next page of business rules",
     "paginaDe": "{{atual}} of {{total}}",
     "artefatosGerados": "Artifacts generated",
+    "artefatosVazio": "No PR or backlog item in this session yet.",
     "arquivosTocados": "Files touched",
     "logDeEventos": "Event log",
     "eventoCitado": "Cited event",

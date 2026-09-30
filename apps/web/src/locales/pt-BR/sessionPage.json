@@ -177,6 +177,7 @@
     "proximaPagina": "Próxima página de regras de negócio",
     "paginaDe": "{{atual}} de {{total}}",
     "artefatosGerados": "Artefatos gerados",
+    "artefatosVazio": "Nenhuma PR nem item de backlog nesta sessão ainda.",
     "arquivosTocados": "Arquivos tocados",
     "logDeEventos": "Log de eventos",
     "eventoCitado": "Evento citado",
