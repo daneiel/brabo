@@ -190,11 +190,11 @@ describe('ProjectSessionsTab — aprovações por sessão', () => {
 
     // A sessão ANTIGA tem uma pendência — e ela aparece, que é o ponto.
     expect(
-      await screen.findByText('1 aguardando · 0 decidida(s) por você'),
+      await screen.findByText('1 aguardando · 0 decididas por você'),
     ).toBeTruthy();
     // E a mais recente mostra a decisão que já foi tomada, na mesma lista.
     expect(
-      await screen.findByText('1 decidida(s) por você · 0 auto'),
+      await screen.findByText('1 decidida por você · 0 auto'),
     ).toBeTruthy();
   });
 
@@ -215,7 +215,7 @@ describe('ProjectSessionsTab — aprovações por sessão', () => {
 
     expect(
       await screen.findByText(
-        /3 ação\(ões\) proposta\(s\) nestas sessões · 1 decidida\(s\) por você · 1 auto-aprovada\(s\) pela política · 1 aguardando/,
+        /3 ações propostas nestas sessões · 1 decidida por você · 1 auto-aprovada pela política · 1 aguardando/,
       ),
     ).toBeTruthy();
   });
@@ -229,7 +229,7 @@ describe('ProjectSessionsTab — aprovações por sessão', () => {
     montar();
 
     expect(await screen.findByText('#11111111')).toBeTruthy();
-    expect(screen.queryByText(/decidida\(s\) por você/)).toBeNull();
+    expect(screen.queryByText(/decidid(a|as) por você/)).toBeNull();
   });
 });
 

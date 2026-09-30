@@ -78,9 +78,13 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
       showToast({
         title: t('rag.reindexSuccessTitle'),
         message: t('rag.reindexSuccessMessage', {
-          docsAdrChunks: relatorio.docs.docsChunks + relatorio.docs.adrChunks,
-          indexed: relatorio.sessions.indexed,
-          total: relatorio.sessions.total,
+          chunks: t('rag.reindexChunks', {
+            count: relatorio.docs.docsChunks + relatorio.docs.adrChunks,
+          }),
+          sessions: t('rag.reindexSessions', {
+            indexed: relatorio.sessions.indexed,
+            count: relatorio.sessions.total,
+          }),
           embeddingSuffix: relatorio.embeddingAvailable
             ? ''
             : t('rag.embeddingUnavailableSuffix'),

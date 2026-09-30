@@ -108,7 +108,9 @@
       "skippedNoCapability": "no catalog listing",
       "skippedNoCredential": "no credential registered",
       "failed": "failed · origin {{origin}}",
-      "summary": "{{discovered}} new · {{reencountered}} back · {{missing}} gone"
+      "novos": "{{count}} new",
+      "deVolta": "{{count}} back",
+      "sumidos": "{{count}} gone"
     }
   },
   "picker": {

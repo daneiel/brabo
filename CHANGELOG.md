@@ -512,6 +512,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web (i18n)**: o plural do i18next vale em TODOS os namespaces (AT-331).
+  "1 eventos" (a contagem da Atividade tinha uma forma só), "1 agentes" no
+  resumo do time, "1 selecionadas" na fila de Aprovações e os "(s)"/"(ões)"
+  que sobravam — o resumo da aba Sessões, as chamadas do Gasto, o RAG, o
+  relatório de sincronização do catálogo, os marcos novos da árvore do time —
+  viram plural de verdade; frase com mais de um número vira uma chave por
+  número. E o pt-BR ganha `_zero` em toda chave com `_one`: a regra de plural
+  do `pt` põe o 0 na categoria `one`, e a tela dizia "0 referência" e "0
+  agente ativo". `i18n-vocabulario.test.ts` estende a régua do "(s)" a todos
+  os namespaces nos dois idiomas, e ganha duas: no pt-BR, `_one` sem `_zero`
+  reprova, e frase com `{{count}}` que não é plural reprova, salvo as
+  invariantes declaradas ("3 aguardando", "2 online").
+- **web**: o brilho de fundo do login deixa de ser `--success-soft` e passa a
+  `--accent-soft`, nos dois temas (AT-332): com o acento teal ele lia como a
+  marca; no tema neutro terracota (ADR 0181) era névoa verde atrás de uma
+  página terracota. `design-contraste.test.ts` mede o texto primário,
+  secundário e muted contra o pico do brilho, nos dois temas, e reprova o
+  `.brilho` que volte a uma cor de estado.
+- **web**: a aba Aprovações diz UMA vez, acima da fila, quantas pendentes estão
+  sem o motivo da política e por quê, em vez de repetir *"fora dos eventos
+  carregados nesta tela"* em cada cartão (AT-333,
+  [RN-614](docs/business-rules.md#rn-614)). A api não expõe o motivo por ação
+  (medido), e buscá-lo sem janela pediria endpoint novo; o cartão cujo evento
+  está carregado continua mostrando a frase.
+
 - **web**: o fio da sessão deixou de esconder o começo da conversa e de
   inverter a ordem ao expandir (AT-319, [RN-644](docs/business-rules.md#rn-644)).
   O corte das últimas 5 conta só MENSAGENS (os cards de handoff, aprovação e

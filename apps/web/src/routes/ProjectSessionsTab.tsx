@@ -332,12 +332,12 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
 
       {totalDaAba.total > 0 && (
         <div className={styles.subtitle}>
-          {t('sessionsTab.summaryLine', {
-            total: totalDaAba.total,
-            decided: totalDaAba.decididasPorVoce,
-            autoApproved: totalDaAba.autoAprovadas,
-            pending: totalDaAba.pendentes,
-          })}
+          {[
+            t('sessionsTab.contagem.acoesPropostas', { count: totalDaAba.total }),
+            t('sessionsTab.contagem.decididasPorVoce', { count: totalDaAba.decididasPorVoce }),
+            t('sessionsTab.contagem.autoAprovadas', { count: totalDaAba.autoAprovadas }),
+            t('sessionsTab.contagem.aguardando', { count: totalDaAba.pendentes }),
+          ].join(' · ')}
         </div>
       )}
 
@@ -435,15 +435,16 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                         : styles.rowApprovals
                     }
                   >
-                    {resumo.pendentes > 0
-                      ? t('sessionsTab.approvalsPending', {
-                          pending: resumo.pendentes,
-                          decided: resumo.decididasPorVoce,
-                        })
-                      : t('sessionsTab.approvalsDecided', {
-                          decided: resumo.decididasPorVoce,
-                          auto: resumo.autoAprovadas,
-                        })}
+                    {(resumo.pendentes > 0
+                      ? [
+                          t('sessionsTab.contagem.aguardando', { count: resumo.pendentes }),
+                          t('sessionsTab.contagem.decididasPorVoce', { count: resumo.decididasPorVoce }),
+                        ]
+                      : [
+                          t('sessionsTab.contagem.decididasPorVoce', { count: resumo.decididasPorVoce }),
+                          t('sessionsTab.contagem.auto', { count: resumo.autoAprovadas }),
+                        ]
+                    ).join(' · ')}
                   </span>
                 )}
                 <span className={styles.rowDate}>{new Date(session.createdAt).toLocaleString('pt-BR')}</span>

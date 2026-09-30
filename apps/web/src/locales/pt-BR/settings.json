@@ -15,11 +15,14 @@
     "voltarAHerdar": "Voltar a herdar"
   },
   "secao": {
+    "naoSalvas_zero": "{{count}} alterações não salvas nesta seção",
     "naoSalvas_one": "{{count}} alteração não salva nesta seção",
     "naoSalvas_other": "{{count}} alterações não salvas nesta seção",
+    "invalidas_zero": "{{count}} valores inválidos — corrija para salvar",
     "invalidas_one": "{{count}} valor inválido — corrija para salvar",
     "invalidas_other": "{{count}} valores inválidos — corrija para salvar",
     "toast": {
+      "salvas_zero": "{{count}} alterações salvas",
       "salvas_one": "{{count}} alteração salva",
       "salvas_other": "{{count}} alterações salvas",
       "parcial": "Salvou {{salvas}} de {{total}}",
@@ -61,6 +64,7 @@
     },
     "noCuratedCoverage": "sem cobertura curada",
     "noAgentYet": "nenhum agente ainda",
+    "usedByCount_zero": "{{count}} agentes deste projeto",
     "usedByCount_one": "{{count}} agente deste projeto",
     "usedByCount_other": "{{count}} agentes deste projeto",
     "emptyMessage": "Nenhuma capacidade cadastrada."
@@ -128,10 +132,12 @@
     "bulk": {
       "label": "Aplicar um modelo a todos os agentes",
       "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "apply_zero": "Aplicar aos {{count}} agentes",
       "apply_one": "Aplicar a {{count}} agente",
       "apply_other": "Aplicar aos {{count}} agentes",
       "applying": "Aplicando…",
       "toast": {
+        "applied_zero": "{{model}} aplicado aos {{count}} agentes",
         "applied_one": "{{model}} aplicado a {{count}} agente",
         "applied_other": "{{model}} aplicado aos {{count}} agentes",
         "error": "Não foi possível aplicar o modelo aos agentes"
@@ -270,6 +276,7 @@
     "card": {
       "title": "Área {{area}}",
       "lead": "Lead: {{lead}}",
+      "membersCount_zero": " — {{count}} membros",
       "membersCount_one": " — {{count}} membro",
       "membersCount_other": " — {{count}} membros",
       "noMembersYet": " — sem membros ainda",

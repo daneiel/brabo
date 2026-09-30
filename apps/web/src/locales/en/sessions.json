@@ -22,7 +22,11 @@
     "coverageError": "Could not load the index coverage.",
     "loadingCoverage": "Loading coverage…",
     "reindexSuccessTitle": "Reindexing complete",
-    "reindexSuccessMessage": "{{docsAdrChunks}} chunk(s) of docs/ADR · {{indexed}} of {{total}} session(s){{embeddingSuffix}}",
+    "reindexSuccessMessage": "{{chunks}} · {{sessions}}{{embeddingSuffix}}",
+    "reindexChunks_one": "{{count}} chunk of docs/ADR",
+    "reindexChunks_other": "{{count}} chunks of docs/ADR",
+    "reindexSessions_one": "{{indexed}} of {{count}} session",
+    "reindexSessions_other": "{{indexed}} of {{count}} sessions",
     "embeddingUnavailableSuffix": " · embedding unavailable, indexed with lexical signal only",
     "reindexErrorTitle": "Reindexing failed",
     "reindexErrorDefaultMessage": "The api did not respond. The index was not changed.",
@@ -31,7 +35,8 @@
     "searchButton": "Search",
     "scopeFilterAriaLabel": "Filter by scope",
     "allScopes": "all scopes",
-    "scopesMarked": "{{count}} scope(s) selected",
+    "scopesMarked_one": "{{count}} scope selected",
+    "scopesMarked_other": "{{count}} scopes selected",
     "emptyPrompt": "Type a term and search the project's index.",
     "searching": "Searching…",
     "searchError": "Could not search right now.",
@@ -44,15 +49,20 @@
       "chooseFolder": "Choose folder…",
       "reading": "Reading files…",
       "emptyFolder": "No eligible files found in this folder (recognized text/code).",
-      "summary": "{{included}} file(s) from “{{folderName}}”, {{skipped}} skipped (too large or binary)",
-      "summaryNoSkipped": "{{included}} file(s) from “{{folderName}}”",
-      "tooManyFiles": "The folder has {{count}} file(s) — the cap is {{limit}}. Choose a smaller folder.",
+      "summary": "{{files}}, {{skipped}} (too large or binary)",
+      "skippedCount": "{{count}} skipped",
+      "summaryNoSkipped_one": "{{count}} file from “{{folderName}}”",
+      "summaryNoSkipped_other": "{{count}} files from “{{folderName}}”",
+      "tooManyFiles_one": "The folder has {{count}} file — the cap is {{limit}}. Choose a smaller folder.",
+      "tooManyFiles_other": "The folder has {{count}} files — the cap is {{limit}}. Choose a smaller folder.",
       "tooManyBytes": "The folder's content sums more than the allowed cap. Choose a smaller folder.",
-      "confirmButton": "Attach {{count}} file(s)",
+      "confirmButton_one": "Attach {{count}} file",
+      "confirmButton_other": "Attach {{count}} files",
       "confirmButtonLoading": "Attaching…",
       "cancelButton": "Cancel",
       "successTitle": "Folder attached",
-      "successMessage": "{{filesIndexed}} file(s) indexed from “{{folderName}}”{{embeddingSuffix}}",
+      "successMessage_one": "{{count}} file indexed from “{{folderName}}”{{embeddingSuffix}}",
+      "successMessage_other": "{{count}} files indexed from “{{folderName}}”{{embeddingSuffix}}",
       "errorTitle": "Failed to attach",
       "errorDefaultMessage": "The api did not respond. Nothing was changed."
     }
@@ -97,7 +107,8 @@
     "noLocalFolder": "no folder attached",
     "localFolder": "from “{{folderName}}”",
     "localAttachedAt": "attached on {{date}}",
-    "chunksInIndex": "{{count}} chunk(s) in the index",
+    "chunksInIndex_one": "{{count}} chunk in the index",
+    "chunksInIndex_other": "{{count}} chunks in the index",
     "chunksWithoutVector": "{{count}} without a vector — indexed with lexical signal only"
   },
   "sessionFailure": {
@@ -161,7 +172,14 @@
     },
     "openingButton": "Opening…",
     "filterGroupAriaLabel": "Filter sessions by status",
-    "summaryLine": "{{total}} proposed action(s) in these sessions · {{decided}} decided by you · {{autoApproved}} auto-approved by policy · {{pending}} awaiting",
+    "contagem": {
+      "acoesPropostas_one": "{{count}} proposed action in these sessions",
+      "acoesPropostas_other": "{{count}} proposed actions in these sessions",
+      "decididasPorVoce": "{{count}} decided by you",
+      "autoAprovadas": "{{count}} auto-approved by policy",
+      "aguardando": "{{count}} awaiting",
+      "auto": "{{count}} auto"
+    },
     "loadError": "Could not load this project's sessions.",
     "filterEmpty": "No sessions in this filter.",
     "renameInput": {
@@ -169,8 +187,6 @@
       "placeholder": "No name — the session stays {{hashtag}}"
     },
     "rowTitle": "Session {{rotulo}} — click to rename",
-    "approvalsPending": "{{pending}} awaiting · {{decided}} decided by you",
-    "approvalsDecided": "{{decided}} decided by you · {{auto}} auto",
     "kpis": {
       "sessionsInProject": {
         "label": "Sessions in project",

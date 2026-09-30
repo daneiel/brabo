@@ -523,11 +523,11 @@ function RelatorioDoSync({ resultados }: { resultados: ResultadoDoSync[] }) {
             </Badge>
           ) : (
             <span className={styles.relatorioNumeros}>
-              {t('catalog.syncReport.summary', {
-                discovered: r.descobertos,
-                reencountered: r.reencontrados,
-                missing: r.indisponibilizados,
-              })}
+              {[
+                t('catalog.syncReport.novos', { count: r.descobertos }),
+                t('catalog.syncReport.deVolta', { count: r.reencontrados }),
+                t('catalog.syncReport.sumidos', { count: r.indisponibilizados }),
+              ].join(' · ')}
             </span>
           )}
         </div>

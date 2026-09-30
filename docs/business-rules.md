@@ -16092,6 +16092,19 @@ mais recente) e não achou o evento na janela carregada diz *"fora dos eventos
 carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
 `ApprovalCard` — hipótese do Psicólogo não é `proposed_action`.
 
+**Desde a AT-333, a fila da aba Aprovações diz a lacuna UMA vez.** A fila é a
+do PROJETO ([RN-638](#rn-638)) e os eventos são os de UMA sessão, então ali o
+*"fora dos eventos carregados"* saía em quase todo card — verdade repetida por
+card, a ferramenta se explicando. A api não expõe o motivo por ação (a ação
+não o guarda, e a leitura de eventos não filtra por `actionId`: medido), e
+buscar sem janela exigiria endpoint novo. A aba passa então a CONTAR as
+pendentes sem o evento e a dizer, numa nota acima da fila, quantas são e por
+quê (*"destas N ações"*, ou *"de N das M ações abaixo"*), no molde da
+[RN-180](business-rules/autenticacao.md#rn-180); o card dessas cala (o estado "tela que não lê"), e o card
+cujo evento está carregado continua mostrando a frase. A nota só conta com o
+log em mãos: antes de os eventos chegarem ela não afirma nada. O chat da
+sessão segue com os três estados por card — ali o recorte é o do próprio fio.
+
 **Ausente não é "sem motivo", e o absoluto nunca aparece.** Evento anterior à
 RN-567 diz *"motivo da política não registrado"*; `terminal` anterior à RN-609
 diz *"raiz do escopo não registrada"*; outro tipo, sem `scopeRoot`, não fala de
@@ -16108,13 +16121,16 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
   `apps/web/src/routes/session-timeline-montagem.tsx:825` e
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:452` (quem passa o dado)
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:304` (`decisoesDaPolitica`, a
+  contagem da nota da AT-333) e `:503` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
   sem vazar caminho), `:114` (os dois idiomas), `:144` (a linha do log É a
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
-  usa a mesma função, e os três estados)
-- **Origem:** AT-148 (EP-025/HS-043)
+  usa a mesma função, e os três estados);
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:239` (a nota dita uma vez,
+  parcial e ausente — AT-333)
+- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333
 
 ---
 
@@ -17763,7 +17779,7 @@ o do chat.
 - **Código:** `apps/web/src/routes/ProjectPage.tsx:82` (o contador),
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
-  (`sessaoDeTrabalho`), `:309` (`handleApprove`);
+  (`sessaoDeTrabalho`), `:322` (`handleApprove`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
