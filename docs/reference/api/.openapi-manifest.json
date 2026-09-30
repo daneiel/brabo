@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "4677d4dca58edb3de096576ac12da37a0a7c38367080f8da095320fb3b69128b",
+  "openapiSha256": "0b5e0b5a904fb5a1ba0721f662727a59e3ea794e04559601b14ec2e2494744f1",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -870,8 +870,8 @@
     "workspaces-controller-get-projects-status.api.mdx": "88eeb4a3559cc5edfd4590a8a41fdc9c41c30941e89c885336ca663c587fd88f",
     "workspaces-controller-get-projects-summary.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-get-projects-summary.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "workspaces-controller-get-projects-summary.StatusCodes.json": "5c52a730c3762f5c264e907beee6143845214e224e5ac2e6c1ea9da7a96f9fe8",
-    "workspaces-controller-get-projects-summary.api.mdx": "afdc72e83804769d31431ddb5754cb7d15b896bb28a322b39cba1013d409cb1e",
+    "workspaces-controller-get-projects-summary.StatusCodes.json": "0380cb9bec9aee806b222e9f8f6f111d8356980c1d9b04fe7d082de2c7c74d2e",
+    "workspaces-controller-get-projects-summary.api.mdx": "9f479c370f8516c0f9afe6566b7d75e2c3ae9abf6446b4be9e08fb44e2c66d28",
     "workspaces-controller-get-summary.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-get-summary.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "workspaces-controller-get-summary.StatusCodes.json": "32b381b1848f943dc1044c13ef19294f92f6645006ce00a53a12ff3a485b0a45",

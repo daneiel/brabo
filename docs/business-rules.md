@@ -16919,3 +16919,45 @@ momento do QA-estratégia) nem o teto de iterações do subagente.
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
   decisão conclui a área); `:265` (uma suspensão, o caminho feliz)
 - **Origem:** AT-248, sobre o achado E2 da análise de uso real de 2026-09-29
+
+### RN-630 — Quem está ativo na sessão se lê da sessão INTEIRA, não dos últimos 200 eventos {#rn-630}
+
+"Quem está ativo" e "quem recebe o composer" saíam do `agent.activated` visto
+na janela de 200 eventos (`latest: true`). Numa sessão longa as ativações do
+Arquiteto e da Infra saíam da janela; as ofertas de handoff endereçadas a eles
+voltavam a parecer aceitáveis e o "oi" ia para o último agente que ainda
+aparecia. É a classe de defeito da RN-180 (teto silencioso faz a
+tela afirmar sobre o que não leu), já fechada para a presença de QA/SecOps na
+[RN-568](#rn-568).
+
+**A regra:** o resumo do projeto ([RN-090](#rn-090)) devolve
+`roster.activatedAgents` — os agentes com ao menos um `agent.activated` na
+sessão mais recente, um por agente, o de ativação mais recente (por `seq`)
+primeiro. Quatro decisões:
+
+1. **A fonte continua sendo o event log.** Nenhuma coluna derivada, nenhum
+   índice e nenhuma migration: o campo entra na MESMA varredura por sessão que
+   já calcula `executionActivated`/`gatesEverOpened` (`array_agg ... filter`),
+   então o número de idas ao banco do resumo não muda (o spec de contagem
+   constante segue valendo). A migration 0066 reservada não foi usada.
+2. **Sem HTTP novo por poll.** O campo viaja no resumo que as telas já leem
+   ([RN-579](#rn-579)).
+3. **O cliente SOMA à janela e só confia com o resumo da MESMA sessão**
+   (`latestSessionId === sessionId`), como na RN-568: ativação é monótona
+   (agente ativado não se desativa), então a janela só dá falso negativo. Resumo
+   de outra sessão não vale; sem resumo, a janela decide sozinha.
+4. **A api diz o que aconteceu, não quem recebe.** O destinatário explícito e
+   visível no chat (AT-251) e o aceite por `handoffId` (AT-253) consomem este
+   campo na web e NÃO fazem parte desta regra.
+
+**Lacuna declarada:** esta rodada só entrega o CONTRATO da api. `apps/web`
+(`session-readiness.ts`, `session-handoffs.ts`) segue lendo a janela até a
+AT-251/AT-253 passarem a consumir `roster.activatedAgents`.
+
+- **Onde vive:** `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts:212`
+  (`activatedAgents`); `apps/api/src/application/ports/projects-summary-repository.port.ts:32`
+  (`activatedAgents`)
+- **Testes:** `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  ("activatedAgents cobre ativações anteriores à janela de 200 eventos" e
+  "activatedAgents é da sessão MAIS RECENTE: ativação de sessão antiga não vale")
+- **Origem:** AT-252
