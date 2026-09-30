@@ -9,8 +9,9 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   Diferente de `propose_infra_pr`, `InfraLeadServer.dispatch_calls/2`
   intercepta esta tool também, mas NÃO consolida com o `WorkflowsAgent`: é
   ação independente, despachada inline (`propose_action(..., "container_start",
-  ...)`), sem HALT — o turno continua e o modelo pode chamar `propose_infra_pr`
-  antes, depois, ou nunca chamar esta.
+  ...)`), sem HALT — o turno continua. `propose_infra_pr` é que encerra o
+  turno, então esta vem ANTES dela ou na MESMA resposta (o lote inteiro é
+  despachado antes do HALT desde a RN-668); depois dela, só num turno novo.
 
   Desde a RN-566, `InfraLeadServer.dispatch_container_start/2` CONSULTA
   LOCALMENTE (`Project.get/1`, sem HTTP) o `execution_mode` do projeto ANTES

@@ -635,6 +635,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   sem bootstrap) não cai para `main`: o working tree, o worktree, o diff e a
   PR falham NOMEANDO a ausência — antes o working tree criava uma `dev` vazia
   e a marcava pronta. A PR de infra (`open_infra_pr`) não mudou.
+- **engine**: o Infra Lead não anuncia mais subida de container que não fez
+  (AT-264, [RN-668](docs/business-rules.md#rn-668)). No uso real de 29/09 ele
+  disse que subiria o container "em paralelo" e nenhum `tool.call` de subida
+  veio depois. Duas causas no código: `propose_infra_pr` encerra o turno e
+  cortava o lote da resposta no meio — uma `propose_container_start` pedida na
+  MESMA resposta, depois da PR, sumia sem rastro —, e nada dizia no fio que a
+  subida não tinha acontecido. Agora o lote inteiro é despachado antes do
+  encerramento, e o turno que termina pela PR sem subida proposta (ou em que a
+  subida foi tentada, recusada e não refeita) fecha com uma frase do SERVIDOR
+  dizendo que a subida NÃO foi proposta, salvo container já registrado de pé.
+  O kickoff e a descrição de `propose_infra_pr` passam a dizer que a subida vem
+  antes da PR ou na mesma resposta. A subida continua proposta pelo modelo e
+  decidida por humano.
+
 - **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
   3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
   `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não
