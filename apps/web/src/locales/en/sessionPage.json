@@ -65,7 +65,10 @@
     "mensagemNaoEnviada": "Your unsent message",
     "naoAtivada": "Session not activated yet.",
     "ativarSessao": "Activate session",
-    "statusGenerico": "Session {{status}} — can't send messages."
+    "statusGenerico": "Session {{status}} — can't send messages.",
+    "reabrir": "Reopen session",
+    "reabrirExplicacao": "Reopening brings the session back to active with everything it already had: the conversation, the business rules, the answered questions and the offers between agents. The previous closing stays on record.",
+    "reabrirExigeMaintainer": "Reopening the session requires the maintainer role in this workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Gathering information...",
@@ -147,7 +150,8 @@
     "erroCancelarTurno": "Could not cancel the turn",
     "erroNoChat": "Chat error",
     "aviso": "Warning",
-    "levandoAExecucao": "Taking you to the execution session."
+    "levandoAExecucao": "Taking you to the execution session.",
+    "erroReabrirSessao": "Could not reopen the session"
   },
   "modal": {
     "devolverTitulo": "Return \"{{titulo}}\" to the PO?",

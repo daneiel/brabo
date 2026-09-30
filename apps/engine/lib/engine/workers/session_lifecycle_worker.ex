@@ -9,6 +9,13 @@ defmodule Engine.Workers.SessionLifecycleWorker do
   agentes CONVERSACIONAIS da sessão (`Engine.Agents.Conversacionais`), em
   todos os nós.
 
+  Desde o ADR 0183 (RN-649) uma sessão encerrada pode ser REABERTA. O job de
+  um fechamento que chega DEPOIS da reabertura (retentativa do Oban, drain
+  atrasado) não para nada: a api já diz que a sessão não é mais terminal, e
+  parar ali derrubaria o processo e os agentes da sessão reaberta. Quem decide
+  é o `status` gravado pela api (`ProjectSession.status/1`); sem linha, o
+  fechamento segue como sempre.
+
   É aqui, e não no `SessionServer`, porque este é o ponto por onde TODO
   fechamento passa: heartbeat, conversa ociosa, fechamento humano, crash. O
   `SessionServer` só vê os que ele mesmo causa, e só no nó dele.
@@ -19,7 +26,7 @@ defmodule Engine.Workers.SessionLifecycleWorker do
   require Logger
 
   alias Engine.Agents.Conversacionais
-  alias Engine.Sessions.{Monitor, SessionServer}
+  alias Engine.Sessions.{Monitor, ProjectSession, SessionServer}
   alias Engine.Telemetry.Span
 
   @impl true
@@ -41,13 +48,28 @@ defmodule Engine.Workers.SessionLifecycleWorker do
       args["traceparent"],
       "outbox.session_lifecycle",
       %{"brabo.session_id" => session_id, "brabo.event_type" => event_type},
-      fn -> encerrar(session_id) end
+      fn -> encerrar_se_ainda_encerrada(session_id, event_type) end
     )
   end
 
   # Catch-all: outros event_type futuros de aggregate_type "session" não
   # falham/retry infinito num desconhecido.
   def perform(%Oban.Job{}), do: :ok
+
+  defp encerrar_se_ainda_encerrada(session_id, event_type) do
+    case ProjectSession.status(session_id) do
+      status when status in ["created", "active", "closing"] ->
+        Logger.info(
+          "#{event_type} ignorado para a sessão #{session_id}: ela foi " <>
+            "reaberta (status atual #{status}) — nada é parado"
+        )
+
+        :ok
+
+      _ ->
+        encerrar(session_id)
+    end
+  end
 
   # Busca em `:global`: o job do Oban pode ser executado por qualquer réplica,
   # e não necessariamente pela que hospeda a sessão. Com lookup local, um job

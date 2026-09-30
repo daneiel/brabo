@@ -450,3 +450,23 @@ describe('classifyEvent — épico sem história (RN-165)', () => {
     expect(c.text).not.toContain('()');
   });
 });
+
+describe('classifyEvent — reabertura de sessão (ADR 0183, RN-649)', () => {
+  it('diz que a sessão foi reaberta e por que ela tinha fechado', () => {
+    const c = classifyEvent(
+      ev('session.reopened', 'user-1', {
+        from: 'closed',
+        to: 'active',
+        closedAt: '2026-09-13T16:46:36.000Z',
+        terminationReason: 'heartbeat_timeout',
+      }),
+    );
+    expect(c.kind).toBe('session');
+    expect(c.text).toBe('sessão reaberta (tinha fechado por heartbeat_timeout)');
+  });
+
+  it('sem causa gravada, não inventa uma', () => {
+    const c = classifyEvent(ev('session.reopened', 'user-1', { terminationReason: null }));
+    expect(c.text).toBe('sessão reaberta');
+  });
+});

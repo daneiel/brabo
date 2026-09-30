@@ -200,6 +200,7 @@ estado lido do repositório e não da conversa.
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 | A aba PRs fala da lista de PRs, e Parar/Remover sem container dizem por quê (AT-323/AT-324) | RN-646 |
 | O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
+| A sessão encerrada pode ser reaberta, com o log intacto e o fechamento anterior como evento novo (AT-071) | ADR 0183, RN-649/650 |
 | Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
 | Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
 | Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
@@ -1437,6 +1438,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
   continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
   em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
+  para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
+  transição genérica continua recusando `closed → active`, e `closing →
+  active` segue proibido por qualquer caminho. Não ponha `active` em
+  `ALLOWED_TRANSITIONS` dos terminais. O fechamento anterior vira o evento NOVO
+  `session.reopened` (a coluna é limpa, o evento guarda quando e por quê), o
+  `kind` não muda, e sessão com `execution.activated` NÃO reabre (409
+  `sessao_com_execucao`); papel `maintainer`, sem prazo e essa recusa são
+  padrão provisório à espera do dono. O `SessionLifecycleWorker` ignora o
+  fechamento que a reabertura já desfez (lê o `status` da sessão).
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
   evento `execution.activated` é o ESTADO de execução, e continua sendo

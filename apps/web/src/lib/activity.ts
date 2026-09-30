@@ -628,6 +628,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             : `atividade em ${actorLabel}`,
     };
   }
+  // ADR 0183 (RN-649): o fechamento anterior mora no payload, não numa linha
+  // apagada — a frase diz a causa quando ela foi gravada.
+  if (type === 'session.reopened') {
+    const causa = payloadField(payload, 'terminationReason');
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `sessão reaberta${causa ? ` (tinha fechado por ${causa})` : ''}`,
+    };
+  }
   if (type === 'architecture.readiness_confirmed') {
     return {
       kind: 'session',

@@ -82,6 +82,7 @@ const DA_SESSAO = new Set([
   'session.closing',
   'session.closed',
   'session.closed_abnormally',
+  'session.reopened',
   'execution.activated',
   'chat.message',
 ]);
