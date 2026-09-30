@@ -71,6 +71,9 @@ import { useRolagemDoFio } from '../lib/session-rolagem';
 import { usePromocaoDeHistorias } from '../lib/session-promocao';
 import { useAcoesDeHandoff } from '../lib/session-acoes-de-handoff';
 import { DevolverHistoriaModal } from './DevolverHistoriaModal';
+import { GavetaDoContexto } from './GavetaDoContexto';
+import { usePainelDeContexto } from '../lib/painel-de-contexto';
+import { useLayoutMovel } from '../lib/layout-movel';
 
 /**
  * O vazio ESTÁVEL (AT-301): `?? []` cria um array novo a cada render, e todo
@@ -152,7 +155,9 @@ export function SessionPage({
   const podeFundirHandoffComExecucao =
     workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
 
-  const [asideOpen, setAsideOpen] = useState(true);
+  // AT-328: no móvel o painel nasce fechado e abre como gaveta sobre o fio.
+  const movel = useLayoutMovel();
+  const [asideOpen, setAsideOpen] = usePainelDeContexto(movel, !!highlightEvent);
   // Log completo de eventos — fechado por padrão, mas abre sozinho quando
   // a navegação traz um `highlightEvent` (chip de evidência do Psicólogo).
   const [logOpen, setLogOpen] = useState(!!highlightEvent);
@@ -946,20 +951,22 @@ export function SessionPage({
         </div>
 
         {asideOpen && (
-          <ContextAside
-            projectId={projectId}
-            sessionId={sessionId}
-            actions={actions}
-            // O MESMO pausa-poll do fio (achados 2/7): o painel lê a mesma
-            // query, e um segundo observador com timer próprio ressuscitaria
-            // o poll que o turno em streaming pausa.
-            pausarPoll={streaming}
-            logOpen={logOpen}
-            onToggleLog={() => setLogOpen((open) => !open)}
-            highlightEvent={highlightEvent}
-            citedEvent={citedEvent}
-            citedEventMissing={citedEventQuery.isError}
-          />
+          <GavetaDoContexto movel={movel} aoFechar={() => setAsideOpen(false)}>
+            <ContextAside
+              projectId={projectId}
+              sessionId={sessionId}
+              actions={actions}
+              // O MESMO pausa-poll do fio (achados 2/7): o painel lê a mesma
+              // query, e um segundo observador com timer próprio ressuscitaria
+              // o poll que o turno em streaming pausa.
+              pausarPoll={streaming}
+              logOpen={logOpen}
+              onToggleLog={() => setLogOpen((open) => !open)}
+              highlightEvent={highlightEvent}
+              citedEvent={citedEvent}
+              citedEventMissing={citedEventQuery.isError}
+            />
+          </GavetaDoContexto>
         )}
       </div>
 
