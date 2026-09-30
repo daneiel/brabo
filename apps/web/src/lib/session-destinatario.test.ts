@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   agentesEmConversa,
+  ativadosSemJanela,
   resolverDestinatario,
 } from './session-destinatario';
 import type { Handoff, SessionEvent } from './api-types';
@@ -66,5 +67,24 @@ describe('resolverDestinatario (RN-631)', () => {
 
   it('escolha que deixou de ser opção não vale', () => {
     expect(resolverDestinatario(['po', 'arquiteto'], 'staff')).toBeNull();
+  });
+});
+
+describe('ativadosSemJanela (RN-631, revisão do PR #759)', () => {
+  it('soma resumo, handoffs (quem recebeu aceito e quem ofereceu) e gasto da sessão', () => {
+    const oferecido = { ...aceito('ux-designer'), fromAgent: 'po', status: 'offered' as const };
+    expect(
+      ativadosSemJanela({
+        doResumo: ['criativo'],
+        handoffs: [aceito('arquiteto'), oferecido],
+        gasto: [{ actorId: 'staff', costMicros: 1, inputTokens: 1, outputTokens: 1 }],
+      }),
+    ).toEqual(['arquiteto', 'criativo', 'po', 'staff', 'x']);
+  });
+
+  it('CASO DE FALHA: oferta PENDENTE não põe o destino como ativo, e sem fonte nenhuma é vazio', () => {
+    const oferecido = { ...aceito('ux-designer'), fromAgent: 'po', status: 'offered' as const };
+    expect(ativadosSemJanela({ handoffs: [oferecido] })).not.toContain('ux-designer');
+    expect(ativadosSemJanela({ handoffs: [] })).toEqual([]);
   });
 });

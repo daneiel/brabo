@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getProjectsSummary } from './api-client';
-import type { Handoff, SessionEvent } from './api-types';
+import { getProjectsSummary, getSessionTokenUsage } from './api-client';
+import type { AgentTokenUsage, Handoff, SessionEvent } from './api-types';
+import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
+import { pollQueParaNoErro } from './query-policy';
 import { AGENTES_DE_CHAT } from './session-readiness';
 
 /**
@@ -66,28 +68,85 @@ function gravarEscolha(sessionId: string, agente: string): void {
 }
 
 /**
- * `roster.activatedAgents` do resumo do projeto (RN-630): quem já foi
- * ativado na sessão INTEIRA. Só vale com o resumo da MESMA sessão
- * (`latestSessionId === sessionId`), no molde da RN-568 — resumo de outra
- * sessão, ou nenhum, é `undefined`, e a janela decide sozinha.
+ * Quem já foi ativado na sessão PEDIDA, lido de fontes SEM a janela de 200
+ * eventos (RN-630, RN-631) — a soma de três, todas escopadas a `sessionId`:
+ *
+ * 1. `roster.activatedAgents` do resumo do projeto, que é a sessão INTEIRA —
+ *    mas só da sessão MAIS RECENTE do projeto. Vale só quando
+ *    `latestSessionId === sessionId` (o molde da RN-568). Não basta sozinho:
+ *    ativar a execução CRIA uma sessão nova, que vira a mais recente, e a
+ *    sessão do chat de onde ela saiu perdia esta fonte inteira, voltando a
+ *    depender da janela — o defeito que a revisão do PR #759 mediu.
+ * 2. Os handoffs DESTA sessão (`useHandoffs`, sem janela): quem RECEBEU um
+ *    handoff aceito entrou na sessão, e quem OFERECEU um estava nela (o
+ *    `fromAgent` do handoff automático é o agente que chamou a ferramenta; o
+ *    do manual é o último ativado, `request-manual-handoff.use-case.ts`).
+ * 3. O gasto por agente DESTA sessão (`GET .../token-usage`, agregado sem
+ *    janela): agente com linha ali rodou turno na sessão, e agente só roda
+ *    turno depois de ativado. É prova de PRESENÇA e nunca de ausência — o
+ *    Staff ativado que ainda não falou não gasta nada, e quem tem papel
+ *    abaixo de `developer` (o mínimo da rota) recebe 403 e fica sem esta
+ *    fonte. Por isso é SOMA: cada fonte só corrige falso negativo.
+ *
+ * O que continua sem fonte não janelada: agente ativado por `start` direto,
+ * sem handoff, que nunca rodou turno, numa sessão que já não é a mais
+ * recente. Fechar isso pede o agregado POR SESSÃO na api (`activatedAgents`
+ * de uma sessão pedida), declarado na RN-631 e não feito aqui.
  *
  * Lê a MESMA `queryKey` de `useProjectsSummary` (o `Shell` a mantém viva a
- * 5s): nenhum poll novo. Não passa por `useProjectsSummary` só porque as
+ * 5s) e a de `useSessionTokenUsage`; não passa por `lib/hooks` só porque as
  * suítes da tela de Sessão substituem `lib/hooks` inteiro.
  */
 export function useAtivadosNaSessaoInteira(
   workspaceId: string | undefined,
   projectId: string,
   sessionId: string,
-): string[] | undefined {
-  const { data } = useQuery({
+  handoffs: readonly Handoff[] = [],
+): string[] {
+  const { data: resumo } = useQuery({
     queryKey: ['projects-summary', workspaceId],
     queryFn: () => getProjectsSummary(workspaceId!),
     enabled: !!workspaceId,
   });
-  const card = data?.find((c) => c.projectId === projectId);
-  if (!card || card.latestSessionId !== sessionId) return undefined;
-  return card.roster.activatedAgents;
+  const canalVivo = useCanalDaSessaoVivo(sessionId);
+  const { data: gasto } = useQuery({
+    queryKey: ['session-token-usage', projectId, sessionId],
+    queryFn: () => getSessionTokenUsage(projectId, sessionId),
+    // Ativação é monótona e as outras duas fontes acompanham o recente:
+    // esta cobre o antigo, e por isso a cadência é longa.
+    refetchInterval: pollQueParaNoErro(
+      intervaloDaSessao(INTERVALO_DO_GASTO_COMO_PRESENCA_MS, canalVivo),
+    ),
+  });
+  const card = resumo?.find((c) => c.projectId === projectId);
+  const doResumo =
+    card && card.latestSessionId === sessionId ? card.roster.activatedAgents : undefined;
+  return useMemo(
+    () => ativadosSemJanela({ doResumo, handoffs, gasto }),
+    [doResumo, handoffs, gasto],
+  );
+}
+
+/** A cadência da terceira fonte de `useAtivadosNaSessaoInteira`. */
+export const INTERVALO_DO_GASTO_COMO_PRESENCA_MS = 60_000;
+
+/** A soma pura das três fontes de `useAtivadosNaSessaoInteira`. */
+export function ativadosSemJanela({
+  doResumo,
+  handoffs,
+  gasto,
+}: {
+  doResumo?: readonly string[];
+  handoffs: readonly Handoff[];
+  gasto?: readonly AgentTokenUsage[];
+}): string[] {
+  const presentes = new Set<string>(doResumo ?? []);
+  for (const h of handoffs) {
+    if (h.status === 'accepted') presentes.add(h.toAgent);
+    presentes.add(h.fromAgent);
+  }
+  for (const linha of gasto ?? []) presentes.add(linha.actorId);
+  return [...presentes].sort();
 }
 
 /** Os agentes a quem o composer pode endereçar, na ordem de `AGENTES_DE_CHAT`. */

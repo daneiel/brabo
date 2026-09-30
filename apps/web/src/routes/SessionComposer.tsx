@@ -22,6 +22,8 @@ import styles from './SessionPage.module.css';
 export interface SessionComposerProps {
   isActive: boolean;
   handoffDaInfraOferecido: Handoff | undefined;
+  /** RN-631: ofertas pendentes cujo `handoff.offered` saiu da janela do fio. */
+  ofertasForaDaJanela?: Handoff[];
   handleAcceptHandoff: (handoffId: string, toAgent: string) => Promise<void>;
   /** RN-631: a quem a mensagem pode ir, e a quem vai. */
   opcoesDeDestinatario: string[];
@@ -58,6 +60,7 @@ export interface SessionComposerProps {
 export function SessionComposer({
   isActive,
   handoffDaInfraOferecido,
+  ofertasForaDaJanela = [],
   handleAcceptHandoff,
   opcoesDeDestinatario,
   destinatario,
@@ -141,6 +144,41 @@ export function SessionComposer({
           </Button>
         </div>
       )}
+
+      {/*
+        A oferta cujo EVENTO saiu da janela de 200 (RN-631): o card
+        acionável do fio pertence ao `handoff.offered`, e sem o evento a
+        oferta ficava pendente e sem botão em lugar nenhum. Mora nesta
+        faixa pelo mesmo motivo 3 do card da Infra acima: ela não rola.
+        Só o aceite — o atalho "Ativar execução" do card do Dev Lead segue
+        no fio, onde o evento dele estiver.
+      */}
+      {isActive &&
+        ofertasForaDaJanela.map((oferta) => (
+          <div
+            key={oferta.id}
+            className={styles.infraHandoffRow}
+            data-oferta-fora-da-janela={oferta.id}
+          >
+            <div className={styles.infraHandoffTexto}>
+              <span className={styles.infraHandoffTitulo}>
+                {t('handoff.foraDaJanelaTitulo', {
+                  de: nomeDoAgente(oferta.fromAgent),
+                  para: nomeDoAgente(oferta.toAgent),
+                })}
+              </span>
+              <span className={styles.infraHandoffDetalhe}>
+                {t('handoff.foraDaJanelaDetalhe')}
+              </span>
+            </div>
+            <Button
+              variant="success"
+              onClick={() => handleAcceptHandoff(oferta.id, oferta.toAgent)}
+            >
+              {t('handoff.aceitarEIniciar', { agente: oferta.toAgent })}
+            </Button>
+          </div>
+        ))}
 
       {/*
         Handoff manual a agente à escolha (ADR 0109/RN-440): a cadeia

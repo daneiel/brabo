@@ -285,12 +285,15 @@ export function SessionPage({
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
-  // Quem já foi ativado na sessão INTEIRA (RN-630), somado à janela pelo
-  // destinatário do composer e pelas ofertas de handoff (RN-631).
+  // Quem já foi ativado na sessão PEDIDA, de fontes sem janela (RN-630,
+  // RN-631): o resumo quando esta é a sessão mais recente, os handoffs desta
+  // sessão e o gasto por agente dela. Somado à janela pelo destinatário do
+  // composer e pelas ofertas de handoff.
   const ativadosNaSessaoInteira = useAtivadosNaSessaoInteira(
     workspaceComPapel?.workspace.id,
     projectId,
     sessionId,
+    handoffs,
   );
 
   // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
@@ -340,6 +343,7 @@ export function SessionPage({
   const {
     activeFor,
     ofertasAcionaveis,
+    ofertasForaDaJanela,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
@@ -863,6 +867,7 @@ export function SessionPage({
           <SessionComposer
             isActive={isActive}
             handoffDaInfraOferecido={handoffDaInfraOferecido}
+            ofertasForaDaJanela={ofertasForaDaJanela}
             handleAcceptHandoff={aceitarHandoff}
             opcoesDeDestinatario={opcoesDeDestinatario}
             destinatario={destinatario}

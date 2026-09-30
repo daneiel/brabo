@@ -95,7 +95,9 @@
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
     "manualBotao": "Address handoff",
-    "manualOrigem": "Manual handoff"
+    "manualOrigem": "Manual handoff",
+    "foraDaJanelaTitulo": "{{de}} handed off to {{para}}",
+    "foraDaJanelaDetalhe": "This offer's event has already left the last 200 in the thread, so its button lives here."
   },
   "backlog": {
     "criouEpico": "created the epic",

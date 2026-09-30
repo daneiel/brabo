@@ -16,6 +16,12 @@ import { AGENTES_DE_CHAT } from './session-readiness';
 export interface DerivacoesDeHandoff {
   activeFor: (agent: string) => boolean;
   ofertasAcionaveis: Handoff[];
+  /**
+   * As ofertas de `ofertasAcionaveis` cujo `handoff.offered` já saiu da
+   * janela de 200 eventos (RN-631): sem o evento no fio não há card onde o
+   * botão more, e elas ganham a faixa fixa acima do composer.
+   */
+  ofertasForaDaJanela: Handoff[];
   handoffDaInfraOferecido: Handoff | undefined;
   prontidaoJaDeclarada: boolean;
   arquiteturaJaDeclarada: boolean;
@@ -86,6 +92,33 @@ export function derivarHandoffsDaSessao(
   }
   const ofertasAcionaveis = [...porDestino.values()];
 
+  // A oferta cujo EVENTO saiu da janela (RN-631, revisão do PR #759). O card
+  // acionável pertence ao `handoff.offered` (casado pelo `handoffId`), e a
+  // lista de handoffs não tem janela: numa sessão longa a oferta continuava
+  // `offered` e sem botão em lugar nenhum. O critério é o do corte, não o da
+  // ausência — a oferta é MAIS ANTIGA que o evento mais antigo da janela.
+  // Ausência só não basta: a lista de handoffs e a de eventos pollam
+  // separadas, e uma oferta recém-criada cujo evento ainda não chegou
+  // piscaria na faixa antes de ir para o fio. Janela vazia (carregando, ou
+  // sessão sem evento) não afirma corte nenhum.
+  const idsNaJanela = new Set<string>();
+  let inicioDaJanela: number | null = null;
+  for (const e of events) {
+    const instante = Date.parse(e.createdAt);
+    if (!Number.isNaN(instante) && (inicioDaJanela === null || instante < inicioDaJanela)) {
+      inicioDaJanela = instante;
+    }
+    if (e.type !== 'handoff.offered') continue;
+    const id = (e.payload as { handoffId?: string } | null)?.handoffId;
+    if (id) idsNaJanela.add(id);
+  }
+  const ofertasForaDaJanela =
+    inicioDaJanela === null
+      ? []
+      : ofertasAcionaveis.filter(
+          (h) => !idsNaJanela.has(h.id) && Date.parse(h.createdAt) < inicioDaJanela!,
+        );
+
   // O handoff da INFRA, que o filtro logo acima deixa de fora — e de
   // propósito. Até a RN-617 o motivo era o Infra Lead não conversar; desde
   // ela ele conversa, e o motivo que sobra é o do card próprio: ele mora na
@@ -125,6 +158,7 @@ export function derivarHandoffsDaSessao(
   return {
     activeFor,
     ofertasAcionaveis,
+    ofertasForaDaJanela,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,

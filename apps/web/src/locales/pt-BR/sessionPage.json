@@ -95,7 +95,9 @@
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
     "manualBotao": "Endereçar handoff",
-    "manualOrigem": "Handoff manual"
+    "manualOrigem": "Handoff manual",
+    "foraDaJanelaTitulo": "{{de}} passou o bastão ao {{para}}",
+    "foraDaJanelaDetalhe": "O evento desta oferta já saiu dos últimos 200 do fio, e por isso o botão mora aqui."
   },
   "backlog": {
     "criouEpico": "criou o épico",

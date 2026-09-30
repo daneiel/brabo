@@ -26,6 +26,7 @@ const sendAgentMessage = vi.fn();
 const acceptHandoff = vi.fn();
 const getSession = vi.fn();
 const getProjectsSummary = vi.fn();
+const getSessionTokenUsage = vi.fn();
 const workspaceMock = vi.fn<() => unknown>(() => undefined);
 
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
@@ -59,6 +60,7 @@ vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
   getSession: (...args: unknown[]) => getSession(...args),
   getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
+  getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
   getSessionBudget: vi.fn().mockResolvedValue(null),
   getSessionModelBinding: vi.fn().mockResolvedValue(null),
   listModels: vi.fn().mockResolvedValue(null),
@@ -162,6 +164,7 @@ beforeEach(async () => {
   eventos.mockReturnValue({ items: [] });
   workspaceMock.mockReturnValue(undefined);
   getProjectsSummary.mockResolvedValue([]);
+  getSessionTokenUsage.mockResolvedValue([]);
 });
 
 /** O resumo do projeto (RN-630): `activatedAgents` da sessão INTEIRA. */
@@ -225,7 +228,8 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
 
   it('agente cuja ativação saiu da janela continua opção pelo handoff ACEITO (RN-180)', async () => {
     // A janela só tem o Criativo; o aceite ao Arquiteto está na lista de
-    // handoffs, que não tem janela.
+    // handoffs, que não tem janela. Quem OFERECEU (o PO) também estava na
+    // sessão, e entra pelo mesmo handoff desde a revisão do PR #759.
     eventos.mockReturnValue({ items: [ativou('criativo', 250)] });
     handoffsMock.mockReturnValue([
       handoff({ id: 'h-arq', fromAgent: 'po', toAgent: 'arquiteto', status: 'accepted' }),
@@ -233,7 +237,47 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
 
     montar();
     const select = await seletor();
-    expect([...select.options].map((o) => o.value)).toEqual(['', 'criativo', 'arquiteto']);
+    expect([...select.options].map((o) => o.value)).toEqual([
+      '',
+      'criativo',
+      'po',
+      'arquiteto',
+    ]);
+  });
+
+  it('ativar a execução criou OUTRA sessão mais recente: a ativação fora da janela segue lida pelos handoffs e pelo gasto DESTA sessão', async () => {
+    // O defeito da revisão do PR #759: o resumo só vale para a sessão mais
+    // recente, e a de execução passa a ser ela. O Staff entrou por `start`
+    // direto (sem handoff), e só o gasto desta sessão o prova.
+    eventos.mockReturnValue({ items: [ativou('criativo', 250)] });
+    comResumo('sessao-de-execucao', ['dev-lead']);
+    handoffsMock.mockReturnValue([
+      handoff({ id: 'h-arq', fromAgent: 'criativo', toAgent: 'arquiteto', status: 'accepted' }),
+    ]);
+    getSessionTokenUsage.mockResolvedValue([
+      { actorId: 'staff', costMicros: 10, inputTokens: 5, outputTokens: 5 },
+    ]);
+
+    montar();
+    await waitFor(() => expect(getSessionTokenUsage).toHaveBeenCalledWith('proj-1', ID));
+    await waitFor(async () =>
+      expect([...(await seletor()).options].map((o) => o.value)).toEqual([
+        '',
+        'criativo',
+        'arquiteto',
+        'staff',
+      ]),
+    );
+  });
+
+  it('CASO DE FALHA: sem permissão para o gasto (403), a fonte some sem derrubar a tela nem inventar opção', async () => {
+    eventos.mockReturnValue({ items: [ativou('criativo', 250)] });
+    comResumo('sessao-de-execucao', ['dev-lead']);
+    getSessionTokenUsage.mockRejectedValue(new Error('403'));
+
+    montar();
+    await waitFor(() => expect(getSessionTokenUsage).toHaveBeenCalled());
+    expect([...(await seletor()).options].map((o) => o.value)).toEqual(['criativo']);
   });
 
   it('agente ativado fora da janela entra pelo resumo da MESMA sessão (RN-630)', async () => {
@@ -285,6 +329,54 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
         screen.queryByRole('button', { name: /Aceitar handoff e iniciar/ }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it('oferta cujo evento saiu da janela ganha botão na faixa fixa acima do composer', async () => {
+    // A janela começa às 13h; a oferta ao PO é das 12h, e o evento dela
+    // ficou para trás dos 200.
+    eventos.mockReturnValue({
+      items: [{ ...ativou('criativo', 250), createdAt: '2026-08-10T13:00:00.000Z' }],
+    });
+    handoffsMock.mockReturnValue([
+      handoff({ id: 'h-po', fromAgent: 'criativo', toAgent: 'po' }),
+    ]);
+
+    const { container } = montar();
+    const botao = await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    expect(container.querySelector('[data-oferta-fora-da-janela="h-po"]')).not.toBeNull();
+    fireEvent.click(botao);
+    await waitFor(() => expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'h-po'));
+  });
+
+  it('CASO DE FALHA: oferta com o evento NA janela, ou mais nova que ela, não vai para a faixa', async () => {
+    eventos.mockReturnValue({
+      items: [
+        { ...ativou('criativo', 1), createdAt: '2026-08-10T13:00:00.000Z' },
+        {
+          id: 'evt-2',
+          seq: 2,
+          type: 'handoff.offered',
+          actor: { kind: 'agent', id: 'criativo' },
+          payload: { handoffId: 'h-po', toAgent: 'po' },
+          createdAt: '2026-08-10T13:00:00.000Z',
+        },
+      ],
+    });
+    handoffsMock.mockReturnValue([
+      handoff({ id: 'h-po', fromAgent: 'criativo', toAgent: 'po', createdAt: '2026-08-10T13:00:00.000Z' }),
+      // Recém-criada, o evento ainda não chegou: não é corte, é atraso.
+      handoff({ id: 'h-ux', fromAgent: 'criativo', toAgent: 'ux-designer', createdAt: '2026-08-10T14:00:00.000Z' }),
+    ]);
+
+    const { container } = montar();
+    // O botão do PO existe UMA vez, no card do fio.
+    expect(
+      await screen.findAllByRole('button', { name: 'Aceitar handoff e iniciar po' }),
+    ).toHaveLength(1);
+    expect(container.querySelector('[data-oferta-fora-da-janela]')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Aceitar handoff e iniciar ux-designer' }),
+    ).not.toBeInTheDocument();
   });
 
   it('aceitar um handoff nesta tela faz do agente que entrou o destinatário', async () => {

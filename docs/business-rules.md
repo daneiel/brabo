@@ -16248,7 +16248,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/lib/session-handoffs.ts:87` (`ofertasAcionaveis`)
+  `apps/web/src/lib/session-handoffs.ts:93` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
@@ -17093,24 +17093,50 @@ desde sempre (AT-251).
    pendentes ao MESMO agente dão um botão só, o da mais recente, e aceitá-la
    tira a outra pelo `activeFor`. A pílula do handoff manual diz "Handoff
    manual" em vez do id da pessoa.
+9. **"Já está na sessão" se lê de fontes SEM janela escopadas à sessão PEDIDA**
+   (revisão do PR #759). O `roster.activatedAgents` do resumo é da sessão MAIS
+   RECENTE do projeto, e ativar a execução CRIA uma sessão nova que passa a ser
+   ela: a sessão do chat perdia a fonte inteira e voltava a depender da janela
+   de 200. A soma agora tem TRÊS fontes — o resumo, só quando é desta sessão; os
+   handoffs DESTA sessão (quem recebeu um aceito e quem OFERECEU um, que estava
+   nela); e o gasto por agente DESTA sessão (`GET .../token-usage`, agregado sem
+   janela: agente com linha ali rodou turno, e só roda turno quem foi ativado).
+   Cada fonte só corrige falso negativo, e o gasto é prova de PRESENÇA, nunca de
+   ausência. **Lacuna declarada:** agente ativado por `start` direto, sem
+   handoff, que nunca rodou turno, numa sessão que já não é a mais recente,
+   continua dependendo da janela — e quem tem papel abaixo de `developer` (o
+   mínimo da rota de gasto) fica sem a terceira fonte. Fechar pede o agregado
+   de ativação POR SESSÃO na api; não foi feito aqui.
+10. **Oferta pendente cujo evento saiu da janela ganha botão na faixa fixa
+    acima do composer** (revisão do PR #759). O card acionável pertence ao
+    `handoff.offered`, e a lista de handoffs não tem janela: numa sessão longa a
+    oferta seguia `offered` e sem botão em lugar nenhum. O critério é o CORTE,
+    não a ausência — a oferta é mais antiga que o evento mais antigo da janela
+    (uma oferta recém-criada cujo evento ainda não chegou não pisca na faixa), e
+    janela vazia não afirma corte. A faixa tem só o aceite; o atalho "Ativar
+    execução" do card do Dev Lead fica no fio.
 
 A guarda da [RN-584](#rn-584) (`scripts/ci/destinos-do-composer.spec.ts`)
 passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:94` (`agentesEmConversa`),
-  `:117` (`resolverDestinatario`), `:134` (`useDestinatarioDoChat`), `:78`
-  (`useAtivadosNaSessaoInteira`); `apps/web/src/routes/SessionComposer.tsx:196`
-  (`destinatarioRow`); `apps/web/src/routes/SessionPage.tsx:330`
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:153` (`agentesEmConversa`),
+  `:176` (`resolverDestinatario`), `:193` (`useDestinatarioDoChat`), `:100`
+  (`useAtivadosNaSessaoInteira`), `:134` (`ativadosSemJanela`);
+  `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:333`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
-  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:41`
-  (`activeFor`), `:87` (`ofertasAcionaveis`)
+  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:47`
+  (`activeFor`), `:93` (`ofertasAcionaveis`), `:115` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
   por quê; opção única; handoff aceito fora da janela; resumo da mesma sessão
   e de outra; aceite que troca e aceite que falha; escolha lembrada; sessão sem
-  agente), `apps/web/src/lib/session-destinatario.test.ts`,
+  agente; sessão de execução mais recente com a ativação lida dos handoffs e
+  do gasto desta sessão, e o gasto recusado; oferta fora da janela na faixa, e
+  oferta na janela ou mais nova que ela fora dela),
+  `apps/web/src/lib/session-destinatario.test.ts` (`ativadosSemJanela`),
   `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx` (oferta
   antiga de OUTRO `handoffId` fica muda),
   `apps/web/src/routes/SessionPage.handoff-manual.test.tsx` (o manual ganha
