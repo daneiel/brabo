@@ -1428,6 +1428,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-members",
+          label: "Lists the workspace's members",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-add-member",
           label: "Associates a user with the workspace",
           className: "api-method post",

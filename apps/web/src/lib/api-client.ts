@@ -53,6 +53,7 @@ import type {
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  WorkspaceMemberWithUser,
   ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
@@ -381,6 +382,12 @@ export const convertProjectExecutionMode = (
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
+/**
+ * Os membros do WORKSPACE (AT-335, `viewer`): quem entra num projeto só pelo
+ * papel de workspace não tem linha em `listProjectMembers`.
+ */
+export const listWorkspaceMembers = (workspaceId: string) =>
+  get<WorkspaceMemberWithUser[]>(`/workspaces/${workspaceId}/members`);
 export const addProjectMember = (
   projectId: string,
   input: { userId: string; role: Role },
@@ -632,7 +639,9 @@ export const reopenSession = (projectId: string, sessionId: string) =>
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
+  // `actionId` (AT-336): só os eventos daquela ação — o motivo da política
+  // mora no `proposed_action.created` dela, e a ação não o guarda.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; actionId?: string } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,

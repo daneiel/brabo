@@ -236,49 +236,85 @@ describe('ProjectApprovalsTab — a fila é a do PROJETO, não a da sessão mais
   });
 });
 
-describe('ProjectApprovalsTab — a lacuna do motivo da política é dita UMA vez (AT-333, RN-180)', () => {
-  function eventoCriado(actionId: string, seq: number) {
+describe('ProjectApprovalsTab — cada card mostra o PRÓPRIO motivo da política (AT-336, RN-614)', () => {
+  function eventoCriado(actionId: string, seq: number, reason: string) {
     return {
       id: `ev-${seq}`,
       sessionId: 'sess-1',
       seq,
       type: 'proposed_action.created',
       actor: { kind: 'agent', id: 'qa' },
-      payload: { actionId, actionType: 'git_commit', reason: 'default: require_approval' },
+      payload: { actionId, actionType: 'git_commit', reason },
       createdAt: '2026-08-02T00:00:00.000Z',
     };
   }
 
-  it('nenhuma ação com o motivo nos eventos: uma nota no topo, e nenhum card repete a frase', async () => {
-    getProjectPendingActions.mockResolvedValue([
-      acao({ id: 'a1', sessionId: 'sess-outra' }),
-      acao({ id: 'a2', sessionId: 'sess-outra', seq: 2 }),
-    ]);
-    montar();
-    const nota = await screen.findByTestId('motivo-fora-do-recorte');
-    expect(nota.textContent).toContain('destas 2 ações');
-    expect(screen.getAllByTestId('motivo-fora-do-recorte')).toHaveLength(1);
-    expect(screen.queryByTestId('motivo-da-politica')).toBeNull();
-    expect(screen.queryByText(/fora dos eventos carregados nesta tela/)).toBeNull();
-  });
+  /** A leitura do log da sessão de trabalho e a leitura POR AÇÃO, separadas. */
+  function eventosPorPedido(
+    doLog: unknown[],
+    porAcao: Record<string, unknown[] | Error>,
+  ) {
+    listSessionEvents.mockImplementation(
+      (_p: string, _s: string, opts?: { actionId?: string }) => {
+        if (!opts?.actionId) return Promise.resolve({ items: doLog, nextCursor: null });
+        const r = porAcao[opts.actionId];
+        if (r instanceof Error) return Promise.reject(r);
+        return Promise.resolve({ items: r ?? [], nextCursor: null });
+      },
+    );
+  }
 
-  it('parte com motivo: o card que o tem o mostra, e a nota conta só as outras', async () => {
+  it('ação de OUTRA sessão: o card lê o motivo pela ação, na sessão dela, e nota nenhuma aparece', async () => {
     getProjectPendingActions.mockResolvedValue([
       acao({ id: 'a1' }),
       acao({ id: 'a2', sessionId: 'sess-outra', seq: 2 }),
     ]);
-    listSessionEvents.mockResolvedValue({ items: [eventoCriado('a1', 5)], nextCursor: null });
+    eventosPorPedido([eventoCriado('a1', 5, 'regra do log carregado')], {
+      a2: [eventoCriado('a2', 9, 'regra lida pela ação')],
+    });
     montar();
-    await waitFor(() => expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1));
-    expect(screen.getByTestId('motivo-da-politica').textContent).toContain('default: require_approval');
-    expect(screen.getByTestId('motivo-fora-do-recorte').textContent).toContain('de 1 das 2 ações abaixo');
+
+    await waitFor(() => expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(2));
+    const frases = screen.getAllByTestId('motivo-da-politica').map((e) => e.textContent);
+    expect(frases.some((f) => f?.includes('regra do log carregado'))).toBe(true);
+    expect(frases.some((f) => f?.includes('regra lida pela ação'))).toBe(true);
+    // Só a ação que o log não cobre virou leitura própria, na sessão DELA.
+    expect(listSessionEvents).toHaveBeenCalledWith('proj-1', 'sess-outra', {
+      actionId: 'a2',
+      limit: 200,
+    });
+    expect(listSessionEvents).not.toHaveBeenCalledWith(
+      'proj-1',
+      expect.anything(),
+      expect.objectContaining({ actionId: 'a1' }),
+    );
+    expect(screen.queryByTestId('motivo-nao-lido')).toBeNull();
   });
 
-  it('todas com motivo: nota nenhuma', async () => {
-    getProjectPendingActions.mockResolvedValue([acao({ id: 'a1' })]);
-    listSessionEvents.mockResolvedValue({ items: [eventoCriado('a1', 5)], nextCursor: null });
+  it('a leitura responde sem o evento: o card diz "não registrado", nunca cala', async () => {
+    getProjectPendingActions.mockResolvedValue([acao({ id: 'a2', sessionId: 'sess-outra' })]);
+    eventosPorPedido([], { a2: [] });
     montar();
-    await screen.findByTestId('motivo-da-politica');
-    expect(screen.queryByTestId('motivo-fora-do-recorte')).toBeNull();
+
+    const linha = await screen.findByTestId('motivo-da-politica');
+    expect(linha.textContent).toMatch(/não registrad/);
+    expect(screen.queryByTestId('motivo-nao-lido')).toBeNull();
+  });
+
+  it('falha: a leitura por ação que falha cala o card e é dita UMA vez, contando só ela', async () => {
+    getProjectPendingActions.mockResolvedValue([
+      acao({ id: 'a1' }),
+      acao({ id: 'a2', sessionId: 'sess-outra', seq: 2 }),
+    ]);
+    eventosPorPedido([eventoCriado('a1', 5, 'regra do log carregado')], {
+      a2: new Error('500'),
+    });
+    montar();
+
+    const nota = await screen.findByTestId('motivo-nao-lido');
+    expect(nota.textContent).toContain('de 1 das 2 ações abaixo');
+    expect(screen.getAllByTestId('motivo-nao-lido')).toHaveLength(1);
+    expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1);
+    expect(screen.queryByText(/fora dos eventos carregados nesta tela/)).toBeNull();
   });
 });

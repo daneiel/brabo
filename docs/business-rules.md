@@ -14024,7 +14024,7 @@ compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) ma
 deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
 certo, porque sem a variável a api nunca chama o broker.
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:349`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:377`
   (`getProjectsBase`, `:256` o campo novo),
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
@@ -14701,7 +14701,7 @@ fechada seguem mostrando a mensagem da api.
   `accept-handoff.use-case.ts:90`, `activate-agent.use-case.ts:52`;
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:30`
   (`FALA_DO_AGENTE`), `:238` (o quinto sinal);
-  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:116`
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:124`
   (`findLatestOfTypesInSession`);
   `apps/engine/lib/engine/sessions/session_server.ex:115` (a pendência com
   instante), `:141` (`handle_info` do relógio próprio, AT-152), `:168`
@@ -16097,7 +16097,12 @@ mais recente) e não achou o evento na janela carregada diz *"fora dos eventos
 carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
 `ApprovalCard` — hipótese do Psicólogo não é `proposed_action`.
 
-**Desde a AT-333, a fila da aba Aprovações diz a lacuna UMA vez.** A fila é a
+**Desde a AT-336 ([RN-656](#rn-656)), cada card da aba Aprovações tem o
+PRÓPRIO motivo**, lido pela ação quando o log carregado não o cobre; o
+parágrafo seguinte é o estado da AT-333, que ela substituiu — a nota única
+sobra só para a leitura que FALHA.
+
+**Na AT-333, a fila da aba Aprovações passou a dizer a lacuna UMA vez.** A fila é a
 do PROJETO ([RN-638](#rn-638)) e os eventos são os de UMA sessão, então ali o
 *"fora dos eventos carregados"* saía em quase todo card — verdade repetida por
 card, a ferramenta se explicando. A api não expõe o motivo por ação (a ação
@@ -16126,16 +16131,16 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
   `apps/web/src/routes/session-timeline-montagem.tsx:825` e
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:304` (`decisoesDaPolitica`, a
-  contagem da nota da AT-333) e `:503` (quem passa o dado)
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (`decisoesDaPolitica`, desde a
+  AT-336 por `useDecisoesDaPolitica`) e `:499` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
   sem vazar caminho), `:114` (os dois idiomas), `:144` (a linha do log É a
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
   usa a mesma função, e os três estados);
-  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:239` (a nota dita uma vez,
-  parcial e ausente — AT-333)
-- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:304` (desde a AT-336, a nota
+  conta só a leitura que falha)
+- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333; o motivo por cartão, AT-336
 
 ---
 
@@ -16192,7 +16197,7 @@ o ticket novo é recusado); tela (não existe seção de membros de workspace no
 `apps/web`). O TITULAR (`workspaces.created_by`) não sai por esta rota — é a
 [RN-616](#rn-616).
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:234`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:262`
   (`removeMember`);
   `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:79`
   (`RemoveWorkspaceMemberUseCase`);
@@ -16269,7 +16274,7 @@ uma linha de log com de/para/quem.
   (`TransferWorkspaceOwnershipUseCase`);
   `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:98`
   (`transferirTitularidade`);
-  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:269`
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:297`
   (`transferOwnership`)
 - **Teste:**
   `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
@@ -18289,14 +18294,19 @@ anexar evento aceita de qualquer espécie. Os desfechos não se colapsam:
 1. **Quem vê** (`actor.id` igual ao `sub` do token; sem ele, pelo e-mail da
    linha de membro) — o nome ou e-mail da linha de membro, senão o e-mail da
    sessão, e só na falta dos dois "Você".
-2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, da
-   rota que JÁ existe, `GET projects/:id/members` (mínimo `viewer`), sob a
-   MESMA `queryKey` da aba de Configurações.
-3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro". É LACUNA
-   declarada: `project_members` só lista quem tem linha no projeto, e quem
-   entra só pelo papel de WORKSPACE não aparece ali; não há rota de leitura de
-   membros de workspace, e nenhuma foi inventada. A leitura que falha ou ainda
-   não chegou dá o mesmo desfecho, sem quebrar o fio.
+2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, de
+   DUAS leituras compostas numa lista só (`comporMembros`), a de PROJETO antes
+   da de WORKSPACE: `GET projects/:id/members` (mínimo `viewer`), sob a MESMA
+   `queryKey` da aba de Configurações, e desde a AT-335
+   `GET workspaces/:id/members` ([RN-655](#rn-655)), do workspace DO PROJETO.
+   Quem tem as duas linhas aparece uma vez, pela de projeto — a mesma ordem da
+   sobreposição de papel ([RN-471](#rn-471)).
+3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro": sem linha de
+   projeto nem de workspace (quem saiu do workspace e ainda tem fala no log),
+   ou as duas leituras falharam ou ainda não chegaram. A leitura que falha não
+   apaga a outra, e nenhuma delas quebra o fio. Até a AT-335 esta era a LACUNA
+   declarada de quem entra só pelo papel de workspace, que não tinha rota de
+   leitura; a rota nasceu por decisão do dono.
 4. **Agente** — `nomeDoAgente` e o avatar/cor do agente, como `agent.response`.
 5. **Ator desconhecido** (ausente, sem id, `system` ou espécie fora de
    pessoa/agente) — "Autor desconhecido", nunca "Você".
@@ -18306,15 +18316,110 @@ A narração `backlog.story_promotion_returned`, que tinha o mesmo defeito
 A mensagem OTIMISTA do composer continua com o e-mail de quem vê — ela é
 sempre dele.
 
-- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:44` (`autorDaMensagem`);
-  `apps/web/src/lib/autoria-da-sessao.ts:18` (`useAutoriaDaSessao`);
+- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
+  `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
+  (`comporMembros`);
   `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
-- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:140`
+- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
   (duas pessoas e um agente, cada mensagem sob o próprio autor — caminho
-  feliz), `:161` (ator desconhecido e pessoa fora dos membros com texto
-  próprio — caso de falha), `:179` (leitura de membros recusada);
+  feliz), `:168` (ator desconhecido e pessoa fora dos membros com texto
+  próprio — caso de falha), `:186` (quem entra só pelo papel de workspace é
+  nomeado — AT-335), `:205` (a leitura do workspace recusada não apaga a do
+  projeto), `:219` (leitura de membros recusada);
+  `apps/web/src/lib/autoria-da-sessao.test.ts:15` (a linha de projeto antes da
+  de workspace), `:22` (falha de uma leitura não apaga a outra);
   `apps/web/src/lib/autor-da-mensagem.test.ts:58` (ator ausente, sem id ou de
   espécie desconhecida nunca vira "você")
-- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)
+- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`);
+  a lista do workspace, AT-335
+
+## A leitura dos membros do workspace (RN-655)
+
+### RN-655 — `GET workspaces/:id/members` é `viewer`, e devolve só id, nome, e-mail e papel {#rn-655}
+
+O fio da sessão ([RN-652](#rn-652)) nomeava só quem tinha linha em
+`project_members`; quem entra no projeto só pelo papel de WORKSPACE virava
+"Outro membro", porque não havia rota que lesse os membros do workspace
+(decisão do dono, AT-335). A rota nasce ao lado das três de ESCRITA de membro
+(`POST`/`DELETE` de membro e `PUT owner-of-record`, todas `owner`), e o mínimo
+dela NÃO é o delas: o mínimo é do ENDPOINT ([RN-102](business-rules/custo.md#rn-102)), e ler a lista
+não é mantê-la. É `viewer`, o das leituras vizinhas (`GET workspaces/:id`,
+`.../projects`) e o de `GET projects/:id/members`, que ela completa — quem
+abre uma sessão precisa saber quem falou nela, e um `viewer` de workspace já
+enxerga todo projeto do workspace.
+
+A resposta tem a MESMA forma da leitura de projeto — `userId`, `name`,
+`email`, `role` (o papel de WORKSPACE) — e nada além: sem `createdAt`, sem
+estado de conta. Workspace inexistente é 404, e quem não é membro é recusado
+pelo `RolesGuard` (403). Continua não havendo TELA de membros de workspace: a
+leitura existe para nomear, e as rotas de escrita seguem sendo de API.
+
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:216`
+  (`listMembers`);
+  `apps/api/src/application/use-cases/iam/list-workspace-members.use-case.ts:16`
+  (`execute`);
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:114`
+  (`listMembers`)
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/list-workspace-members.use-case.spec.ts:75`
+  (a forma da resposta, contra Postgres — caminho feliz), `:96` (workspace
+  inexistente é 404), `:104` (o mínimo é `viewer`), `:112` (`viewer` passa pelo
+  guard), `:125` (quem não é membro recebe 403)
+- **Origem:** AT-335
+
+## O motivo da política em cada cartão de Aprovações (RN-656)
+
+### RN-656 — A leitura de eventos da sessão filtra por `actionId`, e cada cartão da aba Aprovações lê o próprio motivo por ela {#rn-656}
+
+A ação não guarda o motivo da política: ele mora no `proposed_action.created`
+([RN-567](#rn-567), [RN-609](#rn-609)). A aba Aprovações lê a fila do
+PROJETO ([RN-638](#rn-638)) e o log de UMA sessão, então desde a AT-333 ela
+dizia numa nota única quantas ações ficavam sem motivo ([RN-614](#rn-614)).
+Decisão do dono (AT-336): cada cartão mostra o PRÓPRIO.
+
+**O que se mediu.** As duas saídas do card eram um filtro `actionId` na
+leitura de eventos ou uma rota que lesse o evento pela ação. O filtro é o
+menor: reusa a rota (`GET .../sessions/:sessionId/events`, `viewer`), o DTO e o
+caso de uso, e a ação já carrega o `sessionId` da sessão que a propôs. Não
+nasce índice nem migration: o predicado sobre `payload->>'actionId'` roda
+DENTRO da sessão, que o índice único `(session_id, seq)` já recorta. Uma
+leitura de PROJETO por `actionId` exigiria rota nova para achar a sessão que o
+cartão já conhece.
+
+**A regra na api.** `actionId` devolve só os eventos cujo `payload.actionId` é
+aquela ação, na sessão pedida — nunca atravessa sessões. Combina com os outros
+parâmetros e o `limit` conta só os que casam; o `seq` deixa de ser contíguo na
+página, então quem filtra NÃO deriva omitidos por subtração
+([RN-180](business-rules/autenticacao.md#rn-180)). Vazio é 400: um filtro que some com a string errada
+devolveria o log inteiro a quem pediu o motivo de uma ação.
+
+**A regra na tela.** `useDecisoesDaPolitica`: a ação cujo evento está no log
+que a aba JÁ carregou usa esse, sem requisição; as outras leem pela ação, na
+sessão dela, com `staleTime: Infinity` — evento é imutável, então cada ação
+custa UMA leitura enquanto o cache viver e a fila polla sem repetir nenhuma.
+Nada é pedido enquanto a aba ainda carrega o próprio log. A leitura que
+responde SEM o evento dá a frase de "motivo não registrado" (nunca cala); só a
+leitura que FALHA deixa o cartão calado, e é essa, e só essa, que a nota do
+topo conta (*"de N das M ações abaixo"*). O painel "precisa de você" NÃO usa
+este caminho: ele não lê log nenhum e abrir não dispara consulta, então o
+cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
+
+- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:252`
+  (`listEvents`);
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:61`
+  (o filtro);
+  `apps/web/src/lib/decisao-da-politica-queries.ts:35` (`useDecisoesDaPolitica`);
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (quem o chama), `:481` (a
+  nota da falha), `:499` (o motivo em cada cartão)
+- **Teste:**
+  `apps/api/test/application/use-cases/sessions/list-session-events-por-acao.use-case.spec.ts:80`
+  (só os eventos da ação, com o motivo — caminho feliz, contra Postgres),
+  `:109` (não atravessa sessões), `:123` (sessão de outro projeto é 404),
+  `:134` (`actionId` vazio é 400);
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:267` (ação de outra sessão
+  lê o motivo pela ação, e a do log carregado não vira requisição), `:294`
+  (evento ausente diz "não registrado"), `:304` (a leitura que falha é dita
+  uma vez, contando só ela)
+- **Origem:** AT-336

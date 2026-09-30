@@ -9086,6 +9086,16 @@
               "example": "true",
               "type": "string"
             }
+          },
+          {
+            "name": "actionId",
+            "required": false,
+            "in": "query",
+            "description": "Only the events whose `payload.actionId` is this action — e.g. its `proposed_action.created`, which carries the policy `reason` and `scopeRoot` the action row does not keep (RN-614). Combines with the other parameters; `seq` is no longer contiguous in the page, so a caller filtering by action must not derive omitted counts from it. An empty value is a `400`.",
+            "schema": {
+              "example": "01JC4Z0000ACAO00000000000001",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -9098,6 +9108,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "`actionId` is present but empty."
           },
           "401": {
             "description": "No token, expired token, or invalid signature."
@@ -11548,6 +11561,56 @@
       }
     },
     "/workspaces/{workspaceId}/members": {
+      "get": {
+        "description": "Who is associated with the WORKSPACE, with the workspace role — the role every project inherits unless a project row overrides it. Completes `GET projects/:projectId/members`, which lists only project rows: whoever reaches a project through the workspace alone shows up here and not there. Only id, name, e-mail and role.",
+        "operationId": "WorkspacesController_listMembers",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceMemberComUsuarioResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the workspace's members",
+        "tags": [
+          "workspaces"
+        ]
+      },
       "post": {
         "description": "Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.",
         "operationId": "WorkspacesController_addMember",
@@ -23544,6 +23607,41 @@
         "required": [
           "workspace",
           "role"
+        ]
+      },
+      "WorkspaceMemberComUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO0000000002"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "developer",
+              "maintainer",
+              "owner"
+            ],
+            "example": "maintainer",
+            "description": "The WORKSPACE role — what every project of the workspace inherits unless a project row overrides it (RN-471)."
+          },
+          "name": {
+            "type": "string",
+            "example": "Senior Dev",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "example": "dev@brabo.dev"
+          }
+        },
+        "required": [
+          "userId",
+          "role",
+          "name",
+          "email"
         ]
       },
       "WorkspaceMemberResponseDto": {

@@ -213,6 +213,7 @@ estado lido do repositório e não da conversa.
 | Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
 | Os modelos vigentes de agentes e áreas numa leitura só: a carga de Configurações cai de 49 para 30 (AT-334) | RN-654 |
+| O fio nomeia quem entra pelo papel de workspace, e cada cartão de Aprovações lê o próprio motivo da política (AT-335/AT-336) | RN-655, RN-656 |
 
 ## Estado atual e aberto
 
@@ -1580,7 +1581,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é autorização — quem autoriza continua sendo o papel —, e a transferência
   não confere se o novo titular tem credencial: sem ela, o turno termina com o
   desfecho de sempre ("Nenhuma credencial cadastrada"). Não há tela de membros
-  de workspace; as rotas são de API. Segue possível e declarado:
+  de workspace; as rotas são de API. A LEITURA (`GET workspaces/:id/members`,
+  RN-655) é `viewer`, e não o `owner` das escritas: ler não é manter, e é por
+  ela que o fio da sessão nomeia quem entra só pelo papel de workspace. Segue possível e declarado:
   rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
   workspace (única forma de revogar propriedade, reversível pela mesma rota);
   reescrever o próprio papel com o MESMO valor (upsert idempotente não é
