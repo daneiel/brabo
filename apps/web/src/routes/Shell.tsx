@@ -1,4 +1,15 @@
-import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
@@ -22,6 +33,7 @@ import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
 import { AGENTS } from '../lib/agents';
 import { agruparPorInstancia, montarArvore, type GrupoDeAgente, type RamoDeAgente } from '../lib/timeline-tree';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,11 +57,13 @@ import {
   ChevronRightIcon,
   LogoMark,
   LogoutIcon,
+  MenuIcon,
   MoonIcon,
   PlusIcon,
   ServerIcon,
   SunIcon,
   UserIcon,
+  XIcon,
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
@@ -81,6 +95,11 @@ function iniciaisDoProjeto(nome: string): string {
     partes.length >= 2 ? [partes[0]?.[0], partes[1]?.[0]] : [nome[0], nome[1]];
   return letras.filter((c): c is string => !!c).join('').toUpperCase();
 }
+
+/** O que recebe foco dentro da gaveta móvel (RN-643) — para o foco inicial e o
+ * laço do Tab. `disabled` e `tabindex="-1"` ficam de fora. */
+const SELETOR_FOCAVEL =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function rotuloDoAgente(agente: string): string {
   return AGENTS[agente as keyof typeof AGENTS]?.name ?? agente;
@@ -392,7 +411,76 @@ export function Shell() {
   // Só o colapso MANUAL desde o ADR 0126 — o sinal automático da aba de
   // Código (`autoColapsado`, RN-201) saiu junto com `AutoCollapseContext`.
   const [colapsadoManual, setColapsadoManual] = useState(lerColapsado);
-  const colapsado = colapsadoManual;
+  // --- Layout móvel (RN-643) ----------------------------------------------
+  // Abaixo do breakpoint a sidebar vira GAVETA: some da página, abre por cima
+  // do conteúdo pelo botão de menu da barra do topo e fecha ao navegar, no Esc,
+  // no X e no fundo. Na gaveta ela é sempre EXPANDIDA — o colapso manual
+  // (RN-195) é preferência do desktop, gravada e intocada aqui, e volta a
+  // valer quando a janela cruza o corte de novo.
+  const movel = useLayoutMovel();
+  const colapsado = !movel && colapsadoManual;
+  const [gavetaAberta, setGavetaAberta] = useState(false);
+  const idDaGaveta = useId();
+  const gavetaRef = useRef<HTMLElement>(null);
+  const botaoDeMenuRef = useRef<HTMLButtonElement>(null);
+
+  function fecharGaveta({ devolverFoco }: { devolverFoco: boolean }) {
+    setGavetaAberta(false);
+    if (devolverFoco) botaoDeMenuRef.current?.focus();
+  }
+
+  // Fecha ao navegar — inclusive navegação que não veio de clique na gaveta
+  // (o `navigate` do wizard, o botão voltar do navegador).
+  useEffect(() => {
+    setGavetaAberta(false);
+  }, [pathname]);
+
+  // Voltar ao desktop com a gaveta aberta não pode deixá-la "aberta" guardada
+  // para a próxima vez que a janela encolher.
+  useEffect(() => {
+    if (!movel) setGavetaAberta(false);
+  }, [movel]);
+
+  // Aberta, o foco ENTRA na gaveta (é um diálogo modal) e o Esc a fecha
+  // devolvendo o foco ao botão que a abriu — de qualquer lugar da página.
+  useEffect(() => {
+    if (!movel || !gavetaAberta) return;
+    gavetaRef.current?.querySelector<HTMLElement>(SELETOR_FOCAVEL)?.focus();
+    function aoTeclar(e: globalThis.KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setGavetaAberta(false);
+      botaoDeMenuRef.current?.focus();
+    }
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [movel, gavetaAberta]);
+
+  // Tab não escapa da gaveta aberta (`aria-modal`): do último volta ao
+  // primeiro, e vice-versa.
+  function prenderFoco(e: KeyboardEvent<HTMLElement>) {
+    if (!movel || !gavetaAberta || e.key !== 'Tab') return;
+    const focaveis = Array.from(
+      gavetaRef.current?.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL) ?? [],
+    );
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (!primeiro || !ultimo) return;
+    if (e.shiftKey && document.activeElement === primeiro) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primeiro.focus();
+    }
+  }
+
+  // Clicar num LINK da gaveta fecha — mesmo quando ele não troca o pathname
+  // (as abas do projeto mudam só o `?tab=`).
+  function fecharAoSeguirLink(e: MouseEvent<HTMLElement>) {
+    if (!movel) return;
+    if ((e.target as Element).closest('a')) setGavetaAberta(false);
+  }
 
   function alternarColapso() {
     setColapsadoManual((atual) => {
@@ -453,8 +541,63 @@ export function Shell() {
   }
 
   return (
-    <div className={[styles.layout, colapsado && styles.colapsado].filter(Boolean).join(' ')}>
-      <aside className={styles.sidebar}>
+    <div
+      className={[styles.layout, colapsado && styles.colapsado, movel && styles.movel]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {movel && (
+        <header className={styles.barraMovel}>
+          <button
+            ref={botaoDeMenuRef}
+            type="button"
+            className={styles.botaoDeMenu}
+            aria-expanded={gavetaAberta}
+            aria-controls={idDaGaveta}
+            aria-label={t('sidebar.mobile.openMenu')}
+            onClick={() => setGavetaAberta(true)}
+          >
+            <MenuIcon size={20} />
+          </button>
+          <Link to="/" className={styles.brand} aria-label={t('sidebar.brand.dashboardLink')}>
+            <span className={styles.brandTile} aria-hidden="true">
+              <LogoMark size={18} />
+            </span>
+            <span className={styles.brandName}>Brabo</span>
+          </Link>
+        </header>
+      )}
+
+      {movel && gavetaAberta && (
+        <div
+          className={styles.fundoDaGaveta}
+          data-testid="fundo-da-gaveta"
+          aria-hidden="true"
+          onClick={() => fecharGaveta({ devolverFoco: true })}
+        />
+      )}
+
+      <aside
+        id={idDaGaveta}
+        ref={gavetaRef}
+        className={styles.sidebar}
+        hidden={movel && !gavetaAberta}
+        {...(movel
+          ? { role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar.mobile.drawerLabel') }
+          : {})}
+        onKeyDown={prenderFoco}
+        onClick={fecharAoSeguirLink}
+      >
+        {movel && (
+          <button
+            type="button"
+            className={styles.fecharGaveta}
+            aria-label={t('sidebar.mobile.closeMenu')}
+            onClick={() => fecharGaveta({ devolverFoco: true })}
+          >
+            <XIcon size={18} />
+          </button>
+        )}
         {/* O monograma B no ladrilho terracota — a MESMA marca das telas de
             auth, e a única que o handoff reconhece. Até a FASE 17a aqui morava
             o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
@@ -510,7 +653,10 @@ export function Shell() {
                 icon
                 size="sm"
                 variant="ghost"
-                onClick={() => setWizardOpen(true)}
+                onClick={() => {
+                  setGavetaAberta(false);
+                  setWizardOpen(true);
+                }}
                 title={t('sidebar.nav.newProject')}
                 aria-label={t('sidebar.nav.newProject')}
               >
@@ -664,25 +810,28 @@ export function Shell() {
           <BotaoDeTema colapsado={colapsado} />
           <LinkDeContainers colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
-          <button
-            type="button"
-            className={styles.footerButton}
-            aria-expanded={!colapsado}
-            title={
-              colapsado
-                ? t('sidebar.collapseButton.expand')
-                : t('sidebar.collapseButton.collapse')
-            }
-            aria-label={
-              colapsado
-                ? t('sidebar.collapseButton.expand')
-                : t('sidebar.collapseButton.collapse')
-            }
-            onClick={alternarColapso}
-          >
-            {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
-            {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
-          </button>
+          {/* Na gaveta não há o que recolher — ela já some inteira. */}
+          {!movel && (
+            <button
+              type="button"
+              className={styles.footerButton}
+              aria-expanded={!colapsado}
+              title={
+                colapsado
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
+              }
+              aria-label={
+                colapsado
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
+              }
+              onClick={alternarColapso}
+            >
+              {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
+              {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
+            </button>
+          )}
 
           <div className={styles.userCard}>
             <span className={styles.avatar}>{email ? iniciaisDoEmail(email) : '?'}</span>

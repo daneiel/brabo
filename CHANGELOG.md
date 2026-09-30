@@ -477,7 +477,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
   outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
   punham a resposta do Criativo acima da pergunta.
-
+- **web**: depois do login a interface passa a caber num telefone (AT-316,
+  [RN-643](docs/business-rules.md#rn-643)). Abaixo de 768px a sidebar vira uma
+  gaveta aberta pelo botão de menu do topo. Ela fecha ao navegar, no Esc, no X
+  e no fundo, e prende o foco enquanto aberta. O trilho do projeto vira uma
+  barra horizontal rolável acima do conteúdo, e a Visão geral empilha o time e
+  a atividade. A 390px, antes, a moldura fixa ocupava 444px e o conteúdo ficava
+  com 0 a 126px; agora o conteúdo tem a largura inteira e a página não rola de
+  lado. Nas Configurações, os textos cortados caíram de 114 para 33.
 - **web**: a barra do topo da Sessão não transborda mais (AT-317,
   [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo
   cobria "Respostas:", o seletor e a origem do idioma cortavam, "Iniciar

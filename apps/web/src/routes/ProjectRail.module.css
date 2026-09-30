@@ -132,3 +132,52 @@
   background: var(--accent);
   border-radius: var(--radius-full);
 }
+
+/*
+ * Layout móvel (RN-643, AT-316): a BARRA horizontal rolável que substitui a
+ * coluna de 180px abaixo do breakpoint (`useLayoutMovel`). As mesmas folhas e
+ * o mesmo estado ativo; o que muda é o eixo — a faixa rola na horizontal por
+ * DENTRO, e a página nunca. Os cabeçalhos de grupo ficam inline, antes das
+ * abas do grupo, com a mesma gramática de rótulo de seção.
+ */
+.trilhoHorizontal {
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border-right: none;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+.trilhoHorizontal .grupo,
+.trilhoHorizontal .solta {
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.trilhoHorizontal .grupo + .solta,
+.trilhoHorizontal .grupo + .grupo,
+.trilhoHorizontal .solta + .grupo {
+  margin-left: 8px;
+}
+
+.trilhoHorizontal .grupoLabel {
+  padding: 0 4px 0 8px;
+  white-space: nowrap;
+}
+
+.trilhoHorizontal .item {
+  width: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.trilhoHorizontal .itemLabel {
+  overflow: visible;
+}

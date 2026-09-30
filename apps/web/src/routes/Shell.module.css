@@ -651,3 +651,109 @@
   min-width: 0;
   overflow-y: auto;
 }
+
+/* --- Layout móvel (RN-643, AT-316) ----------------------------------------
+ *
+ * Abaixo de 768px (`CONSULTA_MOVEL`, `lib/layout-movel.ts`) a sidebar deixa de
+ * ocupar coluna: a página vira COLUNA (barra do topo + conteúdo na largura
+ * toda) e a sidebar vira GAVETA sobreposta, aberta pelo botão de menu. As
+ * regras abaixo penduram na classe `.movel` que o componente põe a partir da
+ * MESMA consulta — nunca num `@media` próprio —, para o que o JS decide e o
+ * que o CSS desenha não divergirem num pixel de fronteira.
+ *
+ * Só geometria: cores, sombra e fundo são os tokens que a sidebar e o modal
+ * já usam (o fundo escurecido é o MESMO do `.overlay` de `Modal.module.css`).
+ */
+.movel {
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.barraMovel {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 0 8px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.barraMovel .brand {
+  border-bottom: none;
+  padding: 8px 6px;
+  text-decoration: none;
+}
+
+/* 44px: alvo de toque de controle PRIMÁRIO em tela de toque — é a única porta
+   de navegação da página inteira nessa faixa. */
+.botaoDeMenu,
+.fecharGaveta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.botaoDeMenu:hover,
+.fecharGaveta:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.botaoDeMenu:focus-visible,
+.fecharGaveta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.fecharGaveta {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+
+.movel .sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  width: min(var(--sidebar-w), 86vw);
+  transition: none;
+  box-shadow: var(--shadow-lg);
+}
+
+/* A marca da gaveta não pode ficar embaixo do X. */
+.movel .sidebar > .brand {
+  padding-right: 60px;
+}
+
+/* `display: flex` do `.sidebar` venceria o `display: none` do atributo. */
+.sidebar[hidden] {
+  display: none;
+}
+
+/* Abaixo do modal (z-index 100): o wizard aberto pela gaveta fica por cima. */
+.fundoDaGaveta {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+  background: var(--overlay);
+}
+
+.movel .main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
