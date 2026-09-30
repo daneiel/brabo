@@ -33,6 +33,25 @@ import type { QueryClient } from '@tanstack/react-query';
 
 /** O fallback enquanto o canal está vivo — o poll que sobra. */
 export const INTERVALO_COM_CANAL_MS = 15_000;
+/**
+ * O ritmo das leituras de PROJETO que nenhum canal avisa — AT-278, RN-632.
+ *
+ * O canal `session:<id>` só avisa escritas da PRÓPRIA sessão; a lista de
+ * sessões do projeto, as pendências de merge do projeto inteiro, a
+ * arquitetura e o backlog que alimentam os contadores do trilho mudam por
+ * escrita de QUALQUER sessão (ou de nenhuma). Não há aviso para esperar, e
+ * por isso o mecanismo aqui não é invalidação: é o poll da PERIFERIA no mesmo
+ * fallback que a RN-579 já aceita para a sessão com o canal vivo — 15s —,
+ * INCONDICIONAL (não depende de canal nenhum). Quem escreve nesta aba
+ * continua invalidando a chave na hora; a aba que mostra o dado como
+ * assunto principal (Backlog, Arquitetura, PRs) mantém o poll dela, e é o
+ * observador mais rápido que dita o ritmo da chave.
+ *
+ * Medido em `duas-abas.orcamento.test.tsx` (as telas de verdade): com o canal
+ * vivo, a aba Executores fazia 138 req/min, 70 delas leituras de projeto
+ * (lista de sessões, contadores do trilho, arquitetura); caíram para 20.
+ */
+export const INTERVALO_DO_PROJETO_MS = 15_000;
 /** O orçamento muda com gasto de token, não com decisão; pode esperar mais. */
 export const INTERVALO_DO_ORCAMENTO_COM_CANAL_MS = 30_000;
 
@@ -85,7 +104,13 @@ export function intervaloDaSessao(
 }
 
 /** O que um aviso do canal pode deixar desatualizado. */
-export type AlvoDoCanal = 'eventos' | 'acoes' | 'handoffs' | 'backlog' | 'orcamento';
+export type AlvoDoCanal =
+  | 'eventos'
+  | 'acoes'
+  | 'pendenciasDoProjeto'
+  | 'handoffs'
+  | 'backlog'
+  | 'orcamento';
 
 /**
  * Tipo de evento → queries que ele invalida. Os prefixos são os tipos
@@ -97,7 +122,18 @@ export type AlvoDoCanal = 'eventos' | 'acoes' | 'handoffs' | 'backlog' | 'orcame
  */
 export function alvosDoEvento(type: string): AlvoDoCanal[] {
   const alvos: AlvoDoCanal[] = ['eventos', 'orcamento'];
-  if (type.startsWith('proposed_action.') || type.startsWith('action.')) alvos.push('acoes');
+  // AT-299: a mesma escrita muda a fila do PROJETO (`['project-pending-actions',
+  // projectId]`), que o contador do trilho, o painel "precisa de você", a aba
+  // Aprovações e as pendências de outras sessões leem (RN-638). Sem isto a
+  // proposta nova esperava o poll de projeto de 15s (AT-278) para aparecer ali.
+  if (type.startsWith('proposed_action.') || type.startsWith('action.')) {
+    alvos.push('acoes', 'pendenciasDoProjeto');
+  }
+  // O dev agent bloqueado por container (RN-502) espera um `container_start`
+  // que nasce em OUTRA sessão (a do Infra Lead): o canal da execução não
+  // avisa essa proposta, mas avisa o bloqueio — e é a deixa para reler a fila
+  // do projeto, onde ela está (AT-298).
+  if (type === 'dev.blocked_by_container') alvos.push('pendenciasDoProjeto');
   if (type.startsWith('handoff.')) alvos.push('handoffs');
   if (type.startsWith('backlog.')) alvos.push('backlog');
   return alvos;
@@ -114,14 +150,20 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
 export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
   eventos: 3_000,
   acoes: 2_000,
+  pendenciasDoProjeto: 2_000,
   handoffs: 2_000,
   backlog: 2_000,
   orcamento: 10_000,
 };
 
 export interface InvalidadorDoCanal {
-  /** Um aviso do canal. `emStreaming` segura só os EVENTOS (achado C). */
-  aoEvento(type: string, emStreaming: boolean): void;
+  /**
+   * Um aviso do canal. `emStreaming` segura só os EVENTOS (achado C).
+   * `extras`: alvos que ESTA tela quer invalidar a cada aviso além dos que o
+   * tipo decide (a Visão geral lê tasks bloqueadas do backlog) — com a mesma
+   * janela por alvo.
+   */
+  aoEvento(type: string, emStreaming: boolean, extras?: readonly AlvoDoCanal[]): void;
   encerrar(): void;
 }
 
@@ -134,6 +176,8 @@ export function criarInvalidadorDoCanal(
   const chaves: Record<AlvoDoCanal, readonly unknown[]> = {
     eventos: ['session-events', projectId, sessionId],
     acoes: ['session-actions', projectId, sessionId],
+    // Por PREFIXO: alcança a leitura sem tipo e a de `git_merge` da aba PRs.
+    pendenciasDoProjeto: ['project-pending-actions', projectId],
     handoffs: ['session-handoffs', projectId, sessionId],
     backlog: ['backlog', projectId],
     orcamento: ['session-budget', projectId, sessionId],
@@ -163,8 +207,9 @@ export function criarInvalidadorDoCanal(
   }
 
   return {
-    aoEvento(type, emStreaming) {
-      for (const alvo of alvosDoEvento(type)) {
+    aoEvento(type, emStreaming, extras = []) {
+      const alvos = new Set<AlvoDoCanal>([...alvosDoEvento(type), ...extras]);
+      for (const alvo of alvos) {
         // Achado C: durante um turno em streaming, trazer o `agent.response`
         // persistido ANTES do `agent.done` põe a bolha ao vivo e a definitiva
         // na tela juntas. `agent.done` invalida os eventos logo em seguida.

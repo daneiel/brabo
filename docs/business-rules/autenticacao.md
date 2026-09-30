@@ -2403,7 +2403,7 @@ um colapso de doze mensagens é UMA entrada na tela.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:118` (o corte do fio), `:226`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:444` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:499` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2510,8 +2510,8 @@ segundo observador da mesma chave com timer ligado ressuscitaria o poll que a
 tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
-- **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:359` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+- **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
+  `:379` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2617,7 +2617,9 @@ superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
 3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
 4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
 degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
-segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+seguiu travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41)
+até a [RN-640](../business-rules.md#rn-640) (ADR 0181), que a fechou com a
+paleta neutra e a transformou em piso.
 
 O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
 reprovava até o piso de **elemento de interface**, que é o mais baixo que

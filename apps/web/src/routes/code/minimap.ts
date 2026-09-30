@@ -18,6 +18,7 @@
  */
 
 import type { HighlightToken, TokenKind } from './highlight';
+import { lerTokenDoTema } from '../../lib/tokens-padrao';
 
 export interface MinimapLine {
   /** 0 = linha sem conteúdo visível (só espaço). Senão, 0..1, já escalado e limitado. */
@@ -66,23 +67,20 @@ export type CoresDoMinimapa = Record<TokenKind | 'empty', string>;
  * Lê as cores do tema ATIVO via `getComputedStyle`, nunca hardcoded — os
  * mesmos `--syntax-*` que `CodeEditor.module.css` usa para as linhas reais
  * (`design/tokens.css`), então claro/escuro (RN-182..185) resolvem sozinhos.
- * Fallback cinza só entra se a variável não existir (tema desconhecido).
+ * Fallback só entra se a variável não existir, e vem de `TOKENS_PADRAO`
+ * (AT-284, ADR 0181) — o tema primário conferido contra `design/tokens.css`,
+ * no lugar dos oito cinzas soltos que não existiam no design system.
  */
 export function resolverCoresDoMinimapa(elemento: Element): CoresDoMinimapa {
-  const estilo = getComputedStyle(elemento);
-  const ler = (nome: string, fallback: string) => {
-    const valor = estilo.getPropertyValue(nome).trim();
-    return valor.length > 0 ? valor : fallback;
-  };
   return {
-    keyword: ler('--syntax-keyword', '#8a8a8a'),
-    function: ler('--syntax-function', '#8a8a8a'),
-    string: ler('--syntax-string', '#8a8a8a'),
-    number: ler('--syntax-number', '#8a8a8a'),
-    comment: ler('--syntax-comment', '#6b6b6b'),
-    type: ler('--syntax-type', '#8a8a8a'),
-    operator: ler('--syntax-operator', '#8a8a8a'),
-    text: ler('--border-strong', '#8a8a8a'),
+    keyword: lerTokenDoTema('--syntax-keyword', elemento),
+    function: lerTokenDoTema('--syntax-function', elemento),
+    string: lerTokenDoTema('--syntax-string', elemento),
+    number: lerTokenDoTema('--syntax-number', elemento),
+    comment: lerTokenDoTema('--syntax-comment', elemento),
+    type: lerTokenDoTema('--syntax-type', elemento),
+    operator: lerTokenDoTema('--syntax-operator', elemento),
+    text: lerTokenDoTema('--border-strong', elemento),
     empty: 'transparent',
   };
 }

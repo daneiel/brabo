@@ -322,11 +322,19 @@ const sessionRoute = createRoute({
   component: comCarga(SessionPageLazy, () => {
     const { projectId, sessionId } = sessionRoute.useParams();
     const { highlightEvent } = sessionRoute.useSearch();
+    const navigate = sessionRoute.useNavigate();
     return (
       <SessionPageLazy
         projectId={projectId}
         sessionId={sessionId}
         highlightEvent={highlightEvent}
+        // RN-634: depois de "Ativar execução", a sessão que a api criou.
+        irParaSessao={(destino) =>
+          navigate({
+            to: '/projects/$projectId/sessions/$sessionId',
+            params: { projectId, sessionId: destino },
+          })
+        }
       />
     );
   }),

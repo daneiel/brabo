@@ -59,6 +59,12 @@ import { SessionTopbar } from './SessionTopbar';
 import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import { SessionFio } from './SessionFio';
 import { SessionComposer } from './SessionComposer';
+import {
+  DESTINATARIO_DA_SESSAO_CRIATIVA,
+  useAtivadosNaSessaoInteira,
+  useAtivosNoProjeto,
+  useDestinatarioDoChat,
+} from '../lib/session-destinatario';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
 import { useRolagemDoFio } from '../lib/session-rolagem';
 import { usePromocaoDeHistorias } from '../lib/session-promocao';
@@ -78,6 +84,12 @@ interface SessionPageProps {
   sessionId: string;
   /** Evidência do Psicólogo (Fase 4b) — abre o log e rola até o evento. */
   highlightEvent?: string;
+  /**
+   * Leva a tela a outra sessão do projeto (RN-634): depois de "Ativar
+   * execução", a sessão de execução que a api criou. Vem da rota (o
+   * `navigate` do router), e sem ela a tela só avisa.
+   */
+  irParaSessao?: (sessionId: string) => void;
 }
 
 /**
@@ -104,6 +116,7 @@ export function SessionPage({
   projectId,
   sessionId,
   highlightEvent,
+  irParaSessao,
 }: SessionPageProps) {
   const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
@@ -244,6 +257,7 @@ export function SessionPage({
     iniciarTurnoDoAgente,
     turnoAgentRef,
     setTurnoViaCanal,
+    irParaSessao,
   });
 
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
@@ -287,10 +301,23 @@ export function SessionPage({
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? VAZIO;
+  // Quem já foi ativado na sessão PEDIDA, de fontes sem janela (RN-630,
+  // RN-631): o resumo quando esta é a sessão mais recente, os handoffs desta
+  // sessão e o gasto por agente dela. Somado à janela pelo destinatário do
+  // composer e pelas ofertas de handoff.
+  const ativadosNaSessaoInteira = useAtivadosNaSessaoInteira(
+    workspaceComPapel?.workspace.id,
+    projectId,
+    sessionId,
+    handoffs,
+  );
+  // RN-633 (AT-294): quem já roda na sessão MAIS RECENTE do projeto (a de
+  // execução, depois de ativada) — a oferta a ele não é acionável aqui.
+  const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
-  // As seis derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
-  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`,
-  // `hasProductBrief` e `activeAgent` — moraram aqui até a extração do hook
+  // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
+  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory` e
+  // `hasProductBrief` — moraram aqui até a extração do hook
   // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
   // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
   // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
@@ -301,21 +328,48 @@ export function SessionPage({
     hasBusinessRule,
     hasPromotedStory,
     hasProductBrief,
-    activeAgent,
   } = useSessionReadiness(events, backlogQuery.data);
+
+  // O destinatário da mensagem do composer é ESCOLHIDO, nunca derivado do log
+  // (RN-631, AT-251): as opções são os agentes que conversam e já estão na
+  // sessão, e com duas ou mais sem escolha o envio trava e a tela pede uma.
+  const {
+    opcoes: opcoesDeDestinatario,
+    destinatario,
+    precisaEscolher: precisaEscolherDestinatario,
+    escolher: escolherDestinatario,
+  } = useDestinatarioDoChat({
+    sessionId,
+    events,
+    handoffs,
+    kind: session?.kind,
+    ativadosNaSessaoInteira,
+  });
+
+  // Aceitar um handoff nesta tela é o gesto de chamar aquele agente: o
+  // destinatário passa a ser ele. Aceite feito por outro caminho (outra aba,
+  // outro usuário) só acrescenta a opção — não troca a escolha de ninguém.
+  async function aceitarHandoff(handoffId: string, toAgent: string) {
+    if (await handleAcceptHandoff(handoffId, toAgent)) escolherDestinatario(toAgent);
+  }
 
   // As derivações de handoff (RN-136, RN-499, achado L, RN-406) moram em
   // `../lib/session-handoffs` desde o PR 6 do ADR 0176 — puras. Sob `useMemo`
-  // desde a AT-301: varrem eventos e handoffs, e a página re-renderiza por
-  // motivos que não mudam nenhum dos dois.
+  // desde a AT-301 (varrem eventos e handoffs, e a página re-renderiza por
+  // motivos que não mudam nenhum dos dois) e desde a RN-631 (`ofertasAcionaveis`
+  // é uma lista nova a cada chamada e entra na montagem da timeline abaixo).
   const {
     activeFor,
-    offeredHandoff,
+    ofertasAcionaveis,
+    ofertasForaDaJanela,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
     necessidadeJaValidada,
-  } = useMemo(() => derivarHandoffsDaSessao(events, handoffs), [events, handoffs]);
+  } = useMemo(
+    () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto),
+    [events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto],
+  );
 
   // `iniciarTurnoDoAgente`, `finalizarTurnoDoAgente`, `cancelarTurnoOtimista`
   // e o efeito do canal Phoenix (que armava/desarmava este mesmo cluster de
@@ -330,16 +384,17 @@ export function SessionPage({
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
   });
-  // Achado 1: `agentId` viaja na query pra a cascata rodar pro agente
-  // REALMENTE ativo (sessão→agente→área→projeto→workspace, ver
+  // Achado 1: `agentId` viaja na query pra a cascata rodar pro agente a
+  // quem a conversa se dirige — o destinatário do composer, RN-631
+  // (sessão→agente→área→projeto→workspace, ver
   // `RunLlmTurnUseCase`) — sem ele a api só enxerga sessão→projeto→workspace
   // (mais o fallback fixo pro Criativo) e a topbar continuava mostrando o
   // modelo do Criativo depois de um handoff pro PO/Arquiteto/Dev Lead.
-  // `activeAgent` entra na queryKey pra a troca de agente ativo refazer a
+  // `destinatario` entra na queryKey pra a troca de destinatário refazer a
   // busca em vez de servir o binding do agente anterior do cache.
   const { data: resolvedBinding } = useQuery({
-    queryKey: ['session-model-binding', projectId, sessionId, activeAgent],
-    queryFn: () => getSessionModelBinding(projectId, sessionId, activeAgent ?? undefined),
+    queryKey: ['session-model-binding', projectId, sessionId, destinatario],
+    queryFn: () => getSessionModelBinding(projectId, sessionId, destinatario ?? undefined),
   });
   // `null` (sessão sem teto próprio) é o estado normal, e volta 304 desde a
   // RN-579 (`etag-do-corpo-vazio.ts` na api). Gasto de token não tem evento
@@ -400,7 +455,7 @@ export function SessionPage({
         user,
         queryClient,
         invalidateActions,
-        offeredHandoff,
+        ofertasAcionaveis,
         isActive,
         semRepositorio,
         promovendoStoryId,
@@ -412,7 +467,7 @@ export function SessionPage({
         setMotivoRecusa,
         handlePromoteStory,
         handlePromoteAll,
-        handleAcceptHandoff,
+        handleAcceptHandoff: aceitarHandoff,
         handleActivateExecution,
         handleActivateAutoMode,
         iniciarTurnoDoAgente,
@@ -427,7 +482,7 @@ export function SessionPage({
       user.name,
       queryClient,
       invalidateActions,
-      offeredHandoff,
+      ofertasAcionaveis,
       isActive,
       promovendoStoryId,
       promovendoTodas,
@@ -568,12 +623,18 @@ export function SessionPage({
   async function handleSend() {
     const text = draft.trim();
     if (!text || streaming || session?.status !== 'active') return;
+    // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
+    // O botão já está travado; isto cobre o Enter.
+    if (precisaEscolherDestinatario) return;
 
     setDraft('');
     setOptimisticUser(text);
     setStreaming(true);
     setStreamingText('');
 
+    // O destinatário escolhido (RN-631) — ou a opção única, que o composer
+    // nomeia antes do envio.
+    //
     // Achado 3: sessão CRIATIVA sem o Criativo ativo ainda — a primeira
     // mensagem TAMBÉM o ativa (decisão do usuário: ninguém deveria precisar
     // de um clique separado em "Iniciar ideação" antes de falar). Ativa e
@@ -581,12 +642,20 @@ export function SessionPage({
     // (`sendAgentMessage`) — nunca pelo SSE genérico mais abaixo, que não
     // tem histórico, system prompt nem a tool `emit_artifact`, e por isso
     // não registra regra de negócio nenhuma.
-    let agentParaEnviar = activeAgent;
-    if (!agentParaEnviar && session?.kind === 'criativa') {
+    //
+    // "Sem o Criativo ativo" é a MESMA pergunta de antes da RN-631 — nenhum
+    // agente entrou (o Criativo é a opção única, vinda só do `kind`) —, e não
+    // só `!criativoActive`, que lê a janela: numa sessão longa a ativação dele
+    // sai dos 200 eventos e a mensagem o reativaria com outros já em cena.
+    const agentParaEnviar = destinatario;
+    if (
+      agentParaEnviar === DESTINATARIO_DA_SESSAO_CRIATIVA &&
+      !criativoActive &&
+      opcoesDeDestinatario.length === 1
+    ) {
       try {
         await startAgent(projectId, sessionId, 'criativo');
         await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-        agentParaEnviar = 'criativo';
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
@@ -668,10 +737,12 @@ export function SessionPage({
   async function handleCancel() {
     if (!streaming) return;
 
-    // O mesmo agente que `handleSend` teria mandado a mensagem: o ativo, ou
-    // 'criativo' quando a sessão é criativa e ainda não tem ninguém ativo
-    // (a primeira mensagem também ativa o Criativo).
-    const agentAlvo = activeAgent ?? (session?.kind === 'criativa' ? 'criativo' : null);
+    // O agente DO TURNO em curso — fixado por quem o disparou
+    // (`iniciarTurnoDoAgente`) ou dito pelo canal —, e só na falta dele o
+    // destinatário do composer (RN-631). Parar pela escolha do seletor,
+    // trocada no meio do turno de outro agente, pararia o errado.
+    const agentAlvo =
+      turnoAgentRef.current ?? streamingAgent ?? statusAgent ?? destinatario;
 
     if (!agentAlvo) {
       // Chat consultivo sem agente (SSE genérico da api) — cancelamento é
@@ -794,14 +865,16 @@ export function SessionPage({
               turno de agente via `turnoViaCanal`: o chat consultivo sem
               agente ativo continua na bolha antiga, dentro do fio. */}
           {/* AT-265: as pendências que os agentes propuseram em OUTRAS sessões do
-              projeto (a de execução), decididas aqui — atalho, RN-467. */}
-          {isActive && (
-            <PendenciasDeOutrasSessoes
-              projectId={projectId}
-              sessionId={sessionId}
-              podeDecidir={podeDecidir}
-            />
-          )}
+              projeto (a de execução), decididas aqui — atalho, RN-467. AT-298:
+              em QUALQUER estado da sessão — encerrada e técnica inclusive. A
+              decisão é sobre a ação da OUTRA sessão, não conversa nesta, e
+              quem abre uma sessão encerrada para ver o histórico era
+              justamente quem não via que havia algo esperando por ele. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+          />
 
           {turnoViaCanal && (
             <TurnActivityStripDoStore
@@ -814,7 +887,12 @@ export function SessionPage({
           <SessionComposer
             isActive={isActive}
             handoffDaInfraOferecido={handoffDaInfraOferecido}
-            handleAcceptHandoff={handleAcceptHandoff}
+            ofertasForaDaJanela={ofertasForaDaJanela}
+            handleAcceptHandoff={aceitarHandoff}
+            opcoesDeDestinatario={opcoesDeDestinatario}
+            destinatario={destinatario}
+            precisaEscolherDestinatario={precisaEscolherDestinatario}
+            escolherDestinatario={escolherDestinatario}
             manualHandoffTarget={manualHandoffTarget}
             setManualHandoffTarget={setManualHandoffTarget}
             enviandoHandoffManual={enviandoHandoffManual}
