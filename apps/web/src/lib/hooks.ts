@@ -7,7 +7,7 @@ import type { ActionType, SessionEvent } from './api-types';
 import { pollQueParaNoErro } from './query-policy';
 // Com o canal da sessão VIVO, o poll da sessão vira fallback longo e quem diz
 // QUANDO buscar é o aviso do canal (RN-579, `canal-vivo.ts`).
-import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
+import { INTERVALO_DO_PROJETO_MS, intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 
 // App opera sobre o primeiro workspace do usuário — sem UI de troca de
 // workspace ainda (nunca especificado nos mockups, ver design/COMPONENTS.md).
@@ -106,12 +106,25 @@ export function useContainersOverview(
   });
 }
 
-export function useProjectSessions(projectId: string | undefined) {
+/**
+ * A lista de sessões do PROJETO — leitura de projeto que nenhum canal avisa
+ * (AT-278, RN-632): polla no ritmo de projeto (`INTERVALO_DO_PROJETO_MS`),
+ * não mais a 5s. Criar, ativar, renomear e encerrar sessão invalidam
+ * `['sessions', projectId]` na hora, na aba que fez.
+ *
+ * `intervalMs: false` é para quem só precisa do dado no CLIQUE: a página de
+ * containers monta uma linha por projeto, e uma linha em poll era uma
+ * requisição a cada 5s POR PROJETO do workspace.
+ */
+export function useProjectSessions(
+  projectId: string | undefined,
+  intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+) {
   return useQuery({
     queryKey: ['sessions', projectId],
     queryFn: () => listSessions(projectId!),
     enabled: !!projectId,
-    refetchInterval: pollQueParaNoErro(5000),
+    refetchInterval: intervalMs === false ? false : pollQueParaNoErro(intervalMs),
   });
 }
 
@@ -132,8 +145,11 @@ export function sessaoMaisRecente<T extends { createdAt: string; technical: bool
 // atividade da Visão geral e o sino de notificações via polling (decisão:
 // "polling no frontend, sem mudar o backend" — o canal Phoenix continua
 // só heartbeat).
-export function useLatestSession(projectId: string | undefined) {
-  const sessionsQuery = useProjectSessions(projectId);
+export function useLatestSession(
+  projectId: string | undefined,
+  intervalMs: number | false = INTERVALO_DO_PROJETO_MS,
+) {
+  const sessionsQuery = useProjectSessions(projectId, intervalMs);
   const latest = sessionsQuery.data ? sessaoMaisRecente(sessionsQuery.data) : undefined;
   return { ...sessionsQuery, latest };
 }

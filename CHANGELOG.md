@@ -388,6 +388,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   1.178.0), fechando seis CVEs, um deles CRITICAL. A troca é `--no-deps`,
   depois do semgrep, e a prova de que o `semgrep scan` dos gates segue
   funcionando é o scan de verdade que o próprio build já roda.
+- **web**: duas abas abertas (o chat da sessão e a aba Executores) não batem
+  mais no teto de 300 req/min do usuário (AT-278,
+  [RN-632](docs/business-rules.md#rn-632), extensão da
+  [RN-579](docs/business-rules.md#rn-579)). A aba Executores e a Visão geral
+  invalidavam os eventos a cada aviso do canal, sem janela — um dev agent em
+  rajada fazia 630 GET de eventos por minuto numa aba só — e passam pelo mesmo
+  invalidador da tela de Sessão (de brinde, a proposta do dev agent aparece na
+  hora, sem esperar 15s). A lista de sessões e os contadores do trilho do
+  projeto pollam a 15s (eram 3–5s); cada linha de `/containers` parou de pollar
+  a lista de sessões do seu projeto (com 9 projetos, 108 req/min só daquela
+  página); e a espera pelo runner para de sondar `GET /projects/:id` quando a
+  conexão confirma, não só no teto. Medido com as telas de verdade: 208 → 142
+  req/min com o canal vivo, 834 → 167 com um dev agent em rajada, 341 → 275 com
+  o canal caído. O teto não mudou.
+
 - **api**: o merge executado do PR de um dev agent passa a marcar a tarefa como
   `done` — antes ela ficava em `in_review` para sempre (o `pr-6` foi mergeado três
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
