@@ -1,5 +1,6 @@
-import { useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLayoutMovel } from '../lib/layout-movel';
 import styles from './ProjectRail.module.css';
 
 /** Uma folha do trilho — sempre uma ABA de verdade, nunca um grupo, e já com
@@ -33,7 +34,10 @@ interface ProjectRailProps {
   onChange: (key: string) => void;
 }
 
-const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+const TECLAS_VERTICAL = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+// Na barra horizontal do layout móvel (RN-643) o eixo gira junto: as setas
+// que andam são as do eixo em que os itens estão dispostos.
+const TECLAS_HORIZONTAL = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
 
 /**
  * O trilho vertical de navegação do projeto (ADR 0126).
@@ -61,10 +65,29 @@ const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
  * antiga correlacionava por POSIÇÃO, lendo `[role="tab"]` do DOM, porque a
  * primitiva `Tabs` não expunha refs; aqui os botões são deste componente, e
  * um `Map` de refs por chave dá a correlação sem consultar o documento.
+ *
+ * ## Layout móvel (RN-643)
+ *
+ * Abaixo do breakpoint móvel (`useLayoutMovel`) os 180px de coluna não cabem
+ * ao lado do conteúdo num telefone, e o trilho vira BARRA HORIZONTAL rolável
+ * acima dele: as mesmas folhas, na mesma ordem, com os cabeçalhos de grupo
+ * inline, `aria-orientation="horizontal"` e as setas esquerda/direita. A aba
+ * ativa é trazida para dentro da faixa visível ao montar e ao trocar.
  */
 export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
   const { t } = useTranslation('nav');
   const refs = useRef(new Map<string, HTMLButtonElement | null>());
+  const horizontal = useLayoutMovel();
+  const teclas = horizontal ? TECLAS_HORIZONTAL : TECLAS_VERTICAL;
+  const avancar = horizontal ? 'ArrowRight' : 'ArrowDown';
+
+  // Na barra horizontal a aba ativa pode nascer fora da faixa visível (Gastos
+  // e Configurações ficam no fim) — ela é rolada para dentro. `scrollIntoView`
+  // opcional porque o jsdom não o implementa.
+  useEffect(() => {
+    if (!horizontal) return;
+    refs.current.get(active)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [horizontal, active]);
 
   // A ordem VISUAL achatada — grupo por grupo, aba solta por aba solta. É
   // sobre ela que a seta anda: quem navega por teclado atravessa a fronteira
@@ -76,7 +99,7 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
   );
 
   function aoTeclar(e: KeyboardEvent<HTMLElement>) {
-    if (!TECLAS.includes(e.key)) return;
+    if (!teclas.includes(e.key)) return;
     if (folhas.length === 0) return;
 
     const focado = folhas.findIndex((f) => refs.current.get(f.key) === document.activeElement);
@@ -88,7 +111,7 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
     let proximo = ancora;
     if (e.key === 'Home') proximo = 0;
     else if (e.key === 'End') proximo = folhas.length - 1;
-    else proximo = (ancora + (e.key === 'ArrowDown' ? 1 : -1) + folhas.length) % folhas.length;
+    else proximo = (ancora + (e.key === avancar ? 1 : -1) + folhas.length) % folhas.length;
 
     e.preventDefault();
     const alvo = folhas[proximo];
@@ -124,9 +147,9 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
     // continua sendo texto lido — ele diz de que grupo a próxima leva de abas
     // é —, só não é alvo de seleção.
     <nav
-      className={styles.trilho}
+      className={[styles.trilho, horizontal && styles.trilhoHorizontal].filter(Boolean).join(' ')}
       role="tablist"
-      aria-orientation="vertical"
+      aria-orientation={horizontal ? 'horizontal' : 'vertical'}
       aria-label={t('rail.ariaLabel')}
       onKeyDown={aoTeclar}
     >

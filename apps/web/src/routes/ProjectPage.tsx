@@ -18,6 +18,7 @@ import { montarFilas } from '../lib/precisa-de-voce';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
@@ -52,6 +53,9 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
   const [painelAberto, setPainelAberto] = useState(false);
+  // Layout móvel (RN-643): o trilho vira barra horizontal ACIMA do painel, e
+  // o corpo passa de linha a coluna — a mesma consulta que o trilho lê.
+  const movel = useLayoutMovel();
 
   // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
   // de DENTRO de um `ProjectPage` já montado (ex.: "Ver arquitetura
@@ -202,7 +206,7 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   );
 
   return (
-    <div className={styles.wrapper}>
+    <div className={[styles.wrapper, movel && styles.movel].filter(Boolean).join(' ')}>
       {/* O cabeçalho é uma faixa `surface-1` com uma única divisória embaixo
           (handoff, seção 4), e agora atravessa a largura inteira: a navegação
           saiu de dentro dele para o trilho vertical à esquerda (ADR 0126). */}

@@ -29,6 +29,28 @@
   padding: 16px 18px;
 }
 
+/* Layout móvel (RN-643, AT-316): abaixo do breakpoint (`useLayoutMovel`) as
+   duas regiões EMPILHAM — o time em cima, a atividade embaixo, na largura
+   toda — e quem rola é a coluna inteira, não cada região. */
+.layoutMovel {
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.layoutMovel .main {
+  flex: none;
+  overflow: visible;
+  padding: 16px;
+}
+
+.layoutMovel .aside {
+  width: auto;
+  border-left: none;
+  border-top: 1px solid var(--border);
+  overflow: visible;
+  padding: 16px;
+}
+
 /*
  * Estado de ambiente, no topo da coluna lateral. Divisória embaixo e não um
  * card: ele é subordinado ao painel, não uma seção irmã de "Atividade" — e a

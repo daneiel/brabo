@@ -30,6 +30,11 @@
       "expand": "Expandir menu",
       "collapse": "Recolher menu"
     },
+    "mobile": {
+      "openMenu": "Abrir navegação",
+      "closeMenu": "Fechar navegação",
+      "drawerLabel": "Navegação"
+    },
     "footer": {
       "accountFallback": "conta",
       "logout": "sair"

@@ -378,6 +378,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: depois do login a interface passa a caber num telefone (AT-316,
+  [RN-643](docs/business-rules.md#rn-643)). Abaixo de 768px a sidebar vira uma
+  gaveta aberta pelo botão de menu do topo. Ela fecha ao navegar, no Esc, no X
+  e no fundo, e prende o foco enquanto aberta. O trilho do projeto vira uma
+  barra horizontal rolável acima do conteúdo, e a Visão geral empilha o time e
+  a atividade. A 390px, antes, a moldura fixa ocupava 444px e o conteúdo ficava
+  com 0 a 126px; agora o conteúdo tem a largura inteira e a página não rola de
+  lado. Nas Configurações, os textos cortados caíram de 114 para 33.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node
