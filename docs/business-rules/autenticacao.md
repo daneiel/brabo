@@ -2407,7 +2407,7 @@ descrito aqui.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:501` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:507` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2515,7 +2515,7 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
-  `:375` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+  `:379` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`

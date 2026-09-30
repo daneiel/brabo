@@ -13,6 +13,11 @@ import {
   skipBootstrapPlan,
 } from '../lib/api-client';
 import { useSessionEvents } from '../lib/hooks';
+import {
+  INTERVALO_DO_BOOTSTRAP_MS,
+  bootstrapTerminou,
+  pollDoBootstrap,
+} from '../lib/poll-do-bootstrap';
 import { agruparPlano, divergencias, planoVazio } from '../lib/adoption';
 import { deriveStepStates } from '../lib/bootstrap';
 import { BootstrapSteps } from '../components/BootstrapSteps';
@@ -64,15 +69,19 @@ export function AdoptionPlanPage({
     // Só interessa acompanhar depois de aprovar — antes disso, por
     // desenho, nada está rodando.
     enabled: decision === 'approved',
-    refetchInterval: (query) =>
-      query.state.data?.status === 'provisioned' ? false : 1000,
+    // AT-302: 3 s, e para no fim — convergiu OU falhou (aqui nada retoma a
+    // falha sozinho; aprovar de novo invalida a query e o poll volta).
+    refetchInterval: pollDoBootstrap({ paraNaFalha: true }),
   });
 
   const sessionId = bootstrapQuery.data?.sessionId ?? undefined;
   const eventsQuery = useSessionEvents(
     projectId,
     decision === 'approved' ? sessionId : undefined,
-    1000,
+    INTERVALO_DO_BOOTSTRAP_MS,
+    // Os eventos param junto com o status: bootstrap terminado não ganha
+    // passo novo, e a tela aberta pollava para sempre.
+    bootstrapTerminou(bootstrapQuery.data?.status, { paraNaFalha: true }),
   );
   const stepStates = deriveStepStates(eventsQuery.data?.items ?? []);
 

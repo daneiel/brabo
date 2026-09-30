@@ -1,4 +1,7 @@
 {
+  "route": {
+    "loading": "Loading page…"
+  },
   "sidebar": {
     "account": "Account",
     "containers": "Containers"

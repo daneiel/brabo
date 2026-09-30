@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
+import { pollQueParaNoErro } from '../lib/query-policy';
 
 function StatusRow({
   label,
@@ -53,7 +54,11 @@ function useHealthQuery(name: string, baseUrl: string) {
   return useQuery({
     queryKey: ['health', name],
     queryFn: () => fetchHealth(baseUrl),
-    refetchInterval: 5000,
+    // AT-302: o poll PARA no erro, como toda query da app — sem isso, um
+    // serviço fora virava uma requisição a cada 5 s para sempre. A página
+    // volta a perguntar no foco da janela e na remontagem, e o primeiro
+    // sucesso retoma o ritmo sozinho.
+    refetchInterval: pollQueParaNoErro(5000),
     retry: false,
   });
 }

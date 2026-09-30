@@ -199,6 +199,7 @@ estado lido do repositório e não da conversa.
 | A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 | O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
+| Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -760,7 +761,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
-  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
+  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico.
+  Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
+  `.preload` que o router espera), e os painéis das abas do projeto também
+  (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de
+  toda tela vão em `codeSplitting.groups` do `vite.config.ts` por lista de
+  PERMITIDOS: um grupo genérico de `node_modules` puxaria `mermaid`/`xterm`
+  para o bundle inicial (AT-300)
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
   na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
   embutido no bundle) para executar comandos aprovados e terminal
@@ -1841,6 +1848,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (RN-578) NÃO vira fallback de 15s: ela é a rede contra o `agent.done`
   perdido, e o aviso pode se perder junto; o que o canal faz é ANTECIPÁ-LA
   (`avisoPedeVerificacaoDoTurno`, só o `agent.status` do agente acompanhado).
+- O que muda por TOKEN não mora no estado da `SessionPage` (RN-639, AT-301):
+  o texto em curso e a faixa de atividade ficam no store de
+  `lib/streaming-do-turno.ts`, assinado por `useSyncExternalStore` só por quem
+  os desenha (a bolha em `SessionFio.tsx`, `TurnActivityStripDoStore`), e a
+  página assina booleanos. Estado novo de streaming entra no store, nunca num
+  `useState` do `useTurnoDoAgente` — `SessionPage.streaming-isolado.test.tsx`
+  conta os renders da página e reprova o token que a re-renderiza.
 - Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
   contra uma asserção de string — é a mesma lição do `#` no `FROM` do
   Dockerfile ("linter concordar não é build concordar"), medida uma segunda

@@ -424,6 +424,49 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
   entra em backup — é derivada.
 
+### Desempenho
+
+- **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
+  chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
+  router espera antes de trocar de tela — sem flash de fallback na navegação,
+  e com recarga única quando um deploy novo some com o chunk velho); os doze
+  painéis das abas do projeto e o assistente de novo projeto também. O
+  fallback de rota (`CarregandoRota`) diz em texto que está carregando e só
+  aparece se o chunk demorar; o `Shell` segue estático. Vendors de toda tela
+  (`react`, `@tanstack/*`, `i18next`) em chunks próprios de hash estável
+  (`codeSplitting.groups` do Rolldown — o `manualChunks` do Rollup está
+  deprecado no Vite 8), com lista de PERMITIDOS para `mermaid`/`xterm`
+  continuarem só por `import()`. CSP intacta: nenhum script inline novo,
+  `theme-boot.js` e `config.js` como estavam. Medido no `pnpm --filter web
+  build` (KiB, gzip nível 9; "inicial" = entrada + `modulepreload` do
+  `index.html`):
+
+  | | antes | depois |
+  |---|---|---|
+  | JS inicial | 1107,1 (gzip 327,1) | 649,8 (gzip 211,1) |
+  | JS + CSS inicial | 1285,8 (gzip 356,6) | 668,7 (gzip 215,4) |
+  | maior chunk inicial | 1107,1 (`index`) | 215,5 (`i18n`, os JSON de locale) |
+  | total (`assets/*.js,css`) | 4914,4 em 103 arquivos (gzip 1361,9) | 4962,0 em 243 arquivos (gzip 1428,7) |
+
+  O total sobe ~1% pelo custo de fronteira de chunk; o que o navegador baixa
+  antes da primeira tela cai 41% (gzip -35%). O que resta de maior no inicial são
+  os 27 namespaces de locale dos DOIS idiomas, carregados `eager` por
+  `lib/i18n.ts` — fora desta mudança.
+- **web**: o streaming do turno não re-renderiza mais a tela de Sessão
+  (AT-301, [RN-639](docs/business-rules.md#rn-639)). O texto em curso e a
+  faixa de atividade saem do estado do `useTurnoDoAgente` para um store
+  externo (`lib/streaming-do-turno.ts`) assinado só pela bolha e pela faixa;
+  a página assina um booleano. Provado com contador de renders: vinte tokens
+  depois do primeiro, zero renders da página. Junto: `derivarHandoffsDaSessao`
+  sob `useMemo`, vazio ESTÁVEL (`VAZIO`) no lugar de `?? []` para eventos,
+  ações e handoffs (o `?? []` desfazia os memos de `useSessionReadiness`), e a
+  união das páginas do histórico (`useSessionEventHistory`) sob memo.
+- **web**: provisionamento e plano de adoção acompanham o bootstrap a 3 s, não
+  a 1 s, e os EVENTOS da sessão técnica param quando ele termina — antes
+  seguiam a 1 s com o repositório pronto (AT-302, RN-639). O `/status` passa
+  por `pollQueParaNoErro`: serviço que não responde deixa de ser perguntado
+  por timer.
+
 ### Correções
 
 - **web**: o fio da sessão deixou de esconder o começo da conversa e de

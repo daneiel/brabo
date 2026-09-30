@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:791` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:797` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:617` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:623` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -305,7 +305,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5658,7 +5658,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:189` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14536,7 +14536,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
-  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
   (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
@@ -14995,7 +14995,7 @@ passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
   turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
-  sinais); `apps/web/src/lib/session-turno.ts:34` (`turnoTerminouNoLog`)
+  sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
   `agent.response` já está no log e nem `agent.done` nem `idle` saíram; depois
@@ -16896,15 +16896,15 @@ Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
 - **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
-  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:63`
+  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:130` (`podeDecidir`), `:267`
-  (`useRetomarTurnoDoLog`), `:864` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:274`
+  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17253,7 +17253,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:345`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:352`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
   (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -17332,7 +17332,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:186`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:278` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:332` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -17698,3 +17698,45 @@ o do chat.
   `apps/web/src/routes/duas-abas.orcamento.test.tsx` (a rajada invalida a fila
   do projeto na aba Executores, dentro do orçamento da RN-632)
 - **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)
+
+## Acompanhar ao vivo sem martelar (RN-639)
+
+### RN-639 — O que muda por token não re-renderiza a tela, e o que acompanha o bootstrap polla a 3 s e para no fim {#rn-639}
+
+Três telas faziam trabalho que ninguém via (AT-301/AT-302). A tela de Sessão
+re-renderizava INTEIRA a cada token de um turno — o texto em curso morava em
+estado do hook chamado por ela. As telas de provisionamento e de adoção pollavam
+o status do bootstrap e os eventos da sessão técnica a 1 s, e os eventos nunca
+paravam, mesmo com o repositório pronto. E o `/status` batia para sempre num
+serviço que não respondia.
+
+1. **O texto em curso mora num store externo.** O texto do chat consultivo e a
+   faixa de atividade do turno ficam num store por sessão
+   (`criarStoreDoStreaming`), assinado por `useSyncExternalStore` só pelos dois
+   componentes que os desenham — a bolha do fio e a faixa. A página assina UMA
+   pergunta booleana (o turno já mostrou conteúdo?), que é o que o timer de
+   "pensando" ([RN-131](#rn-131)) precisa e que muda uma vez por turno. O
+   reducer da faixa é o mesmo; mudou quem guarda o estado.
+2. **O bootstrap é acompanhado a 3 s.** Status e eventos, nas duas telas.
+3. **E para no fim.** Status e eventos param quando o bootstrap converge
+   (`provisioned`) e quando a query erra (`pollQueParaNoErro`). A FALHA
+   (`provision_failed`) é terminal na adoção e NÃO no provisionamento: ali o
+   "Tentar novamente" dispara um bootstrap novo e a tela precisa ver o
+   progresso dele ([RN-477](#rn-477)).
+4. **O `/status` para no erro.** Serviço que responde — inclusive com 5xx, que
+   vira `status: 'error'` num corpo resolvido — segue a cada 5 s. Serviço que
+   não responde deixa de ser perguntado por timer; o foco da janela e a
+   remontagem perguntam de novo, e o primeiro sucesso retoma o ritmo.
+
+- **Onde:** `apps/web/src/lib/streaming-do-turno.ts:48` (`criarStoreDoStreaming`),
+  `apps/web/src/lib/streaming-do-turno.ts:98` (`useSemConteudoNoTurno`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
+  `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
+  `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
+  `apps/web/src/routes/StatusPage.tsx:61` (`pollQueParaNoErro`)
+- **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
+  tokens depois do primeiro não re-renderizam a página; o fim do turno
+  re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
+  `apps/web/src/lib/poll-do-bootstrap.test.ts`,
+  `apps/web/src/routes/StatusPage.test.tsx`
+- **Origem:** AT-301, AT-302
