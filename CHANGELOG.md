@@ -1345,6 +1345,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   segue sem rodar em PR; o driver é exercitado em PR por
   `scripts/dev/install-e2e.spec.ts`.
 
+### Desempenho
+
+- **ci**: CI mais rápido sem runner pago (AT-303..306). Os nomes dos checks
+  exigidos NÃO mudam.
+  - O job `Build, scan e smoke das imagens de produção` classifica o diff do
+    PR no primeiro passo (`scripts/ci/diff-toca-imagem.ts`) e, quando nada
+    dele entra em imagem, no smoke ou no E2E (só `docs/` exceto
+    `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
+    exceto o `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`),
+    pula bake, Trivy, broker, smoke e E2E POR PASSO e termina verde dizendo
+    por quê. Na dúvida, roda tudo. O spec prova a lista contra os
+    Dockerfiles reais, por mutação.
+  - O mesmo job guarda em cache o navegador do Playwright (chave: versão +
+    `e2e/pnpm-lock.yaml`), o store do pnpm do `e2e/` e a base do Trivy (chave
+    diária; quem decide se ela está velha continua sendo o próprio Trivy).
+  - `Testes TS (api)` e `Testes TS (web)` rodam em dois shards cada; o job com
+    o nome antigo agrega: confere os dois shards, junta os relatórios `blob`
+    e aplica o MESMO piso de cobertura sobre a soma
+    (`vitest --merge-reports --coverage`).
+  - `claude-code-review.yml` ganha `concurrency` (cancela a revisão de um
+    HEAD que já mudou) e teto de 30 min; `docs-check.yml` ganha
+    `timeout-minutes`.
+
 ### Novidades
 
 - **web/api**: a criação de projeto e a página de containers **só oferecem o

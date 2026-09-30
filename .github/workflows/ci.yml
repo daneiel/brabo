@@ -235,13 +235,23 @@ jobs:
             docker/web/Dockerfile.prod docker/backup/Dockerfile.prod \
             docker/broker/Dockerfile.prod
 
-  test-api:
-    name: Testes TS (api)
+  # AT-305: a suíte da api em DOIS shards (matriz), cada um com o seu
+  # Postgres. O piso de cobertura NÃO é conferido no shard (metade dos
+  # arquivos daria metade da cobertura): cada shard grava um relatório `blob`
+  # e o job `test-api` logo abaixo — o que carrega o nome do check — junta os
+  # dois e confere o piso UMA vez, com os números de `apps/api/vitest.config.ts`.
+  test-api-shard:
+    name: Testes TS (api) — shard ${{ matrix.shard }}/2
     runs-on: ubuntu-latest
     # Medido no run 33970169946 (job `test-ts`, antes da divisão): api sozinha
     # (setup + testes + typecheck) ficava por volta de 180s. 8min é folga real
-    # sem ser bobeira.
+    # sem ser bobeira — e o shard faz metade disso.
     timeout-minutes: 8
+    strategy:
+      # Os dois até o fim: o agregador precisa saber de CADA um.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     services:
       postgres:
         # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
@@ -266,7 +276,8 @@ jobs:
       # o setup deriva o banco template (`brabo_test_template`) e um banco
       # por worker do Vitest (`brabo_test_w1`..`brabo_test_w4`,
       # `apps/api/test/support/test-db-name.ts`) — nenhum teste conecta em
-      # "brabo_test" no fluxo normal.
+      # "brabo_test" no fluxo normal. Cada shard tem o SEU Postgres (serviço
+      # por job), então os bancos por worker não se cruzam entre shards.
       DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
       TEST_DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo_test
     steps:
@@ -283,32 +294,109 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `-- --coverage` liga o `@vitest/coverage-v8` (provider `v8`, nativo do
-      # vitest — não é lib nova). `apps/api/vitest.config.ts` tem
-      # `coverage.thresholds` gravado no valor medido hoje, arredondado para
-      # baixo (RATCHET, não meta): o próprio vitest reprova o job se a
-      # cobertura cair abaixo disso. `pnpm --filter api test` (sem
-      # `--coverage`) continua o script que devs usam no dia a dia, sem gerar
-      # relatório — só o CI mede o piso.
-      - name: Testes da api (com piso de cobertura)
-        run: pnpm --filter api test -- --coverage
+      # `-- --coverage` virou flags explícitas: o piso ZERADO só aqui (ver o
+      # comentário do job), o relatório `blob` para o agregador, e o
+      # `default` junto para o log do shard continuar legível.
+      - name: Testes da api (shard ${{ matrix.shard }}/2)
+        run: pnpm --filter api exec vitest run --shard=${{ matrix.shard }}/2 --coverage --coverage.reporter=text-summary --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-${{ matrix.shard }}.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: vitest-blob-api-${{ matrix.shard }}
+          path: apps/api/.vitest-reports/
+          retention-days: 1
+          if-no-files-found: error
+          # `.vitest-reports` começa com ponto, e o upload-artifact ignora
+          # arquivo oculto por padrão — sem isto o shard verde falha no upload.
+          include-hidden-files: true
 
       # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
       # mesmo motivo do typecheck dos scripts de CI, no job `test-packages`.
       # Aqui isso importa mais do que parece: os DTOs de resposta da Fase 7b
       # provam por TIPO que espelham a entidade de domínio (`Wire<T>` +
       # `MesmasChaves`), e sem este passo essa prova só rodaria no job de
-      # imagens, 20 minutos depois e num lugar que ninguém lê.
+      # imagens, 20 minutos depois e num lugar que ninguém lê. Só num shard:
+      # o tipo não muda com a metade dos testes, e no agregador somaria ao
+      # caminho crítico.
       - name: Typecheck da api
+        if: matrix.shard == 1
         run: pnpm --filter api typecheck
 
-  test-web:
-    name: Testes TS (web)
+  # O NOME do check que a proteção de branch conhece (`Testes TS (api)`) fica
+  # neste job, e não nos shards: renomear um check exigido trava todo PR para
+  # sempre (docs/reference/rulesets.md). Ele depende dos shards e é o único que
+  # decide o veredito.
+  #
+  # `if: always()` é obrigatório, não enfeite: sem ele, um shard vermelho
+  # deixaria este job `skipped` — e `skipped` CONTA COMO VERDE para check
+  # exigido. Com ele, o job sempre roda e o primeiro passo reprova se algum
+  # shard não terminou em `success`.
+  test-api:
+    name: Testes TS (api)
+    needs: test-api-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Os dois shards terminaram verdes
+        env:
+          RESULTADO: ${{ needs.test-api-shard.result }}
+        run: |
+          if [ "${RESULTADO}" != 'success' ]; then
+            echo "::error::os shards de api terminaram em '${RESULTADO}' — ver os jobs 'Testes TS (api) — shard N/2'."
+            exit 1
+          fi
+          echo "ok: os dois shards de api passaram"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          pattern: vitest-blob-api-*
+          path: apps/api/.vitest-reports
+          merge-multiple: true
+
+      # Relatório faltando não reprova o piso sozinho — a cobertura de UM shard
+      # pode até passar. Por isso a contagem é conferida antes do merge.
+      - name: Os dois relatórios de shard chegaram
+        run: |
+          n="$(find apps/api/.vitest-reports -name 'blob-*.json' | wc -l)"
+          if [ "${n}" -ne 2 ]; then
+            echo "::error::esperados 2 relatórios de shard de api, chegaram ${n}"
+            exit 1
+          fi
+
+      # O PISO: `vitest --merge-reports` junta os resultados e a cobertura dos
+      # dois shards e confere `coverage.thresholds` do config — os MESMOS
+      # números de antes, sem override. Teste que falhou num shard também
+      # reprova aqui (o merge repete o desfecho de cada arquivo).
+      - name: Piso de cobertura de api (shards agregados)
+        run: pnpm --filter api exec vitest run --merge-reports=.vitest-reports --coverage
+
+  # AT-305: a mesma divisão para o web — sem banco, então sem serviço. O web
+  # tinha a suíte de testes como a maior parte do job (125s de ~169s).
+  test-web-shard:
+    name: Testes TS (web) — shard ${{ matrix.shard }}/2
     runs-on: ubuntu-latest
     # Medido no run 33970169946 (job `test-ts`, antes da divisão): web sozinho
     # (setup + testes + typecheck) ficava por volta de 190s. 8min é folga real
     # sem ser bobeira. Sem serviço `postgres`: o web não toca banco.
     timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
@@ -323,10 +411,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Mesmo mecanismo do passo abaixo: `apps/web/vite.config.ts` tem
-      # `coverage.thresholds` no valor medido hoje, arredondado para baixo.
-      - name: Testes do web (com piso de cobertura)
-        run: pnpm --filter web test -- --coverage
+      # Mesmo mecanismo do shard da api: `apps/web/vite.config.ts` tem
+      # `coverage.thresholds`, e quem o confere é o agregador `test-web`.
+      - name: Testes do web (shard ${{ matrix.shard }}/2)
+        run: pnpm --filter web exec vitest run --shard=${{ matrix.shard }}/2 --coverage --coverage.reporter=text-summary --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 --reporter=default --reporter=blob --outputFile.blob=.vitest-reports/blob-${{ matrix.shard }}.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: vitest-blob-web-${{ matrix.shard }}
+          path: apps/web/.vitest-reports/
+          retention-days: 1
+          if-no-files-found: error
+          # `.vitest-reports` começa com ponto, e o upload-artifact ignora
+          # arquivo oculto por padrão — sem isto o shard verde falha no upload.
+          include-hidden-files: true
 
       # O web NÃO tinha typecheck no CI — só `lint` e `test`, e os dois passam
       # com erro de tipo (o vitest transpila por esbuild, que apaga os tipos
@@ -337,9 +435,73 @@ jobs:
       # O resultado foi quatro erros acumulados em três fases sem ninguém ver,
       # e a imagem `brabo-web` sem conseguir ser construída — ou seja, o deploy
       # Kubernetes inteiro quebrado, em silêncio. `--force` porque o `tsc -b`
-      # é incremental e pularia o trabalho num runner com cache.
+      # é incremental e pularia o trabalho num runner com cache. Só no shard
+      # 1, pelo mesmo motivo do da api.
       - name: Typecheck do web
+        if: matrix.shard == 1
         run: pnpm --filter web typecheck
+
+  # O NOME do check que a proteção de branch conhece (`Testes TS (web)`) fica
+  # neste job, e não nos shards: renomear um check exigido trava todo PR para
+  # sempre (docs/reference/rulesets.md). Ele depende dos shards e é o único que
+  # decide o veredito.
+  #
+  # `if: always()` é obrigatório, não enfeite: sem ele, um shard vermelho
+  # deixaria este job `skipped` — e `skipped` CONTA COMO VERDE para check
+  # exigido. Com ele, o job sempre roda e o primeiro passo reprova se algum
+  # shard não terminou em `success`.
+  test-web:
+    name: Testes TS (web)
+    needs: test-web-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Os dois shards terminaram verdes
+        env:
+          RESULTADO: ${{ needs.test-web-shard.result }}
+        run: |
+          if [ "${RESULTADO}" != 'success' ]; then
+            echo "::error::os shards de web terminaram em '${RESULTADO}' — ver os jobs 'Testes TS (web) — shard N/2'."
+            exit 1
+          fi
+          echo "ok: os dois shards de web passaram"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          pattern: vitest-blob-web-*
+          path: apps/web/.vitest-reports
+          merge-multiple: true
+
+      # Relatório faltando não reprova o piso sozinho — a cobertura de UM shard
+      # pode até passar. Por isso a contagem é conferida antes do merge.
+      - name: Os dois relatórios de shard chegaram
+        run: |
+          n="$(find apps/web/.vitest-reports -name 'blob-*.json' | wc -l)"
+          if [ "${n}" -ne 2 ]; then
+            echo "::error::esperados 2 relatórios de shard de web, chegaram ${n}"
+            exit 1
+          fi
+
+      # O PISO: `vitest --merge-reports` junta os resultados e a cobertura dos
+      # dois shards e confere `coverage.thresholds` do config — os MESMOS
+      # números de antes, sem override. Teste que falhou num shard também
+      # reprova aqui (o merge repete o desfecho de cada arquivo).
+      - name: Piso de cobertura de web (shards agregados)
+        run: pnpm --filter web exec vitest run --merge-reports=.vitest-reports --coverage
 
   test-packages:
     name: Testes TS (pacotes)
@@ -869,10 +1031,58 @@ jobs:
     # padrão — qualquer push efêmero fica publicamente puxável até a limpeza
     # rodar, e isso precisa ser uma decisão explícita de visibilidade, nunca
     # um acidente de default.
+    #
+    # O job SEMPRE roda e SEMPRE conclui (AT-303): quando o diff do PR não toca
+    # nada que entra em imagem, no smoke ou no E2E, os passos pesados são
+    # pulados POR PASSO e o job termina verde dizendo por quê. Nunca `paths:`
+    # no gatilho (o check exigido ficaria pendente para sempre) nem `if:` no
+    # job (`skipped` num re-run colaria o veredito no mesmo SHA) — ver
+    # scripts/ci/diff-toca-imagem.ts.
     steps:
+      # `fetch-depth: 2`: o checkout de `pull_request` é o MERGE COMMIT do PR
+      # na base, e o primeiro pai dele é a ponta da base. `HEAD^1..HEAD` é
+      # exatamente o que o PR traz — o mesmo conjunto de
+      # `origin/<base>...HEAD`, sem precisar do histórico para achar o
+      # merge-base.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 2
+
+      # Só para o `node scripts/ci/diff-toca-imagem.ts` logo abaixo (type
+      # stripping exige o Node pinado, não o do runner). Sem cache aqui: o do
+      # E2E vem num segundo `setup-node`, e só quando o job roda inteiro.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # AT-303. Na dúvida, roda: HEAD que não é merge commit de dois pais, ou
+      # `git diff` que falha, vira "não pôde ser calculado" e o job inteiro
+      # roda. A lista do que NÃO entra em imagem, e a prova dela contra os
+      # Dockerfiles reais, estão no script e no spec ao lado.
+      - name: O diff do PR toca imagem, smoke ou E2E?
+        id: diff
+        run: |
+          set -uo pipefail
+          pais="$(git rev-list --parents -n 1 HEAD | wc -w)"
+          if [ "${pais}" -eq 3 ] && arquivos="$(git diff --name-only --no-renames HEAD^1 HEAD)"; then
+            echo "diff de $(git rev-parse --short HEAD^1) (base) a $(git rev-parse --short HEAD^2) (PR):"
+            printf '%s\n' "${arquivos}" | node scripts/ci/diff-toca-imagem.ts
+          else
+            echo "HEAD não é o merge commit do PR (pais: $((pais - 1))) ou o diff falhou."
+            DIFF_INDISPONIVEL=1 node scripts/ci/diff-toca-imagem.ts
+          fi
+
+      - name: Imagens puladas — o diff não toca nada que entra nelas
+        if: steps.diff.outputs.rodar != 'true'
+        run: |
+          echo "Build, Trivy, broker, smoke e E2E NÃO rodaram neste PR, de propósito:"
+          echo "todo arquivo do diff está na lista de scripts/ci/diff-toca-imagem.ts"
+          echo "(docs, site, manifestos, workflows que não são o ci.yml). O resumo do"
+          echo "passo anterior lista a classificação. Verde aqui é 'nada a provar',"
+          echo "não 'provado'."
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+        if: steps.diff.outputs.rodar == 'true'
 
       # Os cinco alvos em PARALELO num builder só. Em sequência somavam ~6
       # dos 8 minutos do job (api 130s, engine 160s, web 49s, backup 20s).
@@ -883,6 +1093,7 @@ jobs:
       # O que cada alvo constrói, com que cache e com que tag está no
       # docker-bake.hcl da raiz, que também é o que se roda na mão.
       - name: Build das cinco imagens (em paralelo)
+        if: steps.diff.outputs.rodar == 'true'
         uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f  # v7.4.0
         with:
           files: docker-bake.hcl
@@ -892,6 +1103,7 @@ jobs:
       # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
       # porque é barato e falha com mensagem direta.
       - name: Nenhuma imagem pode rodar como root
+        if: steps.diff.outputs.rodar == 'true'
         run: |
           set -euo pipefail
           for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod brabo-broker:prod; do
@@ -925,6 +1137,7 @@ jobs:
       # paralelo — o download de ~110MB deixa de se repetir quatro vezes e a
       # cópia local em disco é bem mais barata que refazer o download.
       - name: Instalar o binário do trivy
+        if: steps.diff.outputs.rodar == 'true'
         run: |
           set -euo pipefail
           curl -fsSL -o /tmp/trivy.tar.gz \
@@ -934,10 +1147,34 @@ jobs:
           sudo chmod 0755 /usr/local/bin/trivy
           trivy --version
 
+      # AT-304: a base (~110MB comprimida) vinha do registry a CADA execução,
+      # sem cache — e o registry dela é também a fonte do flake conhecido de
+      # `TOOMANYREQUESTS`. Chave DIÁRIA (UTC) com `restore-keys` pela versão:
+      # o cache só SEMEIA o diretório; quem decide se a base está velha
+      # continua sendo o próprio Trivy no passo seguinte (`--download-db-only`
+      # compara o `NextUpdate` do metadata e baixa de novo quando passou). O
+      # veredito não fica mais frouxo por causa do cache: a régua de frescor é
+      # a do Trivy, igual à de uma máquina local. Ver
+      # docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      - name: Dia UTC (chave do cache da base do trivy)
+        id: dia
+        if: steps.diff.outputs.rodar == 'true'
+        run: echo "dia=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache da base de vulnerabilidades do trivy
+        if: steps.diff.outputs.rodar == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: /tmp/trivy-cache/seed/db
+          key: trivy-db-${{ env.TRIVY_VERSION }}-${{ steps.dia.outputs.dia }}
+          restore-keys: trivy-db-${{ env.TRIVY_VERSION }}-
+
       - name: Baixar a base de vulnerabilidades do trivy
+        if: steps.diff.outputs.rodar == 'true'
         run: trivy image --cache-dir /tmp/trivy-cache/seed --no-progress --download-db-only
 
       - name: Trivy nas cinco imagens (em paralelo)
+        if: steps.diff.outputs.rodar == 'true'
         run: |
           set -uo pipefail
           # NÃO "set -e" aqui: cada scan roda em background (&) dentro de um
@@ -1012,6 +1249,7 @@ jobs:
       # a integração, que é do E2E do instalador. O gid do grupo vem do socket
       # do runner, o mesmo cálculo que o instalador faz.
       - name: O broker de produção sobe healthy, endurecido
+        if: steps.diff.outputs.rodar == 'true'
         run: |
           set -euo pipefail
           token="$(openssl rand -base64 32 | tr -d '\n')"
@@ -1044,28 +1282,56 @@ jobs:
       # a maior parte do tempo aqui — um job separado as construiria de novo
       # para exercitar exatamente o mesmo compose.
       - name: Teste de fumaça (compose.prod)
+        if: steps.diff.outputs.rodar == 'true'
         run: SMOKE_NO_BUILD=1 SMOKE_KEEP_UP=1 bash docker/smoke.sh
 
       # Este job é de Docker e não tinha Node nem pnpm — só o E2E precisa.
       # Depois do build das imagens de propósito: falha de setup aqui não
       # deve custar a construção que é o objeto principal do job.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        if: steps.diff.outputs.rodar == 'true'
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      # Sem `cache: pnpm`: o lockfile do `e2e/` não é o da raiz, e apontar a
-      # chave de cache para o arquivo errado guarda a árvore errada.
+      # AT-304: `cache: pnpm` com a chave no lockfile DO `e2e/`. Antes não
+      # havia cache nenhum aqui, e o motivo era certo — apontar a chave para o
+      # lockfile da raiz guardaria a árvore errada. `cache-dependency-path` é
+      # o que resolve: a chave passa a ser o hash de `e2e/pnpm-lock.yaml`, o
+      # arquivo que de fato decide a árvore instalada abaixo.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        if: steps.diff.outputs.rodar == 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: e2e/pnpm-lock.yaml
 
       # `e2e/` NÃO é membro do workspace da raiz (mesmo desenho do `website/`,
       # ADR 0117): `pnpm install` roda de DENTRO da pasta, contra o lockfile
       # próprio. `--frozen-lockfile` porque lockfile que o CI atualiza sozinho
       # não é lockfile.
       - name: Dependências do E2E
+        if: steps.diff.outputs.rodar == 'true'
         run: pnpm install --frozen-lockfile
         working-directory: e2e
+
+      # AT-304: o chromium do Playwright era baixado a cada execução. A chave
+      # leva a VERSÃO exata do `@playwright/test` (é ela que escolhe o build do
+      # navegador) e o hash do lockfile do `e2e/`, então subir o Playwright
+      # invalida o cache sozinho. O cache guarda SÓ o navegador: as bibliotecas
+      # de sistema (`--with-deps`) vão para o apt do runner e não cabem num
+      # cache de diretório — com cache quente, instala só elas.
+      - name: Versão do Playwright (chave do cache do navegador)
+        id: playwright
+        if: steps.diff.outputs.rodar == 'true'
+        run: echo "versao=$(node -p "require('./e2e/package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache do navegador do Playwright
+        id: cache-playwright
+        if: steps.diff.outputs.rodar == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.versao }}-${{ hashFiles('e2e/pnpm-lock.yaml') }}
 
       # Só o chromium: um navegador prova o mecanismo (cookie httpOnly, CORS,
       # handshake do socket), e os outros dois custariam download e tempo para
@@ -1074,17 +1340,24 @@ jobs:
       # encaixa na disciplina de pin do repositório (ver
       # docs/explanation/cadeia-de-suprimentos-do-ci.md).
       - name: Navegador do Playwright
+        if: steps.diff.outputs.rodar == 'true' && steps.cache-playwright.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: e2e
 
+      - name: Dependências de sistema do navegador (navegador veio do cache)
+        if: steps.diff.outputs.rodar == 'true' && steps.cache-playwright.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+        working-directory: e2e
+
       - name: E2E de navegador (compose.prod de pé)
+        if: steps.diff.outputs.rodar == 'true'
         run: pnpm test
         working-directory: e2e
 
       # `if: always()` de propósito: o relatório só interessa quando falhou, e
       # é justamente aí que o passo anterior interrompeu o job.
       - name: Relatório do E2E
-        if: always()
+        if: always() && steps.diff.outputs.rodar == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: playwright-report
@@ -1096,5 +1369,5 @@ jobs:
       # `always()` porque volume de banco sobrevivendo a um job que falhou é o
       # tipo de lixo que só aparece semanas depois, no disco do runner.
       - name: Derrubar o compose
-        if: always()
+        if: always() && steps.diff.outputs.rodar == 'true'
         run: docker compose -f docker/docker-compose.prod.yml down -v

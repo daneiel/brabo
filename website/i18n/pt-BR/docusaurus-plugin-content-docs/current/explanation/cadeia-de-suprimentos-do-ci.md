@@ -118,6 +118,35 @@ e verifica por conta própria, e reproduzir a tabela de checksum dela à mão
 seria uma cópia que envelhece. Mais fraco que os binários dos scanners,
 dito em vez de subentendido.
 
+## O que o job de imagens guarda em cache, e o que o cache não muda {#images-job-caches}
+
+Desde a AT-304 o job `images` do `ci.yml` guarda três coisas entre execuções
+com `actions/cache` (preso por SHA como toda action), e cada uma foi escolhida
+para poupar tempo sem mover veredito nenhum:
+
+| cache | chave | quem decide o conteúdo |
+|---|---|---|
+| o navegador do Playwright (`~/.cache/ms-playwright`) | versão exata do `@playwright/test` + hash de `e2e/pnpm-lock.yaml` | o pin do lockfile acima — Playwright novo é chave nova, nunca acerto velho |
+| o store do pnpm do `e2e/` (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash de `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, que continua conferindo a integridade de cada tarball contra o lockfile |
+| a base de vulnerabilidades do Trivy (`/tmp/trivy-cache/seed/db`) | versão do Trivy + dia UTC, restaurando o dia anterior mais recente | **o próprio Trivy**: o `--download-db-only` continua rodando, lê o `NextUpdate` da base e baixa de novo quando ele passou |
+
+A última linha é a que poderia afrouxar um portão, e não afrouxa: o cache só
+*semeia* o diretório, e o frescor é julgado pela mesma régua que o Trivy usa
+numa máquina local. O que o cache tira é o download de ~110 MB do registry a
+cada execução — que era também a fonte do `TOOMANYREQUESTS` ocasional. O
+`release.yml` não usa esse cache: a tag escaneia com uma base que ela mesma
+baixa.
+
+O cache do navegador guarda **só** o navegador. As bibliotecas de sistema que
+o `--with-deps` instala vão para o apt do runner, que nenhum cache de
+diretório alcança, então a execução quente ainda as instala
+(`playwright install-deps`).
+
+O escopo é o do GitHub, não o nosso: o `ci.yml` só roda em `pull_request`,
+então esses caches são gravados no escopo do próprio PR e relidos pelos
+pushes seguintes dele (e do escopo da branch base, que este workflow nunca
+grava). Um PR não semeia o cache de outro.
+
 ## Imagens de container
 
 Imagem de terceiro está presa por tag, não por digest:
