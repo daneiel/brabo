@@ -378,6 +378,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o chat da Sessão passa a mostrar e deixar ESCOLHER o destinatário
+  da mensagem — um seletor "Para" no composer com os agentes que já estão na
+  sessão. Antes a mensagem ia, sem aviso, ao último agente ativado na janela de
+  200 eventos: no uso real de 29/09, depois dos aceites à Infra e ao Arquiteto,
+  o "oi" foi respondido pelo Arquiteto. Aceitar um handoff na tela faz do
+  agente que entrou o destinatário; com dois ou mais agentes e nenhuma escolha,
+  o envio fica travado e a tela pede a escolha. O card de aceite passa a casar
+  a oferta pelo `handoffId`, e agente ativado fora da janela (o
+  `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
+  (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
+
 - **api**: o merge executado do PR de um dev agent passa a marcar a tarefa como
   `done` — antes ela ficava em `in_review` para sempre (o `pr-6` foi mergeado três
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem

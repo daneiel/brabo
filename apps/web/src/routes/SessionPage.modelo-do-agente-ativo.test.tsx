@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { historicoFalso } from '../test/historico-de-eventos';
 
@@ -11,9 +11,12 @@ import { historicoFalso } from '../test/historico-de-eventos';
  * sessão→projeto→workspace (mais o fallback fixo pro Criativo), então depois
  * de um handoff pro PO/Arquiteto/Dev Lead a topbar continuava mostrando o
  * resultado desse fallback, nunca o modelo do agente que estava REALMENTE
- * respondendo. A correção manda o `activeAgent` (o mesmo que `SessionPage` já
- * calcula localmente) como query param — a cascata completa passa a rodar
- * pro agente certo.
+ * respondendo. A correção manda o agente como query param — a cascata
+ * completa passa a rodar pro agente certo.
+ *
+ * Desde a RN-631 esse agente é o DESTINATÁRIO do composer, escolhido pela
+ * pessoa — não mais "o ativado mais recente": com dois agentes na sessão e
+ * nenhuma escolha, não há agente a pedir.
  */
 
 const getSessionModelBinding = vi.fn();
@@ -46,7 +49,15 @@ vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
-  getSession: vi.fn().mockResolvedValue(null),
+  // Sessão ATIVA: é só nela que o composer (e o seletor de destinatário,
+  // RN-631) existe.
+  getSession: vi.fn().mockResolvedValue({
+    id: 'a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7',
+    projectId: 'proj-1',
+    status: 'active',
+    kind: 'consultiva',
+    name: null,
+  }),
   getSessionBudget: vi.fn().mockResolvedValue(null),
   getSessionModelBinding: (...args: unknown[]) => getSessionModelBinding(...args),
   listModels: vi.fn().mockResolvedValue(null),
@@ -93,6 +104,7 @@ function montar() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   getSessionModelBinding.mockResolvedValue({ modelId: 'm1', origin: 'workspace', skipped: [] });
 });
 
@@ -105,25 +117,30 @@ describe('SessionPage — o modelo pedido acompanha o agente ativo', () => {
     expect(getSessionModelBinding).toHaveBeenCalledWith('proj-1', ID, undefined);
   });
 
-  it('caminho feliz: depois do handoff pro PO, pede o binding COM agentId: "po"', async () => {
+  it('caminho feliz: escolhido o PO no composer, pede o binding COM agentId: "po"', async () => {
     eventos.mockReturnValue({
       items: [ativou('criativo', 1), ativou('po', 2)],
     });
     montar();
+    fireEvent.change(
+      within(await screen.findByTestId('destinatario-do-chat')).getByRole('combobox'),
+      { target: { value: 'po' } },
+    );
 
     await waitFor(() =>
       expect(getSessionModelBinding).toHaveBeenCalledWith('proj-1', ID, 'po'),
     );
   });
 
-  it('CASO DE FALHA: sem a correção, o binding do PO nunca seria pedido (ficaria preso no Criativo)', async () => {
+  it('CASO DE FALHA: dois agentes e nenhuma escolha — nenhum agente é presumido (RN-631)', async () => {
     eventos.mockReturnValue({
       items: [ativou('criativo', 1), ativou('po', 2)],
     });
     montar();
 
     await waitFor(() => expect(getSessionModelBinding).toHaveBeenCalled());
+    expect(getSessionModelBinding).toHaveBeenCalledWith('proj-1', ID, undefined);
+    expect(getSessionModelBinding).not.toHaveBeenCalledWith('proj-1', ID, 'po');
     expect(getSessionModelBinding).not.toHaveBeenCalledWith('proj-1', ID, 'criativo');
-    expect(getSessionModelBinding).not.toHaveBeenCalledWith('proj-1', ID, undefined);
   });
 });

@@ -23,6 +23,11 @@ export interface SessionComposerProps {
   isActive: boolean;
   handoffDaInfraOferecido: Handoff | undefined;
   handleAcceptHandoff: (handoffId: string, toAgent: string) => Promise<void>;
+  /** RN-631: a quem a mensagem pode ir, e a quem vai. */
+  opcoesDeDestinatario: string[];
+  destinatario: string | null;
+  precisaEscolherDestinatario: boolean;
+  escolherDestinatario: (agente: string) => void;
   manualHandoffTarget: string;
   setManualHandoffTarget: Dispatch<SetStateAction<string>>;
   enviandoHandoffManual: boolean;
@@ -54,6 +59,10 @@ export function SessionComposer({
   isActive,
   handoffDaInfraOferecido,
   handleAcceptHandoff,
+  opcoesDeDestinatario,
+  destinatario,
+  precisaEscolherDestinatario,
+  escolherDestinatario,
   manualHandoffTarget,
   setManualHandoffTarget,
   enviandoHandoffManual,
@@ -174,7 +183,52 @@ export function SessionComposer({
       )}
 
       {session?.status === 'active' ? (
-        <div className={styles.composer}>
+        <>
+        {/*
+          O destinatário da mensagem, VISÍVEL e escolhido (RN-631, AT-251).
+          Antes ele não aparecia em lugar nenhum: era "o último agente
+          ativado na janela de 200 eventos", e um handoff aceito por outro
+          caminho trocava a quem a próxima mensagem ia sem a pessoa ver.
+          Agora a linha nomeia quem recebe ANTES do envio; com duas ou mais
+          opções e nenhuma escolha, o envio trava e o motivo é dito em TEXTO
+          (tooltip em botão desabilitado não abre).
+        */}
+        <div className={styles.destinatarioRow} data-testid="destinatario-do-chat">
+          {opcoesDeDestinatario.length === 0 ? (
+            <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+          ) : (
+            <>
+              <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
+                {t('composer.destinatarioLabel')}
+              </label>
+              <Select
+                id="destinatario-do-chat"
+                value={destinatario ?? ''}
+                disabled={streaming}
+                onChange={(e) => {
+                  if (e.target.value) escolherDestinatario(e.target.value);
+                }}
+              >
+                {destinatario === null && (
+                  <option value="" disabled>
+                    {t('composer.destinatarioPlaceholder')}
+                  </option>
+                )}
+                {opcoesDeDestinatario.map((agente) => (
+                  <option key={agente} value={agente}>
+                    {nomeDoAgente(agente)}
+                  </option>
+                ))}
+              </Select>
+              {precisaEscolherDestinatario && (
+                <span className={styles.destinatarioAviso}>
+                  {t('composer.destinatarioPrecisaEscolher')}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
           <textarea
             className={styles.textarea}
             value={draft}
@@ -183,7 +237,10 @@ export function SessionComposer({
             placeholder={t('composer.placeholder')}
             disabled={streaming}
           />
-          <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
+          <Button
+            onClick={handleSend}
+            disabled={streaming || !draft.trim() || precisaEscolherDestinatario}
+          >
             {t('composer.enviar')}
           </Button>
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
@@ -258,6 +315,7 @@ export function SessionComposer({
             </Button>
           )}
         </div>
+        </>
       ) : (
         <div className={styles.activatePrompt}>
           {sessaoEhTerminal(session?.status) && draft.trim() !== '' && (

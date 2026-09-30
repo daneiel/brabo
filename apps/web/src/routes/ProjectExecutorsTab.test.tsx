@@ -173,6 +173,7 @@ function resumo(over: Partial<ProjectCardSummary['roster']> = {}): ProjectCardSu
       moduleNames: ['Backend'],
       gatesEverOpened: true,
       delegatedSubagents: [],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,

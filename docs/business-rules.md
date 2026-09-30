@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:718` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:769` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:560` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:595` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -268,11 +268,20 @@ to "infra" today would silently fall through to the Creative agent; treating
 it as the composer's active agent would reopen that trap instead of closing
 one.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:330` (`activeAgent`),
+> **Superseded in part by [RN-631](#rn-631) (AT-251):** "most recent
+> `agent.activated` wins" was itself an implicit default recipient, and an
+> invisible one. The composer's recipient is now CHOSEN by the person (a "To"
+> selector listing the agents already in the session) and the topbar model
+> follows that recipient. What survives from this rule is the half about the
+> model: the binding route receives the agent, never falls back silently.
+
+- **Where:** `apps/web/src/lib/session-destinatario.ts:134`
+  (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
-- **Test:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+- **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (formerly `SessionPage.agente-mais-recente.test.tsx`),
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
   `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
 - **Edge case:** Infra Lead doesn't participate in composer routing nor in
@@ -296,7 +305,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:254` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5643,7 +5652,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:176` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:181` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -16237,7 +16246,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/lib/session-handoffs.ts:60` (`offeredHandoff`)
+  `apps/web/src/lib/session-handoffs.ts:67` (`offeredHandoff`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
@@ -16867,8 +16876,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:117` (`podeDecidir`), `:253`
-  (`useRetomarTurnoDoLog`), `:791` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:122` (`podeDecidir`), `:258`
+  (`useRetomarTurnoDoLog`), `:842` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -16954,6 +16963,11 @@ primeiro. Quatro decisões:
 (`session-readiness.ts`, `session-handoffs.ts`) segue lendo a janela até a
 AT-251/AT-253 passarem a consumir `roster.activatedAgents`.
 
+> **Fechada na [RN-631](#rn-631) (AT-251):** o destinatário do composer e as
+> ofertas de handoff da tela de Sessão SOMAM `roster.activatedAgents` à janela,
+> com a guarda da mesma sessão. `criativoActive`/`arquitetoActive`
+> (`session-readiness.ts`) seguem lendo só a janela.
+
 - **Onde vive:** `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts:212`
   (`activatedAgents`); `apps/api/src/application/ports/projects-summary-repository.port.ts:32`
   (`activatedAgents`)
@@ -17020,3 +17034,69 @@ seguiram em `in_review` (AT-275).
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
   falho, PR sem tarefa)
 - **Origem:** AT-275
+
+### RN-631 — O destinatário do chat é escolhido e visível, e a oferta de handoff é casada pelo `handoffId` {#rn-631}
+
+O destinatário da mensagem do composer era DERIVADO: "o `agent.activated` mais
+recente dentro da janela de 200 eventos" (achado 9-fix). Era um destinatário
+padrão do lado da TELA — a classe de defeito que a [RN-584](#rn-584) fechou no
+engine — e era INVISÍVEL: o composer não dizia a quem a mensagem ia, e aceitar
+um handoff nesta tela não mudava nada além do log. No uso real de 29/09 a
+sessão teve `handoff.accepted` para a Infra e depois para o Arquiteto, e o "oi"
+do usuário foi respondido pelo Arquiteto sem que a tela avisasse. E o card de
+aceite casava a oferta com o evento pelo par ATOR/`toAgent` (`e.actor.id ===
+offeredHandoff.fromAgent`), embora o `handoff.offered` carregue o `handoffId`
+desde sempre (AT-251).
+
+**A regra:**
+
+1. **As OPÇÕES** são os agentes que conversam (`AGENTES_DE_CHAT`) e que já
+   estão na sessão: `agent.activated` na janela, `roster.activatedAgents` do
+   resumo do projeto ([RN-630](#rn-630), sessão INTEIRA, só com o resumo da
+   MESMA sessão, no molde da [RN-568](#rn-568)) ou handoff ACEITO (a lista de
+   handoffs não tem janela). Os dois últimos termos são a [RN-180](#rn-180): o
+   agente não some do seletor porque a ativação saiu dos 200 eventos. Na sessão
+   criativa o Criativo é opção antes de ativado, porque a primeira mensagem o
+   ativa (achado 3).
+2. **O destinatário é o que a pessoa ESCOLHEU** — no seletor "Para" do
+   composer, ou aceitando um handoff NESTA tela (o gesto de chamar aquele
+   agente; aceite que falha não troca nada). Nada do log escolhe por ela: um
+   aceite feito em outra aba ou por outro caminho só acrescenta uma opção.
+3. **Opção ÚNICA é o destinatário, e o composer a nomeia antes do envio.** Não
+   é um padrão no sentido da [RN-584](#rn-584) — não há outro agente a quem a
+   mensagem pudesse ir.
+4. **Duas ou mais opções e nenhuma escolha válida: sem destinatário.** O
+   "Enviar" (e o Enter) fica travado e a tela diz em TEXTO que é preciso
+   escolher — nunca "a mais recente". Zero opções é o chat da sessão sem agente
+   (SSE), e a tela também o diz.
+5. **A escolha é lembrada por sessão no `localStorage`** — conforto de quem vê
+   (sem armazenamento a tela só volta a pedir a escolha), nunca estado do
+   produto.
+6. **"Parar" para o agente DO TURNO** (`turnoAgentRef`, `streamingAgent`,
+   `statusAgent`), e só na falta dele o destinatário: trocar o seletor no meio
+   do turno de outro agente não pode parar o errado. O modelo exibido na topbar
+   segue o destinatário.
+7. **A oferta é casada pelo `handoffId` do payload**, nunca pelo ator: cada
+   `handoff.offered` é o card da oferta dele, sem par para confundir nem "mais
+   recente" para escolher. As ofertas a agente já ativado (janela OU
+   `roster.activatedAgents`) não voltam a ser aceitáveis.
+
+A guarda da [RN-584](#rn-584) (`scripts/ci/destinos-do-composer.spec.ts`)
+passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
+`SessionPage.tsx`: todo destino que o composer pode dar continua tendo
+cláusula própria no engine. Nenhuma mudança de api nem de engine.
+
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:94` (`agentesEmConversa`),
+  `:117` (`resolverDestinatario`), `:134` (`useDestinatarioDoChat`), `:78`
+  (`useAtivadosNaSessaoInteira`); `apps/web/src/routes/SessionComposer.tsx:196`
+  (`destinatarioRow`); `apps/web/src/routes/SessionPage.tsx:330`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
+  (`handoffIdDoEvento`); `apps/web/src/lib/session-handoffs.ts:41` (`activeFor`)
+- **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
+  por quê; opção única; handoff aceito fora da janela; resumo da mesma sessão
+  e de outra; aceite que troca e aceite que falha; escolha lembrada; sessão sem
+  agente), `apps/web/src/lib/session-destinatario.test.ts`,
+  `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx` (oferta
+  antiga de OUTRO `handoffId` fica muda)
+- **Origem:** AT-251

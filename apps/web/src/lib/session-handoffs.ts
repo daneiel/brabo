@@ -25,6 +25,7 @@ export interface DerivacoesDeHandoff {
 export function derivarHandoffsDaSessao(
   events: SessionEvent[],
   handoffs: Handoff[],
+  ativadosNaSessaoInteira: readonly string[] = [],
 ): DerivacoesDeHandoff {
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
@@ -32,7 +33,13 @@ export function derivarHandoffsDaSessao(
   // internamente pra `criativoActive`/`arquitetoActive` (`session-
   // readiness.ts`) — o único consumidor que sobra aqui é `offeredHandoff`,
   // logo abaixo, que não faz parte da extração do hook.
+  //
+  // Desde a RN-631 a janela é SOMADA a `roster.activatedAgents` do resumo
+  // (RN-630, sessão inteira): sem isso, numa sessão longa a ativação do agente
+  // saía dos 200 eventos e a oferta endereçada a ele voltava a parecer
+  // aceitável. Ativação é monótona, então somar só corrige falso negativo.
   const activeFor = (agent: string) =>
+    ativadosNaSessaoInteira.includes(agent) ||
     events.some(
       (e) =>
         e.type === 'agent.activated' &&

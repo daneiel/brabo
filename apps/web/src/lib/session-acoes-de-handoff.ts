@@ -116,7 +116,9 @@ export function useAcoesDeHandoff({
     }
   }
 
-  async function handleAcceptHandoff(handoffId: string, toAgent: string) {
+  /** Resolve `true` quando o aceite passou — é por isso que a tela troca o
+   * destinatário do composer para o agente que entrou (RN-631). */
+  async function handleAcceptHandoff(handoffId: string, toAgent: string): Promise<boolean> {
     // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
@@ -142,10 +144,12 @@ export function useAcoesDeHandoff({
       if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
         await handleActivateExecution();
       }
+      return true;
     } catch {
       turnoAgentRef.current = null;
       setTurnoViaCanal(false);
       showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
+      return false;
     }
   }
 

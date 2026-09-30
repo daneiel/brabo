@@ -125,21 +125,14 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   // inteira — é o que impede um desfecho de escorregar para o turno de
   // baixo.
   const aberturas = aberturasDeTurno(events);
-  // O evento que representa a oferta de handoff ATUAL (ainda não aceita) —
-  // o `handoff.offered` mais RECENTE com o mesmo par fromAgent/toAgent de
-  // `offeredHandoff` (RN-125). O payload do evento não carrega o id do
-  // handoff, então o par + "mais recente" é o jeito de achar QUAL entrada
-  // da timeline vira o card acionável, sem reabrir um convite de aceite
-  // que uma oferta mais antiga pro mesmo par já tenha resolvido.
-  const offeredHandoffEventSeq = offeredHandoff
-    ? events.reduce((maisRecente, e) => {
-        const paraOMesmoPar =
-          e.type === 'handoff.offered' &&
-          e.actor.id === offeredHandoff.fromAgent &&
-          (e.payload as { toAgent?: string })?.toAgent === offeredHandoff.toAgent;
-        return paraOMesmoPar ? Math.max(maisRecente, e.seq) : maisRecente;
-      }, -1)
-    : -1;
+  // A oferta ATUAL (ainda não aceita) vira card acionável no evento que a
+  // CRIOU, casado pelo `handoffId` do payload (RN-631, AT-251) — o id que
+  // `CreateHandoffUseCase` grava no `handoff.offered` desde sempre. Até aqui o
+  // casamento era pelo par ATOR/`toAgent` (RN-125), e o ator nem sempre é o
+  // `fromAgent`: no handoff MANUAL quem grava o evento é a PESSOA (ADR
+  // 0109/RN-440), e o card nunca ganhava o botão (AT-253). Por id não há par
+  // para confundir nem "mais recente" para escolher: cada oferta é o evento
+  // dela.
 
   // Carrossel de histórias (RN-148) — a leva é o conjunto de histórias
   // REALMENTE pendentes de promoção NESTA sessão, e essa verdade NÃO PODE
@@ -458,7 +451,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // (RN-125). Dois botões com o texto IDÊNTICO visíveis ao mesmo
       // tempo (um na topbar, um no fio) seria o mesmo problema que
       // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
-      const isOfertaAtual = isActive && event.seq === offeredHandoffEventSeq;
+      const handoffIdDoEvento = (event.payload as { handoffId?: string })?.handoffId;
+      const isOfertaAtual =
+        isActive && !!offeredHandoff && handoffIdDoEvento === offeredHandoff.id;
       empurrar({
         // RN-172: passar o bastão é o DESFECHO do turno, e por isso desce
         // abaixo da última fala do agente que passou — o `seq` do evento o

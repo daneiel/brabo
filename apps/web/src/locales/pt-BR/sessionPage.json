@@ -51,7 +51,11 @@
     "confirmarArquitetura": "Confirmar arquitetura pronta",
     "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
     "confirmarNecessidade": "Confirmar necessidade validada",
-    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
+    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade",
+    "destinatarioLabel": "Para",
+    "destinatarioPlaceholder": "Escolha o agente…",
+    "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
+    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
