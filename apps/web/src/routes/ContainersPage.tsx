@@ -55,7 +55,11 @@ function AcoesDoContainer({
   papel: Role | undefined;
 }) {
   const { t } = useTranslation('containers');
-  const { latest: latestSession } = useLatestSession(item.projectId);
+  // Sem poll (AT-278, RN-632): a linha só precisa da sessão para PROPOR no
+  // clique, e cada linha em poll de 5s era uma requisição a cada 5s POR
+  // PROJETO do workspace — a página inteira sozinha passava de 100/min com
+  // nove projetos. Montagem e foco da janela bastam.
+  const { latest: latestSession } = useLatestSession(item.projectId, false);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [emAndamento, setEmAndamento] = useState<

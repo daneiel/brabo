@@ -89,8 +89,10 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     expect(within(aprovacoes).getByText('2')).toBeInTheDocument();
     expect(within(merges).getByText('1')).toBeInTheDocument();
     expect(screen.queryByText(/npm test propria/)).toBeNull();
-    // Cada linha diz de onde vem.
-    expect(within(aprovacoes).getAllByText(/Proposta na sessão #/)).toHaveLength(2);
+    // De onde vem é dito UMA vez por sessão (AT-318): as duas aprovações são
+    // da mesma sessão, e o rótulo não se repete entre um card e outro.
+    expect(within(aprovacoes).getAllByText(/propostas na sessão #/)).toHaveLength(1);
+    expect(within(merges).getAllByText(/Proposta na sessão #/)).toHaveLength(1);
 
     fireEvent.click(within(aprovacoes).getAllByRole('button', { name: 'Aprovar' })[0]!);
     await waitFor(() => expect(approveAction).toHaveBeenCalledWith('proj-1', EXECUCAO, 'a1'));
@@ -129,5 +131,43 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     );
     montar();
     expect(await screen.findByText(/Mostrando 20 de 23/)).toBeInTheDocument();
+  });
+});
+
+describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)', () => {
+  it('três cards da mesma sessão: os três à vista, com o detalhe FECHADO, e a presença por fila no cabeçalho', async () => {
+    getProjectPendingActions.mockResolvedValue([
+      acao('c1', { actionType: 'container_start', payload: { imagem: 'node:22' } }),
+      acao('c2'),
+      acao('c3'),
+      acao('m1', {
+        actionType: 'git_merge',
+        payload: { pullRequestId: '7', sourceBranch: 'feature/x', targetBranch: 'dev' },
+      }),
+    ]);
+
+    montar();
+
+    const aprovacoes = await screen.findByRole('region', { name: 'Aprovações' });
+    expect(within(aprovacoes).getAllByRole('button', { name: 'Aprovar' })).toHaveLength(3);
+    // Nenhum detalhe nasce aberto: empilhados, eles empurravam os outros cards.
+    expect(within(aprovacoes).queryAllByRole('button', { expanded: true })).toHaveLength(0);
+    expect(within(aprovacoes).getAllByRole('button', { expanded: false }).length).toBeGreaterThanOrEqual(3);
+    // Presença por fila, cada uma com o próprio número — nunca "4".
+    const topo = screen.getByRole('button', { name: /Pendências de outras sessões/ });
+    expect(topo).toHaveTextContent('Aprovações 3 · Merges de PR 1');
+    expect(topo).not.toHaveTextContent(/\b4\b/);
+  });
+
+  it('recolhido, o bloco some do fio mas a presença continua no cabeçalho', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    montar();
+
+    const topo = await screen.findByRole('button', { name: /Pendências de outras sessões/ });
+    fireEvent.click(topo);
+
+    expect(topo).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).toBeNull();
+    expect(topo).toHaveTextContent('Aprovações 1');
   });
 });

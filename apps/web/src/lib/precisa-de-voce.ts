@@ -75,8 +75,12 @@ export interface FilaPrecisaDeVoce {
 }
 
 export interface EntradaDasFilas {
-  /** Ações pendentes da sessão mais recente (`usePendingActions`). */
-  acoesDaSessao: ProposedAction[] | undefined;
+  /**
+   * Ações pendentes do PROJETO, em qualquer sessão (`useProjectPendingActions`,
+   * AT-297/RN-638). Era a sessão criada por último, e uma ideação aberta
+   * depois da execução escondia as decisões dos dev agents.
+   */
+  acoesPendentes: ProposedAction[] | undefined;
   /** `git_merge` pendente em QUALQUER sessão (`useProjectPendingActions`). */
   merges: ProposedAction[] | undefined;
   /** O backlog inteiro (`useBacklog`) — histórias e a data de cada uma. */
@@ -136,14 +140,14 @@ export function montarFilas(entrada: EntradaDasFilas): FilaPrecisaDeVoce[] {
   const merges = (entrada.merges ?? []).filter((a) => a.status === 'pending');
   const idsDeMerge = new Set(merges.map((a) => a.id));
 
-  // A MESMA `proposed_action` de `git_merge` pode chegar pelos dois hooks:
-  // `usePendingActions` é da sessão mais recente e não filtra por tipo, e
-  // `useProjectPendingActions(_, 'git_merge')` é project-wide. Nas abas isso
+  // A MESMA `proposed_action` de `git_merge` pode chegar pelas duas entradas:
+  // `acoesPendentes` não filtra por tipo, e `merges` é o recorte `git_merge`
+  // da mesma fila do projeto. Nas abas isso
   // não incomoda (cada aba responde uma pergunta), mas numa lista só a mesma
   // decisão apareceria DUAS vezes, sob dois títulos — e quem visse dois
   // cards contaria dois trabalhos. Fica no grupo mais ESPECÍFICO (`prs`);
   // isto é deduplicação por identidade, nunca soma de filas.
-  const aprovacoes = (entrada.acoesDaSessao ?? [])
+  const aprovacoes = (entrada.acoesPendentes ?? [])
     .filter((a) => a.status === 'pending' && !idsDeMerge.has(a.id))
     .map<ItemDaFila>((acao) => ({
       id: acao.id,
