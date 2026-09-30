@@ -66,15 +66,103 @@ function exigirId(corpo: Record<string, unknown>, oque: string): string {
  * por EXECUÇÃO e não persistido em disco: uma execução leva minutos, e a
  * próxima começa do zero.
  */
-let tokenDaExecucao: Promise<string> | null = null;
+let loginDaExecucao: Promise<LoginDaSemeadura> | null = null;
 
-/** Login pelo endpoint da api, para obter o Bearer que semeia o resto. */
-export function autenticar(): Promise<string> {
-  tokenDaExecucao ??= fazerLogin();
-  return tokenDaExecucao;
+interface LoginDaSemeadura {
+  token: string;
+  cookies: CookieDaSemeadura[];
 }
 
-async function fazerLogin(): Promise<string> {
+/** Login pelo endpoint da api, para obter o Bearer que semeia o resto. */
+export async function autenticar(): Promise<string> {
+  loginDaExecucao ??= fazerLogin();
+  return (await loginDaExecucao).token;
+}
+
+/**
+ * O cookie como `BrowserContext.addCookies` o aceita — declarado aqui, e não
+ * importado do Playwright, porque este módulo é só `fetch` e não depende dele.
+ */
+export interface CookieDaSemeadura {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'Strict' | 'Lax' | 'None';
+  expires?: number;
+}
+
+let cookiesJaEntregues = false;
+
+/**
+ * Os cookies (`brabo_refresh` httpOnly e o par `brabo_csrf`) do MESMO login de
+ * semeadura, para um spec que precisa de sessão de NAVEGADOR sem consumir o
+ * estado do `setup` (ver "Só UM spec por execução pode usar o estado do
+ * `setup`" no README).
+ *
+ * A semeadura usa só o Bearer desse login, então o refresh dele está intacto —
+ * e vale UMA vez, pelo mesmo motivo do estado do `setup`: `RefreshUseCase`
+ * rotaciona e revoga a família no reuso. Por isso a entrega é única e a
+ * segunda chamada LANÇA, nomeando a regra: um segundo consumidor derrubaria o
+ * primeiro, e o vermelho apareceria no spec errado. Nenhum login a mais é
+ * gasto do balde do lockout.
+ */
+export async function cookiesDaSemeadura(): Promise<CookieDaSemeadura[]> {
+  if (cookiesJaEntregues) {
+    throw new Error(
+      'cookiesDaSemeadura() já foi consumida nesta execução: o refresh vale uma ' +
+        'vez (rotação com detecção de reuso). Ver e2e/README.md.',
+    );
+  }
+  cookiesJaEntregues = true;
+  loginDaExecucao ??= fazerLogin();
+  return (await loginDaExecucao).cookies;
+}
+
+/**
+ * `Set-Cookie` → cookie do Playwright. O domínio é o HOST da api, sem porta:
+ * cookie não distingue porta, e é por isso que o `brabo_csrf` gravado por
+ * `:3000` é legível pelo JS em `:8088` — o double-submit depende disso.
+ */
+function lerSetCookie(linha: string): CookieDaSemeadura {
+  const [par = '', ...atributos] = linha.split(';').map((p) => p.trim());
+  const igual = par.indexOf('=');
+  const cookie: CookieDaSemeadura = {
+    name: par.slice(0, igual),
+    value: par.slice(igual + 1),
+    domain: new URL(API).hostname,
+    path: '/',
+    httpOnly: false,
+    secure: false,
+    sameSite: 'Lax',
+  };
+  for (const atributo of atributos) {
+    const [chave = '', valor = ''] = atributo.split('=');
+    switch (chave.toLowerCase()) {
+      case 'path':
+        cookie.path = valor;
+        break;
+      case 'httponly':
+        cookie.httpOnly = true;
+        break;
+      case 'secure':
+        cookie.secure = true;
+        break;
+      case 'samesite':
+        cookie.sameSite = (valor.charAt(0).toUpperCase() + valor.slice(1).toLowerCase()) as
+          CookieDaSemeadura['sameSite'];
+        break;
+      case 'expires':
+        cookie.expires = Math.floor(Date.parse(valor) / 1000);
+        break;
+    }
+  }
+  return cookie;
+}
+
+async function fazerLogin(): Promise<LoginDaSemeadura> {
   const resposta = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -98,12 +186,75 @@ async function fazerLogin(): Promise<string> {
     );
   }
 
+  // Lido ANTES do corpo: `json()` consome a resposta, os cabeçalhos não.
+  const cookies = resposta.headers.getSetCookie().map(lerSetCookie);
   const corpo = await json(resposta, 'POST /auth/login');
   const token = corpo.accessToken;
   if (typeof token !== 'string' || token.length === 0) {
     throw new Error('login não devolveu accessToken');
   }
-  return token;
+  return { token, cookies };
+}
+
+/** O `sub` do access token — o id do usuário semeado, sem uma chamada a mais. */
+function usuarioDoToken(token: string): string {
+  const carga = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as {
+    sub?: unknown;
+  };
+  if (typeof carga.sub !== 'string' || carga.sub.length === 0) {
+    throw new Error('access token sem `sub`');
+  }
+  return carga.sub;
+}
+
+/**
+ * Propõe na sessão uma ação que a política deixa `pending`, e devolve o id.
+ *
+ * O TIPO é `write_file`, escolhido por MEDIÇÃO e não por palpite — o motivo
+ * inteiro está em `e2e/README.md` ("Qual ação o spec de aprovação propõe"). Em
+ * resumo: `decide()` dá `require_approval` a todo tipo sem regra, e o
+ * `permissions.json` de um projeto recém-criado é vazio; entre os tipos que
+ * ficam `pending`, `write_file` é um dos que NÃO têm executor na api
+ * (`ApproveActionUseCase` o devolve aprovado sem efeito), e com ator `user`
+ * nenhum agente espera por ele no engine. Se o spec um dia aprovasse em vez
+ * de recusar, nada seria escrito em disco nenhum.
+ *
+ * Nasce `pending` ou este preparo LANÇA: uma mudança de política que o
+ * auto-aprovasse faria o card nunca ter botões, e o spec acusaria a tela.
+ */
+export async function proporAcaoPendente(token: string, sessao: SessaoSemeada): Promise<string> {
+  const acao = await json(
+    await fetch(`${API}/projects/${sessao.projectId}/sessions/${sessao.sessionId}/actions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'write_file',
+        actor: { kind: 'user', id: usuarioDoToken(token) },
+        payload: { path: 'e2e/aprovacao-inline.txt', content: 'nunca escrito: o spec recusa.\n' },
+      }),
+    }),
+    'POST .../actions',
+  );
+  if (acao.status !== 'pending') {
+    throw new Error(
+      `a ação não nasceu pending (status ${String(acao.status)}, política ` +
+        `${String(acao.resolvedPolicy)}): sem pendência não há o que decidir na tela`,
+    );
+  }
+  return exigirId(acao, 'ação');
+}
+
+/** Os ids das ações `pending` da sessão, lidos pela api — a FILA, não a tela. */
+export async function idsPendentes(token: string, sessao: SessaoSemeada): Promise<string[]> {
+  const pagina = await json(
+    await fetch(
+      `${API}/projects/${sessao.projectId}/sessions/${sessao.sessionId}/actions?latest=true&status=pending`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ),
+    'GET .../actions?status=pending',
+  );
+  const itens = Array.isArray(pagina.items) ? (pagina.items as Array<{ id?: unknown }>) : [];
+  return itens.map((i) => String(i.id));
 }
 
 /**

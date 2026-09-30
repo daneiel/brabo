@@ -1696,6 +1696,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Testes
 
+- **e2e**: **a aprovação inline ganha E2E de navegador** (AT-068,
+  `e2e/testes/aprovacao-inline.spec.ts`). Uma `write_file` com ator `user`
+  nasce `pending` pela semeadura; o spec abre a sessão com os cookies do login
+  de semeadura, recusa pelo `ApprovalCard` do chat e asserta a requisição
+  observada — `POST /auth/refresh` com `X-CSRF-Token`, o POST de decisão
+  cruzado `:8088` → `:3000` com `Bearer`, 201 com `denied` — e a fila da api
+  sem a pendência. A medição corrigiu o enunciado: a decisão não leva CSRF
+  (só `/auth` o exige); o CSRF provado é o do refresh que dá o access à página.
+  O streaming do turno fica DECLARADO no `e2e/README.md`: o `agent.delta` só
+  nasce de chunk de provider de LLM real, e não há provider de mentira.
+
 - **deploy/k8s**: **a rotação da chave mestra ganha um ensaio no cluster, toda
   semana** (AT-146, BRB-010). Ela nunca tinha rodado em ambiente real (resposta
   do mantenedor, 27/09), e só o spec da RN-562 a provava — sem imagem, sem
