@@ -311,13 +311,15 @@ defmodule Engine.Harness.RoteamentoDeFerramentaTest do
       Process.put(:fake_llm_turns, [turno, FakeEngineApiClient.final_response("aguardando")])
       Process.put(:fake_propose_action, %{"id" => "pa-1", "status" => "pending"})
 
-      assert {:ok, _} = ToolLoop.run(ctx)
+      # O laço PARA esperando a decisão humana: o Jev escolheu, mas quem aprova
+      # continua sendo a política — nenhum resultado de `terminal` chega ao modelo.
+      assert {:halted, {:awaiting_approval, "pa-1", _tool_call_id, "terminal"}, out} =
+               ToolLoop.run(ctx)
+
+      refute Enum.any?(out.messages, &(&1["role"] == "tool"))
 
       assert_received {:propose_action, "terminal", %{kind: "agent", id: "echo"},
                        %{command: "rm -rf /tmp/x"}}
-
-      refute_received {:event_appended, _, _,
-                       %{type: "tool.result", payload: %{ok: true, resultado: "executed" <> _}}}
     end
 
     test "o módulo do roteamento não conhece a política de aprovação" do

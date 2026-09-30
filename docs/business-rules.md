@@ -16865,7 +16865,7 @@ endpoint é ALPHA e o smoke manual
   `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
   (`recortarEstado`), `:260` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
-  (`preparar`), `:143` (`executar`), `:279` (`registrarGasto`);
+  (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:133`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:154`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
@@ -16878,17 +16878,20 @@ endpoint é ALPHA e o smoke manual
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
-  objeto), `:86` (forma inesperada vira queda — caso de falha), `:130`
-  (o `state`), `:190` (a P3); `apps/api/test/infrastructure/llm/jev-tool-router.contract.spec.ts:49`
-  (a resposta gravada), `:100` (erro HTTP), `:108` (timeout), `:117` (rede),
-  `:124` e `:129` (JSON inesperado), `:136` (escolha fora das opções);
-  `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts:163`
-  (provider ≠ openrouter não chama), `:194` (workspace desligado), `:242` (a
-  P3), `:280` (sem ferramenta = catálogo inteiro), `:291` (sem anterior = inteiro),
-  `:306` (a política não muda), `:321` (as quedas), `:388` (o metering);
+  objeto), `:86` (forma inesperada vira queda — caso de falha), `:138` (o
+  `state`), `:210` (a P3);
+  `apps/api/test/infrastructure/llm/jev-tool-router.contract.spec.ts:60` (a
+  resposta gravada), `:121` (erro HTTP), `:130` (timeout), `:142` (rede),
+  `:149` e `:154` (JSON inesperado), `:163` (escolha fora das opções);
+  `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts:186`
+  (provider ≠ openrouter não chama), `:222` (workspace desligado), `:255`
+  (estado grande), `:277` (a P3), `:318` (sem ferramenta = catálogo inteiro),
+  `:331` (sem anterior = inteiro), `:352` (a política não muda), `:369` (as
+  quedas), `:456` (o metering, no orçamento de área);
   `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:67` (o
-  evento), `:89` (a queda no evento), `:138` (sair do beco), `:223` (o custo no
-  laço), `:234` (a aprovação continua exigida)
+  evento), `:103` (a queda no evento), `:180` (sair do beco), `:288` (o custo no
+  laço), `:299` (a aprovação continua exigida), `:325` (o roteamento não conhece
+  a política)
 - **Origem:** AT-238, sobre a especificação da AT-235, as dezesseis decisões da
   AT-236, a medição da AT-237/AT-280 e a decisão do dono de 2026-09-29 (critério
   de 80%)

@@ -1101,6 +1101,24 @@ reason in the URL.
   wildcard to a client that already knows it has `maintainer`/`owner` —
   but what actually guarantees the role is this same
   `@RequireRole('maintainer')`, unchanged.
+- **The Jev tool router is a new OUTBOUND call carrying agent context**
+  ([ADR 0179](adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
+  [RN-625](business-rules.md#rn-625)). Before a chat call to an OpenRouter
+  model, the api POSTs to `https://openrouter.ai/api/alpha/decisions` (the
+  Decisions API, alpha) with the workspace owner's OpenRouter key — the SAME
+  key the chat already spends, decrypted in the same use case, never logged
+  and never returned. What travels is the `state`: the agent id, the last user
+  message (cut at 6,000 characters), the start of the system message (1,500),
+  and up to six recent tool calls with arguments and results cut at 500
+  characters each — plus the tool NAMES and DESCRIPTIONS, never their
+  `parameters`. That is content the chat call already sends to the same
+  OpenRouter account, in a smaller slice, but it now reaches a second model
+  (`typesafe/jev-1.13`) behind it. The switch is per workspace
+  (`PUT /workspaces/:workspaceId/tool-router`, `role:owner`, on by default) and
+  it only fires with an OpenRouter chat model. The router narrows the tool
+  menu and nothing else: it cannot approve, deny, or widen anything, and a
+  call the model makes outside the menu still becomes a Proposed Action under
+  the same policy. Any failure of the call falls to the whole catalog.
 
 ## Table
 
@@ -1313,6 +1331,7 @@ reason in the URL.
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
 | PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
+| PUT | `/workspaces/:workspaceId/tool-router` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
