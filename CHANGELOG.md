@@ -585,6 +585,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
+  3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
+  `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não
+  publicou — o `apk upgrade` do build não alcançava a correção). A base Node
+  passa de `node:24.11.1-alpine3.21` para **`node:24.21.0-alpine3.23`**
+  (OpenSSL `3.5.8-r0` já na base) e o runtime do web, que era
+  `nginx:1.27.5-alpine` (Alpine 3.21), para **`nginx:1.30.5-alpine`** (Alpine
+  3.24, OpenSSL `3.5.8-r0`), as duas por digest do ÍNDICE com a tag inline
+  (ADR 0178). Medido com Trivy 0.70.0 e as flags do `ci.yml`, sem exceção
+  nova: a base Node nova não tem nenhum HIGH/CRITICAL de SO com correção; a do
+  nginx tem um só, `libexpat` `2.8.4-r0` (`CVE-2026-93990`, corrigido em
+  `2.8.5-r0`), que depende do `apk upgrade` que o Dockerfile já roda. O Node
+  da imagem sobe de `24.11.1` para `24.21.0` (mesma linha maior); o
+  `NODE_VERSION` dos workflows segue em `24.11.1`. Nenhum pacote `apk` mudou
+  de nome (`git`, `docker-cli`).
+
 - **deps**: fecha os HIGH publicados em 30/09 que reprovavam o Trivy das
   imagens de produção, só por `overrides` (nenhum código muda). **Produto**
   (`pnpm-workspace.yaml`): `fast-uri` 3.1.6 → **3.1.8** (GHSA-qw65-cvwx-89v3,
