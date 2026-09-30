@@ -1,11 +1,11 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "a88c0111646751dc6770899c7ca745566bf91d5ff3cc6a0af3d9c31c97eacc6b",
+  "openapiSha256": "97a42de913a9196f89dca0918c2dda9269d75dbb7d4533652921dacea911ff94",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "actions-controller-approve-always.StatusCodes.json": "5e1ffcf8172b242254fc36022f71e1033047e31aba2ed8785417ac107e6b84fc",
-    "actions-controller-approve-always.api.mdx": "59b8fd7d3f07a77a5156d7cd44eaae2b14d8b49088af1195d983a2b6f385be19",
+    "actions-controller-approve-always.StatusCodes.json": "f56628a5b785b1dfd6b1798f2c5c35dd4e57e8f78c14fa8930b713f34377edf1",
+    "actions-controller-approve-always.api.mdx": "4452c576152f82fe0d42bf8fc440d6219d103e1619a6f103ae00ebf3a7c07e87",
     "actions-controller-approve.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "actions-controller-approve.StatusCodes.json": "5e1ffcf8172b242254fc36022f71e1033047e31aba2ed8785417ac107e6b84fc",

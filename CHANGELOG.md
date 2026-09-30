@@ -378,6 +378,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: "Sempre permitir" aprova a ação e grava o padrão na MESMA transação
+  (AT-310, [RN-642](docs/business-rules.md#rn-642)). Antes o padrão era
+  gravado primeiro, e um clique numa ação que já tinha saído de `pending`
+  (clique duplo, a mesma pendência em dois painéis, outra aba) devolvia 409
+  com o padrão já gravado e sem o evento `permission.granted` — 45 de 173
+  cliques no uso real de 29/09. Agora, ação já APROVADA é sucesso (201,
+  `desfecho: "ja_aprovada"`, sem executar de novo, gravando o padrão só se
+  ele faltar, com o evento); ação RECUSADA continua 409, com `reason:
+  "acao_ja_recusada"` e nenhum padrão gravado. A resposta de
+  `POST .../approve_always` ganha `desfecho` e `padraoGravado`. Os tetos
+  (`git push`/PR/deploy, `sudo`/`doas`, `container_remove`) não mudam.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

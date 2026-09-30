@@ -17020,3 +17020,48 @@ seguiram em `in_review` (AT-275).
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
   falho, PR sem tarefa)
 - **Origem:** AT-275
+
+### RN-642 — "Sempre permitir" aprova e grava o padrão na MESMA transação; clique em ação já aprovada é sucesso nomeado {#rn-642}
+
+No uso real de 29/09, 45 de 173 cliques em "Sempre permitir" devolveram 409
+(AT-310): o padrão era gravado ANTES de aprovar, e uma ação que já tinha saído
+de `pending` (clique duplo, a mesma pendência em dois painéis, outra aba)
+lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
+
+1. **Mesma transação, depois da transição.** `ApproveActionUseCase` aceita um
+   `aoAprovar` que roda DENTRO da transação da decisão, depois de
+   `assertTransition` passar e antes da execução; é por ele que o padrão
+   (`permissions.json/allow` ou `agent_autonomy`, [RN-509](#rn-509)) e o
+   `permission.granted` são gravados. "Aprovar antes, gravar depois" em
+   transações separadas foi recusado: trocaria o defeito por ação aprovada (e
+   até executada) com o padrão falhando depois. `agent_autonomy` e o evento são
+   atômicos com a decisão; o `permissions.json` é arquivo e não entra em
+   transação — ele só é escrito depois de a transição ser válida, e falhar ao
+   escrevê-lo desfaz a aprovação. Sobra, declarada, a janela de o COMMIT falhar
+   depois do arquivo escrito.
+2. **O evento acompanha a gravação, e só ela.** Padrão que já existe não é
+   regravado nem narrado de novo (`padraoGravado: false`).
+3. **Ação já aprovada é sucesso nomeado.** Se a transição é recusada porque a
+   ação já está `approved`/`auto_approved`/`executed`/`failed`, a resposta é
+   201 com `desfecho: 'ja_aprovada'` (o caminho normal devolve `'aprovada'`),
+   sem executar de novo, gravando o padrão só se ele faltar — com o evento.
+   Transição inválida vinda da EXECUÇÃO, depois de a decisão ter sido
+   confirmada, NÃO vira `ja_aprovada`: propaga como sempre.
+4. **Ação RECUSADA continua 409, nomeado** (`reason: 'acao_ja_recusada'`), sem
+   gravar padrão nem evento: liberar para sempre o que alguém acabou de recusar
+   não é idempotência.
+5. **Tetos intactos.** `git push`/PR/deploy, `sudo`/`doas`
+   (`motivoDeRecusaSempreAprovar`, [RN-418](#rn-418)) e `container_remove`
+   continuam recusados com 400 ANTES de qualquer leitura de estado — inclusive
+   com a ação já aprovada. O padrão continua o EXATO da ação (a generalização
+   por verbo é a AT-257, fora daqui).
+
+- **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
+  (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
+  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:232`
+  (`approve`)
+- **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
+  ("ordem e idempotência (RN-642)": clique duplo, cliques concorrentes, ação
+  aprovada por outro caminho, recusada → 409 nomeado sem padrão, padrão que
+  falha desfaz a aprovação, tetos com a ação já aprovada)
+- **Origem:** AT-310
