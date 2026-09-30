@@ -142,7 +142,8 @@
     "erroEnviarMensagem": "Não foi possível enviar a mensagem",
     "erroCancelarTurno": "Não foi possível cancelar o turno",
     "erroNoChat": "Erro no chat",
-    "aviso": "Aviso"
+    "aviso": "Aviso",
+    "levandoAExecucao": "Levando você à sessão de execução."
   },
   "modal": {
     "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",

@@ -142,7 +142,8 @@
     "erroEnviarMensagem": "Could not send the message",
     "erroCancelarTurno": "Could not cancel the turn",
     "erroNoChat": "Chat error",
-    "aviso": "Warning"
+    "aviso": "Warning",
+    "levandoAExecucao": "Taking you to the execution session."
   },
   "modal": {
     "devolverTitulo": "Return \"{{titulo}}\" to the PO?",

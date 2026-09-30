@@ -62,6 +62,7 @@ import { SessionComposer } from './SessionComposer';
 import {
   DESTINATARIO_DA_SESSAO_CRIATIVA,
   useAtivadosNaSessaoInteira,
+  useAtivosNoProjeto,
   useDestinatarioDoChat,
 } from '../lib/session-destinatario';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
@@ -75,6 +76,12 @@ interface SessionPageProps {
   sessionId: string;
   /** Evidência do Psicólogo (Fase 4b) — abre o log e rola até o evento. */
   highlightEvent?: string;
+  /**
+   * Leva a tela a outra sessão do projeto (RN-634): depois de "Ativar
+   * execução", a sessão de execução que a api criou. Vem da rota (o
+   * `navigate` do router), e sem ela a tela só avisa.
+   */
+  irParaSessao?: (sessionId: string) => void;
 }
 
 /**
@@ -101,6 +108,7 @@ export function SessionPage({
   projectId,
   sessionId,
   highlightEvent,
+  irParaSessao,
 }: SessionPageProps) {
   const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
@@ -242,6 +250,7 @@ export function SessionPage({
     iniciarTurnoDoAgente,
     turnoAgentRef,
     setTurnoViaCanal,
+    irParaSessao,
   });
 
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
@@ -295,6 +304,9 @@ export function SessionPage({
     sessionId,
     handoffs,
   );
+  // RN-633 (AT-294): quem já roda na sessão MAIS RECENTE do projeto (a de
+  // execução, depois de ativada) — a oferta a ele não é acionável aqui.
+  const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
   // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
   // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory` e
@@ -349,8 +361,8 @@ export function SessionPage({
     arquiteturaJaDeclarada,
     necessidadeJaValidada,
   } = useMemo(
-    () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira),
-    [events, handoffs, ativadosNaSessaoInteira],
+    () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto),
+    [events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto],
   );
 
   // `iniciarTurnoDoAgente`, `finalizarTurnoDoAgente`, `cancelarTurnoOtimista`

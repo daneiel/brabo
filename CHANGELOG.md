@@ -378,6 +378,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o handoff manual não esconde mais "Estou pronto para produzir" nem
+  "Confirmar arquitetura pronta" — ele era tomado pela prontidão declarada
+  porque grava como origem o último agente ativado. E a oferta de handoff a um
+  agente que já roda noutra sessão do projeto (o Dev Lead na sessão de
+  execução) deixa de ter "Aceitar" (AT-293/AT-294,
+  [RN-633](docs/business-rules.md#rn-633)).
+
+- **web**: depois de "Ativar execução", a tela vai à sessão de execução que a
+  api criou, com o aviso "Levando você à sessão de execução." — antes ficava
+  na sessão de chat de onde o clique partiu (AT-295,
+  [RN-634](docs/business-rules.md#rn-634)).
+
 - **web**: depois de ativar a execução, a sessão de onde ela saiu não perde
   mais os agentes que já estavam nela — a ativação passa a ser lida também dos
   handoffs e do gasto por agente DESTA sessão, e não só do resumo, que é da

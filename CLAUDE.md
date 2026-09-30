@@ -190,6 +190,8 @@ estado lido do repositório e não da conversa.
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
 | O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
+| O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
+| Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
 
 ## Estado atual e aberto
 

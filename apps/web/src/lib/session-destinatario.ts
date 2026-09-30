@@ -127,6 +127,28 @@ export function useAtivadosNaSessaoInteira(
   );
 }
 
+/**
+ * Quem já foi ativado no PROJETO além desta sessão (RN-633, AT-294): o
+ * `roster.activatedAgents` do resumo, que é a sessão MAIS RECENTE do projeto
+ * — depois de "Ativar execução", a sessão de execução. Serve só para a
+ * oferta de handoff não ser acionável a quem já roda noutra sessão.
+ *
+ * Lacuna declarada: sessões que não são nem esta nem a mais recente não são
+ * vistas. Fechar pede um agregado de ativação POR PROJETO na api (todas as
+ * sessões), que não existe hoje.
+ */
+export function useAtivosNoProjeto(
+  workspaceId: string | undefined,
+  projectId: string,
+): string[] | undefined {
+  const { data: resumo } = useQuery({
+    queryKey: ['projects-summary', workspaceId],
+    queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+  });
+  return resumo?.find((c) => c.projectId === projectId)?.roster.activatedAgents;
+}
+
 /** A cadência da terceira fonte de `useAtivadosNaSessaoInteira`. */
 export const INTERVALO_DO_GASTO_COMO_PRESENCA_MS = 60_000;
 
