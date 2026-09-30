@@ -783,7 +783,7 @@ describe('RN-156 — indicador de 5s', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-1', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],

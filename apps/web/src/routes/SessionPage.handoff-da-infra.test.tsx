@@ -162,7 +162,7 @@ describe('SessionPage — card acionável do handoff da Infra (RN-499)', () => {
     seq: 1,
     type: 'handoff.offered',
     actor: { kind: 'agent', id: 'arquiteto' },
-    payload: { toAgent: 'infra' },
+    payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
     createdAt: '2026-09-04T12:00:00.000Z',
   };
 
@@ -292,7 +292,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'infra' },
+          payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
           createdAt: '2026-09-04T12:00:00.000Z',
         },
         {
@@ -300,7 +300,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 2,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'dev-lead' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
           createdAt: '2026-09-04T12:00:01.000Z',
         },
       ],

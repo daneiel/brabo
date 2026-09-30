@@ -40,8 +40,113 @@
   background: var(--danger);
 }
 
+/* Todo item da barra fica com o tamanho do próprio conteúdo, e o TÍTULO é o
+   único que cresce e encolhe (AT-317). Antes o bloco do título era o único
+   com `min-width: 0` e os outros nem cabiam nem encolhiam: a 1024px o título
+   virava "S", e os controles do meio sobrepunham um ao outro. Agora quem sai
+   da linha quando falta espaço são os controles, para o painel agrupado
+   (`modoDaBarra`), e o título guarda um piso legível. */
+.topbar > * {
+  flex-shrink: 0;
+}
+
+.topbar > .titleBlock {
+  flex: 1 1 auto;
+  flex-shrink: 1;
+  min-width: 120px;
+}
+
 .titleBlock {
   min-width: 0;
+}
+
+/* Barra estreita: um respiro menor entre os itens. */
+.topbar:not([data-modo='completa']) {
+  gap: 12px;
+}
+
+/* Botão da barra nunca quebra o rótulo em duas linhas ("Iniciar / ideação"). */
+.acaoDaBarra {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Modelo, idioma e orçamento em linha, na barra larga. */
+.ajustesEmLinha {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ajustesEmLinha > * {
+  flex-shrink: 0;
+}
+
+/* O controle agrupado da barra estreita e o painel dele. */
+.ajustesAgrupados {
+  position: relative;
+}
+
+.gatilhoDosAjustes {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  max-width: 280px;
+  padding: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.gatilhoDosAjustes:hover {
+  border-color: var(--border-strong);
+}
+
+.gatilhoDosAjustes:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.gatilhoDosAjustes[aria-expanded='true'] {
+  background: var(--surface-2);
+}
+
+.resumoDosAjustes {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A pergunta da detecção (RN-624) pendente: um ponto no gatilho, na cor do
+   acento — o texto dela vai no nome acessível e no `title`. */
+.marcaDePergunta {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.painelDosAjustes {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(360px, 90vw);
+  padding: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
 }
 
 /* A saída da tela (FASE 20). 32px de lado — acima do piso de 24px do WCAG 2.2
@@ -135,10 +240,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.spacer {
-  flex: 1;
 }
 
 /* A pista ao lado do botão "pelado" da topbar — visível quando a conversa já
@@ -327,6 +428,44 @@
   max-width: 780px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* O destinatário da mensagem (RN-631) — a primeira linha do composer, com a
+   borda de cima dele; o `.composer` logo abaixo perde a própria borda para
+   os dois lerem como um bloco só. */
+.destinatarioRow {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 10px 24px 0;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.destinatarioRow > div {
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.destinatarioLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.destinatarioAviso {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.composerComDestinatario {
+  border-top: none;
+  padding-top: 8px;
 }
 
 /* Handoff manual a agente à escolha (ADR 0109/RN-440) — fita fina acima do
