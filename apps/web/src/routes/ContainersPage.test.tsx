@@ -1,7 +1,7 @@
 import type React from 'react';
-import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { ContainersPage } from './ContainersPage';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type {
@@ -12,6 +12,7 @@ import type {
   Session,
 } from '../lib/api-types';
 import i18n from '../lib/i18n';
+import { simularLayoutMovel } from '../test/match-media';
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR');
@@ -742,5 +743,45 @@ describe('ContainersPage — Parar/Remover sem container e o motivo curto (AT-32
     // Os dois detalhes continuam lá, atrás do mesmo <details>.
     expect(screen.getByText(/Esta instalação não sobe container/)).toBeInTheDocument();
     expect(screen.getByText(/para e remove os containers/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * AT-330 (achado N3 da auditoria da Rodada 29): em 390px as sete colunas
+ * espremidas sobrepunham os cabeçalhos e cortavam as ações à direita. No móvel
+ * cada projeto é um CARTÃO (`Table`, RN-643), com o rótulo de cada coluna junto
+ * do valor e as ações na largura inteira.
+ */
+describe('ContainersPage — layout estreito (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  it('no móvel, a linha vira cartão com os rótulos e as ações na largura inteira', () => {
+    largura = simularLayoutMovel(true);
+    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+
+    montar();
+
+    const cartao = screen.getByTestId('linha-da-tabela');
+    const noCartao = within(cartao);
+    for (const rotulo of ['Projeto', 'Imagem', 'Registrado', 'Ações']) {
+      expect(noCartao.getByText(rotulo)).toBeInTheDocument();
+    }
+    expect(noCartao.getByText('node:22-bookworm-slim')).toBeInTheDocument();
+    const parar = noCartao.getByRole('button', { name: 'Parar' });
+    expect(parar.closest('[data-campo]')).toHaveAttribute('data-campo', 'actions');
+    expect(parar.closest('[data-campo]')).toHaveAttribute('data-largo');
+  });
+
+  it('no desktop, a tabela mantém um cabeçalho só — nenhum cartão', () => {
+    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+
+    montar();
+
+    expect(screen.queryByTestId('linha-da-tabela')).toBeNull();
+    expect(screen.getAllByText('Ações')).toHaveLength(1);
   });
 });

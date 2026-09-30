@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:818` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:823` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:644` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:649` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -308,7 +308,7 @@ stay as they were.
   `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:275` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:280` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5661,7 +5661,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:202` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:207` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14814,7 +14814,7 @@ com a causa do fechamento anterior quando ela foi gravada.
 
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
   (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:142` (`podeReabrir`), `:533`
+  `apps/web/src/routes/SessionPage.tsx:145` (`podeReabrir`), `:533`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
 - **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
@@ -16603,8 +16603,8 @@ turno com autor humano — a divergência que esta regra declarava fechou.
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
   (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
   (`origemPorExtenso`), `:219` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:228` (`SessionLanguageIndicator`),
-  `:115` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
+  `apps/web/src/routes/SessionTopbar.tsx:243` (`SessionLanguageIndicator`),
+  `:116` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
   `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
 - **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
   1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
@@ -16996,7 +16996,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
-  (`useRetomarTurnoDoLog`), `:894` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -18011,7 +18011,7 @@ declarada no ADR 0126.
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
   `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
   (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
-  `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:80`
+  `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:89`
   (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -18101,3 +18101,81 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
   novo)
 - **Origem:** AT-321 (achados G1 e G2 do levantamento visual da Rodada 29;
   extensão da [RN-579](#rn-579) e da [RN-632](#rn-632))
+
+### RN-651 — No telefone, o painel da Sessão é gaveta, a barra quebra linha, e a tabela vira cartões {#rn-651}
+
+A auditoria visual "depois" da Rodada 29
+(`docs/explanation/auditoria-visual-rodada-29.md`, achados N1 e N3 a N8) mediu,
+a 390px, o que a [RN-643](#rn-643) não tinha alcançado: na Sessão o painel
+"Contexto da sessão" mantinha ~320px e deixava ~70px ao fio (uma palavra por
+linha), e a barra jogava "Iniciar ideação" e "Encerrar" para fora da borda; em
+`/containers` sete colunas em fração sobrepunham os cabeçalhos e cortavam as
+ações; em "Modelos por agente" o nome do agente tinha 6px e o seletor 0px; o
+`/status` rolava de lado (413px); a busca do Dashboard virava "Bus"; o nome da
+sessão na lista do Criativo tinha 0px; e o trilho móvel deixava a aba ativa
+cortada, sem sinal de que rolava.
+
+**A regra** (o corte é o mesmo `useLayoutMovel` da [RN-643](#rn-643), e o
+desenho vem por CLASSE ou atributo que o componente põe, nunca por `@media`):
+
+1. **O painel de contexto da Sessão nasce FECHADO no telefone** e abre como
+   GAVETA sobre o fio, pela direita: diálogo modal com o nome do painel, foco
+   no X ao abrir, Esc, X e fundo fecham e devolvem o foco a quem abriu. No
+   desktop ele nasce aberto ao lado do fio, como sempre. Cruzar o corte volta
+   ao padrão do lado novo — um painel aberto no desktop não reaparece
+   espremendo o fio no telefone. A exceção é a navegação que VEM ao painel
+   (`highlightEvent`, o chip de evidência do Psicólogo): aí ele nasce aberto
+   também no telefone.
+2. **A barra da Sessão quebra linha, nunca corta.** Saída, estado, título e o
+   alternador do painel ficam na primeira linha; tipo, ajustes, "Iniciar
+   ideação" e "Encerrar" descem, e descem de novo se precisar. O que a barra
+   mostra continua decidido pela largura dela ([RN-620](#rn-620) item 6).
+3. **Toda `Table` vira pilha de cartões no telefone.** Cada linha é um cartão
+   e cada célula leva o rótulo da coluna ao lado do valor; o cabeçalho some.
+   Coluna sem rótulo, ou marcada `largaNoMovel` (um seletor, um bloco de
+   ações), ocupa a largura do cartão com o rótulo em cima.
+4. **A página não rola de lado, e o que identifica a linha não some.** O
+   `/status` rola a tabela por dentro de um invólucro próprio; a busca do
+   Dashboard ganha linha inteira; a linha da lista de sessões quebra com o nome
+   em cima, inteiro.
+5. **O trilho móvel acompanha a aba ativa e diz que rola.** A ativa é trazida
+   para a faixa ao montar, ao trocar, quando o CONTEÚDO do trilho muda (os
+   contadores chegam depois e alargam as abas anteriores) e quando as fontes
+   terminam de carregar — nunca a cada render, senão quem rolou a faixa à mão
+   seria puxado de volta. A borda que esconde abas esmaece
+   (`data-rola-inicio`/`data-rola-fim`).
+
+**Medido** (390×844, os dois temas, api nativa com o seed, `validacao-visual.js`
+injetado): `scrollWidth` 390 em todas as sete telas; zero `texto-cortado` no
+Dashboard, na lista do Criativo, na Sessão (com e sem a gaveta), em
+`/containers` e no `/status`; nas Configurações os 33 caíram para zero, e a aba
+ativa do trilho ficou inteira dentro da faixa nas três abas medidas.
+
+**O que esta regra NÃO fecha:** na barra mínima "Encerrar" continua só com o
+ícone e o nome acessível (a [RN-620](#rn-620) decide isso pela largura da
+barra). O alternador do painel sobe para a linha do título só na PINTURA
+(`order`): a ordem do Tab segue a do DOM. O `fora-da-viewport` que o
+verificador ainda relata nas Configurações e em Aprovações são ícones decorativos com
+`position: absolute` dentro de controles abaixo da dobra, não algo cortado.
+
+- **Código:** `apps/web/src/lib/painel-de-contexto.ts:16`
+  (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
+  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:122`
+  (`movel`); `apps/web/src/components/ui/Table.tsx:13` (`largaNoMovel`),
+  `:28` (`movel`); `apps/web/src/routes/ProjectRail.tsx:103` (`conteudo`),
+  `:124` (`bordas`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
+  `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
+- **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
+  nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e
+  fundo fecham; a barra quebra antes das ações; e o caso de falha, no desktop o
+  painel fica ao lado do fio sem gaveta nem quebra; cruzar o corte fecha o
+  painel); `apps/web/src/components/ui/Table.test.tsx` ("layout estreito");
+  `apps/web/src/routes/ContainersPage.test.tsx`,
+  `apps/web/src/routes/settings/modelos-por-agente-no-movel.test.tsx`,
+  `apps/web/src/routes/StatusPage.test.tsx`,
+  `apps/web/src/routes/Dashboard.test.tsx`,
+  `apps/web/src/routes/ProjectSessionsTab.test.tsx` e
+  `apps/web/src/routes/ProjectRail.test.tsx` (cada um com o móvel e o caso de
+  falha do desktop ou da faixa que cabe)
+- **Origem:** AT-328 (achado N1) e AT-330 (achados N3 a N8) da auditoria
+  visual da Rodada 29; completa a [RN-643](#rn-643)

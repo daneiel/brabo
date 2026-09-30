@@ -144,6 +144,12 @@
   text-overflow: ellipsis;
 }
 
+/* No cartão da tabela móvel (`Table`, AT-330: o campo ganha `data-campo`) o
+   nome não precisa elipsar — "QA de Performance e Segurança" quebra linha. */
+[data-campo] .agentNome {
+  white-space: normal;
+}
+
 /* Fallback e estimativa: mono, como toda coluna de dado do desenho. */
 .fallback {
   /* `block` não é cosmético: `text-overflow` só age em caixa de bloco, e num
@@ -471,6 +477,9 @@
   background: none;
   border: none;
   padding: 0;
+  /* Piso de alvo de toque (WCAG 2.5.8, `validacao-visual.js`): 14px de altura
+     era o que o telefone oferecia ao dedo (AT-330). */
+  min-height: 24px;
   text-decoration: underline dotted;
   cursor: pointer;
 }

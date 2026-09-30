@@ -105,7 +105,7 @@ export function StatusPage({
   return (
     <main
       style={{
-        padding: 'var(--space-5)',
+        padding: 'var(--space-5) var(--space-4)',
         maxWidth: 720,
         margin: '0 auto',
       }}
@@ -113,42 +113,52 @@ export function StatusPage({
       <h1 style={{ fontSize: 28, marginBottom: 'var(--space-4)' }}>
         {t('status.heading')}
       </h1>
-      <table
-        style={{
-          width: '100%',
-          borderCollapse: 'collapse',
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          overflow: 'hidden',
-        }}
+      {/* AT-330 (achado N5): em 390px esta era a única página que rolava de
+          lado — a tabela empurrava 413px. A rolagem horizontal, se ainda for
+          preciso, fica DENTRO deste invólucro, nunca na página; e as células
+          quebram texto longo em vez de alargar a coluna. */}
+      <div
+        data-testid="rolagem-da-tabela-de-status"
+        style={{ maxWidth: '100%', overflowX: 'auto' }}
       >
-        <thead>
-          <tr
-            style={{
-              background: 'var(--surface-2)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 12,
-              color: 'var(--text-secondary)',
-              textAlign: 'left',
-            }}
-          >
-            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              {t('status.columns.service')}
-            </th>
-            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              {t('status.columns.status')}
-            </th>
-            <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              {t('status.columns.lastCheck')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <StatusRow label={t('status.services.api')} query={apiHealth} />
-          <StatusRow label={t('status.services.engine')} query={engineHealth} />
-        </tbody>
-      </table>
+        <table
+          style={{
+            width: '100%',
+            overflowWrap: 'anywhere',
+            borderCollapse: 'collapse',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                background: 'var(--surface-2)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                textAlign: 'left',
+              }}
+            >
+              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                {t('status.columns.service')}
+              </th>
+              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                {t('status.columns.status')}
+              </th>
+              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
+                {t('status.columns.lastCheck')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <StatusRow label={t('status.services.api')} query={apiHealth} />
+            <StatusRow label={t('status.services.engine')} query={engineHealth} />
+          </tbody>
+        </table>
+      </div>
       <p style={{ marginTop: 'var(--space-4)' }}>
         {/* AT-327: um botão de verdade, não um link de 33×20 px. */}
         <Button variant="secondary" onClick={() => irPara(voltarPara)}>

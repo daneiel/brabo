@@ -446,6 +446,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'model',
+      largaNoMovel: true,
       label: t('modelsSection.columns.model'),
       width: '1.7fr',
       render: (agent) => {
@@ -507,6 +508,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       // Larga o suficiente para a CADEIA (`settings/cascata.tsx`) caber em uma
       // ou duas linhas. Era `0.8fr` quando a célula tinha uma palavra só; as
       // proporções do handoff descreviam aquela célula, não esta.
+      largaNoMovel: true,
       label: t('modelsSection.columns.origin'),
       width: '1.75fr',
       render: (agent) => {

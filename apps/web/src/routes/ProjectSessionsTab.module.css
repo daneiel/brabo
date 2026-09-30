@@ -15,6 +15,12 @@
   min-width: 0;
 }
 
+/* O CTA nunca quebra o rótulo ("Nova / ideação", AT-330). */
+.acaoDoCabecalho {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .subtitleTipo {
   font-size: 12px;
   line-height: 1.45;
@@ -106,6 +112,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * Layout móvel (AT-330, RN-643): a linha quebra — o nome da sessão ocupa a
+ * primeira linha inteira (antes ficava com 0px), e status, aprovações e data
+ * descem para a segunda. A classe vem de `useLayoutMovel`.
+ */
+.listaMovel .row {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.listaMovel .rowId,
+.listaMovel .rowIdEditavel {
+  flex: 1 0 100%;
 }
 
 .rowIdPencil {

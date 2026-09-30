@@ -520,6 +520,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
   outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
   punham a resposta do Criativo acima da pergunta.
+- **web**: a Sessão e as telas que sobravam cabem num telefone (AT-328,
+  AT-330, [RN-651](docs/business-rules.md#rn-651)). Em 390px o painel
+  "Contexto da sessão" ficava com ~320px e o fio com ~70px, e a barra cortava
+  "Iniciar ideação" e "Encerrar"; agora o painel nasce fechado e abre como
+  gaveta sobre o fio (Esc, X e fundo fecham, o foco volta ao botão), e a barra
+  quebra linha sem cortar ação. As tabelas viram cartões — em `/containers` os
+  cabeçalhos não se sobrepõem mais e as ações cabem, e em "Modelos por agente"
+  o nome e o seletor, que tinham 6px e 0px, ocupam o cartão. O `/status` não
+  rola de lado, a busca do Dashboard desce para uma linha própria com "Novo
+  projeto" inteiro, o nome de cada sessão na lista do Criativo volta a
+  aparecer, e o trilho do projeto traz a aba ativa de volta quando os
+  contadores chegam e esmaece a borda que ainda tem abas escondidas.
 - **web**: depois do login a interface passa a caber num telefone (AT-316,
   [RN-643](docs/business-rules.md#rn-643)). Abaixo de 768px a sidebar vira uma
   gaveta aberta pelo botão de menu do topo. Ela fecha ao navegar, no Esc, no X
