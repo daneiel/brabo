@@ -79,9 +79,17 @@ export function idiomaSemOverride(r: SessionResponseLanguage): string {
 export function SessionLanguageIndicator({
   projectId,
   sessionId,
+  modo = 'barra',
 }: {
   projectId: string;
   sessionId: string;
+  /**
+   * `barra`: em linha nos 60px da barra, a origem numa linha com reticências.
+   * `painel`: dentro do painel do controle agrupado da barra estreita
+   * (AT-317) — a origem QUEBRA em vez de cortar, e a pergunta da detecção
+   * entra no fluxo em vez de flutuar sob o indicador.
+   */
+  modo?: 'barra' | 'painel';
 }) {
   const { t, i18n } = useTranslation('responseLanguage');
   const queryClient = useQueryClient();
@@ -168,7 +176,13 @@ export function SessionLanguageIndicator({
   ].join(' · ');
 
   return (
-    <div className={styles.indicador} data-testid="idioma-da-sessao">
+    <div
+      className={[styles.indicador, modo === 'painel' && styles.noPainel]
+        .filter(Boolean)
+        .join(' ')}
+      data-testid="idioma-da-sessao"
+      data-modo={modo}
+    >
       <div className={styles.linha}>
         <span className={styles.rotulo}>{t('session.label')}</span>
         {digitando ? (

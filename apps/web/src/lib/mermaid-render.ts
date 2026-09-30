@@ -13,37 +13,39 @@
  *    trocar de motor de diagrama no futuro.
  */
 
+import { lerTokenDoTema } from './tokens-padrao';
+
 export interface ResultadoDeRender {
   svg: string;
-}
-
-function lerToken(nome: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  const valor = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
-  return valor || fallback;
 }
 
 /**
  * Tema do Mermaid a partir dos tokens do design system — nunca cor fixa.
  * Lido a cada render, e não memoizado: é o único momento em que os tokens já
  * estão aplicados ao `<html>` (o Mermaid só carrega quando o componente monta).
+ *
+ * O padrão de quando o token não resolve vem de `TOKENS_PADRAO` (AT-284, ADR
+ * 0181), conferido contra `design/tokens.css` por teste — eram 14 hex soltos
+ * aqui, no azul-petróleo de antes. O "person" do C4 usava a paleta BRUTA
+ * (`--teal-400`/`--teal-600`), que não muda com o tema; passou ao acento sobre
+ * a superfície de card, que muda.
  */
 function temaMermaid() {
   return {
-    background: lerToken('--surface-0', '#0a2e3d'),
-    primaryColor: lerToken('--surface-2', '#123f4e'),
-    primaryTextColor: lerToken('--text-primary', '#f5ede0'),
-    primaryBorderColor: lerToken('--border-strong', '#2e6072'),
-    lineColor: lerToken('--border-strong', '#2e6072'),
-    secondaryColor: lerToken('--surface-1', '#0e3d38'),
-    secondaryTextColor: lerToken('--text-primary', '#f5ede0'),
-    secondaryBorderColor: lerToken('--border', '#1c4a5a'),
-    tertiaryColor: lerToken('--surface-2', '#123f4e'),
-    tertiaryTextColor: lerToken('--text-primary', '#f5ede0'),
-    tertiaryBorderColor: lerToken('--border', '#1c4a5a'),
-    textColor: lerToken('--text-primary', '#f5ede0'),
-    personBorder: lerToken('--teal-400', '#2a9d8f'),
-    personBkg: lerToken('--teal-600', '#185e56'),
+    background: lerTokenDoTema('--surface-0'),
+    primaryColor: lerTokenDoTema('--surface-2'),
+    primaryTextColor: lerTokenDoTema('--text-primary'),
+    primaryBorderColor: lerTokenDoTema('--border-strong'),
+    lineColor: lerTokenDoTema('--border-strong'),
+    secondaryColor: lerTokenDoTema('--surface-1'),
+    secondaryTextColor: lerTokenDoTema('--text-primary'),
+    secondaryBorderColor: lerTokenDoTema('--border'),
+    tertiaryColor: lerTokenDoTema('--surface-2'),
+    tertiaryTextColor: lerTokenDoTema('--text-primary'),
+    tertiaryBorderColor: lerTokenDoTema('--border'),
+    textColor: lerTokenDoTema('--text-primary'),
+    personBorder: lerTokenDoTema('--accent'),
+    personBkg: lerTokenDoTema('--surface-1'),
   };
 }
 

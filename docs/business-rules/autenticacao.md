@@ -2621,7 +2621,9 @@ superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
 3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
 4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
 degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
-segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+seguiu travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41)
+até a [RN-640](../business-rules.md#rn-640) (ADR 0181), que a fechou com a
+paleta neutra e a transformou em piso.
 
 O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
 reprovava até o piso de **elemento de interface**, que é o mais baixo que
