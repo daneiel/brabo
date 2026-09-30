@@ -522,6 +522,16 @@ reason in the URL.
   the segment (`..`, absolute, empty, `NUL` all refused) plus the concatenated
   result before it becomes a `-v`. It also drops `rationale`, which exists so a
   human can review the decision and has no consumer in a `docker run`.
+- **`GET /internal/projects/:projectId/container-spec` gained
+  `usuarioDaPasta`, and the classification didn't change** — still
+  `engine-service`, still called only by the broker ([ADR 0180](adr/0180-container-com-o-dono-da-pasta.md),
+  [RN-627](business-rules.md#rn-627)). The field is the `{ uid, gid }` of the
+  project folder as the api `stat`s it, or `null` (runner mode, unreachable
+  folder, root-owned folder). The broker re-validates it (integers in
+  1..2^31-1; `0` is refused by name) and uses it as `--user`; it never reads a
+  user from a request body, so there is still no field in which a caller writes
+  `privileged`, `cap_add` or a mount. It runs the container with LESS power than
+  before (non-root instead of root), `--cap-drop ALL` intact.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
   RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key
