@@ -16790,3 +16790,39 @@ para aceitar os `export` de um módulo CommonJS.
   toast)
 - **Origem:** AT-163, sobre as decisões da AT-168 (respostas 4, 6 e 7), a
   especificação da AT-080 e a medição da AT-160
+
+### RN-629 — O QA Lead trata o subagente que SUSPENDE de novo na retomada do mesmo jeito que na primeira vez, e resultado que não conhece vira bloqueio nomeado {#rn-629}
+
+O `qa-automacao` roda vários comandos e cada um pode pedir aprovação humana. O
+`QaLeadServer` já parava a área quando `run/5` devolvia `{:awaiting, _}` (achado
+AB, ADR 0052), mas a RETOMADA (`retomar/3`, quando a decisão chega) devolvia o
+resultado de um laço que podia suspender OUTRA vez — e esse segundo
+`{:awaiting, _}` entrava na lista de resultados colhidos como se fosse parecer.
+Ao consolidar, `registrar_resultado/5` não tinha cláusula para ele e o
+GenServer caía (`FunctionClauseError`, medido em 29/09/2026: 06:55:01 e
+07:00:10), deixando as três tasks entregues em `awaiting_qa` para sempre, sem
+veredito e sem desfecho nomeado.
+
+1. **Um só lugar decide o que fazer com o resultado de um subagente**
+   (`tratar_resultado/6`), venha ele de `run/5` ou de `retomar/3`.
+   `{:awaiting, _}` guarda o estado em voo (chaveado pela nova ação), mantém a
+   linha de `gate_states` em `in_progress` com o subagente e PARA a área: sem
+   veredito, sem bloquear a task, sem registrar a delegação. Quem retoma é o
+   mesmo `{:action_settled, _}` do `Engine.Dev.Wake` (ADR 0086), quantas vezes
+   forem necessárias.
+2. **Resultado que o lead não conhece nunca derruba nem some** (RN-059): vira
+   `{:blocked, …}` com origem `codigo` (falta uma cláusula aqui, não é infra,
+   modelo nem política), que `registrar_resultado/5` grava como delegação
+   `failed` e `QaLead.consolidar/1` transforma em bloqueio da task com a origem.
+
+**Declarado, não resolvido:** o restart do engine com o lead suspenso perde a
+inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a área
+inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
+momento do QA-estratégia) nem o teto de iterações do subagente.
+
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:120`
+  (`handle_info`), `:206` (`tratar_resultado`), `:241` (resultado desconhecido)
+- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:312`
+  (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
+  decisão conclui a área); `:265` (uma suspensão, o caminho feliz)
+- **Origem:** AT-248, sobre o achado E2 da análise de uso real de 2026-09-29

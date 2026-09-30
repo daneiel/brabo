@@ -368,6 +368,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o QA Lead não cai mais quando o `qa-automacao` suspende uma
+  SEGUNDA vez esperando aprovação na retomada (AT-248,
+  [RN-629](docs/business-rules.md#rn-629)). O segundo `{:awaiting, _}` era
+  tratado como parecer e derrubava `registrar_resultado/5`
+  (`FunctionClauseError`), deixando as tasks em `awaiting_qa` para sempre;
+  agora a área continua suspensa e retoma a cada decisão. Resultado de
+  subagente desconhecido vira bloqueio da task com origem `codigo`, nunca queda.
+
 - **scripts**: com o template do grafo ligado (`GRAPH_TEMPLATES_ENABLED`), o
   sumarizador da compactação recebia os turnos em dobro, e os kickoffs do
   Psicólogo e da Anamnese o log de eventos em dobro (AT-244,
