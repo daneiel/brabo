@@ -60,6 +60,16 @@
     },
     "ressalva": {
       "runner_pode_estar_desconectado": "The folder was confirmed by a local agent at some point; if it isn't running right now, the action fails once approved."
-    }
+    },
+    "semContainer": {
+      "nuncaProvisionado": "Never provisioned: there is no container to stop or remove.",
+      "removido": "Container removed: there is nothing to stop or remove."
+    },
+    "bloqueioCurto": {
+      "sem_broker_na_instalacao": "No container broker in this installation: starting could only fail.",
+      "sem_broker_para_parar": "No container broker in this installation: stopping and removing could only fail.",
+      "sem_broker_ambos": "No container broker in this installation: starting, stopping and removing could only fail."
+    },
+    "bloqueioDetalhe": "Why?"
   }
 }

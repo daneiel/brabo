@@ -555,6 +555,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   a oferta pelo `handoffId`, e agente ativado fora da janela (o
   `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
   (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
+- **web**: a aba PRs sem imagem decidida deixa de mostrar "A aba Code ainda não
+  está liberada" — diz "A lista de PRs ainda não está liberada" e por quê; o
+  nome da aba no texto passa a vir do mesmo rótulo do trilho ("Código"/"Code")
+  (AT-323, [RN-646](docs/business-rules.md#rn-646)). Em `/containers`, Parar e
+  Remover num projeto sem container dizem em texto que não há container, o
+  "Remover" desabilitado deixa de sair em vermelho cheio, e o motivo longo da
+  falta de broker vira uma linha curta com o detalhe num "Por quê?" expansível
+  (AT-324).
 
 - **web**: percorrer a aba **Configurações** não derruba mais o projeto no
   teto de 300 req/min do usuário (AT-321,

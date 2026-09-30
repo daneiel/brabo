@@ -7,7 +7,10 @@ import {
   isContainerImageGateError,
   mensagemDaApi,
 } from '../../lib/api-client';
-import { ContainerImageGateNotice } from '../../components/ContainerImageGate';
+import {
+  ContainerImageGateNotice,
+  type SuperficieDoPortao,
+} from '../../components/ContainerImageGate';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
@@ -47,6 +50,12 @@ export interface PrListAndDiffProps {
    * (e um clique nele também dispararia o clique da linha).
    */
   renderItemExtra?: (pr: CodePullRequestSummary) => ReactNode;
+  /**
+   * De qual aba este componente é consumido — decide o TEXTO do bloqueio do
+   * portão da imagem (AT-323, RN-646). Ausente é a aba Código, o
+   * comportamento de sempre; a aba PRs passa `'prs'`.
+   */
+  superficie?: SuperficieDoPortao;
 }
 
 /**
@@ -76,7 +85,11 @@ export interface PrListAndDiffProps {
  * estado que só se resolve quando o Arquiteto decide, nunca clicando de
  * novo.
  */
-export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps) {
+export function PrListAndDiff({
+  projectId,
+  renderItemExtra,
+  superficie = 'code',
+}: PrListAndDiffProps) {
   const { t } = useTranslation('code');
   const [filtro, setFiltro] = useState<CodePullRequestState | 'all'>('open');
   const [idDigitado, setIdDigitado] = useState('');
@@ -127,7 +140,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
         {diffQuery.isError &&
           (isContainerImageGateError(diffQuery.error) ? (
-            <ContainerImageGateNotice />
+            <ContainerImageGateNotice superficie={superficie} />
           ) : (
             <div className={styles.estadoErro} role="alert">
               <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
@@ -192,7 +205,7 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
       {listaQuery.isError &&
         (isContainerImageGateError(listaQuery.error) ? (
-          <ContainerImageGateNotice />
+          <ContainerImageGateNotice superficie={superficie} />
         ) : (
           <div className={styles.estadoErro} role="alert">
             <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>

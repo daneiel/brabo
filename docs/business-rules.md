@@ -17699,6 +17699,61 @@ o do chat.
   do projeto na aba Executores, dentro do orçamento da RN-632)
 - **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)
 
+### RN-646 — Bloqueio e controle inerte dizem o motivo de QUEM está na tela: a aba PRs fala da lista de PRs, e Parar/Remover sem container dizem que não há container {#rn-646}
+
+Duas telas mostravam um estado certo com o texto de outro lugar (AT-323,
+AT-324 — achados P1 e K1/K2 do levantamento visual da Rodada 29).
+
+**A aba PRs e o portão da imagem.** O bloqueio é REAL e fica: a lista de PRs e
+o diff passam pelo MESMO funil da aba Código (`ReadProjectCodeUseCase.alvo` →
+`portaoDoContainer`), então sem imagem decidida (RN-105, nos três modos pela
+[RN-494](#rn-494)) a api responde 409 também ali — medido, não suposto. O que
+estava errado era o texto: a aba PRs mostrava "A aba Code ainda não está
+liberada", falando de OUTRA aba e com um nome ("Code") que não é o do trilho
+("Código"). Agora `ContainerImageGateNotice` recebe a SUPERFÍCIE bloqueada
+(`'code' | 'prs'`), a aba PRs diz "A lista de PRs ainda não está liberada" e
+explica que lê o repositório pelo mesmo caminho da aba Código; e o nome das
+abas no texto vem de `nav:tabs.*.label`, a MESMA fonte do trilho — nunca um
+literal, que é como "Code" e "Código" divergiram. A nota da aba PRs NÃO
+promete liberar sozinha: a aba Código pergunta o estado e revalida, a lista de
+PRs só descobre o 409 quando a query falha.
+
+**`/containers` sem container.** Parar e Remover já eram `disabled` com
+`registrado: null` ([RN-521](#rn-521), "nunca provisionado") e com `removed`,
+mas nada dizia por quê, e a variante `danger` do `Button` não tinha estado
+desabilitado — "Remover" saía em vermelho cheio, igual ao ativo. Agora a linha
+diz o motivo UMA vez em texto (`Nunca provisionado: não há container para
+parar nem remover.` / `Container removido: …`), e `.danger:disabled` ganha a
+mesma opacidade das outras variantes. Linha com container de pé não ganha
+texto nenhum.
+
+**O motivo longo da falta de broker.** O texto que nomeia `BROKER_URL` tinha
+nove linhas e triplicava a altura da linha da tabela. A célula mostra agora UMA
+frase curta num `<summary>`, e o texto longo (que continua nomeando a variável,
+para o operador) abre sob demanda no `<details>` — nativo e acessível por
+teclado, nunca `title` num botão desabilitado (ADR 0064). Quando a MESMA falta
+de broker trava subir E parar/remover, é UMA linha só ("subir, parar e remover
+só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
+
+- **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
+  (`ContainerImageGateNotice`), `:42` (`bloco`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
+  `apps/web/src/routes/ContainersPage.tsx:242` (`semContainer`), `:257`
+  (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
+  (`.danger:disabled`)
+- **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira
+  o estado dedicado, com o texto da aba PRs e não o da aba Código", "409 no
+  diff aberto por id também usa o texto da aba PRs", e o caso de falha: 500
+  continua banner com "Tentar de novo"); `apps/web/src/routes/ProjectCodeTab.test.tsx`
+  e `apps/web/src/routes/code/CodeDiffPanel.test.tsx` (a aba Código diz
+  "Código"); `apps/web/src/routes/ContainersPage.test.tsx`, bloco "Parar/Remover
+  sem container e o motivo curto (AT-324)" (nunca provisionado, removido, o
+  caso de falha "container de pé: nenhum motivo", o `<details>` fechado com
+  `BROKER_URL` só dentro dele, e a linha única quando o broker trava as três)
+- **Origem:** AT-323, AT-324. Não muda o portão da RN-105/RN-494 (a lista de
+  PRs segue bloqueada sem imagem decidida — se ela DEVE escapar do portão é
+  decisão do dono), nem a régua de subida da RN-521/RN-574.
+
 ## Acompanhar ao vivo sem martelar (RN-639)
 
 ### RN-639 — O que muda por token não re-renderiza a tela, e o que acompanha o bootstrap polla a 3 s e para no fim {#rn-639}

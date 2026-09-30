@@ -657,3 +657,90 @@ describe('ContainersPage', () => {
     expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeEnabled();
   });
 });
+
+// AT-324 (RN-646): Parar/Remover sem container, e o motivo longo do broker.
+describe('ContainersPage — Parar/Remover sem container e o motivo curto (AT-324)', () => {
+  function comDados(dados: ContainerOverviewItem[]) {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: dados,
+      refetch: vi.fn(),
+    });
+  }
+
+  it('nunca provisionado: Parar e Remover inertes, com o motivo em TEXTO — clicar não propõe', () => {
+    comDados([item({ registrado: null, naoVerificado: 'sem_container_registrado' })]);
+
+    montar();
+
+    const remover = screen.getByRole('button', { name: 'Remover' });
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
+    expect(remover).toBeDisabled();
+    expect(
+      screen.getByText('Nunca provisionado: não há container para parar nem remover.'),
+    ).toBeInTheDocument();
+    fireEvent.click(remover);
+    expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('container removido: o motivo próprio, nunca o de "nunca provisionado"', () => {
+    comDados([item({ registrado: registro({ status: 'removed' }) })]);
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    expect(
+      screen.getByText('Container removido: não há o que parar nem remover.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nunca provisionado/)).toBeNull();
+  });
+
+  it('container de pé: nenhum motivo de "sem container" — o texto não vira ruído em linha saudável', () => {
+    comDados([item()]);
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeEnabled();
+    expect(screen.queryByText(/não há container para parar/)).toBeNull();
+    expect(screen.queryByText(/Container removido/)).toBeNull();
+  });
+
+  it('sem broker: UMA linha curta visível; o nome da variável só no detalhe, fechado', () => {
+    comDados([
+      item({
+        registrado: null,
+        brokerConfigurado: false,
+        naoVerificado: 'sem_container_registrado',
+      }),
+    ]);
+
+    const { container } = montar();
+
+    const resumo = screen.getByText(
+      /Sem broker de container nesta instalação: a subida só terminaria em falha\./,
+    );
+    expect(resumo.tagName).toBe('SUMMARY');
+    const detalhe = resumo.closest('details') as HTMLDetailsElement;
+    expect(detalhe.open).toBe(false);
+    // O texto longo (com BROKER_URL) mora DENTRO do <details>, e em mais
+    // lugar nenhum da linha.
+    expect(detalhe.textContent).toMatch(/BROKER_URL/);
+    const foraDoDetalhe = Array.from(container.querySelectorAll('p')).filter(
+      (p) => !p.closest('details'),
+    );
+    expect(foraDoDetalhe.some((p) => /BROKER_URL/.test(p.textContent ?? ''))).toBe(false);
+  });
+
+  it('sem broker com container parado: subir, parar e remover travados pelo MESMO fato viram UMA linha', () => {
+    comDados([item({ registrado: registro({ status: 'stopped' }), brokerConfigurado: false })]);
+
+    const { container } = montar();
+
+    expect(screen.getByText(/subir, parar e remover só terminariam em falha/)).toBeInTheDocument();
+    expect(container.querySelectorAll('details')).toHaveLength(1);
+    // Os dois detalhes continuam lá, atrás do mesmo <details>.
+    expect(screen.getByText(/Esta instalação não sobe container/)).toBeInTheDocument();
+    expect(screen.getByText(/para e remove os containers/)).toBeInTheDocument();
+  });
+});

@@ -292,7 +292,7 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
   // do container (RN-105) e mostrava o 409 dele como erro transitório, com
   // "Tentar de novo" — a afordância errada para um estado que só o
   // Arquiteto resolve, decidindo a imagem.
-  it('409 do portão vira o mesmo estado dedicado da aba Code, não um banner com Tentar de novo', async () => {
+  it('409 do portão vira o estado dedicado, com o texto da aba PRs e não o da aba Código (AT-323)', async () => {
     getCodePullRequests.mockRejectedValue(
       new ApiError(409, {
         message:
@@ -303,11 +303,30 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     montar();
 
     expect(
-      await screen.findByText('A aba Code ainda não está liberada'),
+      await screen.findByText('A lista de PRs ainda não está liberada'),
     ).toBeInTheDocument();
-    expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
+    // O motivo nomeia a aba Código pelo MESMO rótulo do trilho, nunca "Code".
+    expect(screen.getByText(/mesmo caminho da aba Código/)).toBeInTheDocument();
+    expect(screen.getByText(/as duas abas, Código e PRs/)).toBeInTheDocument();
+    expect(screen.queryByText(/aba Code/)).not.toBeInTheDocument();
+    expect(screen.queryByText('A aba Código ainda não está liberada')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Tentar de novo')).not.toBeInTheDocument();
+  });
+
+  it('409 no diff aberto por id também usa o texto da aba PRs', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [], truncated: false });
+    getCodeDiff.mockRejectedValue(new ApiError(409, { message: 'portão' }));
+
+    montar();
+
+    const campo = await screen.findByRole('textbox');
+    fireEvent.change(campo, { target: { value: '42' } });
+    fireEvent.submit(campo.closest('form')!);
+
+    expect(
+      await screen.findByText('A lista de PRs ainda não está liberada'),
+    ).toBeInTheDocument();
   });
 
   it('erro de verdade (não o gate) continua com o banner e Tentar de novo', async () => {
@@ -317,6 +336,6 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
-    expect(screen.queryByText('A aba Code ainda não está liberada')).not.toBeInTheDocument();
+    expect(screen.queryByText('A lista de PRs ainda não está liberada')).not.toBeInTheDocument();
   });
 });
