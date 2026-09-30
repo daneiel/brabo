@@ -458,6 +458,7 @@ export function ContainersPage() {
       key: 'actions',
       label: t('table.actions'),
       width: '2fr',
+      largaNoMovel: true,
       render: (item) => <AcoesDoContainer item={item} papel={papel} />,
     },
   ];

@@ -29,6 +29,7 @@ import { LIMITE_DO_NOME, hashtagDaSessao, rotuloDaSessao } from '../lib/session-
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import { Destaque } from '../components/SpendCharts';
 import { formatarUsd } from '../components/CredentialSpendSection';
+import { useLayoutMovel } from '../lib/layout-movel';
 import type { Session, SessionKind, SessionStatus } from '../lib/api-types';
 import styles from './ProjectSessionsTab.module.css';
 
@@ -142,6 +143,10 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   const executionSessionQuery = useActiveExecutionSession(
     kind === 'criativa' ? projectId : undefined,
   );
+  // AT-330 (achado N7): em 390px a linha cabia status, aprovações e data ao
+  // lado do nome, e o nome — o que IDENTIFICA a sessão — ficava com 0px. No
+  // móvel ele ganha a primeira linha inteira e o resto desce para a segunda.
+  const movel = useLayoutMovel();
   const [creating, setCreating] = useState(false);
   const [abrindoForm, setAbrindoForm] = useState(false);
   const [nome, setNome] = useState('');
@@ -278,6 +283,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           <span className={styles.subtitleTipo}>{tipo.explicacao}</span>
         </div>
         <Button
+          className={styles.acaoDoCabecalho}
           onClick={() => setAbrindoForm((v) => !v)}
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
@@ -367,7 +373,10 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
             : t(copy.vazio)}
         </EmptyState>
       ) : (
-        <div className={styles.list}>
+        <div
+          className={[styles.list, movel && styles.listaMovel].filter(Boolean).join(' ')}
+          data-layout={movel ? 'movel' : undefined}
+        >
           {sorted.map((session, indice) => {
             const resumo = resumoDe(indice);
             return (

@@ -100,3 +100,41 @@ describe('StatusPage — data e rótulos na língua de quem lê (AT-327)', () =>
     expect(screen.queryByText(/Invalid Date/)).toBeNull();
   });
 });
+
+/**
+ * AT-330 (achado N5 da auditoria da Rodada 29): em 390px o `/status` era a
+ * única página que rolava de lado (413px de conteúdo). A tabela mora num
+ * invólucro que rola por DENTRO, e as células quebram texto longo.
+ */
+describe('StatusPage — layout estreito (AT-330)', () => {
+  it('a tabela fica num invólucro que rola por dentro, e quebra texto longo em vez de alargar', async () => {
+    await i18n.changeLanguage('pt-BR');
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <StatusPage irPara={() => {}} voltarPara="/login" />
+      </QueryClientProvider>,
+    );
+    await screen.findByText(instante('2026-09-30T00:00:00Z'));
+
+    const rolagem = screen.getByTestId('rolagem-da-tabela-de-status');
+    expect(rolagem.style.overflowX).toBe('auto');
+    expect(rolagem.style.maxWidth).toBe('100%');
+    const tabela = screen.getByRole('table');
+    expect(rolagem).toContainElement(tabela);
+    expect(tabela.style.overflowWrap).toBe('anywhere');
+  });
+
+  it('caso de falha: com um serviço fora, a linha de erro continua dentro do mesmo invólucro', async () => {
+    await i18n.changeLanguage('pt-BR');
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <StatusPage irPara={() => {}} voltarPara="/login" />
+      </QueryClientProvider>,
+    );
+    const rolagem = screen.getByTestId('rolagem-da-tabela-de-status');
+    const erro = await screen.findByText('fora do ar');
+    expect(rolagem).toContainElement(erro);
+  });
+});

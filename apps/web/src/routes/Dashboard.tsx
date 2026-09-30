@@ -18,6 +18,7 @@ import { classifyEvent } from '../lib/activity';
 import { formatRelativeTime } from '../lib/time';
 import { contagemAgentes, contagemProjetos } from '../lib/pluralize';
 import { microsParaUsd, usdFmt } from '../lib/currency';
+import { useLayoutMovel } from '../lib/layout-movel';
 import type { Project, ProjectCardSummary } from '../lib/api-types';
 import { ProjectCard, ProjectCardSkeleton } from '../components/ProjectCard';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
@@ -158,12 +159,19 @@ export function Dashboard() {
     unread.reduce((sum, u) => sum + u.unreadCount, 0) + aguardandoPromocao;
 
   const filtered = (projects ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  // AT-330 (achado N6): em 390px a busca encolhia para "Bus" e "Novo projeto"
+  // quebrava em duas linhas. No móvel a busca desce para uma linha própria,
+  // inteira, e a primeira fica com título, sino e o botão.
+  const movel = useLayoutMovel();
 
   return (
     <>
-      <div className={styles.topbar}>
+      <div
+        className={[styles.topbar, movel && styles.topbarMovel].filter(Boolean).join(' ')}
+        data-layout={movel ? 'movel' : undefined}
+      >
         <h1 className={styles.title}>{t('topbar.title')}</h1>
-        <div className={styles.search}>
+        <div className={styles.search} data-testid="busca-de-projetos">
           <Input placeholder={t('topbar.searchPlaceholder')} icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className={styles.spacer} />
@@ -178,7 +186,7 @@ export function Dashboard() {
             }
           }}
         />
-        <Button onClick={() => setWizardOpen(true)}>
+        <Button className={styles.novoProjeto} onClick={() => setWizardOpen(true)}>
           <PlusIcon size={14} /> {t('topbar.newProject')}
         </Button>
       </div>

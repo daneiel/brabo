@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
@@ -17,6 +17,7 @@ import {
   ProjectSessionsTab,
 } from './ProjectSessionsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+import { simularLayoutMovel } from '../test/match-media';
 // O mock abaixo re-exporta o `ApiError` REAL, então este import atravessa até
 // a classe de verdade — é ela que carrega a frase que o toast mostra.
 import { ApiError } from '../lib/api-client';
@@ -828,5 +829,44 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     await screen.findByText('Dúvidas de billing · #11111111');
     expect(screen.queryByText('Sessões no projeto')).toBeNull();
     expect(getMySpend).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * AT-330 (achado N7 da auditoria da Rodada 29): em 390px o identificador de
+ * cada sessão ("#ae1e5746") ficava numa caixa de 0px — a linha perdia o que a
+ * identifica. No móvel a lista quebra a linha: o nome em cima, inteiro.
+ */
+describe('ProjectSessionsTab — layout estreito (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  beforeEach(() => {
+    listActions.mockResolvedValue({ items: [], nextCursor: null });
+    listSessions.mockResolvedValue([sessao('ae1e5746-aaaa', '2026-08-01T00:00:00.000Z')]);
+  });
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  it('no móvel, a lista quebra a linha e o rótulo da sessão continua inteiro e renomeável', async () => {
+    largura = simularLayoutMovel(true);
+    montar();
+
+    const botao = await screen.findByTitle(/clique para renomear/);
+    expect(botao.textContent).toContain('#ae1e5746');
+    const lista = botao.closest('[data-layout]');
+    expect(lista).toHaveAttribute('data-layout', 'movel');
+
+    // Renomear continua sem navegar — a quebra de linha não muda o clique.
+    fireEvent.click(botao);
+    expect(screen.getByLabelText('Nome da sessão')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('no desktop, a linha continua única — a lista não se marca como móvel', async () => {
+    montar();
+
+    const botao = await screen.findByTitle(/clique para renomear/);
+    expect(botao.closest('[data-layout]')).toBeNull();
   });
 });

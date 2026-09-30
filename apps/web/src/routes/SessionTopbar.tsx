@@ -25,6 +25,7 @@ import {
   useLarguraObservada,
   type ModoDaBarra,
 } from '../lib/modo-da-barra-da-sessao';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { TokenMeter } from '../components/TokenMeter';
 import { SessionLanguageIndicator } from './SessionLanguageIndicator';
 import { ModelPicker } from '../components/ModelPicker';
@@ -114,6 +115,11 @@ export function SessionTopbar({
   const barraRef = useRef<HTMLDivElement>(null);
   const modo = modoDaBarra(useLarguraObservada(barraRef));
   const emLinha = modo === 'completa';
+  // AT-328: no telefone a barra QUEBRA — saída, estado e título na primeira
+  // linha, o resto (tipo, ajustes, ideação, Encerrar, painel) na segunda, e
+  // de novo se precisar. Em 390px "Iniciar ideação" e "Encerrar" saíam pela
+  // borda direita; aqui nenhum item encolhe nem some, só desce de linha.
+  const movel = useLayoutMovel();
 
   const seletorDeModelo = modelsByCategory && (
     <ModelPicker
@@ -139,7 +145,12 @@ export function SessionTopbar({
   );
 
   return (
-    <div className={styles.topbar} ref={barraRef} data-modo={modo}>
+    <div
+      className={[styles.topbar, movel && styles.topbarMovel].filter(Boolean).join(' ')}
+      ref={barraRef}
+      data-modo={modo}
+      data-layout={movel ? 'movel' : undefined}
+    >
       {/* A SAÍDA da tela (FASE 20). Até aqui `SessionPage` não importava
           `Link` nem `useNavigate`: entrar numa sessão era um beco, e o único
           caminho de volta era o botão do navegador. É `Link`, e não um
@@ -204,6 +215,10 @@ export function SessionTopbar({
           {metaDaSessao}
         </div>
       </div>
+      {/* A quebra de linha do layout móvel: tudo depois dela começa embaixo. */}
+      {movel && (
+        <span className={styles.quebraDaBarra} aria-hidden="true" data-testid="quebra-da-barra" />
+      )}
       {/* O tipo, VISÍVEL e imutável (RN-097). É ele que diz por que esta
           sessão tem — ou não tem — o botão de iniciar a ideação. */}
       {tipo && (

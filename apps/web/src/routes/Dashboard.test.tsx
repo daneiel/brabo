@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
+import { act, render, screen, fireEvent } from '@testing-library/react';
+import { simularLayoutMovel } from '../test/match-media';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
 import { ApiError } from '../lib/api-client';
@@ -254,5 +255,42 @@ describe('Dashboard — linha de atividade do card (RN-648)', () => {
 
     expect(screen.queryByText(/Sem atividade/)).toBeNull();
     expect(screen.queryByText('Nenhuma sessão ainda')).toBeNull();
+  });
+});
+
+/**
+ * AT-330 (achado N6 da auditoria da Rodada 29): em 390px a busca encolhia para
+ * "Bus" e "Novo projeto" quebrava em duas linhas. No móvel a barra se arruma
+ * em duas linhas, com a busca inteira embaixo.
+ */
+describe('Dashboard — layout estreito (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  it('no móvel, a barra vira de duas linhas, com a busca e o botão inteiros', () => {
+    largura = simularLayoutMovel(true);
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    renderDashboard();
+
+    const busca = screen.getByTestId('busca-de-projetos');
+    const barra = busca.parentElement as HTMLElement;
+    expect(barra).toHaveAttribute('data-layout', 'movel');
+    expect(screen.getByPlaceholderText('Buscar projetos…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Novo projeto/ })).toBeInTheDocument();
+  });
+
+  it('no desktop, a barra continua de uma linha — e cruzar o corte a rearruma', () => {
+    largura = simularLayoutMovel(false);
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    renderDashboard();
+
+    const barra = screen.getByTestId('busca-de-projetos').parentElement as HTMLElement;
+    expect(barra).not.toHaveAttribute('data-layout');
+
+    act(() => largura!.mudar(true));
+    expect(barra).toHaveAttribute('data-layout', 'movel');
   });
 });
