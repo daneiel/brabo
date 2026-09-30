@@ -71,7 +71,7 @@
     "statusGenerico": "Session {{status}} — can't send messages.",
     "reabrir": "Reopen session",
     "reabrirExplicacao": "Reopening brings the session back to active with everything it already had: the conversation, the business rules, the answered questions and the offers between agents. The previous closing stays on record.",
-    "reabrirExigeMaintainer": "Reopening the session requires the maintainer role in this workspace."
+    "reabrirExigeDeveloper": "Reopening the session requires the developer role in this workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Gathering information...",

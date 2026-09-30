@@ -391,7 +391,7 @@ export function SessionComposer({
               >
                 {t('ativacao.reabrir')}
               </Button>
-              {!podeReabrir && <span>{t('ativacao.reabrirExigeMaintainer')}</span>}
+              {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </>
           ) : (
             <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>

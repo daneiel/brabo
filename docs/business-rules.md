@@ -14761,9 +14761,9 @@ próprio. A transição GENÉRICA continua recusando `closed → active` com 409
    renumerado, e o `kind` não muda ([RN-097](#rn-097)).
 3. **Sessão com execução não reabre** — 409 `sessao_com_execucao`. Reabrir uma
    sessão com `execution.activated` a devolveria a `findActiveExecutionSession`
-   ([RN-139](business-rules/autenticacao.md#rn-139)). Padrão provisório à
-   espera do dono, declarado no ADR.
-4. **Sem prazo.** Toda sessão encerrada é reabrível (padrão provisório).
+   ([RN-139](business-rules/autenticacao.md#rn-139)). Decisão do dono,
+   confirmada no [ADR 0184](adr/0184-reabrir-sessao-decisoes-do-dono.md).
+4. **Sem prazo.** Toda sessão encerrada é reabrível (decisão do dono, ADR 0184).
 5. **O engine é chamado antes da transação**, como na ativação: falha dele
    deixa a sessão encerrada, sem evento. Outro estado que não terminal é 409
    `sessao_nao_encerrada`.
@@ -14798,35 +14798,38 @@ próprio. A transição GENÉRICA continua recusando `closed → active` com 409
   sessão `closed` para, como sempre)
 - **Origem:** AT-071 (HS-048), sobre o `exp001`
 
-### RN-650 — Reabrir é `maintainer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
+### RN-650 — Reabrir é `developer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
 
-`POST projects/:projectId/sessions/:sessionId/reopen` exige `maintainer` — um
-degrau acima da transição genérica (`developer`), porque religa gasto de token
-numa sessão que alguém deu por terminada. Responde 200 com a sessão. Padrão
-provisório à espera do dono (ADR 0183).
+`POST projects/:projectId/sessions/:sessionId/reopen` exige `developer` — o
+MESMO papel da transição genérica que encerra a sessão: quem pode dá-la por
+terminada pode trazê-la de volta. Responde 200 com a sessão. `viewer` é 403.
+O [ADR 0183](adr/0183-reabrir-sessao-encerrada.md) tinha fixado `maintainer`
+como padrão provisório; o dono decidiu `developer` em 2026-09-30
+([ADR 0184](adr/0184-reabrir-sessao-decisoes-do-dono.md)), confirmando junto
+as outras duas decisões — sem prazo, e sessão com `execution.activated`
+recusada.
 
 Na tela de Sessão, a faixa da sessão encerrada mostra "Reabrir sessão" com uma
-frase do que volta. Abaixo de `maintainer` (`roleAtLeast`, papel de WORKSPACE —
+frase do que volta. Abaixo de `developer` (`roleAtLeast`, papel de WORKSPACE —
 a lacuna da [RN-471](#rn-471) já declarada na tela) o botão fica inerte e o
 motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vira
 toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
-- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
-  (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:145` (`podeReabrir`), `:533`
-
-  `apps/web/src/routes/SessionPage.tsx:147` (`podeReabrir`), `:538`
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:206`
+  (`reopen`); `apps/web/src/lib/api-client.ts:629` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:150` (`podeReabrir`), `:543`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
-- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
-  (`maintainer`, e a transição genérica segue `developer`), `:30` (200);
-  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:140` (maintainer
-  reabre pela rota própria — caminho feliz), `:164` (owner também), `:171`
-  (developer/viewer/sem papel: inerte com o motivo em texto — caso de falha),
-  `:184` (recusa da api vira toast), `:206` (sessão ativa não oferece);
+- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:22`
+  (`developer`, o mesmo da transição genérica), `:36` (viewer não alcança o
+  papel da rota; developer, maintainer e owner alcançam), `:49` (200);
+  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:143` (developer
+  reabre pela rota própria — caminho feliz), `:167` (maintainer e owner
+  também), `:178` (viewer/sem papel: inerte com o motivo em texto — caso de
+  falha), `:191` (recusa da api vira toast), `:213` (sessão ativa não oferece);
   `apps/web/src/lib/activity.test.ts` ("reabertura de sessão")
-- **Origem:** AT-071
+- **Origem:** AT-071; papel decidido na AT-337
 
 ## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
 

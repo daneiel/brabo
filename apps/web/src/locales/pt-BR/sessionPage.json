@@ -71,7 +71,7 @@
     "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens.",
     "reabrir": "Reabrir sessão",
     "reabrirExplicacao": "Reabrir volta a sessão a ativa com tudo o que ela já tinha: a conversa, as regras de negócio, as perguntas respondidas e as ofertas entre agentes. O encerramento anterior fica registrado.",
-    "reabrirExigeMaintainer": "Reabrir a sessão exige o papel maintainer neste workspace."
+    "reabrirExigeDeveloper": "Reabrir a sessão exige o papel developer neste workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",

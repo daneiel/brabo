@@ -201,6 +201,7 @@ estado lido do repositório e não da conversa.
 | A aba PRs fala da lista de PRs, e Parar/Remover sem container dizem por quê (AT-323/AT-324) | RN-646 |
 | O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
 | A sessão encerrada pode ser reaberta, com o log intacto e o fechamento anterior como evento novo (AT-071) | ADR 0183, RN-649/650 |
+| Reabrir sessão é `developer`, e o dono confirma sem prazo e a recusa com execução (AT-337) | ADR 0184, RN-650 |
 | Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
 | Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
 | Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
@@ -1450,8 +1451,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `ALLOWED_TRANSITIONS` dos terminais. O fechamento anterior vira o evento NOVO
   `session.reopened` (a coluna é limpa, o evento guarda quando e por quê), o
   `kind` não muda, e sessão com `execution.activated` NÃO reabre (409
-  `sessao_com_execucao`); papel `maintainer`, sem prazo e essa recusa são
-  padrão provisório à espera do dono. O `SessionLifecycleWorker` ignora o
+  `sessao_com_execucao`); papel `developer` (o mesmo de encerrar), sem prazo e
+  essa recusa são decisão do dono desde o ADR 0184 (AT-337), não mais padrão
+  provisório. O `SessionLifecycleWorker` ignora o
   fechamento que a reabertura já desfez (lê o `status` da sessão).
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o

@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "29b03bb53da71b0b1183624da29ba1b6f42b870bca9e0e12eb43948a8e464053",
+  "openapiSha256": "9a4419c2cf02c098e4e3b6bf41b3ea4f138cdaf047a7f5c75aad69834bf9d125",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -826,7 +826,7 @@
     "sessions-controller-reopen.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "sessions-controller-reopen.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "sessions-controller-reopen.StatusCodes.json": "e2bcecd78dbb3762d63b720f1b606c66ab8ba127ab0d1ff8b75f3ffb536aceb8",
-    "sessions-controller-reopen.api.mdx": "a65f2977b94d49e0aa057071ef27405665e9f4890d3698523fe97765015bb532",
+    "sessions-controller-reopen.api.mdx": "b6283464cc73b27eb3fee73af6ea093fbf9e00946d460c3557664e44eeeb5524",
     "sessions-controller-transition.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "28c722c896f846850918fd40522b3b329dcf220f65f2ed07bee982d3adbcc3f7",

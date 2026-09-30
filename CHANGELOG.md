@@ -57,6 +57,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: **`developer` também reabre sessão encerrada** (AT-337,
+  [ADR 0184](docs/adr/0184-reabrir-sessao-decisoes-do-dono.md),
+  [RN-650](docs/business-rules.md#rn-650)). O dono decidiu os três padrões
+  provisórios do ADR 0183: `POST /projects/:projectId/sessions/:sessionId/reopen`
+  passa de `maintainer` para `developer` — o mesmo papel que encerra a sessão —,
+  e a tela libera "Reabrir sessão" a partir de `developer` (abaixo disso, o
+  `viewer` vê o botão inerte e o motivo em texto). Sem prazo e a recusa de
+  sessão com execução (409 `sessao_com_execucao`) ficam CONFIRMADOS.
+
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
@@ -1754,6 +1763,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/explanation/documentation-workflow.md`.
 
 ### Testes
+
+- **e2e**: **o ciclo de um turno chega pelo canal da sessão numa terceira
+  origem** (AT-338, `e2e/testes/turno-pelo-canal.spec.ts`). Decisão do dono:
+  provar o canal com um turno que FALHA por falta de credencial — sem LLM e sem
+  custo. A semeadura vincula ao workspace um modelo de nuvem com tool calling
+  de um provider sem credencial do dono; o spec abre a sessão criativa com um
+  login próprio, envia uma mensagem ao Criativo e asserta os FRAMES do
+  WebSocket do tópico `session:<id>`: `agent.status: working`, `agent.error`
+  com origem `politica` e "Nenhuma credencial cadastrada", e `idle`, nessa
+  ordem; e a bolha de falha aparece pelo seletor estrutural novo
+  (`data-testid="falha-de-turno"`, `data-origem`). O `agent.delta` segue
+  declarado fora (`e2e/README.md`). A execução passa a gastar 4 logins, não 3.
 
 - **e2e**: **a aprovação inline ganha E2E de navegador** (AT-068,
   `e2e/testes/aprovacao-inline.spec.ts`). Uma `write_file` com ator `user`

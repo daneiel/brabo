@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 179 architectural decision records, grouped by phase, with what each one decided.
+description: Brabo's 180 architectural decision records, grouped by phase, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -306,12 +306,13 @@ The loop that makes the team improve.
 | [0181](0181-tema-preto-neutro.md) | The dark theme becomes NEUTRAL BLACK with a SOFT terracotta accent, and light becomes the neutral of the same family (AT-283/AT-284). Semantic VALUES change, names don't; a raw `--neutro-*` scale enters. The final numbers came from MEASUREMENT, not the draft (`--text-muted` `#86868f` dark / `#696972` light, dark `--on-accent` becomes neutral black), and the five dark-theme debt pairs [0074](0074-tema-alcancavel-e-o-boot-sob-csp.md) locked by number now pass 4.5:1 and are asserted as FLOORS; the primary-button exception is gone without moving the brand hue. Color outside tokens moves into tokens: one checked copy of fallbacks for Mermaid/xterm/minimap, three agent tokens per theme, `--overlay`, and a test that fails on any `var(--x)` nobody declares |
 | [0182](0182-ciclo-de-vida-do-handoff.md) | A handoff OFFER gets a lifecycle: status `superseded` (migration `0064`) with an immutable `handoff.superseded` event, and at most ONE `offered` per (project, target) — the same session with no new artifact returns the existing offer, a new artifact or another session replaces it (AT-291/292). Concurrency by a transaction-scoped advisory lock per target, not a partial unique index, so the duplicates already in the table converge WITH an event instead of being rewritten by the migration. Activating an agent by any path supersedes the offers to it; an offer to an agent already active in the project is `409 agente_ja_ativo`, whose message is what the model reads; "architecture ready" and AppSec (`seAusente`, RN-636) stop duplicating offers |
 | [0183](0183-reabrir-sessao-encerrada.md) | A CLOSED session can be REOPENED (AT-071): one exit from the terminal states, only to `active`, through its own route (`POST .../sessions/:id/reopen`) and its own state-machine check (`canReopen`) — the generic transition still refuses `closed → active`, and `closing → active` stays forbidden. The row goes back to `active` with `closed_at`/`termination_reason` cleared, and a NEW `session.reopened` event, in the same `seq`, keeps the previous closing; no event is edited, `kind` is untouched. Three PROVISIONAL defaults await the owner: `maintainer` minimum, no time limit, and a session with `execution.activated` refused with `409 sessao_com_execucao` so `findActiveExecutionSession` cannot be diverted. The engine's `SessionLifecycleWorker` ignores a close the reopening already undid; the Psychologist's second automatic analysis stays blocked by `alreadyAnalyzed` |
+| [0184](0184-reabrir-sessao-decisoes-do-dono.md) | The owner answers the three PROVISIONAL defaults of [ADR 0183](0183-reabrir-sessao-encerrada.md) (AT-337): reopening a closed session needs `developer` — the same role that closes it through the generic transition — instead of `maintainer`, with `viewer` still 403; no time limit and the `409 sessao_com_execucao` refusal for a session with `execution.activated` are CONFIRMED. ADR 0183 is not edited |
 
 ## The convention
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0184**.
+  is superseded — the next one is **0185**.
 - **Three sections, only those:** **Context** (the problem or force that motivated it),
   **Decision** (what was decided), **Consequences** (the accepted trade-offs and
   what's left for later).

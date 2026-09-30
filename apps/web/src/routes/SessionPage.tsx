@@ -145,9 +145,9 @@ export function SessionPage({
   // (RN-102) — `roleAtLeast`, nunca lista à mão. O papel lido é o de WORKSPACE:
   // a tela não busca `project_members`, e a lacuna (RN-471) fica declarada.
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
-  // ADR 0183 (RN-650): reabrir pede `maintainer` no endpoint. Mesmo papel de
-  // WORKSPACE (a lacuna da RN-471 já declarada acima).
-  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'maintainer');
+  // ADR 0184 (RN-650): reabrir pede `developer` no endpoint, o de encerrar.
+  // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
+  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const [reabrindo, setReabrindo] = useState(false);
   // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
   // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —

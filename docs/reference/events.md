@@ -68,7 +68,7 @@ its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 `closed`, like `heartbeat_timeout`.
 
 **A closed session can be reopened ([RN-649](../business-rules.md#rn-649), ADR 0183).**
-`POST /projects/:projectId/sessions/:sessionId/reopen` (`maintainer`) moves a
+`POST /projects/:projectId/sessions/:sessionId/reopen` (`developer`, ADR 0184) moves a
 `closed`/`closed_abnormally` session back to `active` and appends
 `session.reopened` with `{from, to, closedAt, terminationReason}` — the only
 record of the interval that was closed, since `closed_at` and
