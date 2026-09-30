@@ -44,6 +44,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import { Card } from '../components/ui/Card';
 import styles from './ProjectOverviewTab.module.css';
 
 interface ProjectOverviewTabProps {
@@ -519,7 +520,7 @@ function ExecutionSection({
           ) : (
             <div className={styles.moduleGrid}>
               {[...agents.entries()].map(([agentId, a]) => (
-                <div key={agentId} className={styles.moduleCard}>
+                <Card key={agentId} radius="md" padding="sm">
                   <div className={styles.moduleName}>{agentId}</div>
                   <div className={styles.moduleStack}>
                     {t('executionSection.devAgentModule', { module: a.module })}
@@ -529,7 +530,7 @@ function ExecutionSection({
                       {t('executionSection.devAgentTask', { task: a.taskTitle })}
                     </div>
                   )}
-                  {a.branch && <div className={styles.depChip}>{a.branch}</div>}
+                  {a.branch && <Badge tone="neutral">{a.branch}</Badge>}
                   {a.iteration !== undefined && (
                     <div className={styles.moduleResp}>
                       {t('executionSection.devAgentProgress', {
@@ -538,7 +539,7 @@ function ExecutionSection({
                       })}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}

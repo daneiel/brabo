@@ -11,6 +11,7 @@ import {
 } from '../lib/decisao-da-politica';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { Disclosure } from './ui/Disclosure';
 import {
   AlertIcon,
@@ -268,7 +269,9 @@ export function ApprovalCard({
   const detalheAberto = temCorpoProprio && variant === 'chat' && isPending;
 
   return (
-    <div
+    <Card
+      padding="none"
+      recorta
       className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
         .filter(Boolean)
         .join(' ')}
@@ -404,7 +407,7 @@ export function ApprovalCard({
       ) : (
         <DecidedLine action={action} />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -591,11 +594,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
       <div className={styles.body}>
         <div className={styles.prTitle}>{title}</div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source}</span>
+          <Badge tone="neutral" square size="md">{source}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target}</span>
+          <Badge tone="neutral" square size="md">{target}</Badge>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
       </div>
@@ -617,11 +620,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
               : t('approvalCard.body.gitMerge.defaultTitle'))}
         </div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{source ?? '?'}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{target ?? '?'}</Badge>
         </div>
       </div>
     );
@@ -643,9 +646,9 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.prTitle}>
           {agent}
           {typeof fromVersion === 'number' && (
-            <span className={styles.branchPill} style={{ marginLeft: 8 }}>
+            <Badge tone="neutral" square size="md" style={{ marginLeft: 8 }}>
               v{fromVersion} → v{fromVersion + 1}
-            </span>
+            </Badge>
           )}
         </div>
         {/* Badge de origem: qual hipótese aceita do Psicólogo gerou este

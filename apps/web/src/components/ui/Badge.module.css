@@ -3,7 +3,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 500;
   border-radius: var(--radius-full);
   padding: 3px 8px;
@@ -51,6 +51,22 @@
   color: var(--text-muted);
   background: var(--surface-2);
   border-color: var(--border);
+}
+
+.neutral {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.agent {
+  color: var(--agent-color);
+  background: color-mix(in srgb, var(--agent-color) var(--tint-soft), transparent);
+  border-color: color-mix(in srgb, var(--agent-color) var(--tint-line), transparent);
+}
+
+.md {
+  font-size: var(--fs-meta);
 }
 
 .pill {

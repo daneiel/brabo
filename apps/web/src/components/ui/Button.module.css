@@ -5,9 +5,9 @@
   gap: var(--space-2);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-body);
   border-radius: var(--radius-md);
-  padding: 9px 16px;
+  padding: 9px var(--space-3);
   cursor: pointer;
   border: 1px solid transparent;
   transition:
@@ -27,6 +27,28 @@
   padding: 0 16px;
   font-size: 14px;
   letter-spacing: 0.01em;
+}
+
+/* Botão denso (28px): linha de tabela, painel lateral, barra de idioma. */
+.sm {
+  height: 28px;
+  padding: 0 calc(var(--space-2) + 2px);
+  font-size: var(--fs-sm);
+  gap: var(--space-1);
+}
+
+/* Só ícone: quadrado, raio de botão de ícone do handoff (`--r-sm`, 7px). A
+   altura do `md` é a do botão de texto (9px + linha + 9px ≈ 36px). */
+.icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--r-sm);
+}
+
+.icon.sm {
+  width: 28px;
+  height: 28px;
 }
 
 .button:focus-visible {

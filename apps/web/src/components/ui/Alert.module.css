@@ -34,7 +34,7 @@
 
 .texto {
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--text-secondary);
   /* Evita órfã de uma palavra na última linha. */

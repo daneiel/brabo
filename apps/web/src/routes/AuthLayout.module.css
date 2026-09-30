@@ -387,7 +387,7 @@
   background: var(--surface-0);
   padding: 14px 28px;
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
@@ -409,7 +409,7 @@
   gap: var(--space-3);
   margin-top: 22px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
@@ -492,7 +492,7 @@
  * aqui quebraria exatamente o alinhamento que aquele comentário defende.
  */
 .linkPequeno {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
 }
 
 .link:focus-visible {

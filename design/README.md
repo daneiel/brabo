@@ -55,6 +55,16 @@ o `tokens.css` não declara, e tinta do `:root` que o tema claro não redeclara.
 A consolidação arredondou vizinhos: os fundos de 10–18% viraram 12% e as
 bordas de 30–50% viraram 40%.
 
+**Escala** (AT-288). Fonte, espaço e raio saem dos degraus do `tokens.css`:
+nenhum módulo tem meio-degrau de fonte (10,5/11,5/12,5 px — o 12,5 do handoff é
+o `--fs-mono`), os módulos da Sessão, do Shell e do trilho escrevem pelo token
+todo tamanho e espaço que tem degrau, e raio que coincide com um degrau passa
+pelo token em qualquer módulo. As duas famílias de raio CONVIVEM como alias
+declarado: `--r-md`/`--r-lg`/`--r-pill` apontam para `--radius-md`/`-lg`/`-full`,
+e `--r-sm` (7px, botão de ícone) **não** é `--radius-sm` (4px) —
+`apps/web/src/design-escala.test.ts` fixa as duas coisas. Ficam de fora, por
+não terem degrau, os raios de 6, 9, 10 e 11px e as fontes de 14 e 17px.
+
 Toda implementação de UI deve referenciar sempre os tokens semânticos
 (`var(--surface-*)`, `var(--text-*)`, `var(--accent)`, `var(--violet)`
 etc.) — nunca a paleta bruta nem valores de cor/espaçamento inventados.

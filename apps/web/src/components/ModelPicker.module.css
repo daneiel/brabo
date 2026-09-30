@@ -18,7 +18,7 @@
 
 .wrapper.inline .trigger {
   background: var(--surface-0);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   padding: 7px 10px;
   text-align: left;
 }
@@ -126,7 +126,7 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
   color: var(--warning);
 }
@@ -134,7 +134,7 @@
 .vazio {
   padding: 12px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -206,7 +206,7 @@
 .optionName {
   min-width: 0;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-mono);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;

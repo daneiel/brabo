@@ -161,16 +161,9 @@
   color: var(--success);
 }
 
+/* `ui/Badge tone="success" square size="md"` (AT-287); aqui só o alinhamento
+   na coluna do medidor. */
 .savingsBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--success);
-  background: var(--success-soft);
-  border-radius: var(--radius-md);
-  padding: 5px 9px;
   align-self: flex-start;
 }
 

@@ -11,7 +11,7 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-3);
   padding: 0 20px;
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
@@ -130,7 +130,7 @@
 
 .meta {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -148,7 +148,7 @@
 .iniciarIdeacaoComPista {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .iniciarIdeacaoIcone {
@@ -158,38 +158,15 @@
 
 .iniciarIdeacaoDica {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   white-space: nowrap;
 }
 
+/* O alternador do painel é `ui/Button icon` (AT-287), `secondary` aberto e
+   `ghost` fechado; aqui só o que ele tem de próprio na barra. */
 .toggleAside {
-  width: 38px;
-  height: 38px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--surface-0);
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
-}
-
-.toggleAside:hover {
-  border-color: var(--border-strong);
-}
-
-/* O botão diz se o painel está aberto — antes ele tinha uma aparência só, e
-   quem fechasse o contexto não tinha como saber pelo controle. */
-.toggleAside.toggleAsideOn {
-  background: var(--surface-2);
-  color: var(--text-primary);
 }
 
 .body {
@@ -208,7 +185,7 @@
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 24px 40px;
+  padding: 28px var(--space-4) 40px;
 }
 
 .messagesInner {
@@ -267,9 +244,9 @@
 .messageModelo {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   line-height: 1.4;
   padding: 2px 7px;
   border: 1px solid var(--border);
@@ -320,7 +297,7 @@
 .composer {
   flex-shrink: 0;
   border-top: 1px solid var(--border);
-  padding: 14px 24px;
+  padding: 14px var(--space-4);
   display: flex;
   gap: 10px;
   align-items: flex-end;
@@ -335,9 +312,9 @@
 .manualHandoffRow {
   flex-shrink: 0;
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 8px 24px 0;
+  padding: var(--space-2) var(--space-4) 0;
   max-width: 780px;
   margin: 0 auto;
   width: 100%;
@@ -357,14 +334,14 @@
 .infraHandoffRow {
   flex-shrink: 0;
   display: flex;
-  gap: 16px;
+  gap: var(--space-3);
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   max-width: 780px;
-  margin: 8px auto 0;
+  margin: var(--space-2) auto 0;
   width: calc(100% - 48px);
-  padding: 12px 16px;
+  padding: 12px var(--space-3);
   border: 1px solid var(--success-panel-border);
   border-radius: var(--radius-md);
   background: var(--success-panel);
@@ -380,13 +357,13 @@
 
 .infraHandoffTitulo {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .infraHandoffDetalhe {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--text-secondary);
 }
@@ -397,7 +374,7 @@
   max-height: 160px;
   resize: vertical;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   background: var(--surface-1);
   border: 1px solid var(--border);
@@ -415,10 +392,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 24px;
+  padding: 12px var(--space-4);
   border-top: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 /* Trilho de contexto: `surface-1`, seções separadas por divisória própria em
@@ -445,7 +422,7 @@
 }
 
 .asideSection {
-  padding: 16px 18px;
+  padding: var(--space-3) 18px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -455,7 +432,7 @@
 
 .asideHeader {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -464,7 +441,7 @@
 }
 
 .asideEmpty {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -474,7 +451,7 @@
 .asideTeto {
   margin: 0;
   padding: 12px 18px;
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--text-muted);
   background: var(--surface-1);
@@ -487,47 +464,24 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding-top: 4px;
+  padding-top: var(--space-1);
 }
 
-.asidePagerBotao {
-  /* 24px é o alvo mínimo que `scripts/dev/validacao-visual.js` cobra. NÃO
-     sobe para os 32px do handoff (PROGRAMA 28, Onda 5/H5): paginador denso
-     de painel lateral estreito, não botão de ícone PRIMÁRIO — mesmo
-     argumento do `.dot` de `Carousel.module.css`. */
-  min-width: 24px;
-  min-height: 24px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.asidePagerBotao:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
-
-.asidePagerBotao:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
+/* Os botões do paginador são `ui/Button icon size="sm"` (28px, acima dos 24px
+   que `scripts/dev/validacao-visual.js` cobra) — AT-287. */
 
 .asidePagerTexto {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
 }
 
 .asideItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   padding: 3px 0;
 }
@@ -557,24 +511,22 @@
 
 /* --- Fase 3b: cards de regra de negócio + divisor de handoff --- */
 
+/* Superfície, borda, raio e padding: `ui/Card radius="md" padding="sm"`
+   (AT-286); aqui só o espaço entre cards. */
 .ruleCard {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .ruleTitle {
   font-family: var(--font-heading);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .ruleDescription {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   line-height: 1.45;
 }
@@ -582,7 +534,7 @@
 .ruleOrigin {
   margin-top: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
@@ -609,9 +561,9 @@
 .handoffPill {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   background: var(--surface-1);
   border: 1px solid var(--border);
@@ -636,8 +588,8 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin: 4px 0;
-  padding: 16px;
+  margin: var(--space-1) 0;
+  padding: var(--space-3);
   border: 1px solid var(--success-panel-border);
   border-radius: var(--radius-md);
   background: var(--success-panel);
@@ -656,7 +608,7 @@
 
 .storySlideResumo {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--text-secondary);
   max-width: 48ch;
@@ -681,11 +633,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  margin: 4px auto;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-1);
+  margin: var(--space-1) auto;
+  /* Superfície, borda, raio e padding: `ui/Card radius="md"` (AT-286). */
   width: 100%;
   max-width: 560px;
 }
@@ -717,7 +666,7 @@
 }
 
 .structuredQuestionFieldLabel {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -727,7 +676,7 @@
 .structuredQuestionAnswers {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   margin: 0;
 }
@@ -739,13 +688,13 @@
 }
 
 .structuredQuestionAnswerRow dt {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .structuredQuestionAnswerRow dd {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
 }
 
@@ -757,7 +706,7 @@
   align-items: center;
   gap: 3px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--accent);
   text-decoration: none;
 }
@@ -786,7 +735,7 @@
 .agentGroupTitulo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -804,7 +753,7 @@
    régua de `.fioHistoricoCabecalho`, que também vive sem cor de agente. */
 .narracoesCabecalho {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
@@ -834,7 +783,7 @@
 
 .fioHistoricoCabecalho {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -854,13 +803,13 @@
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-md);
   background: var(--surface-2);
-  padding: 8px;
+  padding: var(--space-2);
   margin-bottom: 12px;
 }
 
 .citedEventLabel {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -879,11 +828,9 @@
    quem fala primeiro, que antes só existia na cabeça de quem construiu. */
 .convite {
   max-width: 560px;
-  margin: 48px auto;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface-1);
+  margin: var(--space-6) auto;
+  /* Superfície, borda, raio (12px — era 14px, fora da escala) e padding:
+     `ui/Card padding="lg"` (AT-286). */
 }
 
 /* `--font-display` não existe em `design/tokens.css` — o título do convite
@@ -892,7 +839,7 @@
 .conviteTitulo {
   margin: 0 0 12px;
   font-family: var(--font-heading);
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -911,11 +858,11 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-3);
 }
 
 .conviteAcaoNota {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -930,7 +877,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-mono);
   line-height: 1.6;
   text-align: left;
   cursor: pointer;
@@ -943,8 +890,8 @@
 }
 
 .conviteRodape {
-  margin: 16px 0 0;
-  font-size: 13px;
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -973,11 +920,11 @@
 .artefatoItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   text-decoration: none;
 }
 
@@ -1007,7 +954,7 @@
 
 .artefatoFilhosCabecalho {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   padding-left: 12px;
 }
@@ -1017,7 +964,7 @@
   flex-direction: column;
   gap: 2px;
   margin-left: 14px;
-  padding-left: 8px;
+  padding-left: var(--space-2);
   border-left: 1px solid var(--border);
 }
 
@@ -1034,11 +981,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .mergearNota {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }

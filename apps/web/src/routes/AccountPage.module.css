@@ -96,7 +96,7 @@
 }
 
 .cardHint {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   margin-top: 2px;
   max-width: 62ch;
@@ -129,7 +129,7 @@
 .remove {
   width: 32px;
   height: 32px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-muted);
