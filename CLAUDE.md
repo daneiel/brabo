@@ -211,6 +211,7 @@ estado lido do repositório e não da conversa.
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 | Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
+| Os modelos vigentes de agentes e áreas numa leitura só: a carga de Configurações cai de 49 para 30 (AT-334) | RN-654 |
 
 ## Estado atual e aberto
 
@@ -1871,7 +1872,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
   poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
   moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
-  (container, gasto, `lastUsedAt`) fica fora, com o default. Guardado por
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Os bindings
+  RESOLVIDOS de agentes e áreas vêm num LOTE só
+  (`GET .../model-bindings/resolved`, RN-654), sob UMA `queryKey` que as três
+  seções de modelo leem — não volte a uma query por chave. Guardado por
   `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine

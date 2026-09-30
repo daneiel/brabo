@@ -469,6 +469,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Desempenho
 
+- **api/web**: os modelos vigentes de todos os agentes e áreas vêm numa
+  leitura só (AT-334, [RN-654](docs/business-rules.md#rn-654)). Rota nova
+  `GET /projects/:projectId/model-bindings/resolved?agents=…&areas=…`
+  (`viewer`, como as rotas individuais), que devolve para cada chave
+  exatamente o que `GET .../agent-bindings/:slug` ou
+  `GET .../area-bindings/:key` devolveria — a mesma cascata, reusada chave a
+  chave. Chave malformada ou mais de 64 chaves é 400. As seções de modelo por
+  agente, por área e de melhores modelos da aba Configurações leem o lote por
+  uma chave só: a carga da aba cai de 49 para 30 requisições. A falha da
+  leitura aparece uma vez por seção, com a frase da api e "Tentar de novo", e
+  as linhas dizem "não lido" (ou "lendo…"), nunca "sem modelo".
 - **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
   chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
   router espera antes de trocar de tela — sem flash de fallback na navegação,

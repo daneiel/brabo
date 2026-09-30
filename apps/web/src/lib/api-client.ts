@@ -62,6 +62,7 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  BindingsResolvidosEmLote,
   RoutingPreference,
   ProviderCapabilities,
   PromoteStoriesResult,
@@ -1100,6 +1101,24 @@ export const setSessionModelBinding = (
     { modelId },
   );
 
+/**
+ * Os bindings RESOLVIDOS de vários agentes e áreas numa requisição só (RN-654,
+ * AT-334). Cada chave volta com EXATAMENTE o que a rota individual responderia
+ * (`getAgentModelBinding`/`getAreaModelBinding`) — a cascata é a mesma, no
+ * servidor. É o que as seções de modelo de Configurações leem: eram 20
+ * requisições por carga, contra o teto de 300/min do USUÁRIO (RN-579).
+ */
+export const getResolvedModelBindings = (
+  projectId: string,
+  agents: readonly string[],
+  areas: readonly string[],
+) =>
+  get<BindingsResolvidosEmLote>(
+    `/projects/${projectId}/model-bindings/resolved${qs({
+      agents: agents.length > 0 ? agents.join(',') : undefined,
+      areas: areas.length > 0 ? areas.join(',') : undefined,
+    })}`,
+  );
 export const getAgentModelBinding = (projectId: string, agentSlug: string) =>
   get<ResolvedBinding | null>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
 export const setAgentModelBinding = (

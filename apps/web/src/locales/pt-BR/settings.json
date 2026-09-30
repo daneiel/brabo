@@ -562,5 +562,12 @@
     "toast": {
       "saveError": "Não foi possível salvar a preferência de roteamento"
     }
+  },
+  "resolvedBindings": {
+    "readError": "Não foi possível ler os modelos vigentes: {{reason}}",
+    "readErrorFallback": "a requisição falhou",
+    "retry": "Tentar de novo",
+    "cellLoading": "lendo…",
+    "cellUnread": "não lido"
   }
 }

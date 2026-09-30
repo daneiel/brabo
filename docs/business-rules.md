@@ -278,7 +278,7 @@ one.
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
-  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
+  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (formerly `SessionPage.agente-mais-recente.test.tsx`),
@@ -18092,17 +18092,21 @@ aba Configurações sobre um `fetch` que conta por rota; `dev` → esta regra):
 | carga da aba (2,5s) | 53 | 50 |
 | um minuto parado na aba | 76 | 68 |
 | Configurações → Visão geral → volta (buscas de configuração) | 31 | 0 |
+| carga da aba, com os bindings resolvidos em LOTE ([RN-654](#rn-654), AT-334) | 49 | 30 |
 
-Os "Depois" foram medidos sobre a mesma base do "Antes"; integrada a `dev` com a
-[RN-638](#rn-638) (a moldura lê a fila do projeto uma vez só), a carga ficou em
-49 e o minuto em 64, e são esses os tetos que o teste guarda.
+Os "Depois" das três primeiras linhas foram medidos sobre a mesma base do
+"Antes"; integrada a `dev` com a [RN-638](#rn-638) (a moldura lê a fila do
+projeto uma vez só), a carga ficou em 49 e o minuto em 64. A quarta linha é a
+[RN-654](#rn-654), medida sobre a `dev` em 94e5dc721d: os 20 bindings
+resolvidos por chave viraram UMA leitura, e o teste guarda a carga em 30 e o
+minuto em 64.
 
-**O que esta regra NÃO fecha:** a carga continua em 50, e 20 delas são o
-binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota por chave
-(`GET projects/:projectId/agent-bindings/:agentSlug`) — cortá-las pede rota de
-LOTE na api, decisão à parte. Por isso RECARREGAR a página por seção, como o
-roteiro do levantamento fazia, ainda estoura o teto em ~6 cargas por minuto;
-navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
+**O que esta regra NÃO fecha:** até a [RN-654](#rn-654), 20 das requisições da
+carga eram o binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota
+por chave (`GET projects/:projectId/agent-bindings/:agentSlug`) — essa parte
+fechou com a rota de LOTE. RECARREGAR a página por seção, como o roteiro do
+levantamento fazia, ainda custa 30 por carga (~10 cargas por minuto antes do
+teto); navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
 minuto são todos da MOLDURA (o `Shell` polla `projects-summary` e
 `execution/session` a 5s e os eventos da sessão de execução a 3s), comuns a
 toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
@@ -18121,6 +18125,73 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
   novo)
 - **Origem:** AT-321 (achados G1 e G2 do levantamento visual da Rodada 29;
   extensão da [RN-579](#rn-579) e da [RN-632](#rn-632))
+
+### RN-654 — Os bindings resolvidos de todos os agentes e áreas vêm numa leitura só {#rn-654}
+
+A [RN-645](#rn-645) mediu 49 requisições na carga da aba Configurações, e 20
+delas eram o binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota
+por chave. Três seções liam essas chaves — modelos por agente, modelos por área
+e melhores modelos por capacidade —, e o teto de 300 req/min é do USUÁRIO
+([RN-579](#rn-579)).
+
+**A regra:**
+
+1. **`GET projects/:projectId/model-bindings/resolved?agents=…&areas=…`**
+   devolve `{ agents: [{ key, binding }], areas: [{ key, binding }] }`, na
+   ordem pedida e sem repetição. Cada `binding` é EXATAMENTE o que a rota
+   individual responderia para aquela chave (`GET .../agent-bindings/:slug`,
+   `GET .../area-bindings/:key`): a mesma cascata `workspace › projeto › área ›
+   agente` sem sessão, as mesmas origens que a tela transforma em cadeia
+   ([RN-470](#rn-470)), a herança do Criativo, e `null` quando nenhum nível tem
+   modelo. Não há cascata nova: o caso de uso chama `ResolveModelBindingUseCase`
+   chave a chave, com a entrada que a rota individual passaria.
+2. **O papel mínimo é o das rotas individuais de leitura, `viewer`.** Quem não
+   alcança o projeto recebe o MESMO 403.
+3. **A leitura é contida**
+   ([ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md)): as chaves vêm em
+   lista separada por vírgula, com o alfabeto dos slugs (minúsculas, dígitos, `-`, `_`), e são no
+   máximo 64 somadas (`TETO_DE_CHAVES_NO_LOTE`). Chave malformada ou lote acima
+   do teto é 400 nomeando o motivo, nunca chave descartada calada — a resposta
+   afirmaria sobre menos chaves do que a tela pediu.
+4. **A web lê o lote por UMA `queryKey`** (`['model-bindings-resolved',
+   projectId]`), servida por uma requisição às três seções. Toda escrita de
+   binding de agente ou de área relê o lote inteiro, e a mesma invalidação
+   alcança o prefixo `['agent-binding', projectId]`, que a Visão geral e a aba
+   Executores seguem lendo por agente.
+5. **A falha do lote não vira "sem modelo".** Com uma leitura só, a falha é de
+   todas as chaves de uma vez: a seção diz o motivo UMA vez, com a frase da api
+   e a ação de reler, e cada linha diz "não lido" no lugar da cadeia. Enquanto
+   o lote não responde, a linha diz "lendo…". "Sem modelo em nenhum nível" fica
+   reservado ao `null` que a api afirmou.
+
+**Números:** a carga da aba caiu de 49 para 30 requisições
+(`configuracoes.orcamento.test.tsx`, sobre a `dev` em 94e5dc721d); o minuto
+parado segue em 64, todo da moldura.
+
+**O que esta regra NÃO fecha:** a Visão geral e a aba Executores continuam
+lendo o binding de cada agente do roster por rota individual — são poucos, e
+fora da aba Configurações. As rotas por chave continuam existindo.
+
+- **Código:** `apps/api/src/application/use-cases/llm/resolve-model-bindings-em-lote.use-case.ts:12`
+  (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
+  (`ResolveModelBindingsEmLoteUseCase`);
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1111`
+  (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:35`
+  (`invalidarBindingsResolvidos`), `:55` (`useBindingsResolvidos`);
+  `apps/web/src/routes/settings/LeituraDosBindings.tsx:19`
+  (`AvisoDeBindingsNaoLidos`), `:40` (`MarcaDeBindingNaoLido`)
+- **Teste:** `apps/api/test/interfaces/http/llm/model-bindings-em-lote.integration.spec.ts:182`
+  (caminho feliz contra Postgres: viewer lê o lote, e cada chave é igual à
+  rota individual), `:256` (recusa por papel, o mesmo 403 da rota
+  individual), `:275` (chave malformada), `:287` (lote acima do teto);
+  `apps/web/src/routes/settings/bindings-em-lote.test.tsx:150` (as duas seções
+  renderizam de UMA chamada, sem rota por chave), `:182` (a falha do lote é
+  dita e nenhuma linha vira "sem modelo"), `:217` (lendo, não "sem modelo");
+  `apps/web/src/routes/configuracoes.orcamento.test.tsx:233` (a carga lê o
+  lote uma vez e cabe em 30)
+- **Origem:** AT-334 (decisão do dono sobre a lacuna declarada na
+  [RN-645](#rn-645))
 
 ### RN-651 — No telefone, o painel da Sessão é gaveta, a barra quebra linha, e a tabela vira cartões {#rn-651}
 

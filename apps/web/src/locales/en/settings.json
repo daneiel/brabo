@@ -555,5 +555,12 @@
     "toast": {
       "saveError": "Could not save the routing preference"
     }
+  },
+  "resolvedBindings": {
+    "readError": "Could not read the current models: {{reason}}",
+    "readErrorFallback": "the request failed",
+    "retry": "Try again",
+    "cellLoading": "reading…",
+    "cellUnread": "not read"
   }
 }

@@ -6484,6 +6484,78 @@
         ]
       }
     },
+    "/projects/{projectId}/model-bindings/resolved": {
+      "get": {
+        "description": "Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped.",
+        "operationId": "ModelBindingsController_getResolvedBindings",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agents",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated agent slugs.",
+            "schema": {
+              "example": "criativo,po,dev-lead",
+              "type": "string"
+            }
+          },
+          {
+            "name": "areas",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated area keys.",
+            "schema": {
+              "example": "dev,qa,infra",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BindingsResolvidosEmLoteResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed key, or more keys than the batch cap."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the scope."
+          },
+          "404": {
+            "description": "Scope not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolves the model of several agents and areas in one read",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/projects/{projectId}/models": {
       "get": {
         "description": "The `local` category are Ollama's, which spend no money; `cloud` are the paid API ones. A model the workspace has not activated does not appear here, but stays in the historical costs — to see it use the catalog route. The list is the project's OWNER workspace: the same model can be on in one workspace and off in the neighboring one (ADR 0049).",
@@ -13678,6 +13750,53 @@
           "filesSkipped",
           "chunksCreated",
           "embedding"
+        ]
+      },
+      "BindingResolvidoDaChaveResponseDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "dev-lead",
+            "description": "The agent slug or the area key, exactly as requested."
+          },
+          "binding": {
+            "nullable": true,
+            "description": "The SAME value the single-key route answers for this key — `null` when no level of the cascade has a model.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResolvedBindingResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "binding"
+        ]
+      },
+      "BindingsResolvidosEmLoteResponseDto": {
+        "type": "object",
+        "properties": {
+          "agents": {
+            "description": "One entry per requested agent, in the order requested.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BindingResolvidoDaChaveResponseDto"
+            }
+          },
+          "areas": {
+            "description": "One entry per requested area, in the order requested.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BindingResolvidoDaChaveResponseDto"
+            }
+          }
+        },
+        "required": [
+          "agents",
+          "areas"
         ]
       },
       "BlockTaskInternalDto": {
