@@ -753,7 +753,7 @@ export interface paths {
         put?: never;
         /**
          * Offers a handoff from one agent to another
-         * @description Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent.
+         * @description Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent. Two exceptions. The Creative→PO offer carrying the `product_brief` that an "I'm ready — the need is validated" click asked for is accepted on behalf of whoever clicked, with that person as the actor and `implicito` in the payload (RN-658, ADR 0185). The PO's handoff to the Arquiteto is accepted by the SYSTEM when the backlog is covered (at least one business rule, none without a story) and the repository is `local` with no git credential in the project (RN-660, ADR 0186); `aceiteAutomatico` says whether it happened and, if not, why. Either way the response then carries `status: accepted`.
          */
         post: operations["InternalSessionsController_handoff"];
         delete?: never;
@@ -2916,7 +2916,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the Criativo's business need has been validated
-         * @description Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate.
+         * @description Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate. Since ADR 0185 (RN-657) the "I'm ready — the need is validated" click (`POST .../readiness`) records this event itself, and the web no longer calls this route; it stays for sessions whose readiness click predates that ADR.
          */
         post: operations["AgentsController_validateNecessityHandoff"];
         delete?: never;
@@ -3151,7 +3151,7 @@ export interface paths {
         put?: never;
         /**
          * Reopens a closed session, keeping everything it had
-         * @description Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit.
+         * @description Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit. Requires `developer` (ADR 0184).
          */
         post: operations["SessionsController_reopen"];
         delete?: never;
@@ -4102,6 +4102,17 @@ export interface components {
              * @example api
              */
             module: string;
+        };
+        AceiteAutomaticoResponseDto: {
+            /** @example true */
+            aceito: boolean;
+            criterio?: components["schemas"]["CriterioDoAceiteResponseDto"];
+            /**
+             * @description Why a person still has to click. `falhou`: the system tried and the accept failed — `handoff.auto_accept_failed` is in the event log.
+             * @example regras_sem_historia
+             * @enum {string}
+             */
+            motivo?: "nao_e_po_para_arquiteto" | "oferta_nao_pendente" | "sem_regras_de_negocio" | "regras_sem_historia" | "repositorio_nao_local" | "credencial_de_git_no_projeto" | "autor_sem_papel" | "falhou";
         };
         AceiteResponseDto: {
             /**
@@ -5468,8 +5479,8 @@ export interface components {
              */
             maxConsecutiveBlocked?: number;
             /**
-             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
-             * @example manual
+             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
+             * @example auto
              * @enum {string}
              */
             storyPromotion?: "manual" | "auto";
@@ -5652,6 +5663,24 @@ export interface components {
              * @example connection test failed for openrouter: openrouter responded 401
              */
             motivo?: string;
+        };
+        CriterioDoAceiteResponseDto: {
+            /**
+             * @description Business rules in the project.
+             * @example 4
+             */
+            regras: number;
+            /**
+             * @description Rules cited by at least one story — equal to `regras`.
+             * @example 4
+             */
+            cobertas: number;
+            /**
+             * @description `local`: the project already had a `local` repository. `a_provisionar_local`: none yet — the accept provisions a `local` one.
+             * @example a_provisionar_local
+             * @enum {string}
+             */
+            repositorio: "local" | "a_provisionar_local";
         };
         DecideBootstrapPlanDto: {
             /**
@@ -7100,6 +7129,52 @@ export interface components {
              */
             desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
         };
+        OfertaInternaDeHandoffResponseDto: {
+            /** @example 01JC4Z0000HANDOFF00000000001 */
+            id: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Slug of the agent that passed the baton.
+             * @example criativo
+             */
+            fromAgent: string;
+            /**
+             * @description Slug of the receiving agent.
+             * @example po
+             */
+            toAgent: string;
+            /**
+             * @description Artifact that motivated the handoff (product_brief, module_map…).
+             * @example 01JC4Z0000ARTEFATO000000001
+             */
+            artifactId: Record<string, never> | null;
+            /**
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
+             * @example offered
+             * @enum {string}
+             */
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:05:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description `criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`).
+             * @example criado
+             * @enum {string}
+             */
+            desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
+            aceiteAutomatico: components["schemas"]["AceiteAutomaticoResponseDto"];
+        };
         OkResponseDto: {
             /**
              * @description Always `true`; failure becomes an HTTP error.
@@ -7669,8 +7744,8 @@ export interface components {
              */
             maxConsecutiveBlocked: Record<string, never> | null;
             /**
-             * @description Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation (opt-in; where projects predating 12c ended up).
-             * @example manual
+             * @description Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation — the new-project default since RN-659; projects created before it keep whatever value they had.
+             * @example auto
              * @enum {string}
              */
             storyPromotion: "manual" | "auto";
@@ -9554,8 +9629,8 @@ export interface components {
              */
             maxConsecutiveBlocked?: number;
             /**
-             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
-             * @example manual
+             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
+             * @example auto
              * @enum {string}
              */
             storyPromotion?: "manual" | "auto";
@@ -11206,7 +11281,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaInternaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. */
