@@ -17452,6 +17452,50 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   ("`seAusente` (AppSec, RN-636)…")
 - **Origem:** AT-292, AT-273
 
+### RN-644 — O fio corta por MENSAGEM, nunca parte uma troca e recolhe o histórico na ordem em que aconteceu {#rn-644}
+
+O levantamento visual da Rodada 29 (achado X3, AT-319) mediu três defeitos no
+corte do fio da [RN-177](business-rules/autenticacao.md#rn-177), todos na mesma
+função: (1) as "últimas 5" contavam **entradas**, e os cards de handoff, de
+aprovação e de história contavam como uma mensagem cada — numa conversa curta,
+a primeira pergunta e a primeira resposta iam para o histórico recolhido; (2) o
+corte caía onde a contagem mandava, podendo deixar a pergunta recolhida e a
+resposta aberta; (3) o histórico era agrupado **por origem**, na ordem das
+origens, e o grupo "LLM" vinha antes de "Usuário" — expandido, a resposta do
+Criativo aparecia ACIMA da pergunta que a gerou.
+
+**A regra, no fio (o painel de log NÃO muda — lá o eixo é a camada):**
+
+1. **O corte conta MENSAGENS**: `chat.message`, `agent.response` e
+   `chat.structured_question` (`TimelineEntry.mensagem`). Card e divisor não
+   contam; os que vêm depois do corte ficam abertos com as mensagens em volta.
+   Um colapso por agente ([RN-138](#rn-138)) e um "Passos do turno" continuam
+   sendo UMA entrada, e contam como uma mensagem.
+2. **O corte nunca parte um turno** ([RN-172](business-rules/autenticacao.md#rn-172)): ele recua até a
+   abertura do turno da mensagem que o marcou, então a pergunta fica sempre
+   junto da resposta. Por isso as abertas podem passar de cinco — nunca uma
+   troca pela metade. O prólogo (turno `0`) não tem abertura e não recua; se
+   recuar chegar ao início, não há histórico.
+3. **O histórico é UM bloco, em ordem cronológica**, e DECLARA o recorte
+   ([RN-180](business-rules/autenticacao.md#rn-180)): o título diz o que o corte conta ("Antes das últimas 5
+   mensagens") e o `trailing` separa o que ficou dentro ("2 mensagens · 2
+   outras entradas"). O rótulo "LLM" sai do fio junto com os grupos por origem.
+
+**O que se perdeu, declarado:** reabrir só o que o usuário disse, sem reabrir o
+resto, era a razão dos grupos por origem no fio. Ela não sobrevive à ordem
+cronológica — o painel de log segue oferecendo esse recorte.
+
+- **Código:** `apps/web/src/routes/session-fio.tsx:119` (`FIO_RECENTES_ABERTAS`),
+  `:268` (`dividirFio`), `:141` (`entradaSimples`);
+  `apps/web/src/lib/session-timeline.ts:67` (`mensagem`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:389`, `:426`, `:673` (as
+  três mensagens); `apps/web/src/routes/SessionFio.tsx:139` (o bloco único)
+- **Teste:** `apps/web/src/routes/session-fio.test.ts` (cards não contam, o
+  corte recua até a abertura, ordem do fio, e o caso de falha do turno maior
+  que o corte); `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (describe "RN-177/RN-644": o caso medido com cards intercalados, e o
+  histórico expandido na ordem)
+- **Origem:** AT-319, achado X3 do levantamento visual "antes" da Rodada 29
 ### RN-637 — A tela lê a CAUDA das ações da sessão, e a pendente antiga volta junto {#rn-637}
 
 `GET /projects/:projectId/sessions/:sessionId/actions` ordenava por `seq`
