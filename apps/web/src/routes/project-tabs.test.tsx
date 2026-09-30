@@ -42,7 +42,9 @@ vi.mock('../lib/api-client', async () => {
 
 const useBacklog = vi.fn(() => ({ data: [] as unknown[] }));
 const useHypotheses = vi.fn(() => ({ data: [] as unknown[] }));
-const usePendingActions = vi.fn(() => ({ data: undefined as unknown }));
+// AT-297 (RN-638): o contador de Aprovações e o de PRs saem da MESMA fila de
+// pendentes do PROJETO — não mais da sessão mais recente.
+const useProjectPendingActions = vi.fn(() => ({ data: undefined as unknown }));
 // `useArchitecture` (Onda 3) e `useProjectPendingActions` (Onda 2) — as duas
 // contagens novas que `ProjectPage.tsx` lê pra `arquiteturaPendente`/
 // `prsPendentes`. O que este arquivo prova é a moldura de abas, não o
@@ -53,9 +55,8 @@ vi.mock('../lib/hooks', () => ({
   useBacklog: () => useBacklog(),
   useHypotheses: () => useHypotheses(),
   useLatestSession: () => ({ latest: undefined }),
-  usePendingActions: () => usePendingActions(),
   useArchitecture: () => ({ data: undefined }),
-  useProjectPendingActions: () => ({ data: undefined }),
+  useProjectPendingActions: () => useProjectPendingActions(),
 }));
 
 // Cada painel vira uma frase única. É o que permite afirmar QUAL aba
@@ -141,7 +142,7 @@ beforeEach(async () => {
   getProjectBudget.mockResolvedValue(null);
   useBacklog.mockReturnValue({ data: [] });
   useHypotheses.mockReturnValue({ data: [] });
-  usePendingActions.mockReturnValue({ data: undefined });
+  useProjectPendingActions.mockReturnValue({ data: undefined });
 });
 
 // Restaura o default do app depois deste arquivo — a instância é o
@@ -253,8 +254,11 @@ describe('abas do projeto derivam de um registro só', () => {
   });
 
   it('o selo numérico de uma aba SOLTA sai do registro, e some quando a fila está vazia', async () => {
-    usePendingActions.mockReturnValue({
-      data: { items: [{ status: 'pending' }, { status: 'approved' }] },
+    useProjectPendingActions.mockReturnValue({
+      data: [
+        { status: 'pending', actionType: 'terminal' },
+        { status: 'approved', actionType: 'terminal' },
+      ],
     });
     useHypotheses.mockReturnValue({
       data: [{ status: 'proposed' }, { status: 'accepted' }],
@@ -281,8 +285,8 @@ describe('abas do projeto derivam de um registro só', () => {
   // atenção — a separação das cinco filas é decisão de produto, e agora ela
   // vale sem exceção nenhuma.
   it('cada fila mantém o selo PRÓPRIO, e o cabeçalho do grupo nunca soma as filhas', async () => {
-    usePendingActions.mockReturnValue({
-      data: { items: [{ status: 'pending' }] },
+    useProjectPendingActions.mockReturnValue({
+      data: [{ status: 'pending', actionType: 'terminal' }],
     });
     useHypotheses.mockReturnValue({
       data: [{ status: 'proposed' }],

@@ -114,7 +114,7 @@ const PENDENCIA: ArchitecturePendency = {
 
 /** As CINCO filas com item — o caso que o painel existe para mostrar. */
 const CINCO_FILAS = montarFilas({
-  acoesDaSessao: [acao({ id: 'a1' }), acao({ id: 'a2' })],
+  acoesPendentes: [acao({ id: 'a1' }), acao({ id: 'a2' })],
   merges: [acao({ id: 'm1', actionType: 'git_merge', sessionId: 'sess-antiga' })],
   epicos: [
     epico([
@@ -128,7 +128,7 @@ const CINCO_FILAS = montarFilas({
 });
 
 const NENHUMA_FILA = montarFilas({
-  acoesDaSessao: [],
+  acoesPendentes: [],
   merges: [],
   epicos: [],
   pendenciasDeArquitetura: [],
@@ -300,7 +300,7 @@ describe('PainelPrecisaDeVoce — a pendência de arquitetura sem data própria'
   it('quando a história existe, a data aparece MARCADA como emprestada dela', async () => {
     const user = userEvent.setup();
     const filas = montarFilas({
-      acoesDaSessao: [],
+      acoesPendentes: [],
       merges: [],
       epicos: [epico([historia({ id: 'story-1', proposedReady: false })])],
       pendenciasDeArquitetura: [{ ...PENDENCIA, storyId: 'story-1' }],

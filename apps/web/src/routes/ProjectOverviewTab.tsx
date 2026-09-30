@@ -9,6 +9,7 @@ import {
   useHandoffs,
   useLatestSession,
   usePendingActions,
+  useProjectPendingActions,
   useProjectsSummary,
   useSessionEventHistory,
   useSessionEvents,
@@ -33,6 +34,7 @@ import {
 } from '../lib/agent-status';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
+import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -85,8 +87,15 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const executionActivated = projectSummary?.roster.executionActivated ?? false;
   // Agentes com ação pendente de aprovação entram como `aguardando` — antes
   // esse estado era inalcançável e o contador do header ficava sempre em 0.
+  //
+  // A fila é a do PROJETO (AT-297, RN-638), não a da sessão mais recente: um
+  // dev agent esperando decisão na sessão de execução segue `aguardando`
+  // mesmo com uma ideação aberta depois. Mesma chave do contador do trilho.
+  const pendentesDoProjeto = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
   const pendingActionAgentIds = new Set(
-    actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
+    (pendentesDoProjeto.data ?? [])
+      .filter((a) => a.status === 'pending')
+      .map((a) => a.actor.id),
   );
   // RN-568 — a presença de QA/SecOps (`gatesEverOpened`) e dos membros de
   // área (`delegatedSubagents`) sofria da MESMA classe de defeito acima: o
@@ -159,18 +168,19 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // o refetch do polling — mesmo princípio de SessionPage.tsx.
   useEffect(() => {
     if (!sessionId || latestSession?.status !== 'active') return;
+    // AT-278 (RN-632): pelo MESMO invalidador da tela de Sessão (RN-579),
+    // com janela por alvo — invalidar por aviso sem janela troca poll por
+    // rajada. O backlog segue sendo invalidado a cada aviso (tasks bloqueadas
+    // vêm dele, não do event log), só que também com janela.
+    const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onEvent: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-        // O backlog também: tasks bloqueadas vêm dele, não do event log —
-        // sem isto o destaque de blocked só aparece no poll de 4s.
-        queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      },
-      onAgentStatus: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
+      onEvent: ({ type }) => invalidador.aoEvento(type, false, ['backlog']),
+      onAgentStatus: () => invalidador.aoEvento('agent.status', false),
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      invalidador.encerrar();
+    };
   }, [sessionId, latestSession?.status, projectId, queryClient]);
 
   // `setAgentAutonomy` existia no api-client desde a Fase 4a e nunca tinha

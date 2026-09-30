@@ -37,6 +37,7 @@ export function useAcoesDeHandoff({
   iniciarTurnoDoAgente,
   turnoAgentRef,
   setTurnoViaCanal,
+  irParaSessao,
 }: {
   projectId: string;
   sessionId: string;
@@ -47,6 +48,8 @@ export function useAcoesDeHandoff({
   iniciarTurnoDoAgente: Turno['iniciarTurnoDoAgente'];
   turnoAgentRef: Turno['turnoAgentRef'];
   setTurnoViaCanal: Turno['setTurnoViaCanal'];
+  /** RN-634: leva a tela à sessão de execução que a ativação criou. */
+  irParaSessao?: (sessionId: string) => void;
 }) {
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
@@ -57,7 +60,7 @@ export function useAcoesDeHandoff({
   // `ativandoExecucao`.
   const [validandoNecessidade, setValidandoNecessidade] = useState(false);
   // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
-  // depois do envio (some junto com `offeredHandoff` ao ser aceito), então
+  // depois do envio (some junto com a oferta ao ser aceito), então
   // não precisa lembrar a escolha entre um handoff e outro.
   const [manualHandoffTarget, setManualHandoffTarget] = useState('');
   const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
@@ -92,7 +95,7 @@ export function useAcoesDeHandoff({
   // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
   // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
   // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
-  // existente (`offeredHandoff`) pega o handoff novo sozinho no próximo poll
+  // existente (`ofertasAcionaveis`, RN-631) pega o handoff novo sozinho no próximo poll
   // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
   // resultado mais rápido, mas o handoff em si só passa a existir depois
   // deste POST responder.
@@ -116,7 +119,9 @@ export function useAcoesDeHandoff({
     }
   }
 
-  async function handleAcceptHandoff(handoffId: string, toAgent: string) {
+  /** Resolve `true` quando o aceite passou — é por isso que a tela troca o
+   * destinatário do composer para o agente que entrou (RN-631). */
+  async function handleAcceptHandoff(handoffId: string, toAgent: string): Promise<boolean> {
     // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
@@ -142,10 +147,12 @@ export function useAcoesDeHandoff({
       if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
         await handleActivateExecution();
       }
+      return true;
     } catch {
       turnoAgentRef.current = null;
       setTurnoViaCanal(false);
       showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
+      return false;
     }
   }
 
@@ -180,11 +187,27 @@ export function useAcoesDeHandoff({
     if (ativandoExecucao) return;
     setAtivandoExecucao(true);
     try {
-      await activateExecution(projectId, sessionId);
+      const ativacao = await activateExecution(projectId, sessionId);
       await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['execution-session', projectId] });
+      // RN-634 (AT-295): a execução roda numa sessão NOVA, e a de chat pode
+      // até fechar (RN-135). Ficar aqui deixava a pessoa olhando o lugar de
+      // onde o trabalho saiu. A tela vai à sessão que a api devolveu, e o
+      // aviso diz isso — sem `sessionId` na resposta (ou sem quem navegue),
+      // só o aviso de sempre, e a tela fica.
+      const destino = ativacao?.sessionId;
+      if (destino && destino !== sessionId && irParaSessao) {
+        showToast({
+          title: t('toasts.execucaoAtivada'),
+          message: t('toasts.levandoAExecucao'),
+          tone: 'success',
+        });
+        irParaSessao(destino);
+      } else {
+        showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
+      }
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('toasts.erroAtivarExecucao')),

@@ -4,6 +4,7 @@ import type { Terminal as XTermTerminal } from '@xterm/xterm';
 import type { FitAddon as XTermFitAddon } from '@xterm/addon-fit';
 import { connectTerminalChannel, type TerminalChannel } from '../../lib/terminal-channel';
 import { createXtermTerminal } from '../../lib/xterm-runtime';
+import { lerTokenDoTema } from '../../lib/tokens-padrao';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { RunnerOnboardingPanel } from '../../components/RunnerOnboardingPanel';
 import styles from './TerminalPanel.module.css';
@@ -41,20 +42,18 @@ type EstadoDoTerminal =
   | { tipo: 'erro'; mensagem: string }
   | { tipo: 'conectado' };
 
-/** Token do design system, com fallback — mesmo padrão de `mermaid-render.ts`. */
-function lerToken(nome: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  const valor = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
-  return valor || fallback;
-}
-
+/**
+ * Tema do xterm pelos tokens do design system. O padrão de quando o token não
+ * resolve vem de `TOKENS_PADRAO` (AT-284, ADR 0181) — eram cinco hex soltos
+ * aqui, com o cursor no teal `#2a9d8f` enquanto o token lido era o `--accent`.
+ */
 function temaDoXterm() {
   return {
-    background: lerToken('--code-bg', '#03141b'),
-    foreground: lerToken('--text-primary', '#f5ede0'),
-    cursor: lerToken('--accent', '#2a9d8f'),
-    cursorAccent: lerToken('--code-bg', '#03141b'),
-    selectionBackground: lerToken('--surface-2', '#123f4e'),
+    background: lerTokenDoTema('--code-bg'),
+    foreground: lerTokenDoTema('--text-primary'),
+    cursor: lerTokenDoTema('--accent'),
+    cursorAccent: lerTokenDoTema('--code-bg'),
+    selectionBackground: lerTokenDoTema('--surface-2'),
   };
 }
 
@@ -83,7 +82,7 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
 
       const instancia = await createXtermTerminal({
         convertEol: true,
-        fontFamily: lerToken('--font-mono', "'IBM Plex Mono', monospace"),
+        fontFamily: lerTokenDoTema('--font-mono'),
         fontSize: 13,
         cursorBlink: true,
         theme: temaDoXterm(),
