@@ -165,6 +165,45 @@ describe.each([
  * (Input) ficou no `--text-secondary`, agora por hierarquia e não por
  * contraste (é texto de apoio de leitura, não metadado).
  */
+/**
+ * O brilho do login (AT-332): `.brilho` pinta `--accent-soft` — o acento a
+ * `--tint-soft` sobre transparente — em cima de `--surface-0`, e o cabeçalho
+ * mora no PICO dele (o centro do gradiente radial). O texto que fica fora do
+ * card tem de passar AA contra esse pico, nos dois temas; e a regra CSS tem de
+ * continuar apontando para o acento, não para uma cor de ESTADO.
+ */
+function misturar(cor: Rgb, fundo: Rgb, fracao: number): Rgb {
+  const canal = (a: number, b: number) => Math.round(a * fracao + b * (1 - fracao));
+  return { r: canal(cor.r, fundo.r), g: canal(cor.g, fundo.g), b: canal(cor.b, fundo.b) };
+}
+
+const TINT_SOFT = Number.parseFloat(RAIZ['--tint-soft'] ?? '') / 100;
+
+describe('contraste — o brilho do login é acento, não estado (AT-332)', () => {
+  const authCss = readFileSync(resolve(process.cwd(), 'src/routes/AuthLayout.module.css'), 'utf8');
+  const regraDoBrilho = /\.brilho\s*\{([^}]*)\}/.exec(authCss)?.[1] ?? '';
+
+  it('o `.brilho` pinta --accent-soft, e nenhuma cor de estado', () => {
+    expect(regraDoBrilho).toContain('var(--accent-soft)');
+    expect(regraDoBrilho).not.toMatch(/--(success|warning|danger|violet)-soft/);
+  });
+
+  it('--tint-soft é lido do arquivo (a medição não roda sobre um palpite)', () => {
+    expect(TINT_SOFT).toBeGreaterThan(0);
+    expect(TINT_SOFT).toBeLessThan(1);
+  });
+
+  it.each([
+    ['escuro', ESCURO],
+    ['claro', CLARO],
+  ] as const)('tema %s: primário, secundário e muted passam AA sobre o pico do brilho', (_n, tema) => {
+    const pico = misturar(tema.accent, tema.surface0, TINT_SOFT);
+    expect(contraste(tema.textPrimary, pico)).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(contraste(tema.textSecondary, pico)).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(contraste(tema.textMuted, pico)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+});
+
 describe('contraste — os pares que justificavam .hint e .link', () => {
   it('--text-muted sobre --surface-1 passa AA nos dois temas — .hint fica no secondary por hierarquia', () => {
     for (const tema of [ESCURO, CLARO]) {
