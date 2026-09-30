@@ -329,6 +329,14 @@ export interface ProjectMemberWithUser {
   email: string;
 }
 
+/**
+ * Membro do WORKSPACE com nome e e-mail (`GET /workspaces/:id/members`,
+ * AT-335) — a mesma forma de `ProjectMemberWithUser`, com o papel de
+ * WORKSPACE. Sai do schema gerado, não de uma cópia à mão.
+ */
+export type WorkspaceMemberWithUser =
+  components['schemas']['WorkspaceMemberComUsuarioResponseDto'];
+
 export type PermissionListName = 'allow' | 'deny' | 'ask';
 
 export interface PermissionsFile {
@@ -668,6 +676,19 @@ export interface ResolvedBinding {
    * modelo em silêncio.
    */
   skipped: SkippedBinding[];
+}
+
+/** Uma chave do lote e o binding resolvido dela (RN-654). */
+export interface BindingResolvidoDaChave {
+  key: string;
+  /** O MESMO valor da rota individual — `null` sem modelo em nível nenhum. */
+  binding: ResolvedBinding | null;
+}
+
+/** `GET /projects/:projectId/model-bindings/resolved` (RN-654, AT-334). */
+export interface BindingsResolvidosEmLote {
+  agents: BindingResolvidoDaChave[];
+  areas: BindingResolvidoDaChave[];
 }
 
 // user_credentials guarda tanto chaves de LLM quanto tokens de git do

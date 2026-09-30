@@ -2,7 +2,11 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { ProjectMemberWithUser, Session } from '../lib/api-types';
+import type {
+  ProjectMemberWithUser,
+  Session,
+  WorkspaceMemberWithUser,
+} from '../lib/api-types';
 import { historicoFalso } from '../test/historico-de-eventos';
 import i18n from '../lib/i18n';
 
@@ -15,6 +19,7 @@ import i18n from '../lib/i18n';
 
 const getSession = vi.fn();
 const listProjectMembers = vi.fn<() => Promise<ProjectMemberWithUser[]>>();
+const listWorkspaceMembers = vi.fn<(id: string) => Promise<WorkspaceMemberWithUser[]>>();
 const eventos = vi.fn<() => { items: unknown[] }>(() => ({ items: [] }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -50,12 +55,13 @@ vi.mock('../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
-    getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
+    getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core', workspaceId: 'ws-1' }),
     getSession: (...args: unknown[]) => getSession(...args),
     getSessionBudget: vi.fn().mockResolvedValue(null),
     getSessionModelBinding: vi.fn().mockResolvedValue(null),
     listModels: vi.fn().mockResolvedValue(null),
     listProjectMembers: () => listProjectMembers(),
+    listWorkspaceMembers: (id: string) => listWorkspaceMembers(id),
     renameSession: vi.fn(),
     acceptHandoff: vi.fn(),
     activateExecution: vi.fn(),
@@ -130,6 +136,7 @@ beforeEach(async () => {
     { userId: 'eu', role: 'owner', name: null, email: 'eu@brabo.dev' },
     { userId: 'ana', role: 'developer', name: 'Ana Souza', email: 'ana@brabo.dev' },
   ]);
+  listWorkspaceMembers.mockResolvedValue([]);
 });
 
 afterAll(() => {
@@ -174,6 +181,39 @@ describe('SessionPage — autor de cada chat.message (RN-652)', () => {
     });
     expect(autorDa('fala da Carla')).toEqual({ nome: 'Outro membro', tipo: 'outroMembro' });
     expect(screen.queryByText('eu@brabo.dev')).not.toBeInTheDocument();
+  });
+
+  it('AT-335: quem entra só pelo papel de WORKSPACE é nomeado pela lista do workspace do projeto', async () => {
+    listWorkspaceMembers.mockResolvedValue([
+      { userId: 'eu', role: 'owner', name: null, email: 'eu@brabo.dev' },
+      { userId: 'carla', role: 'viewer', name: 'Carla Lima', email: 'carla@brabo.dev' },
+    ]);
+    eventos.mockReturnValue({
+      items: [
+        mensagem(1, { kind: 'user', id: 'ana' }, 'mensagem da Ana'),
+        mensagem(2, { kind: 'user', id: 'carla' }, 'fala da Carla'),
+      ],
+    });
+    montar();
+
+    await screen.findByText('Carla Lima');
+    expect(listWorkspaceMembers).toHaveBeenCalledWith('ws-1');
+    expect(autorDa('fala da Carla')).toEqual({ nome: 'Carla Lima', tipo: 'membro' });
+    expect(autorDa('mensagem da Ana')).toEqual({ nome: 'Ana Souza', tipo: 'membro' });
+  });
+
+  it('AT-335, falha: a leitura do workspace recusada não apaga a do projeto', async () => {
+    listWorkspaceMembers.mockRejectedValue(new Error('403'));
+    eventos.mockReturnValue({
+      items: [
+        mensagem(1, { kind: 'user', id: 'ana' }, 'mensagem da Ana'),
+        mensagem(2, { kind: 'user', id: 'carla' }, 'fala da Carla'),
+      ],
+    });
+    montar();
+
+    await screen.findByText('Ana Souza');
+    expect(autorDa('fala da Carla')).toEqual({ nome: 'Outro membro', tipo: 'outroMembro' });
   });
 
   it('falha: a leitura de membros recusada não quebra o fio — a outra pessoa vira "Outro membro"', async () => {

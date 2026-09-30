@@ -992,6 +992,17 @@ reason in the URL.
   (`role:owner`, target must already be `owner`, else 409
   `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
   Any owner may transfer it, including to another owner who did not ask.
+- **`GET /workspaces/:workspaceId/members` is `role:viewer`, not the `owner`
+  of the three write routes next to it** ([RN-652](business-rules.md#rn-652),
+  AT-335). The minimum is the endpoint's (RN-102): reading the roster is not
+  maintaining it. `viewer` is what the neighbouring reads use
+  (`GET /workspaces/:workspaceId`, `/projects`) and what
+  `GET /projects/:projectId/members` uses — the read this one completes, since
+  whoever enters a project through the workspace role alone has no project
+  row. Anyone who can open a session can see who spoke in it, and a
+  workspace `viewer` already sees every project of the workspace. The body is
+  the same shape as the project read — `userId`, `name`, `email`, `role` —
+  and nothing else (no `createdAt`, no account state).
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -1088,6 +1099,17 @@ reason in the URL.
   so nothing crosses a project boundary. The same routes now answer with the
   CURRENT offer instead of always a new row (`desfecho`), and the internal one
   accepts `seAusente` — a switch that can only make the call write LESS.
+- **The internal `POST /internal/sessions/:sessionId/handoffs` may now ACCEPT
+  the Creative→PO offer it creates, and the classification didn't change** —
+  still `engine-service` ([RN-658](business-rules.md#rn-658),
+  [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)). The engine gains no
+  power to activate an agent: the api decides, from the `readiness.confirmed`
+  that a PERSON recorded through `POST .../readiness` (`role:developer`, the same
+  minimum as accepting by the card), and records that person as the actor. The
+  engine cannot forge the mark — it never writes `readiness.confirmed` — and
+  the offer must carry the `product_brief` born after that click, in the same
+  session. `POST .../agents/criativo/validate-necessity` keeps its route and
+  role, with no web caller left ([RN-657](business-rules.md#rn-657)).
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
@@ -1307,6 +1329,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/members/:userId` | role:maintainer |
 | GET | `/projects/:projectId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
+| GET | `/projects/:projectId/model-bindings/resolved` | role:viewer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | POST | `/projects/:projectId/personal-access-tokens` | role:developer |
@@ -1360,13 +1383,14 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
-| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:maintainer |
+| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
+| GET | `/workspaces/:workspaceId/members` | role:viewer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
 | PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |

@@ -13,7 +13,7 @@ import i18n from '../lib/i18n';
  * `confirm_readiness` (e narra a recusa como `agent.error` no fio, com
  * origem "politica") quando a sessão não tem nenhuma
  * `artifact.business_rule` — ver criativo_server.ex. Este arquivo cobre só a
- * UX complementar: o botão "Estou pronto para produzir" nasce `disabled`
+ * UX complementar: o botão "Estou pronto — a necessidade está validada" nasce `disabled`
  * (com a dica em `title`) sem regra nenhuma, e libera assim que a MESMA
  * fonte que já alimenta o painel "Regras de negócio" (session-events) tem
  * pelo menos uma.
@@ -143,12 +143,12 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
-describe('SessionPage — "Estou pronto para produzir" exige regra de negócio', () => {
+describe('SessionPage — "Estou pronto — a necessidade está validada" exige regra de negócio', () => {
   it('sem nenhuma regra capturada, o botão nasce desabilitado com a dica', async () => {
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
 
     expect(botao).toBeDisabled();
@@ -164,11 +164,15 @@ describe('SessionPage — "Estou pronto para produzir" exige regra de negócio',
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
 
     expect(botao).not.toBeDisabled();
-    expect(botao).not.toHaveAttribute('title');
+    // ADR 0185: habilitado, o título diz o que o clique fecha.
+    expect(botao).toHaveAttribute(
+      'title',
+      'Fecha a prontidão e a validação da necessidade, e chama o PO: ele entra sozinho quando o Criativo terminar o resumo do produto',
+    );
 
     // O painel "Regras de negócio" (mesma fonte, sem busca própria) mostra a
     // regra registrada — prova de que não há uma segunda leitura divergente.

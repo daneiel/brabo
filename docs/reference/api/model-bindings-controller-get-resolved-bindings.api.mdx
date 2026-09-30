@@ -1,0 +1,69 @@
+---
+id: model-bindings-controller-get-resolved-bindings
+title: "Resolves the model of several agents and areas in one read"
+description: "Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped."
+sidebar_label: "Resolves the model of several agents and areas in one read"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Resolves the model of several agents and areas in one read"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/model-bindings/resolved"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./model-bindings-controller-get-resolved-bindings.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./model-bindings-controller-get-resolved-bindings.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./model-bindings-controller-get-resolved-bindings.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

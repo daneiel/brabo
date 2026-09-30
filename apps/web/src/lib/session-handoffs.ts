@@ -25,7 +25,6 @@ export interface DerivacoesDeHandoff {
   handoffDaInfraOferecido: Handoff | undefined;
   prontidaoJaDeclarada: boolean;
   arquiteturaJaDeclarada: boolean;
-  necessidadeJaValidada: boolean;
 }
 
 /**
@@ -192,11 +191,6 @@ export function derivarHandoffsDaSessao(
     (h) => h.fromAgent === 'arquiteto' && origemDoHandoff(h, events) !== 'manual',
   );
 
-  // A necessidade já foi validada? (RN-406) Diferente dos dois gates acima,
-  // esta confirmação NÃO produz handoff — é só o registro
-  // `necessity.validated` no event log, então a fonte é o próprio `events`.
-  const necessidadeJaValidada = events.some((e) => e.type === 'necessity.validated');
-
   return {
     activeFor,
     ofertasAcionaveis,
@@ -204,6 +198,5 @@ export function derivarHandoffsDaSessao(
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
-    necessidadeJaValidada,
   };
 }

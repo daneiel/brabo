@@ -439,6 +439,7 @@ motivo na URL.
 | DELETE | `/projects/:projectId/members/:userId` | role:maintainer |
 | GET | `/projects/:projectId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
+| GET | `/projects/:projectId/model-bindings/resolved` | role:viewer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |

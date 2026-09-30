@@ -549,14 +549,16 @@ breaker with a click.
 `projects.story_promotion` chooses WHO promotes a story from `draft` to
 `ready`:
 
-- **`manual`** (new project's default): the PO leaves the story complete
+- **`manual`**: the PO leaves the story complete
   and it stays `draft` with `stories.proposed_ready = true`. **None of
   its tasks are claimable** — `claimNext` requires `story.status =
   'ready'` — and it's the user who promotes it, individually or in
   batch, from the Backlog.
-- **`auto`**: the PO promotes on its own upon finishing a complete story.
-  This is the behavior that predates Phase 12c, kept as an explicit
-  option.
+- **`auto`** (new project's default since [RN-659](../business-rules.md#rn-659)):
+  the PO promotes on its own upon finishing a complete story. This was
+  the behavior that predated Phase 12c; `manual` was the default from
+  12c until RN-659 (migration `0065`), which changed only the column
+  default — projects created in between keep `manual`.
 
 **The mode changes the trigger, not the criterion.** Both paths go
 through `assertPromotable` — readiness (RF/DoD/DoR/rule) and modules
@@ -2503,10 +2505,10 @@ só numa seção seria pior que a lacuna.
   `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
   "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
   mudar de mínimo),
-  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:208` e `:236`
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` e `:301`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
-  `apps/web/src/routes/settings/ModelsSection.tsx:85` (`podeEditar`, e por que
+  `apps/web/src/routes/settings/ModelsSection.tsx:89` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
   que diz o motivo)
@@ -2646,9 +2648,9 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:164` (`cadeiaDoAgente`),
+  `apps/web/src/routes/settings/ModelsSection.tsx:149` (`cadeiaDoAgente`),
   `:329` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:398` (`handleClearAgentBinding` — os
+  por que a linha só relê no sucesso), `:385` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:359` (coluna Origem), `:429`
   (`não há nível abaixo`), `:448` (`sem gasto ainda`),
   `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o

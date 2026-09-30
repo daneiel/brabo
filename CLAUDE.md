@@ -202,6 +202,7 @@ estado lido do repositório e não da conversa.
 | A aba PRs fala da lista de PRs, e Parar/Remover sem container dizem por quê (AT-323/AT-324) | RN-646 |
 | O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
 | A sessão encerrada pode ser reaberta, com o log intacto e o fechamento anterior como evento novo (AT-071) | ADR 0183, RN-649/650 |
+| Reabrir sessão é `developer`, e o dono confirma sem prazo e a recusa com execução (AT-337) | ADR 0184, RN-650 |
 | Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
 | Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
 | Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
@@ -212,6 +213,12 @@ estado lido do repositório e não da conversa.
 | A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
 | Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
+| Os modelos vigentes de agentes e áreas numa leitura só: a carga de Configurações cai de 49 para 30 (AT-334) | RN-654 |
+| O fio nomeia quem entra pelo papel de workspace, e cada cartão de Aprovações lê o próprio motivo da política (AT-335/AT-336) | RN-655, RN-656 |
+| Projeto novo nasce com promoção de histórias automática (AT-313) | RN-659 |
+| O handoff do PO ao Arquiteto é aceito pelo sistema com backlog coberto e repositório local (AT-314) | ADR 0186, RN-660 |
+| O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
+| Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 
 ## Estado atual e aberto
 
@@ -1095,7 +1102,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
-  `package.json`: já são catorze na raiz e treze no website, cada um com o
+  `package.json`: já são dezoito na raiz e dezessete no website, cada um com o
   advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
   escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
   versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já
@@ -1457,8 +1464,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `ALLOWED_TRANSITIONS` dos terminais. O fechamento anterior vira o evento NOVO
   `session.reopened` (a coluna é limpa, o evento guarda quando e por quê), o
   `kind` não muda, e sessão com `execution.activated` NÃO reabre (409
-  `sessao_com_execucao`); papel `maintainer`, sem prazo e essa recusa são
-  padrão provisório à espera do dono. O `SessionLifecycleWorker` ignora o
+  `sessao_com_execucao`); papel `developer` (o mesmo de encerrar), sem prazo e
+  essa recusa são decisão do dono desde o ADR 0184 (AT-337), não mais padrão
+  provisório. O `SessionLifecycleWorker` ignora o
   fechamento que a reabertura já desfez (lê o `status` da sessão).
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
@@ -1474,7 +1482,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `execution/activate` sem repositório é 409 antes de qualquer efeito —
   RECUSA, nunca provisiona: provisionar ali esconderia um efeito de git na
   ativação e deixaria Arquiteto e Infra, que trabalham antes dela, sem onde
-  escrever
+  escrever. Desde o ADR 0186 (RN-660) esse aceite tem um SEGUNDO autor: a
+  oferta `po → arquiteto` é aceita pelo SISTEMA quando o backlog está coberto
+  (≥ 1 regra, nenhuma sem história, a mesma `computeCoverage` da aba Backlog),
+  o repositório é `local` e o projeto não tem conexão de git — sempre por
+  `AcceptHandoffUseCase` e com o ator `handoff-auto-accept` no log. Não
+  estenda a outro par de agentes nem a repositório remoto sem ADR
 - O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
   para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
   como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
@@ -1523,7 +1536,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   incondicional, agora é `require_approval` incondicional, com a mesma
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
-  recusa gravar padrão pra esses comandos).
+  recusa gravar padrão pra esses comandos). Desde a RN-661 a aba Executores
+  OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
+  só com o clique, e dizendo o que o modo automático não libera; nunca a grave
+  sem clique.
 - O papel de PROJETO sobrepõe o de workspace nos DOIS sentidos —
   `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`, e
   NÃO é "o maior dos dois" (RN-471). Restringir alguém num projeto sensível é
@@ -1584,7 +1600,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é autorização — quem autoriza continua sendo o papel —, e a transferência
   não confere se o novo titular tem credencial: sem ela, o turno termina com o
   desfecho de sempre ("Nenhuma credencial cadastrada"). Não há tela de membros
-  de workspace; as rotas são de API. Segue possível e declarado:
+  de workspace; as rotas são de API. A LEITURA (`GET workspaces/:id/members`,
+  RN-655) é `viewer`, e não o `owner` das escritas: ler não é manter, e é por
+  ela que o fio da sessão nomeia quem entra só pelo papel de workspace. Segue possível e declarado:
   rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
   workspace (única forma de revogar propriedade, reversível pela mesma rota);
   reescrever o próprio papel com o MESMO valor (upsert idempotente não é
@@ -1878,7 +1896,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
   poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
   moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
-  (container, gasto, `lastUsedAt`) fica fora, com o default. Guardado por
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Os bindings
+  RESOLVIDOS de agentes e áreas vêm num LOTE só
+  (`GET .../model-bindings/resolved`, RN-654), sob UMA `queryKey` que as três
+  seções de modelo leem — não volte a uma query por chave. Guardado por
   `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine

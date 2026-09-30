@@ -53,6 +53,7 @@ import type {
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  WorkspaceMemberWithUser,
   ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
@@ -62,6 +63,7 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  BindingsResolvidosEmLote,
   RoutingPreference,
   ProviderCapabilities,
   PromoteStoriesResult,
@@ -380,6 +382,12 @@ export const convertProjectExecutionMode = (
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
+/**
+ * Os membros do WORKSPACE (AT-335, `viewer`): quem entra num projeto só pelo
+ * papel de workspace não tem linha em `listProjectMembers`.
+ */
+export const listWorkspaceMembers = (workspaceId: string) =>
+  get<WorkspaceMemberWithUser[]>(`/workspaces/${workspaceId}/members`);
 export const addProjectMember = (
   projectId: string,
   input: { userId: string; role: Role },
@@ -623,14 +631,17 @@ export const transitionSession = (
 ) => post<Session>(`/projects/${projectId}/sessions/${sessionId}/transition`, { status });
 /**
  * Reabre uma sessão `closed`/`closed_abnormally` (ADR 0183, RN-649/650). Rota
- * própria, e não a de transição: pede `maintainer` e grava `session.reopened`.
+ * própria, e não a de transição: pede `developer` (ADR 0184) e grava
+ * `session.reopened`.
  */
 export const reopenSession = (projectId: string, sessionId: string) =>
   post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
+  // `actionId` (AT-336): só os eventos daquela ação — o motivo da política
+  // mora no `proposed_action.created` dela, e a ação não o guarda.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; actionId?: string } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
@@ -713,15 +724,6 @@ export const confirmArchitectureReadiness = (
 ) =>
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
-  );
-// Gate `necessidade-validada` (RN-406, ADR 0095) — confirmação humana de
-// que o `product_brief` do Criativo reflete a necessidade de negócio.
-// Endpoint dedicado: não reaproveita `confirmReadiness` (que só exige
-// regra capturada, RN-142) nem o aceite do handoff pelo PO (estrutural,
-// sem julgar conteúdo).
-export const validateNecessity = (projectId: string, sessionId: string) =>
-  post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/criativo/validate-necessity`,
   );
 // RN-162: submissão do formulário de `chat.structured_question` — grava
 // `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
@@ -1100,6 +1102,24 @@ export const setSessionModelBinding = (
     { modelId },
   );
 
+/**
+ * Os bindings RESOLVIDOS de vários agentes e áreas numa requisição só (RN-654,
+ * AT-334). Cada chave volta com EXATAMENTE o que a rota individual responderia
+ * (`getAgentModelBinding`/`getAreaModelBinding`) — a cascata é a mesma, no
+ * servidor. É o que as seções de modelo de Configurações leem: eram 20
+ * requisições por carga, contra o teto de 300/min do USUÁRIO (RN-579).
+ */
+export const getResolvedModelBindings = (
+  projectId: string,
+  agents: readonly string[],
+  areas: readonly string[],
+) =>
+  get<BindingsResolvidosEmLote>(
+    `/projects/${projectId}/model-bindings/resolved${qs({
+      agents: agents.length > 0 ? agents.join(',') : undefined,
+      areas: areas.length > 0 ? areas.join(',') : undefined,
+    })}`,
+  );
 export const getAgentModelBinding = (projectId: string, agentSlug: string) =>
   get<ResolvedBinding | null>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
 export const setAgentModelBinding = (

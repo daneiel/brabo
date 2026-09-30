@@ -278,7 +278,7 @@ one.
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
-  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
+  `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (formerly `SessionPage.agente-mais-recente.test.tsx`),
@@ -1517,6 +1517,12 @@ de fora dessa correção, e sem ela a bolha do agente ficava presa vazia
   manualmente antes da correção.
 
 ### RN-136 — O card acionável de handoff no chat só considera quem CONVERSA nesta tela {#rn-136}
+
+> **Desde o [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+> ([RN-658](#rn-658))** o handoff Criativo→PO que o "Estou pronto" pediu
+> nasce e é aceito na mesma chamada, em nome de quem clicou — o card de
+> aceite dele só aparece quando esse aceite não cabe (sessão anterior ao ADR,
+> brief que não veio do clique) ou falhou. O filtro abaixo não muda.
 
 `OfferInfraHandoffUseCase` oferece o handoff pro Infra e, na MESMA
 confirmação, oferece pro Dev Lead logo em seguida (FASE 14d) — duas chamadas
@@ -3366,6 +3372,18 @@ sozinho que a necessidade que ele mesmo produziu está validada seria
 autovalidação, não gate de verdade.
 
 ### RN-406 — O gate `necessidade-validada` se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando {#rn-406}
+
+> **Revista pelo [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+> ([RN-657](#rn-657)), por decisão do dono em 30/09.** O clique deixou de ser
+> SEPARADO: "Estou pronto — a necessidade está validada" grava
+> `readiness.confirmed` e `necessity.validated` no mesmo POST, com o
+> `product_brief` produzido DEPOIS do clique (`productBriefId: null`). O botão
+> "Confirmar necessidade validada" saiu da tela. O que desta regra continua
+> valendo: quem valida é sempre uma PESSOA, nunca o Criativo; o gate segue
+> `warn`. `POST .../agents/criativo/validate-necessity` continua na api, sem
+> consumidor na tela — é o caminho de uma sessão cujo "Estou pronto" é
+> anterior ao ADR 0185. O texto abaixo é o desenho do ADR 0095, mantido como
+> histórico.
 
 `SessionPage.tsx` ganha um terceiro botão de confirmação, no MESMO padrão
 interacional de "Estou pronto para produzir" (RN-142) e "Confirmar
@@ -14024,7 +14042,7 @@ compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) ma
 deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
 certo, porque sem a variável a api nunca chama o broker.
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:376`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:377`
   (`getProjectsBase`, `:256` o campo novo),
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
@@ -14701,7 +14719,7 @@ fechada seguem mostrando a mensagem da api.
   `accept-handoff.use-case.ts:90`, `activate-agent.use-case.ts:52`;
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:30`
   (`FALA_DO_AGENTE`), `:238` (o quinto sinal);
-  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:116`
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:124`
   (`findLatestOfTypesInSession`);
   `apps/engine/lib/engine/sessions/session_server.ex:115` (a pendência com
   instante), `:141` (`handle_info` do relógio próprio, AT-152), `:168`
@@ -14761,9 +14779,9 @@ próprio. A transição GENÉRICA continua recusando `closed → active` com 409
    renumerado, e o `kind` não muda ([RN-097](#rn-097)).
 3. **Sessão com execução não reabre** — 409 `sessao_com_execucao`. Reabrir uma
    sessão com `execution.activated` a devolveria a `findActiveExecutionSession`
-   ([RN-139](business-rules/autenticacao.md#rn-139)). Padrão provisório à
-   espera do dono, declarado no ADR.
-4. **Sem prazo.** Toda sessão encerrada é reabrível (padrão provisório).
+   ([RN-139](business-rules/autenticacao.md#rn-139)). Decisão do dono,
+   confirmada no [ADR 0184](adr/0184-reabrir-sessao-decisoes-do-dono.md).
+4. **Sem prazo.** Toda sessão encerrada é reabrível (decisão do dono, ADR 0184).
 5. **O engine é chamado antes da transação**, como na ativação: falha dele
    deixa a sessão encerrada, sem evento. Outro estado que não terminal é 409
    `sessao_nao_encerrada`.
@@ -14798,35 +14816,38 @@ próprio. A transição GENÉRICA continua recusando `closed → active` com 409
   sessão `closed` para, como sempre)
 - **Origem:** AT-071 (HS-048), sobre o `exp001`
 
-### RN-650 — Reabrir é `maintainer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
+### RN-650 — Reabrir é `developer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
 
-`POST projects/:projectId/sessions/:sessionId/reopen` exige `maintainer` — um
-degrau acima da transição genérica (`developer`), porque religa gasto de token
-numa sessão que alguém deu por terminada. Responde 200 com a sessão. Padrão
-provisório à espera do dono (ADR 0183).
+`POST projects/:projectId/sessions/:sessionId/reopen` exige `developer` — o
+MESMO papel da transição genérica que encerra a sessão: quem pode dá-la por
+terminada pode trazê-la de volta. Responde 200 com a sessão. `viewer` é 403.
+O [ADR 0183](adr/0183-reabrir-sessao-encerrada.md) tinha fixado `maintainer`
+como padrão provisório; o dono decidiu `developer` em 2026-09-30
+([ADR 0184](adr/0184-reabrir-sessao-decisoes-do-dono.md)), confirmando junto
+as outras duas decisões — sem prazo, e sessão com `execution.activated`
+recusada.
 
 Na tela de Sessão, a faixa da sessão encerrada mostra "Reabrir sessão" com uma
-frase do que volta. Abaixo de `maintainer` (`roleAtLeast`, papel de WORKSPACE —
+frase do que volta. Abaixo de `developer` (`roleAtLeast`, papel de WORKSPACE —
 a lacuna da [RN-471](#rn-471) já declarada na tela) o botão fica inerte e o
 motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vira
 toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
-- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
-  (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:145` (`podeReabrir`), `:533`
-
-  `apps/web/src/routes/SessionPage.tsx:147` (`podeReabrir`), `:538`
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:206`
+  (`reopen`); `apps/web/src/lib/api-client.ts:629` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:150` (`podeReabrir`), `:543`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
-- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
-  (`maintainer`, e a transição genérica segue `developer`), `:30` (200);
-  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:140` (maintainer
-  reabre pela rota própria — caminho feliz), `:164` (owner também), `:171`
-  (developer/viewer/sem papel: inerte com o motivo em texto — caso de falha),
-  `:184` (recusa da api vira toast), `:206` (sessão ativa não oferece);
+- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:22`
+  (`developer`, o mesmo da transição genérica), `:36` (viewer não alcança o
+  papel da rota; developer, maintainer e owner alcançam), `:49` (200);
+  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:143` (developer
+  reabre pela rota própria — caminho feliz), `:167` (maintainer e owner
+  também), `:178` (viewer/sem papel: inerte com o motivo em texto — caso de
+  falha), `:191` (recusa da api vira toast), `:213` (sessão ativa não oferece);
   `apps/web/src/lib/activity.test.ts` ("reabertura de sessão")
-- **Origem:** AT-071
+- **Origem:** AT-071; papel decidido na AT-337
 
 ## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
 
@@ -16094,7 +16115,12 @@ mais recente) e não achou o evento na janela carregada diz *"fora dos eventos
 carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
 `ApprovalCard` — hipótese do Psicólogo não é `proposed_action`.
 
-**Desde a AT-333, a fila da aba Aprovações diz a lacuna UMA vez.** A fila é a
+**Desde a AT-336 ([RN-656](#rn-656)), cada card da aba Aprovações tem o
+PRÓPRIO motivo**, lido pela ação quando o log carregado não o cobre; o
+parágrafo seguinte é o estado da AT-333, que ela substituiu — a nota única
+sobra só para a leitura que FALHA.
+
+**Na AT-333, a fila da aba Aprovações passou a dizer a lacuna UMA vez.** A fila é a
 do PROJETO ([RN-638](#rn-638)) e os eventos são os de UMA sessão, então ali o
 *"fora dos eventos carregados"* saía em quase todo card — verdade repetida por
 card, a ferramenta se explicando. A api não expõe o motivo por ação (a ação
@@ -16123,16 +16149,16 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
   `apps/web/src/routes/session-timeline-montagem.tsx:825` e
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:304` (`decisoesDaPolitica`, a
-  contagem da nota da AT-333) e `:503` (quem passa o dado)
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (`decisoesDaPolitica`, desde a
+  AT-336 por `useDecisoesDaPolitica`) e `:499` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
   sem vazar caminho), `:114` (os dois idiomas), `:144` (a linha do log É a
   frase do card); `apps/web/src/components/ApprovalCard.test.tsx:733` (o card
   usa a mesma função, e os três estados);
-  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:239` (a nota dita uma vez,
-  parcial e ausente — AT-333)
-- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:304` (desde a AT-336, a nota
+  conta só a leitura que falha)
+- **Origem:** AT-148 (EP-025/HS-043); a nota da fila, AT-333; o motivo por cartão, AT-336
 
 ---
 
@@ -16189,7 +16215,7 @@ o ticket novo é recusado); tela (não existe seção de membros de workspace no
 `apps/web`). O TITULAR (`workspaces.created_by`) não sai por esta rota — é a
 [RN-616](#rn-616).
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:234`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:262`
   (`removeMember`);
   `apps/api/src/application/use-cases/iam/remove-workspace-member.use-case.ts:79`
   (`RemoveWorkspaceMemberUseCase`);
@@ -16266,7 +16292,7 @@ uma linha de log com de/para/quem.
   (`TransferWorkspaceOwnershipUseCase`);
   `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:98`
   (`transferirTitularidade`);
-  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:296`
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:297`
   (`transferOwnership`)
 - **Teste:**
   `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
@@ -17622,7 +17648,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:174` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
@@ -17889,7 +17915,7 @@ o do chat.
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:94` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
@@ -18196,17 +18222,21 @@ aba Configurações sobre um `fetch` que conta por rota; `dev` → esta regra):
 | carga da aba (2,5s) | 53 | 50 |
 | um minuto parado na aba | 76 | 68 |
 | Configurações → Visão geral → volta (buscas de configuração) | 31 | 0 |
+| carga da aba, com os bindings resolvidos em LOTE ([RN-654](#rn-654), AT-334) | 49 | 30 |
 
-Os "Depois" foram medidos sobre a mesma base do "Antes"; integrada a `dev` com a
-[RN-638](#rn-638) (a moldura lê a fila do projeto uma vez só), a carga ficou em
-49 e o minuto em 64, e são esses os tetos que o teste guarda.
+Os "Depois" das três primeiras linhas foram medidos sobre a mesma base do
+"Antes"; integrada a `dev` com a [RN-638](#rn-638) (a moldura lê a fila do
+projeto uma vez só), a carga ficou em 49 e o minuto em 64. A quarta linha é a
+[RN-654](#rn-654), medida sobre a `dev` em 94e5dc721d: os 20 bindings
+resolvidos por chave viraram UMA leitura, e o teste guarda a carga em 30 e o
+minuto em 64.
 
-**O que esta regra NÃO fecha:** a carga continua em 50, e 20 delas são o
-binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota por chave
-(`GET projects/:projectId/agent-bindings/:agentSlug`) — cortá-las pede rota de
-LOTE na api, decisão à parte. Por isso RECARREGAR a página por seção, como o
-roteiro do levantamento fazia, ainda estoura o teto em ~6 cargas por minuto;
-navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
+**O que esta regra NÃO fecha:** até a [RN-654](#rn-654), 20 das requisições da
+carga eram o binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota
+por chave (`GET projects/:projectId/agent-bindings/:agentSlug`) — essa parte
+fechou com a rota de LOTE. RECARREGAR a página por seção, como o roteiro do
+levantamento fazia, ainda custa 30 por carga (~10 cargas por minuto antes do
+teto); navegar pelo sumário DENTRO da aba não remonta nada e custa zero. Os 68 do
 minuto são todos da MOLDURA (o `Shell` polla `projects-summary` e
 `execution/session` a 5s e os eventos da sessão de execução a 3s), comuns a
 toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
@@ -18225,6 +18255,73 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
   novo)
 - **Origem:** AT-321 (achados G1 e G2 do levantamento visual da Rodada 29;
   extensão da [RN-579](#rn-579) e da [RN-632](#rn-632))
+
+### RN-654 — Os bindings resolvidos de todos os agentes e áreas vêm numa leitura só {#rn-654}
+
+A [RN-645](#rn-645) mediu 49 requisições na carga da aba Configurações, e 20
+delas eram o binding RESOLVIDO de cada agente (17) e de cada área (3), uma rota
+por chave. Três seções liam essas chaves — modelos por agente, modelos por área
+e melhores modelos por capacidade —, e o teto de 300 req/min é do USUÁRIO
+([RN-579](#rn-579)).
+
+**A regra:**
+
+1. **`GET projects/:projectId/model-bindings/resolved?agents=…&areas=…`**
+   devolve `{ agents: [{ key, binding }], areas: [{ key, binding }] }`, na
+   ordem pedida e sem repetição. Cada `binding` é EXATAMENTE o que a rota
+   individual responderia para aquela chave (`GET .../agent-bindings/:slug`,
+   `GET .../area-bindings/:key`): a mesma cascata `workspace › projeto › área ›
+   agente` sem sessão, as mesmas origens que a tela transforma em cadeia
+   ([RN-470](business-rules/custo.md#rn-470)), a herança do Criativo, e `null` quando nenhum nível tem
+   modelo. Não há cascata nova: o caso de uso chama `ResolveModelBindingUseCase`
+   chave a chave, com a entrada que a rota individual passaria.
+2. **O papel mínimo é o das rotas individuais de leitura, `viewer`.** Quem não
+   alcança o projeto recebe o MESMO 403.
+3. **A leitura é contida**
+   ([ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md)): as chaves vêm em
+   lista separada por vírgula, com o alfabeto dos slugs (minúsculas, dígitos, `-`, `_`), e são no
+   máximo 64 somadas (`TETO_DE_CHAVES_NO_LOTE`). Chave malformada ou lote acima
+   do teto é 400 nomeando o motivo, nunca chave descartada calada — a resposta
+   afirmaria sobre menos chaves do que a tela pediu.
+4. **A web lê o lote por UMA `queryKey`** (`['model-bindings-resolved',
+   projectId]`), servida por uma requisição às três seções. Toda escrita de
+   binding de agente ou de área relê o lote inteiro, e a mesma invalidação
+   alcança o prefixo `['agent-binding', projectId]`, que a Visão geral e a aba
+   Executores seguem lendo por agente.
+5. **A falha do lote não vira "sem modelo".** Com uma leitura só, a falha é de
+   todas as chaves de uma vez: a seção diz o motivo UMA vez, com a frase da api
+   e a ação de reler, e cada linha diz "não lido" no lugar da cadeia. Enquanto
+   o lote não responde, a linha diz "lendo…". "Sem modelo em nenhum nível" fica
+   reservado ao `null` que a api afirmou.
+
+**Números:** a carga da aba caiu de 49 para 30 requisições
+(`configuracoes.orcamento.test.tsx`, sobre a `dev` em 94e5dc721d); o minuto
+parado segue em 64, todo da moldura.
+
+**O que esta regra NÃO fecha:** a Visão geral e a aba Executores continuam
+lendo o binding de cada agente do roster por rota individual — são poucos, e
+fora da aba Configurações. As rotas por chave continuam existindo.
+
+- **Código:** `apps/api/src/application/use-cases/llm/resolve-model-bindings-em-lote.use-case.ts:12`
+  (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
+  (`ResolveModelBindingsEmLoteUseCase`);
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1111`
+  (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:35`
+  (`invalidarBindingsResolvidos`), `:55` (`useBindingsResolvidos`);
+  `apps/web/src/routes/settings/LeituraDosBindings.tsx:19`
+  (`AvisoDeBindingsNaoLidos`), `:40` (`MarcaDeBindingNaoLido`)
+- **Teste:** `apps/api/test/interfaces/http/llm/model-bindings-em-lote.integration.spec.ts:182`
+  (caminho feliz contra Postgres: viewer lê o lote, e cada chave é igual à
+  rota individual), `:256` (recusa por papel, o mesmo 403 da rota
+  individual), `:275` (chave malformada), `:287` (lote acima do teto);
+  `apps/web/src/routes/settings/bindings-em-lote.test.tsx:150` (as duas seções
+  renderizam de UMA chamada, sem rota por chave), `:182` (a falha do lote é
+  dita e nenhuma linha vira "sem modelo"), `:217` (lendo, não "sem modelo");
+  `apps/web/src/routes/configuracoes.orcamento.test.tsx:233` (a carga lê o
+  lote uma vez e cabe em 30)
+- **Origem:** AT-334 (decisão do dono sobre a lacuna declarada na
+  [RN-645](#rn-645))
 
 ### RN-651 — No telefone, o painel da Sessão é gaveta, a barra quebra linha, e a tabela vira cartões {#rn-651}
 
@@ -18319,14 +18416,19 @@ anexar evento aceita de qualquer espécie. Os desfechos não se colapsam:
 1. **Quem vê** (`actor.id` igual ao `sub` do token; sem ele, pelo e-mail da
    linha de membro) — o nome ou e-mail da linha de membro, senão o e-mail da
    sessão, e só na falta dos dois "Você".
-2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, da
-   rota que JÁ existe, `GET projects/:id/members` (mínimo `viewer`), sob a
-   MESMA `queryKey` da aba de Configurações.
-3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro". É LACUNA
-   declarada: `project_members` só lista quem tem linha no projeto, e quem
-   entra só pelo papel de WORKSPACE não aparece ali; não há rota de leitura de
-   membros de workspace, e nenhuma foi inventada. A leitura que falha ou ainda
-   não chegou dá o mesmo desfecho, sem quebrar o fio.
+2. **Outra pessoa que a tela sabe nomear** — o nome dela, senão o e-mail, de
+   DUAS leituras compostas numa lista só (`comporMembros`), a de PROJETO antes
+   da de WORKSPACE: `GET projects/:id/members` (mínimo `viewer`), sob a MESMA
+   `queryKey` da aba de Configurações, e desde a AT-335
+   `GET workspaces/:id/members` ([RN-655](#rn-655)), do workspace DO PROJETO.
+   Quem tem as duas linhas aparece uma vez, pela de projeto — a mesma ordem da
+   sobreposição de papel ([RN-471](#rn-471)).
+3. **Outra pessoa que a tela NÃO sabe nomear** — "Outro membro": sem linha de
+   projeto nem de workspace (quem saiu do workspace e ainda tem fala no log),
+   ou as duas leituras falharam ou ainda não chegaram. A leitura que falha não
+   apaga a outra, e nenhuma delas quebra o fio. Até a AT-335 esta era a LACUNA
+   declarada de quem entra só pelo papel de workspace, que não tinha rota de
+   leitura; a rota nasceu por decisão do dono.
 4. **Agente** — `nomeDoAgente` e o avatar/cor do agente, como `agent.response`.
 5. **Ator desconhecido** (ausente, sem id, `system` ou espécie fora de
    pessoa/agente) — "Autor desconhecido", nunca "Você".
@@ -18336,15 +18438,324 @@ A narração `backlog.story_promotion_returned`, que tinha o mesmo defeito
 A mensagem OTIMISTA do composer continua com o e-mail de quem vê — ela é
 sempre dele.
 
-- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:44` (`autorDaMensagem`);
-  `apps/web/src/lib/autoria-da-sessao.ts:18` (`useAutoriaDaSessao`);
+- **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
+  `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
+  (`comporMembros`);
   `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
-- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:140`
+- **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
   (duas pessoas e um agente, cada mensagem sob o próprio autor — caminho
-  feliz), `:161` (ator desconhecido e pessoa fora dos membros com texto
-  próprio — caso de falha), `:179` (leitura de membros recusada);
+  feliz), `:168` (ator desconhecido e pessoa fora dos membros com texto
+  próprio — caso de falha), `:186` (quem entra só pelo papel de workspace é
+  nomeado — AT-335), `:205` (a leitura do workspace recusada não apaga a do
+  projeto), `:219` (leitura de membros recusada);
+  `apps/web/src/lib/autoria-da-sessao.test.ts:15` (a linha de projeto antes da
+  de workspace), `:22` (falha de uma leitura não apaga a outra);
   `apps/web/src/lib/autor-da-mensagem.test.ts:58` (ator ausente, sem id ou de
   espécie desconhecida nunca vira "você")
+- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`);
+  a lista do workspace, AT-335
+
+## A leitura dos membros do workspace (RN-655)
+
+### RN-655 — `GET workspaces/:id/members` é `viewer`, e devolve só id, nome, e-mail e papel {#rn-655}
+
+O fio da sessão ([RN-652](#rn-652)) nomeava só quem tinha linha em
+`project_members`; quem entra no projeto só pelo papel de WORKSPACE virava
+"Outro membro", porque não havia rota que lesse os membros do workspace
+(decisão do dono, AT-335). A rota nasce ao lado das três de ESCRITA de membro
+(`POST`/`DELETE` de membro e `PUT owner-of-record`, todas `owner`), e o mínimo
+dela NÃO é o delas: o mínimo é do ENDPOINT ([RN-102](business-rules/custo.md#rn-102)), e ler a lista
+não é mantê-la. É `viewer`, o das leituras vizinhas (`GET workspaces/:id`,
+`.../projects`) e o de `GET projects/:id/members`, que ela completa — quem
+abre uma sessão precisa saber quem falou nela, e um `viewer` de workspace já
+enxerga todo projeto do workspace.
+
+A resposta tem a MESMA forma da leitura de projeto — `userId`, `name`,
+`email`, `role` (o papel de WORKSPACE) — e nada além: sem `createdAt`, sem
+estado de conta. Workspace inexistente é 404, e quem não é membro é recusado
+pelo `RolesGuard` (403). Continua não havendo TELA de membros de workspace: a
+leitura existe para nomear, e as rotas de escrita seguem sendo de API.
+
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:216`
+  (`listMembers`);
+  `apps/api/src/application/use-cases/iam/list-workspace-members.use-case.ts:16`
+  (`execute`);
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:114`
+  (`listMembers`)
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/list-workspace-members.use-case.spec.ts:75`
+  (a forma da resposta, contra Postgres — caminho feliz), `:96` (workspace
+  inexistente é 404), `:104` (o mínimo é `viewer`), `:112` (`viewer` passa pelo
+  guard), `:125` (quem não é membro recebe 403)
+- **Origem:** AT-335
+
+## O motivo da política em cada cartão de Aprovações (RN-656)
+
+### RN-656 — A leitura de eventos da sessão filtra por `actionId`, e cada cartão da aba Aprovações lê o próprio motivo por ela {#rn-656}
+
+A ação não guarda o motivo da política: ele mora no `proposed_action.created`
+([RN-567](#rn-567), [RN-609](#rn-609)). A aba Aprovações lê a fila do
+PROJETO ([RN-638](#rn-638)) e o log de UMA sessão, então desde a AT-333 ela
+dizia numa nota única quantas ações ficavam sem motivo ([RN-614](#rn-614)).
+Decisão do dono (AT-336): cada cartão mostra o PRÓPRIO.
+
+**O que se mediu.** As duas saídas do card eram um filtro `actionId` na
+leitura de eventos ou uma rota que lesse o evento pela ação. O filtro é o
+menor: reusa a rota (`GET .../sessions/:sessionId/events`, `viewer`), o DTO e o
+caso de uso, e a ação já carrega o `sessionId` da sessão que a propôs. Não
+nasce índice nem migration: o predicado sobre `payload->>'actionId'` roda
+DENTRO da sessão, que o índice único `(session_id, seq)` já recorta. Uma
+leitura de PROJETO por `actionId` exigiria rota nova para achar a sessão que o
+cartão já conhece.
+
+**A regra na api.** `actionId` devolve só os eventos cujo `payload.actionId` é
+aquela ação, na sessão pedida — nunca atravessa sessões. Combina com os outros
+parâmetros e o `limit` conta só os que casam; o `seq` deixa de ser contíguo na
+página, então quem filtra NÃO deriva omitidos por subtração
+([RN-180](business-rules/autenticacao.md#rn-180)). Vazio é 400: um filtro que some com a string errada
+devolveria o log inteiro a quem pediu o motivo de uma ação.
+
+**A regra na tela.** `useDecisoesDaPolitica`: a ação cujo evento está no log
+que a aba JÁ carregou usa esse, sem requisição; as outras leem pela ação, na
+sessão dela, com `staleTime: Infinity` — evento é imutável, então cada ação
+custa UMA leitura enquanto o cache viver e a fila polla sem repetir nenhuma.
+Nada é pedido enquanto a aba ainda carrega o próprio log. A leitura que
+responde SEM o evento dá a frase de "motivo não registrado" (nunca cala); só a
+leitura que FALHA deixa o cartão calado, e é essa, e só essa, que a nota do
+topo conta (*"de N das M ações abaixo"*). O painel "precisa de você" NÃO usa
+este caminho: ele não lê log nenhum e abrir não dispara consulta, então o
+cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
+
+- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:252`
+  (`listEvents`);
+  `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:61`
+  (o filtro);
+  `apps/web/src/lib/decisao-da-politica-queries.ts:35` (`useDecisoesDaPolitica`);
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (quem o chama), `:481` (a
+  nota da falha), `:499` (o motivo em cada cartão)
+- **Teste:**
+  `apps/api/test/application/use-cases/sessions/list-session-events-por-acao.use-case.spec.ts:80`
+  (só os eventos da ação, com o motivo — caminho feliz, contra Postgres),
+  `:109` (não atravessa sessões), `:123` (sessão de outro projeto é 404),
+  `:134` (`actionId` vazio é 400);
+  `apps/web/src/routes/ProjectApprovalsTab.test.tsx:267` (ação de outra sessão
+  lê o motivo pela ação, e a do log carregado não vira requisição), `:294`
+  (evento ausente diz "não registrado"), `:304` (a leitura que falha é dita
+  uma vez, contando só ela)
+- **Origem:** AT-336
+
 - **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)
+
+### RN-659 — Projeto novo nasce com promoção de histórias automática; projeto existente fica no modo que tinha {#rn-659}
+
+O default de `projects.story_promotion` passa de `manual` para `auto` (decisão
+do dono em 30/09, AT-313): cada história completa do PO nasce `ready`, sem o
+clique de promoção por história que o levantamento da AT-309 contou como +N
+passos. A validação é a MESMA nos dois modos (RN-048); muda só quem dispara.
+
+A mudança é do DEFAULT da coluna, pela migration `0065`
+(`ALTER COLUMN … SET DEFAULT 'auto'`), e nada mais: nenhuma linha é reescrita,
+então projeto que nasceu `manual` continua `manual` até alguém trocar em
+Configurações. A criação NÃO manda o campo — o valor é o default da coluna,
+uma fonte só —, e as duas telas DIZEM o valor: o passo Confirmar da criação
+mostra "Promoção de histórias: automática — o PO promove", com onde mudar, e a
+seção de Configurações diz que projeto novo nasce em Automática e que mudar ali
+vale só para aquele projeto. Os dois scripts de validação que exercitam o fluxo
+manual (`validacao-fase-12.ts`, `validacao-real.ts`) passam a pedir `manual`
+explícito.
+
+- **Código:** `apps/api/src/db/schema/iam.ts:278` (`storyPromotion`);
+  `apps/api/src/db/migrations/0065_default_de_promocao_auto.sql`;
+  `apps/web/src/routes/NewProjectWizard.tsx:978` (a linha do Confirmar);
+  `apps/web/src/routes/settings/PromotionSection.tsx:75` (a nota do default)
+- **Teste:** `apps/api/test/db/story-promotion-migration.spec.ts:29` (projeto
+  novo nasce `auto` — caminho feliz), `:40` (projeto existente em `manual` não
+  muda — caso de falha); `apps/web/src/routes/NewProjectWizard.test.tsx:254`
+  (o Confirmar diz o valor); `apps/web/src/routes/ProjectSettingsTab.test.tsx:625`
+  (projeto antigo segue `manual` e a tela diz o default), `:646` (a api recusa
+  a troca e a tela diz que não salvou)
+- **Origem:** AT-313 (levantamento da AT-309, passo 5); revisa o default da
+  [RN-048](business-rules/custo.md#rn-048)
+
+### RN-660 — O handoff do PO ao Arquiteto é aceito pelo SISTEMA quando o backlog está coberto e o repositório é local e sem credencial {#rn-660}
+
+A oferta `po → arquiteto` que o engine cria (`POST
+/internal/sessions/:id/handoffs`) é aceita sem clique, na mesma requisição e
+DEPOIS da transação da oferta, quando as quatro condições valem
+(`decidirAceiteAutomatico`, puro):
+
+1. a oferta está `offered`;
+2. o **backlog está coberto**: o projeto tem ao menos UMA regra de negócio
+   (`artifact.business_rule`) e NENHUMA sem história que a cite em
+   `businessRuleIds` — a MESMA `computeCoverage` da aba Backlog e da leitura
+   do PO (RN-164). Zero regras não é coberto;
+3. o repositório é **local e sem credencial**: o projeto não tem repositório (o
+   aceite provisiona `local`) ou tem um `local`, e não tem conexão de git
+   (OAuth) em `project_git_connections`;
+4. quem abriu a sessão ainda tem `developer` no projeto (papel efetivo,
+   RN-471) — o mínimo da rota humana de aceite.
+
+Quem aceita continua sendo `AcceptHandoffUseCase`: o repositório nasce ali,
+antes de `activateAgent` (RN-582, ADR 0165), em nome de quem abriu a sessão. O
+aceite é auditável: `handoff.accepted` e `agent.activated` saem com o ator de
+SISTEMA `handoff-auto-accept`, e o `handoff.accepted` leva `automatico: true`,
+`emNomeDe` e o `criterio` (`regras`, `cobertas`, `repositorio`). Condição que
+falha não grava nada — a oferta fica com o botão de sempre, e a resposta ao
+engine diz o motivo (`regras_sem_historia`, `repositorio_nao_local`,
+`credencial_de_git_no_projeto`…). Falha DEPOIS de decidir "sim" não sobe: vira
+o evento `handoff.auto_accept_failed` (origem `infra`) e o fio o mostra. Com o
+aceite feito, a ferramenta `offer_handoff` diz ao PO que o Arquiteto já foi
+ativado. Repositório remoto ou com credencial continua pedindo o clique, e o
+handoff manual (ADR 0109) também.
+
+- **Código:** `apps/api/src/domain/sessions/aceite-automatico-do-handoff.ts:81`
+  (`decidirAceiteAutomatico`), `:74` (`backlogCoberto`);
+  `apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts:44`
+  (`AceitarHandoffAutomaticamenteUseCase`);
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:79`
+  (`AceitePeloSistema`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:403`
+  (`handoff`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:59`;
+  `apps/web/src/routes/session-timeline-montagem.tsx:604` (o aviso no fio)
+- **Teste:** `apps/api/test/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.spec.ts:73`
+  (backlog coberto e sem repositório: aceita pelo sistema — caminho feliz),
+  `:89` (regra sem história: não aceita e não grava nada — caso de falha),
+  `:99` (repositório remoto), `:109` (conexão de git), `:128` (falha vira
+  `handoff.auto_accept_failed`);
+  `apps/api/test/domain/sessions/aceite-automatico-do-handoff.spec.ts:37`,
+  `:49` (cada motivo de recusa);
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:323`
+  (ator de sistema, critério e provisionamento antes de ativar);
+  `apps/web/src/routes/SessionPage.handoff-aceite-automatico.test.tsx:174`,
+  `:196`; `apps/engine/test/engine/harness/tools/offer_handoff_test.exs:38`
+  (não rodado nesta sessão: sem Elixir no ambiente)
+- **Origem:** AT-314, [ADR 0186](adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)
+
+### RN-661 — O modo automático é OFERECIDO em lote para o time no início da execução, e a oferta diz o que ele não libera {#rn-661}
+
+Na aba Executores, com a execução ativa e o time de execução na tela, um cartão
+oferece ligar o modo automático (RN-153) para os agentes do time de uma vez
+(AT-315). É UM controle, e é oferta: os agentes que ainda não estão em
+automático vêm marcados, a pessoa desmarca quem não quer, e nada é gravado sem
+o clique em "Ligar". O clique grava a MESMA curinga (`agent_autonomy`,
+`actionType: "*"`, `auto_approve`) pelo MESMO endpoint do toggle por agente
+(`PUT .../agent-autonomy`, `maintainer`) — um PUT por agente, em série, sem
+abortar na primeira recusa, com desfecho POR agente nos três casos da RN-469
+(todos, nenhum com a frase da api, alguns com quem ficou em manual). Desligar
+continua no toggle manual/auto do card de cada agente; não há "desligar em
+lote". Quando todos já estão em automático, o cartão some.
+
+O cartão DIZ, antes do clique, o que o modo automático NÃO libera — os tetos
+absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida;
+`git push`, abertura de PR e deploy; `sudo`/`doas`; `container_remove`;
+`instruction_patch`; paralelizar ou subir o teto de paralelismo. Sem
+`maintainer` o controle fica inerte e o motivo é dito em texto; o papel lido é
+o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
+automático (RN-471).
+
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:52`
+  (`ModoAutomaticoDoTime`), `:81` (`ligar`), `:35`
+  (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:85`
+  (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
+- **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
+  gravado ao montar; o clique grava a curinga para cada escolhido — caminho
+  feliz), `:85` (a api recusa um agente e o desfecho nomeia quem ficou em
+  manual — caso de falha), `:74` (o que não libera), `:102` (sem
+  `maintainer`), `:108` (todos em automático, nada a oferecer)
+- **Origem:** AT-315 (levantamento da AT-309, linha "Modo automático")
+
+## Um clique fecha a prontidão, a necessidade e o aceite do PO (RN-657/RN-658)
+
+### RN-657 — "Estou pronto — a necessidade está validada" fecha os DOIS gates num POST, com o `product_brief` produzido depois do clique {#rn-657}
+
+Revisa a [RN-406](#rn-406) por decisão do dono (30/09, AT-311): o botão do
+Criativo passou a se chamar **"Estou pronto — a necessidade está validada"**
+(en: "I'm ready — the need is validated"), e é o rótulo que faz do clique o
+julgamento de MÉRITO que o [ADR 0095](adr/0095-gate-necessidade-validada.md)
+exigia separado — a pessoa declara as duas coisas, com as palavras das duas.
+`POST .../sessions/:id/readiness` grava, nesta ordem:
+
+1. `readiness.confirmed`, ator a pessoa, com a marca
+   `{ necessidadeValidada: true, aceiteImplicitoDoPo: true }` (a marca é o
+   que a [RN-658](#rn-658) lê; evento antigo, com payload `{}`, não aceita
+   nada);
+2. o comando ao engine (o turno que consolida o `product_brief`, [RN-142](#rn-142));
+3. só se o engine ACEITOU o turno, `necessity.validated`, ator a mesma
+   pessoa, com `productBriefId: null` (o brief ainda não existe — nasce do
+   turno que o clique dispara), `via: 'readiness.confirmed'` e o
+   `readinessEventId` do passo 1.
+
+A recusa do engine (409 turno em curso, 422 sem regra de negócio) sobe ANTES
+do passo 3: sem turno aceito não há brief a caminho, e a necessidade NÃO fica
+validada. O gate segue `warn` (`docs/gates.yml`) — nada a jusante o consulta.
+A tela não tem mais o botão "Confirmar necessidade validada"; o título do
+botão habilitado diz o que o clique fecha, e o aviso de sucesso diz que o PO
+entra quando o resumo ficar pronto.
+
+- **Código:** `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts:26` (`ConfirmReadinessUseCase`),
+  `:42` (`necessity.validated`);
+  `apps/api/src/domain/sessions/estou-pronto.ts:27` (`MARCA_DO_ESTOU_PRONTO`);
+  `apps/web/src/routes/SessionComposer.tsx:315` (o título do botão);
+  `apps/web/src/routes/SessionPage.tsx:602` (`handleReadiness`)
+- **Teste:** `apps/api/test/application/use-cases/agents/confirm-readiness.use-case.spec.ts:49`
+  (os dois eventos, com a marca e o brief por vir — caminho feliz), `:72`
+  (422 do engine: só a prontidão fica gravada — caso de falha);
+  `apps/web/src/routes/SessionPage.estou-pronto.test.tsx:150` (um clique,
+  aviso de necessidade validada, sem botão separado), `:169` (recusa: nada é
+  dito como validado)
+- **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md), que revisa o
+  [0095](adr/0095-gate-necessidade-validada.md)
+- **Origem:** AT-311 (levantamento da AT-309, achado 1)
+
+### RN-658 — O aceite do handoff Criativo→PO é implícito no "Estou pronto": os MESMOS eventos, com a pessoa como ator e a marca `implicito` {#rn-658}
+
+Decisão do dono (30/09, AT-312): o clique separado de aceitar o PO some. O
+handoff Criativo→PO nasce DEPOIS do clique (é o turno que ele dispara que o
+oferece, `CriativoServer.executar_confirm_readiness/1`), então o aceite não
+cabe no POST do clique: ele acontece na rota interna que CRIA a oferta
+(`POST /internal/sessions/:id/handoffs`), logo depois de
+`CreateHandoffUseCase`, e passa pelo MESMO `AcceptHandoffUseCase` do card.
+
+Medido antes de mudar, o aceite pelo card grava: a transição da linha para
+`accepted`, `handoff.accepted` (ator a pessoa, `{handoffId, toAgent}`),
+`agent.activated` (ator a pessoa, `{agent}`) e, pela [RN-635](#rn-635), o
+`handoff.superseded` das outras ofertas ao PO no projeto. O aceite implícito
+grava exatamente esses, com o MESMO ator humano — quem clicou, lido do
+`readiness.confirmed` marcado —, e acrescenta a marca
+`implicito: { via: 'readiness.confirmed', readinessEventId }` no payload de
+`handoff.accepted` e de `agent.activated`. Nenhum evento é editado, nenhum ator
+de sistema entra no lugar da pessoa, e o aceite pelo card segue sem a marca.
+
+Aceita-se só quando TODAS valem (`decidirAceiteImplicitoDoPo`): a oferta é
+`criativo` → `po`, `offered`, DESTA sessão, e leva como artefato o
+`product_brief` nascido DEPOIS do `readiness.confirmed` marcado mais recente.
+Fora disso a oferta fica `offered` e o card aparece como sempre: sessão
+anterior ao ADR 0185 (sem marca), brief anterior ao clique, e o handoff
+MANUAL, que nunca leva artefato ([RN-633](#rn-633) — o "Estou pronto" segue
+na tela depois dele). A falha do aceite NÃO sobe para o engine (a oferta foi
+criada, e o Criativo diria "não consegui oferecer" — falso): vira
+`agent.error` durável, ator `system`/`aceite-implicito`, com origem (`infra`
+ou `politica`) e `reason: aceite_implicito_falhou`. O 400 de "não está
+`offered`" não é falha: alguém decidiu a oferta por outro caminho no intervalo,
+e isso já está no log. A tela passa o destinatário do composer ao PO no clique
+(o gesto de chamá-lo, [RN-631](#rn-631)); enquanto ele não entra, a escolha não
+vale e o Criativo segue recebendo. Nenhum teto se move: aceitar o PO não
+provisiona repositório (só o Arquiteto e o Dev Lead, [RN-582](#rn-582)), não
+faz merge nem push.
+
+- **Código:** `apps/api/src/domain/sessions/estou-pronto.ts:62` (`decidirAceiteImplicitoDoPo`);
+  `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts:37` (`AceiteImplicitoDoPoUseCase`),
+  `:45` (`seCouber`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:404` (`handoff`);
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:135` (`implicito` no `handoff.accepted`);
+  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:80` (`implicito` no `agent.activated`)
+- **Teste:** `apps/api/test/application/use-cases/agents/aceite-implicito-do-po.use-case.spec.ts:105`
+  (aceita em nome de quem clicou — caminho feliz), `:129` (falha do aceite
+  vira `agent.error` e não sobe — caso de falha), `:120`, `:146`;
+  `apps/api/test/domain/sessions/estou-pronto.spec.ts:58`, `:72`, `:83`, `:94`;
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:318`
+  (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
+- **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+- **Origem:** AT-312 (levantamento da AT-309, passo 4)

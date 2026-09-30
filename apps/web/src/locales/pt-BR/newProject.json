@@ -102,6 +102,8 @@
     "bootstrapLabel": "Bootstrap",
     "visibilityLabel": "Visibilidade",
     "managedFolder": "pasta gerenciada pelo Brabo",
+    "promotionLabel": "Promoção de histórias",
+    "promotionAutoValue": "automática — o PO promove (padrão de projeto novo; muda em Configurações)",
     "bootstrapAdoptValue": "nada roda sem sua aprovação",
     "bootstrapStepsValue_zero": "{{count}} passos de Gitflow",
     "bootstrapStepsValue_one": "{{count}} passo de Gitflow",

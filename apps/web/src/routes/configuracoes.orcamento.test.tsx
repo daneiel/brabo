@@ -32,10 +32,12 @@ import type { ChaveDeAba } from './project-tabs';
  * só), a carga caiu para 49 e o minuto para 64 — os tetos abaixo são esses.
  *
  * O "55" do levantamento é a mesma carga medida a 5s, com os dois primeiros
- * polls da moldura dentro. Dos 50 de agora, 20 são o binding RESOLVIDO de cada
- * agente e de cada área, uma rota por chave — cortá-los pede rota de LOTE na
- * api, fora deste corte. Dos 68 do minuto, todos são da MOLDURA (Shell e
- * trilho), comuns a toda aba.
+ * polls da moldura dentro. Dos 50 de então, 20 eram o binding RESOLVIDO de cada
+ * agente e de cada área, uma rota por chave. A AT-334 (RN-654) os trocou pela
+ * leitura em LOTE (`GET .../model-bindings/resolved`), que as três seções de
+ * modelo leem pela mesma chave: a carga caiu de 49 para 30 (medido aqui, sobre
+ * a `dev` em 94e5dc721d). Dos 64 do minuto, todos são da MOLDURA (Shell e
+ * trilho), comuns a toda aba — a AT-334 não os mexe.
  */
 
 const contagem = new Map<string, number>();
@@ -121,6 +123,7 @@ function corpoDe(rota: string): unknown {
  * buscam. É por elas que a volta à aba se mede.
  */
 const ROTAS_DE_CONFIGURACAO = [
+  /\/model-bindings\/resolved$/,
   /agent-bindings\//,
   /area-bindings\//,
   /\/model-binding$/,
@@ -236,8 +239,14 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     expect(porRota['GET /projects/:id/git/repository']).toBe(1);
     expect(porRota['GET /workspaces']).toBe(1);
     for (const [rota, n] of Object.entries(porRota)) expect([rota, n]).toEqual([rota, 1]);
-    // `dev`: 53.
-    expect(total(porRota)).toBeLessThanOrEqual(49);
+    // AT-334 (RN-654): os bindings resolvidos dos 17 agentes e das 3 áreas
+    // vêm numa leitura só — e nenhuma rota por chave sobra na carga.
+    expect(porRota['GET /projects/:id/model-bindings/resolved']).toBe(1);
+    expect(
+      Object.keys(porRota).filter((k) => /agent-bindings\/|area-bindings\//.test(k)),
+    ).toEqual([]);
+    // `dev`: 53 → 49 (AT-321) → 30 (AT-334).
+    expect(total(porRota)).toBeLessThanOrEqual(30);
   }, 60_000);
 
   it('um minuto parado na aba: nenhum poll de configuração', async () => {

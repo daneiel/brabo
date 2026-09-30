@@ -1,0 +1,83 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import type { SessionEvent } from '../lib/api-types';
+import i18n from '../lib/i18n';
+import { montarTimeline, type ContextoDaTimeline } from './session-timeline-montagem';
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
+}));
+
+/**
+ * A bolha de `agent.error` carrega um seletor ESTRUTURAL — `data-testid` e a
+ * ORIGEM em `data-origem` — para o E2E da AT-338
+ * (`e2e/testes/turno-pelo-canal.spec.ts`) achá-la sem ler texto, que muda com
+ * o idioma da conta.
+ */
+
+function falha(payload: Record<string, unknown>): SessionEvent {
+  return {
+    id: 'e1',
+    seq: 1,
+    type: 'agent.error',
+    actor: { kind: 'agent', id: 'criativo' },
+    payload,
+    createdAt: '2026-09-30T12:00:00.000Z',
+  } as SessionEvent;
+}
+
+function montar(eventos: SessionEvent[]) {
+  const nada = vi.fn();
+  const ctx = {
+    events: eventos,
+    actions: [],
+    backlogQuery: { data: undefined },
+    projectId: 'p1',
+    sessionId: 's1',
+    t: i18n.getFixedT('pt-BR', 'sessionPage'),
+    autoria: { meuId: null, meuEmail: null, membros: undefined },
+    queryClient: {} as never,
+    invalidateActions: nada,
+    ofertasAcionaveis: [],
+    isActive: true,
+    semRepositorio: false,
+    promovendoStoryId: null,
+    promovendoTodas: false,
+    ativandoExecucao: false,
+    podeAtivarAutoMode: false,
+    podeDecidir: true,
+    setRecusandoStory: nada,
+    setMotivoRecusa: nada,
+    handlePromoteStory: nada,
+    handlePromoteAll: nada,
+    handleAcceptHandoff: nada,
+    handleActivateExecution: nada,
+    handleActivateAutoMode: nada,
+    iniciarTurnoDoAgente: nada,
+    acompanharTurnoPeloLog: nada,
+    finalizarTurnoDoAgente: nada,
+  } as unknown as ContextoDaTimeline;
+  const { container } = render(<>{montarTimeline(ctx).map((e) => e.node)}</>);
+  return container;
+}
+
+describe('montarTimeline — a bolha de falha de turno (AT-338)', () => {
+  it('marca a bolha e a origem gravada pelo engine', () => {
+    const container = montar([
+      falha({ origem: 'politica', mensagem: 'Nenhuma credencial cadastrada para anthropic.' }),
+    ]);
+    const bolhas = container.querySelectorAll('[data-testid="falha-de-turno"]');
+    expect(bolhas).toHaveLength(1);
+    expect(bolhas[0]?.getAttribute('data-origem')).toBe('politica');
+  });
+
+  it('payload sem origem: a marca existe, e a origem NÃO é uma das quatro por chute', () => {
+    const container = montar([falha({})]);
+    const bolha = container.querySelector('[data-testid="falha-de-turno"]');
+    expect(bolha).not.toBeNull();
+    expect(['infra', 'modelo', 'codigo', 'politica']).not.toContain(
+      bolha?.getAttribute('data-origem'),
+    );
+  });
+});

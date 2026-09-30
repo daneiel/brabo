@@ -1,0 +1,176 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
+import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-types';
+import { nomeDoAgente } from '../lib/agents';
+import { Button } from './ui/Button';
+import styles from './ModoAutomaticoDoTime.module.css';
+
+/**
+ * O modo automático oferecido EM LOTE para o time, no início da execução
+ * (RN-661, AT-315).
+ *
+ * É UM controle, e ele é oferta: nada é gravado sem o clique em "Ligar".
+ * Grava a MESMA curinga que o toggle de cada agente e o botão do
+ * `ApprovalCard` (`agent_autonomy`, `actionType: "*"`, RN-153), pelo MESMO
+ * endpoint (`PUT .../agent-autonomy`, `maintainer`) — um PUT por agente
+ * escolhido, em série, sem abortar na primeira recusa (RN-469): o desfecho é
+ * POR AGENTE, e os três (todos, nenhum, alguns) não se disfarçam. Desligar
+ * continua sendo o toggle de cada agente; não há "desligar em lote".
+ *
+ * A tela DIZ o que o modo automático NÃO libera — os tetos absolutos (RN-154,
+ * RN-418) seguem pedindo aprovação, e quem liga em lote precisa ler isso ANTES
+ * do clique, não depois.
+ */
+export interface ModoAutomaticoDoTimeProps {
+  projectId: string;
+  /** Os agentes do time de execução, na ordem da tela. */
+  agentes: readonly string[];
+  autonomyRules: readonly AgentAutonomyRule[] | undefined;
+  /** `maintainer` no endpoint (RN-102); sem ele o controle fica inerte. */
+  podeLigar: boolean;
+}
+
+export function agentesEmModoAutomatico(
+  rules: readonly AgentAutonomyRule[] | undefined,
+): Set<string> {
+  return new Set(
+    (rules ?? [])
+      .filter(
+        (r) => r.actionType === AGENT_AUTONOMY_ALL_ACTIONS && r.mode === 'auto_approve',
+      )
+      .map((r) => r.agentId),
+  );
+}
+
+type Desfecho =
+  | { tipo: 'todos'; total: number }
+  | { tipo: 'nenhum'; mensagem: string }
+  | { tipo: 'alguns'; ok: number; total: number; falharam: string[] };
+
+export function ModoAutomaticoDoTime({
+  projectId,
+  agentes,
+  autonomyRules,
+  podeLigar,
+}: ModoAutomaticoDoTimeProps) {
+  const { t } = useTranslation('executors');
+  const queryClient = useQueryClient();
+  const jaLigados = agentesEmModoAutomatico(autonomyRules);
+  const candidatos = agentes.filter((a) => !jaLigados.has(a));
+  // Oferta: todos os que ainda não estão em automático vêm marcados, e a
+  // pessoa desmarca quem não quer. Marcar não grava nada.
+  const [desmarcados, setDesmarcados] = useState<Set<string>>(new Set());
+  const [ligando, setLigando] = useState(false);
+  const [desfecho, setDesfecho] = useState<Desfecho | null>(null);
+
+  if (candidatos.length === 0 && !desfecho) return null;
+
+  const escolhidos = candidatos.filter((a) => !desmarcados.has(a));
+
+  function alternar(agente: string) {
+    setDesmarcados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(agente)) proximo.delete(agente);
+      else proximo.add(agente);
+      return proximo;
+    });
+  }
+
+  async function ligar() {
+    setLigando(true);
+    setDesfecho(null);
+    const falharam: string[] = [];
+    let ultimaMensagem = '';
+    for (const agentId of escolhidos) {
+      try {
+        await setAgentAutonomy(projectId, {
+          agentId,
+          actionType: AGENT_AUTONOMY_ALL_ACTIONS,
+          mode: 'auto_approve',
+        });
+      } catch (erro) {
+        falharam.push(agentId);
+        ultimaMensagem = mensagemDaApi(erro, t('autoModeTeam.erroGenerico'));
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+    const total = escolhidos.length;
+    if (falharam.length === 0) setDesfecho({ tipo: 'todos', total });
+    else if (falharam.length === total) setDesfecho({ tipo: 'nenhum', mensagem: ultimaMensagem });
+    else setDesfecho({ tipo: 'alguns', ok: total - falharam.length, total, falharam });
+    setLigando(false);
+  }
+
+  return (
+    <section className={styles.card} aria-labelledby="modo-automatico-do-time-titulo">
+      <h3 id="modo-automatico-do-time-titulo" className={styles.titulo}>
+        {t('autoModeTeam.title')}
+      </h3>
+      <p className={styles.texto}>{t('autoModeTeam.subtitle')}</p>
+
+      {candidatos.length > 0 && (
+        <ul className={styles.lista}>
+          {candidatos.map((agente) => (
+            <li key={agente}>
+              <label className={styles.opcao}>
+                <input
+                  type="checkbox"
+                  checked={!desmarcados.has(agente)}
+                  disabled={!podeLigar || ligando}
+                  onChange={() => alternar(agente)}
+                />
+                {nomeDoAgente(agente)}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className={styles.naoLibera} data-testid="modo-automatico-nao-libera">
+        <strong>{t('autoModeTeam.notReleased.title')}</strong>
+        <ul>
+          <li>{t('autoModeTeam.notReleased.merge')}</li>
+          <li>{t('autoModeTeam.notReleased.push')}</li>
+          <li>{t('autoModeTeam.notReleased.privileged')}</li>
+          <li>{t('autoModeTeam.notReleased.containerRemove')}</li>
+          <li>{t('autoModeTeam.notReleased.instructionPatch')}</li>
+          <li>{t('autoModeTeam.notReleased.parallelize')}</li>
+        </ul>
+        <span>{t('autoModeTeam.notReleased.turnOff')}</span>
+      </div>
+
+      {!podeLigar && (
+        <p className={styles.texto} data-testid="modo-automatico-sem-papel">
+          {t('autoModeTeam.noRole')}
+        </p>
+      )}
+
+      {candidatos.length > 0 && (
+        <Button
+          variant="primary"
+          loading={ligando}
+          disabled={!podeLigar || escolhidos.length === 0}
+          onClick={() => void ligar()}
+        >
+          {t('autoModeTeam.button', { count: escolhidos.length })}
+        </Button>
+      )}
+
+      {desfecho && (
+        <p className={styles.desfecho} role="status">
+          {desfecho.tipo === 'todos'
+            ? t('autoModeTeam.result.all', { count: desfecho.total })
+            : desfecho.tipo === 'nenhum'
+              ? t('autoModeTeam.result.none', { mensagem: desfecho.mensagem })
+              : t('autoModeTeam.result.some', {
+                  ok: desfecho.ok,
+                  total: desfecho.total,
+                  falharam: desfecho.falharam.map(nomeDoAgente).join(', '),
+                })}
+        </p>
+      )}
+    </section>
+  );
+}

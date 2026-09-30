@@ -10,6 +10,7 @@ import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { simularLayoutMovel } from '../../test/match-media';
 import { ModelsSection } from './ModelsSection';
+import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
  * AT-330 (achado N4 da auditoria da Rodada 29): em 390px "Modelos por agente"
@@ -51,6 +52,9 @@ vi.mock('../../lib/api-client', async () => {
     // produção enquanto o smoke do OpenRouter não rodar.
     listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
