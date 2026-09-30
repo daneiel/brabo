@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
+  ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
+  [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
+  A faixa de uma sessão `closed`/`closed_abnormally` ganha "Reabrir sessão": ela
+  volta a `active` com a conversa, as regras de negócio, as perguntas
+  respondidas e as ofertas entre agentes, e o encerramento anterior fica no log
+  como o evento novo `session.reopened` (quando e por quê). Rota própria,
+  `POST /projects/:projectId/sessions/:sessionId/reopen`, que exige
+  `maintainer`; abaixo disso o botão fica inerte e a tela diz por quê. Sessão
+  que ativou a execução não reabre (409 `sessao_com_execucao`): para voltar a
+  executar, abra uma sessão nova. `closing` continua sem volta, e a transição
+  genérica continua recusando `closed → active`. Papel, prazo e a regra da
+  execução são padrão provisório à espera do dono.
+
 - **web**: **o tema escuro vira preto neutro e calmo, com o acento terracota
   suave; o claro vira o neutro da mesma família** (AT-283, AT-284,
   [ADR 0181](docs/adr/0181-tema-preto-neutro.md),

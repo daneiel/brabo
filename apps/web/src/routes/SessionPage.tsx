@@ -16,6 +16,7 @@ import {
   sendAgentMessage,
   startAgent,
   transitionSession,
+  reopenSession,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
@@ -136,6 +137,10 @@ export function SessionPage({
   // (RN-102) — `roleAtLeast`, nunca lista à mão. O papel lido é o de WORKSPACE:
   // a tela não busca `project_members`, e a lacuna (RN-471) fica declarada.
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
+  // ADR 0183 (RN-650): reabrir pede `maintainer` no endpoint. Mesmo papel de
+  // WORKSPACE (a lacuna da RN-471 já declarada acima).
+  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'maintainer');
+  const [reabrindo, setReabrindo] = useState(false);
   // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
   // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
   // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
@@ -520,6 +525,22 @@ export function SessionPage({
         title: mensagemDaApi(erro, t('toasts.erroAtivarSessao')),
         tone: 'danger',
       });
+    }
+  }
+
+  // A recusa da api (409 de sessão com execução, 403) vira toast com a frase
+  // dela; a tela não repete a régua de execução, que só a api sabe inteira.
+  async function handleReopen() {
+    setReabrindo(true);
+    try {
+      await reopenSession(projectId, sessionId);
+      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+    } catch (erro) {
+      showToast({ title: mensagemDaApi(erro, t('toasts.erroReabrirSessao')), tone: 'danger' });
+    } finally {
+      setReabrindo(false);
     }
   }
 
@@ -918,6 +939,9 @@ export function SessionPage({
             handleValidateNecessity={handleValidateNecessity}
             hasProductBrief={hasProductBrief}
             handleActivate={handleActivate}
+            podeReabrir={podeReabrir}
+            reabrindo={reabrindo}
+            handleReopen={handleReopen}
           />
         </div>
 

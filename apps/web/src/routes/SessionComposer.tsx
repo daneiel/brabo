@@ -55,6 +55,14 @@ export interface SessionComposerProps {
   handleValidateNecessity: () => Promise<void>;
   hasProductBrief: boolean;
   handleActivate: () => Promise<void>;
+  /**
+   * ADR 0183 (RN-650): reabrir sessão encerrada. `podeReabrir` é o papel
+   * (`maintainer`, por `roleAtLeast`); sem ele o botão fica inerte e o motivo
+   * é dito em TEXTO.
+   */
+  podeReabrir?: boolean;
+  reabrindo?: boolean;
+  handleReopen?: () => Promise<void>;
 }
 
 export function SessionComposer({
@@ -91,6 +99,9 @@ export function SessionComposer({
   handleValidateNecessity,
   hasProductBrief,
   handleActivate,
+  podeReabrir = false,
+  reabrindo = false,
+  handleReopen,
 }: SessionComposerProps) {
   const { t } = useTranslation('sessionPage');
   return (
@@ -368,6 +379,19 @@ export function SessionComposer({
             <>
               {t('ativacao.naoAtivada')}
               <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
+            </>
+          ) : sessaoEhTerminal(session?.status) && handleReopen ? (
+            <>
+              <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
+              <span>{t('ativacao.reabrirExplicacao')}</span>
+              <Button
+                onClick={handleReopen}
+                disabled={!podeReabrir}
+                loading={reabrindo}
+              >
+                {t('ativacao.reabrir')}
+              </Button>
+              {!podeReabrir && <span>{t('ativacao.reabrirExigeMaintainer')}</span>}
             </>
           ) : (
             <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>

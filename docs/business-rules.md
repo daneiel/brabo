@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:797` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:818` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:623` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:644` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -305,7 +305,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:275` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5658,7 +5658,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:202` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14709,7 +14709,7 @@ fechada seguem mostrando a mensagem da api.
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
-  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
   (sessão encerrada recusa `chat.message` com 409 nomeado — caso de falha),
@@ -14733,6 +14733,94 @@ fechada seguem mostrando a mensagem da api.
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
 - **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
   8h e causa própria; sessão encerrada recusa conversa, nomeado)
+
+## A sessão encerrada pode ser reaberta (RN-649/RN-650)
+
+### RN-649 — Sessão `closed`/`closed_abnormally` reabre para `active` com o log intacto, e o fechamento anterior vira evento novo {#rn-649}
+
+A [RN-001](#rn-001) dizia que os estados terminais não têm saída. Desde o
+[ADR 0183](adr/0183-reabrir-sessao-encerrada.md) há UMA, e só uma: a
+reabertura, de `closed` ou `closed_abnormally` para `active`, por caminho
+próprio. A transição GENÉRICA continua recusando `closed → active` com 409, e
+`closing → active` segue proibido por qualquer caminho.
+
+1. **O que volta é a sessão inteira.** O event log não é tocado — a conversa,
+   as regras de negócio, as perguntas respondidas, as ofertas e aceites de
+   handoff. Um agente conversacional parado no fechamento volta pelo
+   `start_agent` idempotente na primeira mensagem e reconstrói o histórico
+   ([RN-580](#rn-580)). A conversa volta a entrar porque a recusa da
+   [RN-581](#rn-581) lê o estado da sessão, que agora é `active`.
+2. **O fechamento anterior não se apaga.** A linha de `sessions` perde
+   `closed_at` e `termination_reason`; o evento NOVO `session.reopened`, no
+   mesmo `seq` ([RN-002](#rn-002)) e com o ator humano que reabriu, carrega
+   `{from, to, closedAt, terminationReason}`. Nenhum evento é editado nem
+   renumerado, e o `kind` não muda ([RN-097](#rn-097)).
+3. **Sessão com execução não reabre** — 409 `sessao_com_execucao`. Reabrir uma
+   sessão com `execution.activated` a devolveria a `findActiveExecutionSession`
+   ([RN-139](business-rules/autenticacao.md#rn-139)). Padrão provisório à
+   espera do dono, declarado no ADR.
+4. **Sem prazo.** Toda sessão encerrada é reabrível (padrão provisório).
+5. **O engine é chamado antes da transação**, como na ativação: falha dele
+   deixa a sessão encerrada, sem evento. Outro estado que não terminal é 409
+   `sessao_nao_encerrada`.
+6. **O fechamento que a reabertura desfez não para a sessão viva.** O
+   `SessionLifecycleWorker` lê o `status` da sessão e ignora, com log, o job de
+   `session.closed`/`session.closed_abnormally` de uma sessão que a api já diz
+   não-terminal.
+7. **A segunda análise automática do Psicólogo fica bloqueada** pelo
+   `alreadyAnalyzed` que já existia; o reprocessamento manual segue. A segunda
+   consolidação do grafo estende a janela da mesma `Interacao`.
+
+- **Onde:** `apps/api/src/domain/sessions/session-state-machine.ts:66`
+  (`canReopen`), `:70` (`assertReopen`);
+  `apps/api/src/domain/sessions/reabertura-de-sessao.ts:24`
+  (`SessaoComExecucaoNaoReabreError`), `:44`
+  (`garantirQueSessaoSemExecucaoReabre`), `:58` (`payloadDaReabertura`);
+  `apps/api/src/application/use-cases/sessions/reopen-session.use-case.ts:53`
+  (`execute`), `:96` (`garantirQuePodeReabrir`);
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:59`
+  (`encerrar_se_ainda_encerrada`);
+  `apps/engine/lib/engine/sessions/project_session.ex:48` (`status`)
+- **Teste:** `apps/api/test/domain/sessions/session-state-machine.spec.ts:56`
+  (só terminais reabrem; `closing` nunca volta);
+  `apps/api/test/application/use-cases/sessions/reopen-session.use-case.spec.ts:121`
+  (`closed` reabre, log preservado, `session.reopened` com o fechamento
+  anterior — caminho feliz), `:151` (`closed_abnormally`), `:163` (a conversa
+  volta a entrar), `:186` (`closing` é 409 sem engine nem evento — caso de
+  falha), `:208` (sessão com execução é 409 `sessao_com_execucao`), `:239`
+  (engine fora do ar: nada muda);
+  `apps/engine/test/engine/workers/session_lifecycle_worker_test.exs:66`
+  (fechamento de sessão já `active` não para o processo), `:82` (fechamento de
+  sessão `closed` para, como sempre)
+- **Origem:** AT-071 (HS-048), sobre o `exp001`
+
+### RN-650 — Reabrir é `maintainer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
+
+`POST projects/:projectId/sessions/:sessionId/reopen` exige `maintainer` — um
+degrau acima da transição genérica (`developer`), porque religa gasto de token
+numa sessão que alguém deu por terminada. Responde 200 com a sessão. Padrão
+provisório à espera do dono (ADR 0183).
+
+Na tela de Sessão, a faixa da sessão encerrada mostra "Reabrir sessão" com uma
+frase do que volta. Abaixo de `maintainer` (`roleAtLeast`, papel de WORKSPACE —
+a lacuna da [RN-471](#rn-471) já declarada na tela) o botão fica inerte e o
+motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vira
+toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
+com a causa do fechamento anterior quando ela foi gravada.
+
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
+  (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:142` (`podeReabrir`), `:533`
+  (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
+  `apps/web/src/lib/activity.ts:633` (a frase do fio)
+- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
+  (`maintainer`, e a transição genérica segue `developer`), `:30` (200);
+  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:140` (maintainer
+  reabre pela rota própria — caminho feliz), `:164` (owner também), `:171`
+  (developer/viewer/sem papel: inerte com o motivo em texto — caso de falha),
+  `:184` (recusa da api vira toast), `:206` (sessão ativa não oferece);
+  `apps/web/src/lib/activity.test.ts` ("reabertura de sessão")
+- **Origem:** AT-071
 
 ## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
 
@@ -16903,8 +16991,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:274`
-  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
+  (`useRetomarTurnoDoLog`), `:894` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17252,8 +17340,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:352`
+  `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
   (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
