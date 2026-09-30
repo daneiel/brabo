@@ -19,7 +19,7 @@
    o token de agentes/IA que a FASE 16 criou — estava literal aqui porque até
    então não havia o que referenciar. */
 .row.highlighted {
-  background: color-mix(in srgb, var(--violet) 14%, transparent);
+  background: var(--violet-soft);
   box-shadow: inset 2px 0 0 var(--violet);
 }
 
@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--item-color) 16%, transparent);
+  background: color-mix(in srgb, var(--item-color) var(--tint-soft), transparent);
   color: var(--item-color);
 }
 

@@ -62,7 +62,7 @@
 
 .providerOption.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .providerLabel {
@@ -141,7 +141,7 @@
 
 .toggleOption.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
   color: var(--text-primary);
 }
 

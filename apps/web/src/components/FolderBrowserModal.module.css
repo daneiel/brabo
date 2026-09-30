@@ -144,12 +144,12 @@
 
 /* Pasta selecionada por UM clique (não navegou ainda — duplo clique entra). */
 .itemSelecionado {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
 .itemSelecionado:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: var(--accent-soft);
 }
 
 /* Arquivo: aparece na listagem (o protocolo devolve os dois), mas nunca é

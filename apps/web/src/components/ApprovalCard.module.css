@@ -43,7 +43,7 @@
 }
 
 .card.critical {
-  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  border-color: var(--danger-panel-border);
 }
 
 .header {
@@ -108,8 +108,8 @@
   border-radius: var(--radius-md);
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
   color: var(--accent);
 }
 
@@ -162,8 +162,8 @@
   align-self: center;
   flex-shrink: 0;
   color: var(--urgency-color);
-  background: color-mix(in srgb, var(--urgency-color) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--urgency-color) 34%, transparent);
+  background: color-mix(in srgb, var(--urgency-color) var(--tint-soft), transparent);
+  border: 1px solid color-mix(in srgb, var(--urgency-color) var(--tint-line), transparent);
 }
 
 .urgencyDot {

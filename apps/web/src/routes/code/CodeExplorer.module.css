@@ -54,7 +54,7 @@
 }
 
 .linhaAtiva {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
   border-left-color: var(--accent);
   color: var(--text-primary);
 }

@@ -141,7 +141,7 @@
 
 .remove:not(:disabled):hover {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  border-color: var(--danger-line);
 }
 
 .acoes {

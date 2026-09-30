@@ -176,7 +176,7 @@
 }
 
 .option.selected {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .radio {

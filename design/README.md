@@ -32,6 +32,29 @@ Design system do Brabo — fidelidade estrita exigida na UI (ver `CLAUDE.md`).
 `COMPONENTS.md`/`SCREENS.md` são a tradução curada usada como base pra
 implementação real em React/TSX em `apps/web`.
 
+**Tintas semânticas** (AT-285). Fundo e borda tingidos por um tom de estado
+não se escrevem mais com `color-mix()` no módulo: a escala é UMA e mora no
+`tokens.css`, no fim de cada bloco de tema —
+
+| token | o que é | mistura |
+|---|---|---|
+| `--<tom>-soft` | fundo tingido (badge, item ativo, alerta) | tom a `--tint-soft` (12%) sobre `transparent` |
+| `--<tom>-line` | borda tingida | tom a `--tint-line` (40%) sobre `transparent` |
+| `--<tom>-panel` / `--<tom>-panel-border` | faixa de aviso opaca | tom a `--tint-panel` (8%) sobre `--surface-1`; borda a 40% sobre `--border` |
+| `--focus-ring` / `--focus-ring-inset` / `--danger-ring` | anel de foco | acento a 22% / 45%; perigo a 22% |
+
+`<tom>` é `accent`, `success`, `warning` ou `danger` (`violet` tem só `-soft` e
+`-line`). Misturar com `transparent` é o que faz a tinta funcionar sobre
+QUALQUER base — ela não carrega o matiz da superfície de baixo, que é o que
+permite a paleta neutra trocar os fundos sem revisar módulo por módulo. Cor
+DINÂMICA (`--agent-color`, `--status-color`…) continua em `color-mix()`, mas
+com a porcentagem-token: `color-mix(in srgb, var(--agent-color)
+var(--tint-soft), transparent)`. `apps/web/src/design-tintas.test.ts` reprova
+mistura de tom fixo com porcentagem literal num módulo, tinta referenciada que
+o `tokens.css` não declara, e tinta do `:root` que o tema claro não redeclara.
+A consolidação arredondou vizinhos: os fundos de 10–18% viraram 12% e as
+bordas de 30–50% viraram 40%.
+
 Toda implementação de UI deve referenciar sempre os tokens semânticos
 (`var(--surface-*)`, `var(--text-*)`, `var(--accent)`, `var(--violet)`
 etc.) — nunca a paleta bruta nem valores de cor/espaçamento inventados.

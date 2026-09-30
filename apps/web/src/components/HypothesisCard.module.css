@@ -36,7 +36,7 @@
   justify-content: center;
   /* `--violet` é o token de agentes/IA desde a FASE 16. Era `#9c7be0` cru aqui
      porque não havia o que referenciar — e cru ele não seguia o tema claro. */
-  background: color-mix(in srgb, var(--violet) 18%, transparent);
+  background: var(--violet-soft);
   color: var(--violet);
 }
 
@@ -91,7 +91,7 @@
 }
 
 .termination {
-  border-left: 2px solid color-mix(in srgb, var(--danger) 50%, transparent);
+  border-left: 2px solid var(--danger-line);
   padding-left: 10px;
   display: flex;
   flex-direction: column;

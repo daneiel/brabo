@@ -25,26 +25,26 @@
 
 .success {
   color: var(--success);
-  background: color-mix(in srgb, var(--success) 14%, transparent);
-  border-color: color-mix(in srgb, var(--success) 34%, transparent);
+  background: var(--success-soft);
+  border-color: var(--success-line);
 }
 
 .warning {
   color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 14%, transparent);
-  border-color: color-mix(in srgb, var(--warning) 34%, transparent);
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
 }
 
 .danger {
   color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
-  border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
 }
 
 .accent {
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
 
 .muted {

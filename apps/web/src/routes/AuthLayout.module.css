@@ -79,7 +79,7 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--success) 14%, transparent),
+    var(--success-soft),
     transparent
   );
   pointer-events: none;

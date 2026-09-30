@@ -219,8 +219,8 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+  border: 1px solid var(--danger-panel-border);
+  background: var(--danger-panel);
   border-radius: var(--radius-md);
 }
 
@@ -251,8 +251,8 @@
   gap: 12px;
   padding: 10px 14px;
   margin: 8px 0;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  border: 1px solid var(--accent-panel-border);
+  background: var(--accent-panel);
   border-radius: var(--radius-md);
   font-size: 13px;
 }

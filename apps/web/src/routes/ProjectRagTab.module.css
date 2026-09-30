@@ -64,7 +64,7 @@
 .input:focus-visible {
   outline: none;
   border-color: var(--border-strong);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .escoposFiltro {
@@ -111,7 +111,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  background: var(--warning-soft);
   border: 1px solid var(--warning);
   border-radius: var(--radius-md);
   color: var(--warning);

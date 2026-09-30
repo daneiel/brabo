@@ -88,11 +88,11 @@
 .danger {
   background: transparent;
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  border-color: var(--danger-line);
 }
 
 .danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: var(--danger-soft);
 }
 
 .success {

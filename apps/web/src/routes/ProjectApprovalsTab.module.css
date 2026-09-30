@@ -90,7 +90,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--success) 14%, transparent);
+  background: var(--success-soft);
   display: grid;
   place-items: center;
   margin: 0 auto 14px;
@@ -107,8 +107,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: color-mix(in srgb, var(--warning) 8%, var(--surface-1));
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+  background: var(--warning-panel);
+  border: 1px solid var(--warning-panel-border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-size: 12.5px;
@@ -168,5 +168,5 @@
 
 .revoke:hover {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  border-color: var(--danger-line);
 }

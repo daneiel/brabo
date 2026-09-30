@@ -64,7 +64,7 @@
 }
 
 .railItemAtivo {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 

@@ -84,7 +84,7 @@
 /* Contagem de NOVIDADE — mesmo formato do total, cor de destaque pra
    diferenciar "isto é o que você ainda não viu" de "isto é o total". */
 .contagemNova {
-  background: color-mix(in srgb, var(--accent) 20%, var(--surface-2));
+  background: color-mix(in srgb, var(--accent) var(--tint-avatar), var(--surface-2));
   color: var(--accent);
   font-weight: 600;
 }
