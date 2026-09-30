@@ -206,5 +206,14 @@
     "semPapel": "Mergear aqui exige o papel developer no projeto.",
     "nota": "Propõe o merge nesta sessão; quem confirma é você, no card que aparece — o merge segue manual.",
     "erroTitulo": "Não foi possível propor o merge"
+  },
+  "fio": {
+    "historico": {
+      "titulo_one": "Antes da última mensagem",
+      "titulo_other": "Antes das últimas {{count}} mensagens",
+      "outrasCount_one": "{{count}} outra entrada",
+      "outrasCount_other": "{{count}} outras entradas",
+      "conteudoComOutras": "{{mensagens}} · {{outras}}"
+    }
   }
 }
