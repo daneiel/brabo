@@ -41,7 +41,7 @@ defmodule Engine.Actions.Workspace do
 
   alias Engine.Actions.GitAuth
   alias Engine.Actions.Workspace.RunnerGit
-  alias Engine.Projects.Project
+  alias Engine.Projects.{Project, ProjectRepository}
 
   @doc """
   Versão que não levanta: devolve `{:ok, dir}` ou `{:error, mensagem}`.
@@ -49,8 +49,8 @@ defmodule Engine.Actions.Workspace do
   — uma falha de git aqui não deve derrubar o agente e deixar a task que
   ele já reivindicou órfã em `in_progress`.
   """
-  def ensure(project_id, bare_repo_path, default_branch \\ "main") do
-    {:ok, ensure!(project_id, bare_repo_path, default_branch)}
+  def ensure(project_id, bare_repo_path, branch \\ ProjectRepository.branch_de_trabalho()) do
+    {:ok, ensure!(project_id, bare_repo_path, branch)}
   rescue
     e -> {:error, Exception.message(e)}
   end
@@ -61,9 +61,14 @@ defmodule Engine.Actions.Workspace do
 
   A origem gravada no `origin` é sempre a LIMPA — a credencial entra por
   invocação, via `Engine.Actions.GitAuth`, e não sobra no `.git/config`.
+
+  A branch que o working tree abre é a de TRABALHO (`dev`, RN-664), e NÃO o
+  `default_branch` do remoto: é dela que o worktree de cada dev agent nasce e
+  é para ela que a PR dele vai. O `default_branch` segue no mapa para quem o
+  lê (é a branch do provider), só deixou de decidir a base do trabalho.
   """
   def ensure_remoto(project_id, remoto) do
-    {:ok, ensure!(project_id, remoto.origin, remoto.default_branch || "main", remoto)}
+    {:ok, ensure!(project_id, remoto.origin, ProjectRepository.branch_de_trabalho(), remoto)}
   rescue
     e -> {:error, Exception.message(e)}
   end
@@ -86,7 +91,12 @@ defmodule Engine.Actions.Workspace do
   (`Engine.Runners.RunnerReadiness`); faltando alguma, `RunnerGit.ensure!/5`
   levanta com mensagem NOMEADA, sem tentar I/O nenhum antes.
   """
-  def ensure!(project_id, bare_repo_path, default_branch \\ "main", remoto \\ %{}) do
+  def ensure!(
+        project_id,
+        bare_repo_path,
+        default_branch \\ ProjectRepository.branch_de_trabalho(),
+        remoto \\ %{}
+      ) do
     dir = workspace_dir(project_id)
 
     if runner?(project_id) do
@@ -233,12 +243,36 @@ defmodule Engine.Actions.Workspace do
         :ok
 
       {_, _} ->
-        # Bare repo provisionado mas nunca recebeu push (sem commits, sem
-        # origin/<branch> ainda) — cria um branch local vazio válido.
-        {_, 0} =
-          System.cmd("git", ["checkout", "-b", default_branch], cd: dir, stderr_to_stdout: true)
+        if remoto_vazio?(dir) do
+          # Bare repo provisionado mas nunca recebeu push (sem commits, sem
+          # origin/<branch> ainda) — cria um branch local vazio válido.
+          {_, 0} =
+            System.cmd("git", ["checkout", "-b", default_branch],
+              cd: dir,
+              stderr_to_stdout: true
+            )
 
-        :ok
+          :ok
+        else
+          # RN-664 — o remoto TEM branches, só não tem a de trabalho
+          # (repositório adotado sem bootstrap). Criar uma `dev` VAZIA aqui
+          # marcaria pronto um workspace sem código nenhum, e ele nunca mais
+          # seria re-inicializado; cair para a default faria o agente
+          # trabalhar e o gate julgar sobre uma base que não é a da PR.
+          # Levanta nomeado, e `inicializar_ou_desfazer!/4` desfaz o `.git`:
+          # criada a branch, a próxima tentativa inicializa normalmente.
+          raise ProjectRepository.mensagem_sem_branch_de_trabalho(
+                  "o remoto não tem origin/#{default_branch}"
+                )
+        end
+    end
+  end
+
+  # Nenhuma branch remota depois do fetch: o bare nunca recebeu push.
+  defp remoto_vazio?(dir) do
+    case System.cmd("git", ["branch", "-r"], cd: dir, stderr_to_stdout: true) do
+      {out, 0} -> String.trim(out) == ""
+      _ -> false
     end
   end
 end

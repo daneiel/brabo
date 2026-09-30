@@ -624,6 +624,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   50 de teto), e a descrição custa +23/+19 tokens (cl100k/o200k). Um teste
   reprova qualquer descrição de ferramenta do harness que volte a fixar idioma.
   A medição paga do "depois" segue pendente do dono (comando na RN).
+- **engine/api**: a PR do dev agent mira **`dev`**, não `main` (AT-250,
+  [RN-664](docs/business-rules.md#rn-664)). O `pr_open` leva
+  `targetBranch: "dev"` e a api, sem o campo, completa com `dev` em vez da
+  branch default; a PR de ADR do Arquiteto nasce de `dev` e mira `dev`. Junto,
+  por decisão do dono, o working tree do projeto abre `dev`, o worktree de cada
+  dev agent nasce de `dev` (workspace antigo, parado na default, ganha a `dev`
+  local a partir de `origin/dev`) e o gate calcula o diff contra `dev` — o
+  contexto do QA diz "branch de trabalho dev". Repositório SEM `dev` (adotado
+  sem bootstrap) não cai para `main`: o working tree, o worktree, o diff e a
+  PR falham NOMEANDO a ausência — antes o working tree criava uma `dev` vazia
+  e a marcava pronta. A PR de infra (`open_infra_pr`) não mudou.
 - **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
   3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
   `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não

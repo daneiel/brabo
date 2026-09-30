@@ -20,6 +20,7 @@ defmodule Engine.Dev.AgentIo do
   alias Engine.Containers.ProjectContainerLifecycle
   alias Engine.Dev.DevAgentState
   alias Engine.Harness.ArtifactEmitter
+  alias Engine.Projects.ProjectRepository
   alias Engine.Sessions.EngineApiClient
 
   @doc "Nome registrado do agente — a chave do Registry é {project_id, agent_id}."
@@ -269,9 +270,14 @@ defmodule Engine.Dev.AgentIo do
     propose(state, "git_push", %{worktree: state.worktree, branch: state.branch})
   end
 
+  # RN-664 (AT-250): o alvo vai EXPLÍCITO no payload — é a branch de trabalho
+  # (`dev`), a mesma de onde o worktree nasceu e contra a qual o gate calculou
+  # o diff. Sem ele a api completava com `repo.defaultBranch` (`main`), e a PR
+  # pulava a esteira dev → qa → main.
   def propose_pr(state, title, body) do
     propose(state, "pr_open", %{
       sourceBranch: state.branch,
+      targetBranch: ProjectRepository.branch_de_trabalho(),
       title: title,
       body: body,
       storyTaskId: state.task_id

@@ -221,6 +221,7 @@ estado lido do repositório e não da conversa.
 | Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 | A Visão geral e a aba Executores leem os modelos do time pelo lote, e os cartões das pendências de outras sessões no chat mostram o motivo da política (AT-339/AT-340) | RN-654, RN-656 |
 | O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
+| A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
 
 ## Estado atual e aberto
 
@@ -1294,7 +1295,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma que existe custa caro. Não "limpe" essa lista.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
-  hotfix/ nasce de main. Formato funcao/descritivo,
+  hotfix/ nasce de main. Os AGENTES seguem a mesma régua desde a RN-664: o
+  worktree do dev agent nasce de `dev`, a PR dele e a de ADR miram `dev`, e o
+  gate julga o diff contra `dev` — os três juntos, nunca um só (o gate
+  julgaria um diff que não é o da PR); repositório sem `dev` falha nomeado,
+  sem queda para a default. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
   PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
   de barras), mas só quando o AUTOR é o próprio Dependabot
