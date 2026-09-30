@@ -306,6 +306,9 @@ jobs:
           path: apps/api/.vitest-reports/
           retention-days: 1
           if-no-files-found: error
+          # `.vitest-reports` começa com ponto, e o upload-artifact ignora
+          # arquivo oculto por padrão — sem isto o shard verde falha no upload.
+          include-hidden-files: true
 
       # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
       # mesmo motivo do typecheck dos scripts de CI, no job `test-packages`.
@@ -419,6 +422,9 @@ jobs:
           path: apps/web/.vitest-reports/
           retention-days: 1
           if-no-files-found: error
+          # `.vitest-reports` começa com ponto, e o upload-artifact ignora
+          # arquivo oculto por padrão — sem isto o shard verde falha no upload.
+          include-hidden-files: true
 
       # O web NÃO tinha typecheck no CI — só `lint` e `test`, e os dois passam
       # com erro de tipo (o vitest transpila por esbuild, que apaga os tipos
