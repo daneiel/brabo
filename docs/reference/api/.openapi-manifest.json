@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "0b5e0b5a904fb5a1ba0721f662727a59e3ea794e04559601b14ec2e2494744f1",
+  "openapiSha256": "a88c0111646751dc6770899c7ca745566bf91d5ff3cc6a0af3d9c31c97eacc6b",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
