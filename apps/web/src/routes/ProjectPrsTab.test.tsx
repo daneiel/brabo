@@ -263,6 +263,73 @@ describe('ProjectPrsTab — botão Merge', () => {
     expect(botaoMerge.getAttribute('title')).toBe('QA pediu mudanças');
   });
 
+  it('gate de QA pendente AVISA em texto, nomeando o gate, e o Merge segue ativo (AT-249, RN-663)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_qa' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+    expect(botaoMerge).toBeEnabled();
+    expect(screen.getByTestId('aviso-gate-pendente')).toHaveTextContent(
+      'O gate qa-verificada ainda está pendente',
+    );
+  });
+
+  it('o aviso acompanha também o card da proposta pendente', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_secops' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+
+    montar();
+
+    expect(await screen.findByRole('button', { name: 'Aprovar' })).toBeEnabled();
+    expect(screen.getByTestId('aviso-gate-pendente')).toHaveTextContent('secops-segura');
+  });
+
+  it('gates já passados (awaiting_user): nenhum aviso', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_user' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    await screen.findByRole('button', { name: 'Merge' });
+    expect(screen.queryByTestId('aviso-gate-pendente')).toBeNull();
+  });
+
+  it('CASO DE FALHA: aprovar o merge de PR já mergeada mostra a frase da api (409)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+    approveAction.mockRejectedValue(
+      new ApiError(409, {
+        code: 'pr_ja_mergeado',
+        message: 'A PR pr-a já foi mergeada: não há o que mergear.',
+      }),
+    );
+
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
+    expect(
+      await screen.findByText(/A PR pr-a já foi mergeada: não há o que mergear\./),
+    ).toBeInTheDocument();
+  });
+
   it('sem sessão no projeto, o Merge fica desabilitado', async () => {
     getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
     useLatestSession.mockReturnValue({ latest: undefined });

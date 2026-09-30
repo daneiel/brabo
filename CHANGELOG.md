@@ -924,7 +924,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
   duplica o evento `backlog.task_status_changed`. O merge continua sendo do
   humano (AT-275, [RN-628](docs/business-rules.md#rn-628), [RN-418](docs/business-rules.md#rn-418));
-  a recusa de PR já mergeada (AT-249) fica de fora.
+  a recusa de PR já mergeada (AT-249) veio depois, na RN-663 (abaixo).
+
+- **api**: o merge de PR deixa de repetir. Propor `git_merge` de uma PR que já
+  foi mergeada responde 409 `pr_ja_mergeado`, e de uma PR com merge já proposto
+  e ainda sem desfecho, 409 `merge_ja_proposto` — nada é criado, e a tela mostra
+  a frase da api. Aprovar um merge pendente cuja PR outra proposta já mergeou
+  também é 409 `pr_ja_mergeado`, e a ação fica pendente para ser negada. O
+  provider `local` passa a recusar o merge repetido como o GitHub. Gate de
+  QA/SecOps pendente NÃO recusa: a aba PRs e o "Mergear" do chat avisam em
+  texto qual gate falta, e o botão segue ativo. O merge em branch protegida
+  continua manual (AT-249, [RN-663](docs/business-rules.md#rn-663),
+  [RN-418](docs/business-rules.md#rn-418)).
 
 - **engine**: o QA Lead não cai mais quando o `qa-automacao` suspende uma
   SEGUNDA vez esperando aprovação na retomada (AT-248,

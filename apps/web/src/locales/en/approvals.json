@@ -264,7 +264,8 @@
     "mergeErrorTitle": "Couldn't propose the merge",
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
-    "mergeNoSession": "No session in the project to propose the action."
+    "mergeNoSession": "No session in the project to propose the action.",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
   },
   "politica": {
     "motivo": "Policy decided by: {{motivo}}",

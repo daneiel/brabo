@@ -348,6 +348,15 @@ of the same PR does not move it again or record a second
 `backlog.task_status_changed` event ([RN-628](../business-rules.md#rn-628)). The
 merge itself is never automated ([RN-418](../business-rules.md#rn-418)).
 
+A `git_merge` is REFUSED before it is created when the same PR was already
+merged by an earlier execution (409 `pr_ja_mergeado`) or already has a live
+proposal — pending, approved or auto-approved (409 `merge_ja_proposto`); a
+denied or failed one does not block trying again. Approving a pending merge
+whose PR another proposal already merged is also 409 `pr_ja_mergeado`, and the
+action stays `pending`. A QA/SecOps gate still pending is NOT a refusal: the
+PRs tab and the chat only WARN, naming the gate, and the button stays enabled
+([RN-663](../business-rules.md#rn-663)).
+
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
 reuses the manual/auto toggle the agent card already had in
