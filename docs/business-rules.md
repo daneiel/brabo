@@ -16492,12 +16492,29 @@ turno com autor humano — a divergência que esta regra declarava fechou.
    chega aos agentes" saiu da linha de origem. A linha trunca nos 60px da
    barra e leva o texto inteiro no `title` — o texto está na tela, o `title`
    só devolve o que as reticências cortaram.
+6. **Na barra estreita, o idioma MUDA de lugar e não some** (AT-317). A barra
+   se arruma pela PRÓPRIA largura (`modoDaBarra`, medida por
+   `ResizeObserver`; largura desconhecida é a barra completa): a partir de
+   1720px tudo fica em linha; abaixo disso modelo, idioma e orçamento viram UM
+   controle cujo gatilho resume o modelo e o código do idioma (abaixo de 920px
+   só o ícone, com nome acessível), e o painel dele traz o indicador inteiro
+   com a origem QUEBRANDO em vez de cortar. A pergunta da detecção
+   ([RN-624](#rn-624)) mora no painel, e enquanto existe o gatilho ganha uma
+   marca e o nome acessível a anuncia. O título da sessão é o único item que
+   encolhe (com piso e o nome inteiro no `title`), e os botões não quebram
+   linha — "Encerrar" vira ícone com nome acessível só na barra mínima.
 
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
-  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:162`
-  (`origemPorExtenso`), `:205` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:187` (`SessionLanguageIndicator`)
-- **Teste:** `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
+  (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
+  (`origemPorExtenso`), `:219` (`podeTrocar`);
+  `apps/web/src/routes/SessionTopbar.tsx:228` (`SessionLanguageIndicator`),
+  `:115` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
+  `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
+- **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
+  1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
+  `:236` (barra mínima com nome acessível), `:256` (pergunta pendente marca o
+  controle), `:273` (leitura do idioma falhada — caso de falha);
+  `apps/web/src/routes/SessionLanguageIndicator.test.tsx:99`
   (efetivo com origem e o link, sem o aviso antigo), `:112` (o detectado não vira
   "escolhido"), `:126` (trocar fixa só nesta sessão), `:151` ("Seguir a
   Conta" manda `null`), `:180` (recusa da api — caso de falha), `:202`
@@ -17041,6 +17058,44 @@ seguiram em `in_review` (AT-275).
   falho, PR sem tarefa)
 - **Origem:** AT-275
 
+### RN-640 — A paleta neutra fecha a dívida de contraste, e cor da UI só vem de token {#rn-640}
+
+O tema escuro deixa de ser azul-petróleo e vira preto neutro com o acento
+terracota suave; o claro vira o neutro da mesma família (ADR 0181). O mecanismo
+da [RN-184](business-rules/autenticacao.md#rn-184) não muda — os pares são
+medidos nos dois temas, com o mesmo piso —; o que muda é o que se cobra:
+
+1. **A dívida do escuro virou piso.** Os cinco pares que a RN-184 deixava
+   travados por número (3,89 / 3,10 / 3,88 / 3,88 / 4,41) passam 4,5:1 nos dois
+   temas, e o teste reprova quem os devolver para baixo — não "registra" mais.
+   O valor final saiu da MEDIÇÃO: o `--text-muted` do rascunho (`#71717a`)
+   repetia a dívida e foi recusado (`#86868f` no escuro, `#696972` no claro), e
+   o muted continua ABAIXO do `--text-secondary` nas três superfícies, o que o
+   teste também cobra.
+2. **O texto sobre fundo sólido de marca/estado passa AA.** `--on-accent` do
+   escuro é o preto neutro (5,61:1 sobre o acento, 7,25:1 no hover, 7,65:1
+   sobre `--success`, 5,24:1 sobre `--danger`); a "exceção conhecida" do botão
+   primário deixa de existir, e o matiz do acento continua terracota (10°–30°)
+   nos dois temas.
+3. **Cor da UI só vem de token.** Quem pinta por biblioteca de runtime (Mermaid,
+   xterm, minimapa) lê o token do tema ativo e, sem ele, cai no padrão de
+   `TOKENS_PADRAO` — uma cópia do `:root` que o teste confere contra
+   `design/tokens.css`. Cor de agente é sempre `var(--token)`; os três agentes
+   sem semântico têm `--agent-*` por tema, medidos a 3:1. E nenhum módulo CSS
+   usa `var(--x)` que ninguém declara.
+
+- **Onde:** `design/tokens.css:118`, `design/tokens.css:126`,
+  `apps/web/src/lib/tokens-padrao.ts:50` (`lerTokenDoTema`),
+  `apps/web/src/lib/agents.ts:90`
+- **Teste:** `apps/web/src/lib/contraste.test.ts` ("a antiga dívida de
+  contraste agora é piso"), `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts` ("o botão primário — a exceção que
+  deixou de existir"), `apps/web/src/lib/tokens-padrao.test.ts`,
+  `apps/web/src/lib/agents.test.ts` ("cor de agente vem do design system"),
+  `apps/web/src/design-tokens-existentes.test.ts`
+- **ADR:** [0181](adr/0181-tema-preto-neutro.md)
+- **Origem:** AT-283, AT-284
+
 ### RN-642 — "Sempre permitir" aprova e grava o padrão na MESMA transação; clique em ação já aprovada é sucesso nomeado {#rn-642}
 
 No uso real de 29/09, 45 de 173 cliques em "Sempre permitir" devolveram 409
@@ -17105,6 +17160,7 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
   `apps/web/src/lib/sempre-permitir.test.ts` (a cópia do web igual à da api),
   `apps/web/src/components/ApprovalCard.test.tsx` (git tipado sem o botão)
 - **Origem:** AT-310, AT-320
+
 ### RN-631 — O destinatário do chat é escolhido e visível, e a oferta de handoff é casada pelo `handoffId` {#rn-631}
 
 O destinatário da mensagem do composer era DERIVADO: "o `agent.activated` mais

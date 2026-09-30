@@ -258,7 +258,7 @@ describe('ApprovalCard', () => {
 
   // AT-320: a auditoria de 30/09 viu o botão (e a nota "libera este tipo de
   // ação só para dev-api") num `git_push` — a metade TIPADA do teto da RN-418.
-  it.each(['git_push', 'pr_open', 'git_merge'])(
+  it.each<ActionType>(['git_push', 'pr_open', 'git_merge'])(
     '%s de dev-api: não oferece "Sempre permitir" nem a nota do escopo',
     (actionType) => {
       render(

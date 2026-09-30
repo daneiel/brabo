@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: **o tema escuro vira preto neutro e calmo, com o acento terracota
+  suave; o claro vira o neutro da mesma família** (AT-283, AT-284,
+  [ADR 0181](docs/adr/0181-tema-preto-neutro.md),
+  [RN-640](docs/business-rules.md#rn-640)). Muda o valor dos tokens de cor de
+  `design/tokens.css`, não o nome — nenhum componente troca referência. Os
+  números finais saíram da medição: a dívida de contraste que o escuro
+  carregava desde a FASE 16 (cinco pares abaixo de 4,5:1) acabou e passou a
+  ser piso nos dois temas, e o texto do botão primário passa AA (o
+  `--on-accent` do escuro agora é escuro). Os links das telas de login voltam
+  ao `--accent` do desenho. O diagrama C4, o terminal e o minimapa deixam de
+  cair no azul-petróleo quando o token não resolve, as três cores de agente
+  sem token ganham um por tema, o véu do modal fica neutro e dois tokens que
+  eram usados sem existir (`--surface-3`, `--radius-pill`) saem.
+
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
   O card de aprovação segura os botões enquanto a decisão está em voo e mostra
@@ -378,6 +392,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: a barra do topo da Sessão não transborda mais (AT-317,
+  [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo
+  cobria "Respostas:", o seletor e a origem do idioma cortavam, "Iniciar
+  ideação" quebrava em duas linhas e o título cortava; a 1024px o título virava
+  "S". Agora a barra se arruma pela própria largura: o título é o único item
+  que encolhe (com reticências e o nome inteiro no `title`), os botões não
+  quebram linha, e abaixo de 1720px modelo, idioma e orçamento viram um
+  controle só, que mostra o modelo e o código do idioma e abre um painel com
+  os três inteiros — o idioma com a origem por extenso e a pergunta da
+  detecção, que marca o controle enquanto estiver pendente. Abaixo de 920px o
+  controle e "Encerrar" ficam só com o ícone, com nome acessível.
 - **api**: "Sempre permitir" aprova a ação e grava o padrão na MESMA transação
   (AT-310, [RN-642](docs/business-rules.md#rn-642)). Antes o padrão era
   gravado primeiro, e um clique numa ação que já tinha saído de `pending`

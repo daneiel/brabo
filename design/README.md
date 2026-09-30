@@ -78,29 +78,37 @@ escreveu já sabe onde olhar, e o monitor de quem escreveu é sempre o melhor.
 **Contraste** é aritmética e virou teste:
 `apps/web/src/lib/contraste.test.ts` lê ESTE `tokens.css`, resolve os `var()`
 até a cor literal e mede a razão WCAG dos pares que a interface usa — **nos
-dois temas** desde o ADR 0074 (RN-184). Ele também trava a **dívida
-conhecida** — pares em uso que não atingem 4,5:1 para texto normal, medidos e
-registrados um a um. Não estão escondidos nem quebrando o CI: mudar a paleta é
-decisão do dono do design system, e o teste avisa se o número piorar (ou
-melhorar).
+dois temas** desde o ADR 0074 (RN-184).
 
-A dívida é do **tema escuro**, e é só dela:
+**A paleta é neutra desde o ADR 0181 (RN-640).** O escuro deixou de ser
+azul-petróleo e é preto neutro (`--surface-0/1/2` `#0d0d0f/#141417/#1c1c21`)
+com o acento terracota **suave** (`#c8744f`); o claro é o neutro da mesma
+família (`#ffffff/#fafafa/#f4f4f5`, acento `#a4502c`). As superfícies, o texto
+secundário e as bordas vêm da escala bruta `--neutro-*`; a identidade terracota
+ficou no acento, e o teste confere que o matiz dele continua na faixa
+terracota nos dois temas. Os valores finais saíram da **medição**, não do
+rascunho: onde o rascunho reprovava (`--text-muted` `#71717a` nos dois temas,
+`--on-accent` claro sobre o acento do escuro), o número foi ajustado até o piso
+passar — os números de antes e depois estão no ADR 0181.
 
-| par | razão | serve como |
+**Não há mais dívida de contraste.** Do ADR 0074 ao 0181 o escuro carregou
+cinco pares abaixo de 4,5:1, travados por número:
+
+| par | razão até o ADR 0181 | hoje (escuro / claro) |
 |---|---|---|
-| `--text-muted` sobre `--surface-1` | 3,89:1 | elemento de interface, não texto corrido |
-| `--text-muted` sobre `--surface-2` | 3,10:1 | idem — é o cabeçalho de tabela |
-| `--accent` / `--danger` sobre `--surface-1` | 3,88:1 | realce e erro dentro de card |
-| `--success` sobre `--surface-2` | 4,41:1 | a um passo do piso |
+| `--text-muted` sobre `--surface-1` | 3,89:1 | 5,10 / 5,21 |
+| `--text-muted` sobre `--surface-2` | 3,10:1 | 4,70 / 4,94 |
+| `--accent` sobre `--surface-1` | 3,88:1 | 5,31 / 5,35 |
+| `--danger` sobre `--surface-1` | 3,88:1 | 4,96 / 6,11 |
+| `--success` sobre `--surface-2` | 4,41:1 | 6,69 / 4,85 |
 
-No **tema claro** esses cinco pares passam os 4,5:1, e não por sorte: o ADR
-0074 calibrou os acentos do claro contra `--code-bg`, que é a superfície mais
-exigente do tema (papel, a um passo dos fundos), então quem fecha lá fecha em
-todo o resto. Seis tokens mudaram de valor no caminho — `--accent`,
-`--accent-hover`, `--warning`, `--success`, `--violet` e `--text-muted` — e o
-tema escuro não mudou nenhum. O claro ficou, por isso, um degrau mais escuro
-que os hex do handoff: é a mesma troca das fontes, o handoff estabelece a
-intenção e a medição estabelece o número.
+Os cinco são **piso** agora, nos dois temas: a próxima mudança de paleta que os
+devolver para baixo reprova em vez de ser registrada. Foi-se junto a "exceção
+conhecida" do botão primário (`--on-accent` sobre `--accent`, 3,20:1 no
+escuro): o `--on-accent` do escuro é o preto neutro, 5,61:1. E dois
+consumidores que contornavam a dívida foram revistos — `.link` (auth) voltou
+ao `--accent` do mock; `.hint` (Input) ficou no `--text-secondary`, agora por
+hierarquia.
 
 O mesmo teste guarda a **paridade entre os dois temas**: todo token semântico
 de cor declarado no `:root` precisa ser redeclarado em `[data-theme="light"]`.
@@ -111,17 +119,26 @@ causou.
 
 A **paleta de sintaxe** tem os oito papéis do handoff com o prefixo
 `--syntax-*` (RN-185), cada um com valor próprio por tema e todos medidos a
-4,5:1 contra `--code-bg` nos dois. Cinco dos oito valores que o handoff
-especifica foram **recusados por medição** (o comentário do arquivo diz qual e
-por quanto) — onde o handoff reprova, vale o número medido.
+4,5:1 contra `--code-bg` nos dois (recalculados no ADR 0181 contra os
+`--code-bg` neutros). Cinco dos oito valores que o handoff
+especifica foram **recusados por medição** (o ADR 0074 diz qual e
+por quanto; o comentário do arquivo, os números atuais) — onde o handoff
+reprova, vale o número medido.
 
-`--violet` (agentes/IA) entrou na FASE 16 e está medido: 5,31:1 sobre
-`--surface-0`, 4,30:1 sobre `--surface-1` e 3,42:1 sobre `--surface-2` —
-cumpre o piso de elemento de interface nos três, que é o papel dele (dot de
-status, badge, avatar de agente). Sobre `--code-bg` dá 5,65:1, e ali ele é
-texto de verdade (número e decorator no realce de sintaxe), então responde
-pelo piso de texto normal. No tema claro ele é `#6b4fb0`, o valor que o
-handoff passou a especificar, e mede 4,95:1 sobre `--code-bg`.
+`--violet` (agentes/IA) entrou na FASE 16 e é medido como elemento de
+interface (3:1) nas três superfícies e como texto (4,5:1) sobre `--code-bg`,
+onde ele é número e decorator no realce. No ADR 0181 ele foi dessaturado junto
+com o resto (`#9d8ad6` no escuro, `#6a50b8` no claro). As três cores de agente
+sem semântico — `--agent-leve`, `--agent-frontend`, `--agent-secops` — viraram
+token por tema no mesmo ADR (eram hex soltos em `lib/agents.ts`) e são medidas
+pela mesma régua do `--violet`.
+
+**Cor que precisa sair do CSS** (Mermaid, xterm, o canvas do minimapa) lê o
+token do tema ativo e, sem ele, cai em `apps/web/src/lib/tokens-padrao.ts` —
+uma cópia do `:root` que `tokens-padrao.test.ts` confere contra este arquivo.
+E `apps/web/src/design-tokens-existentes.test.ts` reprova qualquer
+`var(--x)` de módulo CSS que ninguém declara (foi assim que `--surface-3` e
+`--radius-pill`, usados e nunca definidos, apareceram).
 
 **Layout** depende de medida real — largura de fonte, quebra de linha, posição
 calculada — e nenhum ambiente de teste do repositório faz layout (jsdom não

@@ -24,7 +24,11 @@
     "iniciarIdeacao": "Start ideation",
     "iniciarIdeacaoTitulo": "Brings the Creative in to lead this session's ideation — it hasn't joined yet",
     "encerrar": "Close",
-    "alternarPainel": "Toggle context panel"
+    "alternarPainel": "Toggle context panel",
+    "ajustes": "Model and language",
+    "ajustesAria": "Model, response language and budget for this session",
+    "perguntaDeIdiomaPendente": "there is a question about the response language",
+    "encerrarSessao": "Close the session"
   },
   "convite": {
     "criativa": {
