@@ -25,7 +25,7 @@ vi.mock('../../lib/hooks', () => ({
   useSessionEvents: () => ({ data: undefined }),
   useArchitecture: () => ({ data: undefined }),
   useHandoffs: () => ({ data: undefined }),
-  usePendingActions: () => ({ data: undefined }),
+  useProjectPendingActions: () => ({ data: undefined }),
 }));
 
 vi.mock('./CodeExplorer', () => ({

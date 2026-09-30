@@ -137,6 +137,7 @@ async function enviarMensagem(texto: string) {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   await i18n.changeLanguage('pt-BR');
   canalHandlers = undefined;
   eventos.mockReturnValue({ items: eventosIniciais });
@@ -237,10 +238,10 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
 });
 
 describe('SessionPage — o composer oferece o Infra Lead (RN-617)', () => {
-  // Criativo primeiro, Infra depois: o destinatário é o agente ativado mais
-  // RECENTE entre os que conversam (RN-584, sem destinatário padrão). Até a
-  // RN-617 `infra` não estava em `AGENTES_DE_CHAT` e a mensagem seguia para o
-  // Criativo — o agente que a pessoa não via mais falando.
+  // Criativo e Infra na sessão: o Infra Lead é uma das OPÇÕES do seletor de
+  // destinatário, e é a pessoa quem o escolhe (RN-631 — desde ela o
+  // destinatário não é mais "o ativado mais recente"). Até a RN-617 `infra`
+  // não estava em `AGENTES_DE_CHAT` e a mensagem seguia para o Criativo.
   const comInfraAtiva = [
     ...eventosIniciais,
     {
@@ -259,6 +260,9 @@ describe('SessionPage — o composer oferece o Infra Lead (RN-617)', () => {
     cancelAgentTurn.mockResolvedValue({ ok: true });
 
     montar();
+    fireEvent.change(await screen.findByLabelText('Para'), {
+      target: { value: 'infra' },
+    });
     await enviarMensagem('por que essa imagem?');
 
     await waitFor(() =>

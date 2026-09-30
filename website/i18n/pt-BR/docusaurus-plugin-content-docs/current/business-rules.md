@@ -279,7 +279,10 @@ vez de fechar uma.
   `apps/web/src/lib/api-client.ts:773` (`getSessionModelBinding`, o
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:147`
   (`getSessionBinding`, `@Query('agentId')`)
-- **Teste:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+- **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (antes `SessionPage.agente-mais-recente.test.tsx`; desde a
+  [RN-631](pathname://../business-rules#rn-631) o destinatário é ESCOLHIDO, não
+  "o mais recente"),
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
   `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
 - **Borda:** Infra Lead não participa do roteamento do composer nem da
