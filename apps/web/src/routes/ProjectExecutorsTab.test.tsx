@@ -38,6 +38,7 @@ const getAgentModelBinding = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
+const getProjectPendingActions = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -55,6 +56,10 @@ vi.mock('../lib/api-client', async () => {
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
+    getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
+    approveAction: vi.fn(),
+    denyAction: vi.fn(),
+    approveAlwaysAction: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
   };
@@ -219,6 +224,7 @@ beforeEach(async () => {
     },
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
+  getProjectPendingActions.mockResolvedValue([]);
 });
 
 // Restaura o default do app depois deste arquivo — a instância é o
@@ -446,5 +452,41 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
       await screen.findByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
     ).toBeInTheDocument();
     expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectExecutorsTab — o que destrava a execução vem de OUTRA sessão (AT-298)', () => {
+  const containerStartNoChat = {
+    id: 'cs-1',
+    projectId: 'proj-1',
+    sessionId: 'sess-chat',
+    seq: 3,
+    actionType: 'container_start',
+    payload: { imagem: 'node:22' },
+    status: 'pending',
+    resolvedPolicy: 'require_approval',
+    actor: { kind: 'agent', id: 'infra' },
+    decidedBy: null,
+    decidedAt: null,
+    rejectionReason: null,
+    executionResult: null,
+    createdAt: '2026-08-10T10:05:00.000Z',
+    updatedAt: '2026-08-10T10:05:00.000Z',
+  };
+
+  it('o `container_start` pendente do chat aparece na aba da execução', async () => {
+    getProjectPendingActions.mockResolvedValue([containerStartNoChat]);
+    montar();
+
+    expect(await screen.findByTestId('pendencias-de-outras-sessoes')).toBeInTheDocument();
+  });
+
+  it('CASO DE CONTRASTE: pendente da PRÓPRIA execução não vira bloco (o roster a marca)', async () => {
+    getProjectPendingActions.mockResolvedValue([{ ...containerStartNoChat, sessionId: 'sess-1' }]);
+    montar();
+
+    await screen.findByText('dev-backend');
+    await waitFor(() => expect(getProjectPendingActions).toHaveBeenCalled());
+    expect(screen.queryByTestId('pendencias-de-outras-sessoes')).not.toBeInTheDocument();
   });
 });
