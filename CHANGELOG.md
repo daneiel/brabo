@@ -378,6 +378,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: a barra do topo da Sessão não transborda mais (AT-317,
+  [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo
+  cobria "Respostas:", o seletor e a origem do idioma cortavam, "Iniciar
+  ideação" quebrava em duas linhas e o título cortava; a 1024px o título virava
+  "S". Agora a barra se arruma pela própria largura: o título é o único item
+  que encolhe (com reticências e o nome inteiro no `title`), os botões não
+  quebram linha, e abaixo de 1720px modelo, idioma e orçamento viram um
+  controle só, que mostra o modelo e o código do idioma e abre um painel com
+  os três inteiros — o idioma com a origem por extenso e a pergunta da
+  detecção, que marca o controle enquanto estiver pendente. Abaixo de 920px o
+  controle e "Encerrar" ficam só com o ícone, com nome acessível.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

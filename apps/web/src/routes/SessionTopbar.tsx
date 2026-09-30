@@ -1,14 +1,30 @@
-import type { Dispatch, SetStateAction } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import { Link } from '@tanstack/react-router';
-import type { QueryClient } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   getSession,
   getSessionBudget,
   getSessionModelBinding,
+  getSessionResponseLanguage,
   listModels,
   setSessionModelBinding,
 } from '../lib/api-client';
+import { agruparModelos } from '../lib/models';
+import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
+import {
+  modoDaBarra,
+  useLarguraObservada,
+  type ModoDaBarra,
+} from '../lib/modo-da-barra-da-sessao';
 import { TokenMeter } from '../components/TokenMeter';
 import { SessionLanguageIndicator } from './SessionLanguageIndicator';
 import { ModelPicker } from '../components/ModelPicker';
@@ -19,7 +35,9 @@ import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import {
   ArrowLeftIcon,
   BulbIcon,
+  ChevronDownIcon,
   LayoutSidebarIcon,
+  ModelIcon,
   StopSquareIcon,
 } from '../components/ui/icons';
 import { pontoDaSessao } from '../lib/session-timeline';
@@ -36,6 +54,12 @@ import styles from './SessionPage.module.css';
  * Moveu de `SessionPage.tsx` no PR 3 do programa do ADR 0176, sem mudar uma
  * linha do JSX: o estado e os handlers continuam donos do `SessionPage`, e
  * chegam aqui com os MESMOS nomes que o bloco lia do escopo dele.
+ *
+ * Desde a AT-317 ela se arruma pela PRÓPRIA largura (`modoDaBarra`): o título
+ * é o item que cresce e o último a encolher (reticências, e o nome inteiro no
+ * `title`), os botões nunca quebram linha, e abaixo de
+ * `LARGURA_DA_BARRA_COMPLETA` modelo, idioma e orçamento viram UM controle que
+ * abre um painel com os três inteiros — nada some, só muda de lugar.
  */
 export interface SessionTopbarProps {
   projectId: string;
@@ -87,8 +111,35 @@ export function SessionTopbar({
   setAsideOpen,
 }: SessionTopbarProps) {
   const { t } = useTranslation('sessionPage');
+  const barraRef = useRef<HTMLDivElement>(null);
+  const modo = modoDaBarra(useLarguraObservada(barraRef));
+  const emLinha = modo === 'completa';
+
+  const seletorDeModelo = modelsByCategory && (
+    <ModelPicker
+      variant="topbar"
+      models={modelsByCategory}
+      selectedModelId={resolvedBinding?.modelId}
+      onSelect={(model) =>
+        setSessionModelBinding(projectId, sessionId, model.id).then(() =>
+          queryClient.invalidateQueries({ queryKey: ['session-model-binding', projectId, sessionId] }),
+        )
+      }
+    />
+  );
+  const medidor = budget && (
+    <TokenMeter
+      variant="live"
+      unitLabel="USD"
+      used={budget.spentMicros / 1_000_000}
+      limit={budget.limitMicros / 1_000_000}
+      costBRL={0}
+      costUSD={budget.spentMicros / 1_000_000}
+    />
+  );
+
   return (
-    <div className={styles.topbar}>
+    <div className={styles.topbar} ref={barraRef} data-modo={modo}>
       {/* A SAÍDA da tela (FASE 20). Até aqui `SessionPage` não importava
           `Link` nem `useNavigate`: entrar numa sessão era um beco, e o único
           caminho de volta era o botão do navegador. É `Link`, e não um
@@ -160,7 +211,6 @@ export function SessionTopbar({
           {tipo.rotulo}
         </Badge>
       )}
-      <div className={styles.spacer} />
       {/* SEM `filtroDeAgentesPadrao`, ao contrário dos seletores de agente e
           de área nas Configurações — e a omissão é decisão, não esquecimento.
           Este picker grava no escopo `session`, e `assertModelFitsBindingScope`
@@ -169,31 +219,36 @@ export function SessionTopbar({
           quando há ferramenta na chamada. Marcar o filtro aqui esconderia
           modelo que a api aceita, que é o inverso do defeito que ligá-lo nas
           outras duas telas conserta. */}
-      {modelsByCategory && (
-        <ModelPicker
-          variant="topbar"
-          models={modelsByCategory}
-          selectedModelId={resolvedBinding?.modelId}
-          onSelect={(model) =>
-            setSessionModelBinding(projectId, sessionId, model.id).then(() =>
-              queryClient.invalidateQueries({ queryKey: ['session-model-binding', projectId, sessionId] }),
-            )
+      {emLinha ? (
+        <div className={styles.ajustesEmLinha}>
+          {seletorDeModelo}
+          {/* O idioma das respostas de QUEM VÊ (RN-620), ao lado do modelo mas
+              em outro escopo: o modelo é da sessão, o idioma é da pessoa —
+              trocar aqui é o override POR SESSÃO da RN-618, só dela. */}
+          <SessionLanguageIndicator projectId={projectId} sessionId={sessionId} />
+          {medidor}
+        </div>
+      ) : (
+        /* Barra estreita (AT-317): os três no painel de UM controle, e o
+           controle mostra o resumo — nome do modelo e código do idioma. A
+           ORIGEM do idioma (RN-620) e a pergunta da detecção (RN-624) moram no
+           painel, inteiras; a pergunta pendente marca o controle. */
+        <AjustesAgrupados
+          modo={modo}
+          projectId={projectId}
+          sessionId={sessionId}
+          nomeDoModelo={
+            modelsByCategory && resolvedBinding?.modelId
+              ? agruparModelos(modelsByCategory)
+                  .flatMap((g) => g.modelos)
+                  .find((m) => m.id === resolvedBinding.modelId)?.displayName
+              : undefined
           }
-        />
-      )}
-      {/* O idioma das respostas de QUEM VÊ (RN-620), ao lado do modelo mas
-          em outro escopo: o modelo é da sessão, o idioma é da pessoa — trocar
-          aqui é o override POR SESSÃO da RN-618, só dela. */}
-      <SessionLanguageIndicator projectId={projectId} sessionId={sessionId} />
-      {budget && (
-        <TokenMeter
-          variant="live"
-          unitLabel="USD"
-          used={budget.spentMicros / 1_000_000}
-          limit={budget.limitMicros / 1_000_000}
-          costBRL={0}
-          costUSD={budget.spentMicros / 1_000_000}
-        />
+        >
+          {seletorDeModelo}
+          <SessionLanguageIndicator projectId={projectId} sessionId={sessionId} modo="painel" />
+          {medidor}
+        </AjustesAgrupados>
       )}
       {/* O botão existe SÓ na sessão criativa (RN-097). Antes ele aparecia em
           qualquer sessão, e era a única maneira de chegar ao Criativo —
@@ -222,10 +277,15 @@ export function SessionTopbar({
             className={styles.iniciarIdeacaoIcone}
             aria-hidden="true"
           />
-          <span className={styles.iniciarIdeacaoDica}>
-            {t('topbar.trazCriativo')}
-          </span>
+          {/* Na barra estreita a pista sai da LINHA, não da tela: o `title`
+              do botão diz o mesmo, por extenso (AT-317). */}
+          {emLinha && (
+            <span className={styles.iniciarIdeacaoDica}>
+              {t('topbar.trazCriativo')}
+            </span>
+          )}
           <Button
+            className={styles.acaoDaBarra}
             onClick={handleStartIdeation}
             title={t('topbar.iniciarIdeacaoTitulo')}
           >
@@ -241,9 +301,18 @@ export function SessionTopbar({
           texto visíveis ao mesmo tempo na tela. */}
       {/* Encerrar é destrutivo e o desenho o marca como tal: contorno em
           `danger`, não um botão fantasma indistinguível dos outros. */}
-      <Button variant="danger" onClick={handleClose} disabled={!session || sessaoEhTerminal(session.status)}>
+      <Button
+        variant="danger"
+        className={styles.acaoDaBarra}
+        onClick={handleClose}
+        disabled={!session || sessaoEhTerminal(session.status)}
+        // Na barra mínima o botão fica só com o ícone; o nome acessível e o
+        // `title` devolvem o verbo, que é o que um botão destrutivo deve dizer.
+        aria-label={modo === 'minima' ? t('topbar.encerrarSessao') : undefined}
+        title={modo === 'minima' ? t('topbar.encerrarSessao') : undefined}
+      >
         <StopSquareIcon size={15} />
-        {t('topbar.encerrar')}
+        {modo !== 'minima' && t('topbar.encerrar')}
       </Button>
       <button
         type="button"
@@ -256,6 +325,113 @@ export function SessionTopbar({
       >
         <LayoutSidebarIcon size={17} />
       </button>
+    </div>
+  );
+}
+
+/**
+ * Modelo, idioma das respostas e orçamento num controle só, para a barra que
+ * não os comporta em linha (AT-317). O gatilho mostra o RESUMO (nome do modelo
+ * e código do idioma; na barra mínima, só o ícone com nome acessível), e o
+ * painel traz os três controles inteiros — o seletor de modelo de sempre, o
+ * idioma com a ORIGEM por extenso (RN-620) e o medidor.
+ *
+ * A pergunta da detecção (RN-624) mora no painel; enquanto ela existe, o
+ * gatilho ganha uma marca, senão a pergunta ficaria escondida atrás de um
+ * clique que ninguém sabe que precisa dar.
+ */
+function AjustesAgrupados({
+  modo,
+  projectId,
+  sessionId,
+  nomeDoModelo,
+  children,
+}: {
+  modo: Exclude<ModoDaBarra, 'completa'>;
+  projectId: string;
+  sessionId: string;
+  nomeDoModelo: string | undefined;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation('sessionPage');
+  const [aberto, setAberto] = useState(false);
+  const raizRef = useRef<HTMLDivElement>(null);
+  const gatilhoRef = useRef<HTMLButtonElement>(null);
+  const idDoPainel = useId();
+  // A MESMA chave do indicador: o react-query deduplica, então o gatilho lê o
+  // que o indicador já busca, sem requisição a mais.
+  const { data: idioma } = useQuery({
+    queryKey: chaveDoIdiomaDaSessao(projectId, sessionId),
+    queryFn: () => getSessionResponseLanguage(projectId, sessionId),
+  });
+  const perguntaPendente = Boolean(idioma?.detectionQuestion);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function fora(e: MouseEvent) {
+      if (raizRef.current && !raizRef.current.contains(e.target as Node)) setAberto(false);
+    }
+    function tecla(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setAberto(false);
+        gatilhoRef.current?.focus();
+      }
+    }
+    document.addEventListener('mousedown', fora);
+    document.addEventListener('keydown', tecla);
+    return () => {
+      document.removeEventListener('mousedown', fora);
+      document.removeEventListener('keydown', tecla);
+    };
+  }, [aberto]);
+
+  const resumo = [nomeDoModelo ?? t('topbar.ajustes'), idioma?.language]
+    .filter(Boolean)
+    .join(' · ');
+  const nomeAcessivel = [
+    t('topbar.ajustesAria'),
+    resumo,
+    perguntaPendente ? t('topbar.perguntaDeIdiomaPendente') : null,
+  ]
+    .filter(Boolean)
+    .join(' — ');
+
+  return (
+    <div className={styles.ajustesAgrupados} ref={raizRef}>
+      <button
+        type="button"
+        ref={gatilhoRef}
+        className={styles.gatilhoDosAjustes}
+        aria-expanded={aberto}
+        aria-haspopup="dialog"
+        aria-controls={aberto ? idDoPainel : undefined}
+        aria-label={nomeAcessivel}
+        title={nomeAcessivel}
+        data-testid="ajustes-da-sessao"
+        onClick={() => setAberto((v) => !v)}
+      >
+        <ModelIcon size={14} />
+        {modo === 'compacta' && <span className={styles.resumoDosAjustes}>{resumo}</span>}
+        {perguntaPendente && (
+          <span
+            className={styles.marcaDePergunta}
+            aria-hidden="true"
+            data-testid="marca-pergunta-de-idioma"
+          />
+        )}
+        <ChevronDownIcon size={13} />
+      </button>
+      {aberto && (
+        <div
+          id={idDoPainel}
+          role="dialog"
+          aria-label={t('topbar.ajustesAria')}
+          className={styles.painelDosAjustes}
+          data-testid="painel-dos-ajustes"
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
