@@ -378,6 +378,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: depois de ativar a execução, a sessão de onde ela saiu não perde
+  mais os agentes que já estavam nela — a ativação passa a ser lida também dos
+  handoffs e do gasto por agente DESTA sessão, e não só do resumo, que é da
+  sessão mais recente (a de execução). E a oferta de handoff cujo evento saiu
+  dos últimos 200 do fio ganha o botão "Aceitar" numa faixa fixa acima do
+  composer, em vez de ficar pendente sem botão (AT-251/AT-253, revisão do PR
+  #759, [RN-631](docs/business-rules.md#rn-631)).
+
+- **web**: o handoff manual a agente à escolha passa a ter o botão
+  "Aceitar" no fio — antes o card casava a oferta pelo agente de origem, e o
+  manual é gravado com a pessoa como autora, então o botão nunca aparecia (o
+  `handoff.offered` ao PO de 29/09 ficou sem aceite). E oferta pendente não
+  esconde mais as seguintes: cada uma tem o botão no próprio evento, e duas ao
+  mesmo agente viram um botão só, o da mais recente (AT-253,
+  [RN-631](docs/business-rules.md#rn-631), [ADR 0109](docs/adr/0109-handoff-manual-a-agente-a-escolha.md)).
+
+- **web**: o chat da Sessão passa a mostrar e deixar ESCOLHER o destinatário
+  da mensagem — um seletor "Para" no composer com os agentes que já estão na
+  sessão. Antes a mensagem ia, sem aviso, ao último agente ativado na janela de
+  200 eventos: no uso real de 29/09, depois dos aceites à Infra e ao Arquiteto,
+  o "oi" foi respondido pelo Arquiteto. Aceitar um handoff na tela faz do
+  agente que entrou o destinatário; com dois ou mais agentes e nenhuma escolha,
+  o envio fica travado e a tela pede a escolha. O card de aceite passa a casar
+  a oferta pelo `handoffId`, e agente ativado fora da janela (o
+  `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
+  (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

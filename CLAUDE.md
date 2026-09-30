@@ -188,6 +188,8 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
+| O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 

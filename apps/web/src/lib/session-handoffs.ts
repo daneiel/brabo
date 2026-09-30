@@ -15,7 +15,13 @@ import { AGENTES_DE_CHAT } from './session-readiness';
  */
 export interface DerivacoesDeHandoff {
   activeFor: (agent: string) => boolean;
-  offeredHandoff: Handoff | undefined;
+  ofertasAcionaveis: Handoff[];
+  /**
+   * As ofertas de `ofertasAcionaveis` cujo `handoff.offered` já saiu da
+   * janela de 200 eventos (RN-631): sem o evento no fio não há card onde o
+   * botão more, e elas ganham a faixa fixa acima do composer.
+   */
+  ofertasForaDaJanela: Handoff[];
   handoffDaInfraOferecido: Handoff | undefined;
   prontidaoJaDeclarada: boolean;
   arquiteturaJaDeclarada: boolean;
@@ -25,14 +31,21 @@ export interface DerivacoesDeHandoff {
 export function derivarHandoffsDaSessao(
   events: SessionEvent[],
   handoffs: Handoff[],
+  ativadosNaSessaoInteira: readonly string[] = [],
 ): DerivacoesDeHandoff {
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
   // fala AGORA". Cópia local de uma linha da mesma checagem que o hook usa
   // internamente pra `criativoActive`/`arquitetoActive` (`session-
-  // readiness.ts`) — o único consumidor que sobra aqui é `offeredHandoff`,
+  // readiness.ts`) — o único consumidor que sobra aqui é `ofertasAcionaveis`,
   // logo abaixo, que não faz parte da extração do hook.
+  //
+  // Desde a RN-631 a janela é SOMADA a `roster.activatedAgents` do resumo
+  // (RN-630, sessão inteira): sem isso, numa sessão longa a ativação do agente
+  // saía dos 200 eventos e a oferta endereçada a ele voltava a parecer
+  // aceitável. Ativação é monótona, então somar só corrige falso negativo.
   const activeFor = (agent: string) =>
+    ativadosNaSessaoInteira.includes(agent) ||
     events.some(
       (e) =>
         e.type === 'agent.activated' &&
@@ -57,13 +70,54 @@ export function derivarHandoffsDaSessao(
   // handoff dele segue fora DESTE card por NOME: o aceite dele tem o card
   // PRÓPRIO logo abaixo (RN-499), e deixá-lo cair aqui o ofereceria duas
   // vezes — e, por ser o mais antigo, voltaria a esconder o do Dev Lead.
-  const offeredHandoff = handoffs.find(
-    (h) =>
+  //
+  // Desde a RN-631 (AT-253) são TODAS as ofertas pendentes, não a primeira:
+  // o `.find()` elegia uma oferta só, e a mais antiga pendente escondia as
+  // seguintes. O caso real foi o handoff MANUAL (ADR 0109/RN-440) ao PO,
+  // que nunca ganhava botão (o casamento pelo ator não batia) e, sendo o
+  // mais antigo, deixava sem botão toda oferta que viesse depois. Cada
+  // oferta é o card do evento dela (casado pelo `handoffId`); duas pendentes
+  // para o MESMO agente não viram dois botões iguais — vale a mais recente, e
+  // aceitá-la ativa o agente, o que tira a outra daqui pelo `activeFor`.
+  const porDestino = new Map<string, Handoff>();
+  for (const h of handoffs) {
+    if (
       h.status === 'offered' &&
       !activeFor(h.toAgent) &&
       h.toAgent !== 'infra' &&
-      (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
-  );
+      (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent)
+    ) {
+      porDestino.set(h.toAgent, h);
+    }
+  }
+  const ofertasAcionaveis = [...porDestino.values()];
+
+  // A oferta cujo EVENTO saiu da janela (RN-631, revisão do PR #759). O card
+  // acionável pertence ao `handoff.offered` (casado pelo `handoffId`), e a
+  // lista de handoffs não tem janela: numa sessão longa a oferta continuava
+  // `offered` e sem botão em lugar nenhum. O critério é o do corte, não o da
+  // ausência — a oferta é MAIS ANTIGA que o evento mais antigo da janela.
+  // Ausência só não basta: a lista de handoffs e a de eventos pollam
+  // separadas, e uma oferta recém-criada cujo evento ainda não chegou
+  // piscaria na faixa antes de ir para o fio. Janela vazia (carregando, ou
+  // sessão sem evento) não afirma corte nenhum.
+  const idsNaJanela = new Set<string>();
+  let inicioDaJanela: number | null = null;
+  for (const e of events) {
+    const instante = Date.parse(e.createdAt);
+    if (!Number.isNaN(instante) && (inicioDaJanela === null || instante < inicioDaJanela)) {
+      inicioDaJanela = instante;
+    }
+    if (e.type !== 'handoff.offered') continue;
+    const id = (e.payload as { handoffId?: string } | null)?.handoffId;
+    if (id) idsNaJanela.add(id);
+  }
+  const ofertasForaDaJanela =
+    inicioDaJanela === null
+      ? []
+      : ofertasAcionaveis.filter(
+          (h) => !idsNaJanela.has(h.id) && Date.parse(h.createdAt) < inicioDaJanela!,
+        );
 
   // O handoff da INFRA, que o filtro logo acima deixa de fora — e de
   // propósito. Até a RN-617 o motivo era o Infra Lead não conversar; desde
@@ -103,7 +157,8 @@ export function derivarHandoffsDaSessao(
 
   return {
     activeFor,
-    offeredHandoff,
+    ofertasAcionaveis,
+    ofertasForaDaJanela,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,

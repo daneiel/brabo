@@ -57,7 +57,7 @@ export function useAcoesDeHandoff({
   // `ativandoExecucao`.
   const [validandoNecessidade, setValidandoNecessidade] = useState(false);
   // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
-  // depois do envio (some junto com `offeredHandoff` ao ser aceito), então
+  // depois do envio (some junto com a oferta ao ser aceito), então
   // não precisa lembrar a escolha entre um handoff e outro.
   const [manualHandoffTarget, setManualHandoffTarget] = useState('');
   const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
@@ -92,7 +92,7 @@ export function useAcoesDeHandoff({
   // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
   // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
   // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
-  // existente (`offeredHandoff`) pega o handoff novo sozinho no próximo poll
+  // existente (`ofertasAcionaveis`, RN-631) pega o handoff novo sozinho no próximo poll
   // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
   // resultado mais rápido, mas o handoff em si só passa a existir depois
   // deste POST responder.
@@ -116,7 +116,9 @@ export function useAcoesDeHandoff({
     }
   }
 
-  async function handleAcceptHandoff(handoffId: string, toAgent: string) {
+  /** Resolve `true` quando o aceite passou — é por isso que a tela troca o
+   * destinatário do composer para o agente que entrou (RN-631). */
+  async function handleAcceptHandoff(handoffId: string, toAgent: string): Promise<boolean> {
     // Fixado ANTES do `await` (achado B): o kickoff do agente no engine é um
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
@@ -142,10 +144,12 @@ export function useAcoesDeHandoff({
       if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
         await handleActivateExecution();
       }
+      return true;
     } catch {
       turnoAgentRef.current = null;
       setTurnoViaCanal(false);
       showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
+      return false;
     }
   }
 
