@@ -17056,7 +17056,7 @@ desde sempre (AT-251).
    estão na sessão: `agent.activated` na janela, `roster.activatedAgents` do
    resumo do projeto ([RN-630](#rn-630), sessão INTEIRA, só com o resumo da
    MESMA sessão, no molde da [RN-568](#rn-568)) ou handoff ACEITO (a lista de
-   handoffs não tem janela). Os dois últimos termos são a [RN-180](#rn-180): o
+   handoffs não tem janela). Os dois últimos termos são a [RN-180](business-rules/autenticacao.md#rn-180): o
    agente não some do seletor porque a ativação saiu dos 200 eventos. Na sessão
    criativa o Criativo é opção antes de ativado, porque a primeira mensagem o
    ativa (achado 3).
