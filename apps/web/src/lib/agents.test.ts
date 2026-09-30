@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { addressableAgents, AREAS, SOLO_CONVERSATIONAL_AGENTS } from './agents';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { addressableAgents, AGENTS, AREAS, SOLO_CONVERSATIONAL_AGENTS } from './agents';
+import { lerTokens } from './contraste';
 
 /**
  * Handoff manual a agente à escolha (ADR 0109/RN-440): `addressableAgents()`
@@ -33,5 +36,26 @@ describe('addressableAgents (ADR 0109)', () => {
 
   it('inclui o Staff (ADR 0088) — o caso real que motivou esta feature', () => {
     expect(addressableAgents()).toContain('staff');
+  });
+});
+
+/**
+ * A cor de agente é SEMPRE token (AT-284, ADR 0181): hex solto não muda com o
+ * tema, e foi assim que três agentes ficaram lavados no claro.
+ */
+describe('cor de agente vem do design system', () => {
+  const css = readFileSync(resolve(process.cwd(), '../../design/tokens.css'), 'utf8');
+  const raiz = lerTokens(css, ':root');
+
+  it('caminho feliz: todo agente pinta com var(--token) que existe em design/tokens.css', () => {
+    for (const def of Object.values(AGENTS)) {
+      const m = /^var\((--[\w-]+)\)$/.exec(def.color);
+      expect(m, `${def.key} usa "${def.color}", não um var(--token)`).not.toBeNull();
+      expect(raiz[m![1]], `${def.key}: ${m![1]} não existe no :root`).toBeDefined();
+    }
+  });
+
+  it('falha: um hex solto seria recusado pela mesma régua', () => {
+    expect(/^var\((--[\w-]+)\)$/.exec('#5EBEB1')).toBeNull();
   });
 });

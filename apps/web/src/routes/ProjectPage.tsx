@@ -7,7 +7,6 @@ import {
   useBacklog,
   useHypotheses,
   useLatestSession,
-  usePendingActions,
   useProjectPendingActions,
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
@@ -78,8 +77,15 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // Os cinco contadores do trilho são PERIFERIA de projeto (AT-278, RN-632):
   // nenhum canal desta moldura avisa quando mudam, e a aba que mostra o dado
   // como assunto mantém o poll curto dela. Ritmo de projeto aqui.
-  const pendingActionsQuery = usePendingActions(projectId, latestSession?.id, INTERVALO_DO_PROJETO_MS);
-  const pendingCount = pendingActionsQuery.data?.items.filter((a) => a.status === 'pending').length ?? 0;
+  //
+  // As aprovações pendentes são as do PROJETO, em qualquer sessão (AT-297,
+  // RN-638). Era a sessão criada POR ÚLTIMO: uma ideação aberta depois da
+  // execução zerava o contador enquanto os dev agents esperavam decisão na
+  // sessão de execução. As telas que ouvem um canal de sessão invalidam esta
+  // chave no `proposed_action.*` (AT-299, `criarInvalidadorDoCanal`).
+  const pendingActionsQuery = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
+  const pendentesDoProjeto = pendingActionsQuery.data?.filter((a) => a.status === 'pending');
+  const pendingCount = pendentesDoProjeto?.length ?? 0;
 
   // Histórias esperando promoção do usuário (Fase 12c — RN-048). Contador
   // próprio, ao lado do de aprovações: são duas filas de decisão diferentes,
@@ -113,8 +119,11 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // consulta que `ProjectPrsTab` usa) — `git_merge` pendente em qualquer
   // sessão, não só a mais recente, é a mesma correção que resolve o bug de
   // visibilidade da aba.
-  const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge', INTERVALO_DO_PROJETO_MS);
-  const prsPendentes = mergeActionsQuery.data?.length ?? 0;
+  //
+  // Os `git_merge` saem da MESMA leitura de pendentes do projeto (AT-297):
+  // eram uma segunda consulta, com o mesmo conteúdo filtrado pelo servidor.
+  const merges = pendentesDoProjeto?.filter((a) => a.actionType === 'git_merge');
+  const prsPendentes = merges?.length ?? 0;
 
   const contagens: ContagensDeAba = {
     promocoesPendentes,
@@ -131,8 +140,8 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // no chip, pelo mesmo motivo que os contadores do trilho seguem separados
   // (ADR 0126): somar apaga qual fila está pedindo atenção.
   const filasPrecisaDeVoce = montarFilas({
-    acoesDaSessao: pendingActionsQuery.data?.items,
-    merges: mergeActionsQuery.data,
+    acoesPendentes: pendentesDoProjeto,
+    merges,
     epicos: backlogQuery.data,
     pendenciasDeArquitetura: architectureQuery.data?.pendencies,
     hipoteses: hypothesesQuery.data,

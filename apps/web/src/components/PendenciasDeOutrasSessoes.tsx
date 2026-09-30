@@ -81,6 +81,21 @@ export function PendenciasDeOutrasSessoes({
   const mergesVisiveis = desenhadas(merges);
   const cortadas = total - aprovacoesVisiveis.length - mergesVisiveis.length;
 
+  // AT-318: o rótulo de origem sai UMA vez por sessão, não por card — com
+  // três cards da mesma sessão ele se repetia entre um card e o seguinte e
+  // parecia dizer respeito aos dois. A lista já vem na ordem da espera mais
+  // longa; o grupo herda a ordem da primeira ação dele, e o tempo do rótulo é
+  // o da mais antiga (é a espera que importa).
+  const porSessao = (visiveis: ProposedAction[]) => {
+    const grupos = new Map<string, ProposedAction[]>();
+    for (const acao of visiveis) {
+      const grupo = grupos.get(acao.sessionId);
+      if (grupo) grupo.push(acao);
+      else grupos.set(acao.sessionId, [acao]);
+    }
+    return [...grupos.entries()];
+  };
+
   const fila = (
     chave: 'aprovacoes' | 'merges',
     lista: ProposedAction[],
@@ -93,36 +108,52 @@ export function PendenciasDeOutrasSessoes({
           {/* A contagem é DESTA fila e só dela. */}
           <span className={styles.contagem}>{lista.length}</span>
         </h4>
-        {visiveis.map((acao) => (
-          <div key={acao.id} className={styles.linha}>
+        {porSessao(visiveis).map(([origem, acoes]) => (
+          <div key={origem} className={styles.grupo}>
             <div className={styles.origem}>
               {t('pendencias.origem', {
-                hashtag: hashtagDaSessao(acao.sessionId),
-                tempo: formatRelativeTime(acao.createdAt),
+                count: acoes.length,
+                hashtag: hashtagDaSessao(origem),
+                tempo: formatRelativeTime(acoes[0]!.createdAt),
               })}
             </div>
-            <ApprovalCard
-              action={acao}
-              variant="chat"
-              bloqueio={podeDecidir ? undefined : t('pendencias.semPapel')}
-              onApprove={() => decidir(acao, () => approveAction(projectId, acao.sessionId, acao.id))}
-              onDeny={() => decidir(acao, () => denyAction(projectId, acao.sessionId, acao.id))}
-              onAlwaysAllow={() =>
-                decidir(acao, async () => {
-                  await approveAlwaysAction(projectId, acao.sessionId, acao.id);
-                  void queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
-                })
-              }
-            />
+            {acoes.map((acao) => (
+              <ApprovalCard
+                key={acao.id}
+                action={acao}
+                variant="chat"
+                // AT-318: detalhe fechado — empilhados, os detalhes abertos
+                // deixavam um card à vista de três.
+                detalheRecolhido
+                bloqueio={podeDecidir ? undefined : t('pendencias.semPapel')}
+                onApprove={() => decidir(acao, () => approveAction(projectId, acao.sessionId, acao.id))}
+                onDeny={() => decidir(acao, () => denyAction(projectId, acao.sessionId, acao.id))}
+                onAlwaysAllow={() =>
+                  decidir(acao, async () => {
+                    await approveAlwaysAction(projectId, acao.sessionId, acao.id);
+                    void queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
+                  })
+                }
+              />
+            ))}
           </div>
         ))}
       </section>
     );
 
+  // Presença POR FILA no cabeçalho, visível com o bloco recolhido — cada fila
+  // com o próprio número, nunca uma soma (RN-467).
+  const presenca = (['aprovacoes', 'merges'] as const)
+    .map((chave) => ({ chave, n: chave === 'aprovacoes' ? aprovacoes.length : merges.length }))
+    .filter(({ n }) => n > 0)
+    .map(({ chave, n }) => `${t(`pendencias.filas.${chave}`)} ${n}`)
+    .join(' · ');
+
   return (
     <div className={styles.wrapper} data-testid="pendencias-de-outras-sessoes">
       <Disclosure
         titulo={t('pendencias.titulo')}
+        trailing={<span className={styles.presenca}>{presenca}</span>}
         padraoAberto
         className={styles.disclosure}
         classNameCabecalho={styles.cabecalho}

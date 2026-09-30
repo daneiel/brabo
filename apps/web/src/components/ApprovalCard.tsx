@@ -180,6 +180,13 @@ interface ApprovalCardProps {
    * motivo é uma linha visível. Ausente = controles normais.
    */
   bloqueio?: string;
+  /**
+   * AT-318: quem EMPILHA vários cards num espaço curto (as pendências de
+   * outras sessões, acima do composer) pede o detalhe fechado mesmo na
+   * variante `chat` — N detalhes abertos empurravam os outros cards para fora
+   * da vista. Ausente = a regra de sempre (aberto só no chat e pendente).
+   */
+  detalheRecolhido?: boolean;
 }
 
 export function ApprovalCard({
@@ -195,6 +202,7 @@ export function ApprovalCard({
   onActivateAutoMode,
   decisaoDaPolitica,
   bloqueio,
+  detalheRecolhido,
 }: ApprovalCardProps) {
   const { t } = useTranslation('approvals');
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
@@ -265,7 +273,7 @@ export function ApprovalCard({
    * texto que esta fase existe para desfazer. E o payload CRU nunca nasce
    * aberto, em variante nenhuma — despejar JSON é o defeito, não a densidade.
    */
-  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending;
+  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending && !detalheRecolhido;
 
   return (
     <div
