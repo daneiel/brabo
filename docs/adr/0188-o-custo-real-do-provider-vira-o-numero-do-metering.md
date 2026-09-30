@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted.** 2026-09-30 (AT-270, história HS-070, épico EP-030, rodada 34;
+**Accepted.** 2026-09-30 (AT-270 e AT-272, história HS-070, épico EP-030, rodada 34;
 decisão do dono em 30/09: *"o custo real vira o número"* — quando o provider
 devolve o que cobrou, é esse o valor gravado e mostrado, com
 `estimated = false`; o preço do catálogo fica só onde não há custo real).
@@ -92,6 +92,20 @@ Medido no código de `dev` em 2026-09-30, antes de mudar:
    negativo também é "não disse", nunca zero; zero de verdade (modelo
    gratuito) é custo real.
 
+8. **As partes da entrada e da saída são gravadas** (AT-272, RN-666):
+   `cached_input_tokens` (`usage.prompt_tokens_details.cached_tokens`) e
+   `reasoning_tokens` (`usage.completion_tokens_details.reasoning_tokens`),
+   lidos pela base para todo provider do dialeto, porque são campos da própria
+   OpenAI. São PARTES de `input_tokens`/`output_tokens`, nunca somadas a eles,
+   e não recalculam custo: com o custo real, o desconto do cache já está no
+   número; sem ele, o catálogo não tem preço de cache para aplicar, e inventar
+   um seria outra estimativa. `null` é "não disse", distinto de 0. A medição
+   (`medir-execucao.ts`) passa a dizer, por agente, quanto da entrada foi cache
+   lido — só sobre as chamadas que informaram, e em quantas — e em quantas o
+   custo é o real. O intervalo que a análise de 29/09 deixou como hipótese
+   (entre US$ 0,58 e 0,92, dependendo do cache) passa a ser medível nas
+   chamadas novas; as 305 antigas seguem sem a informação.
+
 ## Consequences
 
 - O número da aba Gastos, dos budgets e do orçamento local do laço passa a ser
@@ -119,6 +133,9 @@ Medido no código de `dev` em 2026-09-30, antes de mudar:
   Jev (`model_name = typesafe/jev-1.13`, `model_id` nulo) ou uma chamada de
   chat com custo real (`model_id` preenchido, `catalog_cost_micros` não nulo);
   o Jev não grava `catalog_cost_micros`, porque não tem preço de catálogo.
+- **Anthropic fica de fora das partes.** Ele informa cache no protocolo
+  próprio (`cache_read_input_tokens`), que o adaptador dele não lê; as linhas
+  dele gravam `null` nas duas colunas. Nenhum outro provider muda.
 - O que o modelo resolvido e o id destravam — conferir a cobrança de uma
   linha com `GET /generation?id=`, repreçar por versão datada — fica por
   construir; aqui só se grava.

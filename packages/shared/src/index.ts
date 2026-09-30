@@ -302,6 +302,19 @@ export interface ChatUsageChunk {
   resolvedModel?: string;
   /** O `id` que o provider deu à resposta (`gen-…` no OpenRouter), para conferir depois. */
   generationId?: string;
+  /**
+   * Quantos dos `inputTokens` o provider serviu de CACHE (cache read) —
+   * `usage.prompt_tokens_details.cached_tokens` no dialeto OpenAI (RN-666).
+   * PARTE da entrada, nunca somada a ela. `undefined` = o provider não disse,
+   * que é diferente de 0 (disse que não houve cache).
+   */
+  cachedInputTokens?: number;
+  /**
+   * Quantos dos `outputTokens` foram de RACIOCÍNIO —
+   * `usage.completion_tokens_details.reasoning_tokens` (RN-666). Parte da
+   * saída, nunca somada a ela; `undefined` = não disse.
+   */
+  reasoningTokens?: number;
 }
 
 export interface ChatErrorChunk {

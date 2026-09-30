@@ -144,9 +144,47 @@ In metrics the `upstream_provider` label repeats the provider itself when
 there's no hub, so `sum by (upstream_provider)` keeps summing the whole
 cost.
 
-- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:66`
+- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:73`
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+
+### RN-666 — O metering grava quanto da entrada veio de cache e quanto da saída foi raciocínio {#rn-666}
+
+Cada linha de `token_usage` grava duas PARTES que o provider informa no
+`usage` do dialeto OpenAI: `cached_input_tokens`
+(`prompt_tokens_details.cached_tokens` — quantos dos `input_tokens` foram
+servidos de cache, cobrados a uma fração do preço) e `reasoning_tokens`
+(`completion_tokens_details.reasoning_tokens` — quantos dos `output_tokens`
+foram raciocínio).
+
+1. **Parte, nunca soma.** `input_tokens`/`output_tokens` continuam sendo os
+   totais que o provider disse, e já incluem as partes; nada é somado a eles
+   e nenhum custo é recalculado por elas — o número do custo é o da
+   [RN-665](#rn-665).
+2. **"Não disse" não é zero.** `null` = o provider não informou; 0 = informou
+   que não houve. Valor que não é inteiro não negativo é "não disse".
+3. **A medição diz quanto foi cache.** `medir-execucao.ts` passa a mostrar,
+   por agente, o cache lido e o raciocínio com a porcentagem do total, SÓ sobre
+   as chamadas que informaram (e em quantas, quando não foram todas), e
+   "não medido" quando nenhuma informou — além de em quantas chamadas o custo
+   é o real.
+4. **Lido para todo provider do dialeto**, porque os dois campos são da
+   própria OpenAI; quem não os manda fica com `null`. O Anthropic informa cache
+   no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
+   `null`, declarado; o Ollama não informa.
+
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:270` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:565` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
+  `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
+  `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
+- **Test:** `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
+  (resposta gravada com as duas partes; sem os detalhes; valor inválido e
+  zero), `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/scripts/medir-execucao.spec.ts` (`formatarParteMedida`)
+- **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+  (AT-272)
 
 ### RN-665 — O custo real que o provider devolve é o número do metering; o catálogo fica onde ele não vem {#rn-665}
 
@@ -183,9 +221,9 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Where:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:194` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:211` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:222` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:199` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:216` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:266` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
@@ -241,7 +279,7 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
 - **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
   `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
-  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:109`
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
   (congela no metering),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:245` (`openrouterConfig`,
   a capability provada)
@@ -425,7 +463,7 @@ already exercised. A provider that declares `false` and still exposes
 the method **refuses the call** before touching the network.
 
 - **Where:** `apps/api/src/infrastructure/llm/ollama-provider.ts:73`,
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:316`
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:325`
 - **Test:** `test/contract/llm-provider.contract.ts`,
   `test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`,
   `test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts`
@@ -2395,9 +2433,9 @@ continuam numa linha só. Quem quer a quebra por credencial tem a lista própria
 e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
 pergunta que as duas listas separadas já não respondam.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:133`
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:137`
   (`SpendDimension`),
-  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:251`
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:255`
   (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
@@ -2428,8 +2466,8 @@ chegar ao handler.
 nasce alcançável pelas duas audiências, e tirá-la do alcance do membro vira ato
 explícito **neste ponto** — nunca um esquecimento em outro arquivo.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:117`
-  (as duas sobrecargas), `:143` (`SpendDimensionDoAtor`), `:159`/`:169` (os dois
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:121`
+  (as duas sobrecargas), `:147` (`SpendDimensionDoAtor`), `:163`/`:173` (os dois
   escopos), `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`

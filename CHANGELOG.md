@@ -71,6 +71,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Chamada BYOK cai no catálogo. **Budgets calibrados sobre o preço de catálogo
   podem cruzar os limiares antes**: o uso real de 29/09 custou 1,85× a
   estimativa.
+- **api**: **o metering lê o cache e o raciocínio** (AT-272,
+  [RN-666](docs/business-rules/custo.md#rn-666)). Cada linha de `token_usage`
+  grava `cached_input_tokens` (`prompt_tokens_details.cached_tokens`) e
+  `reasoning_tokens` (`completion_tokens_details.reasoning_tokens`) — partes
+  dos totais, nunca somadas a eles, `null` quando o provider não disse — e o
+  `medir-execucao.ts` passa a mostrar, por agente, quanto da entrada foi cache
+  lido, quanto da saída foi raciocínio e em quantas chamadas o custo é o real.
 - **api, engine**: o laço **pergunta ao Jev qual ferramenta** e o modelo do usuário
   vê só o menu que sobra (AT-238, [RN-625](docs/business-rules.md#rn-625),
   [ADR 0179](docs/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),

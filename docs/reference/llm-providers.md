@@ -52,7 +52,7 @@ the four `ChatStreamChunk` types.
 | --- | --- |
 | `text_delta` | a piece of generated text |
 | `tool_calls` | the model requested tools (single chunk, not incremental) |
-| `usage` | token count, with the `estimated` flag; and, when the response says so, the real cost (`costMicros`), the model that served (`resolvedModel`) and the response id (`generationId`) — [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) |
+| `usage` | token count, with the `estimated` flag; and, when the response says so, the real cost (`costMicros`), the model that served (`resolvedModel`), the response id (`generationId`) and the cached/reasoning PARTS of the token counts (`cachedInputTokens`, `reasoningTokens`, RN-666) — [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) |
 | `error` | failure classified by `code` — **never an exception** |
 
 A failure becomes a chunk, not an exception, because the turn has already spent
