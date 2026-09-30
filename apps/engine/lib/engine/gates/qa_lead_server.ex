@@ -125,8 +125,11 @@ defmodule Engine.Gates.QaLeadServer do
 
     state = %{state | pendente: nil}
 
-    {:noreply,
-     continuar_area(state, p.em_voo, [{p.delegacao, resultado} | p.colhidos], p.restantes)}
+    # AT-248 (RN-629): o laço retomado PODE suspender de novo — o subagente
+    # roda vários comandos e cada um pede aprovação. O resultado da retomada
+    # passa pelo MESMO tratamento do resultado de `run/5`; antes o
+    # `{:awaiting, _}` entrava em `colhidos` como se fosse parecer.
+    {:noreply, tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)}
   end
 
   # Desfecho de OUTRA ação, ou o lead já não está esperando: ignora em vez de
@@ -183,43 +186,68 @@ defmodule Engine.Gates.QaLeadServer do
         finalizar_area(state, emVoo, Enum.reverse(colhidos))
 
       [d | resto] ->
-        case agente(d.subagent).run(
-               emVoo.project_id,
-               emVoo.session_id,
-               emVoo.task_id,
-               emVoo.dev_state,
-               emVoo.dev_context
-             ) do
-          {:awaiting, pendente} ->
-            # Só diagnóstico (ADR 0067) — o resgate NÃO tenta retomar este
-            # `ctx` específico (ele não sobrevive a um restart, mesma
-            # limitação do `laço_pendente` do dev agent); ele reinicia a área
-            # inteira. `step` continua "in_progress".
-            GateState.upsert!(%{
-              project_id: emVoo.project_id,
-              task_id: emVoo.task_id,
-              gate: "qa",
-              session_id: emVoo.session_id,
-              step: "in_progress",
-              subagent: d.subagent
-            })
+        resultado =
+          agente(d.subagent).run(
+            emVoo.project_id,
+            emVoo.session_id,
+            emVoo.task_id,
+            emVoo.dev_state,
+            emVoo.dev_context
+          )
 
-            %{
-              state
-              | pendente:
-                  Map.merge(pendente, %{
-                    delegacao: d,
-                    colhidos: colhidos,
-                    restantes: resto,
-                    task_id: emVoo.task_id,
-                    em_voo: emVoo
-                  })
-            }
-
-          resultado ->
-            continuar_area(state, emVoo, [{d, resultado} | colhidos], resto)
-        end
+        tratar_resultado(state, emVoo, d, resultado, colhidos, resto)
     end
+  end
+
+  # UM só lugar decide o que fazer com o resultado de um subagente, venha ele
+  # de `run/5` ou de `retomar/3` (AT-248, RN-629). `{:awaiting, _}` guarda o
+  # estado em voo e PARA a área; qualquer outra coisa é resultado colhido e a
+  # área segue.
+  defp tratar_resultado(state, emVoo, d, {:awaiting, pendente}, colhidos, resto) do
+    # Só diagnóstico (ADR 0067) — o resgate NÃO tenta retomar este `ctx`
+    # específico (ele não sobrevive a um restart, mesma limitação do
+    # `laço_pendente` do dev agent); ele reinicia a área inteira. `step`
+    # continua "in_progress".
+    GateState.upsert!(%{
+      project_id: emVoo.project_id,
+      task_id: emVoo.task_id,
+      gate: "qa",
+      session_id: emVoo.session_id,
+      step: "in_progress",
+      subagent: d.subagent
+    })
+
+    %{
+      state
+      | pendente:
+          Map.merge(pendente, %{
+            delegacao: d,
+            colhidos: colhidos,
+            restantes: resto,
+            task_id: emVoo.task_id,
+            em_voo: emVoo
+          })
+    }
+  end
+
+  defp tratar_resultado(state, emVoo, d, {tag, _} = resultado, colhidos, resto)
+       when tag in [:ok, :blocked],
+       do: continuar_area(state, emVoo, [{d, resultado} | colhidos], resto)
+
+  # Resultado que o lead não conhece: NUNCA derruba a área nem some (RN-059).
+  # Vira bloqueio com origem `codigo` (falta uma cláusula aqui, não é
+  # infra/modelo/política), que `registrar_resultado/5` e
+  # `QaLead.consolidar/1` já sabem tratar — a task é bloqueada com o motivo.
+  defp tratar_resultado(state, emVoo, d, resultado, colhidos, resto) do
+    bloqueio =
+      {:blocked,
+       %{
+         reason: "#{d.label} devolveu um resultado que o QA Lead não reconhece",
+         diagnosis: "resultado inesperado: #{inspect(resultado, limit: 5, printable_limit: 200)}",
+         origin: "codigo"
+       }}
+
+    continuar_area(state, emVoo, [{d, bloqueio} | colhidos], resto)
   end
 
   defp finalizar_area(state, emVoo, resultados) do
