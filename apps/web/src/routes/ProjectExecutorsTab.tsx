@@ -6,8 +6,9 @@ import {
   useActiveExecutionSession,
   useArchitecture,
   useCurrentWorkspace,
+  useCurrentWorkspaceWithRole,
   useHandoffs,
-  usePendingActions,
+  useProjectPendingActions,
   useProjectsSummary,
   useSessionEvents,
   useSessionTokenUsage,
@@ -24,6 +25,8 @@ import { deriveExecutionProgress } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import { rotuloDaSessao } from '../lib/session-label';
+import { roleAtLeast } from '../lib/roles';
+import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -69,13 +72,20 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const { t } = useTranslation('executors');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  // AT-298: decidir pede `developer` no ENDPOINT (RN-102) — o mesmo papel de
+  // WORKSPACE que a tela de Sessão lê, com a mesma lacuna declarada (RN-471).
+  const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
+  const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const executionSessionQuery = useActiveExecutionSession(projectId);
   const executionSession = executionSessionQuery.session;
   const sessionId = executionSession?.id;
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
-  const actionsQuery = usePendingActions(projectId, sessionId);
-  const actions = actionsQuery.data?.items ?? [];
+  // Quem espera decisão sai da fila do PROJETO (AT-297, RN-638): a mesma
+  // chave do contador do trilho, no ritmo de projeto, avisada pelo canal
+  // abaixo no `proposed_action.*` (AT-299) — nenhuma requisição a mais.
+  const pendentesQuery = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
+  const pendentes = pendentesQuery.data ?? [];
   // Periferia de PROJETO (AT-278): o `module_map` só muda quando o Arquiteto
   // escreve, e nenhum canal desta aba avisa disso — ritmo de projeto.
   const { data: architecture } = useArchitecture(projectId, INTERVALO_DO_PROJETO_MS);
@@ -92,7 +102,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const summaryQuery = useProjectsSummary(workspace?.id);
   const projectSummary = summaryQuery.data?.find((s) => s.projectId === projectId);
   const pendingActionAgentIds = new Set(
-    actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
+    pendentes.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
   // RN-568 — a presença de QA/SecOps (`gatesEverOpened`) e dos membros de
   // área (`delegatedSubagents`) sofria da MESMA classe de defeito acima
@@ -272,6 +282,18 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
       {sessionId && (
         <>
+          {/* AT-298: o que os agentes propuseram FORA da execução e a destrava
+              — o `container_start` do Infra Lead nasce na sessão de chat,
+              enquanto o `dev.blocked_by_container` aparece aqui. Mesmo atalho
+              do chat (RN-626/RN-467): mesmo card, mesmos endpoints, filas
+              separadas. As da PRÓPRIA execução não entram: o roster já as
+              marca como `aguardando`, e a aba Aprovações as decide. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+          />
+
           {/* `executionActivated` vem do resumo agregado — os três estados
               da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO
               (o resumo ainda não chegou) fica indistinguível do vazio real. */}

@@ -278,9 +278,13 @@ describe('orçamento de requisições com DUAS abas (AT-278, RN-632)', () => {
     // `dev`: 630 GET de eventos só nesta aba (um por aviso), 834 nas duas.
     // Janela de 3s: ≤ 20 por invalidação + o fallback.
     expect(executores['GET /projects/:id/sessions/:id/events']).toBeLessThanOrEqual(24);
-    // A proposta do dev agent agora invalida as ações NA HORA (antes só o
-    // fallback de 15s as trazia: 4/min).
-    expect(executores['GET /projects/:id/sessions/:id/actions']).toBeGreaterThanOrEqual(12);
+    // A proposta do dev agent agora invalida as pendentes NA HORA (antes só
+    // o fallback de 15s as trazia: 4/min). Desde a AT-297 (RN-638) a aba lê a
+    // fila do PROJETO — a mesma chave do contador do trilho —, e é ela que o
+    // aviso de `proposed_action.*` invalida (AT-299); as ações da sessão a
+    // aba não lê mais.
+    expect(executores['GET /projects/:id/actions']).toBeGreaterThanOrEqual(12);
+    expect(executores['GET /projects/:id/sessions/:id/actions'] ?? 0).toBe(0);
     expect(total(chat) + total(executores)).toBeLessThan(200);
   }, 60_000);
 
