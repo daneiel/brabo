@@ -1089,6 +1089,13 @@ base itself lands here too rather than becoming an empty segment: `<root>/`
 would mount the whole base — every mounted project — inside one project's
 container.
 
+`usuarioDaPasta` (`{ uid, gid }` or `null`) is the folder's OWNER as the api
+measured it ([ADR 0180](../adr/0180-container-com-o-dono-da-pasta.md),
+[RN-627](../business-rules.md#rn-627)): the broker starts the container with
+`--user uid:gid` so the dev agent can write to `/work` under `--cap-drop ALL`.
+`null` when the folder cannot be measured, the owner is root or the project is
+`runner`. It never travels in a request to the broker.
+
 There is no write route in this direction. Whoever WRITES the container lifecycle
 is still `RegistrarTransicaoDeContainerUseCase`, through the route that already
 exists; giving the broker authority over the state it produces would move the

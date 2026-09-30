@@ -118,6 +118,33 @@ describe('DockerViaCli.start', () => {
     expect(args.join(' ')).not.toContain('--network host');
   });
 
+  it('sem `usuario` o run não leva --user (como sempre), com ele leva --user uid:gid e HOME constante (ADR 0180)', async () => {
+    const um = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('c0ffee\n') },
+    ]);
+    await new DockerViaCli(um.rodar).start(SPEC);
+    expect(um.chamadas.find((c) => c[0] === 'run')).not.toContain('--user');
+
+    const dois = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('c0ffee\n') },
+    ]);
+    await new DockerViaCli(dois.rodar).start({
+      ...SPEC,
+      usuario: { uid: 1000, gid: 1001 },
+    });
+    const run = dois.chamadas.find((c) => c[0] === 'run') as string[];
+    expect(run.join(' ')).toContain('--user 1000:1001');
+    expect(run.join(' ')).toContain('--env HOME=/tmp');
+    // A contenção segue intacta e continua sem campo livre.
+    expect(run.join(' ')).toContain('--cap-drop ALL');
+    expect(run).not.toContain('--privileged');
+    expect(run).not.toContain('--cap-add');
+    expect(run.filter((a) => a === '--volume')).toHaveLength(1);
+    expect(run.filter((a) => a === '--env')).toHaveLength(1);
+  });
+
   it('rede `none` vira `--network none`', async () => {
     const { rodar, chamadas } = duplo([
       { quando: ['ps'], entao: comSaida('') },

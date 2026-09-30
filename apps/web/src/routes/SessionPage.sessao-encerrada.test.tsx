@@ -18,6 +18,7 @@ const getSession = vi.fn();
 const sendAgentMessage = vi.fn();
 const confirmReadiness = vi.fn();
 const transitionSession = vi.fn();
+const getProjectPendingActions = vi.fn();
 
 const EVENTOS_CRIATIVO_ATIVO = [
   {
@@ -81,6 +82,7 @@ vi.mock('../lib/api-client', () => ({
   setSessionModelBinding: vi.fn(),
   startAgent: vi.fn(),
   transitionSession: (...args: unknown[]) => transitionSession(...args),
+  getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
 }));
 
 const { SessionPage } = await import('./SessionPage');
@@ -128,6 +130,7 @@ beforeEach(async () => {
   await i18n.changeLanguage('pt-BR');
   eventos.mockReturnValue({ items: EVENTOS_CRIATIVO_ATIVO });
   getSession.mockResolvedValue(sessao());
+  getProjectPendingActions.mockResolvedValue([]);
 });
 
 afterAll(() => {
@@ -198,5 +201,48 @@ describe('SessionPage — botão Encerrar inerte nos estados terminais (AT-155)'
     montar();
     const botao = await screen.findByRole('button', { name: 'Encerrar' });
     await waitFor(() => expect(botao).toBeEnabled());
+  });
+});
+
+describe('SessionPage — pendências de outras sessões em QUALQUER estado (AT-298)', () => {
+  const EXECUCAO = 'd7e9d7e9-bbbb-4bbb-8bbb-222222222222';
+  const pendenteNaExecucao = {
+    id: 'acao-exec',
+    projectId: 'proj-1',
+    sessionId: EXECUCAO,
+    seq: 7,
+    actionType: 'terminal',
+    payload: { command: 'npm test' },
+    status: 'pending',
+    resolvedPolicy: 'require_approval',
+    actor: { kind: 'agent', id: 'dev-api' },
+    decidedBy: null,
+    decidedAt: null,
+    rejectionReason: null,
+    executionResult: null,
+    createdAt: '2026-08-11T12:30:00.000Z',
+    updatedAt: '2026-08-11T12:30:00.000Z',
+  };
+
+  it.each(['closed', 'closed_abnormally'] as const)(
+    'sessão %s: a pendente da execução aparece, com o card de decisão',
+    async (status) => {
+      getSession.mockResolvedValue(sessao({ status, closedAt: '2026-08-11T13:00:00.000Z' }));
+      getProjectPendingActions.mockResolvedValue([pendenteNaExecucao]);
+
+      montar();
+
+      expect(await screen.findByTestId('pendencias-de-outras-sessoes')).toBeInTheDocument();
+    },
+  );
+
+  it('CASO DE CONTRASTE: a pendente da PRÓPRIA sessão não entra no bloco (o fio já a desenha)', async () => {
+    getSession.mockResolvedValue(sessao({ status: 'closed' }));
+    getProjectPendingActions.mockResolvedValue([{ ...pendenteNaExecucao, sessionId: ID }]);
+
+    montar();
+
+    await waitFor(() => expect(getProjectPendingActions).toHaveBeenCalled());
+    expect(screen.queryByTestId('pendencias-de-outras-sessoes')).not.toBeInTheDocument();
   });
 });

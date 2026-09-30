@@ -7904,7 +7904,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/actions": {
       "get": {
-        "description": "Ordered by `seq`; use `nextCursor` as `afterSeq`.",
+        "description": "Ordered by `seq`; use `nextCursor` as `afterSeq`. `latest=true` fetches the TAIL instead (the newest `limit` actions, still ascending) and ignores `afterSeq`. `status=pending` keeps only the actions waiting for a decision — with `latest`, the newest pending ones, so a session with more than 200 actions does not push a new pending one out of the window (RN-637).",
         "operationId": "ActionsController_list",
         "parameters": [
           {
@@ -7938,6 +7938,26 @@
             "in": "query",
             "schema": {
               "example": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "latest",
+            "required": false,
+            "in": "query",
+            "description": "Fetches the tail of the session; ignores `afterSeq`.",
+            "schema": {
+              "example": "true",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Only `pending` is supported.",
+            "schema": {
+              "example": "pending",
               "type": "string"
             }
           }
@@ -14739,6 +14759,21 @@
               }
             ]
           },
+          "usuarioDaPasta": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "uid": {
+                "type": "integer",
+                "example": 1000
+              },
+              "gid": {
+                "type": "integer",
+                "example": 1000
+              }
+            },
+            "description": "The OWNER of the project folder, measured by the api (ADR 0180): the broker starts the container with `--user uid:gid` so the dev agent can write to the folder under `--cap-drop ALL`. `null` when the folder cannot be measured, the project is `runner`, or the owner is root — the container then starts as before. Never accepted from a request to the broker."
+          },
           "imagem": {
             "nullable": true,
             "description": "`null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work.",
@@ -14762,6 +14797,7 @@
           "workspaceDirName",
           "executionMode",
           "localizacao",
+          "usuarioDaPasta",
           "imagem",
           "imagemVersao"
         ]
@@ -21171,6 +21207,17 @@
               "type": "string"
             }
           },
+          "activatedAgents": {
+            "example": [
+              "arquiteto",
+              "infra"
+            ],
+            "description": "Agents with at least one `agent.activated` in the session, most recently activated first (by `seq`), one entry per agent (RN-630). Covers the WHOLE session, not the 200-event window: the client sums it to the window and trusts it only when `latestSessionId` is the session it is reading.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "infraActive": {
             "type": "boolean",
             "example": false,
@@ -21192,6 +21239,7 @@
           "moduleNames",
           "gatesEverOpened",
           "delegatedSubagents",
+          "activatedAgents",
           "infraActive",
           "uxDesignerActive",
           "staffActive"

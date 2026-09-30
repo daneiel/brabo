@@ -99,6 +99,34 @@ describe('EsperaDoRunner', () => {
     expect(screen.queryByText('Procurando o runner…')).not.toBeInTheDocument();
   }, 10_000);
 
+  it('AT-278 (RN-632): confirmada a espera, a sonda PARA — nada de GET /projects/:id a cada 3s para sempre', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getProjectMock
+      .mockResolvedValueOnce(projeto({ workspaceVerifiedAt: null }))
+      .mockResolvedValue(projeto({ workspaceVerifiedAt: '2026-08-30T12:00:00.000Z' }));
+
+    renderComProviders(<EsperaDoRunner projectId="proj-1" />);
+    await screen.findByText('Procurando o runner…');
+    await vi.advanceTimersByTimeAsync(3_500);
+    expect(await screen.findByText(/Runner conectado/)).toBeInTheDocument();
+
+    const chamadasAoConfirmar = getProjectMock.mock.calls.length;
+    // Um minuto inteiro com o painel na tela. Antes: +20 (a sonda seguia).
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(getProjectMock.mock.calls.length).toBe(chamadasAoConfirmar);
+  }, 10_000);
+
+  it('CASO DE FALHA: sem confirmação, a sonda segue no ritmo dela até o teto (a correção não a calou antes da hora)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getProjectMock.mockResolvedValue(projeto({ workspaceVerifiedAt: null }));
+
+    renderComProviders(<EsperaDoRunner projectId="proj-1" />);
+    await screen.findByText('Procurando o runner…');
+    const antes = getProjectMock.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(getProjectMock.mock.calls.length - antes).toBeGreaterThanOrEqual(9);
+  }, 10_000);
+
   it('carimbo que JÁ EXISTIA quando a espera começou não conta como conexão nova', async () => {
     // Projeto reconfigurado: `workspaceVerifiedAt` já estava preenchido, e
     // reconectar com o MESMO caminho não o regrava. Anunciar "conectado" aqui

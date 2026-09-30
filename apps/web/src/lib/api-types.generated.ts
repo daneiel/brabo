@@ -2690,7 +2690,7 @@ export interface paths {
         };
         /**
          * Paginates the proposed actions in the session
-         * @description Ordered by `seq`; use `nextCursor` as `afterSeq`.
+         * @description Ordered by `seq`; use `nextCursor` as `afterSeq`. `latest=true` fetches the TAIL instead (the newest `limit` actions, still ascending) and ignores `afterSeq`. `status=pending` keeps only the actions waiting for a decision — with `latest`, the newest pending ones, so a session with more than 200 actions does not push a new pending one out of the window (RN-637).
          */
         get: operations["ActionsController_list"];
         put?: never;
@@ -5182,6 +5182,13 @@ export interface components {
             executionMode: "container" | "mounted" | "runner";
             /** @description The discriminated locator of the project folder (RN-503): which of the broker's two roots resolves it, and the relative segment to join to that root. */
             localizacao: components["schemas"]["LocalizacaoDoProjetoResponseDto"];
+            /** @description The OWNER of the project folder, measured by the api (ADR 0180): the broker starts the container with `--user uid:gid` so the dev agent can write to the folder under `--cap-drop ALL`. `null` when the folder cannot be measured, the project is `runner`, or the owner is root — the container then starts as before. Never accepted from a request to the broker. */
+            usuarioDaPasta: {
+                /** @example 1000 */
+                uid?: number;
+                /** @example 1000 */
+                gid?: number;
+            } | null;
             /** @description `null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work. */
             imagem: components["schemas"]["ImagemParaOBrokerResponseDto"] | null;
             /**
@@ -8426,6 +8433,14 @@ export interface components {
              *     ]
              */
             delegatedSubagents: string[];
+            /**
+             * @description Agents with at least one `agent.activated` in the session, most recently activated first (by `seq`), one entry per agent (RN-630). Covers the WHOLE session, not the 200-event window: the client sums it to the window and trusts it only when `latestSessionId` is the session it is reading.
+             * @example [
+             *       "arquiteto",
+             *       "infra"
+             *     ]
+             */
+            activatedAgents: string[];
             /**
              * @description An `accepted` handoff to `infra` exists in the most recent session.
              * @example false
@@ -16765,6 +16780,10 @@ export interface operations {
             query?: {
                 afterSeq?: string;
                 limit?: string;
+                /** @description Fetches the tail of the session; ignores `afterSeq`. */
+                latest?: string;
+                /** @description Only `pending` is supported. */
+                status?: string;
             };
             header?: never;
             path: {

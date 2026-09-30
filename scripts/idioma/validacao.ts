@@ -451,6 +451,43 @@ export function naAmostra(chave: string): boolean {
 
 export type Braco = 'baseline' | 'tratamento';
 
+/**
+ * ONDE a orientação de idioma vai na chamada (AT-279). `ultima-system` é o que o
+ * produto faz hoje (RN-622); as outras três existem só para o diagnóstico do
+ * Haiku, e NADA no produto as usa.
+ */
+export const POSICOES = ['ultima-system', 'system-fundido', 'sufixo-user', 'ultima-system-e-sufixo-user'] as const;
+export type PosicaoDaOrientacao = (typeof POSICOES)[number];
+
+interface MensagemBasica {
+  role: string;
+  content: string;
+}
+
+/**
+ * As mensagens que vão ao modelo, com a orientação na posição pedida. O histórico
+ * NUNCA é alterado (a orientação é efêmera, RN-622): devolve uma cópia.
+ */
+export function posicionar<M extends MensagemBasica>(posicao: PosicaoDaOrientacao, mensagens: readonly M[], texto: string): M[] {
+  const copia = mensagens.map((m) => ({ ...m }));
+  const sistema = { role: 'system', content: texto } as M;
+  if (posicao === 'ultima-system') return [...copia, sistema];
+  if (posicao === 'system-fundido') {
+    const primeira = copia[0];
+    if (!primeira || primeira.role !== 'system') throw new Error('posicionar: a primeira mensagem deveria ser o system da persona');
+    primeira.content = `${primeira.content}\n\n${texto}`;
+    return copia;
+  }
+  let ultimaDoUsuario = -1;
+  copia.forEach((m, i) => {
+    if (m.role === 'user') ultimaDoUsuario = i;
+  });
+  const alvo = copia[ultimaDoUsuario];
+  if (!alvo) throw new Error('posicionar: não há mensagem de usuário para receber o sufixo');
+  alvo.content = `${alvo.content}\n\n${texto}`;
+  return posicao === 'sufixo-user' ? copia : [...copia, sistema];
+}
+
 export interface Resposta {
   braco: Braco;
   modelo: string;
@@ -465,6 +502,8 @@ export interface Resposta {
   texto: string;
   usouFerramenta: string[];
   upstream: string[];
+  /** Só no diagnóstico do Haiku (AT-279): onde a orientação foi. Ausente = `ultima-system`. */
+  posicao?: PosicaoDaOrientacao;
 }
 
 export interface Chamada {
@@ -492,6 +531,8 @@ export interface Chamada {
   custoUsd: number | null;
   latenciaMs: number;
   erro: string | null;
+  /** Só no diagnóstico do Haiku (AT-279). */
+  posicao?: PosicaoDaOrientacao;
 }
 
 export interface Celula {

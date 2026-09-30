@@ -942,7 +942,8 @@ export const proposeAction = (
 export const listActions = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number } = {},
+  // `latest`/`status` (AT-296, RN-637): a CAUDA da sessão e só as pendentes.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; status?: 'pending' } = {},
 ) =>
   get<Page<ProposedAction>>(
     `/projects/${projectId}/sessions/${sessionId}/actions${qs(opts)}`,

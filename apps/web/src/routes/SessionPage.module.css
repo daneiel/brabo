@@ -329,6 +329,44 @@
   width: 100%;
 }
 
+/* O destinatário da mensagem (RN-631) — a primeira linha do composer, com a
+   borda de cima dele; o `.composer` logo abaixo perde a própria borda para
+   os dois lerem como um bloco só. */
+.destinatarioRow {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 10px 24px 0;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.destinatarioRow > div {
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.destinatarioLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.destinatarioAviso {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.composerComDestinatario {
+  border-top: none;
+  padding-top: 8px;
+}
+
 /* Handoff manual a agente à escolha (ADR 0109/RN-440) — fita fina acima do
    composer, de propósito mais discreta que ele: é redirecionamento, não
    conversa. */
@@ -1027,4 +1065,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* AT-266: "Mergear" sob o card do PR aberto. */
+.mergearNoChat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mergearNota {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
 }

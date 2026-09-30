@@ -1,7 +1,8 @@
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
+import { ApiError, mensagemDaApi } from '../lib/api-client';
 import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
 import {
   fraseDaDecisaoDaPolitica,
@@ -142,9 +143,17 @@ interface ApprovalCardProps {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
-  onApprove: () => void;
-  onDeny: (reason?: string) => void;
-  onAlwaysAllow: () => void;
+  /**
+   * Os três callbacks podem devolver a PROMESSA da chamada (AT-256): é ela que
+   * deixa o card segurar os botões enquanto a decisão está em voo e dizer, no
+   * próprio card, a frase da api quando ela recusa — em especial o 409 de
+   * `InvalidActionTransitionError`, de ação que já saiu de `pending` por outro
+   * caminho (auto-aprovação, outra aba, o painel). Devolver `void` continua
+   * valendo: o card só não sabe do desfecho.
+   */
+  onApprove: () => void | Promise<unknown>;
+  onDeny: (reason?: string) => void | Promise<unknown>;
+  onAlwaysAllow: () => void | Promise<unknown>;
   /**
    * "Auto mode" (RN-153) — liga `agent_autonomy` com a curinga `actionType:
    * "*"` pro AGENTE desta ação: nenhum comando FUTURO dele precisa de
@@ -163,6 +172,21 @@ interface ApprovalCardProps {
    * DIZ isso; objeto = a frase de `lib/decisao-da-politica.ts`.
    */
   decisaoDaPolitica?: DecisaoDaPoliticaLida | null;
+  /**
+   * O MOTIVO, em texto, de os controles estarem inertes (AT-265): quem chama
+   * sabe que o papel de quem olha não alcança o mínimo do endpoint de decisão.
+   * O que se tira é o controle, nunca a informação — o card continua mostrando
+   * a ação inteira. `title` em botão `disabled` não abre no Chromium, então o
+   * motivo é uma linha visível. Ausente = controles normais.
+   */
+  bloqueio?: string;
+  /**
+   * AT-318: quem EMPILHA vários cards num espaço curto (as pendências de
+   * outras sessões, acima do composer) pede o detalhe fechado mesmo na
+   * variante `chat` — N detalhes abertos empurravam os outros cards para fora
+   * da vista. Ausente = a regra de sempre (aberto só no chat e pendente).
+   */
+  detalheRecolhido?: boolean;
 }
 
 export function ApprovalCard({
@@ -177,9 +201,36 @@ export function ApprovalCard({
   onAlwaysAllow,
   onActivateAutoMode,
   decisaoDaPolitica,
+  bloqueio,
+  detalheRecolhido,
 }: ApprovalCardProps) {
   const { t } = useTranslation('approvals');
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
+  // AT-256. `emVoo` segura o duplo clique (a segunda chamada era um 409 certo);
+  // `recusa` guarda a frase da api; `obsoleta` é o 409 — a ação JÁ não está
+  // `pending` no servidor, e o card fica inerte até a lista chegar e trocá-lo
+  // pela linha de desfecho. A `ref` fecha a janela entre o clique e o render.
+  const [emVoo, setEmVoo] = useState(false);
+  const [recusa, setRecusa] = useState<string | null>(null);
+  const [obsoleta, setObsoleta] = useState(false);
+  const travaRef = useRef(false);
+
+  async function decidir(chamada: () => void | Promise<unknown>) {
+    if (travaRef.current) return;
+    travaRef.current = true;
+    setEmVoo(true);
+    setRecusa(null);
+    try {
+      await chamada();
+    } catch (erro) {
+      setRecusa(mensagemDaApi(erro));
+      if (erro instanceof ApiError && erro.status === 409) setObsoleta(true);
+    } finally {
+      travaRef.current = false;
+      setEmVoo(false);
+    }
+  }
+  const inerte = emVoo || obsoleta || !!bloqueio;
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
   const actorLabel = actor?.name ?? action.actor.id;
@@ -222,7 +273,7 @@ export function ApprovalCard({
    * texto que esta fase existe para desfazer. E o payload CRU nunca nasce
    * aberto, em variante nenhuma — despejar JSON é o defeito, não a densidade.
    */
-  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending;
+  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending && !detalheRecolhido;
 
   return (
     <div
@@ -300,17 +351,17 @@ export function ApprovalCard({
       {isPending ? (
         <>
           <div className={styles.actions}>
-            <Button variant="success" onClick={onApprove}>
+            <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
               {t('approvalCard.actions.approve')}
             </Button>
-            <Button variant="danger" onClick={() => onDeny()}>
+            <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
               {t('approvalCard.actions.deny')}
             </Button>
             {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
                 gravar a regra em permissions.json não muda nada, então o botão
                 prometia um efeito que não existe. */}
             {podeSemprePermitir && (
-              <Button variant="secondary" onClick={onAlwaysAllow}>
+              <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
                 {t('approvalCard.actions.alwaysAllow')}
               </Button>
             )}
@@ -319,11 +370,27 @@ export function ApprovalCard({
                 desabilitar sem explicar (action.actor.kind === 'user' também
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && (
-              <Button variant="ghost" onClick={onActivateAutoMode}>
+              <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
                 {t('approvalCard.actions.autoMode')}
               </Button>
             )}
           </div>
+          {/* AT-256: a frase da api, no card — nunca um toast genérico. Vale nas
+              duas variantes; `obsoleta` diz o porquê de os botões estarem
+              inertes (o `title` de botão desabilitado não abre no Chromium). */}
+          {bloqueio && (
+            <span className={styles.note} data-testid="bloqueio-da-decisao">
+              <AlertIcon size={12} />
+              {bloqueio}
+            </span>
+          )}
+          {recusa && (
+            <span className={styles.recusa} role="alert" data-testid="recusa-da-decisao">
+              <AlertIcon size={12} />
+              {recusa}
+              {obsoleta && ` ${t('approvalCard.notes.obsolete')}`}
+            </span>
+          )}
           {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />

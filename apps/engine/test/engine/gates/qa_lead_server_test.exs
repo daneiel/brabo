@@ -304,6 +304,72 @@ defmodule Engine.Gates.QaLeadServerTest do
       assert GateState.get(project_id, "task-abc12345", "qa") == nil
     end
 
+    # AT-248 / RN-629 — o laço retomado PODE suspender de novo (o subagente
+    # roda vários comandos, cada um pede aprovação). Antes o `{:awaiting, _}`
+    # da RETOMADA entrava em `colhidos` como se fosse resultado e derrubava
+    # `registrar_resultado/5` (FunctionClauseError) — as tasks ficavam em
+    # `awaiting_qa` para sempre.
+    test "segunda suspensão na retomada: registra como suspenso, não cai, e retoma depois",
+         %{state: state, project_id: project_id} do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, %{"id" => "pa-1", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm install"})
+      ])
+
+      assert {:noreply, suspenso} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      # A retomada pede OUTRA aprovação.
+      Process.put(:fake_propose_action, %{"id" => "pa-2", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"})
+      ])
+
+      assert {:noreply, suspenso2} =
+               QaLeadServer.handle_info(
+                 {:action_settled,
+                  %{action_id: "pa-1", status: "executed", execution_result: %{"exitCode" => 0}}},
+                 suspenso
+               )
+
+      # Continua suspenso, agora pela segunda ação; nada foi decidido.
+      assert suspenso2.pendente.action_id == "pa-2"
+      assert suspenso2.pendente.delegacao.subagent == "qa-automacao"
+      refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
+      refute_received {:task_blocked, _, _, _, _}
+      refute_received {:delegation_recorded, %{status: "completed"}}
+      refute_received {:delegation_recorded, %{status: "failed"}}
+
+      row = GateState.get(project_id, "task-abc12345", "qa")
+      assert row.step == "in_progress"
+      assert row.subagent == "qa-automacao"
+
+      # A segunda decisão chega e a área conclui.
+      Process.put(:fake_propose_action, nil)
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "approved",
+          "resumo" => "suite verde",
+          "itens" => [],
+          "coverageMatrix" => []
+        })
+      ])
+
+      assert {:noreply, retomado} =
+               QaLeadServer.handle_info(
+                 {:action_settled,
+                  %{action_id: "pa-2", status: "executed", execution_result: %{"exitCode" => 0}}},
+                 suspenso2
+               )
+
+      assert retomado.pendente == nil
+      assert_received {:gate_verdict_recorded, _, _, _, _, _, _}
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
+    end
+
     test "desfecho de OUTRA ação não derruba nem retoma", %{state: state} do
       suspenso = %{state | pendente: %{action_id: "pa-99"}}
 

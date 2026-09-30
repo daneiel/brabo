@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:696` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:791` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:541` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:617` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -268,11 +268,20 @@ to "infra" today would silently fall through to the Creative agent; treating
 it as the composer's active agent would reopen that trap instead of closing
 one.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:316` (`activeAgent`),
+> **Superseded in part by [RN-631](#rn-631) (AT-251):** "most recent
+> `agent.activated` wins" was itself an implicit default recipient, and an
+> invisible one. The composer's recipient is now CHOSEN by the person (a "To"
+> selector listing the agents already in the session) and the topbar model
+> follows that recipient. What survives from this rule is the half about the
+> model: the binding route receives the agent, never falls back silently.
+
+- **Where:** `apps/web/src/lib/session-destinatario.ts:215`
+  (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
-- **Test:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+- **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (formerly `SessionPage.agente-mais-recente.test.tsx`),
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
   `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
 - **Edge case:** Infra Lead doesn't participate in composer routing nor in
@@ -295,8 +304,8 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
-- **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:242` (`eventsQuery`)
+- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5197,7 +5206,9 @@ comportamento de sempre para o chamador interno (o engine). O handoff
 nasce `offered`, do MESMO jeito que um automático, e o card de aceite
 já existente (`offeredHandoff`/`handleAcceptHandoff` em `SessionPage.tsx`)
 o pega sozinho no próximo poll de `useHandoffs` — sem NENHUMA mudança no
-caminho de aceite.
+caminho de aceite. *(Não pegava, e ninguém viu até a AT-253: o card casava a
+oferta pelo ATOR, e o ator do manual é a pessoa. Corrigido na
+[RN-631](#rn-631), que casa pelo `handoffId`.)*
 
 A rota (`POST projects/:projectId/sessions/:sessionId/handoffs`) exige
 papel `developer`, o mesmo de `handoffs/:handoffId/accept` (RN-136: quem
@@ -5643,7 +5654,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:169` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:189` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -5901,7 +5912,7 @@ na api resolveria de verdade e é decisão à parte, fora do escopo desta.
   identidade e o empréstimo de data), `:241` (`temAlgoEsperando`);
   `apps/web/src/components/PainelPrecisaDeVoce.tsx:246-248` (`role="dialog"`,
   `aria-modal`, rótulo) e `:279-284` (grupo por fila, com a contagem dela);
-  `apps/web/src/routes/ProjectPage.tsx:116` (monta as filas a partir dos
+  `apps/web/src/routes/ProjectPage.tsx:120` (monta as filas a partir dos
   cinco hooks que os contadores do trilho já usam)
 - **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (as cinco filas
   separadas com os itens de cada uma; nada somado e nenhuma função de total;
@@ -6681,7 +6692,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:415`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:417`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -9715,7 +9726,7 @@ reparável (termina em toast), não o invisível.
   `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
   `apps/web/src/routes/containers-subida.ts:107` (`decidirSubida`, a regra
   inteira, pura);
-  `apps/web/src/routes/ContainersPage.tsx:115` (os dois payloads)
+  `apps/web/src/routes/ContainersPage.tsx:119` (os dois payloads)
 - **Teste:**
   `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts`
   (o terceiro estado com motivo próprio; 25 projetos vazios que NÃO empurram
@@ -10243,8 +10254,8 @@ duas devem.
   (`FRASE_DO_ENGINE_SEM_RUNNER`, o único casamento por substring que sobrou) e
   `:68` (`motivoDaMensagem`); `apps/web/src/components/FolderBrowserModal.tsx:227`
   (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
-  origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
-  `:119` (o `ref` que a dispara uma vez);
+  origens; `apps/web/src/components/EsperaDoRunner.tsx:91` (`onConfirmado`) e
+  `:136` (o `ref` que a dispara uma vez);
   `apps/web/src/components/RunnerOnboardingPanel.tsx:150` (`mostrarEspera`);
   `apps/web/src/routes/NewProjectWizard.tsx:304` (`origemDoNavegador`, o
   transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
@@ -13722,8 +13733,8 @@ da guarda, o mesmo dos outros dois fatos.
 - **Código:** `apps/web/src/lib/agent-status.ts:299` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
-  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:96` e
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:108` (o agregado com a guarda
+  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:111` (o agregado com a guarda
   de sessão)
 - **Teste:** `apps/web/src/lib/agent-status.test.ts:628` (o bloco inteiro:
   `:633` gate fora da janela traz QA/SecOps com status da janela, `:658` sem
@@ -14393,7 +14404,7 @@ depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
   `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
-  `:318` (`acompanharTurnoPeloLog`), `:316`;
+  `:349` (`acompanharTurnoPeloLog`), `:316`;
   `apps/web/src/routes/SessionPage.tsx:503`, `:529`, `:590`;
   `apps/web/src/lib/session-promocao.ts:141`;
   `apps/web/src/lib/recusa-do-agente.ts:17`
@@ -14491,6 +14502,10 @@ voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
 **123** com o canal caído (o comportamento de antes, intacto como fallback) e
 **46** com ele vivo — dos quais 24 são do Shell (resumo dos projetos e sessão
 de execução, que não são da sessão e seguem em 5s). Duas abas: 246 → 92.
+Desde a [RN-632](#rn-632) (AT-278) as leituras de PROJETO pollam no ritmo de
+projeto (15s) e as abas Executores e Visão geral passam pelo MESMO
+`criarInvalidadorDoCanal` — a medição com as telas de verdade e duas abas mora
+lá.
 
 **O que esta regra NÃO fecha:** o aviso da escrita que a api faz por conta
 própria (item 1, AT-157) é melhor esforço — se o engine estiver fora ou o
@@ -14513,11 +14528,11 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
-  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
-  (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
+  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:98`
+  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
-  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:59`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
   (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
@@ -14814,7 +14829,7 @@ repositório, não o de cada sessão, e não mudaram.
   `apps/api/src/domain/execution/repositorio-para-executar.ts:50`
   (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
   também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
-  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;
+  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:369` e `:511`;
   `apps/web/src/routes/SessionPage.tsx:147`; `apps/web/src/routes/session-timeline-montagem.tsx:495`;
   `apps/web/src/lib/session-acoes-de-handoff.ts:130`;
   `apps/engine/lib/engine/projects/project_repository.ex:74` (o texto da recusa
@@ -15335,7 +15350,7 @@ decidir se passam a consultá-lo é decisão à parte, fora desta regra.
 
 - **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
   (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
-  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:124`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:137`
   (`sessaoMaisRecente`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
   (vínculo e não nome; técnica de outro projeto não marca),
@@ -16237,7 +16252,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/lib/session-handoffs.ts:60` (`offeredHandoff`)
+  `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
@@ -16895,3 +16910,627 @@ endpoint é ALPHA e o smoke manual
 - **Origem:** AT-238, sobre a especificação da AT-235, as dezesseis decisões da
   AT-236, a medição da AT-237/AT-280 e a decisão do dono de 2026-09-29 (critério
   de 80%)
+## Decidir no chat, onde o dono está (RN-626)
+
+### RN-626 — O chat da sessão decide o que os agentes propuseram noutra sessão, mostra o turno que estava em curso e propõe o merge — sem mudar teto nenhum {#rn-626}
+
+O uso real de 2026-09-29 mediu o custo de o dono conversar numa sessão e os dev
+agents proporem noutra: as aprovações deles nunca apareciam onde ele estava, 45
+de 173 cliques em "Sempre permitir" voltaram 409 (o card continuava clicável
+depois de a ação já ter saído de `pending`), e reabrir a sessão com um turno em
+curso devolvia o composer livre e o 409. As quatro correções são de TELA — a
+api, o engine e todo teto ficam como estão.
+
+1. **O card fica inerte e diz a frase da api (AT-256).** `ApprovalCard` segura
+   os botões enquanto a decisão está em voo (o duplo clique era um 409 certo) e,
+   quando a chamada devolve promessa que rejeita, mostra a frase que a api
+   mandou NO card — nunca um toast genérico. Um 409 (a ação já não está
+   `pending`) deixa os botões inertes com o motivo em texto até a lista trocar o
+   card pela linha de desfecho. Quem chama devolve a promessa e refaz a lista
+   MESMO na recusa (`finally`): é UMA invalidação por clique, sem poll novo, e a
+   invalidação usa o canal e o orçamento da [RN-579](#rn-579).
+2. **Reabrir a sessão retoma o turno do log (AT-268).** O estado do turno da tela
+   é `useState` local e se perdia ao sair. Na primeira leitura dos eventos de
+   uma sessão `active`, `turnoEmCursoNoLog` olha o `agent.status` persistido
+   mais recente de cada agente (a mesma leitura de `turnoTerminouNoLog`, da
+   [RN-578](#rn-578)); o que estiver `working` reabre a faixa e trava o composer
+   pelas mesmas entradas de um turno aceito (`iniciarTurnoDoAgente` +
+   `acompanharTurnoPeloLog`), e a leitura da cauda do log o fecha. Roda UMA vez
+   por sessão montada (um efeito recorrente rearmaria a faixa com o `working`
+   antigo ainda no cache). O `working` que o reinício do engine deixou é fechado
+   por evento novo no boot ([RN-586](#rn-586)), então o que sobra é turno vivo.
+   **Não enfileira mensagem:** mensagem com turno em curso segue recusada com
+   409 nomeado — a fila é decisão pendente do dono (AT-267).
+3. **As pendências de OUTRAS sessões do projeto aparecem no chat (AT-265).**
+   `PendenciasDeOutrasSessoes` lê `GET /projects/:id/actions?status=pending`
+   (o mesmo endpoint da aba PRs e do painel "precisa de você") e desenha as que
+   NÃO nasceram nesta sessão — as desta o fio já decide. É ATALHO e nunca
+   substituto ([RN-467](#rn-467)): o MESMO `ApprovalCard`, os mesmos endpoints,
+   com o `sessionId` que a própria ação carrega; `onActivateAutoMode` fica de
+   fora (é política, não decisão). As duas filas — aprovações e merges de PR —
+   têm título e contagem PRÓPRIOS e nunca são somadas, e cada linha diz a sessão
+   de origem. O desenho tem teto de 20 cards, e o excedente é dito ("Mostrando N
+   de M"): recorte declarado, como na [RN-180](business-rules/autenticacao.md#rn-180). O poll é o da sessão
+   (5 s com o canal caído, o fallback de 15 s com ele vivo — `intervaloDaSessao`),
+   porque o canal da sessão não avisa escrita de outra.
+4. **"Mergear" no card da PR aberta (AT-266).** Sob o card de um `pr_open`
+   executado, e só quando o evento `action.pr_open` traz o id da PR e não há
+   `git_merge` vivo (pendente, aprovado ou auto-aprovado) para ela, o botão
+   PROPÕE o `git_merge` pelo mesmo endpoint da aba PRs (ator `user`, nesta
+   sessão). A proposta aparece no fio como o card de sempre, com Aprovar/Negar:
+   **a confirmação é a mesma e é do humano** — o merge em branch protegida
+   continua `require_approval` incondicional ([RN-418](#rn-418)), sem auto-aprovar,
+   sem "sempre permitir", sem o modo automático. O dedupe e as recusas da api
+   (PR já mergeada, tarefa sem gate — AT-249) chegam ao dono como a frase da api.
+5. **O papel é o do ENDPOINT, e a lacuna é declarada.** Decidir ação e propor
+   ação pedem `developer` (`actions.controller.ts`); a tela usa `roleAtLeast`
+   sobre o papel de WORKSPACE, porque a Sessão não busca `project_members` — a
+   mesma lacuna única da [RN-471](#rn-471), aqui declarada e não fechada. Quem não
+   alcança VÊ a pendência e o botão, com os controles inertes e o motivo em
+   texto (`bloqueio` do `ApprovalCard`): o que se tira é o controle, nunca a
+   informação.
+
+**O que esta regra NÃO fecha, declarado:** (a) o "Mergear" não propõe E aprova
+num clique só — são dois cliques, a proposta e a confirmação, e é de propósito;
+(b) a retomada do turno lê a janela dos eventos já carregada, e um `agent.status`
+fora dela não é visto (não saber não é "está trabalhando"); (c) a lista de
+pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
+Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
+continuam SEM decisão inline (não há `ApprovalCard` para elas).
+
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
+  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:63`
+  (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
+  `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
+  `:56` (`separarPendenciasDeOutrasSessoes`);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
+  (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
+  (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
+  `apps/web/src/routes/SessionPage.tsx:130` (`podeDecidir`), `:267`
+  (`useRetomarTurnoDoLog`), `:864` (`PendenciasDeOutrasSessoes`)
+- **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
+  (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
+  (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
+  (working), `:22` (idle e awaiting_approval fecham), `:38` (sem status na
+  janela — caso de falha); `apps/web/src/routes/SessionPage.retomar-turno.test.tsx:159`
+  (a tela retoma e o log destrava), `:182` (idle não inventa turno — caso de
+  falha); `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx:71`
+  (filas separadas, sessionId da ação), `:99` (papel abaixo de developer — caso
+  de falha), `:109` (409 no card), `:126` (recorte);
+  `apps/web/src/routes/MergearNoChat.test.tsx:62` (PR do evento), `:75`
+  (dedupe), `:100` (propõe como usuário, sem aprovar), `:121` (recusa da api —
+  caso de falha), `:134` (papel — caso de falha)
+- **Origem:** AT-256, AT-268, AT-265 e AT-266, da análise do uso real de
+  2026-09-29 (itens 4, 5 e 10a), rodada 27, lane web-sessao
+
+### RN-629 — O QA Lead trata o subagente que SUSPENDE de novo na retomada do mesmo jeito que na primeira vez, e resultado que não conhece vira bloqueio nomeado {#rn-629}
+
+O `qa-automacao` roda vários comandos e cada um pode pedir aprovação humana. O
+`QaLeadServer` já parava a área quando `run/5` devolvia `{:awaiting, _}` (achado
+AB, ADR 0052), mas a RETOMADA (`retomar/3`, quando a decisão chega) devolvia o
+resultado de um laço que podia suspender OUTRA vez — e esse segundo
+`{:awaiting, _}` entrava na lista de resultados colhidos como se fosse parecer.
+Ao consolidar, `registrar_resultado/5` não tinha cláusula para ele e o
+GenServer caía (`FunctionClauseError`, medido em 29/09/2026: 06:55:01 e
+07:00:10), deixando as três tasks entregues em `awaiting_qa` para sempre, sem
+veredito e sem desfecho nomeado.
+
+1. **Um só lugar decide o que fazer com o resultado de um subagente**
+   (`tratar_resultado/6`), venha ele de `run/5` ou de `retomar/3`.
+   `{:awaiting, _}` guarda o estado em voo (chaveado pela nova ação), mantém a
+   linha de `gate_states` em `in_progress` com o subagente e PARA a área: sem
+   veredito, sem bloquear a task, sem registrar a delegação. Quem retoma é o
+   mesmo `{:action_settled, _}` do `Engine.Dev.Wake` (ADR 0086), quantas vezes
+   forem necessárias.
+2. **Resultado que o lead não conhece nunca derruba nem some** (RN-059): vira
+   `{:blocked, …}` com origem `codigo` (falta uma cláusula aqui, não é infra,
+   modelo nem política), que `registrar_resultado/5` grava como delegação
+   `failed` e `QaLead.consolidar/1` transforma em bloqueio da task com a origem.
+
+**Declarado, não resolvido:** o restart do engine com o lead suspenso perde a
+inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a área
+inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
+momento do QA-estratégia) nem o teto de iterações do subagente.
+
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:120`
+  (`handle_info`), `:206` (`tratar_resultado`), `:241` (resultado desconhecido)
+- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:312`
+  (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
+  decisão conclui a área); `:265` (uma suspensão, o caminho feliz)
+- **Origem:** AT-248, sobre o achado E2 da análise de uso real de 2026-09-29
+
+### RN-630 — Quem está ativo na sessão se lê da sessão INTEIRA, não dos últimos 200 eventos {#rn-630}
+
+"Quem está ativo" e "quem recebe o composer" saíam do `agent.activated` visto
+na janela de 200 eventos (`latest: true`). Numa sessão longa as ativações do
+Arquiteto e da Infra saíam da janela; as ofertas de handoff endereçadas a eles
+voltavam a parecer aceitáveis e o "oi" ia para o último agente que ainda
+aparecia. É a classe de defeito da RN-180 (teto silencioso faz a
+tela afirmar sobre o que não leu), já fechada para a presença de QA/SecOps na
+[RN-568](#rn-568).
+
+**A regra:** o resumo do projeto ([RN-090](#rn-090)) devolve
+`roster.activatedAgents` — os agentes com ao menos um `agent.activated` na
+sessão mais recente, um por agente, o de ativação mais recente (por `seq`)
+primeiro. Quatro decisões:
+
+1. **A fonte continua sendo o event log.** Nenhuma coluna derivada, nenhum
+   índice e nenhuma migration: o campo entra na MESMA varredura por sessão que
+   já calcula `executionActivated`/`gatesEverOpened` (`array_agg ... filter`),
+   então o número de idas ao banco do resumo não muda (o spec de contagem
+   constante segue valendo). A migration 0066 reservada não foi usada.
+2. **Sem HTTP novo por poll.** O campo viaja no resumo que as telas já leem
+   ([RN-579](#rn-579)).
+3. **O cliente SOMA à janela e só confia com o resumo da MESMA sessão**
+   (`latestSessionId === sessionId`), como na RN-568: ativação é monótona
+   (agente ativado não se desativa), então a janela só dá falso negativo. Resumo
+   de outra sessão não vale; sem resumo, a janela decide sozinha.
+4. **A api diz o que aconteceu, não quem recebe.** O destinatário explícito e
+   visível no chat (AT-251) e o aceite por `handoffId` (AT-253) consomem este
+   campo na web e NÃO fazem parte desta regra.
+
+**Lacuna declarada:** esta rodada só entrega o CONTRATO da api. `apps/web`
+(`session-readiness.ts`, `session-handoffs.ts`) segue lendo a janela até a
+AT-251/AT-253 passarem a consumir `roster.activatedAgents`.
+
+> **Fechada na [RN-631](#rn-631) (AT-251):** o destinatário do composer e as
+> ofertas de handoff da tela de Sessão SOMAM `roster.activatedAgents` à janela,
+> com a guarda da mesma sessão. `criativoActive`/`arquitetoActive`
+> (`session-readiness.ts`) seguem lendo só a janela.
+
+- **Onde vive:** `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts:212`
+  (`activatedAgents`); `apps/api/src/application/ports/projects-summary-repository.port.ts:32`
+  (`activatedAgents`)
+- **Testes:** `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  ("activatedAgents cobre ativações anteriores à janela de 200 eventos" e
+  "activatedAgents é da sessão MAIS RECENTE: ativação de sessão antiga não vale")
+- **Origem:** AT-252
+
+### RN-627 — O container do projeto roda com o dono da pasta, medido pela api {#rn-627}
+
+Sob `--cap-drop ALL` o root do container não tem `CAP_DAC_OVERRIDE` e não
+escreve na pasta do projeto, que é do uid do operador: `npm install` dava
+`EACCES` para todo dev agent (AT-247, [ADR 0180](adr/0180-container-com-o-dono-da-pasta.md)).
+
+1. **A api mede, o broker compõe.** `container-spec` devolve `usuarioDaPasta`
+   (`stat` da pasta dos modos `container`/`mounted`; `null` se a pasta não é
+   alcançada, se o dono é root ou se o projeto é `runner`). O broker o copia
+   para `spec.usuario` e o adaptador emite `--user uid:gid` e `--env HOME=/tmp`.
+2. **Nunca vem de quem pede.** `start` não tem corpo e o corpo de `exec` ignora
+   campo extra; `exec` herda o usuário do container.
+3. **O broker revalida.** Inteiros em 1..2^31-1; `0` é recusado nomeando
+   `usuario.uid`/`usuario.gid` (root é o ausente, "como sempre").
+4. **Não afrouxa contenção**: `--cap-drop ALL`, um bind, rede de dois valores
+   e cinco operações continuam. Container já criado só muda ao ser recriado.
+
+- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+  `packages/docker-port/src/spec-de-container.ts:141` (`usuarioValidado`),
+  `apps/broker/src/operacoes.ts:385` (`especificacaoDoProjeto`),
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:110`
+  (`ObterSpecDeContainerUseCase`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (o `run` leva
+  `--user` e continua sem campo livre), `packages/docker-port/src/spec-de-container.spec.ts`
+  (`usuario`), `apps/broker/src/operacoes.spec.ts` ("o usuário do container"),
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+- **Origem:** AT-247
+
+### RN-628 — O merge executado fecha a tarefa da PR: `done`, uma vez só {#rn-628}
+
+O gate de QA/SecOps termina em `awaiting_user` e nada mais mexia no `status` da
+tarefa: no uso real de 29/09 o `pr-6` foi mergeado três vezes e as tarefas
+seguiram em `in_review` (AT-275).
+
+1. **Depois do merge, nunca no lugar dele.** `git_merge` continua sendo
+   `require_approval` incondicional ([RN-418](#rn-418)); a regra roda DENTRO de
+   `ExecuteGitActionUseCase`, na transação que grava o resultado do merge, e só
+   quando o provider devolveu `state: 'merged'` (PR aberta, ou merge que falhou,
+   não toca a tarefa).
+2. **A tarefa é achada pela PR que a abriu.** Toda `pr_open` do projeto cujo
+   `pullRequestId` é o da PR mergeada e que carrega `storyTaskId` no payload.
+   PR sem tarefa (infra, ADR) não muda nada.
+3. **Idempotente.** `TaskRepository.markDoneIfNotDone` é um `UPDATE … WHERE
+   status <> 'done'`: merge repetido da mesma PR devolve `null`, não move de
+   novo e NÃO grava o evento. Quando move, grava UM evento imutável
+   `backlog.task_status_changed` (`cause: 'pr_merged'`, `pullRequestId`,
+   `actionId`), append-only, sem UPDATE em tabela de eventos. Sem migration.
+4. **Fronteira declarada (AT-249).** Esta regra NÃO recusa merge de PR já
+   mergeada nem consulta `gate_status`: a recusa "PR já mergeada e tarefa ainda
+   sem gate" é decisão pendente do dono e não foi implementada aqui.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:252`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:287`
+  (`markDoneIfNotDone`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
+  falho, PR sem tarefa)
+- **Origem:** AT-275
+
+### RN-631 — O destinatário do chat é escolhido e visível, e a oferta de handoff é casada pelo `handoffId` {#rn-631}
+
+O destinatário da mensagem do composer era DERIVADO: "o `agent.activated` mais
+recente dentro da janela de 200 eventos" (achado 9-fix). Era um destinatário
+padrão do lado da TELA — a classe de defeito que a [RN-584](#rn-584) fechou no
+engine — e era INVISÍVEL: o composer não dizia a quem a mensagem ia, e aceitar
+um handoff nesta tela não mudava nada além do log. No uso real de 29/09 a
+sessão teve `handoff.accepted` para a Infra e depois para o Arquiteto, e o "oi"
+do usuário foi respondido pelo Arquiteto sem que a tela avisasse. E o card de
+aceite casava a oferta com o evento pelo par ATOR/`toAgent` (`e.actor.id ===
+offeredHandoff.fromAgent`), embora o `handoff.offered` carregue o `handoffId`
+desde sempre (AT-251).
+
+**A regra:**
+
+1. **As OPÇÕES** são os agentes que conversam (`AGENTES_DE_CHAT`) e que já
+   estão na sessão: `agent.activated` na janela, `roster.activatedAgents` do
+   resumo do projeto ([RN-630](#rn-630), sessão INTEIRA, só com o resumo da
+   MESMA sessão, no molde da [RN-568](#rn-568)) ou handoff ACEITO (a lista de
+   handoffs não tem janela). Os dois últimos termos são a [RN-180](business-rules/autenticacao.md#rn-180): o
+   agente não some do seletor porque a ativação saiu dos 200 eventos. Na sessão
+   criativa o Criativo é opção antes de ativado, porque a primeira mensagem o
+   ativa (achado 3).
+2. **O destinatário é o que a pessoa ESCOLHEU** — no seletor "Para" do
+   composer, ou aceitando um handoff NESTA tela (o gesto de chamar aquele
+   agente; aceite que falha não troca nada). Nada do log escolhe por ela: um
+   aceite feito em outra aba ou por outro caminho só acrescenta uma opção.
+3. **Opção ÚNICA é o destinatário, e o composer a nomeia antes do envio.** Não
+   é um padrão no sentido da [RN-584](#rn-584) — não há outro agente a quem a
+   mensagem pudesse ir.
+4. **Duas ou mais opções e nenhuma escolha válida: sem destinatário.** O
+   "Enviar" (e o Enter) fica travado e a tela diz em TEXTO que é preciso
+   escolher — nunca "a mais recente". Zero opções é o chat da sessão sem agente
+   (SSE), e a tela também o diz.
+5. **A escolha é lembrada por sessão no `localStorage`** — conforto de quem vê
+   (sem armazenamento a tela só volta a pedir a escolha), nunca estado do
+   produto.
+6. **"Parar" para o agente DO TURNO** (`turnoAgentRef`, `streamingAgent`,
+   `statusAgent`), e só na falta dele o destinatário: trocar o seletor no meio
+   do turno de outro agente não pode parar o errado. O modelo exibido na topbar
+   segue o destinatário.
+7. **A oferta é casada pelo `handoffId` do payload**, nunca pelo ator: cada
+   `handoff.offered` é o card da oferta dele, sem par para confundir nem "mais
+   recente" para escolher. As ofertas a agente já ativado (janela OU
+   `roster.activatedAgents`) não voltam a ser aceitáveis.
+
+8. **Toda oferta pendente é acionável, e nenhuma esconde outra** (AT-253). O
+   card elegia UMA oferta (`handoffs.find`, a pendente mais antiga), e o
+   handoff MANUAL ([ADR 0109](adr/0109-handoff-manual-a-agente-a-escolha.md),
+   [RN-441](#rn-441)) — gravado com a PESSOA como ator, e por isso nunca
+   casado pelo ator — ficava sem "Aceitar" e escondia as ofertas seguintes.
+   Agora cada oferta pendente a um agente que conversa (fora a da Infra, que
+   tem card próprio, [RN-499](#rn-499)) tem o botão no evento dela; duas
+   pendentes ao MESMO agente dão um botão só, o da mais recente, e aceitá-la
+   tira a outra pelo `activeFor`. A pílula do handoff manual diz "Handoff
+   manual" em vez do id da pessoa.
+9. **"Já está na sessão" se lê de fontes SEM janela escopadas à sessão PEDIDA**
+   (revisão do PR #759). O `roster.activatedAgents` do resumo é da sessão MAIS
+   RECENTE do projeto, e ativar a execução CRIA uma sessão nova que passa a ser
+   ela: a sessão do chat perdia a fonte inteira e voltava a depender da janela
+   de 200. A soma agora tem TRÊS fontes — o resumo, só quando é desta sessão; os
+   handoffs DESTA sessão (quem recebeu um aceito e quem OFERECEU um, que estava
+   nela); e o gasto por agente DESTA sessão (`GET .../token-usage`, agregado sem
+   janela: agente com linha ali rodou turno, e só roda turno quem foi ativado).
+   Cada fonte só corrige falso negativo, e o gasto é prova de PRESENÇA, nunca de
+   ausência. **Lacuna declarada:** agente ativado por `start` direto, sem
+   handoff, que nunca rodou turno, numa sessão que já não é a mais recente,
+   continua dependendo da janela — e quem tem papel abaixo de `developer` (o
+   mínimo da rota de gasto) fica sem a terceira fonte. Fechar pede o agregado
+   de ativação POR SESSÃO na api; não foi feito aqui.
+10. **Oferta pendente cujo evento saiu da janela ganha botão na faixa fixa
+    acima do composer** (revisão do PR #759). O card acionável pertence ao
+    `handoff.offered`, e a lista de handoffs não tem janela: numa sessão longa a
+    oferta seguia `offered` e sem botão em lugar nenhum. O critério é o CORTE,
+    não a ausência — a oferta é mais antiga que o evento mais antigo da janela
+    (uma oferta recém-criada cujo evento ainda não chegou não pisca na faixa), e
+    janela vazia não afirma corte. A faixa tem só o aceite; o atalho "Ativar
+    execução" do card do Dev Lead fica no fio.
+
+A guarda da [RN-584](#rn-584) (`scripts/ci/destinos-do-composer.spec.ts`)
+passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
+`SessionPage.tsx`: todo destino que o composer pode dar continua tendo
+cláusula própria no engine. Nenhuma mudança de api nem de engine.
+
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
+  `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
+  (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
+  `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:345`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
+  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
+- **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
+  por quê; opção única; handoff aceito fora da janela; resumo da mesma sessão
+  e de outra; aceite que troca e aceite que falha; escolha lembrada; sessão sem
+  agente; sessão de execução mais recente com a ativação lida dos handoffs e
+  do gasto desta sessão, e o gasto recusado; oferta fora da janela na faixa, e
+  oferta na janela ou mais nova que ela fora dela),
+  `apps/web/src/lib/session-destinatario.test.ts` (`ativadosSemJanela`),
+  `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx` (oferta
+  antiga de OUTRO `handoffId` fica muda),
+  `apps/web/src/routes/SessionPage.handoff-manual.test.tsx` (o manual ganha
+  "Aceitar"; o manual pendente não esconde a oferta seguinte; duas ao mesmo
+  agente viram um botão)
+- **Origem:** AT-251, AT-253
+
+### RN-633 — O handoff manual não declara prontidão, e "já ativo" para a oferta é do projeto {#rn-633}
+
+Duas leituras da tela de Sessão deixavam o handoff obsoleto (AT-293, AT-294):
+
+1. **O handoff MANUAL não esconde "Estou pronto para produzir" nem "Confirmar
+   arquitetura pronta"** (AT-293). `prontidaoJaDeclarada` e
+   `arquiteturaJaDeclarada` perguntavam só "existe handoff saindo do
+   Criativo/Arquiteto?", e o handoff manual
+   ([ADR 0109](adr/0109-handoff-manual-a-agente-a-escolha.md),
+   [RN-441](#rn-441)) grava como `fromAgent` o ÚLTIMO agente ativado
+   (`request-manual-handoff.use-case.ts`): pedir um handoff manual ao Staff com
+   o Criativo ativo escondia o botão de prontidão sem prontidão nenhuma
+   declarada. O manual se reconhece pelo ATOR humano do `handoff.offered`
+   (casado pelo `handoffId`, [RN-631](#rn-631)) — o `Handoff` da api não
+   carrega o ator. Fora da janela de 200 o ator é desconhecido, e aí: para o
+   Criativo vale o `artifactId` (o handoff da prontidão leva o
+   `product_brief`, `criativo_server.ex`; o manual nunca leva artefato); para o
+   Arquiteto os dois automáticos não levam artefato, então o de origem
+   desconhecida segue contando, como antes. **Lacuna declarada:** a marca
+   durável seria o ator (ou uma marca de manual) no próprio `Handoff` da api;
+   não foi feita aqui (a api é da lane do ciclo de vida, ADR 0182).
+2. **Oferta a agente já ATIVO em outra sessão do projeto não é acionável**
+   (AT-294). "Ativo" era da SESSÃO: depois de "Ativar execução", o Dev Lead
+   roda na sessão de execução, e a oferta a ele na sessão do chat seguia com
+   "Aceitar". Agora a oferta (o card do fio, a faixa fora da janela e o card da
+   Infra) soma ao "já entrou nesta sessão" o `roster.activatedAgents` do
+   resumo, que é a sessão MAIS RECENTE do projeto — a de execução, depois de
+   ativada. `activeFor` continua sendo DESTA sessão, porque é ele que o
+   seletor do handoff manual usa. **Lacuna declarada:** sessões que não são
+   nem esta nem a mais recente não são vistas; fechar pede um agregado de
+   ativação POR PROJETO na api, que não existe.
+
+Nenhuma mudança de api nem de engine.
+
+- **Onde:** `apps/web/src/lib/session-handoffs.ts:41` (`origemDoHandoff`),
+  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:191`
+  (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:140`
+  (`useAtivosNoProjeto`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
+  (manual com o Criativo ativo não esconde "Estou pronto"; manual com o
+  Arquiteto ativo não esconde "Confirmar arquitetura pronta"; o handoff do
+  agente continua escondendo — caso de falha; fora da janela o do Criativo
+  com brief conta; Dev Lead ativo na sessão de execução deixa a oferta muda;
+  sem ele, a oferta segue acionável — caso de falha)
+- **Origem:** AT-293, AT-294
+
+### RN-634 — Depois de "Ativar execução", a tela vai à sessão de execução {#rn-634}
+
+A execução roda numa sessão NOVA (RN-135, RN-139), e a de chat de onde o
+clique partiu pode até fechar. O atalho "Ativar execução" do card do handoff
+ao Dev Lead (RN-137) — e a fusão com o aceite (RN-161) — deixava a pessoa na
+sessão de chat, olhando o lugar de onde o trabalho saiu (AT-295). Agora
+`handleActivateExecution` lê o `sessionId` que `POST .../execution/activate`
+devolve e leva a tela até ele, com o aviso "Levando você à sessão de
+execução.". Sem `sessionId` na resposta, com o mesmo id da sessão atual, ou
+sem quem navegue (a tela montada fora da rota), só o aviso de sempre, e a tela
+fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
+ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
+
+- **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:186`
+  (`handleActivateExecution`); `apps/web/src/router.tsx:278` (`irParaSessao`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
+  (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
+  falha; sem quem navegue, só avisa)
+- **Origem:** AT-295
+### RN-632 — Leitura de PROJETO polla no ritmo de projeto, e toda tela que ouve o canal da sessão invalida pela MESMA janela {#rn-632}
+
+O uso real de 29/09 bateu o teto de 300 req/min do usuário ([RN-579](#rn-579))
+com duas abas abertas: 192 × 429 às 07:14, 106 deles em
+`GET /projects/:id/sessions` e 20 em `GET /projects/:id`, e três cliques de
+`approve_always` recusados no meio (AT-278). A RN-579 tinha posto sob o canal
+as leituras da tela de SESSÃO; as de PROJETO e as outras telas que ouvem o
+canal ficaram de fora. O teto NÃO muda: o que cai é o pedido.
+
+**A regra:**
+
+1. **Leitura de projeto que nenhum canal avisa polla a 15s**
+   (`INTERVALO_DO_PROJETO_MS`), INCONDICIONAL. O canal `session:<id>` só avisa
+   escritas da própria sessão; a lista de sessões do projeto e os contadores do
+   trilho (aprovações da sessão mais recente, merges pendentes do projeto,
+   histórias a promover, pendências de arquitetura, hipóteses) mudam por escrita
+   de QUALQUER sessão — não há aviso para esperar, então o mecanismo é poll
+   longo, no mesmo fallback que a RN-579 já aceita para a sessão. Vale para
+   `useProjectSessions`/`useLatestSession` (eram 5s), para os cinco contadores
+   da moldura `ProjectPage` e para a arquitetura da aba Executores. A aba que
+   mostra o dado como ASSUNTO (Backlog, Arquitetura, PRs) mantém o poll dela, e
+   o observador mais rápido dita o ritmo da chave. Quem escreve nesta aba
+   continua invalidando a chave na hora.
+2. **Quem só precisa do dado no clique não polla.** Cada linha de
+   `/containers` lê a sessão mais recente do seu projeto para PROPOR
+   parar/remover/subir; em poll de 5s eram 12 req/min POR PROJETO — nove
+   projetos, 108/min só dessa página, o número que casa com os 106 do log.
+   `useLatestSession(projectId, false)`: montagem e foco da janela bastam.
+3. **Toda tela que ouve o canal passa por `criarInvalidadorDoCanal`.** As abas
+   Executores e Visão geral invalidavam os eventos a CADA `event.appended`,
+   sem janela: um dev agent em rajada (10 avisos/s) fazia 630 GET de eventos
+   por minuto só na aba Executores. Agora as duas usam o MESMO invalidador da
+   tela de Sessão (janela por alvo, o TIPO decide o alvo), e ganham de brinde o
+   que faltava: a proposta de ação do dev agent invalida as ações na hora, em
+   vez de esperar o fallback de 15s. A Visão geral pede o backlog a cada aviso
+   (as tasks bloqueadas vêm dele) pelo parâmetro `extras`, com a mesma janela.
+4. **A espera pelo runner para quando acaba.** `EsperaDoRunner` só parava a
+   sonda de `GET /projects/:id` (3s) no TETO; confirmada a conexão, o efeito do
+   teto saía cedo e a sonda seguia para sempre — 20 req/min enquanto o painel
+   estivesse na tela, e, sendo o observador mais rápido de `['project', id]`,
+   arrastando a chave inteira da página. Agora para no teto OU na confirmação.
+
+**Números** (`duas-abas.orcamento.test.tsx`, as telas de verdade — `Shell`,
+`SessionPage`, `ProjectPage` na aba Executores, `ContainersPage` — sobre um
+`fetch` que conta por rota; cada aba medida sozinha, porque duas abas são dois
+contextos JS, e somadas; req/min, `dev` → esta regra):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| chat da sessão + Executores, canal vivo | 70 + 138 = 208 | 70 + 72 = 142 |
+| idem, dev agent em rajada (10 avisos/s) | 70 + 764 = 834 | 70 + 97 = 167 |
+| idem, canal que nunca conecta | 155 + 186 = 341 | 155 + 120 = 275 |
+| `/containers` com 9 projetos | 132 (108 de `/sessions`) | 24 |
+
+**O que esta regra NÃO fecha:** com o canal CAÍDO nas duas abas, 275/min ainda
+é perto do teto — a tela de Sessão volta aos 3s de sempre (RN-579: nunca pior
+que era), e 25 req/min de folga somem com uma rajada de cliques. O `Shell`
+segue pollando `projects-summary` e `execution/session` a 5s e, na aba do chat,
+os eventos da sessão de EXECUÇÃO a 3s (a aba não tem o canal dela) — 44 das 70
+req/min da aba do chat. Uma lista de sessões criada noutra aba aparece aqui em
+até 15s (eram 5s). O número do incidente foi CASADO, não reproduzido: o log
+não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
+numa delas é inferência pelos 106 ≈ 9 × 12.
+
+- **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
+  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:119`
+  (`useProjectSessions`), `:148` (`useLatestSession`);
+  `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
+  `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:168` (`invalidador`);
+  `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
+- **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
+  com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
+  os quatro reprovam na `dev`); `apps/web/src/components/EsperaDoRunner.test.tsx`
+  ("confirmada a espera, a sonda PARA" e o caso de falha: sem confirmação ela
+  segue); `apps/web/src/routes/ContainersPage.test.tsx` ("a linha lê a sessão
+  mais recente SEM poll")
+- **Origem:** AT-278 (extensão da [RN-579](#rn-579); não muda a RN-108 — o
+  ticket de uso único e a reconexão manual seguem como estão)
+
+### RN-637 — A tela lê a CAUDA das ações da sessão, e a pendente antiga volta junto {#rn-637}
+
+`GET /projects/:projectId/sessions/:sessionId/actions` ordenava por `seq`
+crescente com teto de 200, e `usePendingActions` nunca paginava: a partir da
+ação 201 de uma sessão — o que uma execução real alcança fácil, um dev agent
+propõe dezenas de comandos por tarefa — a pendente NOVA ficava fora da única
+página lida e sumia do fio, dos Executores e de Aprovações (AT-296), justamente
+quando havia alguém esperando por ela.
+
+**A regra:**
+
+1. **A rota aceita `latest=true` e `status=pending`.** `latest` traz as `limit`
+   ações de `seq` mais alto, devolvidas em ordem CRESCENTE e sem `nextCursor`,
+   ignorando `afterSeq` — o mesmo contrato do `latest` dos eventos (ADR 0021).
+   `status` só aceita `pending` (outro valor é 400, sem consultar); combinado
+   com `latest`, traz as pendentes mais novas sem que as decididas ocupem a
+   janela. Sem os dois parâmetros o contrato é o de antes.
+2. **A tela faz duas perguntas, e a segunda só quando precisa.**
+   `buscarAcoesDaSessao` lê a cauda (200); só se ela vier CHEIA pede também as
+   pendentes e une por `id`, em `seq` crescente. Uma pendente antiga que a
+   cauda empurrou para fora continua sendo decisão a tomar e não some por ter
+   esperado demais. A sessão curta — o caso comum — continua custando UMA
+   requisição, e a leitura de pendentes que falha derruba a query (a tela diz
+   que falhou, nunca finge fila vazia — RN-088).
+
+**O que esta regra NÃO fecha:** com mais de 200 PENDENTES numa sessão, as mais
+antigas além delas ficam fora (o teto é o mesmo `limit`); e o que o fio mostra
+de DECIDIDO continua sendo a cauda — ação decidida antiga, fora das 200 mais
+novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
+([RN-638](#rn-638)).
+
+- **Código:** `apps/api/src/infrastructure/persistence/drizzle/proposed-action.repository.ts:96`
+  (`listPaginated`), `:113` (o ramo `latest`);
+  `apps/api/src/interfaces/http/actions/actions.controller.ts:105` (`list`),
+  `:114` (a recusa de `status`);
+  `apps/api/src/application/ports/proposed-action-repository.port.ts`
+  (`ListProposedActionsOptions`);
+  `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
+  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:420`
+  (`usePendingActions`)
+- **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
+  (sem `latest` a pendente nova fica de fora — o defeito; com `latest` ela
+  está na cauda; `status=pending` devolve a antiga; e não traz outra sessão);
+  `apps/api/test/interfaces/http/actions/actions-list.controller.spec.ts`
+  (repasse dos parâmetros e o 400 — caso de falha);
+  `apps/web/src/lib/acoes-da-sessao.test.ts` (sessão curta numa requisição;
+  cauda cheia com 250 ações devolve a pendente 3 e a 250; leitura de pendentes
+  que falha derruba a query)
+- **Origem:** AT-296 (HS-076)
+
+### RN-638 — Quem pergunta "o que espera decisão" lê a fila do PROJETO, nunca a sessão mais recente {#rn-638}
+
+O contador de Aprovações do trilho, o painel "precisa de você" ([RN-467](#rn-467)),
+a aba Aprovações, o roster da Visão geral e a aba Código liam as pendentes de
+`useLatestSession` — a sessão CRIADA por último —, que só é a de execução por
+coincidência. Uma ideação ou um chat aberto depois da execução zerava o
+contador e escondia do roster os dev agents esperando decisão (AT-297). E o
+bloco de pendências de outras sessões do chat ([RN-626](#rn-626)) só existia em
+sessão ativa, enquanto o `container_start` que o Infra Lead propõe no CHAT
+destrava o `dev.blocked_by_container` que aparece na EXECUÇÃO (AT-298).
+
+**A regra:**
+
+1. **A fila é a do projeto.** Essas telas leem `useProjectPendingActions`
+   (`GET /projects/:projectId/actions?status=pending`, em qualquer sessão),
+   todas pela MESMA chave `['project-pending-actions', projectId, undefined]`
+   — no ritmo de projeto da [RN-632](#rn-632), e a 3s só na aba Aprovações, que
+   a tem como assunto. A moldura `ProjectPage` tira o contador de PRs
+   (`git_merge`) da MESMA leitura, em vez de uma segunda consulta. As filas
+   continuam separadas, com o selo próprio — nada se soma (RN-467).
+2. **Cada card decide pela sessão que a PRÓPRIA ação carrega.** Na aba
+   Aprovações, aprovar, negar, "sempre permitir" e o lote chamam o endpoint com
+   `action.sessionId`, e invalidam a fila do projeto por prefixo e as ações da
+   sessão da ação. Os blocos de PR e gate da aba leem eventos e ações da sessão
+   de EXECUÇÃO vigente (RN-139), e só sem ela da mais recente.
+3. **As pendências de outras sessões aparecem em qualquer estado.** O bloco do
+   chat sai também em sessão encerrada e técnica — decidir é sobre a ação da
+   OUTRA sessão, não conversa nesta (a RN-581 segue recusando conversa) —, e a
+   aba Executores ganha o MESMO bloco para a sessão de execução: o
+   `container_start` do chat fica visível onde o bloqueio aparece.
+4. **A proposta chega pelo canal, sem esperar o poll.** Todo aviso
+   `proposed_action.*`/`action.*` de qualquer canal de sessão que uma tela ouve
+   invalida também a fila do projeto (`pendenciasDoProjeto` em
+   `criarInvalidadorDoCanal`, janela de 2s), e o `dev.blocked_by_container`
+   também — a proposta que o destrava nasce noutra sessão, cujo canal ninguém
+   ali ouve (AT-299). Nenhum poll subiu.
+5. **O bloco cabe na coluna e mostra todos (AT-318).** Na medida do fio e do
+   composer (780px), recolhível, com a PRESENÇA de cada fila no cabeçalho —
+   "Aprovações 3 · Merges de PR 1", cada uma com o próprio número, nunca a
+   soma (RN-467) — visível mesmo recolhido. Os cards nascem com o detalhe
+   FECHADO (`detalheRecolhido` no `ApprovalCard`): abertos, cobriam ~60% do fio
+   e deixavam um card à vista de três. O rótulo de origem sai UMA vez por
+   sessão, com o tempo da mais antiga — por card, ele se repetia entre um card
+   e o seguinte. O teto de 20 cards e o recorte declarado (RN-180) seguem.
+
+**O que esta regra NÃO fecha:** o aviso só chega onde há uma tela ouvindo um
+canal de sessão (Sessão; Visão geral, a sessão mais recente; Executores, a de
+execução). Numa aba sem canal (Aprovações, PRs, Backlog…) ou para uma proposta
+feita numa sessão cujo canal nenhuma tela aberta ouve, o contador chega pelo
+poll de projeto, em até 15s; abrir um canal de sessão na moldura mudaria o
+ciclo de vida da sessão (o canal é o heartbeat da RN-064) e ficou de fora. O
+contador de Aprovações continua contando o `git_merge` pendente, como antes —
+o painel o deduplica para a fila de PRs. A lacuna do papel de WORKSPACE no
+lugar do efetivo (RN-471) vale para o bloco novo dos Executores como vale para
+o do chat.
+
+- **Código:** `apps/web/src/routes/ProjectPage.tsx:82` (o contador),
+  `:121` (os merges da mesma leitura);
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
+  (`sessaoDeTrabalho`), `:309` (`handleApprove`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:93` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
+  (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
+  `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
+  `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
+  (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
+  (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:438`
+  (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
+  (`acoesPendentes`)
+- **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
+  execução com uma ideação mais nova, decidida pela sessão dela; decidida não
+  entra — contraste); `apps/web/src/routes/project-tabs.test.tsx` (os selos
+  pela fila do projeto); `apps/web/src/routes/ProjectExecutorsTab.test.tsx`
+  (o `container_start` do chat na aba da execução; a pendente da própria
+  execução não vira bloco — contraste);
+  `apps/web/src/routes/SessionPage.sessao-encerrada.test.tsx` (o bloco em
+  `closed` e `closed_abnormally`; a da própria sessão não entra);
+  `apps/web/src/lib/acoes-da-sessao.test.ts` (o canal invalida a fila do
+  projeto por prefixo e com janela; `tool.call` não);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` (três cards à
+  vista com o detalhe fechado e a presença por fila sem soma; recolhido, a
+  presença fica no cabeçalho; um rótulo de origem por sessão);
+  `apps/web/src/routes/duas-abas.orcamento.test.tsx` (a rajada invalida a fila
+  do projeto na aba Executores, dentro do orçamento da RN-632)
+- **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)
