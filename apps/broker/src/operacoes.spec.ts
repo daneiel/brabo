@@ -14,6 +14,7 @@ import {
   LocalizacaoIndisponivelError,
   ModoDeExecucaoNaoSuportadoError,
   RaizDeWorkspacesNaoConfiguradaError,
+  pedidoDeExecValidado,
   start,
   type DependenciasDoBroker,
 } from './operacoes.ts';
@@ -89,6 +90,31 @@ function montar(
     },
   };
 }
+
+describe('o usuário do container (ADR 0180)', () => {
+  it('vem do contexto lido da api e vira spec.usuario', async () => {
+    const { deps, docker } = montar({ usuarioDaPasta: { uid: 1000, gid: 1000 } });
+    await start(deps, 'p1');
+    expect(docker.ultimaSpec?.usuario).toEqual({ uid: 1000, gid: 1000 });
+  });
+
+  it('sem dono medido a spec fica sem usuário', async () => {
+    const { deps, docker } = montar({ usuarioDaPasta: null });
+    await start(deps, 'p1');
+    expect(docker.ultimaSpec?.usuario ?? null).toBeNull();
+  });
+
+  it('o corpo de `exec` não carrega usuário: campo extra é ignorado', () => {
+    const pedido = pedidoDeExecValidado({ comando: 'ls', user: 'root', usuario: { uid: 0 } });
+    expect(Object.keys(pedido).sort()).toEqual(['comando', 'cwd', 'maxBytes', 'timeoutMs']);
+  });
+
+  it('uid 0 vindo da api é RECUSADO, não repassado', async () => {
+    const { deps, docker } = montar({ usuarioDaPasta: { uid: 0, gid: 0 } });
+    await expect(start(deps, 'p1')).rejects.toThrow(/usuario\.uid/);
+    expect(docker.chamadas).toBe(0);
+  });
+});
 
 describe('as duas raízes do broker (RN-503)', () => {
   it('`gerenciada` resolve contra PROJECT_WORKSPACES_HOST_ROOT', async () => {

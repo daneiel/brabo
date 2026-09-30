@@ -35,7 +35,9 @@
  */
 
 import {
+  idDeUsuarioValido,
   raizDeProjetoValidada,
+  type UsuarioDoContainer,
   type EspecificacaoDeContainer,
 } from './docker-port.ts';
 
@@ -126,6 +128,32 @@ export interface EntradaDeEspecificacao {
   pidsLimit?: unknown;
   /** Caminho de HOST da pasta do projeto — a única coisa montada no container. */
   raizDoProjeto?: unknown;
+  /** `{uid, gid}` medido pela api, ou `null`/ausente. Ver `usuarioValidado`. */
+  usuario?: unknown;
+}
+
+/**
+ * O PARSE do usuário (ADR 0180). Ausente e `null` são "como sempre"; qualquer
+ * outra coisa tem de ser `{uid, gid}` de inteiros em 1..2^31-1 — `0` é recusado
+ * (root é o ausente, e um `--user 0` explícito seria um afrouxamento que
+ * ninguém decidiu) e nada é corrigido em silêncio.
+ */
+export function usuarioValidado(valor: unknown): UsuarioDoContainer | null {
+  if (valor === undefined || valor === null) return null;
+  const u = valor as { uid?: unknown; gid?: unknown };
+  if (typeof valor !== 'object' || !idDeUsuarioValido(u.uid)) {
+    throw new EspecificacaoInvalidaError(
+      'usuario.uid',
+      `esperava inteiro de 1 a 2147483647, recebi ${descrever((u ?? {}).uid)}`,
+    );
+  }
+  if (!idDeUsuarioValido(u.gid)) {
+    throw new EspecificacaoInvalidaError(
+      'usuario.gid',
+      `esperava inteiro de 1 a 2147483647, recebi ${descrever(u.gid)}`,
+    );
+  }
+  return { uid: u.uid, gid: u.gid };
 }
 
 /**
@@ -215,6 +243,8 @@ export function especificacaoValidada(
     );
   }
 
+  const usuario = usuarioValidado(entrada.usuario);
+
   return {
     workspaceDirName,
     projectId: texto(entrada.projectId, 'projectId'),
@@ -237,6 +267,8 @@ export function especificacaoValidada(
       'pidsLimit',
       TETO_DE_RECURSOS.pidsLimit,
     ),
+    // Só aparece quando há: a spec do runner (ADR 0137) não tem dono medido.
+    ...(usuario === null ? {} : { usuario }),
   };
 }
 

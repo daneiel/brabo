@@ -115,6 +115,8 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d api engine bro
 offered `runner`. A value in `.env` still wins; the production and installation
 composes keep no default, on purpose.
 
+The project container runs as the **owner of the project folder** ([ADR 0180](adr/0180-container-com-o-dono-da-pasta.md), [RN-627](business-rules.md#rn-627)): the api reads the folder's uid and gid and the broker starts it with `--user <uid>:<gid>` and `HOME=/tmp`. That is what lets a dev agent write to `/work` under `--cap-drop ALL`. Two things to know when it does not: a folder owned by root, unreadable or absent falls back to the previous behaviour (root inside the container, no write to a folder of another uid — `npm install` answers `EACCES`); and a container that already exists only changes when it is recreated (`container_remove`, then `container_start`).
+
 `pnpm dev` also **reports** the managed folder on every run (RN-599): with
 `PROJECT_WORKSPACES_HOST_DIR` unset, `api`/`engine` use the managed volume, the
 broker gets no `PROJECT_WORKSPACES_HOST_ROOT`, and `container_start` ends
