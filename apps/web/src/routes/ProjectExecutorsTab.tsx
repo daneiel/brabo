@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useActiveExecutionSession,
   useArchitecture,
@@ -14,7 +15,6 @@ import {
   useSessionTokenUsage,
 } from '../lib/hooks';
 import {
-  getAgentModelBinding,
   listAgentAutonomy,
   listModels,
   rearmDevAgent,
@@ -150,12 +150,12 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const allModels = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
-  const bindingQueries = useQueries({
-    queries: roster.map((r) => ({
-      queryKey: ['agent-binding', projectId, r.id],
-      queryFn: () => getAgentModelBinding(projectId, r.id),
-    })),
-  });
+  // RN-654 (AT-339): os bindings do roster saem do LOTE, não de uma rota por
+  // agente — os do catálogo pela mesma chave da aba Configurações.
+  const bindingDoAgente = useBindingsDosAgentes(
+    projectId,
+    roster.map((r) => r.id),
+  );
   const { data: autonomyRules } = useQuery({
     queryKey: ['agent-autonomy', projectId],
     queryFn: () => listAgentAutonomy(projectId),
@@ -333,7 +333,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
               roster={roster}
               groups={executorGroups}
               events={events}
-              bindingQueries={bindingQueries}
+              bindingDoAgente={bindingDoAgente}
               allModels={allModels}
               tokenUsage={tokenUsage}
               autonomyRules={autonomyRules}

@@ -10,9 +10,13 @@ import {
 } from '../lib/pendencias-do-projeto';
 import { hashtagDaSessao } from '../lib/session-label';
 import { formatRelativeTime } from '../lib/time';
+import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { ApprovalCard } from './ApprovalCard';
 import { Disclosure } from './ui/Disclosure';
 import styles from './PendenciasDeOutrasSessoes.module.css';
+
+/** Nenhum evento local: estas ações são sempre de OUTRA sessão (AT-340). */
+const SEM_EVENTOS_LOCAIS: readonly never[] = [];
 
 interface PendenciasDeOutrasSessoesProps {
   projectId: string;
@@ -49,6 +53,30 @@ export function PendenciasDeOutrasSessoes({
   const consulta = usePendenciasDoProjeto(projectId, sessionId);
   const { aprovacoes, merges } = separarPendenciasDeOutrasSessoes(consulta.data, sessionId);
   const total = aprovacoes.length + merges.length;
+
+  // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
+  // desenho, mas cada fila diz o seu próprio total no cabeçalho.
+  const aprovacoesVisiveis = aprovacoes.slice(0, TETO_DE_PENDENCIAS_NO_CHAT);
+  const mergesVisiveis = merges.slice(
+    0,
+    TETO_DE_PENDENCIAS_NO_CHAT - aprovacoesVisiveis.length,
+  );
+  const cortadas = total - aprovacoesVisiveis.length - mergesVisiveis.length;
+  const desenhadas = total - cortadas;
+
+  // AT-340 (RN-656): o motivo da política de CADA card desenhado, lido pela
+  // ação (`?actionId=`) na sessão que a própria ação carrega — a MESMA leitura
+  // e o MESMO cache (`staleTime: Infinity`) da aba Aprovações, então a ação
+  // que uma das duas telas já leu não custa nada à outra. Nenhuma destas ações
+  // é da sessão aberta (é o que as separa), então o log da tela não cobre
+  // nenhuma: `[]` e não `null`, que esperaria por um log que não vem. Só os
+  // cards DESENHADOS pedem — o recorte segura o número de leituras no teto.
+  const { decisoes, falhas } = useDecisoesDaPolitica(
+    projectId,
+    [...aprovacoesVisiveis, ...mergesVisiveis],
+    SEM_EVENTOS_LOCAIS,
+  );
+
   if (total === 0) return null;
 
   function invalidar(acao: ProposedAction) {
@@ -68,18 +96,6 @@ export function PendenciasDeOutrasSessoes({
       invalidar(acao);
     }
   }
-
-  // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
-  // desenho, mas cada fila diz o seu próprio total no cabeçalho.
-  let restante = TETO_DE_PENDENCIAS_NO_CHAT;
-  const desenhadas = (fila: ProposedAction[]) => {
-    const visiveis = fila.slice(0, restante);
-    restante -= visiveis.length;
-    return visiveis;
-  };
-  const aprovacoesVisiveis = desenhadas(aprovacoes);
-  const mergesVisiveis = desenhadas(merges);
-  const cortadas = total - aprovacoesVisiveis.length - mergesVisiveis.length;
 
   // AT-318: o rótulo de origem sai UMA vez por sessão, não por card — com
   // três cards da mesma sessão ele se repetia entre um card e o seguinte e
@@ -124,6 +140,9 @@ export function PendenciasDeOutrasSessoes({
                 // AT-318: detalhe fechado — empilhados, os detalhes abertos
                 // deixavam um card à vista de três.
                 detalheRecolhido
+                // Carregando ou com a leitura falha, `undefined`: o card cala,
+                // e a falha é dita UMA vez no topo (RN-180).
+                decisaoDaPolitica={decisoes.get(acao.id)}
                 bloqueio={podeDecidir ? undefined : t('pendencias.semPapel')}
                 onApprove={() => decidir(acao, () => approveAction(projectId, acao.sessionId, acao.id))}
                 onDeny={() => decidir(acao, () => denyAction(projectId, acao.sessionId, acao.id))}
@@ -158,6 +177,16 @@ export function PendenciasDeOutrasSessoes({
         classNameCabecalho={styles.cabecalho}
       >
         <p className={styles.nota}>{t('pendencias.nota')}</p>
+        {falhas > 0 && (
+          <p className={styles.nota} data-testid="motivo-nao-lido">
+            {t(
+              falhas === desenhadas
+                ? 'pendencias.motivoNaoLido.todas'
+                : 'pendencias.motivoNaoLido.algumas',
+              { count: falhas, total: desenhadas },
+            )}
+          </p>
+        )}
         <div className={styles.lista}>
           {fila('aprovacoes', aprovacoes, aprovacoesVisiveis)}
           {fila('merges', merges, mergesVisiveis)}

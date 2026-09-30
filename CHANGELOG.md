@@ -78,6 +78,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `proposed_action.created` dela, na sessão que a propôs — uma vez, porque
   evento não muda. A nota única do topo da fila sobra só para a leitura que
   falha.
+- **web**: **os cartões das pendências de outras sessões no chat também
+  mostram o motivo da política** (AT-340, [RN-656](docs/business-rules.md#rn-656)),
+  pela mesma leitura por ação e o mesmo cache da aba Aprovações — a ação que
+  uma das duas telas já leu não custa nada à outra. Só os cartões desenhados
+  pedem; a leitura que falha é dita uma vez, no topo do bloco. O painel
+  "precisa de você" continua sem requisição, por decisão.
 - **api/web**: **projeto novo nasce com promoção de histórias automática**
   (AT-313, [RN-659](docs/business-rules.md#rn-659)). O default de
   `projects.story_promotion` passa a `auto` (migration `0065`, só o DEFAULT da
@@ -542,6 +548,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   uma chave só: a carga da aba cai de 49 para 30 requisições. A falha da
   leitura aparece uma vez por seção, com a frase da api e "Tentar de novo", e
   as linhas dizem "não lido" (ou "lendo…"), nunca "sem modelo".
+- **web**: a Visão geral e a aba Executores também leem os modelos do time
+  pelo lote (AT-339, [RN-654](docs/business-rules.md#rn-654)), em vez de uma
+  requisição por agente: os agentes do catálogo pela mesma chave da aba
+  Configurações — voltar de Configurações não busca binding nenhum — e os
+  `dev-<modulo>` numa leitura em lote a mais. A carga das duas abas cai de 29
+  e 33 para 27 e 31 requisições com o time base, e mais com time e módulos;
+  os tetos de `duas-abas.orcamento.test.tsx` descem aos números medidos.
 - **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
   chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
   router espera antes de trocar de tela — sem flash de fallback na navegação,
@@ -617,6 +630,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   era o HIGH "sem versão corrigida" declarado em `website/pnpm-workspace.yaml`,
   e a 2.0.3 saiu em 14/09. Segue aberto, e escrito, só o `@faker-js/faker`.
   `pnpm audit --audit-level high` fica limpo no produto.
+- **runner**: no macOS, rodar o runner sob Node (pelo fonte ou por
+  `npm install -g @brabo/runner`) deixa de falhar com `posix_spawnp failed` no
+  primeiro terminal (AT-114). O `node-pty@1.1.0` chega com o `spawn-helper` do
+  prebuild em `0644`, e nenhum install o marca executável; ao carregar o
+  `node-pty`, o runner agora acrescenta o bit (só em darwin, idempotente) e,
+  quando o arquivo falta ou o `chmod` é recusado, para com erro nomeando o
+  caminho e o `chmod +x` do conserto. Provado por teste simulando plataforma e
+  permissões; só um macOS real prova a correção de ponta a ponta. O binário
+  standalone já extraía o helper com `0755` e não muda.
+
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de

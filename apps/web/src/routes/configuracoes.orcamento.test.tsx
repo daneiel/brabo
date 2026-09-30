@@ -265,14 +265,26 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
 
   it('trocar de aba e voltar dentro do minuto não refaz as buscas de configuração', async () => {
     const { irPara } = await carga();
-    // A Visão geral busca o que é DELA (inclusive o binding de três agentes,
-    // com o frescor de sempre); o que se mede é só a VOLTA.
+    // A Visão geral busca o que é DELA; os bindings do roster ela lê do
+    // MESMO lote desta aba (AT-339), então nem eles entram. O que se mede
+    // aqui é só a VOLTA.
     await irPara('overview');
     contagem.clear();
     await irPara('settings');
 
     // `dev`: 31 — as 19 seções remontavam e refaziam a carga delas.
     expect(Object.fromEntries([...contagem].filter(([k]) => ehDeConfiguracao(k)))).toEqual({});
+  }, 60_000);
+
+  it('ir de Configurações para a Visão geral não busca binding nenhum: o lote já está no cache (AT-339)', async () => {
+    const { irPara } = await carga();
+    contagem.clear();
+    await irPara('overview');
+    const ida = Object.fromEntries(contagem);
+
+    // `dev`: 3 — um `GET .../agent-bindings/:slug` por agente do roster base
+    // (Criativo, PO, Arquiteto), mesmo com o lote dos 17 já em cache.
+    expect(Object.keys(ida).filter((k) => /agent-bindings\/|model-bindings\/resolved/.test(k))).toEqual([]);
   }, 60_000);
 
   it('CASO DE FALHA: salvar invalida e busca NA HORA, e depois do minuto a volta busca de novo', async () => {

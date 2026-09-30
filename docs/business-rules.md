@@ -16118,7 +16118,9 @@ carregados nesta tela"*; e o evento achado dá a frase. A aba Insights não tem
 **Desde a AT-336 ([RN-656](#rn-656)), cada card da aba Aprovações tem o
 PRÓPRIO motivo**, lido pela ação quando o log carregado não o cobre; o
 parágrafo seguinte é o estado da AT-333, que ela substituiu — a nota única
-sobra só para a leitura que FALHA.
+sobra só para a leitura que FALHA. Desde a AT-340 o mesmo vale para os cards
+das pendências de OUTRAS sessões no chat ([RN-626](#rn-626)), que antes
+calavam: o log do fio nunca cobre ação de outra sessão.
 
 **Na AT-333, a fila da aba Aprovações passou a dizer a lacuna UMA vez.** A fila é a
 do PROJETO ([RN-638](#rn-638)) e os eventos são os de UMA sessão, então ali o
@@ -17036,7 +17038,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
@@ -18180,10 +18182,16 @@ e melhores modelos por capacidade —, e o teto de 300 req/min é do USUÁRIO
    do teto é 400 nomeando o motivo, nunca chave descartada calada — a resposta
    afirmaria sobre menos chaves do que a tela pediu.
 4. **A web lê o lote por UMA `queryKey`** (`['model-bindings-resolved',
-   projectId]`), servida por uma requisição às três seções. Toda escrita de
-   binding de agente ou de área relê o lote inteiro, e a mesma invalidação
-   alcança o prefixo `['agent-binding', projectId]`, que a Visão geral e a aba
-   Executores seguem lendo por agente.
+   projectId]`), servida por uma requisição às três seções de Configurações e,
+   desde a AT-339, também à Visão geral e à aba Executores
+   (`useBindingsDosAgentes`): os agentes do roster que o catálogo conhece saem
+   dessa MESMA chave — o cache que uma aba aqueceu serve a outra sem
+   requisição —, e os que o catálogo não conhece (os `dev-<modulo>`) saem de UMA
+   leitura em lote a mais, sob o mesmo prefixo e em fatias do mesmo teto. Toda
+   escrita de binding de agente ou de área relê o lote inteiro por esse
+   PREFIXO, que alcança as duas leituras; não sobra chave por agente para
+   invalidar. A falha dessas leituras deixa o cartão do agente sem modelo —
+   "não sei", nunca um modelo afirmado — e não cai de volta na rota por agente.
 5. **A falha do lote não vira "sem modelo".** Com uma leitura só, a falha é de
    todas as chaves de uma vez: a seção diz o motivo UMA vez, com a frase da api
    e a ação de reler, e cada linha diz "não lido" no lugar da cadeia. Enquanto
@@ -18192,19 +18200,27 @@ e melhores modelos por capacidade —, e o teto de 300 req/min é do USUÁRIO
 
 **Números:** a carga da aba caiu de 49 para 30 requisições
 (`configuracoes.orcamento.test.tsx`, sobre a `dev` em 94e5dc721d); o minuto
-parado segue em 64, todo da moldura.
+parado segue em 64, todo da moldura. Na AT-339, a carga da aba Executores caiu
+de 29 para 27 e a da Visão geral de 33 para 31 (`duas-abas.orcamento.test.tsx`,
+com o roster base de três agentes — com time e módulos, a queda é de um por
+cartão), e ir de Configurações para a Visão geral deixou de buscar binding
+nenhum (antes, 3).
 
-**O que esta regra NÃO fecha:** a Visão geral e a aba Executores continuam
-lendo o binding de cada agente do roster por rota individual — são poucos, e
-fora da aba Configurações. As rotas por chave continuam existindo.
+**O que esta regra NÃO fecha:** as rotas por chave continuam existindo na api
+(nenhuma tela as lê mais). Um `dev-<modulo>` cuja chave passe de 64 caracteres
+seria recusado pelo formato do lote, e a leitura dos extras falharia inteira —
+não medido em projeto real, e declarado.
 
 - **Código:** `apps/api/src/application/use-cases/llm/resolve-model-bindings-em-lote.use-case.ts:12`
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
   (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1111`
-  (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:35`
-  (`invalidarBindingsResolvidos`), `:55` (`useBindingsResolvidos`);
+  (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
+  (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
+  (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
+  e `apps/web/src/routes/ProjectExecutorsTab.tsx:155` (quem o chama);
+  `apps/web/src/components/AgentTeamGrid.tsx:46` (`bindingDoAgente`);
   `apps/web/src/routes/settings/LeituraDosBindings.tsx:19`
   (`AvisoDeBindingsNaoLidos`), `:40` (`MarcaDeBindingNaoLido`)
 - **Teste:** `apps/api/test/interfaces/http/llm/model-bindings-em-lote.integration.spec.ts:182`
@@ -18215,9 +18231,16 @@ fora da aba Configurações. As rotas por chave continuam existindo.
   renderizam de UMA chamada, sem rota por chave), `:182` (a falha do lote é
   dita e nenhuma linha vira "sem modelo"), `:217` (lendo, não "sem modelo");
   `apps/web/src/routes/configuracoes.orcamento.test.tsx:233` (a carga lê o
-  lote uma vez e cabe em 30)
+  lote uma vez e cabe em 30), `:279` (ir para a Visão geral não busca
+  binding); `apps/web/src/routes/ProjectOverviewTab.test.tsx:472` (o modelo
+  do cartão sai de UMA leitura em lote, sem rota por agente), `:493` (o lote
+  recusado não inventa modelo nem cai na rota por agente);
+  `apps/web/src/routes/ProjectExecutorsTab.test.tsx:524` (o `dev-<modulo>`
+  fora do catálogo vem da leitura dos extras), `:547` (os extras recusados
+  deixam o cartão sem modelo); `apps/web/src/routes/duas-abas.orcamento.test.tsx:334`
+  (a carga das duas abas lê o lote uma vez e cabe em 27 e 31)
 - **Origem:** AT-334 (decisão do dono sobre a lacuna declarada na
-  [RN-645](#rn-645))
+  [RN-645](#rn-645)); AT-339 (a Visão geral e a aba Executores no lote)
 
 ### RN-651 — No telefone, o painel da Sessão é gaveta, a barra quebra linha, e a tabela vira cartões {#rn-651}
 
@@ -18420,9 +18443,16 @@ custa UMA leitura enquanto o cache viver e a fila polla sem repetir nenhuma.
 Nada é pedido enquanto a aba ainda carrega o próprio log. A leitura que
 responde SEM o evento dá a frase de "motivo não registrado" (nunca cala); só a
 leitura que FALHA deixa o cartão calado, e é essa, e só essa, que a nota do
-topo conta (*"de N das M ações abaixo"*). O painel "precisa de você" NÃO usa
-este caminho: ele não lê log nenhum e abrir não dispara consulta, então o
-cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
+topo conta (*"de N das M ações abaixo"*). Desde a AT-340 os cartões das
+pendências de OUTRAS sessões no chat ([RN-626](#rn-626),
+`PendenciasDeOutrasSessoes`, também na aba Executores) passam pelo MESMO hook e
+pelo MESMO cache: toda ação ali é de outra sessão, então nenhuma é coberta
+pelo log da tela e cada uma lê pela ação — só as DESENHADAS, dentro do teto de
+cards do bloco, e a que a aba Aprovações já leu não custa nada ali (e
+vice-versa). A leitura que falha também cala o cartão e é dita uma vez, no topo
+do bloco. O painel "precisa de você" NÃO usa este caminho: ele não lê log
+nenhum e abrir não dispara consulta, então o cartão ali segue calado, como a
+[RN-614](#rn-614) já dizia — decisão, não lacuna. Nenhum teto muda.
 
 - **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:252`
   (`listEvents`);
@@ -18430,7 +18460,9 @@ cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
   (o filtro);
   `apps/web/src/lib/decisao-da-politica-queries.ts:35` (`useDecisoesDaPolitica`);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (quem o chama), `:481` (a
-  nota da falha), `:499` (o motivo em cada cartão)
+  nota da falha), `:499` (o motivo em cada cartão);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:74` (o chat chama o
+  mesmo hook), `:145` (o motivo em cada cartão), `:181` (a nota da falha)
 - **Teste:**
   `apps/api/test/application/use-cases/sessions/list-session-events-por-acao.use-case.spec.ts:80`
   (só os eventos da ação, com o motivo — caminho feliz, contra Postgres),
@@ -18439,8 +18471,11 @@ cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
   `apps/web/src/routes/ProjectApprovalsTab.test.tsx:267` (ação de outra sessão
   lê o motivo pela ação, e a do log carregado não vira requisição), `:294`
   (evento ausente diz "não registrado"), `:304` (a leitura que falha é dita
-  uma vez, contando só ela)
-- **Origem:** AT-336
+  uma vez, contando só ela);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx:204` (o cartão
+  do chat lê o motivo pela ação, na sessão dela, e remontar não relê), `:228`
+  (a leitura que falha cala o cartão e é dita uma vez)
+- **Origem:** AT-336; AT-340 (as pendências de outras sessões no chat)
 
 - **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)
 
