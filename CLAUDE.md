@@ -190,6 +190,7 @@ estado lido do repositório e não da conversa.
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
 | O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
+| Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
 
 ## Estado atual e aberto
 
@@ -1811,7 +1812,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
   passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
   aviso SEM janela só troca poll por rajada. O número é guardado por
-  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Leitura
+  de PROJETO (lista de sessões, contadores do trilho) nenhum canal avisa, e
+  polla no ritmo de projeto, `INTERVALO_DO_PROJETO_MS` (15s, incondicional);
+  quem só precisa do dado no CLIQUE não polla (`useLatestSession(id, false)`,
+  as linhas de `/containers`); e TODA tela que ouve `session:<id>` — não só a
+  de Sessão: Executores e Visão geral também — passa pelo MESMO
+  `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
+  eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
@@ -2171,6 +2180,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `ExternalSecret`, com restart da api e o `rewrap-deks.js` da imagem —
   ensaio, não rotação de ambiente real.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
+- Subagentes das rodadas do backlog têm DUAS definições em `.claude/agents/`,
+  por esforço de raciocínio (decisão do dono, 30/09): `analista` (esforço
+  MÉDIO, somente leitura) levanta requisitos e mede antes de uma atividade, e
+  `executor` (esforço BAIXO) executa a atividade já especificada. Não troque
+  os papéis: esforço médio é só para raciocínio de levantamento.
 
 ## Documentação é parte da definição de pronto (permanente)
 - Ao alterar código, consulte docs/.docmap.yml e atualize os docs

@@ -33,6 +33,25 @@ import type { QueryClient } from '@tanstack/react-query';
 
 /** O fallback enquanto o canal está vivo — o poll que sobra. */
 export const INTERVALO_COM_CANAL_MS = 15_000;
+/**
+ * O ritmo das leituras de PROJETO que nenhum canal avisa — AT-278, RN-632.
+ *
+ * O canal `session:<id>` só avisa escritas da PRÓPRIA sessão; a lista de
+ * sessões do projeto, as pendências de merge do projeto inteiro, a
+ * arquitetura e o backlog que alimentam os contadores do trilho mudam por
+ * escrita de QUALQUER sessão (ou de nenhuma). Não há aviso para esperar, e
+ * por isso o mecanismo aqui não é invalidação: é o poll da PERIFERIA no mesmo
+ * fallback que a RN-579 já aceita para a sessão com o canal vivo — 15s —,
+ * INCONDICIONAL (não depende de canal nenhum). Quem escreve nesta aba
+ * continua invalidando a chave na hora; a aba que mostra o dado como
+ * assunto principal (Backlog, Arquitetura, PRs) mantém o poll dela, e é o
+ * observador mais rápido que dita o ritmo da chave.
+ *
+ * Medido em `duas-abas.orcamento.test.tsx` (as telas de verdade): com o canal
+ * vivo, a aba Executores fazia 138 req/min, 70 delas leituras de projeto
+ * (lista de sessões, contadores do trilho, arquitetura); caíram para 20.
+ */
+export const INTERVALO_DO_PROJETO_MS = 15_000;
 /** O orçamento muda com gasto de token, não com decisão; pode esperar mais. */
 export const INTERVALO_DO_ORCAMENTO_COM_CANAL_MS = 30_000;
 
@@ -120,8 +139,13 @@ export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
 };
 
 export interface InvalidadorDoCanal {
-  /** Um aviso do canal. `emStreaming` segura só os EVENTOS (achado C). */
-  aoEvento(type: string, emStreaming: boolean): void;
+  /**
+   * Um aviso do canal. `emStreaming` segura só os EVENTOS (achado C).
+   * `extras`: alvos que ESTA tela quer invalidar a cada aviso além dos que o
+   * tipo decide (a Visão geral lê tasks bloqueadas do backlog) — com a mesma
+   * janela por alvo.
+   */
+  aoEvento(type: string, emStreaming: boolean, extras?: readonly AlvoDoCanal[]): void;
   encerrar(): void;
 }
 
@@ -163,8 +187,9 @@ export function criarInvalidadorDoCanal(
   }
 
   return {
-    aoEvento(type, emStreaming) {
-      for (const alvo of alvosDoEvento(type)) {
+    aoEvento(type, emStreaming, extras = []) {
+      const alvos = new Set<AlvoDoCanal>([...alvosDoEvento(type), ...extras]);
+      for (const alvo of alvos) {
         // Achado C: durante um turno em streaming, trazer o `agent.response`
         // persistido ANTES do `agent.done` põe a bolha ao vivo e a definitiva
         // na tela juntas. `agent.done` invalida os eventos logo em seguida.
