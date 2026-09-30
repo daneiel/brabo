@@ -49,6 +49,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `session.draining` | the node hosting it is draining |
 | `session.closed` | normal termination |
 | `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
+| `session.reopened` | a `closed`/`closed_abnormally` session went back to `active` (ADR 0183) |
 
 **A terminal session no longer takes conversation ([RN-581](../business-rules.md#rn-581)).**
 Once a session is `closed` or `closed_abnormally`, appending a conversation
@@ -65,6 +66,15 @@ closed session, still come in. Human decisions on a pending action
 outlives the session. A session closed because the conversation sat idle past
 its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 `closed`, like `heartbeat_timeout`.
+
+**A closed session can be reopened ([RN-649](../business-rules.md#rn-649), ADR 0183).**
+`POST /projects/:projectId/sessions/:sessionId/reopen` (`maintainer`) moves a
+`closed`/`closed_abnormally` session back to `active` and appends
+`session.reopened` with `{from, to, closedAt, terminationReason}` — the only
+record of the interval that was closed, since `closed_at` and
+`termination_reason` are cleared on the row. No earlier event is edited, and
+the session's `kind` does not change. A session that already has
+`execution.activated` is refused with 409 `sessao_com_execucao`.
 
 ### Chat and agents
 
