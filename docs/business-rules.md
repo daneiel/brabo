@@ -17020,3 +17020,41 @@ seguiram em `in_review` (AT-275).
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
   falho, PR sem tarefa)
 - **Origem:** AT-275
+
+### RN-640 — A paleta neutra fecha a dívida de contraste, e cor da UI só vem de token {#rn-640}
+
+O tema escuro deixa de ser azul-petróleo e vira preto neutro com o acento
+terracota suave; o claro vira o neutro da mesma família (ADR 0181). O mecanismo
+da [RN-184](business-rules/autenticacao.md#rn-184) não muda — os pares são
+medidos nos dois temas, com o mesmo piso —; o que muda é o que se cobra:
+
+1. **A dívida do escuro virou piso.** Os cinco pares que a RN-184 deixava
+   travados por número (3,89 / 3,10 / 3,88 / 3,88 / 4,41) passam 4,5:1 nos dois
+   temas, e o teste reprova quem os devolver para baixo — não "registra" mais.
+   O valor final saiu da MEDIÇÃO: o `--text-muted` do rascunho (`#71717a`)
+   repetia a dívida e foi recusado (`#86868f` no escuro, `#696972` no claro), e
+   o muted continua ABAIXO do `--text-secondary` nas três superfícies, o que o
+   teste também cobra.
+2. **O texto sobre fundo sólido de marca/estado passa AA.** `--on-accent` do
+   escuro é o preto neutro (5,61:1 sobre o acento, 7,25:1 no hover, 7,65:1
+   sobre `--success`, 5,24:1 sobre `--danger`); a "exceção conhecida" do botão
+   primário deixa de existir, e o matiz do acento continua terracota (10°–30°)
+   nos dois temas.
+3. **Cor da UI só vem de token.** Quem pinta por biblioteca de runtime (Mermaid,
+   xterm, minimapa) lê o token do tema ativo e, sem ele, cai no padrão de
+   `TOKENS_PADRAO` — uma cópia do `:root` que o teste confere contra
+   `design/tokens.css`. Cor de agente é sempre `var(--token)`; os três agentes
+   sem semântico têm `--agent-*` por tema, medidos a 3:1. E nenhum módulo CSS
+   usa `var(--x)` que ninguém declara.
+
+- **Onde:** `design/tokens.css:118`, `design/tokens.css:126`,
+  `apps/web/src/lib/tokens-padrao.ts:50` (`lerTokenDoTema`),
+  `apps/web/src/lib/agents.ts:90`
+- **Teste:** `apps/web/src/lib/contraste.test.ts` ("a antiga dívida de
+  contraste agora é piso"), `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts` ("o botão primário — a exceção que
+  deixou de existir"), `apps/web/src/lib/tokens-padrao.test.ts`,
+  `apps/web/src/lib/agents.test.ts` ("cor de agente vem do design system"),
+  `apps/web/src/design-tokens-existentes.test.ts`
+- **ADR:** [0181](adr/0181-tema-preto-neutro.md)
+- **Origem:** AT-283, AT-284

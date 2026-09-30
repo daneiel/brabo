@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: **o tema escuro vira preto neutro e calmo, com o acento terracota
+  suave; o claro vira o neutro da mesma família** (AT-283, AT-284,
+  [ADR 0181](docs/adr/0181-tema-preto-neutro.md),
+  [RN-640](docs/business-rules.md#rn-640)). Muda o valor dos tokens de cor de
+  `design/tokens.css`, não o nome — nenhum componente troca referência. Os
+  números finais saíram da medição: a dívida de contraste que o escuro
+  carregava desde a FASE 16 (cinco pares abaixo de 4,5:1) acabou e passou a
+  ser piso nos dois temas, e o texto do botão primário passa AA (o
+  `--on-accent` do escuro agora é escuro). Os links das telas de login voltam
+  ao `--accent` do desenho. O diagrama C4, o terminal e o minimapa deixam de
+  cair no azul-petróleo quando o token não resolve, as três cores de agente
+  sem token ganham um por tema, o véu do modal fica neutro e dois tokens que
+  eram usados sem existir (`--surface-3`, `--radius-pill`) saem.
+
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
   O card de aprovação segura os botões enquanto a decisão está em voo e mostra

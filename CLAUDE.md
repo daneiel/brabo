@@ -188,6 +188,7 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
 
 ## Estado atual e aberto
 
@@ -626,7 +627,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Dívida de contraste do tema ESCURO travada por número (ADR 0074)
 - Gasto de embedding fora do metering (corte declarado do ADR 0075)
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
@@ -2122,9 +2122,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ARQUIVO e não script inline — a imagem serve sob `script-src 'self'`, e
   inline passa em dev e é bloqueado em produção. A preferência mora em
   `localStorage['brabo.theme']` e a API é `apps/web/src/lib/tema.ts`;
-  nenhum componente escreve o atributo por conta própria. Dívida de
-  contraste é do tema ESCURO e está travada por número — não afrouxe um
-  piso para passar, e não deixe o claro nascer pior que o primário.
+  nenhum componente escreve o atributo por conta própria. Desde o ADR 0181
+  (RN-640) a paleta é NEUTRA (escuro preto, claro branco, acento terracota) e
+  NÃO há dívida de contraste: os cinco pares que o escuro devia desde a FASE 16
+  são PISO nos dois temas. Não afrouxe um piso para passar, não reabra dívida
+  "registrada", e não deixe o claro nascer pior que o primário. Cor que sai do
+  CSS (Mermaid, xterm, minimapa) cai em `lib/tokens-padrao.ts`, conferido
+  contra o `:root` por teste — não escreva fallback em hex no chamador; cor de
+  agente é `var(--token)`; e `var(--x)` sem declaração reprova
+  (`design-tokens-existentes.test.ts`).
 - O handoff estabelece a INTENÇÃO; a medição estabelece o NÚMERO, e o
   produto estabelece o MECANISMO. Já valeu três vezes: as fontes (ADR
   0036), o boot de tema inline e cinco dos oito `--syn-*` que reprovam
