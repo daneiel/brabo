@@ -39,6 +39,7 @@ onde a dependência **vai**, não sobre o que ela fala.
 | sessão que sobrevive ao reload | é o único jeito de provar que o access em memória foi RECONSTRUÍDO do cookie, e não que nunca sumiu |
 | ticket de uso único do socket (RN-108) | exige handshake de WebSocket real contra o engine, numa TERCEIRA origem |
 | o `kid` da chave de dispositivo (RN-475) | `crypto.subtle.generateKey({name:'Ed25519'})` **não existe em jsdom** — `runner-bootstrap.test.ts` dubla `crypto.subtle` inteiro, então a suite do web nunca gerou uma chave nem exportou uma JWK de verdade. Aqui o par é real, e quem diz se ele serve é o `PatAuthGuard` respondendo 201 em `runner-ticket` |
+| o CICLO do turno pelo canal (`turno-pelo-canal.spec.ts`, AT-338) | o `agent.status` (`working`, depois `idle`) e o `agent.error` só existem como frames do WebSocket real que a página abriu com o ticket de uso único, contra o engine numa TERCEIRA origem; a suite do web dubla o canal. O spec lê os FRAMES (`framereceived`) do tópico `session:<id>`, na ordem, e a bolha de falha pelo seletor estrutural `data-testid="falha-de-turno"` com `data-origem` |
 | a aprovação INLINE (`aprovacao-inline.spec.ts`, AT-068) | a decisão sai do `ApprovalCard` do chat da sessão como POST cruzado `:8088` → `:3000`, com o `Authorization` do access que a página reconstruiu do cookie httpOnly pelo double-submit; jsdom não tem preflight nem origem, e a suite do web testa o card com a api dublada. O spec asserta a REQUISIÇÃO observada (origem, Bearer, 201 com `denied`, refresh fora dela) e a FILA pela api — nunca o card sumindo |
 
 A medição da AT-068 corrigiu o enunciado da aprovação inline: o POST de
@@ -89,6 +90,12 @@ fala só por Bearer. Não custa login a mais, e vale a MESMA regra: uma vez.
 `cookiesDaSemeadura()` LANÇA na segunda chamada, nomeando o motivo, para que
 um segundo consumidor quebre onde está, e não no spec seguinte.
 
+A QUARTA, quando as três já têm dono: `turno-pelo-canal.spec.ts` (AT-338) roda
+depois de todos e precisa de sessão de navegador. Ele opta por sair e faz um
+login PRÓPRIO (`cookiesDeUmLoginProprio()`), que NÃO é memoizado — memoizar
+entregaria o mesmo refresh a dois consumidores. Custa um login do balde do
+lockout, contado abaixo.
+
 ## Qual ação o spec de aprovação propõe, e por quê
 
 `write_file`, com ator `user`, e o spec **recusa** — nunca aprova. Medido no
@@ -120,14 +127,16 @@ de gasto, que ninguém quer ver aprovado por engano num teste.
 
 O acréscimo da AT-068 é **um** teste, cujo trabalho é uma navegação, um
 refresh, um clique e uma leitura da fila — a mesma ordem de grandeza de
-`socket-da-sessao.spec.ts`.
+`socket-da-sessao.spec.ts`. O da AT-338 também é um: uma navegação, um envio
+e um turno que falha na api antes de qualquer chamada de rede ao provider —
+segundos, sem modelo, sem download e sem token gasto.
 
 > **TODO(humano):** o número medido. A AT-068 não conseguiu subir o compose
 > de produção no ambiente em que foi escrita: `hex.pm`,
 > `dl-cdn.alpinelinux.org` e os blobs do GHCR são recusados pela política de
 > saída de rede de lá, então nem o engine se constrói nem a imagem publicada
-> se baixa. O número sai do passo `pnpm e2e` do job `images` da primeira
-> execução deste spec no CI (a linha `N passed (Xs)` do reporter `list`),
+> se baixa, e a AT-338 esbarrou na mesma política. O número sai do passo
+> `pnpm e2e` do job `images` da primeira execução destes specs no CI (a linha `N passed (Xs)` do reporter `list`),
 > comparado com a execução anterior da `dev`.
 
 ## Se o login começar a falhar rodando várias vezes seguidas
@@ -138,10 +147,12 @@ IP** do próprio produto (`AUTH_LOCKOUT_IP_THRESHOLDS`, default
 uniforme** de senha errada — de propósito: distinguir os dois diria ao
 atacante quando ele acertou o e-mail.
 
-Cada execução gasta exatamente **3 logins** (o `setup`, o spec de
-autenticação e a semeadura por HTTP), e continuará gastando 3 por mais specs
+Cada execução gasta exatamente **4 logins** (o `setup`, o spec de
+autenticação, a semeadura por HTTP e o login próprio de
+`turno-pelo-canal.spec.ts`). A semeadura continua custando UM por mais specs
 que existam: `autenticar()` memoiza o token pela execução inteira, e com
-`workers: 1` os arquivos rodam no mesmo processo. Uma execução por vez, como
+`workers: 1` os arquivos rodam no mesmo processo. Só um spec que precise de
+sessão de navegador NOVA acrescenta um login, e o diz. Uma execução por vez, como
 no CI, fica muito longe do teto; iterar dez vezes em quinze minutos, não.
 
 Saídas, em ordem de preferência:
@@ -157,8 +168,10 @@ quase aconteceu ao escrever esta camada.
 ## O que NÃO está coberto
 
 Declarado, não esquecido (ver as Consequências do ADR 0120): diferenças
-entre navegadores (só chromium roda) e o **streaming do turno**. A aprovação
-inline saiu desta lista na AT-068.
+entre navegadores (só chromium roda) e o **streaming do turno** — o
+`agent.delta`. A aprovação inline saiu desta lista na AT-068, e o CICLO do
+turno pelo canal (`working` → `agent.error` → `idle`) saiu na AT-338; o delta
+continua.
 
 O streaming ficou de fora por MEDIÇÃO, não por esquecimento. O que o faria
 ser streaming — o `agent.delta` chegando pelo canal numa terceira origem — só
@@ -180,6 +193,17 @@ stub de engine. As saídas conhecidas são decisão de custo, do dono:
    `idle` chegam pelo canal sem gastar nada — prova o ciclo do turno na
    terceira origem, mas NÃO o `agent.delta`, e por isso não foi chamado de
    streaming aqui.
+
+O dono escolheu a terceira (AT-338), e ela é o `turno-pelo-canal.spec.ts`. O
+que ele usa foi lido no código: sem credencial do DONO do workspace para o
+provider do modelo vinculado (RN-058), `StreamLlmTurnUseCase` fecha o turno com
+o frame final `Nenhuma credencial cadastrada para <provider>`, e
+`Engine.Agents.FalhaDeTurno` classifica `credencial` como origem `politica`
+(RN-059). O workspace da semeadura ganha um modelo de NUVEM com tool calling
+de um provider sem credencial (`semearSessaoSemCredencial`): sem binding o
+texto seria outro (`Nenhum modelo vinculado`), e o workspace do seed vincula o
+`ollama`, que não pede credencial e cairia em `infra`. As saídas 1 e 2 seguem
+de pé para o delta, com o mesmo custo.
 
 E, no spec da chave de dispositivo, uma metade nomeada: **a INTERFACE do
 onboarding do runner**. `configurarPastaAutomaticamente` começa por

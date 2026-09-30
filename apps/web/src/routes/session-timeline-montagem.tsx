@@ -787,6 +787,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             className={styles.message}
             key={event.id}
             style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            // Seletor ESTRUTURAL do E2E (`e2e/testes/turno-pelo-canal.spec.ts`,
+            // AT-338): a bolha de falha e a origem dela, sem ler o texto, que
+            // muda com o idioma da conta.
+            data-testid="falha-de-turno"
+            data-origem={origem}
           >
             <span className={styles.avatar}>
               <AlertCircleIcon size={15} />
