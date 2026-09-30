@@ -8,6 +8,7 @@ import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
@@ -118,7 +119,7 @@ export function StructuredQuestionCard({
 
   if (respondida) {
     return (
-      <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+      <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
         <span className={styles.structuredQuestionCabecalho}>
           <AvatarDoAgente id={agent} />
           <span className={styles.handoffPill}>
@@ -134,7 +135,7 @@ export function StructuredQuestionCard({
             </div>
           ))}
         </dl>
-      </div>
+      </Card>
     );
   }
 
@@ -180,7 +181,7 @@ export function StructuredQuestionCard({
   }
 
   return (
-    <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+    <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
       <span className={styles.structuredQuestionCabecalho}>
         <AvatarDoAgente id={agent} />
         <span className={styles.handoffPill}>
@@ -285,6 +286,6 @@ export function StructuredQuestionCard({
       >
         {t('perguntas.enviarRespostas')}
       </Button>
-    </div>
+    </Card>
   );
 }

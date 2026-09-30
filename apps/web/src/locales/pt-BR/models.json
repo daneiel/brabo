@@ -10,7 +10,7 @@
   "facets": {
     "toolCalling": {
       "label": "tool calling",
-      "help": "Só os que um agente consegue usar (RN-040)."
+      "help": "Só os que um agente consegue usar."
     },
     "vision": {
       "label": "lê imagem",

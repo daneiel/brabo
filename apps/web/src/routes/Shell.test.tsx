@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
@@ -7,6 +7,7 @@ import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
 import { CHAVE_COLAPSADO } from '../lib/sidebar-state';
+import { simularLayoutMovel } from '../test/match-media';
 // Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
 // rótulos, então o teste também lê daqui em vez de repetir uma string.
 import { ABAS_DO_PROJETO } from './project-tabs';
@@ -315,7 +316,7 @@ describe('Shell — marca', () => {
  * lacuna.
  */
 describe('Shell — novo projeto na sidebar', () => {
-  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', () => {
+  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', async () => {
     estado.pathname = '/projects/project-1';
 
     renderShell();
@@ -324,7 +325,8 @@ describe('Shell — novo projeto na sidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo projeto' }));
 
-    expect(screen.getByTestId('wizard-stub')).toBeInTheDocument();
+    // O assistente é carregado sob demanda (AT-300): o stub chega num tick.
+    expect(await screen.findByTestId('wizard-stub')).toBeInTheDocument();
   });
 
   it('também aparece no dashboard — as duas entradas convivem, uma na topbar (Dashboard) e outra na sidebar (aqui)', () => {
@@ -474,5 +476,120 @@ describe('Shell — botão de tema', () => {
     renderShell();
 
     expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-643 (AT-316): abaixo do breakpoint móvel a sidebar vira GAVETA. A
+ * consulta vem de `window.matchMedia` (mock em `test/match-media.ts`); sem
+ * ele o jsdom é DESKTOP, que é o caso de falha abaixo.
+ */
+describe('Shell — layout móvel (RN-643)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  function gaveta() {
+    return document.querySelector('aside') as HTMLElement;
+  }
+
+  it('a gaveta nasce fechada, abre pelo menu com o foco dentro e o Esc fecha devolvendo o foco', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+
+    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(gaveta()).not.toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+
+    const dialogo = screen.getByRole('dialog', { name: 'Navegação' });
+    expect(dialogo).toBeVisible();
+    expect(dialogo).toHaveAttribute('aria-modal', 'true');
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+    expect(menu).toHaveAttribute('aria-controls', dialogo.id);
+    expect(dialogo.contains(document.activeElement)).toBe(true);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).not.toBeVisible();
+    expect(document.activeElement).toBe(menu);
+  });
+
+  it('fecha ao seguir um link, pelo X e pelo fundo', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
+
+    fireEvent.click(menu);
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Core API'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar navegação' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+    fireEvent.click(screen.getByTestId('fundo-da-gaveta'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(menu);
+  });
+
+  it('fecha quando a rota muda por fora da gaveta', () => {
+    largura = simularLayoutMovel(true);
+    const { rerender } = renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    estado.pathname = `/projects/${PROJECT.id}`;
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nextProvider i18n={novaInstanciaI18n()}>
+          <Shell />
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('na gaveta ignora o colapso gravado do desktop e não oferece "Recolher menu"', () => {
+    window.localStorage.setItem(CHAVE_COLAPSADO, '1');
+    largura = simularLayoutMovel(true);
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+
+    // Expandida: a lista de projetos com nome, não a trilha de iniciais.
+    expect(within(screen.getByRole('dialog')).getByText('Core API')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Recolher menu|Expandir menu/ })).not.toBeInTheDocument();
+  });
+
+  it('sem matchMedia (desktop) não há barra de menu nem diálogo — a sidebar de sempre', () => {
+    renderShell();
+
+    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Recolher menu' })).toBeInTheDocument();
+  });
+
+  it('cruzar o corte para o desktop com a gaveta aberta volta à sidebar fixa', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+
+    act(() => largura?.mudar(false));
+
+    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).toBeVisible();
+
+    // E voltar ao móvel não reabre a gaveta sozinha.
+    act(() => largura?.mudar(true));
+    expect(gaveta()).not.toBeVisible();
   });
 });

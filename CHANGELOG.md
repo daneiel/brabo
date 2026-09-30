@@ -71,6 +71,40 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   sem token ganham um por tema, o véu do modal fica neutro e dois tokens que
   eram usados sem existir (`--surface-3`, `--radius-pill`) saem.
 
+- **api/engine**: **o handoff deixa de repetir e de ficar obsoleto** (AT-291,
+  AT-292, [ADR 0182](docs/adr/0182-ciclo-de-vida-do-handoff.md),
+  [RN-635](docs/business-rules.md#rn-635), [RN-636](docs/business-rules.md#rn-636)).
+  Há no máximo UMA oferta pendente por destino no projeto: repetir a mesma
+  oferta na mesma sessão devolve a que já existe, e uma oferta com artefato
+  novo (ou vinda de outra sessão) substitui a anterior, que vira `superseded`
+  com o evento `handoff.superseded`. Ativar um agente, por qualquer caminho,
+  substitui as ofertas pendentes a ele, e oferecer a um agente já ativo no
+  projeto é recusado com 409 `agente_ja_ativo` — frase que o agente lê como
+  resultado da ferramenta. O duplo clique (ou a segunda aba) em "arquitetura
+  pronta" não duplica mais Infra nem Dev Lead, e o AppSec só oferece o threat
+  model a quem ainda não recebeu oferta nem está ativo. `GET .../handoffs`
+  passa a devolver o status `superseded`, e as rotas de criação devolvem
+  `desfecho`, e a tela de Sessão nunca oferece aceitar uma oferta `superseded`.
+  Migration `0064` (só acrescenta o valor ao enum).
+- **web**: **uma tela, um vocabulário visual** (AT-285, AT-286, AT-287, AT-288)
+  — só apresentação, nenhuma lógica muda. Os ~110 `color-mix()` soltos viraram
+  tintas semânticas em `design/tokens.css` (`--<tom>-soft`/`-line`/`-panel`,
+  `--focus-ring`), misturadas com `transparent` para funcionarem sobre qualquer
+  base; os fundos de 10–18% viraram 12% e as bordas de 30–50% viraram 40%.
+  Nascem `ui/Card` (a superfície `--surface-1` com raio e padding da escala,
+  agora no `ApprovalCard`, na pergunta estruturada, no convite do chat, nas
+  regras do painel da sessão e nos cards de módulo) e `ui/Chip` (a pílula de
+  filtro que existia copiada nas abas Sessões, Chat e RAG); `ui/Badge` ganha
+  os tons `neutral` e `agent` e o tamanho `md` (branch, repositório,
+  dependência, economia de token e o badge do card de agente passam por ele);
+  `ui/Button` ganha `size="sm"` (28px) e `icon` (quadrado, raio `--r-sm`) —
+  barra de idioma da sessão, alternador do painel, paginador de regras,
+  revogar permissão e "novo projeto" da sidebar. Os meios-degraus de fonte
+  (10,5/11,5/12,5 px) somem de todo módulo, Sessão/Shell/trilho escrevem fonte
+  e espaço pela escala `--fs-*`/`--space-*`, e raio que coincide com um degrau
+  passa pelo token. `design-tintas.test.ts` e `design-escala.test.ts` reprovam
+  a volta.
+
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
   O card de aprovação segura os botões enquanto a decisão está em voo e mostra
@@ -390,8 +424,67 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
   entra em backup — é derivada.
 
+### Desempenho
+
+- **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
+  chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
+  router espera antes de trocar de tela — sem flash de fallback na navegação,
+  e com recarga única quando um deploy novo some com o chunk velho); os doze
+  painéis das abas do projeto e o assistente de novo projeto também. O
+  fallback de rota (`CarregandoRota`) diz em texto que está carregando e só
+  aparece se o chunk demorar; o `Shell` segue estático. Vendors de toda tela
+  (`react`, `@tanstack/*`, `i18next`) em chunks próprios de hash estável
+  (`codeSplitting.groups` do Rolldown — o `manualChunks` do Rollup está
+  deprecado no Vite 8), com lista de PERMITIDOS para `mermaid`/`xterm`
+  continuarem só por `import()`. CSP intacta: nenhum script inline novo,
+  `theme-boot.js` e `config.js` como estavam. Medido no `pnpm --filter web
+  build` (KiB, gzip nível 9; "inicial" = entrada + `modulepreload` do
+  `index.html`):
+
+  | | antes | depois |
+  |---|---|---|
+  | JS inicial | 1107,1 (gzip 327,1) | 649,8 (gzip 211,1) |
+  | JS + CSS inicial | 1285,8 (gzip 356,6) | 668,7 (gzip 215,4) |
+  | maior chunk inicial | 1107,1 (`index`) | 215,5 (`i18n`, os JSON de locale) |
+  | total (`assets/*.js,css`) | 4914,4 em 103 arquivos (gzip 1361,9) | 4962,0 em 243 arquivos (gzip 1428,7) |
+
+  O total sobe ~1% pelo custo de fronteira de chunk; o que o navegador baixa
+  antes da primeira tela cai 41% (gzip -35%). O que resta de maior no inicial são
+  os 27 namespaces de locale dos DOIS idiomas, carregados `eager` por
+  `lib/i18n.ts` — fora desta mudança.
+- **web**: o streaming do turno não re-renderiza mais a tela de Sessão
+  (AT-301, [RN-639](docs/business-rules.md#rn-639)). O texto em curso e a
+  faixa de atividade saem do estado do `useTurnoDoAgente` para um store
+  externo (`lib/streaming-do-turno.ts`) assinado só pela bolha e pela faixa;
+  a página assina um booleano. Provado com contador de renders: vinte tokens
+  depois do primeiro, zero renders da página. Junto: `derivarHandoffsDaSessao`
+  sob `useMemo`, vazio ESTÁVEL (`VAZIO`) no lugar de `?? []` para eventos,
+  ações e handoffs (o `?? []` desfazia os memos de `useSessionReadiness`), e a
+  união das páginas do histórico (`useSessionEventHistory`) sob memo.
+- **web**: provisionamento e plano de adoção acompanham o bootstrap a 3 s, não
+  a 1 s, e os EVENTOS da sessão técnica param quando ele termina — antes
+  seguiam a 1 s com o repositório pronto (AT-302, RN-639). O `/status` passa
+  por `pollQueParaNoErro`: serviço que não responde deixa de ser perguntado
+  por timer.
+
 ### Correções
 
+- **web**: o fio da sessão deixou de esconder o começo da conversa e de
+  inverter a ordem ao expandir (AT-319, [RN-644](docs/business-rules.md#rn-644)).
+  O corte das últimas 5 conta só MENSAGENS (os cards de handoff, aprovação e
+  história não contam mais), recua até a abertura do turno para a pergunta
+  nunca ficar separada da resposta, e o histórico recolhido é um bloco só, em
+  ordem cronológica — "Antes das últimas 5 mensagens", com "N mensagens · M
+  outras entradas" —, no lugar dos grupos por origem ("LLM", "Usuário") que
+  punham a resposta do Criativo acima da pergunta.
+- **web**: depois do login a interface passa a caber num telefone (AT-316,
+  [RN-643](docs/business-rules.md#rn-643)). Abaixo de 768px a sidebar vira uma
+  gaveta aberta pelo botão de menu do topo. Ela fecha ao navegar, no Esc, no X
+  e no fundo, e prende o foco enquanto aberta. O trilho do projeto vira uma
+  barra horizontal rolável acima do conteúdo, e a Visão geral empilha o time e
+  a atividade. A 390px, antes, a moldura fixa ocupava 444px e o conteúdo ficava
+  com 0 a 126px; agora o conteúdo tem a largura inteira e a página não rola de
+  lado. Nas Configurações, os textos cortados caíram de 114 para 33.
 - **web**: a barra do topo da Sessão não transborda mais (AT-317,
   [RN-620](docs/business-rules.md#rn-620) item 6). A 1440px o chip do modelo
   cobria "Respostas:", o seletor e a origem do idioma cortavam, "Iniciar
@@ -403,6 +496,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   os três inteiros — o idioma com a origem por extenso e a pergunta da
   detecção, que marca o controle enquanto estiver pendente. Abaixo de 920px o
   controle e "Encerrar" ficam só com o ícone, com nome acessível.
+- **api**: "Sempre permitir" aprova a ação e grava o padrão na MESMA transação
+  (AT-310, [RN-642](docs/business-rules.md#rn-642)). Antes o padrão era
+  gravado primeiro, e um clique numa ação que já tinha saído de `pending`
+  (clique duplo, a mesma pendência em dois painéis, outra aba) devolvia 409
+  com o padrão já gravado e sem o evento `permission.granted` — 45 de 173
+  cliques no uso real de 29/09. Agora, ação já APROVADA é sucesso (201,
+  `desfecho: "ja_aprovada"`, sem executar de novo, gravando o padrão só se
+  ele faltar, com o evento); ação RECUSADA continua 409, com `reason:
+  "acao_ja_recusada"` e nenhum padrão gravado. A resposta de
+  `POST .../approve_always` ganha `desfecho` e `padraoGravado`. Os tetos
+  (`git push`/PR/deploy, `sudo`/`doas`, `container_remove`) não mudam.
+- **api/web**: "Sempre permitir" passa a recusar também os TIPOS do teto, e o
+  card deixa de oferecer o botão para eles (AT-320,
+  [RN-642](docs/business-rules.md#rn-642)). A api só recusava o `git push`
+  digitado no terminal; um `git_push` tipado gravava `GitPush()` em `allow`
+  e o card mostrava "libera este tipo de ação só para dev-api". Agora
+  `git_push`, `pr_open`, `git_merge`, `container_remove`, `instruction_patch`,
+  `parallelize` e `raise_max_parallel` respondem 400 com `reason:
+  "teto_do_sempre_permitir"`, sem gravar nada. A semeadura da ativação
+  (`git_commit`/`git_push`/`pr_open` automáticos por módulo) não muda.
 
 - **web**: o handoff manual não esconde mais "Estou pronto para produzir" nem
   "Confirmar arquitetura pronta" — ele era tomado pela prontidão declarada
@@ -450,6 +563,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   "Remover" desabilitado deixa de sair em vermelho cheio, e o motivo longo da
   falta de broker vira uma linha curta com o detalhe num "Por quê?" expansível
   (AT-324).
+
+- **web**: percorrer a aba **Configurações** não derruba mais o projeto no
+  teto de 300 req/min do usuário (AT-321,
+  [RN-645](docs/business-rules.md#rn-645), extensão da
+  [RN-579](docs/business-rules.md#rn-579)). Dado de configuração vale um
+  minuto antes de ser buscado de novo: as seções não repetem o projeto, o
+  repositório e o workspace que a moldura já trouxe, e voltar à aba dentro do
+  minuto não refaz as 31 buscas dela (quem salva continua vendo o valor novo na
+  hora). O perfil de proficiência e o histórico de versões de instrução pararam
+  de pollar a 15s. E o sumário "Nesta página" deita numa faixa acima das seções
+  em qualquer largura: como quarta coluna ele deixava ~740px de conteúdo a
+  1440px e a tabela de modelos cortava os nomes; agora as seções ganham 208px.
+  O preço é o sumário não ficar mais grudado na tela ao rolar.
+- **web (i18n)**: os últimos textos fixos de tela saem do `.tsx` para
+  `locales/en` e `locales/pt-BR` (AT-289) — a sub-lista "todos os tokens do
+  projeto" da seção de tokens de acesso (título, subtítulo, cabeçalhos, estado,
+  rótulo de revogar e a data, que era sempre `pt-BR`) e o rótulo acessível do
+  filtro de estado da lista de PRs. Em `en`, o idioma default, a sub-lista
+  aparecia em português. No `pt-BR`, as abas "Backlog" e "Insights" passam a
+  "Histórias" e "Percepções" (e as frases que apontam para elas). Um teste novo
+  (`i18n-paridade.test.ts`) reprova chave que exista num idioma e falte no
+  outro, por namespace.
+- **web (i18n)**: a interface em pt-BR deixa de misturar inglês e jargão
+  interno (AT-326). "circuit breaker" vira "parada automática", "tasks
+  blocked"/"task" viram "tarefas bloqueadas"/"tarefa", "default" vira
+  "padrão"; nenhuma frase de tela cita mais número de RN ou ADR (nos dois
+  idiomas); o botão de aceitar handoff e os rótulos de lead/subagentes das
+  seções de área mostram o NOME do agente ("iniciar PO", "Lead: Dev Lead"), não
+  o id; a Conta deixa de afirmar que só ela está traduzida; e os plurais por
+  "(s)" de backlog, insights, aprovações e sessão viram plural do i18next.
+  "handoff", "gate", "binding", "LLM", "dev agent", "lead" e "runner" ficam,
+  por serem a linguagem ubíqua do glossário. `i18n-vocabulario.test.ts` trava
+  as três réguas.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

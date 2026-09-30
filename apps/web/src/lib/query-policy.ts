@@ -85,3 +85,27 @@ export const OPCOES_PADRAO_DAS_QUERIES = {
   retry: deveRetentar,
   refetchIntervalInBackground: false,
 } as const;
+
+/**
+ * Quanto tempo um dado de CONFIGURAÇÃO vale sem nova ida à api (AT-321,
+ * RN-645).
+ *
+ * O default do TanStack é `staleTime: 0`, e com ele toda observadora que MONTA
+ * depois da primeira refaz a busca. Na aba Configurações isso é a regra, não a
+ * exceção: a moldura do projeto busca `['project', id]`, `['repository', id]` e
+ * `['workspaces']`, e as seções — que só montam depois que o projeto chega —
+ * repetiam as três. E trocar de aba e voltar remontava as 19 seções, refazendo
+ * a carga inteira contra os 300/min do USUÁRIO (RN-579).
+ *
+ * Um minuto, porque configuração só muda por MUTAÇÃO, e toda mutação da aba
+ * invalida a própria chave — invalidar ignora `staleTime`, então quem salva vê
+ * o valor novo na hora. O que o número atrasa é a mudança feita por OUTRA
+ * pessoa, e essa continua chegando no foco da janela e na próxima montagem
+ * depois do minuto.
+ *
+ * Só vale para CONFIGURAÇÃO. Estado operacional (ciclo de vida do container,
+ * gasto, chave de dispositivo com `lastUsedAt`, plano de bootstrap) segue com
+ * o default — ali "o que está de pé agora" é a pergunta, e um minuto de atraso
+ * seria a tela afirmando sobre o que não leu.
+ */
+export const FRESCOR_DA_CONFIGURACAO_MS = 60_000;

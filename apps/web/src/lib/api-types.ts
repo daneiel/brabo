@@ -900,7 +900,7 @@ export type ChatSseEvent =
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 
-export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected';
+export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected' | 'superseded';
 
 export interface Handoff {
   id: string;

@@ -1,6 +1,6 @@
 {
   "title": "Machine keys",
-  "eyebrow": "Local agent · RN-611",
+  "eyebrow": "Local agent",
   "subtitle": "A machine key authenticates the local agent installed on one of your machines (brabo-runner running as a service). It is born on the machine, at install time, and only its public half ever reaches here. This lists YOUR machine keys, revoked ones included — and it works with no project yet, which is exactly when the install creates one. Project keys are not here: they live in each project's settings.",
   "subtitleAlcance": "A machine key serves every project of yours in runner mode: revoking it drops the local agent in all of them at once.",
   "subtitleNaoEBatimento": "A registered key is not a running agent: \"last used\" is the last time the agent asked for access with it, never proof that it is up right now — what knows about right now is a project's terminal.",

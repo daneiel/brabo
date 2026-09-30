@@ -1,4 +1,7 @@
 {
+  "route": {
+    "loading": "Loading page…"
+  },
   "sidebar": {
     "account": "Account",
     "containers": "Containers"
@@ -10,7 +13,7 @@
     "language": {
       "title": "Language",
       "eyebrow": "interface",
-      "subtitle": "Only this page is translated so far — the rest of the interface is being translated in a separate, larger pass.",
+      "subtitle": "The language of Brabo's screens. Messages that come from the server, such as the API's refusals, may stay in the language they were written in.",
       "ptBR": "Portuguese (Brazil)",
       "en": "English",
       "saving": "Saving…",

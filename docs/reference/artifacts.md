@@ -240,6 +240,13 @@ choose to emit, the server emits when the loop ends.
 (not every story carries residual risk) and the tool already guarantees the KEY
 exists — there's no "forgotten" to distinguish from "none".
 
+The artifact is always recorded, but the HANDOFFS that carry it are not: since
+[RN-636](../business-rules.md#rn-636) AppSec offers it only to a target
+(`arquiteto`, `dev-lead`, `infra`) that has no pending offer and is not active
+in the project. The threat model of a second story stays in the log without an
+offer of its own — the first offer, still pending, is not replaced
+([ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)).
+
 ## Artifacts that don't go through here
 
 Two `artifact.*` event types exist in the log without being in this registry,

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
+import { Badge } from './ui/Badge';
 import styles from './AgentCard.module.css';
 
 // `travado` (Fase 12b — RN-047): circuit breaker do dev agent disparado.
@@ -91,7 +92,11 @@ export function AgentCard({
         <div className={styles.info}>
           <div className={styles.name}>
             {agent.name}
-            {badge && <span className={styles.badge}>{badge}</span>}
+            {badge && (
+              <Badge tone="agent" className={styles.badge}>
+                {badge}
+              </Badge>
+            )}
           </div>
           <div className={styles.role}>{agent.role}</div>
           <span className={styles.status} style={statusStyle}>

@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { connectSessionHeartbeat } from './session-channel';
 import { criarInvalidadorDoCanal } from './canal-vivo';
 import { listSessionEvents } from './api-client';
 import type { SessionEvent } from './api-types';
-import {
-  ESTADO_INICIAL_DA_ATIVIDADE,
-  reduzirAtividadeDoTurno,
-  type EstadoDaAtividadeDoTurno,
-} from './atividade-do-turno';
+import { criarStoreDoStreaming, useSemConteudoNoTurno } from './streaming-do-turno';
 import { fraseDaFerramenta } from './narracao-de-ferramentas';
 
 /**
@@ -160,7 +156,15 @@ export function useTurnoDoAgente(
   queryClient: QueryClient,
 ) {
   const [streaming, setStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
+  // AT-301: o texto em curso e a faixa de atividade moram num store EXTERNO
+  // (`lib/streaming-do-turno.ts`), não em `useState`/`useReducer` daqui — o
+  // hook é chamado pela `SessionPage`, e estado aqui re-renderizava a página
+  // inteira a cada token. Quem desenha o texto assina o store; a página só
+  // assina o booleano `semConteudoNoTurno`, abaixo. Um store por montagem da
+  // página (`useState` com inicializador, nunca recriado).
+  const [streamingStore] = useState(criarStoreDoStreaming);
+  const setStreamingText = streamingStore.definirTexto;
+  const dispatchAtividade = streamingStore.despacharAtividade;
   // QUEM está falando (achado C). O delta passou a carregar o agente; sem ele
   // a tela rotulava a bolha com o nome do MODELO, que é detalhe de execução.
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
@@ -169,11 +173,7 @@ export function useTurnoDoAgente(
   // bolha de streaming NO FIO para esse caso (a bolha continua existindo só
   // pro chat consultivo sem agente ativo, via SSE — ver `turnoViaCanal`
   // abaixo). Reducer PURO (`lib/atividade-do-turno.ts`), testado sem
-  // React nenhum.
-  const [atividadeDoTurno, dispatchAtividade] = useReducer(
-    reduzirAtividadeDoTurno,
-    ESTADO_INICIAL_DA_ATIVIDADE,
-  );
+  // React nenhum; o estado dele mora no `streamingStore` acima (AT-301).
   // O turno em curso é via CANAL do agente (Criativo/PO/Arquiteto/Dev Lead/UX
   // Designer/Staff), e não o chat consultivo sem agente ativo (SSE genérico,
   // `streamChatMessage`)? É esta flag — nunca `streaming`/`statusAgent`
@@ -278,7 +278,7 @@ export function useTurnoDoAgente(
         setStatusAgent(agente);
       }
     },
-    [],
+    [setStreamingText],
   );
 
   // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
@@ -307,7 +307,7 @@ export function useTurnoDoAgente(
     queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
-  }, [queryClient, projectId, sessionId]);
+  }, [queryClient, projectId, sessionId, setStreamingText, dispatchAtividade]);
 
   // Desfaz um arme otimista que falhou (`handleReadiness`/
   // `handleArchitectureReadiness`, nos dois `catch` de `SessionPage.tsx`): os
@@ -453,7 +453,7 @@ export function useTurnoDoAgente(
       disconnect();
       invalidador.encerrar();
     };
-  }, [sessionStatus, sessionId, projectId, queryClient, finalizarTurnoDoAgente]);
+  }, [sessionStatus, sessionId, projectId, queryClient, finalizarTurnoDoAgente, dispatchAtividade]);
 
   // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131) — o MESMO
   // timer que a faixa de atividade (`TurnActivityStrip`) reusa pro seu
@@ -466,8 +466,7 @@ export function useTurnoDoAgente(
   // (a resposta foi rápida, e o indicador nunca deveria ter existido). O
   // timer é cancelado no cleanup do próprio efeito sempre que uma dessas
   // dependências muda, então nunca liga `pensandoVisivel` depois do fato.
-  const semConteudoNoTurno =
-    !streamingText && !atividadeDoTurno.corrente && atividadeDoTurno.linhas.length === 0;
+  const semConteudoNoTurno = useSemConteudoNoTurno(streamingStore);
   useEffect(() => {
     if (!(streaming || statusAgent) || !semConteudoNoTurno) {
       setPensandoVisivel(false);
@@ -480,12 +479,13 @@ export function useTurnoDoAgente(
   return {
     // leituras
     streaming,
-    streamingText,
+    // AT-301: o texto em curso e a faixa saem daqui como STORE, não como
+    // valor — quem lê valor re-renderiza a cada token.
+    streamingStore,
     streamingAgent,
     turnoViaCanal,
     statusAgent,
     pensandoVisivel,
-    atividadeDoTurno,
     optimisticUser,
     // API imperativa
     iniciarTurnoDoAgente,
@@ -562,4 +562,4 @@ export function useRetomarTurnoDoLog({
 }
 
 export type UseTurnoDoAgenteResult = ReturnType<typeof useTurnoDoAgente>;
-export type { EstadoDaAtividadeDoTurno };
+export type { EstadoDaAtividadeDoTurno } from './atividade-do-turno';

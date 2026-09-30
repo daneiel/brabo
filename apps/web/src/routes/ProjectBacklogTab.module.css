@@ -99,7 +99,7 @@
   gap: 8px;
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .proposalTitle {
@@ -199,7 +199,7 @@
 
 .storyBody {
   margin: 2px 0 8px 30px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
@@ -235,7 +235,7 @@
 
 .ruleRefs {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
@@ -272,8 +272,8 @@
 }
 
 .uncovered {
-  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface-1));
+  border-color: var(--danger-panel-border);
+  background: var(--danger-panel);
 }
 
 .ruleTitle {

@@ -5,7 +5,7 @@
 }
 
 .explicacao {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   line-height: 1.5;
 }
@@ -15,12 +15,12 @@
 }
 
 .estado {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
 .resumo {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   padding: 10px 12px;
   background: var(--surface-2);
@@ -32,11 +32,11 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  background: var(--danger-soft);
   border: 1px solid var(--danger);
   border-radius: var(--radius-md);
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .acoes {

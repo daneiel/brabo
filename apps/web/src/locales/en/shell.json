@@ -30,6 +30,11 @@
       "expand": "Expand menu",
       "collapse": "Collapse menu"
     },
+    "mobile": {
+      "openMenu": "Open navigation",
+      "closeMenu": "Close navigation",
+      "drawerLabel": "Navigation"
+    },
     "footer": {
       "accountFallback": "account",
       "logout": "sign out"

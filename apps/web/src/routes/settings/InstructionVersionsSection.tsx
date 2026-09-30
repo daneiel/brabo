@@ -6,12 +6,12 @@ import {
   rollbackInstruction,
 } from '../../lib/api-client';
 import { AGENT_LIST } from '../../lib/agents';
-import { pollQueParaNoErro } from '../../lib/query-policy';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Histórico de versões por arquivo de agente (Fase 4b), com diff de cada
@@ -30,7 +30,10 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
   const { data: historico } = useQuery({
     queryKey: ['instruction-versions', projectId],
     queryFn: () => listProjectInstructionVersions(projectId),
-    refetchInterval: pollQueParaNoErro(15000),
+    // Sem poll (AT-321, RN-645): versão de instrução nasce de patch APROVADO
+    // ou do rollback daqui, e o rollback invalida a chave. Pollar a 15s eram
+    // 4 req/min contra o teto do usuário para uma lista que quase nunca muda.
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   // Um clique é o que o enunciado pede — mas revertendo DUAS vezes por duplo

@@ -149,7 +149,7 @@ describe('padrão único de valor herdado — Execução (circuit breaker)', () 
     montar(<ExecutionSection projectId="proj-1" />);
 
     expect(await screen.findByText('Sem valor próprio')).toBeInTheDocument();
-    expect(screen.getByText('usa o default (3)')).toBeInTheDocument();
+    expect(screen.getByText('usa o padrão (3)')).toBeInTheDocument();
     expect(screen.queryByText('Valor próprio')).toBeNull();
   });
 

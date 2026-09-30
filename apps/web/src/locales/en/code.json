@@ -30,9 +30,9 @@
     },
     "checkStateError": "Could not check the container status.",
     "since": "since",
-    "neverProvisioned": "Project container: never provisioned (RN-267).",
+    "neverProvisioned": "Project container: never provisioned.",
     "problemsEmpty": "There's no integrated lint or tests running over this project's code — no static analysis tool scans the managed repository today. Showing an error or warning count here would be decoration, not state: once that integration exists, this tab will start listing real diagnostics.",
-    "outputEmpty": "There's no AGGREGATED build or deploy command stream in this tab — the interactive terminal (Terminal tab) already has its own output, inside it. `git push`, PR and deploy don't go through the terminal anyway (RN-106): once there's a build or deploy pipeline separate from the terminal, its output will show up here."
+    "outputEmpty": "There's no AGGREGATED build or deploy command stream in this tab — the interactive terminal (Terminal tab) already has its own output, inside it. `git push`, PR and deploy don't go through the terminal anyway: once there's a build or deploy pipeline separate from the terminal, its output will show up here."
   },
   "branchPicker": {
     "noDefaultBranch": "no default branch",
@@ -140,6 +140,7 @@
       "closed": "Closed",
       "all": "All"
     },
+    "filtersAriaLabel": "Filter by state",
     "backToList": "Back to list",
     "loadingDiff": "Loading diff…",
     "diffErrorFallback": "Could not load this PR's diff.",

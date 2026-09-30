@@ -9,12 +9,9 @@
  * de terminal e de diff encostarem no card, como o desenho mostra; com padding
  * no card eles flutuavam numa moldura de 16px que o desenho não tem.
  */
-.card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
+/* A superfície, a borda, o raio e o recorte vêm de `ui/Card` (`padding="none"
+   recorta`, AT-286). `.card` fica só como gancho dos seletores compostos
+   abaixo (`.card.chat`, `.card.critical`). */
 
 /*
  * RN-173 — no FIO da sessão (variante `chat`), o card concorda com a conversa
@@ -43,7 +40,7 @@
 }
 
 .card.critical {
-  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  border-color: var(--danger-panel-border);
 }
 
 .header {
@@ -108,8 +105,8 @@
   border-radius: var(--radius-md);
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
   color: var(--accent);
 }
 
@@ -162,8 +159,8 @@
   align-self: center;
   flex-shrink: 0;
   color: var(--urgency-color);
-  background: color-mix(in srgb, var(--urgency-color) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--urgency-color) 34%, transparent);
+  background: color-mix(in srgb, var(--urgency-color) var(--tint-soft), transparent);
+  border: 1px solid color-mix(in srgb, var(--urgency-color) var(--tint-line), transparent);
 }
 
 .urgencyDot {
@@ -367,13 +364,7 @@
 }
 
 /* Retângulo com borda (raio 6), não pílula: é o que o desenho mostra. */
-.branchPill {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px 8px;
-  color: var(--text-secondary);
-}
+/* Os nomes de branch são `ui/Badge tone="neutral" square size="md"` (AT-287). */
 
 .prSummary {
   padding: 0 16px 14px;

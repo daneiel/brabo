@@ -49,7 +49,7 @@
     "title": "Best models by capability",
     "eyebrow": "curation · real usage · cost",
     "subtitle": {
-      "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (ADR 0042: curation is always manual); mark the uses in the ",
+      "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (curation is always manual); mark the uses in the ",
       "link": "Model catalog",
       "after": ", further below."
     },
@@ -93,7 +93,7 @@
       "intro": "Origin shows where the value is resolved:",
       "mostSpecificWins": "The most specific wins.",
       "areaWord": "area",
-      "areaExplain": "is the default that the lead and subagents share (RN-102) — set it in",
+      "areaExplain": "is the default that the lead and subagents share — set it in",
       "areaLink": "Model by area",
       "below": ", further below.",
       "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting."
@@ -430,7 +430,7 @@
   },
   "personalAccessTokens": {
     "title": "Access tokens",
-    "eyebrow": "Local runner · ADR 0105",
+    "eyebrow": "Local runner",
     "subtitle": {
       "before": "A Personal Access Token authenticates ",
       "after": " on this machine, scoped to just this project — revocable at any time, and the raw value never shows up again once issued."
@@ -458,6 +458,22 @@
       "removeTitle": "Revoke"
     },
     "emptyMessage": "No access token issued for this project.",
+    "admin": {
+      "title": "All project tokens",
+      "eyebrow": "maintainer",
+      "subtitle": "Incident response — revoke any user's token in this project, not just your own.",
+      "emptyMessage": "No access token issued for this project.",
+      "table": {
+        "name": "Name",
+        "owner": "Owner",
+        "created": "Created",
+        "status": "Status",
+        "statusRevoked": "revoked",
+        "statusActive": "active",
+        "removeAria": "Revoke {{name}} ({{email}})",
+        "removeTitle": "Revoke"
+      }
+    },
     "modal": {
       "title": "Token generated",
       "bodyBefore": "Copy it now — this token can't be recovered after closing this window. Use it in ",
@@ -470,7 +486,7 @@
   },
   "runnerDeviceKeys": {
     "title": "Device keys",
-    "eyebrow": "Local runner · RN-519 · RN-561",
+    "eyebrow": "Local runner",
     "subtitle": "A device key authenticates brabo-runner without a hand-typed token: the Ed25519 pair is born on your machine or in your browser, and only the public half ever reaches here. This lists YOUR keys that serve this project, revoked ones included — dropping the row would make this screen claim the key never existed.",
     "subtitleAlcance": "A MACHINE key serves every project of yours in runner mode, which is why it shows up in all of their lists: revoking it drops the local agent in all of them, not just this one.",
     "subtitleNaoEBatimento": "A registered key is not a running agent: it proves the device was paired once, never that the agent is up right now — what knows about right now is the project terminal.",

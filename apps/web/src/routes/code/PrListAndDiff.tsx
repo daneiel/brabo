@@ -186,7 +186,7 @@ export function PrListAndDiff({
 
   return (
     <div className={styles.painel}>
-      <div className={styles.filtros} role="tablist" aria-label="Filtrar por estado">
+      <div className={styles.filtros} role="tablist" aria-label={t('diff.filtersAriaLabel')}>
         {FILTROS.map((f) => (
           <button
             key={f.chave}

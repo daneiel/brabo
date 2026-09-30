@@ -9,7 +9,7 @@
   gap: 2px;
   min-width: 0;
   max-width: 320px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
@@ -22,7 +22,7 @@
 
 .rotulo {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -33,7 +33,7 @@
   min-width: 0;
   max-width: 200px;
   padding: 0 6px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-primary);
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -45,24 +45,10 @@
   font-family: var(--font-mono);
 }
 
-.botao {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-}
 
-.botao:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
 
 .origem {
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -90,49 +76,24 @@
   color: var(--text-primary);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   box-shadow: var(--shadow-modal);
 }
 
 .textoDaPergunta {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   white-space: normal;
 }
 
 .notaDaPergunta {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   white-space: normal;
 }
 
-.botaoPrimario {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
-  color: var(--on-accent);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.botaoDiscreto {
-  height: 26px;
-  padding: 0 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.botaoPrimario:disabled,
-.botaoDiscreto:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
+/* Os botões da barra de idioma são `ui/Button size="sm"` (AT-287). */
 
 /* Dentro do painel do controle agrupado da barra estreita (AT-317): há
    largura e altura, então a origem QUEBRA em vez de cortar — cortar era o

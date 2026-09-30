@@ -235,7 +235,7 @@ describe('deriveAgentRoster — status', () => {
           [ev('dev.idle_tripped', 'dev-core', { consecutiveBlocked: 3 })],
           'dev-core',
         ),
-      ).toBe('circuit breaker: 3 tasks blocked seguidas');
+      ).toBe('parada automática: 3 tarefas bloqueadas seguidas');
 
       expect(breakerReasonFor([], 'dev-core')).toBeUndefined();
     });

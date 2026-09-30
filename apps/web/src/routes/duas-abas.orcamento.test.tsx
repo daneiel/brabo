@@ -186,6 +186,12 @@ async function abrir(aba: Aba) {
   const { SessionPage } = await import('./SessionPage');
   const { ProjectPage } = await import('./ProjectPage');
   const { ContainersPage } = await import('./ContainersPage');
+  // O painel da aba é chunk sob demanda (AT-300, `React.lazy` em
+  // `project-tabs.ts`), e o `import()` dele é I/O de verdade que os relógios
+  // falsos não esperam: sob carga ele chegava NO MEIO do minuto medido, e a aba
+  // montando ali somava buscas que não são do regime. Pré-carregado, o `lazy`
+  // resolve na carga, pelo mesmo caminho de produção.
+  await import('./ProjectExecutorsTab');
   const { __Caminho: Caminho } = (await import('@tanstack/react-router')) as unknown as {
     __Caminho: React.Context<string>;
   };
@@ -218,6 +224,8 @@ async function abrir(aba: Aba) {
   );
   // Carrega (a moldura só monta a aba depois do projeto) e estabiliza.
   await avancar(5_000);
+  // A tela MONTOU — nada ficou preso no `Suspense` para chegar durante o minuto.
+  expect(document.body.textContent).not.toContain('Carregando a página');
 }
 
 /** Req/min por rota da aba aberta, com `durante` rodando a cada 100 ms. */

@@ -256,6 +256,27 @@ describe('ApprovalCard', () => {
     expect(onToggleSelect).toHaveBeenCalledTimes(1);
   });
 
+  // AT-320: a auditoria de 30/09 viu o botão (e a nota "libera este tipo de
+  // ação só para dev-api") num `git_push` — a metade TIPADA do teto da RN-418.
+  it.each<ActionType>(['git_push', 'pr_open', 'git_merge'])(
+    '%s de dev-api: não oferece "Sempre permitir" nem a nota do escopo',
+    (actionType) => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType, actor: { kind: 'agent', id: 'dev-api' } })}
+          variant="chat"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Sempre permitir' })).toBeNull();
+      expect(screen.queryByText(/só para/)).toBeNull();
+    },
+  );
+
   describe('instruction_patch (Fase 4b)', () => {
     function patchAction(payload: Record<string, unknown> = {}) {
       return makeAction({
@@ -604,7 +625,7 @@ describe('ApprovalCard', () => {
       expect(preview.textContent).toContain('linha 1');
       expect(preview.textContent).toContain('linha 25');
       expect(preview.textContent).not.toContain('linha 40');
-      expect(screen.getByText(/25 de 40 linha\(s\)/)).toBeTruthy();
+      expect(screen.getByText(/25 de 40 linhas/)).toBeTruthy();
     });
 
     it('write_file com content vazio mostra a mensagem de fallback, não um preview em branco', () => {
