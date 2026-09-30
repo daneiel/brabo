@@ -94,7 +94,8 @@
     "infraBotao": "Aceitar handoff da Infra",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
-    "manualBotao": "Endereçar handoff"
+    "manualBotao": "Endereçar handoff",
+    "manualOrigem": "Handoff manual"
   },
   "backlog": {
     "criouEpico": "criou o épico",

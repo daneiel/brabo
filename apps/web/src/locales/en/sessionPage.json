@@ -94,7 +94,8 @@
     "infraBotao": "Accept the Infra handoff",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
-    "manualBotao": "Address handoff"
+    "manualBotao": "Address handoff",
+    "manualOrigem": "Manual handoff"
   },
   "backlog": {
     "criouEpico": "created the epic",

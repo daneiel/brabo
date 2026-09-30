@@ -63,7 +63,7 @@ export interface ContextoDaTimeline {
   user: { name: string | null };
   queryClient: QueryClient;
   invalidateActions: () => void;
-  offeredHandoff: Handoff | undefined;
+  ofertasAcionaveis: Handoff[];
   isActive: boolean;
   semRepositorio: boolean;
   promovendoStoryId: string | null;
@@ -101,7 +101,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     user,
     queryClient,
     invalidateActions,
-    offeredHandoff,
+    ofertasAcionaveis,
     isActive,
     semRepositorio,
     promovendoStoryId,
@@ -452,8 +452,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // tempo (um na topbar, um no fio) seria o mesmo problema que
       // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
       const handoffIdDoEvento = (event.payload as { handoffId?: string })?.handoffId;
-      const isOfertaAtual =
-        isActive && !!offeredHandoff && handoffIdDoEvento === offeredHandoff.id;
+      const oferta = isActive
+        ? ofertasAcionaveis.find((h) => h.id === handoffIdDoEvento)
+        : undefined;
+      const isOfertaAtual = !!oferta;
+      // O handoff MANUAL (ADR 0109/RN-440) é gravado com a PESSOA como ator,
+      // e o id dela não é nome de agente: a pílula diz "handoff manual" em
+      // vez de mostrar um UUID como quem passou o bastão (AT-253).
+      const origem =
+        event.actor.kind === 'user' ? (
+          <span className={styles.handoffAgent}>{t('handoff.manualOrigem')}</span>
+        ) : (
+          <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
+            {nomeDoAgente(event.actor.id)}
+          </span>
+        );
       empurrar({
         // RN-172: passar o bastão é o DESFECHO do turno, e por isso desce
         // abaixo da última fala do agente que passou — o `seq` do evento o
@@ -464,9 +477,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         node: isOfertaAtual ? (
           <div className={styles.handoffCard} key={event.id}>
             <span className={styles.handoffPill}>
-              <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
-                {nomeDoAgente(event.actor.id)}
-              </span>
+              {origem}
               <ChevronRightIcon size={13} />
               {t('handoff.passouOBastaoAo')}
               <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
@@ -475,9 +486,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             </span>
             <Button
               variant="success"
-              onClick={() => handleAcceptHandoff(offeredHandoff!.id, offeredHandoff!.toAgent)}
+              onClick={() => handleAcceptHandoff(oferta!.id, oferta!.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: offeredHandoff!.toAgent })}
+              {t('handoff.aceitarEIniciar', { agente: oferta!.toAgent })}
             </Button>
             {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                 precisa saber onde acompanhar depois (RN-125). As outras
@@ -519,9 +530,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         ) : (
           <div className={styles.handoffDivider} key={event.id}>
             <span className={styles.handoffPill}>
-              <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
-                {nomeDoAgente(event.actor.id)}
-              </span>
+              {origem}
               <ChevronRightIcon size={13} />
               {t('handoff.passouOBastaoAo')}
               <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>

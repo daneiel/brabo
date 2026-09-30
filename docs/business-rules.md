@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:769` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:775` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:595` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:601` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -5206,7 +5206,9 @@ comportamento de sempre para o chamador interno (o engine). O handoff
 nasce `offered`, do MESMO jeito que um automático, e o card de aceite
 já existente (`offeredHandoff`/`handleAcceptHandoff` em `SessionPage.tsx`)
 o pega sozinho no próximo poll de `useHandoffs` — sem NENHUMA mudança no
-caminho de aceite.
+caminho de aceite. *(Não pegava, e ninguém viu até a AT-253: o card casava a
+oferta pelo ATOR, e o ator do manual é a pessoa. Corrigido na
+[RN-631](#rn-631), que casa pelo `handoffId`.)*
 
 A rota (`POST projects/:projectId/sessions/:sessionId/handoffs`) exige
 papel `developer`, o mesmo de `handoffs/:handoffId/accept` (RN-136: quem
@@ -16246,7 +16248,7 @@ deu e com as quatro ferramentas.
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
-  `apps/web/src/lib/session-handoffs.ts:67` (`offeredHandoff`)
+  `apps/web/src/lib/session-handoffs.ts:87` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
@@ -16877,7 +16879,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:122` (`podeDecidir`), `:258`
-  (`useRetomarTurnoDoLog`), `:842` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:848` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17081,6 +17083,17 @@ desde sempre (AT-251).
    recente" para escolher. As ofertas a agente já ativado (janela OU
    `roster.activatedAgents`) não voltam a ser aceitáveis.
 
+8. **Toda oferta pendente é acionável, e nenhuma esconde outra** (AT-253). O
+   card elegia UMA oferta (`handoffs.find`, a pendente mais antiga), e o
+   handoff MANUAL ([ADR 0109](adr/0109-handoff-manual-a-agente-a-escolha.md),
+   [RN-441](#rn-441)) — gravado com a PESSOA como ator, e por isso nunca
+   casado pelo ator — ficava sem "Aceitar" e escondia as ofertas seguintes.
+   Agora cada oferta pendente a um agente que conversa (fora a da Infra, que
+   tem card próprio, [RN-499](#rn-499)) tem o botão no evento dela; duas
+   pendentes ao MESMO agente dão um botão só, o da mais recente, e aceitá-la
+   tira a outra pelo `activeFor`. A pílula do handoff manual diz "Handoff
+   manual" em vez do id da pessoa.
+
 A guarda da [RN-584](#rn-584) (`scripts/ci/destinos-do-composer.spec.ts`)
 passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
@@ -17091,12 +17104,16 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`); `apps/web/src/routes/SessionComposer.tsx:196`
   (`destinatarioRow`); `apps/web/src/routes/SessionPage.tsx:330`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
-  (`handoffIdDoEvento`); `apps/web/src/lib/session-handoffs.ts:41` (`activeFor`)
+  (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:41`
+  (`activeFor`), `:87` (`ofertasAcionaveis`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
   por quê; opção única; handoff aceito fora da janela; resumo da mesma sessão
   e de outra; aceite que troca e aceite que falha; escolha lembrada; sessão sem
   agente), `apps/web/src/lib/session-destinatario.test.ts`,
   `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx` (oferta
-  antiga de OUTRO `handoffId` fica muda)
-- **Origem:** AT-251
+  antiga de OUTRO `handoffId` fica muda),
+  `apps/web/src/routes/SessionPage.handoff-manual.test.tsx` (o manual ganha
+  "Aceitar"; o manual pendente não esconde a oferta seguinte; duas ao mesmo
+  agente viram um botão)
+- **Origem:** AT-251, AT-253

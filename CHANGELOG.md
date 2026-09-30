@@ -378,6 +378,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o handoff manual a agente à escolha passa a ter o botão
+  "Aceitar" no fio — antes o card casava a oferta pelo agente de origem, e o
+  manual é gravado com a pessoa como autora, então o botão nunca aparecia (o
+  `handoff.offered` ao PO de 29/09 ficou sem aceite). E oferta pendente não
+  esconde mais as seguintes: cada uma tem o botão no próprio evento, e duas ao
+  mesmo agente viram um botão só, o da mais recente (AT-253,
+  [RN-631](docs/business-rules.md#rn-631), [ADR 0109](docs/adr/0109-handoff-manual-a-agente-a-escolha.md)).
+
 - **web**: o chat da Sessão passa a mostrar e deixar ESCOLHER o destinatário
   da mensagem — um seletor "Para" no composer com os agentes que já estão na
   sessão. Antes a mensagem ia, sem aviso, ao último agente ativado na janela de

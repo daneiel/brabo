@@ -334,14 +334,20 @@ export function SessionPage({
   // As derivações de handoff (RN-136, RN-499, achado L, RN-406) moram em
   // `../lib/session-handoffs` desde o PR 6 do ADR 0176 — puras, calculadas
   // a cada render como antes.
+  //
+  // Memoizadas desde a RN-631: `ofertasAcionaveis` é uma lista nova a cada
+  // chamada, e entra nas dependências da montagem da timeline logo abaixo.
   const {
     activeFor,
-    offeredHandoff,
+    ofertasAcionaveis,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
     necessidadeJaValidada,
-  } = derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira);
+  } = useMemo(
+    () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira),
+    [events, handoffs, ativadosNaSessaoInteira],
+  );
 
   // `iniciarTurnoDoAgente`, `finalizarTurnoDoAgente`, `cancelarTurnoOtimista`
   // e o efeito do canal Phoenix (que armava/desarmava este mesmo cluster de
@@ -427,7 +433,7 @@ export function SessionPage({
         user,
         queryClient,
         invalidateActions,
-        offeredHandoff,
+        ofertasAcionaveis,
         isActive,
         semRepositorio,
         promovendoStoryId,
@@ -454,7 +460,7 @@ export function SessionPage({
       user.name,
       queryClient,
       invalidateActions,
-      offeredHandoff,
+      ofertasAcionaveis,
       isActive,
       promovendoStoryId,
       promovendoTodas,

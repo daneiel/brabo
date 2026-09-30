@@ -22,7 +22,7 @@ import type { Epic, SessionEvent } from './api-types';
  * fechado) e só DEPOIS ganhou cláusula de `message`. Ele é destinatário
  * pela mesma regra dos outros (`session-destinatario.ts`, RN-631) — sem
  * destinatário padrão. O aceite do handoff dele continua no card PRÓPRIO
- * (RN-499), fora do fio: `offeredHandoff` o exclui por nome. `qa` segue de
+ * (RN-499), fora do fio: `ofertasAcionaveis` o exclui por nome. `qa` segue de
  * fora — lead de ÁREA sem cláusula de `message`.
  *
  * NÃO é gerada: `SOLO_CONVERSATIONAL_AGENTS` (gerada por `gerar:areas`) é a

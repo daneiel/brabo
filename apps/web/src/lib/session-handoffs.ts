@@ -15,7 +15,7 @@ import { AGENTES_DE_CHAT } from './session-readiness';
  */
 export interface DerivacoesDeHandoff {
   activeFor: (agent: string) => boolean;
-  offeredHandoff: Handoff | undefined;
+  ofertasAcionaveis: Handoff[];
   handoffDaInfraOferecido: Handoff | undefined;
   prontidaoJaDeclarada: boolean;
   arquiteturaJaDeclarada: boolean;
@@ -31,7 +31,7 @@ export function derivarHandoffsDaSessao(
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
   // fala AGORA". Cópia local de uma linha da mesma checagem que o hook usa
   // internamente pra `criativoActive`/`arquitetoActive` (`session-
-  // readiness.ts`) — o único consumidor que sobra aqui é `offeredHandoff`,
+  // readiness.ts`) — o único consumidor que sobra aqui é `ofertasAcionaveis`,
   // logo abaixo, que não faz parte da extração do hook.
   //
   // Desde a RN-631 a janela é SOMADA a `roster.activatedAgents` do resumo
@@ -64,13 +64,27 @@ export function derivarHandoffsDaSessao(
   // handoff dele segue fora DESTE card por NOME: o aceite dele tem o card
   // PRÓPRIO logo abaixo (RN-499), e deixá-lo cair aqui o ofereceria duas
   // vezes — e, por ser o mais antigo, voltaria a esconder o do Dev Lead.
-  const offeredHandoff = handoffs.find(
-    (h) =>
+  //
+  // Desde a RN-631 (AT-253) são TODAS as ofertas pendentes, não a primeira:
+  // o `.find()` elegia uma oferta só, e a mais antiga pendente escondia as
+  // seguintes. O caso real foi o handoff MANUAL (ADR 0109/RN-440) ao PO,
+  // que nunca ganhava botão (o casamento pelo ator não batia) e, sendo o
+  // mais antigo, deixava sem botão toda oferta que viesse depois. Cada
+  // oferta é o card do evento dela (casado pelo `handoffId`); duas pendentes
+  // para o MESMO agente não viram dois botões iguais — vale a mais recente, e
+  // aceitá-la ativa o agente, o que tira a outra daqui pelo `activeFor`.
+  const porDestino = new Map<string, Handoff>();
+  for (const h of handoffs) {
+    if (
       h.status === 'offered' &&
       !activeFor(h.toAgent) &&
       h.toAgent !== 'infra' &&
-      (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
-  );
+      (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent)
+    ) {
+      porDestino.set(h.toAgent, h);
+    }
+  }
+  const ofertasAcionaveis = [...porDestino.values()];
 
   // O handoff da INFRA, que o filtro logo acima deixa de fora — e de
   // propósito. Até a RN-617 o motivo era o Infra Lead não conversar; desde
@@ -110,7 +124,7 @@ export function derivarHandoffsDaSessao(
 
   return {
     activeFor,
-    offeredHandoff,
+    ofertasAcionaveis,
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
