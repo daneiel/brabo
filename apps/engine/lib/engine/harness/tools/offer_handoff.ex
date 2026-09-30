@@ -42,8 +42,21 @@ defmodule Engine.Harness.Tools.OfferHandoff do
            to_agent,
            artifact_id
          ) do
+      # ADR 0182 (RN-635): a api devolve a oferta que JÁ estava pendente em vez
+      # de criar outra — dizer "oferecido" de novo faria o modelo achar que
+      # passou o bastão duas vezes.
+      {:ok, %{"desfecho" => "ja_oferecido"}} ->
+        {:ok,
+         "já havia um handoff pendente a #{to_agent} — nenhum novo foi criado; " <>
+           "continua aguardando o usuário aceitar."}
+
       {:ok, _handoff} ->
         {:ok, "handoff oferecido a #{to_agent} — aguardando o usuário aceitar."}
+
+      # Recusa NOMEADA: o destino já está ativo no projeto. A frase da api é o
+      # que o modelo lê (RN-163), nunca o `inspect` do corpo.
+      {:error, {409, %{"reason" => "agente_ja_ativo", "message" => mensagem}}} ->
+        {:error, mensagem}
 
       {:error, reason} ->
         {:error, "falha ao oferecer handoff: #{inspect(reason)}"}

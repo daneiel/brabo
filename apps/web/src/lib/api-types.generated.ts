@@ -2876,7 +2876,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the architecture is ready and offers the handoff to Infra
-         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends.
+         * @description Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends. Idempotent (ADR 0182, RN-635): a target that already has a pending offer or is active in the project is not triggered again, and with both like that nothing is recorded.
          */
         post: operations["AgentsController_handoffInfra"];
         delete?: never;
@@ -3025,7 +3025,7 @@ export interface paths {
         put?: never;
         /**
          * Manually offers a handoff to a chosen agent
-         * @description Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400.
+         * @description Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400. At most one pending offer per (project, target): see `desfecho` (ADR 0182, RN-635).
          */
         post: operations["AgentsController_requestManual"];
         delete?: never;
@@ -4224,6 +4224,15 @@ export interface components {
             /** @example 14200 */
             outputTokens: number;
         };
+        AlvoJaAtendidoResponseDto: {
+            /**
+             * @example infra
+             * @enum {string}
+             */
+            toAgent: "infra" | "dev-lead";
+            /** @enum {string} */
+            motivo: "oferta_pendente" | "agente_ativo";
+        };
         AnaliseDeTerminoResponseDto: {
             /**
              * @description The ORIGIN of the failure, never deduced by elimination (lesson from ADR 0020).
@@ -5102,6 +5111,19 @@ export interface components {
              */
             truncated: boolean;
         };
+        ConfirmacaoDeArquiteturaResponseDto: {
+            /**
+             * @example true
+             * @enum {boolean}
+             */
+            ok: true;
+            /**
+             * @description `confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab).
+             * @enum {string}
+             */
+            desfecho: "confirmado" | "ja_oferecido";
+            jaAtendidos: components["schemas"]["AlvoJaAtendidoResponseDto"][];
+        };
         ConfirmProjectWorkspaceInternalDto: {
             /**
              * @description Absolute path confirmed by the runner ON THE HOST — the source of truth (RN-423). Re-validated LEXICALLY here before writing; invalid is 400, never written.
@@ -5344,6 +5366,11 @@ export interface components {
              * @example 01JC4Z8QK3M7YV2N5T9B0PXHRB
              */
             artifactId?: string;
+            /**
+             * @description Only if nobody got it yet (ADR 0182, RN-636): with a pending offer to the target in ANY session of the project, return it (`desfecho: ja_oferecido`) instead of replacing it. AppSec sends it.
+             * @example true
+             */
+            seAusente?: boolean;
         };
         CreateModuleMapInternalDto: {
             /**
@@ -6000,11 +6027,11 @@ export interface components {
              */
             artifactId: Record<string, never> | null;
             /**
-             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives.
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
              * @example offered
              * @enum {string}
              */
-            status: "offered" | "accepted" | "completed" | "rejected";
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
             /**
              * Format: date-time
              * @example 2026-07-24T10:00:00.000Z
@@ -6968,6 +6995,51 @@ export interface components {
              * @description `null` when the container has never started.
              */
             iniciadoEm: Record<string, never> | null;
+        };
+        OfertaDeHandoffResponseDto: {
+            /** @example 01JC4Z0000HANDOFF00000000001 */
+            id: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Slug of the agent that passed the baton.
+             * @example criativo
+             */
+            fromAgent: string;
+            /**
+             * @description Slug of the receiving agent.
+             * @example po
+             */
+            toAgent: string;
+            /**
+             * @description Artifact that motivated the handoff (product_brief, module_map…).
+             * @example 01JC4Z0000ARTEFATO000000001
+             */
+            artifactId: Record<string, never> | null;
+            /**
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
+             * @example offered
+             * @enum {string}
+             */
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:05:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description `criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`).
+             * @example criado
+             * @enum {string}
+             */
+            desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
         };
         OkResponseDto: {
             /**
@@ -11061,7 +11133,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. */
@@ -11080,6 +11152,13 @@ export interface operations {
             };
             /** @description Session, project, or resource not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project. The `message` is the text the agent reads as the tool result. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17407,7 +17486,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OkResponseDto"];
+                    "application/json": components["schemas"]["ConfirmacaoDeArquiteturaResponseDto"];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -17968,7 +18047,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
@@ -17994,6 +18073,13 @@ export interface operations {
             };
             /** @description Project, session, or handoff not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project — no offer is created. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

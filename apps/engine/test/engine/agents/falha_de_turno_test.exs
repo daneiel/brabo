@@ -61,6 +61,12 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.origem({422, %{}}) == "codigo"
     end
 
+    test "ADR 0182: handoff recusado por agente já ativo é política, não código" do
+      assert FalhaDeTurno.origem({409, %{"reason" => "agente_ja_ativo"}}) == "politica"
+      # Outro 409 continua sendo do chamador.
+      assert FalhaDeTurno.origem({409, %{"reason" => "sessao_encerrada"}}) == "codigo"
+    end
+
     test "transporte morto é infra, não modelo" do
       assert FalhaDeTurno.origem(:no_final_event) == "infra"
       assert FalhaDeTurno.origem(:aborted) == "infra"

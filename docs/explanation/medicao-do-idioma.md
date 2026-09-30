@@ -522,7 +522,7 @@ English prose in 8 of 10 — which points at the model, not at the placement.
 changed, if it had helped, is `Engine.Harness.IdiomaDaResposta.anexar/4`
 (`apps/engine/lib/engine/harness/idioma_da_resposta.ex:231`, the `messages ++
 [%{"role" => "system", …}]`), called from the two `llm_turn` paths of
-`apps/engine/lib/engine/sessions/engine_api_client.ex:591` and `:643`. It stays
+`apps/engine/lib/engine/sessions/engine_api_client.ex:609` and `:661`. It stays
 as it is. The next activity, if the owner wants Haiku to obey `en` over
 Portuguese input, is to test wording and persona language (the list above),
 with this same script.

@@ -1076,6 +1076,18 @@ reason in the URL.
   handoff exists and its status, which any `viewer` of the project already reads
   through `GET .../sessions/:sessionId/handoffs`; it never names a session or
   a user.
+- **Offering a handoff to an agent already active in the project is `409`
+  `agente_ja_ativo`, and the classification didn't change** — the human route
+  `POST .../sessions/:sessionId/handoffs` stays `role:developer` and the
+  internal one stays `engine-service` ([RN-635](business-rules.md#rn-635),
+  [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)). Unlike the refusal above,
+  this one DOES name a session: the message says in which session of the same
+  project the target is active, because it is the text the agent reads as its
+  tool result and the pointer a person needs to go talk to it. Any `viewer` of
+  the project already lists its sessions and reads `agent.activated` in each,
+  so nothing crosses a project boundary. The same routes now answer with the
+  CURRENT offer instead of always a new row (`desfecho`), and the internal one
+  accepts `seAusente` — a switch that can only make the call write LESS.
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT

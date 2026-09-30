@@ -198,6 +198,7 @@ estado lido do repositório e não da conversa.
 | O fio corta por mensagem, não parte a troca e recolhe o histórico na ordem (AT-319) | RN-644 |
 | A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
 | A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
+| O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
 
 ## Estado atual e aberto
 
