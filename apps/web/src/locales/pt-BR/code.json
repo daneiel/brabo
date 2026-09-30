@@ -1,11 +1,16 @@
 {
   "projectCodeTab": {
     "loadProjectError": "Não consegui carregar este projeto.",
-    "checkGateError": "Não consegui verificar se a aba Code está liberada.",
+    "checkGateError": "Não consegui verificar se a aba {{aba}} está liberada.",
     "blocked": {
-      "title": "A aba Code ainda não está liberada",
+      "title": "A aba {{aba}} ainda não está liberada",
       "description": "O Arquiteto ainda não decidiu qual imagem de container sobe para este projeto. Sem essa decisão o container não sobe, e é ele que isola a execução — não há onde rodar o código que esta aba mostraria.",
       "note": "Assim que o Arquiteto emitir a decisão de imagem, esta aba libera sozinha — não é preciso recarregar a página manualmente."
+    },
+    "blockedPrs": {
+      "title": "A lista de PRs ainda não está liberada",
+      "description": "A lista de PRs lê o repositório pelo mesmo caminho da aba {{abaCodigo}}, e esse caminho só abre depois que o Arquiteto decide qual imagem de container sobe para este projeto. Não há falha a tentar de novo: falta essa decisão.",
+      "note": "A mesma decisão de imagem libera as duas abas, {{abaCodigo}} e {{abaPrs}}."
     }
   },
   "bottomPanel": {

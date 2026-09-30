@@ -154,6 +154,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
 
       <PrListAndDiff
         projectId={projectId}
+        superficie="prs"
         renderItemExtra={(pr) => {
           if (pr.state !== 'open') return null;
 

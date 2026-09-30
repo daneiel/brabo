@@ -131,7 +131,7 @@ describe('CodeDiffPanel — lista de PRs', () => {
     montar();
 
     expect(
-      await screen.findByText('A aba Code ainda não está liberada'),
+      await screen.findByText('A aba Código ainda não está liberada'),
     ).toBeInTheDocument();
     expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('CodeDiffPanel — diff por id conhecido', () => {
     await pedirDiffPeloId('1');
 
     expect(
-      await screen.findByText('A aba Code ainda não está liberada'),
+      await screen.findByText('A aba Código ainda não está liberada'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
