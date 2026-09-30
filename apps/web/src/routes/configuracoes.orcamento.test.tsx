@@ -178,6 +178,14 @@ const deConfiguracao = (porRota: Record<string, number>) =>
 async function abrirConfiguracoes() {
   const { Shell } = await import('./Shell');
   const { ProjectPage } = await import('./ProjectPage');
+  // Os painéis são chunks sob demanda (AT-300, `React.lazy` em
+  // `project-tabs.ts`), e o `import()` deles é I/O de verdade: os relógios
+  // falsos não esperam por ele. Sem pré-carregar, a medição inteira rodava
+  // sobre o `Suspense` de `ProjectPage` — a aba nunca montava, nenhuma seção
+  // buscava nada e os tetos passavam VAZIOS. Pré-carregar só tira o tempo de
+  // rede do chunk da conta; o que o `lazy` faz depois (resolver e montar) segue
+  // o caminho de produção.
+  await Promise.all([import('./ProjectSettingsTab'), import('./ProjectOverviewTab')]);
   const { __Caminho: Caminho } = (await import('@tanstack/react-router')) as unknown as {
     __Caminho: React.Context<string>;
   };
@@ -209,7 +217,13 @@ async function carga() {
   // Carrega (a moldura só monta a aba depois do projeto) e estabiliza. Menos
   // de 3s: o primeiro poll da moldura (eventos a 3s) não entra na conta.
   await avancar(2_500);
-  return { ...aberta, porRota: Object.fromEntries(contagem) };
+  const porRota = Object.fromEntries(contagem);
+  // A aba MONTOU. Sem isto, um painel preso no `Suspense` passaria todos os
+  // tetos deste arquivo sem medir nada — foi o que aconteceu ao entrar o
+  // AT-300, e só o caso de falha acusou.
+  expect(document.body.textContent).not.toContain('Carregando a página');
+  expect(porRota['GET /projects/:id/members']).toBe(1);
+  return { ...aberta, porRota };
 }
 
 describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', () => {
