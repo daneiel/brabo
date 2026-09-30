@@ -18142,7 +18142,7 @@ e melhores modelos por capacidade —, e o teto de 300 req/min é do USUÁRIO
    individual responderia para aquela chave (`GET .../agent-bindings/:slug`,
    `GET .../area-bindings/:key`): a mesma cascata `workspace › projeto › área ›
    agente` sem sessão, as mesmas origens que a tela transforma em cadeia
-   ([RN-470](#rn-470)), a herança do Criativo, e `null` quando nenhum nível tem
+   ([RN-470](business-rules/custo.md#rn-470)), a herança do Criativo, e `null` quando nenhum nível tem
    modelo. Não há cascata nova: o caso de uso chama `ResolveModelBindingUseCase`
    chave a chave, com a entrada que a rota individual passaria.
 2. **O papel mínimo é o das rotas individuais de leitura, `viewer`.** Quem não
