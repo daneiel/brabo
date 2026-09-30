@@ -378,6 +378,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: o merge executado do PR de um dev agent passa a marcar a tarefa como
+  `done` — antes ela ficava em `in_review` para sempre (o `pr-6` foi mergeado três
+  vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
+  duplica o evento `backlog.task_status_changed`. O merge continua sendo do
+  humano (AT-275, [RN-628](docs/business-rules.md#rn-628), [RN-418](docs/business-rules.md#rn-418));
+  a recusa de PR já mergeada (AT-249) fica de fora.
+
 - **engine**: o QA Lead não cai mais quando o `qa-automacao` suspende uma
   SEGUNDA vez esperando aprovação na retomada (AT-248,
   [RN-629](docs/business-rules.md#rn-629)). O segundo `{:awaiting, _}` era

@@ -16989,3 +16989,34 @@ escreve na pasta do projeto, que é do uid do operador: `npm install` dava
   (`usuario`), `apps/broker/src/operacoes.spec.ts` ("o usuário do container"),
   `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
 - **Origem:** AT-247
+
+### RN-628 — O merge executado fecha a tarefa da PR: `done`, uma vez só {#rn-628}
+
+O gate de QA/SecOps termina em `awaiting_user` e nada mais mexia no `status` da
+tarefa: no uso real de 29/09 o `pr-6` foi mergeado três vezes e as tarefas
+seguiram em `in_review` (AT-275).
+
+1. **Depois do merge, nunca no lugar dele.** `git_merge` continua sendo
+   `require_approval` incondicional ([RN-418](#rn-418)); a regra roda DENTRO de
+   `ExecuteGitActionUseCase`, na transação que grava o resultado do merge, e só
+   quando o provider devolveu `state: 'merged'` (PR aberta, ou merge que falhou,
+   não toca a tarefa).
+2. **A tarefa é achada pela PR que a abriu.** Toda `pr_open` do projeto cujo
+   `pullRequestId` é o da PR mergeada e que carrega `storyTaskId` no payload.
+   PR sem tarefa (infra, ADR) não muda nada.
+3. **Idempotente.** `TaskRepository.markDoneIfNotDone` é um `UPDATE … WHERE
+   status <> 'done'`: merge repetido da mesma PR devolve `null`, não move de
+   novo e NÃO grava o evento. Quando move, grava UM evento imutável
+   `backlog.task_status_changed` (`cause: 'pr_merged'`, `pullRequestId`,
+   `actionId`), append-only, sem UPDATE em tabela de eventos. Sem migration.
+4. **Fronteira declarada (AT-249).** Esta regra NÃO recusa merge de PR já
+   mergeada nem consulta `gate_status`: a recusa "PR já mergeada e tarefa ainda
+   sem gate" é decisão pendente do dono e não foi implementada aqui.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:252`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:287`
+  (`markDoneIfNotDone`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
+  falho, PR sem tarefa)
+- **Origem:** AT-275
