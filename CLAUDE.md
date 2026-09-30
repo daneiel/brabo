@@ -707,16 +707,25 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
   `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
   `v4.0.0` FOI corrigida, com espera de teto 600s em
-  `build-runner-binaries.yml`. O que falta são os outros dois, e são DUAS
-  causas distintas: `win32-x64` e `darwin-arm64` reprovam no BUILD por motivo
-  próprio de plataforma (o `.node` do `node-pty` fora de `build/Release`;
-  `--self-test-pty` com `posix_spawnp failed`), e as duas correções JÁ ESTÃO
-  na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca exercitadas — o que
-  falta aí é uma TAG, não uma sessão. Não medido, mas o issue do Bun
-  (oven-sh/bun#25822, o `onData` do `node-pty` que nunca dispara) foi aberto
-  em darwin ARM64: é provável que o `darwin-arm64` esbarre nele depois do
-  conserto do `spawn-helper`, e aí "falta uma TAG" não bastaria. O quinto
-  alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
+  `build-runner-binaries.yml`. O que falta são os outros dois, e o ensaio da
+  matriz (`workflow_dispatch` com tag vazia, run 36775746724) mediu que os dois
+  já CONSTROEM — as correções de build da `dev` valeram — e reprovam no SMOKE,
+  por causas distintas. `win32-x64` saía com código 1 no uso sem argumentos:
+  `ENOENT` em `realpathSync`, porque o runner só reconhecia o caminho virtual
+  do binário compilado de Linux/macOS (`/$bunfs/`) e o do Windows é
+  `B:/~BUN/root/` (AT-343, `apps/runner/src/binario-compilado.ts`). `darwin-arm64`
+  passou do `posix_spawnp failed` e reprovou no `--self-test-pty` com o
+  marcador na saída UMA vez: é o oven-sh/bun#25822, MEDIDO — sob o Bun o
+  `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro `EAGAIN` do
+  fd não-bloqueante, e o terminal do binário parava depois do primeiro pedaço
+  de saída nas TRÊS plataformas Unix (o Linux passava na prova por sorte de
+  tempo). Sob o Bun o runner lê o PTY com leitor próprio
+  (`apps/runner/src/leitor-de-pty.ts`, AT-342), e o `--self-test-pty` ganhou
+  uma segunda volta depois de uma pausa, que reprova o leitor antigo também no
+  Linux. Provado no binário `linux-x64` e em teste; os dois alvos NÃO estão
+  provados até o próximo ensaio da matriz, e o `win32-x64` pode ter defeito
+  seguinte (o self-test no Windows usa `cmd.exe` pelo ConPTY, nunca rodado). O
+  quinto alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
   AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
   que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`
   no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a AT-114 o

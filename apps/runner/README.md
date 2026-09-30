@@ -304,6 +304,19 @@ O binário standalone não depende disso: ele embute o conteúdo do
 `spawn-helper` e o extrai com `0755` (`native-pty-loader.ts`). E isto não é o
 bug do Bun (oven-sh/bun#25822), que reprova o binário mesmo com o bit certo.
 
+Esse bug do Bun é MEDIDO (AT-342): sob o Bun, o `tty.ReadStream` com que o
+`node-pty` lê o PTY é um `fs.ReadStream`, e a primeira leitura sem dados no fd
+não-bloqueante sobe como `EAGAIN`, destrói o stream e fecha o fd — o terminal
+para de receber saída depois do primeiro pedaço, em qualquer plataforma Unix.
+Sob o Bun (o binário, ou `bun run` em dev) o runner troca esse leitor, só
+durante o `spawn`, por um leitor próprio do mesmo fd que espera e tenta de novo
+no `EAGAIN` (`leitor-de-pty.ts`; o fd ocioso é consultado a no máximo 32 ms).
+Sob o Node nada muda. O `--self-test-pty` faz duas voltas com uma pausa entre
+elas, e é a pausa que reprova o leitor antigo — antes, no Linux, a prova
+passava porque a primeira leitura trazia o eco e a resposta juntos. No Windows
+o self-test usa `cmd.exe` (não há `/bin/cat`) e conta o marcador sem as
+sequências de controle do ConPTY.
+
 ## Chave de dispositivo pelo terminal (`device-key create | finish`)
 
 O par Ed25519 pode nascer **nesta máquina**, sem passar pelo navegador (ADR

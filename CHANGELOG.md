@@ -522,6 +522,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   permissões; só um macOS real prova a correção de ponta a ponta. O binário
   standalone já extraía o helper com `0755` e não muda.
 
+- **runner**: o terminal interativo do binário standalone deixa de parar de
+  receber saída depois do primeiro pedaço (AT-342). Sob o Bun, o
+  `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro `EAGAIN` do
+  fd não-bloqueante (oven-sh/bun#25822): medido em Linux x64, escrevendo 200 ms
+  depois do spawn, nenhuma saída chegava. No `macos-14` o `--self-test-pty`
+  reprovava por isso (o marcador chegava UMA vez, só o eco); no Linux passava
+  por sorte de tempo. Sob o Bun o runner agora lê o PTY com um leitor próprio
+  que espera e tenta de novo no `EAGAIN` (consulta o fd ocioso a no máximo
+  32 ms), e o `--self-test-pty` faz uma segunda volta depois de uma pausa —
+  com o leitor antigo ela reprova também no Linux. Provado no binário
+  `linux-x64`; o `darwin-arm64` só o próximo ensaio da matriz prova.
+
+- **runner**: o binário standalone de Windows deixa de sair com código 1 e
+  `ENOENT` em `realpathSync` antes de fazer qualquer coisa (AT-343). O runner
+  só reconhecia o caminho virtual do binário compilado de Linux/macOS
+  (`/$bunfs/root/`); o do Windows é `B:/~BUN/root/`. As duas formas passam a
+  ser reconhecidas, e no Windows o `--self-test-pty` usa `cmd.exe` no lugar de
+  `/bin/cat`. Provado por teste com os caminhos; só o ensaio da matriz no
+  `windows-latest` prova o binário.
+
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de
