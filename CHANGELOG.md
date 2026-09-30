@@ -378,6 +378,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: a aba PRs sem imagem decidida deixa de mostrar "A aba Code ainda não
+  está liberada" — diz "A lista de PRs ainda não está liberada" e por quê; o
+  nome da aba no texto passa a vir do mesmo rótulo do trilho ("Código"/"Code")
+  (AT-323, [RN-646](docs/business-rules.md#rn-646)). Em `/containers`, Parar e
+  Remover num projeto sem container dizem em texto que não há container, o
+  "Remover" desabilitado deixa de sair em vermelho cheio, e o motivo longo da
+  falta de broker vira uma linha curta com o detalhe num "Por quê?" expansível
+  (AT-324).
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

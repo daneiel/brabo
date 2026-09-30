@@ -95,6 +95,13 @@
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
+/* Era a única variante SEM estado desabilitado: um "Remover" inerte saía em
+   vermelho cheio, igual ao ativo, e parecia oferecer remover o que não existe
+   (AT-324). Mesmo tratamento de `.secondary`/`.ghost`. */
+.danger:disabled {
+  opacity: 0.5;
+}
+
 .success {
   background: var(--success);
   /* Era `#fff` — o único hex solto do arquivo. `--on-accent` (#f7eee2) é o

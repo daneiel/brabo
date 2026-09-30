@@ -60,6 +60,16 @@
     },
     "ressalva": {
       "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada."
-    }
+    },
+    "semContainer": {
+      "nuncaProvisionado": "Nunca provisionado: não há container para parar nem remover.",
+      "removido": "Container removido: não há o que parar nem remover."
+    },
+    "bloqueioCurto": {
+      "sem_broker_na_instalacao": "Sem broker de container nesta instalação: a subida só terminaria em falha.",
+      "sem_broker_para_parar": "Sem broker de container nesta instalação: parar e remover só terminariam em falha.",
+      "sem_broker_ambos": "Sem broker de container nesta instalação: subir, parar e remover só terminariam em falha."
+    },
+    "bloqueioDetalhe": "Por quê?"
   }
 }
