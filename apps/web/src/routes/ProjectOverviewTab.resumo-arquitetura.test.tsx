@@ -47,6 +47,7 @@ const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
+const getResolvedModelBindings = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
@@ -92,7 +93,10 @@ vi.mock('../lib/api-client', async () => {
     getArchitecture: (...args: unknown[]) => getArchitecture(...args),
     getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // A rota por agente segue na api; a aba não a lê mais (RN-654, AT-339), e
+    // o dublê existe para o teste PROVAR isso.
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    getResolvedModelBindings: (...args: unknown[]) => getResolvedModelBindings(...args),
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
@@ -166,6 +170,7 @@ beforeEach(() => {
   getSessionTokenUsage.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
+  getResolvedModelBindings.mockResolvedValue({ agents: [], areas: [] });
   listAgentAutonomy.mockResolvedValue([]);
   listWorkspaces.mockResolvedValue([
     {

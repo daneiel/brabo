@@ -207,7 +207,13 @@
     "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
     "recorte": "Showing {{mostradas}} of {{total}} — the rest are in the Approvals tab.",
-    "semPapel": "Deciding here needs the developer role on the project. You can see the item, but someone else decides."
+    "semPapel": "Deciding here needs the developer role on the project. You can see the item, but someone else decides.",
+    "motivoNaoLido": {
+      "todas_one": "The policy reason for this card could not be read: reading the log of the session that proposed the action failed.",
+      "todas_other": "The policy reason for these {{count}} cards could not be read: reading the log of the session that proposed the actions failed.",
+      "algumas_one": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the action failed.",
+      "algumas_other": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the actions failed."
+    }
   },
   "mergearNoChat": {
     "botao": "Merge",

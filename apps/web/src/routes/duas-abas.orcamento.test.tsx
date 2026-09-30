@@ -37,6 +37,12 @@ import type { SessionChannelHandlers } from '../lib/session-channel';
  *
  * O último é o que casa com o número do incidente: 9 linhas × 12/min = 108
  * `GET /projects/:id/sessions`, contra os 106 do log.
+ *
+ * Remedidos na AT-339 (os tetos abaixo são estes números, não folga):
+ *   chat + Executores, canal vivo ........ 71 + 64 = 135
+ *   idem, dev agent em rajada ............ 71 + 89 = 160
+ *   idem, canal que nunca conecta ........ 156 + 104 = 260
+ *   CARGA de Executores / Visão geral .... 29 / 33 → 27 / 31 (bindings em lote)
  */
 
 const contagem = new Map<string, number>();
@@ -178,7 +184,7 @@ async function avancar(ms: number) {
   });
 }
 
-type Aba = 'chat' | 'executores' | 'containers';
+type Aba = 'chat' | 'executores' | 'visao-geral' | 'containers';
 
 /** Uma aba do navegador: o `Shell` e a tela da rota, com os defaults de `main.tsx`. */
 async function abrir(aba: Aba) {
@@ -192,13 +198,14 @@ async function abrir(aba: Aba) {
   // montando ali somava buscas que não são do regime. Pré-carregado, o `lazy`
   // resolve na carga, pelo mesmo caminho de produção.
   await import('./ProjectExecutorsTab');
+  await import('./ProjectOverviewTab');
   const { __Caminho: Caminho } = (await import('@tanstack/react-router')) as unknown as {
     __Caminho: React.Context<string>;
   };
   const caminho =
     aba === 'chat'
       ? '/projects/proj-1/sessions/sess-chat'
-      : aba === 'executores'
+      : aba === 'executores' || aba === 'visao-geral'
         ? '/projects/proj-1'
         : '/containers';
   const tela =
@@ -206,6 +213,8 @@ async function abrir(aba: Aba) {
       <SessionPage projectId="proj-1" sessionId="sess-chat" />
     ) : aba === 'executores' ? (
       <ProjectPage projectId="proj-1" initialTab="executores" />
+    ) : aba === 'visao-geral' ? (
+      <ProjectPage projectId="proj-1" initialTab="overview" />
     ) : (
       <ContainersPage />
     );
@@ -238,6 +247,18 @@ async function umMinuto(durante?: (decimo: number) => void): Promise<Record<stri
   return Object.fromEntries(contagem);
 }
 
+/**
+ * A CARGA de uma aba: o que ela pede do render até estabilizar (os 5s de
+ * `abrir`), sem o minuto — e desmonta.
+ */
+async function carregar(aba: Aba) {
+  contagem.clear();
+  await abrir(aba);
+  const porRota = Object.fromEntries(contagem);
+  cleanup();
+  return porRota;
+}
+
 const total = (porRota: Record<string, number>) =>
   Object.values(porRota).reduce((a, b) => a + b, 0);
 
@@ -265,8 +286,9 @@ describe('orçamento de requisições com DUAS abas (AT-278, RN-632)', () => {
     const chat = await medir('chat');
     const executores = await medir('executores');
 
-    // `dev`: 208. A aba de Executores caiu de 138 para 72.
-    expect(total(chat) + total(executores)).toBeLessThanOrEqual(150);
+    // `dev`: 208. A aba de Executores caiu de 138 para 72, e mediu 64 na
+    // AT-339 — o teto é o número medido (71 + 64).
+    expect(total(chat) + total(executores)).toBeLessThanOrEqual(135);
     // `dev`: 12/min (5s). Ritmo de projeto: 15s.
     expect(executores['GET /projects/:id/sessions']).toBe(4);
     // `GET /projects/:id` só na montagem: nenhuma das duas o polla.
@@ -293,7 +315,8 @@ describe('orçamento de requisições com DUAS abas (AT-278, RN-632)', () => {
     // aba não lê mais.
     expect(executores['GET /projects/:id/actions']).toBeGreaterThanOrEqual(12);
     expect(executores['GET /projects/:id/sessions/:id/actions'] ?? 0).toBe(0);
-    expect(total(chat) + total(executores)).toBeLessThan(200);
+    // Medido na AT-339: 71 + 89.
+    expect(total(chat) + total(executores)).toBeLessThanOrEqual(160);
   }, 60_000);
 
   it('CASO DE FALHA: canal que nunca conecta — o poll curto volta, e as duas abas ainda cabem no teto', async () => {
@@ -304,7 +327,25 @@ describe('orçamento de requisições com DUAS abas (AT-278, RN-632)', () => {
     // Sem canal a sessão volta aos 3s de sempre (RN-579: nunca pior que era).
     expect(executores['GET /projects/:id/sessions/:id/events']).toBe(20);
     // `dev`: 341 — o teto estourava só com as duas abas paradas na tela.
-    expect(total(chat) + total(executores)).toBeLessThan(300);
+    // Medido na AT-339: 156 + 104.
+    expect(total(chat) + total(executores)).toBeLessThanOrEqual(260);
+  }, 60_000);
+
+  it('a carga da Visão geral e da aba Executores lê os bindings em LOTE, não um por agente (AT-339)', async () => {
+    const executores = await carregar('executores');
+    const visaoGeral = await carregar('visao-geral');
+
+    for (const carga of [executores, visaoGeral]) {
+      // `dev`: um `GET .../agent-bindings/:slug` por agente do roster (3 nesta
+      // fixture; numa sessão com time e módulos, um por cartão).
+      expect(Object.keys(carga).filter((k) => /agent-bindings\//.test(k))).toEqual([]);
+      // O roster daqui é todo do catálogo: uma leitura só, a mesma chave da
+      // aba Configurações (RN-654).
+      expect(carga['GET /projects/:id/model-bindings/resolved']).toBe(1);
+    }
+    // `dev`: 29 e 33.
+    expect(total(executores)).toBeLessThanOrEqual(27);
+    expect(total(visaoGeral)).toBeLessThanOrEqual(31);
   }, 60_000);
 
   it('/containers não polla a lista de sessões de cada projeto (9 projetos: 108/min → 0)', async () => {

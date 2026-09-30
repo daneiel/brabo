@@ -218,6 +218,7 @@ estado lido do repositório e não da conversa.
 | O handoff do PO ao Arquiteto é aceito pelo sistema com backlog coberto e repositório local (AT-314) | ADR 0186, RN-660 |
 | O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
 | Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
+| A Visão geral e a aba Executores leem os modelos do time pelo lote, e os cartões das pendências de outras sessões no chat mostram o motivo da política (AT-339/AT-340) | RN-654, RN-656 |
 
 ## Estado atual e aberto
 
@@ -1892,7 +1893,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (container, gasto, `lastUsedAt`) fica fora, com o default. Os bindings
   RESOLVIDOS de agentes e áreas vêm num LOTE só
   (`GET .../model-bindings/resolved`, RN-654), sob UMA `queryKey` que as três
-  seções de modelo leem — não volte a uma query por chave. Guardado por
+  seções de modelo, a Visão geral e a aba Executores leem (os `dev-<modulo>`
+  fora do catálogo numa leitura em lote a mais, sob o mesmo prefixo, AT-339) —
+  não volte a uma query por chave. Guardado por
   `configuracoes.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
