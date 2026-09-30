@@ -214,6 +214,22 @@ describe('ContainersPage', () => {
     expect(screen.getByText('rodando')).toBeInTheDocument();
   });
 
+  it('AT-278 (RN-632): a linha lê a sessão mais recente SEM poll — uma por projeto a cada 5s estourava o teto', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item(), item({ projectId: 'proj-2', projectName: 'api', projectSlug: 'api' })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(useLatestSession).toHaveBeenCalledWith('proj-1', false);
+    expect(useLatestSession).toHaveBeenCalledWith('proj-2', false);
+    // Nenhuma linha pede o poll default (o segundo argumento ausente).
+    expect(useLatestSession.mock.calls.every((args) => args[1] === false)).toBe(true);
+  });
+
   it('naoVerificado (teto atingido) NUNCA é confundido com naoObservado — texto próprio', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,

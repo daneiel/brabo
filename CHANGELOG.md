@@ -398,6 +398,45 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `parallelize` e `raise_max_parallel` respondem 400 com `reason:
   "teto_do_sempre_permitir"`, sem gravar nada. A semeadura da ativação
   (`git_commit`/`git_push`/`pr_open` automáticos por módulo) não muda.
+
+- **web**: o handoff manual não esconde mais "Estou pronto para produzir" nem
+  "Confirmar arquitetura pronta" — ele era tomado pela prontidão declarada
+  porque grava como origem o último agente ativado. E a oferta de handoff a um
+  agente que já roda noutra sessão do projeto (o Dev Lead na sessão de
+  execução) deixa de ter "Aceitar" (AT-293/AT-294,
+  [RN-633](docs/business-rules.md#rn-633)).
+
+- **web**: depois de "Ativar execução", a tela vai à sessão de execução que a
+  api criou, com o aviso "Levando você à sessão de execução." — antes ficava
+  na sessão de chat de onde o clique partiu (AT-295,
+  [RN-634](docs/business-rules.md#rn-634)).
+
+- **web**: depois de ativar a execução, a sessão de onde ela saiu não perde
+  mais os agentes que já estavam nela — a ativação passa a ser lida também dos
+  handoffs e do gasto por agente DESTA sessão, e não só do resumo, que é da
+  sessão mais recente (a de execução). E a oferta de handoff cujo evento saiu
+  dos últimos 200 do fio ganha o botão "Aceitar" numa faixa fixa acima do
+  composer, em vez de ficar pendente sem botão (AT-251/AT-253, revisão do PR
+  #759, [RN-631](docs/business-rules.md#rn-631)).
+
+- **web**: o handoff manual a agente à escolha passa a ter o botão
+  "Aceitar" no fio — antes o card casava a oferta pelo agente de origem, e o
+  manual é gravado com a pessoa como autora, então o botão nunca aparecia (o
+  `handoff.offered` ao PO de 29/09 ficou sem aceite). E oferta pendente não
+  esconde mais as seguintes: cada uma tem o botão no próprio evento, e duas ao
+  mesmo agente viram um botão só, o da mais recente (AT-253,
+  [RN-631](docs/business-rules.md#rn-631), [ADR 0109](docs/adr/0109-handoff-manual-a-agente-a-escolha.md)).
+
+- **web**: o chat da Sessão passa a mostrar e deixar ESCOLHER o destinatário
+  da mensagem — um seletor "Para" no composer com os agentes que já estão na
+  sessão. Antes a mensagem ia, sem aviso, ao último agente ativado na janela de
+  200 eventos: no uso real de 29/09, depois dos aceites à Infra e ao Arquiteto,
+  o "oi" foi respondido pelo Arquiteto. Aceitar um handoff na tela faz do
+  agente que entrou o destinatário; com dois ou mais agentes e nenhuma escolha,
+  o envio fica travado e a tela pede a escolha. O card de aceite passa a casar
+  a oferta pelo `handoffId`, e agente ativado fora da janela (o
+  `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
+  (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node
@@ -408,6 +447,41 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   1.178.0), fechando seis CVEs, um deles CRITICAL. A troca é `--no-deps`,
   depois do semgrep, e a prova de que o `semgrep scan` dos gates segue
   funcionando é o scan de verdade que o próprio build já roda.
+- **web**: duas abas abertas (o chat da sessão e a aba Executores) não batem
+  mais no teto de 300 req/min do usuário (AT-278,
+  [RN-632](docs/business-rules.md#rn-632), extensão da
+  [RN-579](docs/business-rules.md#rn-579)). A aba Executores e a Visão geral
+  invalidavam os eventos a cada aviso do canal, sem janela — um dev agent em
+  rajada fazia 630 GET de eventos por minuto numa aba só — e passam pelo mesmo
+  invalidador da tela de Sessão (de brinde, a proposta do dev agent aparece na
+  hora, sem esperar 15s). A lista de sessões e os contadores do trilho do
+  projeto pollam a 15s (eram 3–5s); cada linha de `/containers` parou de pollar
+  a lista de sessões do seu projeto (com 9 projetos, 108 req/min só daquela
+  página); e a espera pelo runner para de sondar `GET /projects/:id` quando a
+  conexão confirma, não só no teto. Medido com as telas de verdade: 208 → 142
+  req/min com o canal vivo, 834 → 167 com um dev agent em rajada, 341 → 275 com
+  o canal caído. O teto não mudou.
+- **web/api**: a aprovação chega à janela certa (AT-296..299,
+  [RN-637](docs/business-rules.md#rn-637),
+  [RN-638](docs/business-rules.md#rn-638)). Numa sessão com mais de 200 ações
+  a pendente NOVA sumia do fio, dos Executores e de Aprovações: a tela lia a
+  primeira página e nunca paginava. `GET .../sessions/:id/actions` ganha
+  `latest=true` (a cauda) e `status=pending`, e a tela lê a cauda e, quando
+  ela vem cheia, as pendentes que ficaram de fora. O contador de Aprovações do
+  trilho, o painel "precisa de você", a aba Aprovações, a Visão geral e a aba
+  Código passam a ler as pendentes do PROJETO, em qualquer sessão — eram as da
+  sessão criada por último, e uma ideação aberta depois da execução escondia as
+  decisões dos dev agents; cada card decide pela sessão que a própria ação
+  carrega. As pendências de outras sessões aparecem também em sessão
+  encerrada e técnica, e na aba Executores — o `container_start` que o Infra
+  Lead propõe no chat fica visível onde o `dev.blocked_by_container` aparece.
+  E a proposta nova chega ao contador pelo aviso do canal, sem esperar os 15s
+  do poll de projeto, em toda tela que ouve um canal de sessão. O bloco de
+  pendências de outras sessões (AT-318) passa a caber na coluna do fio,
+  recolhível e com a presença de cada fila no cabeçalho, os cards com o
+  detalhe fechado — antes cobria ~60% do fio e deixava um card à vista de
+  três — e o rótulo de origem uma vez por sessão.
+
 - **api**: o merge executado do PR de um dev agent passa a marcar a tarefa como
   `done` — antes ela ficava em `in_review` para sempre (o `pr-6` foi mergeado três
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
@@ -1291,6 +1365,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   que o runbook manda ([RN-534](docs/business-rules.md#rn-534)). O workflow
   segue sem rodar em PR; o driver é exercitado em PR por
   `scripts/dev/install-e2e.spec.ts`.
+
+### Desempenho
+
+- **ci**: CI mais rápido sem runner pago (AT-303..306). Os nomes dos checks
+  exigidos NÃO mudam.
+  - O job `Build, scan e smoke das imagens de produção` classifica o diff do
+    PR no primeiro passo (`scripts/ci/diff-toca-imagem.ts`) e, quando nada
+    dele entra em imagem, no smoke ou no E2E (só `docs/` exceto
+    `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
+    exceto o `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`),
+    pula bake, Trivy, broker, smoke e E2E POR PASSO e termina verde dizendo
+    por quê. Na dúvida, roda tudo. O spec prova a lista contra os
+    Dockerfiles reais, por mutação.
+  - O mesmo job guarda em cache o navegador do Playwright (chave: versão +
+    `e2e/pnpm-lock.yaml`), o store do pnpm do `e2e/` e a base do Trivy (chave
+    diária; quem decide se ela está velha continua sendo o próprio Trivy).
+  - `Testes TS (api)` e `Testes TS (web)` rodam em dois shards cada; o job com
+    o nome antigo agrega: confere os dois shards, junta os relatórios `blob`
+    e aplica o MESMO piso de cobertura sobre a soma
+    (`vitest --merge-reports --coverage`).
+  - `claude-code-review.yml` ganha `concurrency` (cancela a revisão de um
+    HEAD que já mudou) e teto de 30 min; `docs-check.yml` ganha
+    `timeout-minutes`.
 
 ### Novidades
 

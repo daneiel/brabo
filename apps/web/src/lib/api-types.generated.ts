@@ -2690,7 +2690,7 @@ export interface paths {
         };
         /**
          * Paginates the proposed actions in the session
-         * @description Ordered by `seq`; use `nextCursor` as `afterSeq`.
+         * @description Ordered by `seq`; use `nextCursor` as `afterSeq`. `latest=true` fetches the TAIL instead (the newest `limit` actions, still ascending) and ignores `afterSeq`. `status=pending` keeps only the actions waiting for a decision — with `latest`, the newest pending ones, so a session with more than 200 actions does not push a new pending one out of the window (RN-637).
          */
         get: operations["ActionsController_list"];
         put?: never;
@@ -16774,6 +16774,10 @@ export interface operations {
             query?: {
                 afterSeq?: string;
                 limit?: string;
+                /** @description Fetches the tail of the session; ignores `afterSeq`. */
+                latest?: string;
+                /** @description Only `pending` is supported. */
+                status?: string;
             };
             header?: never;
             path: {

@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "97a42de913a9196f89dca0918c2dda9269d75dbb7d4533652921dacea911ff94",
+  "openapiSha256": "ba9af7798211e82b6e04e777daab97c74d62398343df596241651f93216cd4ed",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -14,10 +14,10 @@
     "actions-controller-deny.RequestSchema.json": "b00abaec0fc7fe1635eee11a18eb3d57b4009114c286c6b670d196733f9cea1d",
     "actions-controller-deny.StatusCodes.json": "a62eb62b67afc78ee1e4cc9e79a08c859d5d71f01e7254724fb7bfe1a84e73a0",
     "actions-controller-deny.api.mdx": "00bed9cdcc11da975d894d6327a68de17d7d9de23016bee7fcac98ee8bf692ff",
-    "actions-controller-list.ParamsDetails.json": "6d7b68acf386d17f9a22f70b2ef057267a4c890a26707b10f8b118d0d3aa15e8",
+    "actions-controller-list.ParamsDetails.json": "33774cc1273b881c3489e70cc8c1392a4d92b60ab842364defa7c588ffc3b8af",
     "actions-controller-list.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "actions-controller-list.StatusCodes.json": "d6f7ec7104dbb73d484a37e6c418e58fa23c6257656e1fe472587b9bf4377e5c",
-    "actions-controller-list.api.mdx": "f17fe1f232ad6e6652ab07956e8d3457afee36991789601e5e7fbb72beb77b65",
+    "actions-controller-list.api.mdx": "c8df318d493fc3909323c4b63e1b34ce07438bfe4e03c476b7f96b21c4b5f70b",
     "actions-controller-propose.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "actions-controller-propose.RequestSchema.json": "031ddf46b6268ace253ae74a0f3640096b72f956e93ae8269dfa0719af9b0052",
     "actions-controller-propose.StatusCodes.json": "9b1c5b87ee434f8968af61b3af7597e12e7c83d9f9568746c598405b31f537f2",
