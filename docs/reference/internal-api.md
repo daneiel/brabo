@@ -325,6 +325,32 @@ extract the field from the frame and include it in the `agent.response` payload
 (`modelName`), which is what `SessionPage.tsx` reads to show the model next
 to the agent's name.
 
+#### The Jev may narrow the tool menu ([RN-625](../business-rules.md#rn-625))
+
+Since [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md) both
+paths may ask the Jev tool router which tool fits the step before calling the
+chat model, and then offer the model only the menu that is left. The contract
+changes are additive:
+
+- **Request:** both bodies accept an optional `catalogoCompleto: boolean`.
+  `true` skips the router for that call and offers the whole `tools` list. The
+  engine sets it when it repeats a step whose restricted menu made the model
+  answer without calling a tool (once per step).
+- **Response:** `RunLlmTurnResult` and the `final` frame of
+  `LlmTurnStreamEvent` gain an optional `toolRouting` — the menu before and
+  after, the pick, its confidence, the previous tool of the run, latency, the
+  Jev's real cost, and, on any fall to the whole catalog, `motivoDaQueda` and
+  `origemDaQueda` (`infra`/`modelo`/`codigo`). It is ABSENT when the router was
+  not consulted: a provider other than OpenRouter, fewer than two tools, or the
+  workspace switch (`tool_router_enabled`) off. The engine records it as the
+  `tool_router.decided` event.
+- **Stream:** `/llm-turn-stream` may emit a `tool_routing_started` frame
+  BEFORE any `delta`. Engines that do not know it ignore it as an unknown frame
+  type.
+
+The turn never fails because of the router: every error falls to the whole
+catalog, with the reason in `toolRouting`. No route was added or removed.
+
 #### Spend reports do NOT go through here
 
 Metering is written on **this** path: each `/llm-turn` writes a row to
