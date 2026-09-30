@@ -470,6 +470,18 @@ clicking a DENIED action is still `409` with `reason: "acao_ja_recusada"`
 and writes nothing. The caps above are checked before any of this, even for
 an action that was already approved.
 
+**The TYPED half of the cap (AT-320).** Until 30/09 only the typed-in
+`git push` command was refused; a typed `git_push` action went through and
+wrote `GitPush()` into `allow`. "Always allow" now refuses, by type, the
+single list `TIPOS_SEM_SEMPRE_PERMITIR`
+(`apps/api/src/domain/actions/sempre-permitir.ts`): `git_push`, `pr_open`,
+`git_merge`, `container_remove`, `instruction_patch`, `parallelize` and
+`raise_max_parallel` — `400` with `reason: "teto_do_sempre_permitir"`. The
+approval card hides the button for the same list (a copy checked against
+this one by test). This does NOT change `decide()` nor what activating
+execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
+each `dev-<module>` (see "What activating execution seeds").
+
 ## Path scope
 
 A `terminal` command is also evaluated by **where it touches**, not just

@@ -17055,13 +17055,33 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
    continuam recusados com 400 ANTES de qualquer leitura de estado — inclusive
    com a ação já aprovada. O padrão continua o EXATO da ação (a generalização
    por verbo é a AT-257, fora daqui).
+6. **Os TIPOS do teto também (AT-320).** Medido na auditoria de 30/09: a api
+   só recusava o `git push` DIGITADO no terminal; o `git_push` TIPADO passava e
+   gravava `GitPush()` em `allow` (ou autonomia do módulo), e o `ApprovalCard`
+   oferecia o botão. `TIPOS_SEM_SEMPRE_PERMITIR` é a lista ÚNICA — `git_push`,
+   `pr_open`, `git_merge` (inteiro: o padrão `GitMerge()` valeria para todo
+   destino), `container_remove`, `instruction_patch`, `parallelize`,
+   `raise_max_parallel` — e `motivoDeRecusaDoSempreAprovar` julga terminal pelo
+   comando e o resto pelo tipo. A recusa é 400 com `reason:
+   'teto_do_sempre_permitir'` e `actionType`. A web esconde o botão pela cópia
+   em `apps/web/src/lib/sempre-permitir.ts`, conferida contra a da api por
+   teste; comando de terminal segue com o botão (repetir o parser na tela
+   seria segunda régua) e recebe a recusa da api. NÃO muda `decide()` nem a
+   semeadura: `DEV_AUTO_GIT_ACTIONS` continua dando `auto_approve` a
+   `git_commit`/`git_push`/`pr_open` de cada `dev-<modulo>` na ativação — o
+   que fecha é o CLIQUE criar autonomia nova para esses tipos.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
   (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:232`
-  (`approve`)
+  (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:29`
+  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:60` (`motivoDeRecusaDoSempreAprovar`),
+  `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
 - **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
   ("ordem e idempotência (RN-642)": clique duplo, cliques concorrentes, ação
   aprovada por outro caminho, recusada → 409 nomeado sem padrão, padrão que
-  falha desfaz a aprovação, tetos com a ação já aprovada)
-- **Origem:** AT-310
+  falha desfaz a aprovação, tetos com a ação já aprovada; "tipos do teto
+  (AT-320)"), `apps/api/test/domain/actions/sempre-permitir.spec.ts`,
+  `apps/web/src/lib/sempre-permitir.test.ts` (a cópia do web igual à da api),
+  `apps/web/src/components/ApprovalCard.test.tsx` (git tipado sem o botão)
+- **Origem:** AT-310, AT-320

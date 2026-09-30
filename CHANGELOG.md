@@ -389,6 +389,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   "acao_ja_recusada"` e nenhum padrão gravado. A resposta de
   `POST .../approve_always` ganha `desfecho` e `padraoGravado`. Os tetos
   (`git push`/PR/deploy, `sudo`/`doas`, `container_remove`) não mudam.
+- **api/web**: "Sempre permitir" passa a recusar também os TIPOS do teto, e o
+  card deixa de oferecer o botão para eles (AT-320,
+  [RN-642](docs/business-rules.md#rn-642)). A api só recusava o `git push`
+  digitado no terminal; um `git_push` tipado gravava `GitPush()` em `allow`
+  e o card mostrava "libera este tipo de ação só para dev-api". Agora
+  `git_push`, `pr_open`, `git_merge`, `container_remove`, `instruction_patch`,
+  `parallelize` e `raise_max_parallel` respondem 400 com `reason:
+  "teto_do_sempre_permitir"`, sem gravar nada. A semeadura da ativação
+  (`git_commit`/`git_push`/`pr_open` automáticos por módulo) não muda.
 - **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
   GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
   corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node

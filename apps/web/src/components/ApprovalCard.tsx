@@ -21,6 +21,7 @@ import {
   TerminalIcon,
   TrashIcon,
 } from './ui/icons';
+import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -230,13 +231,11 @@ export function ApprovalCard({
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
-  // `container_remove` entrou no MESMO teto absoluto de `instruction_patch`
-  // (ADR 0136, RN-495) — a api recusa (400) gravar o padrão de "sempre
-  // permitir" pra ele, então mostrar o botão prometeria um efeito que o
-  // clique não produz.
-  const podeSemprePermitir =
-    action.actionType !== 'instruction_patch' &&
-    action.actionType !== 'container_remove';
+  // Tipos do teto (git tipado, `container_remove`, `instruction_patch`,
+  // paralelismo — AT-320): a api recusa (400) gravar o padrão de "sempre
+  // permitir" pra eles, então mostrar o botão prometeria um efeito que o
+  // clique não produz. A lista é a da api, conferida por teste.
+  const podeSemprePermitir = podeOferecerSemprePermitir(action.actionType);
   // Mesma regra de `ehDevDeModulo`/`DEV_LEAD` em
   // `apps/api/src/domain/agents/agent-areas.ts` (RN-507) — sem cópia gerada
   // pro web porque só ESTE componente precisa saber, e só pra trocar o
