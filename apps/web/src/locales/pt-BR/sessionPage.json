@@ -51,7 +51,11 @@
     "confirmarArquitetura": "Confirmar arquitetura pronta",
     "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
     "confirmarNecessidade": "Confirmar necessidade validada",
-    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
+    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade",
+    "destinatarioLabel": "Para",
+    "destinatarioPlaceholder": "Escolha o agente…",
+    "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
+    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -90,7 +94,10 @@
     "infraBotao": "Aceitar handoff da Infra",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
-    "manualBotao": "Endereçar handoff"
+    "manualBotao": "Endereçar handoff",
+    "manualOrigem": "Handoff manual",
+    "foraDaJanelaTitulo": "{{de}} passou o bastão ao {{para}}",
+    "foraDaJanelaDetalhe": "O evento desta oferta já saiu dos últimos 200 do fio, e por isso o botão mora aqui."
   },
   "backlog": {
     "criouEpico": "criou o épico",
@@ -135,7 +142,8 @@
     "erroEnviarMensagem": "Não foi possível enviar a mensagem",
     "erroCancelarTurno": "Não foi possível cancelar o turno",
     "erroNoChat": "Erro no chat",
-    "aviso": "Aviso"
+    "aviso": "Aviso",
+    "levandoAExecucao": "Levando você à sessão de execução."
   },
   "modal": {
     "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",
@@ -183,7 +191,8 @@
       "aprovacoes": "Aprovações",
       "merges": "Merges de PR"
     },
-    "origem": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
     "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa."
   },

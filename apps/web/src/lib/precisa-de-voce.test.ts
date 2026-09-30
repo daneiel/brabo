@@ -105,7 +105,7 @@ const PENDENCIA: ArchitecturePendency = {
 };
 
 const VAZIO: EntradaDasFilas = {
-  acoesDaSessao: undefined,
+  acoesPendentes: undefined,
   merges: undefined,
   epicos: undefined,
   pendenciasDeArquitetura: undefined,
@@ -125,7 +125,7 @@ describe('montarFilas — as cinco filas continuam CINCO', () => {
 
   it('cada fila carrega os SEUS itens — nada é somado numa lista só', () => {
     const filas = montarFilas({
-      acoesDaSessao: [acao({ id: 'a1' }), acao({ id: 'a2' })],
+      acoesPendentes: [acao({ id: 'a1' }), acao({ id: 'a2' })],
       merges: [acao({ id: 'm1', actionType: 'git_merge' })],
       epicos: [
         epico([
@@ -155,7 +155,7 @@ describe('montarFilas — as cinco filas continuam CINCO', () => {
   it('só conta o que está mesmo esperando: ação decidida e hipótese aceita saem', () => {
     const filas = montarFilas({
       ...VAZIO,
-      acoesDaSessao: [
+      acoesPendentes: [
         acao({ id: 'a1' }),
         acao({ id: 'a2', status: 'approved' }),
         acao({ id: 'a3', status: 'denied' }),
@@ -179,7 +179,7 @@ describe('montarFilas — as cinco filas continuam CINCO', () => {
       ...VAZIO,
       // `usePendingActions` é da sessão e não filtra por tipo; o merge cai nos
       // dois. Numa lista só, isso seria a mesma decisão contada duas vezes.
-      acoesDaSessao: [merge, acao({ id: 'outra' })],
+      acoesPendentes: [merge, acao({ id: 'outra' })],
       merges: [merge],
     });
 
@@ -190,7 +190,7 @@ describe('montarFilas — as cinco filas continuam CINCO', () => {
   it('dentro da fila, quem espera há mais tempo vem primeiro', () => {
     const filas = montarFilas({
       ...VAZIO,
-      acoesDaSessao: [
+      acoesPendentes: [
         acao({ id: 'nova', createdAt: '2026-08-30T12:00:00.000Z' }),
         acao({ id: 'velha', createdAt: '2026-08-29T12:00:00.000Z' }),
         acao({ id: 'media', createdAt: '2026-08-30T06:00:00.000Z' }),

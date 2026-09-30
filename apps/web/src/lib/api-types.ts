@@ -224,6 +224,12 @@ export interface ProjectCardSummary {
     moduleNames: string[];
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
+    /**
+     * Agentes com ao menos um `agent.activated` na sessão MAIS RECENTE, a
+     * sessão inteira e não a janela de 200 (RN-630). O cliente SOMA à janela
+     * e só confia quando `latestSessionId` é a sessão que ele lê.
+     */
+    activatedAgents: string[];
     infraActive: boolean;
     /** ADR 0087 — mesmo critério de `infraActive`. */
     uxDesignerActive: boolean;

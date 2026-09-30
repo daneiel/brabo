@@ -104,7 +104,13 @@ export function intervaloDaSessao(
 }
 
 /** O que um aviso do canal pode deixar desatualizado. */
-export type AlvoDoCanal = 'eventos' | 'acoes' | 'handoffs' | 'backlog' | 'orcamento';
+export type AlvoDoCanal =
+  | 'eventos'
+  | 'acoes'
+  | 'pendenciasDoProjeto'
+  | 'handoffs'
+  | 'backlog'
+  | 'orcamento';
 
 /**
  * Tipo de evento → queries que ele invalida. Os prefixos são os tipos
@@ -116,7 +122,18 @@ export type AlvoDoCanal = 'eventos' | 'acoes' | 'handoffs' | 'backlog' | 'orcame
  */
 export function alvosDoEvento(type: string): AlvoDoCanal[] {
   const alvos: AlvoDoCanal[] = ['eventos', 'orcamento'];
-  if (type.startsWith('proposed_action.') || type.startsWith('action.')) alvos.push('acoes');
+  // AT-299: a mesma escrita muda a fila do PROJETO (`['project-pending-actions',
+  // projectId]`), que o contador do trilho, o painel "precisa de você", a aba
+  // Aprovações e as pendências de outras sessões leem (RN-638). Sem isto a
+  // proposta nova esperava o poll de projeto de 15s (AT-278) para aparecer ali.
+  if (type.startsWith('proposed_action.') || type.startsWith('action.')) {
+    alvos.push('acoes', 'pendenciasDoProjeto');
+  }
+  // O dev agent bloqueado por container (RN-502) espera um `container_start`
+  // que nasce em OUTRA sessão (a do Infra Lead): o canal da execução não
+  // avisa essa proposta, mas avisa o bloqueio — e é a deixa para reler a fila
+  // do projeto, onde ela está (AT-298).
+  if (type === 'dev.blocked_by_container') alvos.push('pendenciasDoProjeto');
   if (type.startsWith('handoff.')) alvos.push('handoffs');
   if (type.startsWith('backlog.')) alvos.push('backlog');
   return alvos;
@@ -133,6 +150,7 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
 export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
   eventos: 3_000,
   acoes: 2_000,
+  pendenciasDoProjeto: 2_000,
   handoffs: 2_000,
   backlog: 2_000,
   orcamento: 10_000,
@@ -158,6 +176,8 @@ export function criarInvalidadorDoCanal(
   const chaves: Record<AlvoDoCanal, readonly unknown[]> = {
     eventos: ['session-events', projectId, sessionId],
     acoes: ['session-actions', projectId, sessionId],
+    // Por PREFIXO: alcança a leitura sem tipo e a de `git_merge` da aba PRs.
+    pendenciasDoProjeto: ['project-pending-actions', projectId],
     handoffs: ['session-handoffs', projectId, sessionId],
     backlog: ['backlog', projectId],
     orcamento: ['session-budget', projectId, sessionId],
