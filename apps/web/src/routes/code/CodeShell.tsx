@@ -6,10 +6,11 @@ import {
   useArchitecture,
   useHandoffs,
   useLatestSession,
-  usePendingActions,
+  useProjectPendingActions,
   useSessionEvents,
 } from '../../lib/hooks';
 import { deriveAgentRoster } from '../../lib/agent-status';
+import { INTERVALO_DO_PROJETO_MS } from '../../lib/canal-vivo';
 import { BranchIcon, FolderIcon, SearchIcon } from '../../components/ui/icons';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { CodeExplorer } from './CodeExplorer';
@@ -95,9 +96,11 @@ export function CodeShell({ projectId }: { projectId: string }) {
   const events = eventsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
   const handoffsQuery = useHandoffs(projectId, sessionId);
-  const actionsQuery = usePendingActions(projectId, sessionId);
+  // Quem espera decisão sai da fila do PROJETO (AT-297, RN-638), a mesma
+  // chave do contador do trilho — não a da sessão mais recente.
+  const pendentesQuery = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
   const pendingActionAgentIds = new Set(
-    (actionsQuery.data?.items ?? [])
+    (pendentesQuery.data ?? [])
       .filter((a) => a.status === 'pending')
       .map((a) => a.actor.id),
   );

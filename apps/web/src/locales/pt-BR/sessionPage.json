@@ -191,7 +191,8 @@
       "aprovacoes": "Aprovações",
       "merges": "Merges de PR"
     },
-    "origem": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
     "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa."
   },

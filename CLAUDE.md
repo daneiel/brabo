@@ -192,6 +192,8 @@ estado lido do repositório e não da conversa.
 | O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
 | O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
 | Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
+| Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 
 ## Estado atual e aberto
 
@@ -1813,7 +1815,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
   passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
   aviso SEM janela só troca poll por rajada. O número é guardado por
-  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Leitura
+  de PROJETO (lista de sessões, contadores do trilho) nenhum canal avisa, e
+  polla no ritmo de projeto, `INTERVALO_DO_PROJETO_MS` (15s, incondicional);
+  quem só precisa do dado no CLIQUE não polla (`useLatestSession(id, false)`,
+  as linhas de `/containers`); e TODA tela que ouve `session:<id>` — não só a
+  de Sessão: Executores e Visão geral também — passa pelo MESMO
+  `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
+  eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit
@@ -1995,6 +2005,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
   incluído); reabrir a sessão retoma do log o turno em curso, sem fila de
   mensagem (essa é decisão pendente do dono).
+  Quem pergunta "o que espera decisão" — contador do trilho, painel, aba
+  Aprovações, roster da Visão geral/Executores/Código — lê a fila do PROJETO
+  (`useProjectPendingActions`, chave `['project-pending-actions', projectId]`),
+  NUNCA a sessão mais recente (RN-638), e cada card decide pelo `sessionId` da
+  PRÓPRIA ação; o aviso `proposed_action.*` de qualquer canal invalida essa
+  chave. A leitura de ações por SESSÃO é a CAUDA (`latest`) mais as pendentes
+  quando a cauda vem cheia (RN-637) — nunca a primeira página.
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
@@ -2173,6 +2190,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `ExternalSecret`, com restart da api e o `rewrap-deks.js` da imagem —
   ensaio, não rotação de ambiente real.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
+- Subagentes das rodadas do backlog têm DUAS definições em `.claude/agents/`,
+  por esforço de raciocínio (decisão do dono, 30/09): `analista` (esforço
+  MÉDIO, somente leitura) levanta requisitos e mede antes de uma atividade, e
+  `executor` (esforço BAIXO) executa a atividade já especificada. Não troque
+  os papéis: esforço médio é só para raciocínio de levantamento.
 
 ## Documentação é parte da definição de pronto (permanente)
 - Ao alterar código, consulte docs/.docmap.yml e atualize os docs

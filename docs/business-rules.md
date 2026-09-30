@@ -304,8 +304,8 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
-- **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:263` (`eventsQuery`)
+- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5912,7 +5912,7 @@ na api resolveria de verdade e é decisão à parte, fora do escopo desta.
   identidade e o empréstimo de data), `:241` (`temAlgoEsperando`);
   `apps/web/src/components/PainelPrecisaDeVoce.tsx:246-248` (`role="dialog"`,
   `aria-modal`, rótulo) e `:279-284` (grupo por fila, com a contagem dela);
-  `apps/web/src/routes/ProjectPage.tsx:116` (monta as filas a partir dos
+  `apps/web/src/routes/ProjectPage.tsx:120` (monta as filas a partir dos
   cinco hooks que os contadores do trilho já usam)
 - **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (as cinco filas
   separadas com os itens de cada uma; nada somado e nenhuma função de total;
@@ -6692,7 +6692,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:415`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:417`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -9726,7 +9726,7 @@ reparável (termina em toast), não o invisível.
   `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
   `apps/web/src/routes/containers-subida.ts:107` (`decidirSubida`, a regra
   inteira, pura);
-  `apps/web/src/routes/ContainersPage.tsx:115` (os dois payloads)
+  `apps/web/src/routes/ContainersPage.tsx:119` (os dois payloads)
 - **Teste:**
   `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts`
   (o terceiro estado com motivo próprio; 25 projetos vazios que NÃO empurram
@@ -10254,8 +10254,8 @@ duas devem.
   (`FRASE_DO_ENGINE_SEM_RUNNER`, o único casamento por substring que sobrou) e
   `:68` (`motivoDaMensagem`); `apps/web/src/components/FolderBrowserModal.tsx:227`
   (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
-  origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
-  `:119` (o `ref` que a dispara uma vez);
+  origens; `apps/web/src/components/EsperaDoRunner.tsx:91` (`onConfirmado`) e
+  `:136` (o `ref` que a dispara uma vez);
   `apps/web/src/components/RunnerOnboardingPanel.tsx:150` (`mostrarEspera`);
   `apps/web/src/routes/NewProjectWizard.tsx:304` (`origemDoNavegador`, o
   transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
@@ -13733,8 +13733,8 @@ da guarda, o mesmo dos outros dois fatos.
 - **Código:** `apps/web/src/lib/agent-status.ts:299` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
-  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:96` e
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:108` (o agregado com a guarda
+  `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:111` (o agregado com a guarda
   de sessão)
 - **Teste:** `apps/web/src/lib/agent-status.test.ts:628` (o bloco inteiro:
   `:633` gate fora da janela traz QA/SecOps com status da janela, `:658` sem
@@ -14502,6 +14502,10 @@ voltavam 304 em 99% das vezes), enquanto a tela já mantinha aberto o canal
 **123** com o canal caído (o comportamento de antes, intacto como fallback) e
 **46** com ele vivo — dos quais 24 são do Shell (resumo dos projetos e sessão
 de execução, que não são da sessão e seguem em 5s). Duas abas: 246 → 92.
+Desde a [RN-632](#rn-632) (AT-278) as leituras de PROJETO pollam no ritmo de
+projeto (15s) e as abas Executores e Visão geral passam pelo MESMO
+`criarInvalidadorDoCanal` — a medição com as telas de verdade e duas abas mora
+lá.
 
 **O que esta regra NÃO fecha:** o aviso da escrita que a api faz por conta
 própria (item 1, AT-157) é melhor esforço — se o engine estiver fora ou o
@@ -14524,8 +14528,8 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
-  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:47` (estado), `:79`
-  (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
+  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:98`
+  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
@@ -14825,7 +14829,7 @@ repositório, não o de cada sessão, e não mudaram.
   `apps/api/src/domain/execution/repositorio-para-executar.ts:50`
   (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
   também usa); `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:55`
-  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:367` e `:509`;
+  (`findByProject`); `apps/web/src/routes/ProjectOverviewTab.tsx:369` e `:511`;
   `apps/web/src/routes/SessionPage.tsx:147`; `apps/web/src/routes/session-timeline-montagem.tsx:495`;
   `apps/web/src/lib/session-acoes-de-handoff.ts:130`;
   `apps/engine/lib/engine/projects/project_repository.ex:74` (o texto da recusa
@@ -15346,7 +15350,7 @@ decidir se passam a consultá-lo é decisão à parte, fora desta regra.
 
 - **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
   (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
-  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:124`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:137`
   (`sessaoMaisRecente`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
   (vínculo e não nome; técnica de outro projeto não marca),
@@ -17209,3 +17213,220 @@ ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
 - **Origem:** AT-295
+### RN-632 — Leitura de PROJETO polla no ritmo de projeto, e toda tela que ouve o canal da sessão invalida pela MESMA janela {#rn-632}
+
+O uso real de 29/09 bateu o teto de 300 req/min do usuário ([RN-579](#rn-579))
+com duas abas abertas: 192 × 429 às 07:14, 106 deles em
+`GET /projects/:id/sessions` e 20 em `GET /projects/:id`, e três cliques de
+`approve_always` recusados no meio (AT-278). A RN-579 tinha posto sob o canal
+as leituras da tela de SESSÃO; as de PROJETO e as outras telas que ouvem o
+canal ficaram de fora. O teto NÃO muda: o que cai é o pedido.
+
+**A regra:**
+
+1. **Leitura de projeto que nenhum canal avisa polla a 15s**
+   (`INTERVALO_DO_PROJETO_MS`), INCONDICIONAL. O canal `session:<id>` só avisa
+   escritas da própria sessão; a lista de sessões do projeto e os contadores do
+   trilho (aprovações da sessão mais recente, merges pendentes do projeto,
+   histórias a promover, pendências de arquitetura, hipóteses) mudam por escrita
+   de QUALQUER sessão — não há aviso para esperar, então o mecanismo é poll
+   longo, no mesmo fallback que a RN-579 já aceita para a sessão. Vale para
+   `useProjectSessions`/`useLatestSession` (eram 5s), para os cinco contadores
+   da moldura `ProjectPage` e para a arquitetura da aba Executores. A aba que
+   mostra o dado como ASSUNTO (Backlog, Arquitetura, PRs) mantém o poll dela, e
+   o observador mais rápido dita o ritmo da chave. Quem escreve nesta aba
+   continua invalidando a chave na hora.
+2. **Quem só precisa do dado no clique não polla.** Cada linha de
+   `/containers` lê a sessão mais recente do seu projeto para PROPOR
+   parar/remover/subir; em poll de 5s eram 12 req/min POR PROJETO — nove
+   projetos, 108/min só dessa página, o número que casa com os 106 do log.
+   `useLatestSession(projectId, false)`: montagem e foco da janela bastam.
+3. **Toda tela que ouve o canal passa por `criarInvalidadorDoCanal`.** As abas
+   Executores e Visão geral invalidavam os eventos a CADA `event.appended`,
+   sem janela: um dev agent em rajada (10 avisos/s) fazia 630 GET de eventos
+   por minuto só na aba Executores. Agora as duas usam o MESMO invalidador da
+   tela de Sessão (janela por alvo, o TIPO decide o alvo), e ganham de brinde o
+   que faltava: a proposta de ação do dev agent invalida as ações na hora, em
+   vez de esperar o fallback de 15s. A Visão geral pede o backlog a cada aviso
+   (as tasks bloqueadas vêm dele) pelo parâmetro `extras`, com a mesma janela.
+4. **A espera pelo runner para quando acaba.** `EsperaDoRunner` só parava a
+   sonda de `GET /projects/:id` (3s) no TETO; confirmada a conexão, o efeito do
+   teto saía cedo e a sonda seguia para sempre — 20 req/min enquanto o painel
+   estivesse na tela, e, sendo o observador mais rápido de `['project', id]`,
+   arrastando a chave inteira da página. Agora para no teto OU na confirmação.
+
+**Números** (`duas-abas.orcamento.test.tsx`, as telas de verdade — `Shell`,
+`SessionPage`, `ProjectPage` na aba Executores, `ContainersPage` — sobre um
+`fetch` que conta por rota; cada aba medida sozinha, porque duas abas são dois
+contextos JS, e somadas; req/min, `dev` → esta regra):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| chat da sessão + Executores, canal vivo | 70 + 138 = 208 | 70 + 72 = 142 |
+| idem, dev agent em rajada (10 avisos/s) | 70 + 764 = 834 | 70 + 97 = 167 |
+| idem, canal que nunca conecta | 155 + 186 = 341 | 155 + 120 = 275 |
+| `/containers` com 9 projetos | 132 (108 de `/sessions`) | 24 |
+
+**O que esta regra NÃO fecha:** com o canal CAÍDO nas duas abas, 275/min ainda
+é perto do teto — a tela de Sessão volta aos 3s de sempre (RN-579: nunca pior
+que era), e 25 req/min de folga somem com uma rajada de cliques. O `Shell`
+segue pollando `projects-summary` e `execution/session` a 5s e, na aba do chat,
+os eventos da sessão de EXECUÇÃO a 3s (a aba não tem o canal dela) — 44 das 70
+req/min da aba do chat. Uma lista de sessões criada noutra aba aparece aqui em
+até 15s (eram 5s). O número do incidente foi CASADO, não reproduzido: o log
+não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
+numa delas é inferência pelos 106 ≈ 9 × 12.
+
+- **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
+  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:119`
+  (`useProjectSessions`), `:148` (`useLatestSession`);
+  `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
+  `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:168` (`invalidador`);
+  `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
+- **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
+  com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
+  os quatro reprovam na `dev`); `apps/web/src/components/EsperaDoRunner.test.tsx`
+  ("confirmada a espera, a sonda PARA" e o caso de falha: sem confirmação ela
+  segue); `apps/web/src/routes/ContainersPage.test.tsx` ("a linha lê a sessão
+  mais recente SEM poll")
+- **Origem:** AT-278 (extensão da [RN-579](#rn-579); não muda a RN-108 — o
+  ticket de uso único e a reconexão manual seguem como estão)
+
+### RN-637 — A tela lê a CAUDA das ações da sessão, e a pendente antiga volta junto {#rn-637}
+
+`GET /projects/:projectId/sessions/:sessionId/actions` ordenava por `seq`
+crescente com teto de 200, e `usePendingActions` nunca paginava: a partir da
+ação 201 de uma sessão — o que uma execução real alcança fácil, um dev agent
+propõe dezenas de comandos por tarefa — a pendente NOVA ficava fora da única
+página lida e sumia do fio, dos Executores e de Aprovações (AT-296), justamente
+quando havia alguém esperando por ela.
+
+**A regra:**
+
+1. **A rota aceita `latest=true` e `status=pending`.** `latest` traz as `limit`
+   ações de `seq` mais alto, devolvidas em ordem CRESCENTE e sem `nextCursor`,
+   ignorando `afterSeq` — o mesmo contrato do `latest` dos eventos (ADR 0021).
+   `status` só aceita `pending` (outro valor é 400, sem consultar); combinado
+   com `latest`, traz as pendentes mais novas sem que as decididas ocupem a
+   janela. Sem os dois parâmetros o contrato é o de antes.
+2. **A tela faz duas perguntas, e a segunda só quando precisa.**
+   `buscarAcoesDaSessao` lê a cauda (200); só se ela vier CHEIA pede também as
+   pendentes e une por `id`, em `seq` crescente. Uma pendente antiga que a
+   cauda empurrou para fora continua sendo decisão a tomar e não some por ter
+   esperado demais. A sessão curta — o caso comum — continua custando UMA
+   requisição, e a leitura de pendentes que falha derruba a query (a tela diz
+   que falhou, nunca finge fila vazia — RN-088).
+
+**O que esta regra NÃO fecha:** com mais de 200 PENDENTES numa sessão, as mais
+antigas além delas ficam fora (o teto é o mesmo `limit`); e o que o fio mostra
+de DECIDIDO continua sendo a cauda — ação decidida antiga, fora das 200 mais
+novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
+([RN-638](#rn-638)).
+
+- **Código:** `apps/api/src/infrastructure/persistence/drizzle/proposed-action.repository.ts:96`
+  (`listPaginated`), `:113` (o ramo `latest`);
+  `apps/api/src/interfaces/http/actions/actions.controller.ts:105` (`list`),
+  `:114` (a recusa de `status`);
+  `apps/api/src/application/ports/proposed-action-repository.port.ts`
+  (`ListProposedActionsOptions`);
+  `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
+  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:420`
+  (`usePendingActions`)
+- **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
+  (sem `latest` a pendente nova fica de fora — o defeito; com `latest` ela
+  está na cauda; `status=pending` devolve a antiga; e não traz outra sessão);
+  `apps/api/test/interfaces/http/actions/actions-list.controller.spec.ts`
+  (repasse dos parâmetros e o 400 — caso de falha);
+  `apps/web/src/lib/acoes-da-sessao.test.ts` (sessão curta numa requisição;
+  cauda cheia com 250 ações devolve a pendente 3 e a 250; leitura de pendentes
+  que falha derruba a query)
+- **Origem:** AT-296 (HS-076)
+
+### RN-638 — Quem pergunta "o que espera decisão" lê a fila do PROJETO, nunca a sessão mais recente {#rn-638}
+
+O contador de Aprovações do trilho, o painel "precisa de você" ([RN-467](#rn-467)),
+a aba Aprovações, o roster da Visão geral e a aba Código liam as pendentes de
+`useLatestSession` — a sessão CRIADA por último —, que só é a de execução por
+coincidência. Uma ideação ou um chat aberto depois da execução zerava o
+contador e escondia do roster os dev agents esperando decisão (AT-297). E o
+bloco de pendências de outras sessões do chat ([RN-626](#rn-626)) só existia em
+sessão ativa, enquanto o `container_start` que o Infra Lead propõe no CHAT
+destrava o `dev.blocked_by_container` que aparece na EXECUÇÃO (AT-298).
+
+**A regra:**
+
+1. **A fila é a do projeto.** Essas telas leem `useProjectPendingActions`
+   (`GET /projects/:projectId/actions?status=pending`, em qualquer sessão),
+   todas pela MESMA chave `['project-pending-actions', projectId, undefined]`
+   — no ritmo de projeto da [RN-632](#rn-632), e a 3s só na aba Aprovações, que
+   a tem como assunto. A moldura `ProjectPage` tira o contador de PRs
+   (`git_merge`) da MESMA leitura, em vez de uma segunda consulta. As filas
+   continuam separadas, com o selo próprio — nada se soma (RN-467).
+2. **Cada card decide pela sessão que a PRÓPRIA ação carrega.** Na aba
+   Aprovações, aprovar, negar, "sempre permitir" e o lote chamam o endpoint com
+   `action.sessionId`, e invalidam a fila do projeto por prefixo e as ações da
+   sessão da ação. Os blocos de PR e gate da aba leem eventos e ações da sessão
+   de EXECUÇÃO vigente (RN-139), e só sem ela da mais recente.
+3. **As pendências de outras sessões aparecem em qualquer estado.** O bloco do
+   chat sai também em sessão encerrada e técnica — decidir é sobre a ação da
+   OUTRA sessão, não conversa nesta (a RN-581 segue recusando conversa) —, e a
+   aba Executores ganha o MESMO bloco para a sessão de execução: o
+   `container_start` do chat fica visível onde o bloqueio aparece.
+4. **A proposta chega pelo canal, sem esperar o poll.** Todo aviso
+   `proposed_action.*`/`action.*` de qualquer canal de sessão que uma tela ouve
+   invalida também a fila do projeto (`pendenciasDoProjeto` em
+   `criarInvalidadorDoCanal`, janela de 2s), e o `dev.blocked_by_container`
+   também — a proposta que o destrava nasce noutra sessão, cujo canal ninguém
+   ali ouve (AT-299). Nenhum poll subiu.
+5. **O bloco cabe na coluna e mostra todos (AT-318).** Na medida do fio e do
+   composer (780px), recolhível, com a PRESENÇA de cada fila no cabeçalho —
+   "Aprovações 3 · Merges de PR 1", cada uma com o próprio número, nunca a
+   soma (RN-467) — visível mesmo recolhido. Os cards nascem com o detalhe
+   FECHADO (`detalheRecolhido` no `ApprovalCard`): abertos, cobriam ~60% do fio
+   e deixavam um card à vista de três. O rótulo de origem sai UMA vez por
+   sessão, com o tempo da mais antiga — por card, ele se repetia entre um card
+   e o seguinte. O teto de 20 cards e o recorte declarado (RN-180) seguem.
+
+**O que esta regra NÃO fecha:** o aviso só chega onde há uma tela ouvindo um
+canal de sessão (Sessão; Visão geral, a sessão mais recente; Executores, a de
+execução). Numa aba sem canal (Aprovações, PRs, Backlog…) ou para uma proposta
+feita numa sessão cujo canal nenhuma tela aberta ouve, o contador chega pelo
+poll de projeto, em até 15s; abrir um canal de sessão na moldura mudaria o
+ciclo de vida da sessão (o canal é o heartbeat da RN-064) e ficou de fora. O
+contador de Aprovações continua contando o `git_merge` pendente, como antes —
+o painel o deduplica para a fila de PRs. A lacuna do papel de WORKSPACE no
+lugar do efetivo (RN-471) vale para o bloco novo dos Executores como vale para
+o do chat.
+
+- **Código:** `apps/web/src/routes/ProjectPage.tsx:82` (o contador),
+  `:121` (os merges da mesma leitura);
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
+  (`sessaoDeTrabalho`), `:309` (`handleApprove`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:93` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
+  (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
+  `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
+  `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
+  (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
+  (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:438`
+  (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
+  (`acoesPendentes`)
+- **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
+  execução com uma ideação mais nova, decidida pela sessão dela; decidida não
+  entra — contraste); `apps/web/src/routes/project-tabs.test.tsx` (os selos
+  pela fila do projeto); `apps/web/src/routes/ProjectExecutorsTab.test.tsx`
+  (o `container_start` do chat na aba da execução; a pendente da própria
+  execução não vira bloco — contraste);
+  `apps/web/src/routes/SessionPage.sessao-encerrada.test.tsx` (o bloco em
+  `closed` e `closed_abnormally`; a da própria sessão não entra);
+  `apps/web/src/lib/acoes-da-sessao.test.ts` (o canal invalida a fila do
+  projeto por prefixo e com janela; `tool.call` não);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` (três cards à
+  vista com o detalhe fechado e a presença por fila sem soma; recolhido, a
+  presença fica no cabeçalho; um rótulo de origem por sessão);
+  `apps/web/src/routes/duas-abas.orcamento.test.tsx` (a rajada invalida a fila
+  do projeto na aba Executores, dentro do orçamento da RN-632)
+- **Origem:** AT-297, AT-298, AT-299 (HS-076), AT-318 (auditoria visual de 30/09)

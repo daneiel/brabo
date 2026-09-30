@@ -859,14 +859,16 @@ export function SessionPage({
               turno de agente via `turnoViaCanal`: o chat consultivo sem
               agente ativo continua na bolha antiga, dentro do fio. */}
           {/* AT-265: as pendências que os agentes propuseram em OUTRAS sessões do
-              projeto (a de execução), decididas aqui — atalho, RN-467. */}
-          {isActive && (
-            <PendenciasDeOutrasSessoes
-              projectId={projectId}
-              sessionId={sessionId}
-              podeDecidir={podeDecidir}
-            />
-          )}
+              projeto (a de execução), decididas aqui — atalho, RN-467. AT-298:
+              em QUALQUER estado da sessão — encerrada e técnica inclusive. A
+              decisão é sobre a ação da OUTRA sessão, não conversa nesta, e
+              quem abre uma sessão encerrada para ver o histórico era
+              justamente quem não via que havia algo esperando por ele. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+          />
 
           {turnoViaCanal && (
             <TurnActivityStrip
