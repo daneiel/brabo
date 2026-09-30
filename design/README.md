@@ -69,6 +69,20 @@ Toda implementação de UI deve referenciar sempre os tokens semânticos
 (`var(--surface-*)`, `var(--text-*)`, `var(--accent)`, `var(--violet)`
 etc.) — nunca a paleta bruta nem valores de cor/espaçamento inventados.
 
+**Padrões de tela** (AT-322, AT-327). O que a auditoria visual de 30/09 achou
+em várias formas tem UMA agora, em `apps/web/src/components/ui/`:
+
+| padrão | componente | regra |
+|---|---|---|
+| controle segmentado ("qual destes") | `SegmentedControl` | grupo rotulado de `Chip`s com `aria-pressed`, um ligado por vez — filtro de lista OU troca de painel; nunca `role="tab"` sem `tabpanel` |
+| estado vazio | `EmptyState` | caixa tracejada centralizada, frase em `--text-secondary`, ícone e CTA opcionais; a FRASE é de quem chama (vazio por filtro ≠ por ausência) e erro/carregando seguem separados (RN-088) |
+| CTA de criar | `Button` + `PlusIcon` | ícone + verbo ("Nova ideação"), nunca o caractere "+" no texto |
+| botão desabilitado | `Button` | `--text-muted` sobre `--surface-2` com contorno `--border-strong`, SEM `opacity` — o par é medido em `design-contraste.test.ts` nos dois temas |
+| decisão pedida | `ApprovalCard` | uma variante só nas quatro superfícies (fio, aba Aprovações, "precisa de você", pendências de outras sessões): mesmos botões com largura natural, mesmas notas em corpo de 12px, código da frase em mono sem aspas; a largura é do CONTÊINER |
+
+Aba do projeto começa no topo, sem margem de seção antes do título: `.arch`
+(`ProjectOverviewTab.module.css`) é de seção que vem DEPOIS de outra.
+
 ## `design_handoff_brabo/` — o handoff, versionado
 
 Desde 2026-08-08 (FASE 16) o handoff de design vive **no repositório**, na

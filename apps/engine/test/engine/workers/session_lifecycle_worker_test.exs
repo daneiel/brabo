@@ -60,6 +60,51 @@ defmodule Engine.Workers.SessionLifecycleWorkerTest do
       })
   end
 
+  # ADR 0183 (RN-649): a sessão pode ser REABERTA. O job de um fechamento que
+  # chega depois da reabertura não pode derrubar o processo da sessão viva.
+  describe "fechamento que a reabertura já desfez" do
+    test "session.closed de uma sessão que a api já diz `active` não para o processo" do
+      session_id = sessao_na_api("active")
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+      :ok =
+        perform_job(SessionLifecycleWorker, %{
+          "event_type" => "session.closed",
+          "aggregate_id" => session_id,
+          "payload" => %{}
+        })
+
+      assert Process.alive?(pid)
+      :ok = Engine.Sessions.Monitor.expect_stop(session_id)
+      Engine.Sessions.SessionServer.stop(pid)
+    end
+
+    test "session.closed de uma sessão que a api diz `closed` para o processo, como sempre" do
+      session_id = sessao_na_api("closed")
+      {:ok, pid} = SessionSupervisor.start_session(session_id, "project-1")
+
+      :ok =
+        perform_job(SessionLifecycleWorker, %{
+          "event_type" => "session.closed",
+          "aggregate_id" => session_id,
+          "payload" => %{}
+        })
+
+      refute Process.alive?(pid)
+    end
+  end
+
+  defp sessao_na_api(status) do
+    id = Ecto.UUID.generate()
+
+    Engine.Repo.query!(
+      "INSERT INTO public.sessions (id, project_id, status) VALUES ($1, $2, $3)",
+      [Ecto.UUID.dump!(id), Ecto.UUID.dump!(Ecto.UUID.generate()), status]
+    )
+
+    id
+  end
+
   defp perform_job(worker, args) do
     worker.perform(%Oban.Job{args: args})
   end

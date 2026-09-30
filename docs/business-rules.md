@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:797` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:818` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:623` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:644` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -304,8 +304,11 @@ parameter, default `false`: the hook's other consumers (Overview, Code,
 Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
-- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
+- **Where:** `apps/web/src/lib/hooks.ts:221` (`useSessionEvents`),
   `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
+
+- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
+  `apps/web/src/routes/SessionPage.tsx:275` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5658,7 +5661,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:202` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -5889,7 +5892,8 @@ apareceria duas vezes na mesma lista, sob dois títulos. Fica no grupo mais
 específico (`prs`).
 
 **Nunca executa.** As duas filas acionáveis no painel (`aprovacoes`, `prs`)
-renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`,
+renderizam o MESMO `ApprovalCard` da aba de Aprovações (uma variante só desde
+a AT-322, com o detalhe recolhido),
 e os botões chamam os mesmos endpoints de decisão — o painel é um ATALHO para
 a decisão, nunca um substituto dela. Isso importa em especial para
 `git_merge`: merge em branch protegida é rebaixado a `require_approval`
@@ -14709,7 +14713,7 @@ fechada seguem mostrando a mensagem da api.
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
-  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:69`
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
   (sessão encerrada recusa `chat.message` com 409 nomeado — caso de falha),
@@ -14733,6 +14737,94 @@ fechada seguem mostrando a mensagem da api.
   `apps/engine/test/engine/psychologist/termination_classifier_test.exs:20`
 - **Origem:** AT-072 — `exp001`; decisões do mantenedor em 2026-09-18 (teto de
   8h e causa própria; sessão encerrada recusa conversa, nomeado)
+
+## A sessão encerrada pode ser reaberta (RN-649/RN-650)
+
+### RN-649 — Sessão `closed`/`closed_abnormally` reabre para `active` com o log intacto, e o fechamento anterior vira evento novo {#rn-649}
+
+A [RN-001](#rn-001) dizia que os estados terminais não têm saída. Desde o
+[ADR 0183](adr/0183-reabrir-sessao-encerrada.md) há UMA, e só uma: a
+reabertura, de `closed` ou `closed_abnormally` para `active`, por caminho
+próprio. A transição GENÉRICA continua recusando `closed → active` com 409, e
+`closing → active` segue proibido por qualquer caminho.
+
+1. **O que volta é a sessão inteira.** O event log não é tocado — a conversa,
+   as regras de negócio, as perguntas respondidas, as ofertas e aceites de
+   handoff. Um agente conversacional parado no fechamento volta pelo
+   `start_agent` idempotente na primeira mensagem e reconstrói o histórico
+   ([RN-580](#rn-580)). A conversa volta a entrar porque a recusa da
+   [RN-581](#rn-581) lê o estado da sessão, que agora é `active`.
+2. **O fechamento anterior não se apaga.** A linha de `sessions` perde
+   `closed_at` e `termination_reason`; o evento NOVO `session.reopened`, no
+   mesmo `seq` ([RN-002](#rn-002)) e com o ator humano que reabriu, carrega
+   `{from, to, closedAt, terminationReason}`. Nenhum evento é editado nem
+   renumerado, e o `kind` não muda ([RN-097](#rn-097)).
+3. **Sessão com execução não reabre** — 409 `sessao_com_execucao`. Reabrir uma
+   sessão com `execution.activated` a devolveria a `findActiveExecutionSession`
+   ([RN-139](business-rules/autenticacao.md#rn-139)). Padrão provisório à
+   espera do dono, declarado no ADR.
+4. **Sem prazo.** Toda sessão encerrada é reabrível (padrão provisório).
+5. **O engine é chamado antes da transação**, como na ativação: falha dele
+   deixa a sessão encerrada, sem evento. Outro estado que não terminal é 409
+   `sessao_nao_encerrada`.
+6. **O fechamento que a reabertura desfez não para a sessão viva.** O
+   `SessionLifecycleWorker` lê o `status` da sessão e ignora, com log, o job de
+   `session.closed`/`session.closed_abnormally` de uma sessão que a api já diz
+   não-terminal.
+7. **A segunda análise automática do Psicólogo fica bloqueada** pelo
+   `alreadyAnalyzed` que já existia; o reprocessamento manual segue. A segunda
+   consolidação do grafo estende a janela da mesma `Interacao`.
+
+- **Onde:** `apps/api/src/domain/sessions/session-state-machine.ts:66`
+  (`canReopen`), `:70` (`assertReopen`);
+  `apps/api/src/domain/sessions/reabertura-de-sessao.ts:24`
+  (`SessaoComExecucaoNaoReabreError`), `:44`
+  (`garantirQueSessaoSemExecucaoReabre`), `:58` (`payloadDaReabertura`);
+  `apps/api/src/application/use-cases/sessions/reopen-session.use-case.ts:53`
+  (`execute`), `:96` (`garantirQuePodeReabrir`);
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:59`
+  (`encerrar_se_ainda_encerrada`);
+  `apps/engine/lib/engine/sessions/project_session.ex:48` (`status`)
+- **Teste:** `apps/api/test/domain/sessions/session-state-machine.spec.ts:56`
+  (só terminais reabrem; `closing` nunca volta);
+  `apps/api/test/application/use-cases/sessions/reopen-session.use-case.spec.ts:121`
+  (`closed` reabre, log preservado, `session.reopened` com o fechamento
+  anterior — caminho feliz), `:151` (`closed_abnormally`), `:163` (a conversa
+  volta a entrar), `:186` (`closing` é 409 sem engine nem evento — caso de
+  falha), `:208` (sessão com execução é 409 `sessao_com_execucao`), `:239`
+  (engine fora do ar: nada muda);
+  `apps/engine/test/engine/workers/session_lifecycle_worker_test.exs:66`
+  (fechamento de sessão já `active` não para o processo), `:82` (fechamento de
+  sessão `closed` para, como sempre)
+- **Origem:** AT-071 (HS-048), sobre o `exp001`
+
+### RN-650 — Reabrir é `maintainer`, por rota própria, e a tela só oferece o botão a quem alcança o papel {#rn-650}
+
+`POST projects/:projectId/sessions/:sessionId/reopen` exige `maintainer` — um
+degrau acima da transição genérica (`developer`), porque religa gasto de token
+numa sessão que alguém deu por terminada. Responde 200 com a sessão. Padrão
+provisório à espera do dono (ADR 0183).
+
+Na tela de Sessão, a faixa da sessão encerrada mostra "Reabrir sessão" com uma
+frase do que volta. Abaixo de `maintainer` (`roleAtLeast`, papel de WORKSPACE —
+a lacuna da [RN-471](#rn-471) já declarada na tela) o botão fica inerte e o
+motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vira
+toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
+com a causa do fechamento anterior quando ela foi gravada.
+
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:205`
+  (`reopen`); `apps/web/src/lib/api-client.ts:628` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:142` (`podeReabrir`), `:533`
+  (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
+  `apps/web/src/lib/activity.ts:633` (a frase do fio)
+- **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:20`
+  (`maintainer`, e a transição genérica segue `developer`), `:30` (200);
+  `apps/web/src/routes/SessionPage.reabrir-sessao.test.tsx:140` (maintainer
+  reabre pela rota própria — caminho feliz), `:164` (owner também), `:171`
+  (developer/viewer/sem papel: inerte com o motivo em texto — caso de falha),
+  `:184` (recusa da api vira toast), `:206` (sessão ativa não oferece);
+  `apps/web/src/lib/activity.test.ts` ("reabertura de sessão")
+- **Origem:** AT-071
 
 ## O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)
 
@@ -15354,7 +15446,7 @@ decidir se passam a consultá-lo é decisão à parte, fora desta regra.
 
 - **Código:** `apps/api/src/application/use-cases/sessions/list-sessions-for-project.use-case.ts:30`
   (`execute`), `apps/api/src/interfaces/http/sessions/dto/sessions.response.dto.ts:110`
-  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:137`
+  (`SessionListItemResponseDto`), `apps/web/src/lib/hooks.ts:147`
   (`sessaoMaisRecente`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/list-sessions-for-project.use-case.spec.ts:81`
   (vínculo e não nome; técnica de outro projeto não marca),
@@ -16895,7 +16987,7 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:224` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
@@ -16903,8 +16995,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:274`
-  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
+  (`useRetomarTurnoDoLog`), `:894` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17252,8 +17344,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:234` (`destinatarioRow`), `:157`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:352`
+  `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:454`
   (`handoffIdDoEvento`), `:462` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -17402,8 +17494,8 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:119`
-  (`useProjectSessions`), `:148` (`useLatestSession`);
+  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
@@ -17600,7 +17692,7 @@ novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
   `apps/api/src/application/ports/proposed-action-repository.port.ts`
   (`ListProposedActionsOptions`);
   `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
-  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:420`
+  (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:432`
   (`usePendingActions`)
 - **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
   (sem `latest` a pendente nova fica de fora — o defeito; com `latest` ela
@@ -17679,7 +17771,7 @@ o do chat.
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
-  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:438`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:450`
   (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
   (`acoesPendentes`)
 - **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
@@ -17754,6 +17846,77 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
   PRs segue bloqueada sem imagem decidida — se ela DEVE escapar do portão é
   decisão do dono), nem a régua de subida da RN-521/RN-574.
 
+### RN-648 — A sidebar, o card do Dashboard e o painel de artefatos não se contradizem: cada estado vazio diz QUAL sessão leu, e contador e lista contam na mesma unidade {#rn-648}
+
+Três telas afirmavam "nada" ao lado de uma tela que mostrava algo (AT-325 —
+achados S2/D2/X6 do levantamento visual da AT-290). A reprodução com o engine
+real não foi possível neste ambiente (o egress bloqueia `repo.hex.pm` e o
+Alpine, e nenhuma imagem compila); as três contradições foram MEDIDAS no
+código e provadas por testes que falham antes da correção. A do Dashboard
+nasceu, no levantamento, de um 500 do stub do engine no resumo do workspace —
+mas o texto que a transformou em "sem atividade" é do web, e com o engine real
+qualquer falha do resumo produziria o mesmo.
+
+**A sidebar lia a sessão de EXECUÇÃO, e só ela.** O bloco Atividades
+(RN-198) pedia os eventos da sessão de execução vigente
+(`useActiveExecutionSession`). Num projeto só com sessões de conversa ela é
+`null`, a lista vinha vazia, e a sidebar dizia "Nenhum agente entrou em ação
+ainda" ao lado de uma Visão geral com o Criativo aguardando. Agora: com
+execução vigente, a sidebar continua lendo ELA (os dev agents e as instâncias
+`-2` são o que o agrupamento da RN-198 existe para mostrar, e a `queryKey` é a
+da aba Executores); SEM execução, lê a MESMA sessão da Visão geral e do card do
+Dashboard — a mais recente de trabalho (`useLatestSession`, a regra de
+`sessaoMaisRecente`). Os estados que colapsavam no mesmo texto se separam
+([RN-470](business-rules/custo.md#rn-470)): carregando (nada é afirmado), erro (texto próprio),
+projeto sem sessão ("Este projeto ainda não tem sessão."), e a sessão lida sem
+agente, com o texto NOMEANDO qual ("…na sessão de execução…" /
+"…na sessão mais recente…"). A lista de sessões só é pedida sem execução, e com
+o frescor de um ciclo de projeto (`frescorMs` em `useProjectSessions`): quando
+a sidebar a habilita a moldura do projeto já a trouxe, e o orçamento de
+requisições da [RN-632](#rn-632)/[RN-645](#rn-645) não cresce.
+
+**O card do Dashboard tinha um texto para quatro estados.** "Sem atividade
+ainda" saía com o resumo do workspace CARREGANDO, com ele FALHADO (o caso do
+levantamento: o resumo respondia 500 e o card de um projeto com dezesseis
+eventos dizia que não havia nenhum), com o projeto SEM sessão e com a sessão
+mais recente vazia. Agora são quatro textos: "carregando atividade…",
+"atividade indisponível", "Nenhuma sessão ainda" e "Sem atividade na sessão
+mais recente ainda". A linha continua lendo a sessão mais recente de trabalho
+(`latestSessionId`), a mesma da Visão geral e da sidebar sem execução — a api
+não mudou.
+
+**"Artefatos gerados 3" sobre um único grupo "PO 1".** O cabeçalho da seção
+contava a ÁRVORE do backlog (épico, história e tarefa: 3) e o grupo por agente
+contava só as RAÍZES (1). Os dois contam agora na mesma unidade — cada item
+carrega `quantos` (1, mais os descendentes quando é raiz do backlog), o
+cabeçalho é a soma dos itens e cada grupo é a soma dos seus, então a soma dos
+grupos É o cabeçalho, por construção. E o vazio da seção diz o que ela conta
+("Nenhuma PR nem item de backlog nesta sessão ainda.") em vez do "Nada ainda."
+genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia negar
+que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
+muda.
+
+- **Código:** `apps/web/src/routes/Shell.tsx:534` (`execucao`), `:542`
+  (`origemDaAtividade`), `:549` (`estadoDaAtividade`);
+  `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
+  `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
+  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:237`
+  (`totalDeArtefatos`)
+- **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
+  execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
+  de execução e o vazio diz qual; projeto sem sessão; e o caso de falha, a
+  lista de sessões que falha vira erro nomeado e nunca "nenhum agente");
+  `apps/web/src/routes/Dashboard.test.tsx` ("Dashboard — linha de atividade do
+  card (RN-648)": o resumo que falhou diz "indisponível", carregando não afirma,
+  sem sessão × sessão vazia têm textos diferentes, e com evento nenhum vazio
+  aparece); `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx` (a
+  soma dos grupos é o cabeçalho; o vazio diz o que conta);
+  `apps/web/src/routes/configuracoes.orcamento.test.tsx` e
+  `apps/web/src/routes/duas-abas.orcamento.test.tsx` seguem nos tetos
+- **Origem:** AT-325 (achados S2/D2/X6 da AT-290). Não muda o escopo da
+  [RN-159](business-rules/autenticacao.md#rn-159) nem o resumo do workspace ([RN-090](#rn-090)); estende a
+  [RN-198](business-rules/autenticacao.md#rn-198) (qual sessão a sidebar lê) e aplica a [RN-470](business-rules/custo.md#rn-470)
+
 ## Acompanhar ao vivo sem martelar (RN-639)
 
 ### RN-639 — O que muda por token não re-renderiza a tela, e o que acompanha o bootstrap polla a 3 s e para no fim {#rn-639}
@@ -17788,7 +17951,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:61` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:78` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
@@ -17846,8 +18009,8 @@ gaveta e a barra) continuam existindo lado a lado, a mesma duplicação
 declarada no ADR 0126.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:413`
-  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
+  (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:80`
   (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
@@ -17926,7 +18089,7 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
 
 - **Código:** `apps/web/src/lib/query-policy.ts:111`
   (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
-  (`useCurrentWorkspaceWithRole`), `:520` (`useProficiency`);
+  (`useCurrentWorkspaceWithRole`), `:530` (`useProficiency`);
   `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
   (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
   e `apps/web/src/components/ModelCatalogSection.tsx`;

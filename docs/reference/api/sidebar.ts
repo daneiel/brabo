@@ -1218,6 +1218,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-reopen",
+          label: "Reopens a closed session, keeping everything it had",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/session-response-language-controller-get",
           label: "The language agents answer YOU in, in this session",
           className: "api-method get",

@@ -141,7 +141,6 @@ function readFiles(payload: Record<string, unknown>): DiffFile[] | undefined {
 interface ApprovalCardProps {
   action: ProposedAction;
   urgency?: ApprovalUrgency;
-  variant?: 'chat' | 'queue';
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
@@ -183,10 +182,16 @@ interface ApprovalCardProps {
    */
   bloqueio?: string;
   /**
-   * AT-318: quem EMPILHA vários cards num espaço curto (as pendências de
-   * outras sessões, acima do composer) pede o detalhe fechado mesmo na
-   * variante `chat` — N detalhes abertos empurravam os outros cards para fora
-   * da vista. Ausente = a regra de sempre (aberto só no chat e pendente).
+   * Quem EMPILHA vários cards (a fila da aba Aprovações, o painel "precisa de
+   * você", as pendências de outras sessões — AT-318) pede o detalhe fechado:
+   * N detalhes abertos são de novo a parede de texto, e empurravam os outros
+   * cards para fora da vista. Ausente = aberto enquanto a ação espera decisão
+   * (o fio da sessão, onde o card é o assunto do momento).
+   *
+   * É a ÚNICA diferença entre as superfícies, e ela é de ESTADO INICIAL de um
+   * colapso, não de aparência: desde a AT-322 o card tem uma variante só —
+   * mesmos botões, mesma largura natural deles, mesmas notas. Quem decide a
+   * largura do card é o CONTÊINER (o fio o centraliza em 560px, RN-173).
    */
   detalheRecolhido?: boolean;
 }
@@ -194,7 +199,6 @@ interface ApprovalCardProps {
 export function ApprovalCard({
   action,
   urgency,
-  variant = 'chat',
   selectable,
   selected,
   onToggleSelect,
@@ -258,30 +262,22 @@ export function ApprovalCard({
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
-  const { verbo, frase } = descreverAcao(action.actionType, payload);
+  const { verbo, trechos } = descreverAcao(action.actionType, payload);
   const temCorpoProprio = COM_CORPO_PROPRIO.has(action.actionType);
 
   /*
-   * O default do colapso sai de `variant` e `status`, que JÁ existem — nenhuma
-   * prop nova (FASE 19, item 14). Não é economia de digitação: prop nova
-   * obrigatória obrigaria a abrir os dois call sites, e um deles
-   * (`SessionPage.tsx`) pertence a outra fase da mesma onda.
-   *
-   * A regra que os dois defaults expressam é uma só: abre o que ainda espera
-   * decisão de quem está olhando. No chat a ação pendente é o assunto do
-   * momento; na fila são N cards, e N detalhes abertos são de novo a parede de
-   * texto que esta fase existe para desfazer. E o payload CRU nunca nasce
-   * aberto, em variante nenhuma — despejar JSON é o defeito, não a densidade.
+   * A regra do colapso é uma só: abre o que ainda espera decisão de quem está
+   * olhando, salvo quando quem chama empilha N cards (`detalheRecolhido`). E o
+   * payload CRU nunca nasce aberto, em superfície nenhuma — despejar JSON é o
+   * defeito, não a densidade.
    */
-  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending && !detalheRecolhido;
+  const detalheAberto = temCorpoProprio && isPending && !detalheRecolhido;
 
   return (
     <Card
       padding="none"
       recorta
-      className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
-        .filter(Boolean)
-        .join(' ')}
+      className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}
     >
       <div className={styles.header}>
         {selectable && (
@@ -318,7 +314,21 @@ export function ApprovalCard({
           conhece não tem frase: aí a linha degrada para verbo + "ver detalhes",
           e o detalhe é o payload cru COLAPSADO. O que nunca mais acontece é o
           despejo de `chave: JSON.stringify(valor)` que estava aqui. */}
-      <p className={styles.frase}>{frase ?? `${verbo} — ${SEM_FRASE}.`}</p>
+      <p className={styles.frase}>
+        {trechos
+          ? trechos.map((trecho, indice) =>
+              // AT-322: comando, branch e caminho em mono e SEM aspas — a aspa
+              // reta em fonte proporcional se lia como parte do comando.
+              trecho.codigo ? (
+                <code key={indice} className={styles.codigoNaFrase}>
+                  {trecho.texto}
+                </code>
+              ) : (
+                trecho.texto
+              ),
+            )
+          : `${verbo} — ${SEM_FRASE}.`}
+      </p>
 
       {/* AT-148 (RN-614): QUAL regra decidiu e, em `terminal`, contra qual
           raiz relativa — a MESMA frase da linha do evento no painel de log. */}
@@ -377,38 +387,45 @@ export function ApprovalCard({
               </Button>
             )}
           </div>
-          {/* AT-256: a frase da api, no card — nunca um toast genérico. Vale nas
-              duas variantes; `obsoleta` diz o porquê de os botões estarem
+          {/* AT-256: a frase da api, no card — nunca um toast genérico. Vale em
+              toda superfície; `obsoleta` diz o porquê de os botões estarem
               inertes (o `title` de botão desabilitado não abre no Chromium). */}
           {bloqueio && (
-            <span className={styles.note} data-testid="bloqueio-da-decisao">
-              <AlertIcon size={12} />
-              {bloqueio}
-            </span>
+            <p className={styles.note} data-testid="bloqueio-da-decisao">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>{bloqueio}</span>
+            </p>
           )}
           {recusa && (
-            <span className={styles.recusa} role="alert" data-testid="recusa-da-decisao">
-              <AlertIcon size={12} />
-              {recusa}
-              {obsoleta && ` ${t('approvalCard.notes.obsolete')}`}
-            </span>
+            <p className={styles.recusa} role="alert" data-testid="recusa-da-decisao">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>
+                {recusa}
+                {obsoleta && ` ${t('approvalCard.notes.obsolete')}`}
+              </span>
+            </p>
           )}
-          {variant === 'chat' && podeSemprePermitir && (
-            <span className={styles.note}>
-              <AlertIcon size={12} />
-              {ehAgenteDeModulo
-                ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
-                : t('approvalCard.notes.alwaysAllow')}
-            </span>
+          {/* AT-322: a nota de "Sempre permitir" sai em TODA superfície onde o
+              botão sai — antes só no fio, e a mesma decisão tinha texto numa
+              tela e nenhum na outra. O texto só muda com o ATOR (RN-509), nunca
+              com a tela. */}
+          {podeSemprePermitir && (
+            <p className={styles.note} data-testid="nota-sempre-permitir">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>
+                {ehAgenteDeModulo
+                  ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
+                  : t('approvalCard.notes.alwaysAllow')}
+              </span>
+            </p>
           )}
-          {/* A nota do modo automático vale nas DUAS variantes (RN-603): é a
-              única frase que diz, antes do clique, o que o botão libera — e
-              na fila de Aprovações o botão existe igual. */}
+          {/* A nota do modo automático sai onde o botão sai (RN-603): é a
+              única frase que diz, antes do clique, o que o botão libera. */}
           {onActivateAutoMode && (
-            <span className={styles.note}>
-              <AlertIcon size={12} />
-              {t('approvalCard.notes.autoMode', { actor: actorLabel })}
-            </span>
+            <p className={styles.note} data-testid="nota-modo-automatico">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
+            </p>
           )}
         </>
       ) : (

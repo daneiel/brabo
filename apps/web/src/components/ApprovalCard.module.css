@@ -11,32 +11,19 @@
  */
 /* A superfície, a borda, o raio e o recorte vêm de `ui/Card` (`padding="none"
    recorta`, AT-286). `.card` fica só como gancho dos seletores compostos
-   abaixo (`.card.chat`, `.card.critical`). */
+   abaixo (`.card.critical`). */
 
 /*
- * RN-173 — no FIO da sessão (variante `chat`), o card concorda com a conversa
- * em vez de atropelá-la.
- *
- * Sem isto ele é o ÚNICO item da timeline a ocupar os 780px inteiros de
- * `.messagesInner`: as bolhas começam 45px adentro (avatar de 32px + gap de
- * 13px, em `ChatBubble.module.css`), `.structuredQuestionCard` para em 480px,
- * e o card de aprovação ia de ponta a ponta — daí a leitura de "mal
- * diagramado". Caixa larga demais no meio de um fio estreito lê como outro
- * assunto, não como o desfecho deste.
- *
- * A escolha é CENTRALIZAR com teto de largura, e não recuar 45px como as
- * bolhas: o card não é fala de ninguém, é uma decisão pedida ao usuário — a
- * mesma natureza de `.handoffCard`/`.handoffDivider`, que o desenho já
- * centraliza no fio. 560px é mais largo que os 480px do formulário de
- * perguntas de propósito: aqui cabem diff e saída de terminal.
- *
- * Escopado em `.chat` — a fila da aba Aprovações (`variant="queue"`) vive num
- * grid próprio, onde o card DEVE preencher a coluna.
+ * AT-322 — UMA variante só. O card não conhece mais a superfície em que está:
+ * ele preenche o contêiner, e quem decide a largura é o contêiner. No fio da
+ * sessão é `.acaoNoFio` (`SessionPage.module.css`) que o centraliza com teto
+ * de 560px (RN-173); na fila de Aprovações ele preenche a coluna; no painel
+ * "precisa de você" e nas pendências de outras sessões, a largura do painel.
+ * Antes a variante `chat` morava aqui, e cada superfície tinha botões,
+ * largura e notas diferentes para a mesma decisão.
  */
-.card.chat {
+.card {
   width: 100%;
-  max-width: 560px;
-  margin-inline: auto;
 }
 
 .card.critical {
@@ -455,23 +442,46 @@
 }
 
 /*
- * Só no chat os dois primeiros esticam. Na fila os botões têm largura natural,
- * como no desenho — esticar dentro de um card de 960px transformava "Aprovar"
- * numa faixa de 400px.
+ * Os botões têm largura NATURAL em toda superfície (AT-322), como no desenho.
+ * Esticar os dois primeiros no fio fazia "Modo automático" cair para outra
+ * linha a 1024px, e esticá-los na fila transformava "Aprovar" numa faixa.
  */
-.card.chat .actions > :first-child,
-.card.chat .actions > :nth-child(2) {
-  flex: 1;
-}
 
+/*
+ * A nota: corpo 12px apagado, NUNCA mono (AT-322, achado A4 da auditoria de
+ * 30/09). Em mono de 11px, três a cinco linhas pesavam mais que a própria
+ * decisão. O ícone tem 14px, não encolhe, e se alinha à PRIMEIRA linha
+ * (`flex-start` + a altura da linha) em vez de flutuar no meio do parágrafo.
+ */
 .note {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 18px;
   color: var(--text-muted);
   padding: 0 16px 12px;
+}
+
+.noteIcon {
+  flex-shrink: 0;
+  /* (18px de linha − 14px de ícone) / 2: centro do ícone no centro da 1ª linha. */
+  margin-top: 2px;
+}
+
+/* AT-322 (achado A5): o código dentro da frase — comando, branch, caminho —
+   em mono, sem aspas, num fundo que o separa da prosa sem virar botão. */
+.codigoNaFrase {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  overflow-wrap: anywhere;
 }
 
 .decided {
@@ -495,13 +505,15 @@
   color: var(--decided-color);
 }
 
-/* AT-256: a recusa da api dita no card. */
+/* AT-256: a recusa da api dita no card — mesma forma da nota, em `--danger`. */
 .recusa {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 18px;
   color: var(--danger);
   padding: 0 16px 12px;
 }

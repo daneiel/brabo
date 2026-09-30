@@ -166,18 +166,9 @@
   margin-bottom: 16px;
 }
 
-/* Filtros pill (todas/ativas/fechadas/abortadas), acima da lista. */
+/* Filtros (todas/ativas/fechadas/abortadas), acima da lista. O controle é
+   `ui/SegmentedControl` (AT-327); aqui só o espaço em volta. */
 .filtros {
-  display: flex;
-  gap: 8px;
   margin-bottom: 12px;
 }
 
-/* A pílula de filtro é `ui/Chip` (AT-287). */
-
-.empty {
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 24px;
-  text-align: center;
-}

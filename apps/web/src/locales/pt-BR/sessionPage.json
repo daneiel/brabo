@@ -65,7 +65,10 @@
     "mensagemNaoEnviada": "Sua mensagem não enviada",
     "naoAtivada": "Sessão ainda não ativada.",
     "ativarSessao": "Ativar sessão",
-    "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens."
+    "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens.",
+    "reabrir": "Reabrir sessão",
+    "reabrirExplicacao": "Reabrir volta a sessão a ativa com tudo o que ela já tinha: a conversa, as regras de negócio, as perguntas respondidas e as ofertas entre agentes. O encerramento anterior fica registrado.",
+    "reabrirExigeMaintainer": "Reabrir a sessão exige o papel maintainer neste workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",
@@ -147,7 +150,8 @@
     "erroCancelarTurno": "Não foi possível cancelar o turno",
     "erroNoChat": "Erro no chat",
     "aviso": "Aviso",
-    "levandoAExecucao": "Levando você à sessão de execução."
+    "levandoAExecucao": "Levando você à sessão de execução.",
+    "erroReabrirSessao": "Não foi possível reabrir a sessão"
   },
   "modal": {
     "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",
@@ -177,6 +181,7 @@
     "proximaPagina": "Próxima página de regras de negócio",
     "paginaDe": "{{atual}} de {{total}}",
     "artefatosGerados": "Artefatos gerados",
+    "artefatosVazio": "Nenhuma PR nem item de backlog nesta sessão ainda.",
     "arquivosTocados": "Arquivos tocados",
     "logDeEventos": "Log de eventos",
     "eventoCitado": "Evento citado",

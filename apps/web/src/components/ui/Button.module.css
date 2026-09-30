@@ -71,26 +71,17 @@
   border-color: var(--accent-hover);
 }
 
-.primary:disabled {
-  background: var(--surface-2);
-  color: var(--text-muted);
-  border-color: var(--surface-2);
-  opacity: 0.6;
-}
 
+/* Contorno `--border-strong` (AT-327): com `--border`, "Sempre permitir" no
+   card de aprovação quase sumia contra a superfície do card no tema claro. */
 .secondary {
   background: var(--surface-2);
   color: var(--text-primary);
-  border-color: var(--border);
-}
-
-.secondary:hover:not(:disabled) {
   border-color: var(--border-strong);
 }
 
-.secondary:disabled {
-  background: transparent;
-  opacity: 0.5;
+.secondary:hover:not(:disabled) {
+  border-color: var(--text-muted);
 }
 
 .ghost {
@@ -104,7 +95,7 @@
 }
 
 .ghost:disabled {
-  opacity: 0.5;
+  color: var(--text-muted);
 }
 
 .danger {
@@ -119,9 +110,10 @@
 
 /* Era a única variante SEM estado desabilitado: um "Remover" inerte saía em
    vermelho cheio, igual ao ativo, e parecia oferecer remover o que não existe
-   (AT-324). Mesmo tratamento de `.secondary`/`.ghost`. */
+   (AT-324). Desde a AT-327 perde o vermelho em vez de ganhar opacidade. */
 .danger:disabled {
-  opacity: 0.5;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
 }
 
 .success {
@@ -138,6 +130,25 @@
 
 .success:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+
+/*
+ * O desabilitado LEGÍVEL (AT-327, achado CL1 da auditoria de 30/09): texto
+ * `--text-muted` sobre `--surface-2`, SEM `opacity`, e contorno
+ * `--border-strong` para a forma do botão continuar lá. Com `opacity: 0.5`/
+ * `0.6` por cima de `--text-muted`, "Converter" inerte virava bege sobre bege
+ * no tema claro — o par sem opacidade passa o AA nos dois temas e é medido em
+ * `design-contraste.test.ts` ("botão desabilitado"). Vale para toda variante
+ * com fundo; `ghost` fica sem fundo, só com o texto apagado, e `danger` perde
+ * o vermelho (inerte não pode parecer oferecer remover).
+ */
+.primary:disabled,
+.secondary:disabled,
+.success:disabled {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  filter: none;
 }
 
 /*

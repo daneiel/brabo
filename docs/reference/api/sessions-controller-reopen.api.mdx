@@ -1,0 +1,69 @@
+---
+id: sessions-controller-reopen
+title: "Reopens a closed session, keeping everything it had"
+description: "Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit."
+sidebar_label: "Reopens a closed session, keeping everything it had"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Reopens a closed session, keeping everything it had"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/reopen"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./sessions-controller-reopen.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./sessions-controller-reopen.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./sessions-controller-reopen.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -6,6 +6,7 @@ import { promoteStories, returnStory } from '../lib/api-client';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { Textarea } from '../components/ui/Textarea';
 import { useToast } from '../components/ui/ToastProvider';
@@ -56,7 +57,7 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
 
         <div className={styles.sectionLabel}>{t('sectionLabel.backlog')}</div>
         {!epics || epics.length === 0 ? (
-          <div className={styles.empty}>{t('empty.epics')}</div>
+          <EmptyState>{t('empty.epics')}</EmptyState>
         ) : (
           epics.map((epic) => <EpicNode key={epic.id} epic={epic} />)
         )}
@@ -72,7 +73,7 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
           )}
         </div>
         {!coverage || coverage.rules.length === 0 ? (
-          <div className={styles.empty}>{t('empty.rules')}</div>
+          <EmptyState>{t('empty.rules')}</EmptyState>
         ) : (
           coverage.rules.map((r) => (
             <div

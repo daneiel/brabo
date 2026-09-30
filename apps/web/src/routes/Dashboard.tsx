@@ -25,6 +25,7 @@ import { NotificationBell } from '../components/NotificationBell';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PlusIcon, SearchIcon } from '../components/ui/icons';
 import { NewProjectWizard } from './NewProjectWizard';
 import styles from './Dashboard.module.css';
@@ -45,6 +46,8 @@ function ProjectCardContainer({
 }: {
   project: Project;
   summary: ProjectCardSummary | undefined;
+  /** O resumo do workspace ainda está chegando — sem ele não há como saber
+   *  se houve atividade, e o card não afirma nada (RN-648). */
   carregando: boolean;
 }) {
   const navigate = useNavigate();
@@ -65,9 +68,20 @@ function ProjectCardContainer({
     ? groupRosterByArea(rosterFromFacts(summary.roster, () => 'ocioso'))
     : [];
 
-  const lastActivityText = summary?.lastEvent
-    ? `${classifyEvent(summary.lastEvent).text} · ${formatRelativeTime(summary.lastEvent.createdAt)}`
-    : t('activity.none');
+  // RN-648 (AT-325): QUATRO estados, que antes caíam todos em "Sem atividade
+  // ainda" — inclusive o resumo que FALHOU, num projeto com sessões e
+  // eventos. A linha lê a MESMA sessão que a Visão geral e a sidebar (a mais
+  // recente de trabalho, `latestSessionId`), então "sem atividade" fala DELA,
+  // e um projeto sem sessão nenhuma diz isso em vez.
+  const lastActivityText = summary
+    ? summary.lastEvent
+      ? `${classifyEvent(summary.lastEvent).text} · ${formatRelativeTime(summary.lastEvent.createdAt)}`
+      : summary.latestSessionId
+        ? t('activity.latestSessionEmpty')
+        : t('activity.noSession')
+    : carregando
+      ? t('activity.loading')
+      : t('activity.unavailable');
 
   return (
     <ProjectCard
@@ -207,16 +221,17 @@ export function Dashboard() {
           // Primeiro uso de verdade: o workspace não tem NENHUM projeto —
           // distinto do caso abaixo (busca sem resultado), que tem projetos
           // e não precisa de CTA de criar o primeiro.
-          <div className={styles.empty}>
-            <p>{t('empty.noProjectsYet')}</p>
-            <Button onClick={() => setWizardOpen(true)}>
-              <PlusIcon size={14} /> {t('empty.createProject')}
-            </Button>
-          </div>
+          <EmptyState
+            acao={
+              <Button onClick={() => setWizardOpen(true)}>
+                <PlusIcon size={14} /> {t('empty.createProject')}
+              </Button>
+            }
+          >
+            {t('empty.noProjectsYet')}
+          </EmptyState>
         ) : filtered.length === 0 ? (
-          <div className={styles.empty}>
-            {t('empty.noSearchResults', { search })}
-          </div>
+          <EmptyState>{t('empty.noSearchResults', { search })}</EmptyState>
         ) : (
           <div className={styles.grid}>
             {filtered.map((project) => (

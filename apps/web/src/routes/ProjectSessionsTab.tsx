@@ -17,13 +17,14 @@ import {
   type ResumoDeAprovacoes,
 } from '../lib/approvals';
 import { Button } from '../components/ui/Button';
-import { Chip } from '../components/ui/Chip';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
+import { EmptyState } from '../components/ui/EmptyState';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
-import { PencilIcon } from '../components/ui/icons';
+import { PencilIcon, PlusIcon } from '../components/ui/icons';
 import { LIMITE_DO_NOME, hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import { Destaque } from '../components/SpendCharts';
@@ -281,7 +282,15 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
         >
-          {abrindoForm ? t('sessionsTab.cancelButton') : t(copy.abrir)}
+          {/* AT-327: o CTA de criar é ícone + verbo, como "Novo projeto" no
+              Dashboard — nunca o caractere "+" dentro do texto. */}
+          {abrindoForm ? (
+            t('sessionsTab.cancelButton')
+          ) : (
+            <>
+              <PlusIcon size={14} /> {t(copy.abrir)}
+            </>
+          )}
         </Button>
       </div>
 
@@ -312,13 +321,13 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       )}
 
       {kind === 'criativa' && sessionsQuery.data && doKind.length > 0 && (
-        <div className={styles.filtros} role="group" aria-label={t('sessionsTab.filterGroupAriaLabel')}>
-          {ORDEM_DOS_FILTROS.map((chave) => (
-            <Chip key={chave} pressed={filtro === chave} onClick={() => setFiltro(chave)}>
-              {t(CHAVE_DO_FILTRO[chave])}
-            </Chip>
-          ))}
-        </div>
+        <SegmentedControl
+          className={styles.filtros}
+          rotulo={t('sessionsTab.filterGroupAriaLabel')}
+          opcoes={ORDEM_DOS_FILTROS.map((chave) => ({ valor: chave, rotulo: t(CHAVE_DO_FILTRO[chave]) }))}
+          valor={filtro}
+          onChange={setFiltro}
+        />
       )}
 
       {totalDaAba.total > 0 && (
@@ -348,7 +357,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           <Skeleton height={44} />
         </div>
       ) : sorted.length === 0 ? (
-        <div className={styles.empty}>
+        <EmptyState>
           {/* Vazio por FILTRO (há sessões, nenhuma no pill escolhido) é uma
               frase diferente de vazio por AUSÊNCIA — dizer "nenhuma ideação
               ainda" com sessões fechadas escondidas atrás do pill "Ativas"
@@ -356,7 +365,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           {kind === 'criativa' && filtro !== 'todas' && doKind.length > 0
             ? t('sessionsTab.filterEmpty')
             : t(copy.vazio)}
-        </div>
+        </EmptyState>
       ) : (
         <div className={styles.list}>
           {sorted.map((session, indice) => {

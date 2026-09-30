@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
+  ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
+  [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
+  A faixa de uma sessão `closed`/`closed_abnormally` ganha "Reabrir sessão": ela
+  volta a `active` com a conversa, as regras de negócio, as perguntas
+  respondidas e as ofertas entre agentes, e o encerramento anterior fica no log
+  como o evento novo `session.reopened` (quando e por quê). Rota própria,
+  `POST /projects/:projectId/sessions/:sessionId/reopen`, que exige
+  `maintainer`; abaixo disso o botão fica inerte e a tela diz por quê. Sessão
+  que ativou a execução não reabre (409 `sessao_com_execucao`): para voltar a
+  executar, abra uma sessão nova. `closing` continua sem volta, e a transição
+  genérica continua recusando `closed → active`. Papel, prazo e a regra da
+  execução são padrão provisório à espera do dono.
+
 - **web**: **o tema escuro vira preto neutro e calmo, com o acento terracota
   suave; o claro vira o neutro da mesma família** (AT-283, AT-284,
   [ADR 0181](docs/adr/0181-tema-preto-neutro.md),
@@ -104,6 +118,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   e espaço pela escala `--fs-*`/`--space-*`, e raio que coincide com um degrau
   passa pelo token. `design-tintas.test.ts` e `design-escala.test.ts` reprovam
   a volta.
+- **web**: **o cartão de aprovação é um só nas quatro superfícies** (AT-322) —
+  só apresentação, nenhum endpoint nem teto muda. O `ApprovalCard` perde a
+  prop `variant`: o fio da sessão, a aba Aprovações, o painel "precisa de você"
+  e as pendências de outras sessões mostram os mesmos botões, com a largura
+  natural deles (esticar os dois primeiros fazia "Modo automático" cair de
+  linha a 1024px), e a mesma nota de "Sempre permitir" — antes só o fio a
+  mostrava. A única diferença entre superfícies é o detalhe nascer fechado onde
+  os cards se empilham (`detalheRecolhido`), e quem centraliza o card no fio
+  com teto de 560px passa a ser o contêiner (`.acaoNoFio`, RN-173). As notas
+  ficam curtas, em corpo de 12px em vez de mono, com o ícone de 14px alinhado
+  à primeira linha. O comando, a branch, o caminho e a imagem da frase
+  (`lib/aprovacoes.ts`, que continua a fonte única dela) saem em mono e sem
+  aspas: `trechosDaFraseDaAcao` devolve a frase em trechos de prosa e de
+  código, e `fraseDaAcao` segue devolvendo a string, agora sem as aspas retas.
+- **web**: **controle segmentado, estado vazio e CTA seguem um padrão só**
+  (AT-327) — só apresentação. Nascem `ui/SegmentedControl` (grupo rotulado de
+  `Chip`s, `aria-pressed`), usado nos filtros da aba Criativo, no
+  Conversar/Buscar do Chat e no filtro por estado das PRs — que deixa de ser
+  `role="tab"` sem painel —, e `ui/EmptyState` (caixa tracejada centralizada,
+  ícone e CTA opcionais), usado nos vazios de Sessões, Insights, Executores,
+  Arquitetura, Backlog, Aprovações e Dashboard. O CTA de criar é ícone + verbo
+  em toda parte ("Nova ideação", "Nova conversa", sem o "+" no texto). Insights
+  e Arquitetura começam no topo como as outras abas (perdem a margem de 28px de
+  seção). O `/status` mostra a hora formatada no idioma de quem lê em vez do
+  ISO cru, estados em palavras ("no ar"/"fora do ar"), "Última verificação" e
+  um botão "Voltar" de verdade. O botão desabilitado deixa de usar `opacity`:
+  texto `--text-muted` sobre `--surface-2` com contorno `--border-strong`, par
+  medido em `design-contraste.test.ts` nos dois temas ("Converter" inerte não
+  some mais no tema claro), e o secundário ganha contorno `--border-strong`.
 
 - **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
   AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
@@ -555,6 +598,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   a oferta pelo `handoffId`, e agente ativado fora da janela (o
   `roster.activatedAgents` da RN-630) não perde a opção nem reabre oferta
   (AT-251, [RN-631](docs/business-rules.md#rn-631), [RN-584](docs/business-rules.md#rn-584)).
+- **web**: a sidebar, o card do Dashboard e o painel "Contexto da sessão"
+  deixam de se contradizer (AT-325, [RN-648](docs/business-rules.md#rn-648)).
+  Sem sessão de execução, o bloco Atividades da sidebar lê a mesma sessão da
+  Visão geral (antes dizia "Nenhum agente entrou em ação" com o Criativo
+  trabalhando); carregando, erro, projeto sem sessão e sessão vazia ganham
+  textos próprios, e o vazio diz qual sessão leu. O card do Dashboard separa
+  "carregando atividade…", "atividade indisponível" (o resumo que falhou dizia
+  "Sem atividade ainda"), "Nenhuma sessão ainda" e "Sem atividade na sessão
+  mais recente ainda". E em "Artefatos gerados" o contador de cada agente conta
+  a árvore do backlog, como o do cabeçalho — a soma dos grupos é o total —, e o
+  vazio diz que a seção conta PRs e itens de backlog.
 - **web**: a aba PRs sem imagem decidida deixa de mostrar "A aba Code ainda não
   está liberada" — diz "A lista de PRs ainda não está liberada" e por quê; o
   nome da aba no texto passa a vir do mesmo rótulo do trilho ("Código"/"Code")
@@ -1655,6 +1709,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/explanation/documentation-workflow.md`.
 
 ### Testes
+
+- **e2e**: **a aprovação inline ganha E2E de navegador** (AT-068,
+  `e2e/testes/aprovacao-inline.spec.ts`). Uma `write_file` com ator `user`
+  nasce `pending` pela semeadura; o spec abre a sessão com os cookies do login
+  de semeadura, recusa pelo `ApprovalCard` do chat e asserta a requisição
+  observada — `POST /auth/refresh` com `X-CSRF-Token`, o POST de decisão
+  cruzado `:8088` → `:3000` com `Bearer`, 201 com `denied` — e a fila da api
+  sem a pendência. A medição corrigiu o enunciado: a decisão não leva CSRF
+  (só `/auth` o exige); o CSRF provado é o do refresh que dá o access à página.
+  O streaming do turno fica DECLARADO no `e2e/README.md`: o `agent.delta` só
+  nasce de chunk de provider de LLM real, e não há provider de mentira.
 
 - **deploy/k8s**: **a rotação da chave mestra ganha um ensaio no cluster, toda
   semana** (AT-146, BRB-010). Ela nunca tinha rodado em ambiente real (resposta

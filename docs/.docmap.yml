@@ -466,6 +466,15 @@ rules:
     docs: ["docs/explanation/medicao-do-jev.md"]
     severity: warn
 
+  # A auditoria visual da AT-290: os números do "antes" e do "depois" saíram do
+  # verificador de layout rodado em cada tela. Mudar o que ele conta como
+  # achado muda o que a página compara.
+  - id: auditoria-visual
+    watch:
+      - "scripts/dev/validacao-visual.js"
+    docs: ["docs/explanation/auditoria-visual-rodada-29.md"]
+    severity: warn
+
   - id: scripts
     watch:
       - "package.json"

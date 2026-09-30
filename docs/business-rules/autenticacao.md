@@ -2177,16 +2177,18 @@ A guarda continua **inalterada e deliberada**: só rola quem já está a menos d
 120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
 a conversa, não sequestra a leitura.
 
-No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
-inteiros da coluna: ganha teto de 560px e fica centralizado, como
+No mesmo fio, o card de aprovação deixa de ocupar os 780px inteiros da
+coluna: ganha teto de 560px e fica centralizado, como
 `.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
 errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
-fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
-a coluna do grid.
+fila da aba Aprovações não muda: lá o card DEVE preencher a coluna do grid.
+Desde a AT-322 o card é UM só em toda superfície e preenche o contêiner —
+quem aplica o teto e a centralização no fio é o contêiner dele
+(`.acaoNoFio`), não mais uma variante do card.
 
 - **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
   efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
-  (`.card.chat`)
+  (`.card`) e `apps/web/src/routes/SessionPage.module.css` (`.acaoNoFio`)
 - **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
   (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
   ter rolado para cima)
@@ -2440,7 +2442,7 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:98` (`REGRAS_POR_PAGINA`) e
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:104` (`REGRAS_POR_PAGINA`) e
   a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2515,7 +2517,7 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
-  `:379` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+  `:388` (`baixados`); `apps/web/src/routes/ContextAside.tsx:149`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
