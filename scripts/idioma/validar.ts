@@ -39,12 +39,14 @@ import {
   mediana,
   naAmostra,
   orientacao,
+  posicionar,
   resultadoDaFerramenta,
   tabela,
   veredicto,
   type Braco,
   type Caso,
   type Chamada,
+  type PosicaoDaOrientacao,
   type Resposta,
 } from './validacao.ts';
 
@@ -108,12 +110,17 @@ function lerOpcoes(argv: string[]): Opcoes {
 }
 
 function lerChave(o: Opcoes): string {
-  if (o.arquivoDeChave) {
-    for (const linha of readFileSync(o.arquivoDeChave, 'utf8').split('\n')) {
+  return chaveDe(o.arquivoDeChave);
+}
+
+/** A chave de um arquivo `OPENROUTER_TEST_KEY=…` ou do ambiente. NUNCA é impressa. */
+export function chaveDe(arquivoDeChave: string | null): string {
+  if (arquivoDeChave) {
+    for (const linha of readFileSync(arquivoDeChave, 'utf8').split('\n')) {
       const m = linha.trim().match(/^(?:export\s+)?OPENROUTER_TEST_KEY=(.*)$/);
       if (m) return (m[1] as string).trim().replace(/^["']|["']$/g, '');
     }
-    throw new Error(`OPENROUTER_TEST_KEY ausente em ${o.arquivoDeChave}`);
+    throw new Error(`OPENROUTER_TEST_KEY ausente em ${arquivoDeChave}`);
   }
   const k = process.env.OPENROUTER_TEST_KEY;
   if (!k) throw new Error('OPENROUTER_TEST_KEY ausente (ambiente ou --arquivo-de-chave)');
@@ -130,7 +137,7 @@ async function usoDaChave(chave: string): Promise<number | null> {
   }
 }
 
-interface Mensagem {
+export interface Mensagem {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[];
@@ -149,9 +156,9 @@ interface Retorno {
   custo: number | null;
 }
 
-class TetoAtingido extends Error {}
+export class TetoAtingido extends Error {}
 
-class Cliente {
+export class Cliente {
   gasto = 0;
   private readonly chave: string;
   private readonly teto: number;
@@ -225,7 +232,7 @@ class Cliente {
   }
 }
 
-interface Contexto {
+export interface Contexto {
   cliente: Cliente;
   sha: string;
   data: string;
@@ -237,6 +244,10 @@ interface Contexto {
   modelos: string[];
   gravarChamada: (c: Chamada) => void;
   gravarResposta: (r: Resposta) => void;
+  /** Só o diagnóstico (AT-279): para depois de N turnos. */
+  turnosMax?: number;
+  /** Só o diagnóstico (AT-279): a orientação SEM a cláusula do artefato (RN-623), para isolar o efeito dela. */
+  semClausula?: boolean;
 }
 
 /** O histórico como a reidratação o reconstrói: texto, ferramenta vira texto, sem `role: "tool"` (RN-580). */
@@ -253,15 +264,23 @@ function reidratar(msgs: Mensagem[]): Mensagem[] {
   return out;
 }
 
-async function conversa(ctx: Contexto, modelo: string, braco: Braco, caso: Caso, rodada: number): Promise<void> {
+export async function conversa(
+  ctx: Contexto,
+  modelo: string,
+  braco: Braco,
+  caso: Caso,
+  rodada: number,
+  /** Onde a orientação vai; ausente = como o produto faz (última `system`). */
+  posicao?: PosicaoDaOrientacao,
+): Promise<void> {
   const outro = ctx.modelos.find((m) => m !== modelo) ?? modelo;
   for (let s = 0; s < caso.sessoes.length; s++) {
     let msgs: Mensagem[] = [{ role: 'system', content: ctx.persona }];
     let quebrada: string | null = null;
     const turnos = caso.sessoes[s] as NonNullable<Caso['sessoes'][number]>;
-    for (let t = 0; t < turnos.length; t++) {
+    for (let t = 0; t < Math.min(turnos.length, ctx.turnosMax ?? turnos.length); t++) {
       const turno = turnos[t] as NonNullable<(typeof turnos)[number]>;
-      const base = { data: ctx.data, sha: ctx.sha, braco, modelo, sobTeste: modelo, caso: caso.id, rodada, sessao: s, turno: t };
+      const base = { data: ctx.data, sha: ctx.sha, braco, modelo, sobTeste: modelo, caso: caso.id, rodada, sessao: s, turno: t, ...(posicao ? { posicao } : {}) };
       let compactou = false;
       if (!quebrada && turno.retomarAntes) msgs = reidratar(msgs);
       if (!quebrada && turno.compactarAntes) {
@@ -292,8 +311,8 @@ async function conversa(ctx: Contexto, modelo: string, braco: Braco, caso: Caso,
       const upstreams: string[] = [];
       const modeloDoTurno = turno.noOutroModelo ? outro : modelo;
       for (let it = 0; !quebrada && it < ITERACOES_POR_TURNO; it++) {
-        const texto = braco === 'tratamento' ? orientacao(ctx.orient, turno.autor, IDIOMA_DO_PROJETO, ctx.nomes) : null;
-        const envio: Mensagem[] = texto ? [...msgs, { role: 'system', content: texto }] : msgs;
+        const texto = braco === 'tratamento' ? orientacao(ctx.orient, turno.autor, ctx.semClausula ? null : IDIOMA_DO_PROJETO, ctx.nomes) : null;
+        const envio: Mensagem[] = texto ? posicionar(posicao ?? 'ultima-system', msgs, texto) : msgs;
         const inicio = Date.now();
         let r: Retorno;
         try {
@@ -344,7 +363,7 @@ async function conversa(ctx: Contexto, modelo: string, braco: Braco, caso: Caso,
         ctx.gravarResposta({
           braco, modelo, caso: caso.id, rodada, sessao: s, turno: t, esperado: turno.esperado, veredito,
           revisar: veredito === 'indeterminado' || veredito !== turno.esperado || Boolean(turno.revisarSempre) || naAmostra(chave),
-          noLimiar: caso.noLimiar, texto: quebrada ? `(falha: ${quebrada})` : vazia ? '(falha: resposta vazia — o teto de max_tokens esgotou no raciocínio?)' : ultimoTexto, usouFerramenta: usadas, upstream: upstreams,
+          noLimiar: caso.noLimiar, texto: quebrada ? `(falha: ${quebrada})` : vazia ? '(falha: resposta vazia — o teto de max_tokens esgotou no raciocínio?)' : ultimoTexto, usouFerramenta: usadas, upstream: upstreams, ...(posicao ? { posicao } : {}),
         });
       }
     }
