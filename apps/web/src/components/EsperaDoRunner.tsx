@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject } from '../lib/api-client';
+import type { Project } from '../lib/api-types';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import styles from './EsperaDoRunner.module.css';
@@ -68,6 +69,19 @@ export const TETO_MS = 180_000;
 
 type Fase = 'esperando' | 'confirmado' | 'semResposta';
 
+/** Confirmado é o carimbo MUDAR em relação à linha de base, nunca "existir". */
+function confirmadoPor(
+  project: Pick<Project, 'workspaceVerifiedAt'> | undefined,
+  base: string | null | undefined,
+): boolean {
+  return (
+    !!project &&
+    base !== undefined &&
+    project.workspaceVerifiedAt !== null &&
+    project.workspaceVerifiedAt !== base
+  );
+}
+
 export function EsperaDoRunner({
   projectId,
   onConfirmado,
@@ -88,21 +102,24 @@ export function EsperaDoRunner({
    */
   const base = useRef<string | null | undefined>(undefined);
 
+  // A sonda PARA quando a espera acaba — pelo teto OU pela confirmação
+  // (AT-278, RN-632). Antes só o teto a parava: confirmado, o efeito do teto
+  // saía cedo, `expirou` nunca virava `true` e a espera seguia batendo
+  // `GET /projects/:id` a cada 3s (20/min) enquanto o painel estivesse na
+  // tela — e, sendo o observador mais rápido de `['project', id]`, arrastava
+  // a chave inteira da página junto.
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
-    refetchInterval: () => (expirou ? false : INTERVALO_MS),
+    refetchInterval: (query) =>
+      expirou || confirmadoPor(query.state.data, base.current) ? false : INTERVALO_MS,
   });
 
   if (project && base.current === undefined) {
     base.current = project.workspaceVerifiedAt;
   }
 
-  const confirmado =
-    !!project &&
-    base.current !== undefined &&
-    project.workspaceVerifiedAt !== null &&
-    project.workspaceVerifiedAt !== base.current;
+  const confirmado = confirmadoPor(project, base.current);
 
   useEffect(() => {
     if (confirmado || expirou) return;

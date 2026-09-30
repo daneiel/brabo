@@ -188,6 +188,7 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
 
 ## Estado atual e aberto
 
@@ -1809,7 +1810,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
   passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
   aviso SEM janela só troca poll por rajada. O número é guardado por
-  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Escrita
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Leitura
+  de PROJETO (lista de sessões, contadores do trilho) nenhum canal avisa, e
+  polla no ritmo de projeto, `INTERVALO_DO_PROJETO_MS` (15s, incondicional);
+  quem só precisa do dado no CLIQUE não polla (`useLatestSession(id, false)`,
+  as linhas de `/containers`); e TODA tela que ouve `session:<id>` — não só a
+  de Sessão: Executores e Visão geral também — passa pelo MESMO
+  `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
+  eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Escrita
   que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
   também avisa desde a AT-157: a api pede ao engine
   `POST /internal/sessions/:id/event-appended` DEPOIS do commit

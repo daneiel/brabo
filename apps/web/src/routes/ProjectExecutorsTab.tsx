@@ -22,6 +22,7 @@ import {
 import { deriveAgentRoster, groupRosterByArea, isExecutorAgentId, isExecutorGroup } from '../lib/agent-status';
 import { deriveExecutionProgress } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
+import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import { rotuloDaSessao } from '../lib/session-label';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
@@ -75,7 +76,9 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const events = eventsQuery.data?.items ?? [];
   const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
-  const { data: architecture } = useArchitecture(projectId);
+  // Periferia de PROJETO (AT-278): o `module_map` só muda quando o Arquiteto
+  // escreve, e nenhum canal desta aba avisa disso — ritmo de projeto.
+  const { data: architecture } = useArchitecture(projectId, INTERVALO_DO_PROJETO_MS);
   const handoffsQuery = useHandoffs(projectId, sessionId);
   const handoffs = handoffsQuery.data ?? [];
 
@@ -167,15 +170,22 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (!sessionId || executionSession?.status !== 'active') return;
+    // AT-278 (RN-632): o aviso passa pelo MESMO invalidador da tela de
+    // Sessão (RN-579). Antes cada `event.appended` invalidava os eventos NA
+    // HORA, sem janela — uma rajada de `tool.call`/`tool.result` de dev agent
+    // (10/s) virava 630 GET de eventos por minuto só nesta aba, o dobro do
+    // teto do usuário. E as ações/handoffs, que o canal vivo deixa no
+    // fallback de 15s, nunca eram invalidadas por aqui: a proposta de um dev
+    // agent levava até 15s para aparecer.
+    const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onEvent: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
-      onAgentStatus: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
+      onEvent: ({ type }) => invalidador.aoEvento(type, false),
+      onAgentStatus: () => invalidador.aoEvento('agent.status', false),
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      invalidador.encerrar();
+    };
   }, [sessionId, executionSession?.status, projectId, queryClient]);
 
   async function handleAutonomyChange(agentId: string, actionType: string, mode: AutonomyMode) {

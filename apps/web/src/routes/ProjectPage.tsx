@@ -11,6 +11,7 @@ import {
   useProjectPendingActions,
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
+import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { TokenMeter } from '../components/TokenMeter';
 import { PainelPrecisaDeVoce } from '../components/PainelPrecisaDeVoce';
 import { montarFilas } from '../lib/precisa-de-voce';
@@ -70,20 +71,23 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   const { data: budget } = useQuery({ queryKey: ['budget', projectId], queryFn: () => getProjectBudget(projectId) });
 
   const { latest: latestSession } = useLatestSession(projectId);
-  const pendingActionsQuery = usePendingActions(projectId, latestSession?.id);
+  // Os cinco contadores do trilho são PERIFERIA de projeto (AT-278, RN-632):
+  // nenhum canal desta moldura avisa quando mudam, e a aba que mostra o dado
+  // como assunto mantém o poll curto dela. Ritmo de projeto aqui.
+  const pendingActionsQuery = usePendingActions(projectId, latestSession?.id, INTERVALO_DO_PROJETO_MS);
   const pendingCount = pendingActionsQuery.data?.items.filter((a) => a.status === 'pending').length ?? 0;
 
   // Histórias esperando promoção do usuário (Fase 12c — RN-048). Contador
   // próprio, ao lado do de aprovações: são duas filas de decisão diferentes,
   // e somá-las esconderia qual delas está pedindo atenção.
-  const backlogQuery = useBacklog(projectId);
+  const backlogQuery = useBacklog(projectId, INTERVALO_DO_PROJETO_MS);
   const promocoesPendentes = aguardandoPromocao(backlogQuery.data).length;
 
   // Terceira fila de decisão do projeto: hipóteses do Psicólogo esperando
   // aceitar/descartar. Ficavam no fim da Visão geral, sem contador nenhum —
   // achado #15. Contador próprio pelo mesmo motivo do de promoções: somar
   // filas diferentes esconde qual delas está pedindo atenção.
-  const hypothesesQuery = useHypotheses(projectId);
+  const hypothesesQuery = useHypotheses(projectId, INTERVALO_DO_PROJETO_MS);
   const hipotesesPendentes = (hypothesesQuery.data ?? []).filter(
     (h) => h.status === 'proposed',
   ).length;
@@ -97,7 +101,7 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // validação cruzada entre história e módulo (mesmo campo que
   // `ArchitectureContent`/`ProjectArchitectureTab.tsx` já lista com badge
   // "Pendências de validação cruzada").
-  const architectureQuery = useArchitecture(projectId);
+  const architectureQuery = useArchitecture(projectId, INTERVALO_DO_PROJETO_MS);
   const arquiteturaPendente = architectureQuery.data?.pendencies.length ?? 0;
 
   // Onda 2 do PROGRAMA de abas agrupadas: `prsPendentes` deixou de ser o
@@ -105,7 +109,7 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // consulta que `ProjectPrsTab` usa) — `git_merge` pendente em qualquer
   // sessão, não só a mais recente, é a mesma correção que resolve o bug de
   // visibilidade da aba.
-  const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge');
+  const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge', INTERVALO_DO_PROJETO_MS);
   const prsPendentes = mergeActionsQuery.data?.length ?? 0;
 
   const contagens: ContagensDeAba = {
