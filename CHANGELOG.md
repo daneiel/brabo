@@ -378,6 +378,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api (segurança)**: `nodemailer` sobe de 9.1.1 para 10.0.12, que fecha o
+  GHSA-v53p-9fqp-m79j (backtracking quadrático no `addressparser`, HIGH,
+  corrigido só na linha 10). A única mudança incompatível da 10 é exigir Node
+  20 ou mais novo, e a imagem roda Node 22. O Trivy do job de imagens reprovava
+  todo PR desde a publicação da advisory.
+- **engine (segurança)**: a imagem de produção instala `PyJWT` 2.15.1 por cima
+  do 2.13.0 que o semgrep prende (`pyjwt~=2.13.0`, inclusive no último release,
+  1.178.0), fechando seis CVEs, um deles CRITICAL. A troca é `--no-deps`,
+  depois do semgrep, e a prova de que o `semgrep scan` dos gates segue
+  funcionando é o scan de verdade que o próprio build já roda.
 - **web**: duas abas abertas (o chat da sessão e a aba Executores) não batem
   mais no teto de 300 req/min do usuário (AT-278,
   [RN-632](docs/business-rules.md#rn-632), extensão da
