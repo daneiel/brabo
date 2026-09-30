@@ -549,14 +549,16 @@ breaker with a click.
 `projects.story_promotion` chooses WHO promotes a story from `draft` to
 `ready`:
 
-- **`manual`** (new project's default): the PO leaves the story complete
+- **`manual`**: the PO leaves the story complete
   and it stays `draft` with `stories.proposed_ready = true`. **None of
   its tasks are claimable** — `claimNext` requires `story.status =
   'ready'` — and it's the user who promotes it, individually or in
   batch, from the Backlog.
-- **`auto`**: the PO promotes on its own upon finishing a complete story.
-  This is the behavior that predates Phase 12c, kept as an explicit
-  option.
+- **`auto`** (new project's default since [RN-659](../business-rules.md#rn-659)):
+  the PO promotes on its own upon finishing a complete story. This was
+  the behavior that predated Phase 12c; `manual` was the default from
+  12c until RN-659 (migration `0065`), which changed only the column
+  default — projects created in between keep `manual`.
 
 **The mode changes the trigger, not the criterion.** Both paths go
 through `assertPromotable` — readiness (RF/DoD/DoR/rule) and modules

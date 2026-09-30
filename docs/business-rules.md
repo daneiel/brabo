@@ -17526,7 +17526,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:182` (`invalidador`),
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:174` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
@@ -17793,7 +17793,7 @@ o do chat.
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:87` (`pendentesQuery`), `:291`
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:94` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:794` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
@@ -18423,3 +18423,123 @@ cartão ali segue calado, como a [RN-614](#rn-614) já dizia. Nenhum teto muda.
   (evento ausente diz "não registrado"), `:304` (a leitura que falha é dita
   uma vez, contando só ela)
 - **Origem:** AT-336
+
+- **Origem:** AT-329 (achado N2 de `docs/explanation/auditoria-visual-rodada-29.md`)
+
+### RN-659 — Projeto novo nasce com promoção de histórias automática; projeto existente fica no modo que tinha {#rn-659}
+
+O default de `projects.story_promotion` passa de `manual` para `auto` (decisão
+do dono em 30/09, AT-313): cada história completa do PO nasce `ready`, sem o
+clique de promoção por história que o levantamento da AT-309 contou como +N
+passos. A validação é a MESMA nos dois modos (RN-048); muda só quem dispara.
+
+A mudança é do DEFAULT da coluna, pela migration `0065`
+(`ALTER COLUMN … SET DEFAULT 'auto'`), e nada mais: nenhuma linha é reescrita,
+então projeto que nasceu `manual` continua `manual` até alguém trocar em
+Configurações. A criação NÃO manda o campo — o valor é o default da coluna,
+uma fonte só —, e as duas telas DIZEM o valor: o passo Confirmar da criação
+mostra "Promoção de histórias: automática — o PO promove", com onde mudar, e a
+seção de Configurações diz que projeto novo nasce em Automática e que mudar ali
+vale só para aquele projeto. Os dois scripts de validação que exercitam o fluxo
+manual (`validacao-fase-12.ts`, `validacao-real.ts`) passam a pedir `manual`
+explícito.
+
+- **Código:** `apps/api/src/db/schema/iam.ts:278` (`storyPromotion`);
+  `apps/api/src/db/migrations/0065_default_de_promocao_auto.sql`;
+  `apps/web/src/routes/NewProjectWizard.tsx:978` (a linha do Confirmar);
+  `apps/web/src/routes/settings/PromotionSection.tsx:75` (a nota do default)
+- **Teste:** `apps/api/test/db/story-promotion-migration.spec.ts:29` (projeto
+  novo nasce `auto` — caminho feliz), `:40` (projeto existente em `manual` não
+  muda — caso de falha); `apps/web/src/routes/NewProjectWizard.test.tsx:254`
+  (o Confirmar diz o valor); `apps/web/src/routes/ProjectSettingsTab.test.tsx:625`
+  (projeto antigo segue `manual` e a tela diz o default), `:646` (a api recusa
+  a troca e a tela diz que não salvou)
+- **Origem:** AT-313 (levantamento da AT-309, passo 5); revisa o default da
+  [RN-048](business-rules/custo.md#rn-048)
+
+### RN-660 — O handoff do PO ao Arquiteto é aceito pelo SISTEMA quando o backlog está coberto e o repositório é local e sem credencial {#rn-660}
+
+A oferta `po → arquiteto` que o engine cria (`POST
+/internal/sessions/:id/handoffs`) é aceita sem clique, na mesma requisição e
+DEPOIS da transação da oferta, quando as quatro condições valem
+(`decidirAceiteAutomatico`, puro):
+
+1. a oferta está `offered`;
+2. o **backlog está coberto**: o projeto tem ao menos UMA regra de negócio
+   (`artifact.business_rule`) e NENHUMA sem história que a cite em
+   `businessRuleIds` — a MESMA `computeCoverage` da aba Backlog e da leitura
+   do PO (RN-164). Zero regras não é coberto;
+3. o repositório é **local e sem credencial**: o projeto não tem repositório (o
+   aceite provisiona `local`) ou tem um `local`, e não tem conexão de git
+   (OAuth) em `project_git_connections`;
+4. quem abriu a sessão ainda tem `developer` no projeto (papel efetivo,
+   RN-471) — o mínimo da rota humana de aceite.
+
+Quem aceita continua sendo `AcceptHandoffUseCase`: o repositório nasce ali,
+antes de `activateAgent` (RN-582, ADR 0165), em nome de quem abriu a sessão. O
+aceite é auditável: `handoff.accepted` e `agent.activated` saem com o ator de
+SISTEMA `handoff-auto-accept`, e o `handoff.accepted` leva `automatico: true`,
+`emNomeDe` e o `criterio` (`regras`, `cobertas`, `repositorio`). Condição que
+falha não grava nada — a oferta fica com o botão de sempre, e a resposta ao
+engine diz o motivo (`regras_sem_historia`, `repositorio_nao_local`,
+`credencial_de_git_no_projeto`…). Falha DEPOIS de decidir "sim" não sobe: vira
+o evento `handoff.auto_accept_failed` (origem `infra`) e o fio o mostra. Com o
+aceite feito, a ferramenta `offer_handoff` diz ao PO que o Arquiteto já foi
+ativado. Repositório remoto ou com credencial continua pedindo o clique, e o
+handoff manual (ADR 0109) também.
+
+- **Código:** `apps/api/src/domain/sessions/aceite-automatico-do-handoff.ts:81`
+  (`decidirAceiteAutomatico`), `:74` (`backlogCoberto`);
+  `apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts:44`
+  (`AceitarHandoffAutomaticamenteUseCase`);
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:79`
+  (`AceitePeloSistema`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:403`
+  (`handoff`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:59`;
+  `apps/web/src/routes/session-timeline-montagem.tsx:604` (o aviso no fio)
+- **Teste:** `apps/api/test/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.spec.ts:73`
+  (backlog coberto e sem repositório: aceita pelo sistema — caminho feliz),
+  `:89` (regra sem história: não aceita e não grava nada — caso de falha),
+  `:99` (repositório remoto), `:109` (conexão de git), `:128` (falha vira
+  `handoff.auto_accept_failed`);
+  `apps/api/test/domain/sessions/aceite-automatico-do-handoff.spec.ts:37`,
+  `:49` (cada motivo de recusa);
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:323`
+  (ator de sistema, critério e provisionamento antes de ativar);
+  `apps/web/src/routes/SessionPage.handoff-aceite-automatico.test.tsx:174`,
+  `:196`; `apps/engine/test/engine/harness/tools/offer_handoff_test.exs:38`
+  (não rodado nesta sessão: sem Elixir no ambiente)
+- **Origem:** AT-314, [ADR 0186](adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)
+
+### RN-661 — O modo automático é OFERECIDO em lote para o time no início da execução, e a oferta diz o que ele não libera {#rn-661}
+
+Na aba Executores, com a execução ativa e o time de execução na tela, um cartão
+oferece ligar o modo automático (RN-153) para os agentes do time de uma vez
+(AT-315). É UM controle, e é oferta: os agentes que ainda não estão em
+automático vêm marcados, a pessoa desmarca quem não quer, e nada é gravado sem
+o clique em "Ligar". O clique grava a MESMA curinga (`agent_autonomy`,
+`actionType: "*"`, `auto_approve`) pelo MESMO endpoint do toggle por agente
+(`PUT .../agent-autonomy`, `maintainer`) — um PUT por agente, em série, sem
+abortar na primeira recusa, com desfecho POR agente nos três casos da RN-469
+(todos, nenhum com a frase da api, alguns com quem ficou em manual). Desligar
+continua no toggle manual/auto do card de cada agente; não há "desligar em
+lote". Quando todos já estão em automático, o cartão some.
+
+O cartão DIZ, antes do clique, o que o modo automático NÃO libera — os tetos
+absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida;
+`git push`, abertura de PR e deploy; `sudo`/`doas`; `container_remove`;
+`instruction_patch`; paralelizar ou subir o teto de paralelismo. Sem
+`maintainer` o controle fica inerte e o motivo é dito em texto; o papel lido é
+o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
+automático (RN-471).
+
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:52`
+  (`ModoAutomaticoDoTime`), `:81` (`ligar`), `:35`
+  (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:85`
+  (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
+- **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
+  gravado ao montar; o clique grava a curinga para cada escolhido — caminho
+  feliz), `:85` (a api recusa um agente e o desfecho nomeia quem ficou em
+  manual — caso de falha), `:74` (o que não libera), `:102` (sem
+  `maintainer`), `:108` (todos em automático, nada a oferecer)
+- **Origem:** AT-315 (levantamento da AT-309, linha "Modo automático")

@@ -626,22 +626,36 @@ describe('PromotionSection (Fase 12c — RN-048)', () => {
     return montarSecao(<PromotionSection projectId="proj-1" />);
   }
 
-  it('projeto novo cai em manual e explica o que isso significa', async () => {
+  it('projeto antigo em manual segue manual, explica, e a tela diz que projeto novo nasce em Automática (RN-659)', async () => {
     getProject.mockResolvedValue(project({ storyPromotion: 'manual' }));
     montarPromocao();
 
     expect(await screen.findByDisplayValue('Manual — eu promovo')).toBeTruthy();
     expect(screen.getByText(/Nenhuma tarefa dela é pegável até lá/)).toBeTruthy();
+    expect(screen.getByTestId('promocao-default')).toHaveTextContent(
+      'Projeto novo nasce em Automática',
+    );
   });
 
-  it('projeto em auto mostra que é o comportamento anterior, mantido como opção', async () => {
+  it('projeto em auto (o padrão de projeto novo) mostra o valor e o que ele faz', async () => {
     getProject.mockResolvedValue(project({ storyPromotion: 'auto' }));
     montarPromocao();
 
     expect(
       await screen.findByDisplayValue('Automática — o PO promove'),
     ).toBeTruthy();
-    expect(screen.getByText(/comportamento anterior à Fase 12c/)).toBeTruthy();
+    expect(screen.getByText(/O PO promove sozinho/)).toBeTruthy();
+  });
+
+  it('CASO DE FALHA: a api recusa a troca e a tela diz que não salvou', async () => {
+    getProject.mockResolvedValue(project({ storyPromotion: 'auto' }));
+    updateProject.mockRejectedValue(new Error('boom'));
+    montarPromocao();
+
+    const select = await screen.findByLabelText('Quem promove histórias');
+    fireEvent.change(select, { target: { value: 'manual' } });
+
+    expect(await screen.findByText('Não foi possível salvar')).toBeTruthy();
   });
 
   it('trocar o modo salva no onChange, sem botão', async () => {

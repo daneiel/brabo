@@ -214,6 +214,9 @@ estado lido do repositório e não da conversa.
 | O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
 | Os modelos vigentes de agentes e áreas numa leitura só: a carga de Configurações cai de 49 para 30 (AT-334) | RN-654 |
 | O fio nomeia quem entra pelo papel de workspace, e cada cartão de Aprovações lê o próprio motivo da política (AT-335/AT-336) | RN-655, RN-656 |
+| Projeto novo nasce com promoção de histórias automática (AT-313) | RN-659 |
+| O handoff do PO ao Arquiteto é aceito pelo sistema com backlog coberto e repositório local (AT-314) | ADR 0186, RN-660 |
+| O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
 
 ## Estado atual e aberto
 
@@ -1471,7 +1474,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `execution/activate` sem repositório é 409 antes de qualquer efeito —
   RECUSA, nunca provisiona: provisionar ali esconderia um efeito de git na
   ativação e deixaria Arquiteto e Infra, que trabalham antes dela, sem onde
-  escrever
+  escrever. Desde o ADR 0186 (RN-660) esse aceite tem um SEGUNDO autor: a
+  oferta `po → arquiteto` é aceita pelo SISTEMA quando o backlog está coberto
+  (≥ 1 regra, nenhuma sem história, a mesma `computeCoverage` da aba Backlog),
+  o repositório é `local` e o projeto não tem conexão de git — sempre por
+  `AcceptHandoffUseCase` e com o ator `handoff-auto-accept` no log. Não
+  estenda a outro par de agentes nem a repositório remoto sem ADR
 - O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
   para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
   como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
@@ -1520,7 +1528,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   incondicional, agora é `require_approval` incondicional, com a mesma
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
-  recusa gravar padrão pra esses comandos).
+  recusa gravar padrão pra esses comandos). Desde a RN-661 a aba Executores
+  OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
+  só com o clique, e dizendo o que o modo automático não libera; nunca a grave
+  sem clique.
 - O papel de PROJETO sobrepõe o de workspace nos DOIS sentidos —
   `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`, e
   NÃO é "o maior dos dois" (RN-471). Restringir alguém num projeto sensível é

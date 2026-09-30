@@ -320,7 +320,8 @@
     "card": {
       "title": "Who promotes",
       "hintManual": "The PO leaves the completed story waiting for you in the Backlog. None of its tasks are pickable until then.",
-      "hintAuto": "The PO promotes on its own once a story is complete — this was the previous behavior before Phase 12c, kept as an option."
+      "hintAuto": "The PO promotes on its own once a story is complete.",
+      "defaultNote": "A new project starts on Automatic. Changing it here only affects this project; projects created earlier keep the mode they had."
     },
     "selectAria": "Who promotes stories",
     "optionManual": "Manual — I promote",

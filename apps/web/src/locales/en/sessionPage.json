@@ -94,6 +94,8 @@
     "semMotivo": "no reason given"
   },
   "handoff": {
+    "aceiteAutomatico": "Accepted automatically: the backlog covers all {{regras}} business rules and the repository is local, so {{agente}} joined without a click.",
+    "aceiteAutomaticoFalhou": "The automatic accept of the handoff to {{agente}} failed: {{erro}}. Accept it from the offer card.",
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",

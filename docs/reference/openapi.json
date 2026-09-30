@@ -1721,7 +1721,7 @@
     },
     "/internal/sessions/{sessionId}/handoffs": {
       "post": {
-        "description": "Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent.",
+        "description": "Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent. ONE exception (RN-660, ADR 0186): the PO's handoff to the Arquiteto is accepted by the SYSTEM when the backlog is covered (at least one business rule, none without a story) and the repository is `local` with no git credential in the project; `aceiteAutomatico` says whether it happened and, if not, why.",
         "operationId": "InternalSessionsController_handoff",
         "parameters": [
           {
@@ -1749,7 +1749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OfertaDeHandoffResponseDto"
+                  "$ref": "#/components/schemas/OfertaInternaDeHandoffResponseDto"
                 }
               }
             }
@@ -12767,6 +12767,36 @@
           "module"
         ]
       },
+      "AceiteAutomaticoResponseDto": {
+        "type": "object",
+        "properties": {
+          "aceito": {
+            "type": "boolean",
+            "example": true
+          },
+          "criterio": {
+            "$ref": "#/components/schemas/CriterioDoAceiteResponseDto"
+          },
+          "motivo": {
+            "type": "string",
+            "enum": [
+              "nao_e_po_para_arquiteto",
+              "oferta_nao_pendente",
+              "sem_regras_de_negocio",
+              "regras_sem_historia",
+              "repositorio_nao_local",
+              "credencial_de_git_no_projeto",
+              "autor_sem_papel",
+              "falhou"
+            ],
+            "example": "regras_sem_historia",
+            "description": "Why a person still has to click. `falhou`: the system tried and the accept failed — `handoff.auto_accept_failed` is in the event log."
+          }
+        },
+        "required": [
+          "aceito"
+        ]
+      },
       "AceiteResponseDto": {
         "type": "object",
         "properties": {
@@ -15442,8 +15472,8 @@
               "manual",
               "auto"
             ],
-            "example": "manual",
-            "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
+            "example": "auto",
+            "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
           },
           "executionMode": {
             "type": "string",
@@ -15772,6 +15802,35 @@
         },
         "required": [
           "resultado"
+        ]
+      },
+      "CriterioDoAceiteResponseDto": {
+        "type": "object",
+        "properties": {
+          "regras": {
+            "type": "number",
+            "example": 4,
+            "description": "Business rules in the project."
+          },
+          "cobertas": {
+            "type": "number",
+            "example": 4,
+            "description": "Rules cited by at least one story — equal to `regras`."
+          },
+          "repositorio": {
+            "type": "string",
+            "enum": [
+              "local",
+              "a_provisionar_local"
+            ],
+            "example": "a_provisionar_local",
+            "description": "`local`: the project already had a `local` repository. `a_provisionar_local`: none yet — the accept provisions a `local` one."
+          }
+        },
+        "required": [
+          "regras",
+          "cobertas",
+          "repositorio"
         ]
       },
       "DecideBootstrapPlanDto": {
@@ -18604,6 +18663,87 @@
           "desfecho"
         ]
       },
+      "OfertaInternaDeHandoffResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HANDOFF00000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "fromAgent": {
+            "type": "string",
+            "example": "criativo",
+            "description": "Slug of the agent that passed the baton."
+          },
+          "toAgent": {
+            "type": "string",
+            "example": "po",
+            "description": "Slug of the receiving agent."
+          },
+          "artifactId": {
+            "type": "object",
+            "example": "01JC4Z0000ARTEFATO000000001",
+            "nullable": true,
+            "description": "Artifact that motivated the handoff (product_brief, module_map…)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "offered",
+              "accepted",
+              "completed",
+              "rejected",
+              "superseded"
+            ],
+            "example": "offered",
+            "description": "This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-24T10:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-24T10:05:00.000Z",
+            "format": "date-time"
+          },
+          "desfecho": {
+            "type": "string",
+            "enum": [
+              "criado",
+              "substituiu_oferta",
+              "ja_oferecido"
+            ],
+            "example": "criado",
+            "description": "`criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`)."
+          },
+          "aceiteAutomatico": {
+            "$ref": "#/components/schemas/AceiteAutomaticoResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "projectId",
+          "fromAgent",
+          "toAgent",
+          "artifactId",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "desfecho",
+          "aceiteAutomatico"
+        ]
+      },
       "OkResponseDto": {
         "type": "object",
         "properties": {
@@ -19745,8 +19885,8 @@
               "manual",
               "auto"
             ],
-            "example": "manual",
-            "description": "Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation (opt-in; where projects predating 12c ended up)."
+            "example": "auto",
+            "description": "Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation — the new-project default since RN-659; projects created before it keep whatever value they had."
           },
           "createdAt": {
             "type": "string",
@@ -23373,8 +23513,8 @@
               "manual",
               "auto"
             ],
-            "example": "manual",
-            "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
+            "example": "auto",
+            "description": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it."
           },
           "language": {
             "type": "string",
