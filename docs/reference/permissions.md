@@ -342,6 +342,12 @@ merge, `instruction_patch`, parallelism and `container_remove` never
 auto-approve. A SPECIFIC rule (`terminal: auto_approve` or
 `terminal: require_approval`) is not auto mode and keeps the scope cap.
 
+When a `git_merge` the human approved EXECUTES and the provider reports the PR
+as `merged`, the task that PR came from moves to `done` — once: a repeated merge
+of the same PR does not move it again or record a second
+`backlog.task_status_changed` event ([RN-628](../business-rules.md#rn-628)). The
+merge itself is never automated ([RN-418](../business-rules.md#rn-418)).
+
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
 reuses the manual/auto toggle the agent card already had in
