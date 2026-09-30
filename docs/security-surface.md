@@ -1073,6 +1073,13 @@ reason in the URL.
   `null`; never the project's most recent session, which is what the
   Executors tab used to read and which silently switched sessions the
   moment another session was born after it.
+- **`GET /workspaces/:workspaceId/projects-summary` gained
+  `roster.activatedAgents`, and the classification didn't change** — still
+  `role:viewer`. The field is the list of agent ids with an `agent.activated`
+  in the project's most recent session ([RN-630](business-rules.md#rn-630)),
+  computed in the same per-session sweep that already produces
+  `executionActivated` and `gatesEverOpened` ([RN-568](business-rules.md#rn-568)).
+  It names no user, no session and no credential, and adds no query.
 - **`POST .../llm-turn` and `POST .../llm-turn-stream` gained
   `modelName` in the response body/final frame, and the classification
   didn't change** — still `engine-service` as always
