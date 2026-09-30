@@ -37,6 +37,7 @@ import {
 } from '../lib/session-timeline';
 import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
 import { StorySlide } from './StorySlide';
+import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { agruparNarracoesDoTurno } from './session-fio';
 
@@ -69,6 +70,8 @@ export interface ContextoDaTimeline {
   promovendoTodas: boolean;
   ativandoExecucao: boolean;
   podeAtivarAutoMode: boolean;
+  /** O papel alcança o mínimo do endpoint de decisão (`developer`)? (AT-266) */
+  podeDecidir: boolean;
   setRecusandoStory: Dispatch<SetStateAction<{ id: string; title: string } | null>>;
   setMotivoRecusa: Dispatch<SetStateAction<string>>;
   handlePromoteStory: (storyId: string) => Promise<void>;
@@ -105,6 +108,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     promovendoTodas,
     ativandoExecucao,
     podeAtivarAutoMode,
+    podeDecidir,
     setRecusandoStory,
     setMotivoRecusa,
     handlePromoteStory,
@@ -791,6 +795,18 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   }
 
   for (const action of actions) {
+    // AT-266: o "Mergear" sob o card da PR aberta. Só quando a execução
+    // gravou o id da PR e ainda não há proposta de merge viva para ela.
+    const prAberta = prAbertaDaAcao(action, events);
+    const mergear =
+      prAberta && !jaHaMergeDaPr(actions, prAberta.pullRequestId) ? (
+        <MergearNoChat
+          projectId={projectId}
+          sessionId={sessionId}
+          pr={prAberta}
+          podeDecidir={podeDecidir}
+        />
+      ) : null;
     // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
     // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
     const ordem = ordemDaAcaoNaTimeline(action, events);
@@ -818,18 +834,25 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // `token_usage` não se liga à ação. Quem propôs já está no card, em
       // negrito, e é o AGENTE — que é o que não muda.
       node: (
+        <div key={action.id}>
         <ApprovalCard
-          key={action.id}
           action={action}
           variant="chat"
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
-          onApprove={() => approveAction(projectId, sessionId, action.id).then(invalidateActions)}
-          onDeny={() => denyAction(projectId, sessionId, action.id).then(invalidateActions)}
+          // AT-256: devolve a promessa (o card segura os botões e diz a frase
+          // da api) e refaz a lista MESMO na recusa — um 409 quer dizer que a
+          // ação já saiu de `pending`, e a lista é quem troca o card pela
+          // linha de desfecho. Sem poll novo: é UMA invalidação por clique.
+          onApprove={() =>
+            approveAction(projectId, sessionId, action.id).finally(invalidateActions)
+          }
+          onDeny={() => denyAction(projectId, sessionId, action.id).finally(invalidateActions)}
           onAlwaysAllow={() =>
-            approveAlwaysAction(projectId, sessionId, action.id).then(() => {
-              invalidateActions();
-              queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
-            })
+            approveAlwaysAction(projectId, sessionId, action.id)
+              .then(() => {
+                queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
+              })
+              .finally(invalidateActions)
           }
           onActivateAutoMode={
             podeAtivarAutoMode && action.actor.kind === 'agent'
@@ -837,6 +860,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               : undefined
           }
         />
+        {mergear}
+        </div>
       ),
     });
   }

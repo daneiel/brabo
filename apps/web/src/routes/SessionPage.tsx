@@ -18,7 +18,9 @@ import {
   transitionSession,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
-import { useTurnoDoAgente } from '../lib/session-turno';
+import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
+import { roleAtLeast } from '../lib/roles';
+import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -109,6 +111,10 @@ export function SessionPage({
   const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
   const podeAtivarAutoMode =
     workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
+  // AT-265/266: decidir ação e propor merge pedem `developer` no ENDPOINT
+  // (RN-102) — `roleAtLeast`, nunca lista à mão. O papel lido é o de WORKSPACE:
+  // a tela não busca `project_members`, e a lacuna (RN-471) fica declarada.
+  const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
   // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
   // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
   // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
@@ -242,6 +248,16 @@ export function SessionPage({
   // invalidação busca de qualquer forma.
   const eventsQuery = useSessionEvents(projectId, sessionId, 3000, streaming);
   const events = eventsQuery.data?.items ?? [];
+  // AT-268: reabrir a sessão com um turno em curso — a faixa e o composer
+  // travado voltam do log, em vez de nascerem do zero e do 409.
+  useRetomarTurnoDoLog({
+    sessionId,
+    sessionStatus: session?.status,
+    eventos: eventsQuery.data?.items,
+    turnoViaCanal,
+    iniciarTurnoDoAgente,
+    acompanharTurnoPeloLog,
+  });
 
   // O evento CITADO buscado pelo id. A listagem traz só os últimos 200 e o
   // feed corta ruído de máquina, então sem esta busca o chip de evidência
@@ -383,6 +399,7 @@ export function SessionPage({
         promovendoTodas,
         ativandoExecucao,
         podeAtivarAutoMode,
+        podeDecidir,
         setRecusandoStory,
         setMotivoRecusa,
         handlePromoteStory,
@@ -408,6 +425,7 @@ export function SessionPage({
       promovendoTodas,
       ativandoExecucao,
       podeAtivarAutoMode,
+      podeDecidir,
       iniciarTurnoDoAgente,
       finalizarTurnoDoAgente,
       acompanharTurnoPeloLog,
@@ -767,6 +785,16 @@ export function SessionPage({
               invalidação que `finalizarTurnoDoAgente` dispara). Só existe
               turno de agente via `turnoViaCanal`: o chat consultivo sem
               agente ativo continua na bolha antiga, dentro do fio. */}
+          {/* AT-265: as pendências que os agentes propuseram em OUTRAS sessões do
+              projeto (a de execução), decididas aqui — atalho, RN-467. */}
+          {isActive && (
+            <PendenciasDeOutrasSessoes
+              projectId={projectId}
+              sessionId={sessionId}
+              podeDecidir={podeDecidir}
+            />
+          )}
+
           {turnoViaCanal && (
             <TurnActivityStrip
               estado={atividadeDoTurno}

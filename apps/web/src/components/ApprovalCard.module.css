@@ -503,3 +503,14 @@
 .decidedText {
   color: var(--decided-color);
 }
+
+/* AT-256: a recusa da api dita no card. */
+.recusa {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--danger);
+  padding: 0 16px 12px;
+}

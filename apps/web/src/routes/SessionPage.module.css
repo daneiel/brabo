@@ -1028,3 +1028,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* AT-266: "Mergear" sob o card do PR aberto. */
+.mergearNoChat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mergearNota {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}

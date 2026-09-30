@@ -175,5 +175,23 @@
     "passosDoTurno": "Turn steps",
     "passosCount_one": "{{count}} step",
     "passosCount_other": "{{count}} steps"
+  },
+  "pendencias": {
+    "titulo": "Pending decisions from other sessions in this project",
+    "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
+    "filas": {
+      "aprovacoes": "Approvals",
+      "merges": "PR merges"
+    },
+    "origem": "Proposed in session {{hashtag}} · {{tempo}}",
+    "recorte": "Showing {{mostradas}} of {{total}} — the rest are in the Approvals tab.",
+    "semPapel": "Deciding here needs the developer role on the project. You can see the item, but someone else decides."
+  },
+  "mergearNoChat": {
+    "botao": "Merge",
+    "propondo": "Proposing…",
+    "semPapel": "Merging here needs the developer role on the project.",
+    "nota": "Proposes the merge in this session; you confirm it on the card that appears — merging stays manual.",
+    "erroTitulo": "Could not propose the merge"
   }
 }
