@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import { Table } from './Table';
+import { simularLayoutMovel } from '../../test/match-media';
 
 /**
  * Auditoria de foco visível (frente H1, PROGRAMA 28): `Table` foi um dos 5
@@ -46,5 +47,65 @@ describe('Table', () => {
     const botao = screen.getByRole('button', { name: 'Abrir Item 1' });
     botao.focus();
     expect(botao).toHaveFocus();
+  });
+});
+
+/**
+ * AT-330 (RN-643): abaixo do breakpoint móvel a tabela vira PILHA de cartões —
+ * cada célula com o rótulo da própria coluna, e o cabeçalho de grade some.
+ */
+describe('Table — layout estreito', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  const colunas = [
+    { key: 'nome', label: 'Nome', width: '2fr', render: (r: { nome: string }) => r.nome },
+    { key: 'estado', label: 'Estado', render: (r: { nome: string }) => `ok-${r.nome}` },
+    {
+      key: 'acao',
+      label: '',
+      render: (r: { nome: string }) => <button type="button">Abrir {r.nome}</button>,
+    },
+  ];
+
+  it('no móvel, cada linha é um cartão com o rótulo da coluna ao lado de cada valor', () => {
+    largura = simularLayoutMovel(true);
+    const { container } = render(
+      <Table columns={colunas} rows={[{ nome: 'A' }, { nome: 'B' }]} rowKey={(r) => r.nome} />,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute('data-layout', 'pilha');
+    const cartoes = screen.getAllByTestId('linha-da-tabela');
+    expect(cartoes).toHaveLength(2);
+    const primeiro = within(cartoes[0]!);
+    expect(primeiro.getByText('Nome')).toBeInTheDocument();
+    expect(primeiro.getByText('Estado')).toBeInTheDocument();
+    expect(primeiro.getByText('ok-A')).toBeInTheDocument();
+    expect(primeiro.getByRole('button', { name: 'Abrir A' })).toBeInTheDocument();
+    // Nenhuma grade de colunas em fração sobra para espremer o conteúdo.
+    expect(container.querySelector('[style*="grid-template-columns"]')).toBeNull();
+  });
+
+  it('no desktop continua a grade com UM cabeçalho — o rótulo não se repete por linha', () => {
+    const { container } = render(
+      <Table columns={colunas} rows={[{ nome: 'A' }, { nome: 'B' }]} rowKey={(r) => r.nome} />,
+    );
+
+    expect(container.firstElementChild).not.toHaveAttribute('data-layout');
+    expect(screen.queryAllByTestId('linha-da-tabela')).toHaveLength(0);
+    expect(screen.getAllByText('Nome')).toHaveLength(1);
+    expect(container.querySelector('[style*="grid-template-columns"]')).not.toBeNull();
+  });
+
+  it('cruzar o corte troca o desenho sem remontar a tela', () => {
+    largura = simularLayoutMovel(false);
+    render(<Table columns={colunas} rows={[{ nome: 'A' }]} rowKey={(r) => r.nome} />);
+    expect(screen.queryAllByTestId('linha-da-tabela')).toHaveLength(0);
+
+    act(() => largura!.mudar(true));
+    expect(screen.getAllByTestId('linha-da-tabela')).toHaveLength(1);
   });
 });

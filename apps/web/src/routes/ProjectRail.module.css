@@ -151,6 +151,31 @@
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
+  /* A aba trazida para a faixa não fica rente à borda esmaecida (AT-330). */
+  scroll-padding-inline: 28px;
+}
+
+/*
+ * A faixa DIZ que rola (AT-330, achado N8): a borda que esconde conteúdo
+ * esmaece. `mask-image` apaga o conteúdo, não pinta por cima — funciona igual
+ * nos dois temas, sem cor nova.
+ */
+.trilhoHorizontal[data-rola-fim] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.trilhoHorizontal[data-rola-inicio] {
+  mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+}
+
+.trilhoHorizontal[data-rola-inicio][data-rola-fim] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent
+  );
 }
 
 .trilhoHorizontal .grupo,

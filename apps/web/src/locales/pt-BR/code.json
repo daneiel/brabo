@@ -37,6 +37,7 @@
   "branchPicker": {
     "noDefaultBranch": "sem branch padrão",
     "dropdownAriaLabel": "Selecionar branch",
+    "header_zero": "{{count}} branches · comparadas com a branch padrão",
     "header_one": "{{count}} branch · comparada com a branch padrão",
     "header_other": "{{count}} branches · comparadas com a branch padrão",
     "headerPlaceholder": "branches",
@@ -78,6 +79,7 @@
     "bottomPanelClose": "Fechar painel inferior",
     "refLabel": "ref",
     "encodingLabel": "UTF-8",
+    "activeAgents_zero": "{{count}} agentes ativos",
     "activeAgents_one": "{{count}} agente ativo",
     "activeAgents_other": "{{count}} agentes ativos"
   },
@@ -118,6 +120,7 @@
     "searching": "Buscando…",
     "errorFallback": "Não consegui buscar agora.",
     "noResults": "Nenhum resultado para “{{query}}”.",
+    "filesScanned_zero": "{{count}} arquivos verificados",
     "filesScanned_one": "{{count}} arquivo verificado",
     "filesScanned_other": "{{count}} arquivos verificados",
     "truncatedSuffix": " · busca cortada pelo orçamento — refine o termo ou o caminho"

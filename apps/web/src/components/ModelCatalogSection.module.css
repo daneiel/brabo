@@ -141,6 +141,9 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  /* O slug é um token só ("moonshotai/Kimi-K2.5"): em 390px ele estourava a
+     coluna do nome (AT-330). Quebra em qualquer ponto em vez de vazar. */
+  overflow-wrap: anywhere;
 }
 
 .selos {

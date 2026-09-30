@@ -65,6 +65,43 @@
   gap: 12px;
 }
 
+/*
+ * Layout móvel da barra (AT-328, RN-643 — a classe vem de `useLayoutMovel`):
+ * ela quebra linha em vez de empurrar ações para fora da borda. A primeira
+ * linha é saída + estado + título; `quebraDaBarra` força o resto para baixo.
+ */
+.topbarMovel {
+  height: auto;
+  min-height: 60px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  padding: 10px 16px;
+}
+
+.topbarMovel > .titleBlock {
+  min-width: 0;
+  flex-basis: 0;
+}
+
+.quebraDaBarra {
+  flex-basis: 100%;
+  height: 0;
+}
+
+/* O alternador do painel sobe para a linha do título — sozinho numa terceira
+   linha ele parecia solto da barra. `order` só reordena a pintura: o DOM (e a
+   ordem do Tab) segue a de sempre. */
+.topbarMovel > * {
+  order: 2;
+}
+
+.topbarMovel > .voltar,
+.topbarMovel > .statusDot,
+.topbarMovel > .titleBlock,
+.topbarMovel > .toggleAside {
+  order: 1;
+}
+
 /* Botão da barra nunca quebra o rótulo em duas linhas ("Iniciar / ideação"). */
 .acaoDaBarra {
   white-space: nowrap;
@@ -545,6 +582,50 @@
   border-left: 1px solid var(--border);
   background: var(--surface-1);
   overflow-y: auto;
+}
+
+/*
+ * O painel de contexto como GAVETA no layout móvel (AT-328): sobre o fio, pela
+ * direita, com o fundo escurecido do `.overlay` do Modal — o mesmo molde da
+ * gaveta de navegação do `Shell` (RN-643). Dentro dela o `.aside` perde os
+ * 320px fixos e ocupa a gaveta inteira.
+ */
+.fundoDaGavetaDoContexto {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--overlay);
+}
+
+.gavetaDoContexto {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 81;
+  width: min(360px, calc(100vw - 48px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-modal);
+}
+
+.gavetaDoContexto > .aside {
+  width: 100%;
+  flex: 1;
+  border-left: none;
+}
+
+.gavetaDoContexto .asideTitleBar {
+  padding-right: 56px;
+}
+
+.fecharGavetaDoContexto {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
 }
 
 .asideTitleBar {

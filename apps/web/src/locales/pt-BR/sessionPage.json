@@ -12,7 +12,9 @@
     "semTitulo": "(sem título)",
     "verNoBacklog": "Ver em Histórias",
     "voce": "Você",
-    "agenteGenerico": "agente"
+    "agenteGenerico": "agente",
+    "outroMembro": "Outro membro",
+    "autorDesconhecido": "Autor desconhecido"
   },
   "topbar": {
     "voltarAoProjeto": "Voltar ao projeto",
@@ -25,6 +27,7 @@
     "iniciarIdeacaoTitulo": "Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou",
     "encerrar": "Encerrar",
     "alternarPainel": "Alternar painel de contexto",
+    "fecharPainel": "Fechar painel de contexto",
     "ajustes": "Modelo e idioma",
     "ajustesAria": "Modelo, idioma das respostas e orçamento desta sessão",
     "perguntaDeIdiomaPendente": "há uma pergunta sobre o idioma das respostas",
@@ -84,6 +87,7 @@
     "promover": "Promover",
     "devolver": "Devolver",
     "aprovarTodas": "Aprovar todas",
+    "aguardandoPromocao_zero": "{{count}} histórias aguardando promoção",
     "aguardandoPromocao_one": "{{count}} história aguardando promoção",
     "aguardandoPromocao_other": "{{count}} histórias aguardando promoção",
     "devolveuAoPo": "devolveu ao PO",
@@ -139,6 +143,7 @@
     "erroModoAutomatico": "Não foi possível ligar o modo automático",
     "erroPromover": "Não foi possível promover",
     "historiaPromovida": "História promovida",
+    "historiasPromovidas_zero": "{{count}} histórias promovidas",
     "historiasPromovidas_one": "História promovida",
     "historiasPromovidas_other": "{{count}} histórias promovidas",
     "promovidasParcial": "{{promovidas}} de {{total}} promovidas",
@@ -167,6 +172,7 @@
     "historias": "histórias",
     "tarefas": "tarefas",
     "itens": "itens",
+    "mensagensCount_zero": "{{count}} mensagens",
     "mensagensCount_one": "{{count}} mensagem",
     "mensagensCount_other": "{{count}} mensagens"
   },
@@ -175,6 +181,7 @@
     "teto": "Este painel lê os <b>{{lidos}}</b> eventos já carregados desta sessão. Há <b>{{anteriores}}</b> anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e as outras seções crescem junto.",
     "regrasDeNegocio": "Regras de negócio",
     "nadaAinda": "Nada ainda.",
+    "origemRefs_zero": "origem: {{count}} referências",
     "origemRefs_one": "origem: {{count}} referência",
     "origemRefs_other": "origem: {{count}} referências",
     "paginaAnterior": "Página anterior de regras de negócio",
@@ -191,6 +198,7 @@
   "turno": {
     "pensando": "Pensando…",
     "passosDoTurno": "Passos do turno",
+    "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",
     "passosCount_other": "{{count}} passos"
   },
@@ -201,6 +209,7 @@
       "aprovacoes": "Aprovações",
       "merges": "Merges de PR"
     },
+    "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
@@ -215,8 +224,10 @@
   },
   "fio": {
     "historico": {
+      "titulo_zero": "Antes das últimas {{count}} mensagens",
       "titulo_one": "Antes da última mensagem",
       "titulo_other": "Antes das últimas {{count}} mensagens",
+      "outrasCount_zero": "{{count}} outras entradas",
       "outrasCount_one": "{{count}} outra entrada",
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"

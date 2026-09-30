@@ -39,6 +39,10 @@
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+  /* Piso de alvo de toque de 24px (AT-330, `validacao-visual.js`). */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .projectLink:hover {
