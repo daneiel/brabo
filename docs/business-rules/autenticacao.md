@@ -2403,7 +2403,7 @@ um colapso de doze mensagens é UMA entrada na tela.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:118` (o corte do fio), `:226`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:425` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:436` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
