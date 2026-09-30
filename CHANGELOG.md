@@ -57,6 +57,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: **projeto novo nasce com promoção de histórias automática**
+  (AT-313, [RN-659](docs/business-rules.md#rn-659)). O default de
+  `projects.story_promotion` passa a `auto` (migration `0065`, só o DEFAULT da
+  coluna): cada história completa do PO já nasce pronta, sem um clique por
+  história. Projeto que já existe NÃO muda — quem nasceu `manual` continua
+  `manual`. O passo Confirmar da criação diz o valor e onde mudá-lo, e a seção
+  de Configurações diz que projeto novo nasce em Automática.
+
+- **api/engine/web**: **o handoff do PO ao Arquiteto é aceito sem clique
+  quando o backlog está coberto** (AT-314,
+  [ADR 0186](docs/adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md),
+  [RN-660](docs/business-rules.md#rn-660)). Com ao menos uma regra de negócio e
+  nenhuma sem história, repositório `local` (ou ainda por nascer) e nenhuma
+  conexão de git no projeto, o sistema aceita a oferta em nome de quem abriu a
+  sessão: o repositório nasce como sempre, antes de o Arquiteto entrar, e o fio
+  diz por que ele entrou. O aceite fica no log com o ator de sistema e o
+  critério; falha vira o evento novo `handoff.auto_accept_failed`, e a oferta
+  segue com o botão. Repositório remoto ou com credencial continua pedindo o
+  clique.
+
+- **web**: **o modo automático é oferecido em lote para o time no início da
+  execução** (AT-315, [RN-661](docs/business-rules.md#rn-661)). A aba Executores
+  ganha um cartão que liga o modo automático para os agentes escolhidos de uma
+  vez — o mesmo curinga e o mesmo endpoint do toggle por agente, só com o
+  clique, e com o desfecho por agente. O cartão diz o que o modo automático
+  NÃO libera (merge em branch protegida, push/PR/deploy, `sudo`/`doas`,
+  remover container, mudar instrução de agente, paralelizar); desligar segue no
+  card de cada agente.
+
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).

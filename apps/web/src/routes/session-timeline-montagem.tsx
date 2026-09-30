@@ -584,6 +584,54 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         ),
       });
     } else if (
+      event.type === 'handoff.accepted' &&
+      (event.payload as { automatico?: boolean } | null)?.automatico === true
+    ) {
+      // RN-660 (ADR 0186): o SISTEMA aceitou o handoff do PO ao Arquiteto,
+      // sem clique. O aceite humano não aparece no fio (o clique já foi
+      // visto por quem clicou); este aparece, porque ninguém clicou e o fio
+      // é o único lugar onde a pessoa descobre por que o Arquiteto entrou.
+      const payload = event.payload as {
+        toAgent?: string;
+        criterio?: { regras?: number };
+      };
+      empurrar({
+        desfecho: true,
+        node: (
+          <div
+            className={styles.handoffDivider}
+            key={event.id}
+            data-testid="handoff-aceite-automatico"
+          >
+            <span className={styles.handoffPill}>
+              {t('handoff.aceiteAutomatico', {
+                agente: nomeDoAgente(payload.toAgent),
+                regras: payload.criterio?.regras ?? 0,
+              })}
+            </span>
+          </div>
+        ),
+      });
+    } else if (event.type === 'handoff.auto_accept_failed') {
+      const payload = event.payload as { toAgent?: string; error?: string };
+      empurrar({
+        desfecho: true,
+        node: (
+          <div
+            className={styles.handoffDivider}
+            key={event.id}
+            data-testid="handoff-aceite-automatico-falhou"
+          >
+            <span className={styles.handoffPill}>
+              {t('handoff.aceiteAutomaticoFalhou', {
+                agente: nomeDoAgente(payload.toAgent),
+                erro: payload.error ?? '',
+              })}
+            </span>
+          </div>
+        ),
+      });
+    } else if (
       event.type === 'backlog.epic_created' ||
       event.type === 'backlog.story_created'
     ) {

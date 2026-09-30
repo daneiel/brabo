@@ -243,7 +243,9 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
     // árvore, que reusa o mesmo rótulo) — `getAllByText` prova que o lead
     // está lá sem fixar QUANTAS vezes o nome se repete na tela.
     expect(screen.getAllByText('QA').length).toBeGreaterThan(0);
-    expect(screen.getByText('QA de Automação')).toBeInTheDocument();
+    // O nome do membro também aparece na oferta de modo automático para o
+    // time (RN-661), que lista os mesmos executores — daí `getAllByText`.
+    expect(screen.getAllByText('QA de Automação').length).toBeGreaterThan(0);
 
     // Criativo, SecOps (o `pr.gate_changed` da fixture traz os dois, QA e
     // SecOps, juntos — Fase 4a) e Infra estão na sessão, mas não são
@@ -257,8 +259,10 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
     montar();
 
     await screen.findByText('dev-backend');
-    // dev-backend + qa (lead) + qa-automacao (membro) = 3 agentes.
-    expect(screen.getByText(/3 agentes/)).toBeInTheDocument();
+    // dev-backend + qa (lead) + qa-automacao (membro) = 3 agentes. O `·`
+    // prende a frase ao CABEÇALHO: o botão da oferta de modo automático
+    // (RN-661) também conta agentes.
+    expect(screen.getByText(/3 agentes ·/)).toBeInTheDocument();
   });
 
   it('sem dev/QA na sessão, mostra o estado vazio em vez de grid em branco', async () => {
@@ -397,7 +401,8 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
 
     montar();
 
-    expect(await screen.findByText('QA de Automação')).toBeInTheDocument();
+    // `findAll`: o nome aparece no card e na oferta de modo automático (RN-661).
+    expect((await screen.findAllByText('QA de Automação')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('QA').length).toBeGreaterThan(0);
   });
 

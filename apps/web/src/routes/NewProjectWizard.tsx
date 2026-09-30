@@ -971,6 +971,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               />
             </>
           )}
+          {/* RN-659 (AT-313): o projeto nasce com promoção automática — o
+              default da coluna na api, que a criação não sobrescreve. A tela
+              diz o valor antes do clique, e onde mudá-lo. */}
+          <SummaryRow
+            label={t('confirm.promotionLabel')}
+            value={t('confirm.promotionAutoValue')}
+          />
         </div>
       )}
 

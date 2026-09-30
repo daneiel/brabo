@@ -95,6 +95,8 @@
     "semMotivo": "sem motivo"
   },
   "handoff": {
+    "aceiteAutomatico": "Aceito automaticamente: o backlog cobre as {{regras}} regras de negócio e o repositório é local, então {{agente}} entrou sem clique.",
+    "aceiteAutomaticoFalhou": "O aceite automático do handoff a {{agente}} falhou: {{erro}}. Aceite pelo card da oferta.",
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",

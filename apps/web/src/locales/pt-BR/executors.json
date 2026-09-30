@@ -109,5 +109,31 @@
     "detail": {
       "origin": "origem {{origem}}"
     }
+  },
+  "autoModeTeam": {
+    "title": "Modo automático para o time",
+    "subtitle": "A execução começou. Ligar o modo automático nos agentes escolhidos faz os próximos comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto.",
+    "notReleased": {
+      "title": "O modo automático NÃO libera — estes continuam pedindo sua aprovação:",
+      "merge": "merge em branch protegida (dev, qa, main)",
+      "push": "git push, abertura de PR e deploy",
+      "privileged": "sudo e doas",
+      "containerRemove": "remover container (container_remove)",
+      "instructionPatch": "mudar instrução de agente (instruction_patch)",
+      "parallelize": "paralelizar ou subir o teto de paralelismo",
+      "turnOff": "Para desligar, use o toggle manual/auto no card de cada agente."
+    },
+    "noRole": "Ligar o modo automático pede o papel maintainer (lido do workspace; o papel de projeto não é consultado aqui).",
+    "button_zero": "Ligar para {{count}} agentes",
+    "button_one": "Ligar para {{count}} agente",
+    "button_other": "Ligar para {{count}} agentes",
+    "erroGenerico": "Não foi possível ligar o modo automático",
+    "result": {
+      "all_one": "Modo automático ligado para {{count}} agente.",
+      "all_other": "Modo automático ligado para os {{count}} agentes.",
+      "all_zero": "Nenhum agente escolhido.",
+      "none": "Nenhum agente teve o modo automático ligado: {{mensagem}}",
+      "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
+    }
   }
 }

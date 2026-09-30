@@ -27,6 +27,7 @@ import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-v
 import { rotuloDaSessao } from '../lib/session-label';
 import { roleAtLeast } from '../lib/roles';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
+import { ModoAutomaticoDoTime } from '../components/ModoAutomaticoDoTime';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -78,6 +79,10 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   // WORKSPACE que a tela de Sessão lê, com a mesma lacuna declarada (RN-471).
   const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
+  // RN-661 (AT-315): ligar o modo automático pede `maintainer` no endpoint
+  // (`PUT .../agent-autonomy`, RN-153) — o mesmo papel de WORKSPACE, com a
+  // mesma lacuna declarada, e a tela diz isso em texto.
+  const podeLigarModoAutomatico = roleAtLeast(workspaceComPapel?.role, 'maintainer');
   const executionSessionQuery = useActiveExecutionSession(projectId);
   const executionSession = executionSessionQuery.session;
   const sessionId = executionSession?.id;
@@ -295,6 +300,18 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             sessionId={sessionId}
             podeDecidir={podeDecidir}
           />
+
+          {/* RN-661 (AT-315): no início da execução, a oferta de ligar o
+              modo automático para o time de uma vez. Some quando todos já
+              estão em automático; desligar segue no card de cada um. */}
+          {executorRoster.length > 0 && (
+            <ModoAutomaticoDoTime
+              projectId={projectId}
+              agentes={executorRoster.map((r) => r.id)}
+              autonomyRules={autonomyRules}
+              podeLigar={podeLigarModoAutomatico}
+            />
+          )}
 
           {/* `executionActivated` vem do resumo agregado — os três estados
               da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO

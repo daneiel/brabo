@@ -327,7 +327,8 @@
     "card": {
       "title": "Quem promove",
       "hintManual": "O PO deixa a história completa e ela aguarda você na aba Histórias. Nenhuma tarefa dela é pegável até lá.",
-      "hintAuto": "O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção."
+      "hintAuto": "O PO promove sozinho ao terminar uma história completa.",
+      "defaultNote": "Projeto novo nasce em Automática. Mudar aqui vale só para este projeto; projetos criados antes continuam no modo que tinham."
     },
     "selectAria": "Quem promove histórias",
     "optionManual": "Manual — eu promovo",
