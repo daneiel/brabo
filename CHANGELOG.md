@@ -402,6 +402,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   conexão confirma, não só no teto. Medido com as telas de verdade: 208 → 142
   req/min com o canal vivo, 834 → 167 com um dev agent em rajada, 341 → 275 com
   o canal caído. O teto não mudou.
+- **web/api**: a aprovação chega à janela certa (AT-296..299,
+  [RN-637](docs/business-rules.md#rn-637),
+  [RN-638](docs/business-rules.md#rn-638)). Numa sessão com mais de 200 ações
+  a pendente NOVA sumia do fio, dos Executores e de Aprovações: a tela lia a
+  primeira página e nunca paginava. `GET .../sessions/:id/actions` ganha
+  `latest=true` (a cauda) e `status=pending`, e a tela lê a cauda e, quando
+  ela vem cheia, as pendentes que ficaram de fora. O contador de Aprovações do
+  trilho, o painel "precisa de você", a aba Aprovações, a Visão geral e a aba
+  Código passam a ler as pendentes do PROJETO, em qualquer sessão — eram as da
+  sessão criada por último, e uma ideação aberta depois da execução escondia as
+  decisões dos dev agents; cada card decide pela sessão que a própria ação
+  carrega. As pendências de outras sessões aparecem também em sessão
+  encerrada e técnica, e na aba Executores — o `container_start` que o Infra
+  Lead propõe no chat fica visível onde o `dev.blocked_by_container` aparece.
+  E a proposta nova chega ao contador pelo aviso do canal, sem esperar os 15s
+  do poll de projeto, em toda tela que ouve um canal de sessão. O bloco de
+  pendências de outras sessões (AT-318) passa a caber na coluna do fio,
+  recolhível e com a presença de cada fila no cabeçalho, os cards com o
+  detalhe fechado — antes cobria ~60% do fio e deixava um card à vista de
+  três — e o rótulo de origem uma vez por sessão.
 
 - **api**: o merge executado do PR de um dev agent passa a marcar a tarefa como
   `done` — antes ela ficava em `in_review` para sempre (o `pr-6` foi mergeado três
