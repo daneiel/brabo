@@ -3699,7 +3699,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lists the workspace's members
+         * @description Who is associated with the WORKSPACE, with the workspace role — the role every project inherits unless a project row overrides it. Completes `GET projects/:projectId/members`, which lists only project rows: whoever reaches a project through the workspace alone shows up here and not there. Only id, name, e-mail and role.
+         */
+        get: operations["WorkspacesController_listMembers"];
         put?: never;
         /**
          * Associates a user with the workspace
@@ -9635,6 +9639,20 @@ export interface components {
              * @enum {string}
              */
             role: "viewer" | "developer" | "maintainer" | "owner";
+        };
+        WorkspaceMemberComUsuarioResponseDto: {
+            /** @example 01JC4Z0000USUARIO0000000002 */
+            userId: string;
+            /**
+             * @description The WORKSPACE role — what every project of the workspace inherits unless a project row overrides it (RN-471).
+             * @example maintainer
+             * @enum {string}
+             */
+            role: "viewer" | "developer" | "maintainer" | "owner";
+            /** @example Senior Dev */
+            name: string | null;
+            /** @example dev@brabo.dev */
+            email: string;
         };
         WorkspaceMemberResponseDto: {
             /** @example 01JC4Z0000WORKSPACE00000001 */
@@ -17775,6 +17793,8 @@ export interface operations {
                 limit?: string;
                 /** @description Fetches the tail of the log; ignores `afterSeq`. */
                 latest?: string;
+                /** @description Only the events whose `payload.actionId` is this action — e.g. its `proposed_action.created`, which carries the policy `reason` and `scopeRoot` the action row does not keep (RN-614). Combines with the other parameters; `seq` is no longer contiguous in the page, so a caller filtering by action must not derive omitted counts from it. An empty value is a `400`. */
+                actionId?: string;
             };
             header?: never;
             path: {
@@ -17792,6 +17812,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginaDeEventosResponseDto"];
                 };
+            };
+            /** @description `actionId` is present but empty. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
@@ -20047,6 +20074,55 @@ export interface operations {
                 content?: never;
             };
             /** @description Pull request not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_listMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMemberComUsuarioResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -214,12 +214,11 @@
       "loadingQueue": "Loading the queue…",
       "queueError": "Couldn't load the approval queue.",
       "empty": "No pending approvals. The team is flowing.",
-      "motivoForaDoRecorte": {
-        "porque": "this tab reads one session's log, and the reason lives in the log of the session that proposed the action.",
-        "todas_one": "The policy reason for this action is not among the events this screen loaded: {{porque}}",
-        "todas_other": "The policy reason for these {{count}} actions is not among the events this screen loaded: {{porque}}",
-        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}",
-        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}"
+      "motivoNaoLido": {
+        "todas_one": "The policy reason for this action could not be read: reading the log of the session that proposed it failed.",
+        "todas_other": "The policy reason for these {{count}} actions could not be read: reading the log of the session that proposed them failed.",
+        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed it failed.",
+        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed them failed."
       }
     },
     "devPrs": {

@@ -329,6 +329,14 @@ export interface ProjectMemberWithUser {
   email: string;
 }
 
+/**
+ * Membro do WORKSPACE com nome e e-mail (`GET /workspaces/:id/members`,
+ * AT-335) — a mesma forma de `ProjectMemberWithUser`, com o papel de
+ * WORKSPACE. Sai do schema gerado, não de uma cópia à mão.
+ */
+export type WorkspaceMemberWithUser =
+  components['schemas']['WorkspaceMemberComUsuarioResponseDto'];
+
 export type PermissionListName = 'allow' | 'deny' | 'ask';
 
 export interface PermissionsFile {

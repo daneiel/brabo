@@ -992,6 +992,17 @@ reason in the URL.
   (`role:owner`, target must already be `owner`, else 409
   `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
   Any owner may transfer it, including to another owner who did not ask.
+- **`GET /workspaces/:workspaceId/members` is `role:viewer`, not the `owner`
+  of the three write routes next to it** ([RN-652](business-rules.md#rn-652),
+  AT-335). The minimum is the endpoint's (RN-102): reading the roster is not
+  maintaining it. `viewer` is what the neighbouring reads use
+  (`GET /workspaces/:workspaceId`, `/projects`) and what
+  `GET /projects/:projectId/members` uses — the read this one completes, since
+  whoever enters a project through the workspace role alone has no project
+  row. Anyone who can open a session can see who spoke in it, and a
+  workspace `viewer` already sees every project of the workspace. The body is
+  the same shape as the project read — `userId`, `name`, `email`, `role` —
+  and nothing else (no `createdAt`, no account state).
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -1349,6 +1360,7 @@ reason in the URL.
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
+| GET | `/workspaces/:workspaceId/members` | role:viewer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
 | PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |

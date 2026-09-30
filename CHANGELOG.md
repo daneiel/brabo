@@ -57,6 +57,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api/web**: **o fio da sessão nomeia quem entra no projeto pelo papel de
+  workspace** (AT-335, [RN-655](docs/business-rules.md#rn-655),
+  [RN-652](docs/business-rules.md#rn-652)). Nasce `GET
+  /workspaces/:workspaceId/members` (`viewer`, só id, nome, e-mail e papel), e
+  a Sessão compõe as duas listas, a de projeto antes da de workspace: a pessoa
+  que antes aparecia como "Outro membro" aparece pelo nome.
+- **api/web**: **cada cartão da aba Aprovações mostra o próprio motivo da
+  política** (AT-336, [RN-656](docs/business-rules.md#rn-656),
+  [RN-614](docs/business-rules.md#rn-614)). A leitura de eventos da sessão
+  ganha o filtro `actionId`, e a ação que o log carregado não cobre lê o
+  `proposed_action.created` dela, na sessão que a propôs — uma vez, porque
+  evento não muda. A nota única do topo da fila sobra só para a leitura que
+  falha.
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
