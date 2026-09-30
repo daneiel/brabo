@@ -512,6 +512,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner**: no macOS, rodar o runner sob Node (pelo fonte ou por
+  `npm install -g @brabo/runner`) deixa de falhar com `posix_spawnp failed` no
+  primeiro terminal (AT-114). O `node-pty@1.1.0` chega com o `spawn-helper` do
+  prebuild em `0644`, e nenhum install o marca executável; ao carregar o
+  `node-pty`, o runner agora acrescenta o bit (só em darwin, idempotente) e,
+  quando o arquivo falta ou o `chmod` é recusado, para com erro nomeando o
+  caminho e o `chmod +x` do conserto. Provado por teste simulando plataforma e
+  permissões; só um macOS real prova a correção de ponta a ponta. O binário
+  standalone já extraía o helper com `0755` e não muda.
+
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de

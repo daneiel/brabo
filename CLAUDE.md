@@ -718,7 +718,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   conserto do `spawn-helper`, e aí "falta uma TAG" não bastaria. O quinto
   alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
   AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
-  que reprova, com a MESMA prova passando sob Node. O Mac Intel usa
+  que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`
+  no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a AT-114 o
+  runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
+  (`apps/runner/src/spawn-helper.ts`, só darwin, erro nomeado se falta ou o
+  `chmod` é recusado), provado por teste e NUNCA num macOS real. O Mac Intel usa
   `npm install -g @brabo/runner`: o `install.sh` diz isso sem baixar, o proxy
   recusa `darwin-x64` com 400 próprio e o navegador nem pede o download. Os
   quatro lugares que enumeram alvos (matriz, `PLATAFORMAS` da api, o `case` do
