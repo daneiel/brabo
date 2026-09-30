@@ -585,6 +585,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **deps**: fecha os HIGH publicados em 30/09 que reprovavam o Trivy das
+  imagens de produção, só por `overrides` (nenhum código muda). **Produto**
+  (`pnpm-workspace.yaml`): `fast-uri` 3.1.6 → **3.1.8** (GHSA-qw65-cvwx-89v3,
+  GHSA-58mr-gqgx-xq4g) e `undici` 7.29.0 → **7.29.1** (GHSA-rfgv-xxqx-mfg5,
+  GHSA-w293-vg96-wgc3) sobem de TETO na faixa que já existia; entram
+  `brace-expansion` nas três linhas maiores da árvore (1.1.21, 2.1.7, 5.0.12 —
+  GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p) e `@grpc/grpc-js` **1.14.5**
+  (GHSA-m9gg-hp2v-232j). Dos quatro, só o `@grpc/grpc-js` chega à imagem da
+  api (`@opentelemetry/sdk-node` o arrasta); os outros três são de
+  desenvolvimento. Os alvos fecham também as moderadas da MESMA linha que
+  saíram junto. **Website** (lockfile próprio, ADR 0117): as mesmas faixas de
+  `fast-uri`, `undici` 7 e `brace-expansion` 1.x, mais `undici` 6 (**6.28.1**),
+  `joi` (**17.13.7**, GHSA-6h2x-m376-mqjq) e `image-size` (**2.0.4**) — este
+  era o HIGH "sem versão corrigida" declarado em `website/pnpm-workspace.yaml`,
+  e a 2.0.3 saiu em 14/09. Segue aberto, e escrito, só o `@faker-js/faker`.
+  `pnpm audit --audit-level high` fica limpo no produto.
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de
