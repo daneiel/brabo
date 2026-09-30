@@ -161,7 +161,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -183,7 +183,8 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
   });
 
   it('um handoff.offered ANTIGO (já resolvido) continua como divisor mudo, sem botão', async () => {
-    // Duas ofertas pro MESMO par fromAgent/toAgent: a atual é a de seq maior.
+    // Duas ofertas pro MESMO par fromAgent/toAgent: a atual é a do `handoffId`
+    // pendente (RN-631) — a antiga é de outro handoff, já resolvido.
     handoffsMock.mockReturnValue([HANDOFF_PO]);
     eventos.mockReturnValue({
       items: [
@@ -192,7 +193,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po-antigo', toAgent: 'po' },
           createdAt: '2026-08-10T11:00:00.000Z',
         },
         {
@@ -200,7 +201,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 2,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -227,7 +228,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
         {
@@ -272,7 +273,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'dev-lead' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -311,7 +312,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],

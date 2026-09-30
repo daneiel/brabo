@@ -55,7 +55,11 @@
     "confirmarArquitetura": "Confirm architecture ready",
     "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
     "confirmarNecessidade": "Confirm need validated",
-    "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need"
+    "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need",
+    "destinatarioLabel": "To",
+    "destinatarioPlaceholder": "Choose the agent…",
+    "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
+    "semAgente": "No agent in this session: the message goes to the model, without an agent."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
@@ -94,7 +98,10 @@
     "infraBotao": "Accept the Infra handoff",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
-    "manualBotao": "Address handoff"
+    "manualBotao": "Address handoff",
+    "manualOrigem": "Manual handoff",
+    "foraDaJanelaTitulo": "{{de}} handed off to {{para}}",
+    "foraDaJanelaDetalhe": "This offer's event has already left the last 200 in the thread, so its button lives here."
   },
   "backlog": {
     "criouEpico": "created the epic",
@@ -139,7 +146,8 @@
     "erroEnviarMensagem": "Could not send the message",
     "erroCancelarTurno": "Could not cancel the turn",
     "erroNoChat": "Chat error",
-    "aviso": "Warning"
+    "aviso": "Warning",
+    "levandoAExecucao": "Taking you to the execution session."
   },
   "modal": {
     "devolverTitulo": "Return \"{{titulo}}\" to the PO?",
@@ -187,7 +195,8 @@
       "aprovacoes": "Approvals",
       "merges": "PR merges"
     },
-    "origem": "Proposed in session {{hashtag}} · {{tempo}}",
+    "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
+    "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
     "recorte": "Showing {{mostradas}} of {{total}} — the rest are in the Approvals tab.",
     "semPapel": "Deciding here needs the developer role on the project. You can see the item, but someone else decides."
   },

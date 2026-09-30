@@ -26,6 +26,9 @@ const listInfraArtifacts = vi.fn();
 const getProjectPermissions = vi.fn();
 const setProjectPermissions = vi.fn();
 const getRegistroDeGates = vi.fn();
+const getProjectPendingActions = vi.fn();
+const getActiveExecutionSession = vi.fn();
+const approveAction = vi.fn();
 
 // `importOriginal` porque `ApiError`/`mensagemDaApi` continuam valendo: é deles
 // que `ErroDeCarregamento` tira a frase da api e o `trace_id`.
@@ -41,7 +44,9 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     getProjectPermissions: (...args: unknown[]) => getProjectPermissions(...args),
     setProjectPermissions: (...args: unknown[]) => setProjectPermissions(...args),
     getRegistroDeGates: (...args: unknown[]) => getRegistroDeGates(...args),
-    approveAction: vi.fn(),
+    getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
+    getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
+    approveAction: (...args: unknown[]) => approveAction(...args),
     approveAlwaysAction: vi.fn(),
     denyAction: vi.fn(),
   };
@@ -106,11 +111,14 @@ beforeEach(() => {
   listInfraArtifacts.mockResolvedValue([]);
   getProjectPermissions.mockResolvedValue(PERMISSOES);
   getRegistroDeGates.mockResolvedValue({ gates: [] });
+  getProjectPendingActions.mockResolvedValue([]);
+  getActiveExecutionSession.mockResolvedValue(null);
+  approveAction.mockResolvedValue(acao());
 });
 
 describe('ProjectApprovalsTab — os três estados da RN-088', () => {
   it('fila que FALHOU diz que falhou, e nunca que está vazia', async () => {
-    listActions.mockRejectedValue(new Error('limite de requisições excedido'));
+    getProjectPendingActions.mockRejectedValue(new Error('limite de requisições excedido'));
     montar();
 
     expect(
@@ -155,7 +163,7 @@ describe('ProjectApprovalsTab — os três estados da RN-088', () => {
 
 describe('ProjectApprovalsTab — fila e permissões', () => {
   it('lista as pendentes e oferece o lote com "Limpar"', async () => {
-    listActions.mockResolvedValue({ items: [acao()], nextCursor: null });
+    getProjectPendingActions.mockResolvedValue([acao()]);
     montar();
 
     const caixa = await screen.findByRole('checkbox');
@@ -195,6 +203,35 @@ describe('ProjectApprovalsTab — fila e permissões', () => {
 
     expect(
       await screen.findByText('Nenhuma regra corresponde à busca.'),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('ProjectApprovalsTab — a fila é a do PROJETO, não a da sessão mais recente (AT-297)', () => {
+  it('a pendente da sessão de execução aparece com uma ideação mais nova aberta, e decide pela sessão DELA', async () => {
+    // A ideação nasceu DEPOIS da execução: é ela a "mais recente".
+    listSessions.mockResolvedValue([
+      { ...sessao(), id: 'exec', createdAt: '2026-08-01T00:00:00.000Z' },
+      { ...sessao(), id: 'ideacao', createdAt: '2026-08-03T00:00:00.000Z' },
+    ]);
+    getProjectPendingActions.mockResolvedValue([
+      acao({ id: 'do-dev', sessionId: 'exec', actor: { kind: 'agent', id: 'dev-api' } }),
+    ]);
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Aprovar/ }));
+
+    await waitFor(() => expect(approveAction).toHaveBeenCalledWith('proj-1', 'exec', 'do-dev'));
+    // Nada da fila vem da listagem por sessão.
+    expect(listActions).not.toHaveBeenCalledWith('proj-1', 'ideacao', expect.objectContaining({ status: 'pending' }));
+  });
+
+  it('CASO DE CONTRASTE: ação já decidida que a leitura devolva não entra na fila', async () => {
+    getProjectPendingActions.mockResolvedValue([acao({ status: 'approved' })]);
+    montar();
+
+    expect(
+      await screen.findByText('Nenhuma aprovação pendente. O time está fluindo.'),
     ).toBeInTheDocument();
   });
 });

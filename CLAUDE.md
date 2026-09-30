@@ -188,8 +188,13 @@ estado lido do repositório e não da conversa.
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
+| O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
+| O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
+| Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
 | Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
 | A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
+| A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
 
 ## Estado atual e aberto
 
@@ -2001,6 +2006,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
   incluído); reabrir a sessão retoma do log o turno em curso, sem fila de
   mensagem (essa é decisão pendente do dono).
+  Quem pergunta "o que espera decisão" — contador do trilho, painel, aba
+  Aprovações, roster da Visão geral/Executores/Código — lê a fila do PROJETO
+  (`useProjectPendingActions`, chave `['project-pending-actions', projectId]`),
+  NUNCA a sessão mais recente (RN-638), e cada card decide pelo `sessionId` da
+  PRÓPRIA ação; o aviso `proposed_action.*` de qualquer canal invalida essa
+  chave. A leitura de ações por SESSÃO é a CAUDA (`latest`) mais as pendentes
+  quando a cauda vem cheia (RN-637) — nunca a primeira página.
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
