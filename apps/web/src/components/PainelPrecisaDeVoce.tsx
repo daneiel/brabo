@@ -171,18 +171,27 @@ export function PainelPrecisaDeVoce({
 
   async function aprovar(item: ItemDaFila) {
     if (!item.acao) return;
-    await approveAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await approveAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
   }
   async function negar(item: ItemDaFila) {
     if (!item.acao) return;
-    await denyAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await denyAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
   }
   async function semprePermitir(item: ItemDaFila) {
     if (!item.acao) return;
-    await approveAlwaysAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await approveAlwaysAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -290,9 +299,9 @@ export function PainelPrecisaDeVoce({
                         <ApprovalCard
                           action={item.acao}
                           variant="queue"
-                          onApprove={() => void aprovar(item)}
-                          onDeny={() => void negar(item)}
-                          onAlwaysAllow={() => void semprePermitir(item)}
+                          onApprove={() => aprovar(item)}
+                          onDeny={() => negar(item)}
+                          onAlwaysAllow={() => semprePermitir(item)}
                         />
                         <div className={styles.rodapeDoCard}>{tempo(item)}</div>
                       </div>

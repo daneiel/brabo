@@ -136,7 +136,8 @@
     "notes": {
       "alwaysAllow": "\"Sempre permitir\" grava a regra em .brabo/permissions.json",
       "alwaysAllowScoped": "\"Sempre permitir\" libera este tipo de ação só para {{agent}} — não para os outros agentes do projeto",
-      "autoMode": "\"Modo automático\" deixa {{actor}} rodar qualquer comando sem perguntar, inclusive fora da pasta do projeto — continuam pedindo sua decisão git push, PR, deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container, e o que estiver em deny segue negado. Dá pra desligar depois no card do agente."
+      "autoMode": "\"Modo automático\" deixa {{actor}} rodar qualquer comando sem perguntar, inclusive fora da pasta do projeto — continuam pedindo sua decisão git push, PR, deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container, e o que estiver em deny segue negado. Dá pra desligar depois no card do agente.",
+      "obsolete": "A ação já foi decidida por outro caminho; este card se atualiza sozinho."
     },
     "decided": {
       "denied": "Negado",

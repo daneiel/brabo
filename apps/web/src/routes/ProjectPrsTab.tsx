@@ -115,16 +115,25 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   }
 
   async function aprovar(acao: ProposedAction) {
-    await approveAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await approveAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
   }
   async function negar(acao: ProposedAction) {
-    await denyAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await denyAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
   }
   async function sempreAprovar(acao: ProposedAction) {
-    await approveAlwaysAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await approveAlwaysAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -155,9 +164,9 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
                 <ApprovalCard
                   action={acaoPendente}
                   variant="queue"
-                  onApprove={() => void aprovar(acaoPendente)}
-                  onDeny={() => void negar(acaoPendente)}
-                  onAlwaysAllow={() => void sempreAprovar(acaoPendente)}
+                  onApprove={() => aprovar(acaoPendente)}
+                  onDeny={() => negar(acaoPendente)}
+                  onAlwaysAllow={() => sempreAprovar(acaoPendente)}
                 />
               </div>
             );

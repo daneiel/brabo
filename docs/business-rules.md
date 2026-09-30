@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:696` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:718` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:541` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:560` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -268,7 +268,7 @@ to "infra" today would silently fall through to the Creative agent; treating
 it as the composer's active agent would reopen that trap instead of closing
 one.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:316` (`activeAgent`),
+- **Where:** `apps/web/src/routes/SessionPage.tsx:330` (`activeAgent`),
   `apps/web/src/lib/api-client.ts:1075` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:156`
   (`getSessionBinding`, `@Query('agentId')`)
@@ -296,7 +296,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:194` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:242` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:249` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -5643,7 +5643,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:169` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:176` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14393,7 +14393,7 @@ depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
   `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
-  `:318` (`acompanharTurnoPeloLog`), `:316`;
+  `:349` (`acompanharTurnoPeloLog`), `:316`;
   `apps/web/src/routes/SessionPage.tsx:503`, `:529`, `:590`;
   `apps/web/src/lib/session-promocao.ts:141`;
   `apps/web/src/lib/recusa-do-agente.ts:17`
@@ -14517,7 +14517,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`intervaloDaSessao`), `:98` (`alvosDoEvento`), `:114` (janelas), `:128`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
-  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:59`
+  (o aviso: invalida e, do acompanhado, antecipa a leitura), `:90`
   (`avisoPedeVerificacaoDoTurno`), `:344` (a leitura imediata);
   `apps/web/src/lib/hooks.ts` (`useSessionEvents`, `usePendingActions`,
   `useHandoffs`, `useBacklog`); `apps/web/src/lib/query-policy.ts:86`;
@@ -16790,6 +16790,99 @@ para aceitar os `export` de um módulo CommonJS.
   toast)
 - **Origem:** AT-163, sobre as decisões da AT-168 (respostas 4, 6 e 7), a
   especificação da AT-080 e a medição da AT-160
+
+## Decidir no chat, onde o dono está (RN-626)
+
+### RN-626 — O chat da sessão decide o que os agentes propuseram noutra sessão, mostra o turno que estava em curso e propõe o merge — sem mudar teto nenhum {#rn-626}
+
+O uso real de 2026-09-29 mediu o custo de o dono conversar numa sessão e os dev
+agents proporem noutra: as aprovações deles nunca apareciam onde ele estava, 45
+de 173 cliques em "Sempre permitir" voltaram 409 (o card continuava clicável
+depois de a ação já ter saído de `pending`), e reabrir a sessão com um turno em
+curso devolvia o composer livre e o 409. As quatro correções são de TELA — a
+api, o engine e todo teto ficam como estão.
+
+1. **O card fica inerte e diz a frase da api (AT-256).** `ApprovalCard` segura
+   os botões enquanto a decisão está em voo (o duplo clique era um 409 certo) e,
+   quando a chamada devolve promessa que rejeita, mostra a frase que a api
+   mandou NO card — nunca um toast genérico. Um 409 (a ação já não está
+   `pending`) deixa os botões inertes com o motivo em texto até a lista trocar o
+   card pela linha de desfecho. Quem chama devolve a promessa e refaz a lista
+   MESMO na recusa (`finally`): é UMA invalidação por clique, sem poll novo, e a
+   invalidação usa o canal e o orçamento da [RN-579](#rn-579).
+2. **Reabrir a sessão retoma o turno do log (AT-268).** O estado do turno da tela
+   é `useState` local e se perdia ao sair. Na primeira leitura dos eventos de
+   uma sessão `active`, `turnoEmCursoNoLog` olha o `agent.status` persistido
+   mais recente de cada agente (a mesma leitura de `turnoTerminouNoLog`, da
+   [RN-578](#rn-578)); o que estiver `working` reabre a faixa e trava o composer
+   pelas mesmas entradas de um turno aceito (`iniciarTurnoDoAgente` +
+   `acompanharTurnoPeloLog`), e a leitura da cauda do log o fecha. Roda UMA vez
+   por sessão montada (um efeito recorrente rearmaria a faixa com o `working`
+   antigo ainda no cache). O `working` que o reinício do engine deixou é fechado
+   por evento novo no boot ([RN-586](#rn-586)), então o que sobra é turno vivo.
+   **Não enfileira mensagem:** mensagem com turno em curso segue recusada com
+   409 nomeado — a fila é decisão pendente do dono (AT-267).
+3. **As pendências de OUTRAS sessões do projeto aparecem no chat (AT-265).**
+   `PendenciasDeOutrasSessoes` lê `GET /projects/:id/actions?status=pending`
+   (o mesmo endpoint da aba PRs e do painel "precisa de você") e desenha as que
+   NÃO nasceram nesta sessão — as desta o fio já decide. É ATALHO e nunca
+   substituto ([RN-467](#rn-467)): o MESMO `ApprovalCard`, os mesmos endpoints,
+   com o `sessionId` que a própria ação carrega; `onActivateAutoMode` fica de
+   fora (é política, não decisão). As duas filas — aprovações e merges de PR —
+   têm título e contagem PRÓPRIOS e nunca são somadas, e cada linha diz a sessão
+   de origem. O desenho tem teto de 20 cards, e o excedente é dito ("Mostrando N
+   de M"): recorte declarado, como na [RN-180](business-rules/autenticacao.md#rn-180). O poll é o da sessão
+   (5 s com o canal caído, o fallback de 15 s com ele vivo — `intervaloDaSessao`),
+   porque o canal da sessão não avisa escrita de outra.
+4. **"Mergear" no card da PR aberta (AT-266).** Sob o card de um `pr_open`
+   executado, e só quando o evento `action.pr_open` traz o id da PR e não há
+   `git_merge` vivo (pendente, aprovado ou auto-aprovado) para ela, o botão
+   PROPÕE o `git_merge` pelo mesmo endpoint da aba PRs (ator `user`, nesta
+   sessão). A proposta aparece no fio como o card de sempre, com Aprovar/Negar:
+   **a confirmação é a mesma e é do humano** — o merge em branch protegida
+   continua `require_approval` incondicional ([RN-418](#rn-418)), sem auto-aprovar,
+   sem "sempre permitir", sem o modo automático. O dedupe e as recusas da api
+   (PR já mergeada, tarefa sem gate — AT-249) chegam ao dono como a frase da api.
+5. **O papel é o do ENDPOINT, e a lacuna é declarada.** Decidir ação e propor
+   ação pedem `developer` (`actions.controller.ts`); a tela usa `roleAtLeast`
+   sobre o papel de WORKSPACE, porque a Sessão não busca `project_members` — a
+   mesma lacuna única da [RN-471](#rn-471), aqui declarada e não fechada. Quem não
+   alcança VÊ a pendência e o botão, com os controles inertes e o motivo em
+   texto (`bloqueio` do `ApprovalCard`): o que se tira é o controle, nunca a
+   informação.
+
+**O que esta regra NÃO fecha, declarado:** (a) o "Mergear" não propõe E aprova
+num clique só — são dois cliques, a proposta e a confirmação, e é de propósito;
+(b) a retomada do turno lê a janela dos eventos já carregada, e um `agent.status`
+fora dela não é visto (não saber não é "está trabalhando"); (c) a lista de
+pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
+Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
+continuam SEM decisão inline (não há `ApprovalCard` para elas).
+
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:210` (`decidir`, a
+  decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:63`
+  (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
+  `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
+  `:56` (`separarPendenciasDeOutrasSessoes`);
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:42`
+  (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
+  (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
+  `apps/web/src/routes/SessionPage.tsx:117` (`podeDecidir`), `:253`
+  (`useRetomarTurnoDoLog`), `:791` (`PendenciasDeOutrasSessoes`)
+- **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
+  (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
+  (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
+  (working), `:22` (idle e awaiting_approval fecham), `:38` (sem status na
+  janela — caso de falha); `apps/web/src/routes/SessionPage.retomar-turno.test.tsx:159`
+  (a tela retoma e o log destrava), `:182` (idle não inventa turno — caso de
+  falha); `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx:71`
+  (filas separadas, sessionId da ação), `:99` (papel abaixo de developer — caso
+  de falha), `:109` (409 no card), `:126` (recorte);
+  `apps/web/src/routes/MergearNoChat.test.tsx:62` (PR do evento), `:75`
+  (dedupe), `:100` (propõe como usuário, sem aprovar), `:121` (recusa da api —
+  caso de falha), `:134` (papel — caso de falha)
+- **Origem:** AT-256, AT-268, AT-265 e AT-266, da análise do uso real de
+  2026-09-29 (itens 4, 5 e 10a), rodada 27, lane web-sessao
 
 ### RN-629 — O QA Lead trata o subagente que SUSPENDE de novo na retomada do mesmo jeito que na primeira vez, e resultado que não conhece vira bloqueio nomeado {#rn-629}
 

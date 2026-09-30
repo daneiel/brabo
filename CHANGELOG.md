@@ -57,6 +57,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: **decidir no chat, onde o dono está** (AT-256, AT-268, AT-265,
+  AT-266, [RN-626](docs/business-rules.md#rn-626)) — só tela, nenhum teto muda.
+  O card de aprovação segura os botões enquanto a decisão está em voo e mostra
+  a frase da api no próprio card (o 409 de ação que já saiu de `pending` deixa
+  de ser um clique sem explicação); reabrir a sessão com um turno em curso
+  devolve a faixa de atividade e o composer travado a partir do log; o chat
+  lista as pendências dos agentes em OUTRAS sessões do projeto (filas de
+  aprovações e de merges separadas, nunca somadas) e as decide ali, pelos mesmos
+  endpoints do painel "precisa de você"; e o card da PR aberta ganha "Mergear",
+  que PROPÕE o merge — a confirmação continua sendo o seu clique no card.
 - **api**: o critério de roteamento do binding de modelo **acorda no
   OpenRouter** — a capability `routingPreference` passa a `true` nele, e só
   nele (AT-158, [RN-583](docs/business-rules/custo.md#rn-583),

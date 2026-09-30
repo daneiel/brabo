@@ -186,6 +186,7 @@ estado lido do repositório e não da conversa.
 | O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
 | A tag da imagem de terceiro entra na referência, antes do digest; o Dependabot de imagem segue desligado (AT-139) | ADR 0178 |
 | A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
+| O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 
 ## Estado atual e aberto
 
@@ -1981,6 +1982,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   não tem a data de um registro DIZ de onde tirou a que mostra, ou não mostra
   data: a pendência de arquitetura não tem instante gravado e a linha declara
   que a data é da história relacionada.
+  O chat da sessão é o TERCEIRO lugar onde isso vale (RN-626): mostra as
+  pendências dos agentes em OUTRAS sessões do projeto com o mesmo `ApprovalCard`
+  e os mesmos endpoints, cada fila com o próprio título e contagem, e o
+  "Mergear" do card da PR aberta só PROPÕE o merge — quem confirma é o
+  clique humano no card, e o teto da RN-418 não se move. O card fica inerte
+  enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
+  incluído); reabrir a sessão retoma do log o turno em curso, sem fila de
+  mensagem (essa é decisão pendente do dono).
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO

@@ -175,5 +175,23 @@
     "passosDoTurno": "Passos do turno",
     "passosCount_one": "{{count}} passo",
     "passosCount_other": "{{count}} passos"
+  },
+  "pendencias": {
+    "titulo": "Pendências de outras sessões deste projeto",
+    "nota": "Atalho para a decisão: os mesmos cards e os mesmos endpoints da aba Aprovações. Nenhum teto muda — merge em branch protegida segue manual.",
+    "filas": {
+      "aprovacoes": "Aprovações",
+      "merges": "Merges de PR"
+    },
+    "origem": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
+    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa."
+  },
+  "mergearNoChat": {
+    "botao": "Mergear",
+    "propondo": "Propondo…",
+    "semPapel": "Mergear aqui exige o papel developer no projeto.",
+    "nota": "Propõe o merge nesta sessão; quem confirma é você, no card que aparece — o merge segue manual.",
+    "erroTitulo": "Não foi possível propor o merge"
   }
 }
