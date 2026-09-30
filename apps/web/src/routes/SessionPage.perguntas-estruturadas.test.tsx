@@ -74,7 +74,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 // `mensagemDaApi`/`ApiError` vêm do módulo REAL: o caminho de erro do card
 // (`handleSubmit`) os chama, e um mock que não os exporta transforma a falha

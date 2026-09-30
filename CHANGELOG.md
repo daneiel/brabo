@@ -512,6 +512,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
+  mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
+  Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de
+  um agente com o seu e-mail. Agora a pessoa aparece pelo nome (ou e-mail) da
+  lista de membros do projeto, o agente com o nome e o avatar dele, e o ator
+  que a tela não reconhece como "Autor desconhecido". Quem entra no projeto só
+  pelo papel de workspace não está nessa lista e aparece como "Outro membro" —
+  lacuna declarada, sem rota nova.
 - **web**: o fio da sessão deixou de esconder o começo da conversa e de
   inverter a ordem ao expandir (AT-319, [RN-644](docs/business-rules.md#rn-644)).
   O corte das últimas 5 conta só MENSAGENS (os cards de handoff, aprovação e

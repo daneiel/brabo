@@ -12,7 +12,9 @@
     "semTitulo": "(no title)",
     "verNoBacklog": "View in Backlog",
     "voce": "You",
-    "agenteGenerico": "agent"
+    "agenteGenerico": "agent",
+    "outroMembro": "Another member",
+    "autorDesconhecido": "Unknown author"
   },
   "topbar": {
     "voltarAoProjeto": "Back to project",

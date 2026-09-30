@@ -38,6 +38,7 @@ import {
   useCanalDaSessaoVivo,
 } from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
+import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
 import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
@@ -126,6 +127,10 @@ export function SessionPage({
   // (Fase 7a). Para o rótulo de autoria da própria mensagem, o e-mail serve —
   // e o fallback cobre o instante entre o boot e a primeira renovação.
   const user = { name: emailDaSessao() };
+  // RN-652: o autor de cada fala do fio sai do ATOR do evento, resolvido
+  // contra quem vê e os membros do projeto — `user` acima é só o rótulo da
+  // mensagem OTIMISTA, que é sempre de quem vê.
+  const autoria = useAutoriaDaSessao(projectId);
 
   // "Auto mode" (RN-153) exige `maintainer` no endpoint que grava a curinga —
   // mesma aproximação de `ProjectApprovalsTab.tsx`/`ProjectSettingsTab.tsx`
@@ -457,7 +462,7 @@ export function SessionPage({
         projectId,
         sessionId,
         t,
-        user,
+        autoria,
         queryClient,
         invalidateActions,
         ofertasAcionaveis,
@@ -484,7 +489,7 @@ export function SessionPage({
       actions,
       projectId,
       sessionId,
-      user.name,
+      autoria,
       queryClient,
       invalidateActions,
       ofertasAcionaveis,

@@ -77,7 +77,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   listSessionEvents: (...args: unknown[]) => cauda(...args),
