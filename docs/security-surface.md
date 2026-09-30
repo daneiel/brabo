@@ -1099,6 +1099,17 @@ reason in the URL.
   so nothing crosses a project boundary. The same routes now answer with the
   CURRENT offer instead of always a new row (`desfecho`), and the internal one
   accepts `seAusente` — a switch that can only make the call write LESS.
+- **The internal `POST /internal/sessions/:sessionId/handoffs` may now ACCEPT
+  the Creative→PO offer it creates, and the classification didn't change** —
+  still `engine-service` ([RN-658](business-rules.md#rn-658),
+  [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)). The engine gains no
+  power to activate an agent: the api decides, from the `readiness.confirmed`
+  that a PERSON recorded through `POST .../readiness` (`role:developer`, the same
+  minimum as accepting by the card), and records that person as the actor. The
+  engine cannot forge the mark — it never writes `readiness.confirmed` — and
+  the offer must carry the `product_brief` born after that click, in the same
+  session. `POST .../agents/criativo/validate-necessity` keeps its route and
+  role, with no web caller left ([RN-657](business-rules.md#rn-657)).
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT

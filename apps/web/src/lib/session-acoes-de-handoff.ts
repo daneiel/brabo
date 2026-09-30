@@ -7,7 +7,6 @@ import {
   mensagemDaApi,
   requestManualHandoff,
   setAgentAutonomy,
-  validateNecessity,
 } from './api-client';
 import { AGENT_AUTONOMY_ALL_ACTIONS } from './api-types';
 import type { useToast } from '../components/ui/ToastProvider';
@@ -17,10 +16,12 @@ type Turno = ReturnType<typeof useTurnoDoAgente>;
 
 /**
  * As ações da tela de Sessão que NÃO são turno de conversa e mexem em handoff
- * ou execução: validar a necessidade (RN-406), pedir o handoff manual (ADR
+ * ou execução: pedir o handoff manual (ADR
  * 0109/RN-440), aceitar um handoff (com a fusão condicional da RN-161),
  * ativar a execução pelo atalho do card (RN-137) e ligar o modo automático
- * pelo card de aprovação (RN-153) — com os quatro estados de "em voo" delas.
+ * pelo card de aprovação (RN-153) — com os três estados de "em voo" delas.
+ * Validar a necessidade saiu daqui no ADR 0185: o "Estou pronto" a fecha
+ * (RN-657), e não há mais clique separado.
  *
  * Morou em `SessionPage.tsx` até o PR 9 do programa do ADR 0176, que moveu os
  * estados e os cinco handlers sem mudar uma linha; o hook é chamado depois de
@@ -54,46 +55,14 @@ export function useAcoesDeHandoff({
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
   const [ativandoExecucao, setAtivandoExecucao] = useState(false);
-  // Gate `necessidade-validada` (RN-406) — diferente de `streaming`
-  // (`handleReadiness`/`handleArchitectureReadiness`), esta confirmação NÃO
-  // é um turno do engine: é só um POST que grava o evento, mesmo padrão de
-  // `ativandoExecucao`.
-  const [validandoNecessidade, setValidandoNecessidade] = useState(false);
   // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
   // depois do envio (some junto com a oferta ao ser aceito), então
   // não precisa lembrar a escolha entre um handoff e outro.
   const [manualHandoffTarget, setManualHandoffTarget] = useState('');
   const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
 
-  /**
-   * Gate `necessidade-validada` (RN-406, ADR 0095) — o usuário confirma que
-   * o `product_brief` que o Criativo consolidou reflete de verdade a
-   * necessidade de negócio. Diferente de `handleReadiness`/
-   * `handleArchitectureReadiness`, NÃO é um `GenServer.call` síncrono no
-   * engine (o handoff Criativo→PO já aconteceu dentro do próprio
-   * `confirm_readiness`): é só um POST que grava `necessity.validated`, sem
-   * turno pra esperar — por isso não usa `streaming`, e sim um loading
-   * próprio (`validandoNecessidade`), mesmo padrão de `handleActivateExecution`.
-   */
-  async function handleValidateNecessity() {
-    if (validandoNecessidade) return;
-    setValidandoNecessidade(true);
-    try {
-      await validateNecessity(projectId, sessionId);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: t('toasts.necessidadeValidada'), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroValidarNecessidade')),
-        tone: 'danger',
-      });
-    } finally {
-      setValidandoNecessidade(false);
-    }
-  }
-
   // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
-  // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
+  // engine (não é o padrão de `handleSend`),
   // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
   // existente (`ofertasAcionaveis`, RN-631) pega o handoff novo sozinho no próximo poll
   // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
@@ -243,11 +212,9 @@ export function useAcoesDeHandoff({
 
   return {
     ativandoExecucao,
-    validandoNecessidade,
     manualHandoffTarget,
     setManualHandoffTarget,
     enviandoHandoffManual,
-    handleValidateNecessity,
     handleRequestManualHandoff,
     handleAcceptHandoff,
     handleActivateExecution,

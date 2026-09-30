@@ -50,10 +50,6 @@ export interface SessionComposerProps {
   arquiteturaJaDeclarada: boolean;
   handleArchitectureReadiness: () => Promise<void>;
   hasPromotedStory: boolean;
-  necessidadeJaValidada: boolean;
-  validandoNecessidade: boolean;
-  handleValidateNecessity: () => Promise<void>;
-  hasProductBrief: boolean;
   handleActivate: () => Promise<void>;
   /**
    * ADR 0183 (RN-650): reabrir sessão encerrada. `podeReabrir` é o papel
@@ -94,10 +90,6 @@ export function SessionComposer({
   arquiteturaJaDeclarada,
   handleArchitectureReadiness,
   hasPromotedStory,
-  necessidadeJaValidada,
-  validandoNecessidade,
-  handleValidateNecessity,
-  hasProductBrief,
   handleActivate,
   podeReabrir = false,
   reabrindo = false,
@@ -305,6 +297,12 @@ export function SessionComposer({
             "Estou pronto para produzir" DEPOIS do handoff — convidando a
             declarar de novo uma prontidão que já foi declarada, e cuja
             consequência (o handoff para o PO) já está na tela.
+
+            Desde o ADR 0185 o mesmo clique fecha os DOIS gates — a
+            prontidão e a necessidade validada (RN-657) — e aceita em nome
+            da pessoa o handoff ao PO que o Criativo oferecer (RN-658). O
+            rótulo diz isso: é ele que faz do clique um julgamento de
+            mérito, e não só o piso "≥1 regra" da RN-142.
           */}
           {criativoActive && !prontidaoJaDeclarada && (
             <Button
@@ -314,7 +312,7 @@ export function SessionComposer({
               title={
                 !hasBusinessRule
                   ? t('composer.prontoParaProduzirDesabilitado')
-                  : undefined
+                  : t('composer.prontoParaProduzirExplica')
               }
             >
               {t('composer.prontoParaProduzir')}
@@ -337,30 +335,6 @@ export function SessionComposer({
               }
             >
               {t('composer.confirmarArquitetura')}
-            </Button>
-          )}
-          {/*
-            Gate `necessidade-validada` (RN-406, ADR 0095): confirmação
-            humana SEPARADA de "Estou pronto para produzir" — este botão
-            só existe para não deixar o Criativo (o modelo) se
-            autovalidar (`modelo-de-time.md`, anti-padrão registrado).
-            Habilita só DEPOIS que o product_brief já existe (não dá pra
-            "validar" algo que ainda não foi consolidado) e some assim
-            que já foi validada.
-          */}
-          {criativoActive && !necessidadeJaValidada && (
-            <Button
-              variant="success"
-              loading={validandoNecessidade}
-              onClick={handleValidateNecessity}
-              disabled={streaming || !hasProductBrief}
-              title={
-                !hasProductBrief
-                  ? t('composer.confirmarNecessidadeDesabilitado')
-                  : undefined
-              }
-            >
-              {t('composer.confirmarNecessidade')}
             </Button>
           )}
         </div>

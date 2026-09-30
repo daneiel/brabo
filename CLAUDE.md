@@ -217,6 +217,7 @@ estado lido do repositório e não da conversa.
 | Projeto novo nasce com promoção de histórias automática (AT-313) | RN-659 |
 | O handoff do PO ao Arquiteto é aceito pelo sistema com backlog coberto e repositório local (AT-314) | ADR 0186, RN-660 |
 | O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
+| Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
 
 ## Estado atual e aberto
 

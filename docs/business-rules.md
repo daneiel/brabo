@@ -1518,6 +1518,12 @@ de fora dessa correção, e sem ela a bolha do agente ficava presa vazia
 
 ### RN-136 — O card acionável de handoff no chat só considera quem CONVERSA nesta tela {#rn-136}
 
+> **Desde o [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+> ([RN-658](#rn-658))** o handoff Criativo→PO que o "Estou pronto" pediu
+> nasce e é aceito na mesma chamada, em nome de quem clicou — o card de
+> aceite dele só aparece quando esse aceite não cabe (sessão anterior ao ADR,
+> brief que não veio do clique) ou falhou. O filtro abaixo não muda.
+
 `OfferInfraHandoffUseCase` oferece o handoff pro Infra e, na MESMA
 confirmação, oferece pro Dev Lead logo em seguida (FASE 14d) — duas chamadas
 separadas, a de Infra primeiro. `handoffs` (o que `SessionPage.tsx` lê de
@@ -3366,6 +3372,18 @@ sozinho que a necessidade que ele mesmo produziu está validada seria
 autovalidação, não gate de verdade.
 
 ### RN-406 — O gate `necessidade-validada` se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando {#rn-406}
+
+> **Revista pelo [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+> ([RN-657](#rn-657)), por decisão do dono em 30/09.** O clique deixou de ser
+> SEPARADO: "Estou pronto — a necessidade está validada" grava
+> `readiness.confirmed` e `necessity.validated` no mesmo POST, com o
+> `product_brief` produzido DEPOIS do clique (`productBriefId: null`). O botão
+> "Confirmar necessidade validada" saiu da tela. O que desta regra continua
+> valendo: quem valida é sempre uma PESSOA, nunca o Criativo; o gate segue
+> `warn`. `POST .../agents/criativo/validate-necessity` continua na api, sem
+> consumidor na tela — é o caminho de uma sessão cujo "Estou pronto" é
+> anterior ao ADR 0185. O texto abaixo é o desenho do ADR 0095, mantido como
+> histórico.
 
 `SessionPage.tsx` ganha um terceiro botão de confirmação, no MESMO padrão
 interacional de "Estou pronto para produzir" (RN-142) e "Confirmar
@@ -18543,3 +18561,97 @@ automático (RN-471).
   manual — caso de falha), `:74` (o que não libera), `:102` (sem
   `maintainer`), `:108` (todos em automático, nada a oferecer)
 - **Origem:** AT-315 (levantamento da AT-309, linha "Modo automático")
+
+## Um clique fecha a prontidão, a necessidade e o aceite do PO (RN-657/RN-658)
+
+### RN-657 — "Estou pronto — a necessidade está validada" fecha os DOIS gates num POST, com o `product_brief` produzido depois do clique {#rn-657}
+
+Revisa a [RN-406](#rn-406) por decisão do dono (30/09, AT-311): o botão do
+Criativo passou a se chamar **"Estou pronto — a necessidade está validada"**
+(en: "I'm ready — the need is validated"), e é o rótulo que faz do clique o
+julgamento de MÉRITO que o [ADR 0095](adr/0095-gate-necessidade-validada.md)
+exigia separado — a pessoa declara as duas coisas, com as palavras das duas.
+`POST .../sessions/:id/readiness` grava, nesta ordem:
+
+1. `readiness.confirmed`, ator a pessoa, com a marca
+   `{ necessidadeValidada: true, aceiteImplicitoDoPo: true }` (a marca é o
+   que a [RN-658](#rn-658) lê; evento antigo, com payload `{}`, não aceita
+   nada);
+2. o comando ao engine (o turno que consolida o `product_brief`, [RN-142](#rn-142));
+3. só se o engine ACEITOU o turno, `necessity.validated`, ator a mesma
+   pessoa, com `productBriefId: null` (o brief ainda não existe — nasce do
+   turno que o clique dispara), `via: 'readiness.confirmed'` e o
+   `readinessEventId` do passo 1.
+
+A recusa do engine (409 turno em curso, 422 sem regra de negócio) sobe ANTES
+do passo 3: sem turno aceito não há brief a caminho, e a necessidade NÃO fica
+validada. O gate segue `warn` (`docs/gates.yml`) — nada a jusante o consulta.
+A tela não tem mais o botão "Confirmar necessidade validada"; o título do
+botão habilitado diz o que o clique fecha, e o aviso de sucesso diz que o PO
+entra quando o resumo ficar pronto.
+
+- **Código:** `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts:26` (`ConfirmReadinessUseCase`),
+  `:42` (`necessity.validated`);
+  `apps/api/src/domain/sessions/estou-pronto.ts:27` (`MARCA_DO_ESTOU_PRONTO`);
+  `apps/web/src/routes/SessionComposer.tsx:315` (o título do botão);
+  `apps/web/src/routes/SessionPage.tsx:602` (`handleReadiness`)
+- **Teste:** `apps/api/test/application/use-cases/agents/confirm-readiness.use-case.spec.ts:49`
+  (os dois eventos, com a marca e o brief por vir — caminho feliz), `:72`
+  (422 do engine: só a prontidão fica gravada — caso de falha);
+  `apps/web/src/routes/SessionPage.estou-pronto.test.tsx:150` (um clique,
+  aviso de necessidade validada, sem botão separado), `:169` (recusa: nada é
+  dito como validado)
+- **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md), que revisa o
+  [0095](adr/0095-gate-necessidade-validada.md)
+- **Origem:** AT-311 (levantamento da AT-309, achado 1)
+
+### RN-658 — O aceite do handoff Criativo→PO é implícito no "Estou pronto": os MESMOS eventos, com a pessoa como ator e a marca `implicito` {#rn-658}
+
+Decisão do dono (30/09, AT-312): o clique separado de aceitar o PO some. O
+handoff Criativo→PO nasce DEPOIS do clique (é o turno que ele dispara que o
+oferece, `CriativoServer.executar_confirm_readiness/1`), então o aceite não
+cabe no POST do clique: ele acontece na rota interna que CRIA a oferta
+(`POST /internal/sessions/:id/handoffs`), logo depois de
+`CreateHandoffUseCase`, e passa pelo MESMO `AcceptHandoffUseCase` do card.
+
+Medido antes de mudar, o aceite pelo card grava: a transição da linha para
+`accepted`, `handoff.accepted` (ator a pessoa, `{handoffId, toAgent}`),
+`agent.activated` (ator a pessoa, `{agent}`) e, pela [RN-635](#rn-635), o
+`handoff.superseded` das outras ofertas ao PO no projeto. O aceite implícito
+grava exatamente esses, com o MESMO ator humano — quem clicou, lido do
+`readiness.confirmed` marcado —, e acrescenta a marca
+`implicito: { via: 'readiness.confirmed', readinessEventId }` no payload de
+`handoff.accepted` e de `agent.activated`. Nenhum evento é editado, nenhum ator
+de sistema entra no lugar da pessoa, e o aceite pelo card segue sem a marca.
+
+Aceita-se só quando TODAS valem (`decidirAceiteImplicitoDoPo`): a oferta é
+`criativo` → `po`, `offered`, DESTA sessão, e leva como artefato o
+`product_brief` nascido DEPOIS do `readiness.confirmed` marcado mais recente.
+Fora disso a oferta fica `offered` e o card aparece como sempre: sessão
+anterior ao ADR 0185 (sem marca), brief anterior ao clique, e o handoff
+MANUAL, que nunca leva artefato ([RN-633](#rn-633) — o "Estou pronto" segue
+na tela depois dele). A falha do aceite NÃO sobe para o engine (a oferta foi
+criada, e o Criativo diria "não consegui oferecer" — falso): vira
+`agent.error` durável, ator `system`/`aceite-implicito`, com origem (`infra`
+ou `politica`) e `reason: aceite_implicito_falhou`. O 400 de "não está
+`offered`" não é falha: alguém decidiu a oferta por outro caminho no intervalo,
+e isso já está no log. A tela passa o destinatário do composer ao PO no clique
+(o gesto de chamá-lo, [RN-631](#rn-631)); enquanto ele não entra, a escolha não
+vale e o Criativo segue recebendo. Nenhum teto se move: aceitar o PO não
+provisiona repositório (só o Arquiteto e o Dev Lead, [RN-582](#rn-582)), não
+faz merge nem push.
+
+- **Código:** `apps/api/src/domain/sessions/estou-pronto.ts:62` (`decidirAceiteImplicitoDoPo`);
+  `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts:37` (`AceiteImplicitoDoPoUseCase`),
+  `:45` (`seCouber`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:404` (`handoff`);
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:135` (`implicito` no `handoff.accepted`);
+  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:80` (`implicito` no `agent.activated`)
+- **Teste:** `apps/api/test/application/use-cases/agents/aceite-implicito-do-po.use-case.spec.ts:105`
+  (aceita em nome de quem clicou — caminho feliz), `:129` (falha do aceite
+  vira `agent.error` e não sobe — caso de falha), `:120`, `:146`;
+  `apps/api/test/domain/sessions/estou-pronto.spec.ts:58`, `:72`, `:83`, `:94`;
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:318`
+  (mesmos eventos, ator humano e marca), `:338` (sem marca pelo card)
+- **ADR:** [0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)
+- **Origem:** AT-312 (levantamento da AT-309, passo 4)

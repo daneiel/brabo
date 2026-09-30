@@ -84,7 +84,6 @@ describe('useSessionReadiness', () => {
     expect(result.current.arquitetoActive).toBe(true);
     expect(result.current.hasBusinessRule).toBe(true);
     expect(result.current.hasPromotedStory).toBe(true);
-    expect(result.current.hasProductBrief).toBe(true);
   });
 
   it('degrada pra falso/null sem nenhuma evidência (sessão nova, backlog undefined)', () => {
@@ -94,7 +93,6 @@ describe('useSessionReadiness', () => {
     expect(result.current.arquitetoActive).toBe(false);
     expect(result.current.hasBusinessRule).toBe(false);
     expect(result.current.hasPromotedStory).toBe(false);
-    expect(result.current.hasProductBrief).toBe(false);
   });
 
   it('hasPromotedStory exige status diferente de draft — épico só com draft não conta', () => {
