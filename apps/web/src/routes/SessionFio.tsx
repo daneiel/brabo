@@ -5,6 +5,7 @@ import { ROTULO_DA_ORIGEM } from '../lib/activity';
 import { Button } from '../components/ui/Button';
 import { Disclosure } from '../components/ui/Disclosure';
 import { ModelIcon, UserIcon } from '../components/ui/icons';
+import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import type { dividirFio } from './session-fio';
 import styles from './SessionPage.module.css';
 
@@ -30,7 +31,12 @@ export interface SessionFioProps {
   optimisticUser: string | null;
   user: { name: string | null };
   turnoViaCanal: boolean;
-  streamingText: string;
+  /**
+   * O texto em curso vem como STORE, não como string (AT-301): só a bolha
+   * (`BolhaDoStreaming`, abaixo) o assina, e um token re-renderiza a bolha —
+   * não o fio, e muito menos a `SessionPage`.
+   */
+  streamingStore: StoreDoStreaming;
   pensandoVisivel: boolean;
   streaming: boolean;
   statusAgent: string | null;
@@ -48,7 +54,7 @@ export function SessionFio({
   optimisticUser,
   user,
   turnoViaCanal,
-  streamingText,
+  streamingStore,
   pensandoVisivel,
   streaming,
   statusAgent,
@@ -195,54 +201,87 @@ export function SessionFio({
           turno de agente conversacional narra pela faixa de
           atividade (`TurnActivityStrip`, logo abaixo do fio), nunca
           pelos dois ao mesmo tempo. */}
-      {!turnoViaCanal && (streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
-        <div
-          className={styles.message}
-          style={
-            {
-              ['--msg-color' as string]:
-                agenteExibido?.color ?? 'var(--accent)',
-            } as CSSProperties
-          }
-        >
-          <span className={styles.avatar}>
-            {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
-          </span>
-          <div className={styles.messageBody}>
-            <div className={styles.messageHeader}>
-              {/*
-                Quem fala é o AGENTE (achado C). O modelo é detalhe de
-                execução e aparecia aqui como se fosse o interlocutor —
-                depois trocava para o agente quando o evento persistido
-                chegava, o que também mudava o nome na cara do usuário.
-                Sem o agente no delta, degrada para "agente" genérico,
-                nunca para o nome do modelo.
-
-                RN-156: "Reunindo informações..." só antes de haver
-                texto — é o que deixa explícito que o silêncio é
-                trabalho em curso, não ausência de resposta (achado
-                B). Frase fixa, sem o nome do agente interpolado: o
-                nome já aparece no cabeçalho assim que o streaming
-                real começa, e repeti-lo aqui não ajudava a leitura.
-              */}
-              <span className={styles.messageName}>
-                {streamingText
-                  ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
-                  : t('mensagens.reunindoInformacoes')}
-              </span>
-            </div>
-            {streamingText ? (
-              <div className={styles.bubble}>{streamingText}</div>
-            ) : (
-              <div className={styles.typing}>
-                <span className={styles.typingDot} />
-                <span className={styles.typingDot} />
-                <span className={styles.typingDot} />
-              </div>
-            )}
-          </div>
-        </div>
+      {!turnoViaCanal && (
+        <BolhaDoStreaming
+          store={streamingStore}
+          pensandoVisivel={pensandoVisivel}
+          streaming={streaming}
+          statusAgent={statusAgent}
+          agenteExibido={agenteExibido}
+        />
       )}
     </>
+  );
+}
+
+/**
+ * A bolha do chat consultivo em streaming — o ÚNICO leitor do texto em curso
+ * (AT-301). Mesmo JSX e mesma condição de antes (RN-131: "tem texto OU já
+ * passou o prazo"), só que o texto sai do store por `useSyncExternalStore`:
+ * um delta re-renderiza isto, e nada acima.
+ */
+function BolhaDoStreaming({
+  store,
+  pensandoVisivel,
+  streaming,
+  statusAgent,
+  agenteExibido,
+}: {
+  store: StoreDoStreaming;
+  pensandoVisivel: boolean;
+  streaming: boolean;
+  statusAgent: string | null;
+  agenteExibido: SessionFioProps['agenteExibido'];
+}) {
+  const { t } = useTranslation('sessionPage');
+  const streamingText = useTextoDoStreaming(store);
+  if (!(streamingText || (pensandoVisivel && (streaming || statusAgent)))) return null;
+  return (
+    <div
+      className={styles.message}
+      style={
+        {
+          ['--msg-color' as string]:
+            agenteExibido?.color ?? 'var(--accent)',
+        } as CSSProperties
+      }
+    >
+      <span className={styles.avatar}>
+        {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
+      </span>
+      <div className={styles.messageBody}>
+        <div className={styles.messageHeader}>
+          {/*
+            Quem fala é o AGENTE (achado C). O modelo é detalhe de
+            execução e aparecia aqui como se fosse o interlocutor —
+            depois trocava para o agente quando o evento persistido
+            chegava, o que também mudava o nome na cara do usuário.
+            Sem o agente no delta, degrada para "agente" genérico,
+            nunca para o nome do modelo.
+
+            RN-156: "Reunindo informações..." só antes de haver
+            texto — é o que deixa explícito que o silêncio é
+            trabalho em curso, não ausência de resposta (achado
+            B). Frase fixa, sem o nome do agente interpolado: o
+            nome já aparece no cabeçalho assim que o streaming
+            real começa, e repeti-lo aqui não ajudava a leitura.
+          */}
+          <span className={styles.messageName}>
+            {streamingText
+              ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+              : t('mensagens.reunindoInformacoes')}
+          </span>
+        </div>
+        {streamingText ? (
+          <div className={styles.bubble}>{streamingText}</div>
+        ) : (
+          <div className={styles.typing}>
+            <span className={styles.typingDot} />
+            <span className={styles.typingDot} />
+            <span className={styles.typingDot} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
