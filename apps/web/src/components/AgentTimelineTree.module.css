@@ -9,14 +9,14 @@
 .vazio {
   padding: 20px;
   border: 1px dashed var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   color: var(--text-muted);
   font-size: 14px;
 }
 
 .ramo {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   overflow: hidden;
   background: var(--surface-1);
 }
@@ -74,7 +74,7 @@
 .contagem {
   flex: 0 0 auto;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-secondary);
   font-family: var(--font-mono);
@@ -84,7 +84,7 @@
 /* Contagem de NOVIDADE — mesmo formato do total, cor de destaque pra
    diferenciar "isto é o que você ainda não viu" de "isto é o total". */
 .contagemNova {
-  background: color-mix(in srgb, var(--accent) 20%, var(--surface-2));
+  background: color-mix(in srgb, var(--accent) var(--tint-avatar), var(--surface-2));
   color: var(--accent);
   font-weight: 600;
 }
@@ -100,7 +100,7 @@
 .marco {
   position: relative;
   padding: 6px 0 6px 16px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .marco::before {
@@ -173,7 +173,7 @@
   border-top: 1px dashed var(--border);
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -199,7 +199,7 @@
 .detalhe {
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
 }
 
 .hora {
@@ -237,7 +237,7 @@
 .detalheRotulo {
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -247,13 +247,13 @@
   /* O conteúdo é sempre mono aqui (args/resultado/JSON) — a bolha do chat
      é Archivo por padrão; a árvore mostra dado técnico, não prosa. */
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
 }
 
 .detalheErro {
   color: var(--danger);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
 }
 
 /* Cada tipo de marco tem sua cor: falha e gate são os que se procura primeiro. */

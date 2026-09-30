@@ -2,6 +2,7 @@ import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
 import { ModelIcon, UserIcon } from '../components/ui/icons';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
@@ -65,7 +66,7 @@ export function SessionFio({
           nunca o teriam. */}
       {conviteVisivel && (
         sessaoCriativa ? (
-          <div className={styles.convite}>
+          <Card padding="lg" className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -107,9 +108,9 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </div>
+          </Card>
         ) : (
-          <div className={styles.convite}>
+          <Card padding="lg" className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -125,7 +126,7 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </div>
+          </Card>
         )
       )}
 

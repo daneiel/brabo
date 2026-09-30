@@ -20,7 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 8px 16px;
+  padding: 10px var(--space-2) var(--space-3);
   background: var(--surface-1);
   border-right: 1px solid var(--border);
   overflow-y: auto;
@@ -47,9 +47,9 @@
    (mono, minúsculo em caixa alta, `--text-muted`) — o que declara "isto
    nomeia uma seção", e não "isto é clicável". */
 .grupoLabel {
-  padding: 6px 8px 2px;
+  padding: 6px var(--space-2) 2px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -60,16 +60,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 32px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -85,7 +85,7 @@
 
 .itemAtivo,
 .itemAtivo:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
 }
@@ -99,7 +99,7 @@
 .item:focus-visible {
   outline: 2px solid transparent;
   outline-offset: -2px;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: inset 0 0 0 2px var(--focus-ring-inset);
 }
 
 @media (forced-colors: active) {
@@ -126,7 +126,7 @@
   align-items: center;
   padding: 1px 7px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 500;
   color: var(--on-accent);
   background: var(--accent);

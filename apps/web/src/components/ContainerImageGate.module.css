@@ -21,7 +21,7 @@
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  background: var(--warning-soft);
   color: var(--warning);
   display: flex;
   align-items: center;

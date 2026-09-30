@@ -17,6 +17,7 @@ import {
   type ResumoDeAprovacoes,
 } from '../lib/approvals';
 import { Button } from '../components/ui/Button';
+import { Chip } from '../components/ui/Chip';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -313,19 +314,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
       {kind === 'criativa' && sessionsQuery.data && doKind.length > 0 && (
         <div className={styles.filtros} role="group" aria-label={t('sessionsTab.filterGroupAriaLabel')}>
           {ORDEM_DOS_FILTROS.map((chave) => (
-            <button
-              key={chave}
-              type="button"
-              className={
-                filtro === chave
-                  ? `${styles.pill} ${styles.pillAtivo}`
-                  : styles.pill
-              }
-              aria-pressed={filtro === chave}
-              onClick={() => setFiltro(chave)}
-            >
+            <Chip key={chave} pressed={filtro === chave} onClick={() => setFiltro(chave)}>
               {t(CHAVE_DO_FILTRO[chave])}
-            </button>
+            </Chip>
           ))}
         </div>
       )}

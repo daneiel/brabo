@@ -229,6 +229,45 @@
   --sidebar-w-collapsed: 62px;
   --header-h: 60px;
   --tabs-h: 42px;
+
+  /* Tintas semânticas (AT-285). Os módulos repetiam ~110 `color-mix()` sobre
+     os mesmos cinco tons com uma dúzia de porcentagens vizinhas (10, 12, 14,
+     15, 16, 18% para o mesmo papel de "fundo tingido"). A escala agora é UMA:
+     - `-soft`: fundo tingido sobre QUALQUER superfície (mistura com
+       `transparent`, então não carrega o matiz da superfície de baixo);
+     - `-line`: borda tingida, idem;
+     - `-panel` / `-panel-border`: faixa de aviso opaca, misturada com
+       `--surface-1`/`--border` — acompanha a base neutra do tema.
+     As porcentagens são tokens próprios para que cores DINÂMICAS
+     (`--agent-color`, `--status-color`…) usem a mesma escala:
+     `color-mix(in srgb, var(--agent-color) var(--tint-soft), transparent)`.
+     Nenhuma é medida pelo teste de contraste (não resolvem a cor literal): são
+     fundo e borda, e o texto sobre elas continua sendo o tom cheio. */
+  --tint-soft: 12%;
+  --tint-line: 40%;
+  --tint-panel: 8%;
+  --tint-avatar: 18%;
+  --accent-soft: color-mix(in srgb, var(--accent) var(--tint-soft), transparent);
+  --accent-line: color-mix(in srgb, var(--accent) var(--tint-line), transparent);
+  --accent-panel: color-mix(in srgb, var(--accent) var(--tint-panel), var(--surface-1));
+  --accent-panel-border: color-mix(in srgb, var(--accent) var(--tint-line), var(--border));
+  --success-soft: color-mix(in srgb, var(--success) var(--tint-soft), transparent);
+  --success-line: color-mix(in srgb, var(--success) var(--tint-line), transparent);
+  --success-panel: color-mix(in srgb, var(--success) var(--tint-panel), var(--surface-1));
+  --success-panel-border: color-mix(in srgb, var(--success) var(--tint-line), var(--border));
+  --warning-soft: color-mix(in srgb, var(--warning) var(--tint-soft), transparent);
+  --warning-line: color-mix(in srgb, var(--warning) var(--tint-line), transparent);
+  --warning-panel: color-mix(in srgb, var(--warning) var(--tint-panel), var(--surface-1));
+  --warning-panel-border: color-mix(in srgb, var(--warning) var(--tint-line), var(--border));
+  --danger-soft: color-mix(in srgb, var(--danger) var(--tint-soft), transparent);
+  --danger-line: color-mix(in srgb, var(--danger) var(--tint-line), transparent);
+  --danger-panel: color-mix(in srgb, var(--danger) var(--tint-panel), var(--surface-1));
+  --danger-panel-border: color-mix(in srgb, var(--danger) var(--tint-line), var(--border));
+  --violet-soft: color-mix(in srgb, var(--violet) var(--tint-soft), transparent);
+  --violet-line: color-mix(in srgb, var(--violet) var(--tint-line), transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 22%, transparent);
+  --focus-ring-inset: color-mix(in srgb, var(--accent) 45%, transparent);
+  --danger-ring: color-mix(in srgb, var(--danger) 22%, transparent);
 }
 
 /*
@@ -282,4 +321,29 @@
     0 1px 2px rgba(24, 24, 27, 0.06),
     0 12px 32px rgba(24, 24, 27, 0.1);
   --shadow-lg: 0 24px 60px rgba(24, 24, 27, 0.14);
+
+  /* As tintas do :root, redeclaradas: um custom property com `var()` é
+     calculado no elemento que o declara, então quem aplicar `data-theme` num
+     ancestral que não seja o <html> herdaria a tinta do escuro. */
+  --accent-soft: color-mix(in srgb, var(--accent) var(--tint-soft), transparent);
+  --accent-line: color-mix(in srgb, var(--accent) var(--tint-line), transparent);
+  --accent-panel: color-mix(in srgb, var(--accent) var(--tint-panel), var(--surface-1));
+  --accent-panel-border: color-mix(in srgb, var(--accent) var(--tint-line), var(--border));
+  --success-soft: color-mix(in srgb, var(--success) var(--tint-soft), transparent);
+  --success-line: color-mix(in srgb, var(--success) var(--tint-line), transparent);
+  --success-panel: color-mix(in srgb, var(--success) var(--tint-panel), var(--surface-1));
+  --success-panel-border: color-mix(in srgb, var(--success) var(--tint-line), var(--border));
+  --warning-soft: color-mix(in srgb, var(--warning) var(--tint-soft), transparent);
+  --warning-line: color-mix(in srgb, var(--warning) var(--tint-line), transparent);
+  --warning-panel: color-mix(in srgb, var(--warning) var(--tint-panel), var(--surface-1));
+  --warning-panel-border: color-mix(in srgb, var(--warning) var(--tint-line), var(--border));
+  --danger-soft: color-mix(in srgb, var(--danger) var(--tint-soft), transparent);
+  --danger-line: color-mix(in srgb, var(--danger) var(--tint-line), transparent);
+  --danger-panel: color-mix(in srgb, var(--danger) var(--tint-panel), var(--surface-1));
+  --danger-panel-border: color-mix(in srgb, var(--danger) var(--tint-line), var(--border));
+  --violet-soft: color-mix(in srgb, var(--violet) var(--tint-soft), transparent);
+  --violet-line: color-mix(in srgb, var(--violet) var(--tint-line), transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 22%, transparent);
+  --focus-ring-inset: color-mix(in srgb, var(--accent) 45%, transparent);
+  --danger-ring: color-mix(in srgb, var(--danger) 22%, transparent);
 }

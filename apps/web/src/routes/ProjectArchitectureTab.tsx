@@ -7,6 +7,7 @@ import type { Architecture } from '../lib/api-types';
 // `ProjectInsightsTab.tsx`, achado #15): a seção saiu de lá inteira e
 // precisa continuar IDÊNTICA visualmente. Duplicar as classes só para ter
 // arquivo de CSS próprio abriria a porta para as duas versões divergirem.
+import { Card } from '../components/ui/Card';
 import styles from './ProjectOverviewTab.module.css';
 
 /**
@@ -61,20 +62,20 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
           ) : (
             <div className={styles.moduleGrid}>
               {moduleMap.modules.map((m) => (
-                <div key={m.name} className={styles.moduleCard}>
+                <Card key={m.name} radius="md" padding="sm">
                   <div className={styles.moduleName}>{m.name}</div>
                   <div className={styles.moduleStack}>{m.stack}</div>
                   <div className={styles.moduleResp}>{m.responsibility}</div>
                   {m.dependsOn.length > 0 && (
                     <div className={styles.deps}>
                       {m.dependsOn.map((d) => (
-                        <span key={d} className={styles.depChip}>
+                        <Badge key={d} tone="neutral">
                           {d}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}

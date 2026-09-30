@@ -30,20 +30,20 @@
   width: 26px;
   height: 26px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   display: flex;
   align-items: center;
   justify-content: center;
   /* `--violet` é o token de agentes/IA desde a FASE 16. Era `#9c7be0` cru aqui
      porque não havia o que referenciar — e cru ele não seguia o tema claro. */
-  background: color-mix(in srgb, var(--violet) 18%, transparent);
+  background: var(--violet-soft);
   color: var(--violet);
 }
 
 .confidence {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -60,7 +60,7 @@
  */
 .frase {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.45;
   color: var(--text-secondary);
 }
@@ -85,13 +85,13 @@
 }
 
 .body {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   line-height: 1.45;
 }
 
 .termination {
-  border-left: 2px solid color-mix(in srgb, var(--danger) 50%, transparent);
+  border-left: 2px solid var(--danger-line);
   padding-left: 10px;
   display: flex;
   flex-direction: column;

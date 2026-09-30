@@ -53,7 +53,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -68,7 +68,7 @@
 }
 
 .estado {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   padding: 10px 0;
 }
@@ -100,7 +100,7 @@
 
 .repoId {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-mono);
   color: var(--text-primary);
   word-break: break-word;
 }
@@ -133,7 +133,7 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
 }
 
@@ -153,13 +153,13 @@
 }
 
 .explicacaoModal {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   line-height: 1.5;
 }
 
 .resumoModal {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   padding: 10px 12px;
   background: var(--surface-2);
