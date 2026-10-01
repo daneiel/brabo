@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "326fa2a970694997a8df26b5305ffcc3c49239a092ef3f333c89a4991724428b",
+  "openapiSha256": "1b3ed5f322f19f0d006a83ad8f2b97f729b77eaee585f05e1128bd8edbafa7e0",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -851,7 +851,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "28c722c896f846850918fd40522b3b329dcf220f65f2ed07bee982d3adbcc3f7",
     "sessions-controller-transition.api.mdx": "c717389d42cd3b9dab8b296b8c21692257346197df60d7b38e22757cebc263dd",
-    "sidebar.ts": "69649b19b9610c164f14f5f2300215c8371d8c69482a07be208b7cda6371e0e4",
+    "sidebar.ts": "13d80f440512add56105aa543c478b42ee557ba401b110ba322eb6a5bb8b108c",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",

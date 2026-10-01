@@ -85,6 +85,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `POST /internal/sessions/:id/module-contracts` e
   `GET /internal/projects/:id/module-contracts`. O tipo entra na pasta `docs/`
   dos artefatos (ADR 0148) como versionado.
+- **docs**: **o índice de ADR passa a ser agrupado por TEMA, com o tema FORA do
+  ADR** (AT-137, [ADR 0202](docs/adr/0202-o-indice-de-adr-por-tema.md), finding
+  `BRB-026`; decisão do dono em 01/10). Agrupado por fase, o índice tinha 148
+  das 191 linhas sob `## Phase 12`. O tema de cada ADR mora em
+  `docs/adr/temas.yml` — 15 temas tirados das frentes do produto, um por ADR —,
+  e nenhum ADR aceito é editado. O índice é CONFERIDO, não gerado: o
+  `pnpm docs:check` (`scripts/docs/temas-de-adr.mjs`) reprova ADR sem tema,
+  tema fora da lista, tema sem ADR e linha do índice na seção errada, fora de
+  seção ou fora da ordem numérica. **ADR novo** ganha uma linha em
+  `temas.yml` no mesmo PR. A taxonomia é proposta para revisão do dono.
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
   [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A

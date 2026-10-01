@@ -320,6 +320,39 @@ English page. A
 second, unchecked copy of the table there would be exactly the copy the table
 exists to replace.
 
+### The ADR index is grouped by theme {#the-adr-index-is-grouped-by-theme}
+
+The ADR index used to be grouped by phase. Once the phases ended, the last
+section became the index: measured on 2026-10-01, 148 of its 191 rows lived
+under `## Phase 12`. [ADR 0202](../adr/0202-o-indice-de-adr-por-tema.md)
+groups it by **theme** instead, and puts the theme **outside** the ADR — an
+accepted ADR is never edited, not even to gain a `tema:` frontmatter key.
+
+The theme lives in `docs/adr/temas.yml`, next to the index: `temas:` is the
+closed, ordered list (`id`, `titulo`, `descricao`) and `adrs:` maps each ADR
+number to ONE theme. The index is **checked, not generated** — its one-line
+descriptions are curated and no script writes them, the same reason
+`verificarIndiceAdr` gives — and each theme is a section
+`## <titulo> {#tema-<id>}`, in the list's order, with its rows in numeric
+order.
+
+`generate.mjs` checks it (`verificarTemasDeAdr`, right after
+`verificarIndiceAdr`; logic in `scripts/docs/temas-de-adr.mjs`, proven by
+mutation in `temas-de-adr.spec.ts`). It fails an ADR file with no theme, a
+theme in the map that is not in the list, a map entry for an ADR that does not
+exist, a listed theme with no ADR, a repeated or malformed theme id or title,
+and, in the index, a missing, repeated, misnamed, out-of-order or unknown
+theme section, or an ADR row under another theme's section, outside any theme
+section, repeated or out of numeric order. Unreadable YAML, an empty list or
+map, or an index with no theme section at all (the old by-phase index) is
+`CEGO` and fails.
+
+**Severity: `block`**, like the runbook table: it was born with every ADR
+classified, so whatever breaks it later is a new ADR whose PR forgot its line
+in `temas.yml` — the PR that can fix it. The pt-BR translation of the index is
+still by phase and behind the English one; the `traducao-pt-br` rule warns, as
+always.
+
 ## The pieces
 
 ```mermaid
