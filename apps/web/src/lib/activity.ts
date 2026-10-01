@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { DelegationEventPayload, SessionEvent } from './api-types';
 import { AGENTS } from './agents';
+import { linhaDoEventoDePolitica } from './decisao-da-politica';
 import {
   BranchIcon,
   CommitIcon,
@@ -328,8 +329,8 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--danger)',
       bad: true,
       text:
-        `${actorLabel} PAROU — circuit breaker` +
-        (n ? `: ${n} tasks bloqueadas seguidas` : '') +
+        `${actorLabel} PAROU — parada automática` +
+        (n ? `: ${n} ${n === '1' ? 'tarefa bloqueada seguida' : 'tarefas bloqueadas seguidas'}` : '') +
         '. Rearme no painel do time para retomar.',
     };
   }
@@ -525,6 +526,30 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `história "${payloadField(payload, 'title') ?? 'nova'}" não acrescenta cobertura sobre "${payloadField(payload, 'sobrepoeTitulo') ?? 'outra'}"`,
     };
   }
+  // RN-681 (ADR 0198): a duplicata SEMÂNTICA, por embedding. Também é AVISO:
+  // o item existe, e o texto nomeia o parecido e o número para quem lê julgar.
+  if (type === 'backlog.semantic_duplicate_warned') {
+    const oQue =
+      payloadField(payload, 'kind') === 'story' ? 'história' : 'regra';
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--warning)',
+      bad: false,
+      text: `${oQue} "${payloadField(payload, 'title') ?? 'nova'}" parece duplicar "${payloadField(payload, 'similarToTitle') ?? 'outra'}" (similaridade ${payloadField(payload, 'similarity') ?? '?'})`,
+    };
+  }
+  // A checagem que não rodou DIZ por quê — sem isto, "nenhum aviso" se leria
+  // como "não é duplicata".
+  if (type === 'backlog.semantic_duplicate_check_skipped') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--text-secondary)',
+      bad: false,
+      text: `checagem de duplicata semântica pulada: ${payloadField(payload, 'reason') ?? 'motivo não informado'}`,
+    };
+  }
   if (type.startsWith('adr.')) {
     return {
       kind: 'pr',
@@ -627,6 +652,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             : `atividade em ${actorLabel}`,
     };
   }
+  // ADR 0183 (RN-649): o fechamento anterior mora no payload, não numa linha
+  // apagada — a frase diz a causa quando ela foi gravada.
+  if (type === 'session.reopened') {
+    const causa = payloadField(payload, 'terminationReason');
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `sessão reaberta${causa ? ` (tinha fechado por ${causa})` : ''}`,
+    };
+  }
   if (type === 'architecture.readiness_confirmed') {
     return {
       kind: 'session',
@@ -643,6 +680,26 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--accent)',
       bad: false,
       text: `${actorLabel} entrou na sessão`,
+    };
+  }
+  // RN-660 (ADR 0186): o aceite pelo SISTEMA diz que foi automático; o
+  // prefixo genérico abaixo diria "ofereceu" sobre um aceite.
+  if (type === 'handoff.accepted' && (payload as { automatico?: boolean } | null)?.automatico === true) {
+    return {
+      kind: 'generic',
+      icon: PrIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'} aceito automaticamente (backlog coberto, repositório local)`,
+    };
+  }
+  if (type === 'handoff.auto_accept_failed') {
+    return {
+      kind: 'generic',
+      icon: PrIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `aceite automático do handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'} falhou: ${payloadField(payload, 'error') ?? 'motivo não informado'}`,
     };
   }
   if (type.startsWith('handoff.')) {
@@ -712,6 +769,19 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: granted
         ? `${actorLabel} concedeu permissão${payloadField(payload, 'pattern') ? ` para ${payloadField(payload, 'pattern')}` : ''}`
         : `${actorLabel} negou permissão`,
+    };
+  }
+  // AT-148 (RN-614): a linha diz o MOTIVO da política (RN-567) e, em
+  // `terminal`, a RAIZ relativa do escopo (RN-609). A frase é a MESMA do
+  // `ApprovalCard` — sai de `lib/decisao-da-politica.ts`, nunca daqui.
+  if (type === 'proposed_action.created') {
+    const status = payloadField(payload, 'status');
+    return {
+      kind: 'permission',
+      icon: PermissionIcon,
+      color: status === 'denied' ? 'var(--danger)' : 'var(--text-secondary)',
+      bad: status === 'denied',
+      text: linhaDoEventoDePolitica(actorLabel, payload),
     };
   }
   // Ações git executadas viram `action.<kind>` (execute-git-action.use-case).

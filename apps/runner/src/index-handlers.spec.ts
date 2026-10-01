@@ -10,7 +10,12 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DockerPort, EspecificacaoDeContainer, PedidoDeExec } from '@brabo/docker-port';
+import {
+  PullExcedeuTetoError,
+  type DockerPort,
+  type EspecificacaoDeContainer,
+  type PedidoDeExec,
+} from '@brabo/docker-port';
 import {
   MARCA_DE_CREDENCIAL_NAO_ENTREGUE,
   tratarContainerRemove,
@@ -226,6 +231,52 @@ describe('tratarExec — a credencial não atravessa o docker exec (RN-558)', ()
     expect(payload.output).toContain('NADA foi executado');
   });
 
+  it('AT-111 — a saída da recusa é BYTE A BYTE a fixture que o engine consome no ExUnit', async () => {
+    // Elo runner -> engine da corrente. O teste do engine
+    // (`credencial_no_runner_test.exs`) responde ao `exec` pelo canal REAL com
+    // ESTE arquivo; se a saída do runner mudar, este teste reprova e obriga a
+    // regravar a fixture — e com ela o que o engine lê.
+    const canal = new CanalFalso();
+    const estado = estadoFalso({ canal, containerAtivo: 'brabo-proj-abc12345' });
+    await tratarExec(estado, {
+      ref: 'r-at111',
+      command: 'git -c credential.helper= fetch origin',
+      cwd: '/home/user/projetos/loja',
+      env: credencialFalsa(),
+    });
+
+    const fixture = JSON.parse(
+      readFileSync(
+        join(import.meta.dirname, '..', 'fixtures', 'exec-result-recusa-de-credencial.json'),
+        'utf8',
+      ),
+    ) as { exitCode: number; output: string; timedOut: boolean };
+    const { ref, ...semRef } = (canal.pushes[0]?.payload ?? {}) as { ref: string } & typeof fixture;
+    expect(ref).toBe('r-at111');
+    expect(semRef).toEqual(fixture);
+    expect(fixture.output).toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+  });
+
+  it('AT-111 — o ramo que funciona: sem container ativo o valor da credencial CHEGA ao processo filho', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: null, dir: tmpdir() });
+    const env = credencialFalsa();
+
+    await tratarExec(estado, {
+      ref: 'r-at111-host',
+      command: 'printenv BRABO_GIT_TOKEN',
+      cwd: tmpdir(),
+      env,
+    });
+
+    const payload = canal.pushes[0]?.payload as { exitCode: number; output: string };
+    expect(docker.exec).not.toHaveBeenCalled();
+    expect(payload.exitCode).toBe(0);
+    // O processo filho REAL recebeu o valor — é o que o container ativo não faz.
+    expect(payload.output.trim()).toBe(env.BRABO_GIT_TOKEN);
+  });
+
   it('a recusa NUNCA cita nome nem valor de variável do `env` — só a contagem (RN-507)', async () => {
     const canal = new CanalFalso();
     const estado = estadoFalso({ canal, containerAtivo: 'brabo-proj-abc12345' });
@@ -286,6 +337,162 @@ describe('tratarExec — a credencial não atravessa o docker exec (RN-558)', ()
     });
     const payload = canal.pushes[0]?.payload as { output: string };
     expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+  });
+});
+
+describe('tratarExec — o git credenciado roda no HOST com container ativo (ADR 0193, AT-111)', () => {
+  // Mesma disciplina do bloco acima: credencial GERADA em runtime.
+  function credencialFalsa(): Record<string, string> {
+    return {
+      BRABO_GIT_USERNAME: 'x-access-token',
+      BRABO_GIT_TOKEN: `tok-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
+    };
+  }
+
+  // O helper EXATO de `Engine.Actions.GitAuth` (`args_de_auth/1`), sem o
+  // token: ele lê as duas variáveis do ambiente do processo filho.
+  const HELPER =
+    "-c credential.helper= -c 'credential.helper=!f(){ echo username=$BRABO_GIT_USERNAME; " +
+    "echo password=$BRABO_GIT_TOKEN; };f'";
+
+  let raiz: string;
+  beforeEach(() => {
+    raiz = mkdtempSync(join(tmpdir(), 'brabo-at111-host-'));
+  });
+  afterEach(() => {
+    rmSync(raiz, { recursive: true, force: true });
+  });
+
+  it('AT-111 — com container ativo e a marca, a credencial CHEGA ao helper do git, no host', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+    const env = credencialFalsa();
+
+    // O helper de credencial do git, de verdade: `credential fill` pergunta ao
+    // helper e imprime o que ele respondeu — é o que o `git fetch` contra um
+    // remoto HTTPS faz por baixo.
+    await tratarExec(estado, {
+      ref: 'r-at111-ok',
+      command: `printf 'protocol=https\\nhost=exemplo.invalid\\n\\n' | git ${HELPER} credential fill`,
+      cwd: raiz,
+      env,
+      gitCredenciado: true,
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    const payload = canal.pushes[0]?.payload as { exitCode: number; output: string };
+    expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+    expect(payload.exitCode).toBe(0);
+    expect(payload.output).toContain(`password=${env.BRABO_GIT_TOKEN}`);
+    expect(payload.output).toContain('username=x-access-token');
+  });
+
+  it('AT-111 — o `git fetch origin` com o helper roda no host e SUCEDE com container ativo', async () => {
+    const remoto = join(raiz, 'remoto.git');
+    const trabalho = join(raiz, 'trabalho');
+    const semente = join(raiz, 'semente');
+    execFileSync('git', ['init', '-q', '-b', 'main', semente]);
+    execFileSync(
+      'git',
+      ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'c'],
+      { cwd: semente },
+    );
+    execFileSync('git', ['clone', '-q', '--bare', semente, remoto]);
+    mkdirSync(trabalho);
+    execFileSync('git', ['init', '-q'], { cwd: trabalho });
+    execFileSync('git', ['remote', 'add', 'origin', remoto], { cwd: trabalho });
+
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+
+    await tratarExec(estado, {
+      ref: 'r-at111-fetch',
+      command: `git ${HELPER} fetch origin`,
+      cwd: trabalho,
+      env: credencialFalsa(),
+      gitCredenciado: true,
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    const payload = canal.pushes[0]?.payload as { exitCode: number; output: string };
+    expect(payload.exitCode).toBe(0);
+    // O `.git` do host foi atualizado — é a MESMA pasta que o container monta
+    // em `/work`, então o worktree do dev agent enxerga o que o fetch trouxe.
+    const ref = execFileSync('git', ['rev-parse', '--verify', 'origin/main'], {
+      cwd: trabalho,
+      encoding: 'utf8',
+    });
+    expect(ref.trim()).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it('CASO DE FALHA — `env` SEM a marca, com container ativo, segue RECUSADO: `env` não é porta de saída', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+
+    await tratarExec(estado, {
+      ref: 'r-sem-marca',
+      command: 'echo escapou',
+      cwd: raiz,
+      env: credencialFalsa(),
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    const payload = canal.pushes[0]?.payload as { exitCode: number; output: string };
+    expect(payload.exitCode).toBe(-1);
+    expect(payload.output).toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+    expect(payload.output).not.toContain('escapou\n');
+  });
+
+  it('a marca SEM `env` não muda nada: o comando vai ao container como sempre', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+
+    await tratarExec(estado, { ref: 'r-marca-so', command: 'ls', cwd: raiz, gitCredenciado: true });
+
+    expect(docker.exec).toHaveBeenCalledWith('brabo-proj-abc12345', { comando: 'ls', cwd: '/work' });
+  });
+
+  it('o comando do dev agent (sem `env`, sem marca) continua no container', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+
+    await tratarExec(estado, { ref: 'r-dev', command: 'pnpm test', cwd: raiz });
+
+    expect(docker.exec).toHaveBeenCalledWith('brabo-proj-abc12345', {
+      comando: 'pnpm test',
+      cwd: '/work',
+    });
+  });
+
+  it('no host, o log NUNCA traz nome nem valor de variável do `env` (RN-507)', async () => {
+    const canal = new CanalFalso();
+    const estado = estadoFalso({ canal, containerAtivo: 'brabo-proj-abc12345', dir: raiz });
+    const env = credencialFalsa();
+    const linhas: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => {
+      linhas.push(a.map(String).join(' '));
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => {
+      linhas.push(a.map(String).join(' '));
+    });
+    try {
+      await tratarExec(estado, { ref: 'r-log', command: 'true', cwd: raiz, env, gitCredenciado: true });
+    } finally {
+      log.mockRestore();
+      warn.mockRestore();
+    }
+
+    const texto = linhas.join('\n');
+    expect(texto).toContain('git credenciado, no host');
+    for (const [nome, valor] of Object.entries(env)) {
+      expect(texto).not.toContain(nome);
+      expect(texto).not.toContain(valor);
+    }
   });
 });
 
@@ -364,6 +571,39 @@ describe('tratarContainerStart (ADR 0137)', () => {
     const payload = canal.pushes[0]?.payload as { sucesso: boolean; erro?: string };
     expect(payload.sucesso).toBe(false);
     expect(payload.erro).toBeTruthy();
+  });
+
+  it('pull que estoura o teto de controle chega NOMEADO no resultado (AT-234, RN-605)', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso({
+      start: vi.fn(async () => {
+        throw new PullExcedeuTetoError('node:22-bookworm-slim', 30_000);
+      }),
+    });
+    const estado = estadoFalso({ canal, docker });
+
+    await tratarContainerStart(estado, {
+      ref: 'r-pull',
+      spec: {
+        workspaceDirName: 'proj-abc12345',
+        projectId: 'proj-1',
+        projectSlug: 'proj-1',
+        workspaceId: 'ws-1',
+        imagem: 'node:22-bookworm-slim',
+        imagemVersao: 1,
+        rede: 'none',
+        cpus: 1,
+        memoriaMb: 512,
+        pidsLimit: 256,
+      },
+    });
+
+    expect(estado.containerAtivo).toBeNull();
+    const payload = canal.pushes[0]?.payload as { sucesso: boolean; erro?: string };
+    expect(payload.sucesso).toBe(false);
+    expect(payload.erro).toContain('node:22-bookworm-slim');
+    expect(payload.erro).toContain('foi cancelado');
+    expect(payload.erro).toContain('Imagem grande não sobe por este caminho');
   });
 
   it('Docker indisponível na máquina do usuário: responde sucesso: false, nunca lança', async () => {

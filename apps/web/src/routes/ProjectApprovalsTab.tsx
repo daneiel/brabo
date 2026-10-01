@@ -9,7 +9,17 @@ import {
   setAgentAutonomy,
   setProjectPermissions,
 } from '../lib/api-client';
-import { useBacklog, useCurrentWorkspaceWithRole, useInfraArtifacts, useLatestSession, usePendingActions, useSessionEvents } from '../lib/hooks';
+import {
+  useActiveExecutionSession,
+  useBacklog,
+  useCurrentWorkspaceWithRole,
+  useInfraArtifacts,
+  useLatestSession,
+  usePendingActions,
+  useProjectPendingActions,
+  useSessionEvents,
+} from '../lib/hooks';
+import type { ProposedAction } from '../lib/api-types';
 import {
   AGENT_AUTONOMY_ALL_ACTIONS,
   type CoverageMatrixRow,
@@ -19,12 +29,14 @@ import {
   type Task,
 } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
 import { getRegistroDeGates } from '../lib/api-client';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastProvider';
 import { AlertCircleIcon, CheckIcon, SearchIcon, TrashIcon } from '../components/ui/icons';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
@@ -93,8 +105,17 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const { t } = useTranslation('approvals');
   const sessionsQuery = useLatestSession(projectId);
   const latestSession = sessionsQuery.latest;
-  const actionsQuery = usePendingActions(projectId, latestSession?.id);
-  const eventsQuery = useSessionEvents(projectId, latestSession?.id);
+  // AT-297 (RN-638): a fila de decisão é a do PROJETO, em qualquer sessão —
+  // era a da sessão criada por último, e uma ideação aberta depois da
+  // execução escondia as pendentes dos dev agents. Cada card decide pela
+  // sessão que a PRÓPRIA ação carrega.
+  const pendentesQuery = useProjectPendingActions(projectId);
+  // Os blocos de PR e gate leem eventos e ações de UMA sessão: a de execução
+  // vigente (onde QA/SecOps/dev agents escrevem), e só sem ela a mais recente.
+  const { session: sessaoDeExecucao } = useActiveExecutionSession(projectId);
+  const sessaoDeTrabalho = sessaoDeExecucao ?? latestSession;
+  const actionsQuery = usePendingActions(projectId, sessaoDeTrabalho?.id);
+  const eventsQuery = useSessionEvents(projectId, sessaoDeTrabalho?.id);
   const backlogQuery = useBacklog(projectId);
   const infraQuery = useInfraArtifacts(projectId);
   const epics = backlogQuery.data;
@@ -275,26 +296,40 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     staleTime: 60 * 60 * 1000,
   });
 
-  const pending = (actionsQuery.data?.items ?? []).filter((a) => a.status === 'pending');
+  const pending = (pendentesQuery.data ?? []).filter((a) => a.status === 'pending');
+  // O motivo da política mora no `proposed_action.created`, e a ação não o
+  // guarda. Desde a AT-336 cada card tem o PRÓPRIO: o que o log carregado
+  // cobre sai dele, e o resto é lido pela ação (`?actionId=`, na sessão que
+  // a ação carrega). Enquanto a tela ainda carrega o próprio log (`null`),
+  // nada é pedido — ele responderia de graça as da sessão de trabalho.
+  const eventosProntos =
+    sessaoDeTrabalho && eventsQuery.isPending ? null : (eventsQuery.data?.items ?? []);
+  const { decisoes: decisoesDaPolitica, falhas: semMotivo } = useDecisoesDaPolitica(
+    projectId,
+    pending,
+    eventosProntos,
+  );
 
-  function invalidateActions() {
-    queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, latestSession?.id] });
+  function invalidateActions(sessoes: Iterable<string>) {
+    // Por prefixo: a fila do projeto (esta aba, o contador do trilho, o
+    // painel) e o recorte `git_merge` da aba PRs.
+    queryClient.invalidateQueries({ queryKey: ['project-pending-actions', projectId] });
+    for (const sessionId of new Set(sessoes)) {
+      queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
+    }
   }
 
-  async function handleApprove(actionId: string) {
-    if (!latestSession) return;
-    await approveAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleApprove(action: ProposedAction) {
+    await approveAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
   }
-  async function handleDeny(actionId: string) {
-    if (!latestSession) return;
-    await denyAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleDeny(action: ProposedAction) {
+    await denyAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
   }
-  async function handleAlwaysAllow(actionId: string) {
-    if (!latestSession) return;
-    await approveAlwaysAction(projectId, latestSession.id, actionId);
-    invalidateActions();
+  async function handleAlwaysAllow(action: ProposedAction) {
+    await approveAlwaysAction(projectId, action.sessionId, action.id);
+    invalidateActions([action.sessionId]);
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -331,10 +366,10 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   }
 
   async function approveSelected() {
-    if (!latestSession) return;
-    await Promise.all(Array.from(selected).map((id) => approveAction(projectId, latestSession.id, id)));
+    const escolhidas = pending.filter((a) => selected.has(a.id));
+    await Promise.all(escolhidas.map((a) => approveAction(projectId, a.sessionId, a.id)));
     setSelected(new Set());
-    invalidateActions();
+    invalidateActions(escolhidas.map((a) => a.sessionId));
   }
 
   async function revokeRule(row: PermissionRow) {
@@ -380,15 +415,18 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
       // carrega o padrão porque "Revogar" sozinho, repetido por linha, não diz
       // revogar o quê.
       render: (r) => (
-        <button
+        <Button
           type="button"
+          icon
+          size="sm"
+          variant="secondary"
           className={styles.revoke}
           title={t('approvalsTab.permissions.revoke')}
           aria-label={t('approvalsTab.permissions.revokeAriaLabel', { pattern: r.pattern })}
           onClick={() => revokeRule(r)}
         >
           <TrashIcon size={14} />
-        </button>
+        </Button>
       ),
     },
   ];
@@ -426,31 +464,45 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
               <div className={styles.clean}>{t('approvalsTab.pending.noSession')}</div>
             ) : (
               <BlocoDeDados
-                query={actionsQuery}
+                query={pendentesQuery}
                 titulo={t('approvalsTab.pending.queueError')}
                 carregando={t('approvalsTab.pending.loadingQueue')}
               >
                 {() =>
                   pending.length === 0 ? (
-                    <div className={styles.vazioCard}>
-                      <span className={styles.vazioIcone}>
-                        <CheckIcon size={24} />
-                      </span>
-                      <p className={styles.vazioTexto}>{t('approvalsTab.pending.empty')}</p>
-                    </div>
+                    <EmptyState icone={<CheckIcon size={20} />} tom="sucesso">
+                      {t('approvalsTab.pending.empty')}
+                    </EmptyState>
                   ) : (
                     <div className={styles.queue}>
+                      {/* AT-336: a nota sobra só para a leitura que FALHOU —
+                          o card dessa ação cala, e a lacuna é dita uma vez. */}
+                      {semMotivo > 0 && (
+                        <p className={styles.notaDoRecorte} data-testid="motivo-nao-lido">
+                          {t(
+                            semMotivo === pending.length
+                              ? 'approvalsTab.pending.motivoNaoLido.todas'
+                              : 'approvalsTab.pending.motivoNaoLido.algumas',
+                            { count: semMotivo, total: pending.length },
+                          )}
+                        </p>
+                      )}
                       {pending.map((action) => (
                         <ApprovalCard
                           key={action.id}
                           action={action}
-                          variant="queue"
+                          detalheRecolhido
+                          // AT-336 (RN-614): o motivo DESTA ação, do log
+                          // carregado ou lido pela ação. Carregando ou com a
+                          // leitura falha, `undefined` — o card cala, e a
+                          // falha é dita UMA vez no topo da fila (RN-180).
+                          decisaoDaPolitica={decisoesDaPolitica.get(action.id)}
                           selectable
                           selected={selected.has(action.id)}
                           onToggleSelect={() => toggleSelect(action.id)}
-                          onApprove={() => handleApprove(action.id)}
-                          onDeny={() => handleDeny(action.id)}
-                          onAlwaysAllow={() => handleAlwaysAllow(action.id)}
+                          onApprove={() => handleApprove(action)}
+                          onDeny={() => handleDeny(action)}
+                          onAlwaysAllow={() => handleAlwaysAllow(action)}
                           onActivateAutoMode={
                             podeAtivarAutoMode && action.actor.kind === 'agent'
                               ? () => handleActivateAutoMode(action.actor.id)

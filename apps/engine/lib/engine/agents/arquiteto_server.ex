@@ -15,7 +15,14 @@ defmodule Engine.Agents.ArquitetoServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
 
   alias Engine.Harness.Tools.{
     CreateModuleMap,
@@ -23,6 +30,7 @@ defmodule Engine.Agents.ArquitetoServer do
     ChooseProjectImage,
     CreateC4Diagram,
     RouteModulesToInfra,
+    DeclareModuleContracts,
     ProposeAdr,
     EmitInsight,
     EmitArtifact
@@ -54,22 +62,22 @@ defmodule Engine.Agents.ArquitetoServer do
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
 
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
+
+  # A confirmação de arquitetura pronta oferece SÓ à Infra desde a RN-672
+  # (AT-262, ADR 0190): o handoff ao Dev Lead deixou de sair daqui e passou a
+  # sair da Infra, quando o container do projeto está `running`
+  # (`Engine.Infra.InfraLeadServer`). Antes eram dois handoffs da mesma
+  # confirmação (FASE 14d), e o Dev Lead podia ser aceito sem container.
   def offer_infra_handoff(session_id),
     do: GenServer.call(via(session_id), :offer_infra_handoff, 180_000)
-
-  @doc """
-  Oferece o handoff ao Dev Lead (FASE 14d — ADR 0053).
-
-  SEPARADO do de Infra de propósito, e não porque sejam dois momentos: os dois
-  saem da mesma confirmação de arquitetura pronta. É que são duas áreas
-  diferentes, com desfechos diferentes — juntá-los numa chamada só faria a
-  falha de uma derrubar a outra.
-  """
-  def offer_dev_handoff(session_id),
-    do: GenServer.call(via(session_id), :offer_dev_handoff, 180_000)
 
   # --- Callbacks ---
 
@@ -81,7 +89,13 @@ defmodule Engine.Agents.ArquitetoServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -95,6 +109,7 @@ defmodule Engine.Agents.ArquitetoServer do
          ChooseProjectImage.spec(),
          CreateC4Diagram.spec(),
          RouteModulesToInfra.spec(),
+         DeclareModuleContracts.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec(),
          # Frente 3 do plano de decision_record — mesma ferramenta do
@@ -104,6 +119,11 @@ defmodule Engine.Agents.ArquitetoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
      }}
   end
@@ -122,11 +142,41 @@ defmodule Engine.Agents.ArquitetoServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
   @impl true
-  def handle_call({:user_message, text}, from, state) do
-    work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
   end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
+  @impl true
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
+  end
+
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
+  @impl true
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
 
   # O usuário confirmou que a arquitetura está pronta (Fase 4a — fechamento):
   # roda um turno de fechamento (sem ferramenta nova esperada) e OFERECE o
@@ -137,25 +187,12 @@ defmodule Engine.Agents.ArquitetoServer do
     TurnoAssincrono.iniciar(state, from, fn -> executar_offer_infra_handoff(state) end)
   end
 
-  # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
-  # da MESMA confirmação. Continua síncrono — é só uma chamada HTTP rápida
-  # de criação de handoff, não uma chamada ao LLM, então não precisa da
-  # Task/cancelamento de `TurnoAssincrono`.
-  @impl true
-  def handle_call(:offer_dev_handoff, _from, state) do
-    state =
-      case EngineApiClient.create_handoff(
-             state.project_id,
-             state.session_id,
-             @agent,
-             "dev-lead",
-             nil
-           ) do
-        {:ok, _handoff} -> state
-        {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
-      end
-
-    {:reply, :ok, state}
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
+    work = state |> append(user_msg(text)) |> compact()
+    fn -> run_turn(work, @max_iterations) end
   end
 
   @impl true
@@ -276,11 +313,9 @@ defmodule Engine.Agents.ArquitetoServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    text =
-      case run_tool(name, args, state) do
-        {:ok, s} -> s
-        {:error, s} -> s
-      end
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    {_, text} = resultado
 
     append(state, %{
       "role" => "tool",
@@ -296,6 +331,10 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("create_c4_diagram", args, state), do: CreateC4Diagram.run(args, state)
   defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
+
+  defp run_tool("declare_module_contracts", args, state),
+    do: DeclareModuleContracts.run(args, state)
+
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
@@ -304,8 +343,14 @@ defmodule Engine.Agents.ArquitetoServer do
   # --- Kickoff ---
 
   defp kickoff_instruction(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} -> build_kickoff(events)
+    # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
+    # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.product_brief",
+           "artifact.business_rule",
+           "backlog.story_created"
+         ]) do
+      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Defina a arquitetura do produto (module_map, ADRs, insights)."
     end
   end
@@ -351,13 +396,17 @@ defmodule Engine.Agents.ArquitetoServer do
     4. route_modules_to_infra: depois do module_map, roteie CADA módulo para uma imagem de
        container CANDIDATA, com o porquê — um item por módulo. Você candidata; a Infra
        elege entre as candidatas depois.
-    5. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    5. declare_module_contracts: para cada módulo que OUTRO usa, declare o que ele expõe
+       (função, rota, evento ou forma de dado, com a assinatura exata). É o que os dev
+       agents leem para integrar sem abrir o código um do outro; mudar a interface depois
+       é declarar de novo, com a lista inteira.
+    6. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    6. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
+    7. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
        depois do module_map, porque o Container level é derivado dele. Descreva só o nome
        do sistema e os atores externos (ex.: o usuário, um provedor de Git); os módulos e
        as dependências entram sozinhos.
-    7. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    8. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:
@@ -370,23 +419,6 @@ defmodule Engine.Agents.ArquitetoServer do
     #{stories}
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

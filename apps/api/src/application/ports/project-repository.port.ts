@@ -38,6 +38,10 @@ export interface ProjectInput {
   // normal). Escrevem aqui, via `update`, `SetProjectMirrorPathUseCase` e a
   // conversão de modo, que o LIMPA ao entrar em `container`.
   mirrorPath?: string | null;
+  // O idioma do projeto (RN-619) — código BCP-47 JÁ canonicalizado por quem
+  // chama (`idiomaDoProjetoOuRecusa`). Omitido na criação direta usa o
+  // default da coluna; `CreateProjectUseCase` sempre o manda.
+  language?: string;
 }
 
 export abstract class ProjectRepository {
@@ -85,5 +89,26 @@ export abstract class ProjectRepository {
     userId: string,
   ): Promise<Role | null>;
   abstract listMembers(projectId: string): Promise<ProjectMemberWithUser[]>;
+  /**
+   * Os membros EFETIVOS do projeto (RN-471): a linha de `project_members` de
+   * cada um, ou, sem ela, a de `workspace_members` do workspace do projeto —
+   * `membrosEfetivos` (`domain/iam/membros-efetivos.ts`). `listMembers`
+   * continua devolvendo só as linhas de projeto, que é o que a tela de
+   * Membros edita (RN-680).
+   */
+  abstract listEffectiveMembers(
+    projectId: string,
+  ): Promise<ProjectMemberWithUser[]>;
   abstract removeMember(projectId: string, userId: string): Promise<void>;
+  /**
+   * Apaga as linhas de `project_members` de `userId` em TODOS os projetos do
+   * workspace e devolve quantas foram (ADR 0173, RN-615). É a cascata da
+   * remoção de membro de WORKSPACE: sem ela, a sobreposição
+   * `projectRole ?? workspaceRole` (RN-471) manteria o removido dentro de todo
+   * projeto em que tivesse linha própria, e a remoção seria cosmética.
+   */
+  abstract removeMemberFromWorkspaceProjects(
+    workspaceId: string,
+    userId: string,
+  ): Promise<number>;
 }

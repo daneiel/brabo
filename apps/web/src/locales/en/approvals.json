@@ -110,7 +110,7 @@
       "modulesCount_one": "{{count}} module",
       "modulesCount_other": "{{count}} modules",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " You still decide when to activate execution."
+      "note": " and ACTIVATES execution: the dev agents start and begin spending."
     },
     "assessImplementability": {
       "verb": "assesses a story's implementability",
@@ -125,7 +125,8 @@
     "details": {
       "title": "Details",
       "rawPayloadTitle": "Raw payload",
-      "fieldCount": "{{count}} field(s)"
+      "fieldCount_one": "{{count}} field",
+      "fieldCount_other": "{{count}} fields"
     },
     "actions": {
       "approve": "Approve",
@@ -134,9 +135,10 @@
       "autoMode": "Auto mode"
     },
     "notes": {
-      "alwaysAllow": "\"Always allow\" records the rule in .brabo/permissions.json",
-      "alwaysAllowScoped": "\"Always allow\" releases this action type only for {{agent}} — not for the project's other agents",
-      "autoMode": "\"Auto mode\" releases EVERY future action from {{actor}} without asking — except merges into a protected branch, instruction patches and parallelism, which keep always asking for your decision. You can turn it off later from the agent's card."
+      "alwaysAllow": "Always allow: records, in the project's .brabo/permissions.json, one rule per command segment, by verb + subcommand (e.g. \"npm test\", \"git status\") — the next command with the same verb and subcommand runs without asking.",
+      "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
+      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "obsolete": "The action was already decided another way; this card refreshes on its own."
     },
     "decided": {
       "denied": "Denied",
@@ -157,7 +159,8 @@
         "invalidPath": "The model didn't produce a valid path for this action.",
         "invalidContent": "The model didn't produce valid content for this action.",
         "previewHeader": "content preview",
-        "linesTruncated": "{{shown}} of {{count}} line(s)"
+        "linesTruncated_one": "{{shown}} of {{count}} line",
+        "linesTruncated_other": "{{shown}} of {{count}} lines"
       },
       "prOpen": {
         "defaultTitle": "Pull request"
@@ -210,7 +213,13 @@
       "noSession": "No session yet — approvals come from what agents propose in a session.",
       "loadingQueue": "Loading the queue…",
       "queueError": "Couldn't load the approval queue.",
-      "empty": "No pending approvals. The team is flowing."
+      "empty": "No pending approvals. The team is flowing.",
+      "motivoNaoLido": {
+        "todas_one": "The policy reason for this action could not be read: reading the log of the session that proposed it failed.",
+        "todas_other": "The policy reason for these {{count}} actions could not be read: reading the log of the session that proposed them failed.",
+        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed it failed.",
+        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed them failed."
+      }
     },
     "devPrs": {
       "title": "PRs in review",
@@ -255,6 +264,26 @@
     "mergeErrorTitle": "Couldn't propose the merge",
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
-    "mergeNoSession": "No session in the project to propose the action."
+    "mergeNoSession": "No session in the project to propose the action.",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
+  },
+  "politica": {
+    "motivo": "Policy decided by: {{motivo}}",
+    "motivoNaoRegistrado": "Policy reason not recorded (proposed before the reason was logged)",
+    "foraDoRecorte": "Policy reason not in the events loaded on this screen",
+    "raiz": {
+      "raizGerenciada": "scope root: managed folder “{{segmento}}”",
+      "baseDeProjetos": "scope root: “{{segmento}}” under the projects base",
+      "nomeDaPasta": "scope root: folder “{{segmento}}” on the runner's machine",
+      "indisponivel": "scope root: no relative form (mounted folder outside the projects base, or no base configured)",
+      "formaDesconhecida": "scope root: recorded in a form this screen does not know",
+      "naoRegistrada": "scope root not recorded (proposed before the root was logged)"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}: action auto-approved by policy",
+      "negada": "{{ator}}: action denied by policy",
+      "pendente": "{{ator}}: action waiting for a decision",
+      "proposta": "{{ator}} proposed an action"
+    }
   }
 }

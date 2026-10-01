@@ -1,8 +1,15 @@
-name: brabo
+# `brabo-dev`, e NUNCA `brabo` (ADR 0170): `brabo` é o nome do compose de
+# INSTALAÇÃO, e com o mesmo nome os dois eram o MESMO projeto Docker —
+# containers, rede e volumes (`brabo_pgdata`…) compartilhados, e o reset total
+# apagaria o banco de uma instalação na mesma máquina. Os volumes de dev são
+# `brabo-dev_*`; os `brabo_*` de antes do ADR ficam no disco (ver o runbook,
+# "Moving a dev environment to brabo-dev"). O overlay de observabilidade repete
+# este nome: o `name:` do ÚLTIMO arquivo passado com `-f` vence.
+name: brabo-dev
 
 services:
   postgres:
-    image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -26,7 +33,7 @@ services:
   # default público que vira fallback silencioso" que o resto do compose segue
   # (ADR 0059).
   neo4j:
-    image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+    image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-dev-neo4j-password-change-me}
       # NÃO defina NEO4J_USERNAME/NEO4J_PASSWORD aqui (só NEO4J_AUTH acima) —
@@ -82,7 +89,7 @@ services:
     # `latest` muda sob o pé sem aviso, e um upgrade silencioso de Ollama já
     # quebrou build antes (mudança de rota da API). Atualizar é decisão
     # manual — subir o número aqui, não seguir `latest`.
-    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
     profiles: ["local-llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -122,7 +129,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
     profiles: ["local-llm"]
     depends_on:
       ollama:
@@ -174,11 +181,22 @@ services:
       # senão quem desiste primeiro é a api e o teto do engine não vale nada.
       OLLAMA_REQUEST_TIMEOUT_MS: ${OLLAMA_REQUEST_TIMEOUT_MS:-300000}
       CREDENTIALS_MASTER_KEY: ${CREDENTIALS_MASTER_KEY:-dev-master-key-change-me}
+      # Os `_PREVIOUS` só existem durante uma rotação sem downtime (runbook: "Auth
+      # key rotation" e "Master key rotation"); vazio = sem rotação, o normal. Sem
+      # estas linhas o Compose não os repassa e a rotação não acontece (RN-595).
+      CREDENTIALS_MASTER_KEY_PREVIOUS: ${CREDENTIALS_MASTER_KEY_PREVIOUS:-}
       # Auth first-party (Fase 7a). AUTH_JWT_SECRET deriva o par Ed25519 que
       # assina o access token; BRABO_SERVICE_TOKEN autentica o tráfego interno
       # engine <-> api nos dois sentidos.
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-auth-jwt-secret-change-me}
+      AUTH_JWT_SECRET_PREVIOUS: ${AUTH_JWT_SECRET_PREVIOUS:-}
+      # O pepper do hash dos refresh tokens, links de conta e PATs — PRÓPRIO,
+      # nunca o AUTH_JWT_SECRET (RN-613): é essa separação que deixa o JWT
+      # rotacionar sem deslogar ninguém. Default de dev público, recusado em
+      # produção como o do JWT.
+      AUTH_TOKEN_PEPPER: ${AUTH_TOKEN_PEPPER:-dev-auth-token-pepper-change-me}
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-dev-service-token-change-me}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       # MAIL_TRANSPORT=log (default) — o link de verificação/reset sai no log
       # da api. Definir MAIL_TRANSPORT=smtp aqui (contra um MailHog local, por
       # exemplo) exige também SMTP_HOST/SMTP_USER/SMTP_PASSWORD/SMTP_FROM —
@@ -248,13 +266,16 @@ services:
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
       # Broker de container (ADR 0130) — o único processo com acesso ao daemon
       # Docker. A api é a ÚNICA que o alcança (rede `broker`, `internal: true`,
-      # sem porta publicada). Vazia é estado NORMAL — quem lê o estado
-      # observado DIZ "não observado" em vez de herdar o registrado (RN-468) —,
-      # mas aqui ela é o que RESTA configurar: desde o ADR 0146 (RN-512) o
-      # serviço sobe por padrão neste compose, e é esta variável que liga a api
-      # a ele. No compose de PRODUÇÃO o serviço segue sob profile, e lá vazia é
-      # também o caso comum.
-      BROKER_URL: ${BROKER_URL:-}
+      # sem porta publicada). Neste compose ela tem DEFAULT (RN-599): desde o
+      # ADR 0146 (RN-512) o serviço `broker` sobe por padrão aqui, e com a
+      # variável vazia a api respondia `brokerConfigurado: false` para um broker
+      # de pé ao lado — a criação de projeto só oferecia `runner` (ADR 0161).
+      # O default aponta para o serviço e a porta DESTE arquivo (`BROKER_PORT`,
+      # abaixo), e `scripts/dev/broker-url-no-dev.spec.ts` trava os dois juntos.
+      # Nos composes de PRODUÇÃO e de INSTALAÇÃO ela segue SEM default, de
+      # propósito: lá o broker está sob profile, e quem o liga grava a URL
+      # (o `install.sh`, perguntando — ADR 0162). Não uniformize.
+      BROKER_URL: ${BROKER_URL:-http://broker:8090}
     ports:
       - "${API_PORT:-3000}:3000"
     networks:
@@ -350,6 +371,7 @@ services:
       # Mesmo segredo dos dois lados — ver EngineServiceGuard e
       # EngineWeb.Plugs.VerifyServiceToken.
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-dev-service-token-change-me}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       PORT: 4000
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
       MIX_ENV: dev
@@ -363,6 +385,8 @@ services:
       # A api chama o engine com um token client-credentials deste client
       # — o engine só precisa saber QUAL client esperar, nunca o secret.
       SESSION_HEARTBEAT_TIMEOUT_MS: ${SESSION_HEARTBEAT_TIMEOUT_MS:-30000}
+      # Teto da conversa ociosa (RN-581): mesmo default do runtime.exs (8h).
+      SESSION_CONVERSATION_IDLE_TIMEOUT_MS: ${SESSION_CONVERSATION_IDLE_TIMEOUT_MS:-28800000}
       # Pipeline de ações propostas (Fase 1 item 5): mesma raiz de
       # workspaces que a api usa — Engine.Actions.Workspace faz o
       # checkout do bare repo (montado abaixo, read-only) ali dentro.
@@ -410,7 +434,9 @@ services:
       # As flags de PRODUTO dos dois agentes de fundo (RN-115/RN-117), e as
       # duas de rollout do grafo. Todas com o MESMO default do `runtime.exs` —
       # esta linha não muda decisão de produto nenhuma, ela só faz existir o
-      # caminho de LIGAR.
+      # caminho de virar. `ANAMNESE_ENABLED` é `true` desde a RN-680 (ADR
+      # 0196): a Anamnese foi RELIGADA, com a guarda de sujeito elegível; o
+      # Psicólogo segue pausado.
       #
       # Por que estão aqui (RN-540): variável que o `runtime.exs` lê e que o
       # `environment:` não mapeia NUNCA chega ao processo — o Compose não
@@ -419,7 +445,7 @@ services:
       # lugares no código prometendo que "ligar de volta é `X=true` e
       # reiniciar". `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova a
       # próxima que faltar.
-      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-false}
+      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-true}
       PSYCHOLOGIST_ENABLED: ${PSYCHOLOGIST_ENABLED:-false}
       GRAPH_TEMPLATES_ENABLED: ${GRAPH_TEMPLATES_ENABLED:-false}
       GRAPH_INSTRUCTION_TEMPLATES_ENABLED: ${GRAPH_INSTRUCTION_TEMPLATES_ENABLED:-false}
@@ -540,6 +566,7 @@ services:
       # Mesmo segredo dos outros dois serviços — ver EngineServiceGuard,
       # EngineWeb.Plugs.VerifyServiceToken e `apps/broker/src/config.ts`.
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-dev-service-token-change-me}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       # De onde o broker LÊ a decisão do Arquiteto. Ele não recebe
       # especificação de container: recebe `projectId` e vem buscar aqui.
       API_URL: ${API_URL:-http://api:3000}
@@ -552,7 +579,9 @@ services:
       # Deriva de PROJECT_WORKSPACES_HOST_DIR (a mesma variável que troca o
       # volume nomeado por uma pasta real, ver .env.example): com volume
       # gerenciado não há caminho de host que sirva, e o broker prefere recusar
-      # a adivinhar.
+      # a adivinhar. Como vazia é o estado de quem copiou o `.env.example`, o
+      # `preflight.mjs` RELATA a ausência a cada subida (RN-599) — e também o
+      # `~`, que o Compose expande no bind-mount de api/engine mas NÃO aqui.
       PROJECT_WORKSPACES_HOST_ROOT: ${PROJECT_WORKSPACES_HOST_ROOT:-${PROJECT_WORKSPACES_HOST_DIR:-}}
       # A SEGUNDA raiz do broker: a base dos projetos MONTADOS, também no HOST
       # (ADR 0141). Mesmo motivo da de cima, e mesma derivação — o valor

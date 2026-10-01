@@ -86,6 +86,102 @@ defmodule Engine.DataCase do
   end
 
   @doc """
+  Cria uma pasta temporária PRÓPRIA e VAZIA para o teste que a chama, e a
+  apaga no `on_exit` — o `worktree_path`/`workspace_root` de spec que não
+  precisa de arquivo nenhum.
+
+  Existe porque `System.tmp_dir!()` cru como `worktree_path` fazia
+  `Engine.Harness.InstructionFiles.Live` percorrer o `/tmp` INTEIRO da
+  máquina procurando `AGENTS.md` (walk recursivo sob a raiz): o teste
+  passava a medir o `/tmp` de quem roda, e numa máquina com o `/tmp` cheio
+  o agente estourava o `assert_receive` antes de chegar ao desfecho
+  (AT-204). Fica sob `System.tmp_dir!()` e NÃO sob a pasta do checkout (o
+  `@tag :tmp_dir` do ExUnit): o agente pode rodar `git` no worktree, e
+  dentro do checkout ele acharia o repositório do Brabo.
+  """
+  def pasta_temporaria_propria!(prefixo \\ "brabo-teste") do
+    pasta =
+      Path.join(
+        System.tmp_dir!(),
+        "#{prefixo}-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(pasta)
+    ExUnit.Callbacks.on_exit(fn -> File.rm_rf!(pasta) end)
+    pasta
+  end
+
+  @doc """
+  Encerra os dev agents e os agentes de gate (QA Lead, SecOps) do projeto —
+  o `on_exit` de spec que sobe agente REAL (AT-204, mesma classe da AT-180).
+
+  Esses processos são filhos dos supervisores da APLICAÇÃO, não do teste:
+  sem isto eles seguem vivos depois do fim. Um dev agent que reivindica a
+  próxima task depois do fim do teste grava no banco com o dono da sandbox
+  já morto (`owner #PID<…> exited`, em `AgentIo.claim_e_rodar`), e o que ele
+  notifica pelo `:test_pid` cai no mailbox do teste SEGUINTE — era o
+  `{:task_blocked, …, "dev-api"}` de `QaLeadServerTest`,
+  `QaAutomacaoAgentTest` e `QaPerformanceSegurancaAgentTest`.
+
+  Chame DENTRO do `on_exit` e ANTES de soltar o `Application.put_env`: com o
+  env solto, o agente que sobra passa a falar com o cliente `Live`.
+  """
+  def encerrar_agentes_do_projeto(project_id) do
+    registros = [
+      {Engine.Dev.Registry, [Engine.Dev.DevAgentSupervisor]},
+      {Engine.Gates.Registry, [Engine.Gates.QaLeadSupervisor, Engine.Gates.SecOpsAgentSupervisor]}
+    ]
+
+    for {registro, supervisores} <- registros,
+        pid <-
+          Registry.select(registro, [
+            {{{:"$1", :_}, :"$2", :_}, [{:==, :"$1", project_id}], [:"$2"]}
+          ]),
+        supervisor <- supervisores do
+      # `{:error, :not_found}` quando o pid é filho do OUTRO supervisor do
+      # mesmo registro (ou já saiu) — nos dois casos não há o que encerrar.
+      DynamicSupervisor.terminate_child(supervisor, pid)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Roda `fun` com a LIMPEZA do `registro` suspensa: um processo que morre lá
+  dentro continua com a chave no Registry até o fim de `fun`.
+
+  É a janela que o Registry tem de verdade — ele apaga a chave de forma
+  ASSÍNCRONA, quando a partição recebe o EXIT (medido: ~2% das vezes a chave
+  ainda está lá logo depois de `DynamicSupervisor.terminate_child/2`) —,
+  aberta de propósito para o teste não depender de sorte (AT-204). Esperar a
+  partição por tempo (`Process.sleep` em laço) era o que os testes faziam
+  antes, e escondia que o código de produção tomava o pid morto por vivo.
+
+  Registrar a chave por cima de um pid morto continua funcionando com a
+  partição suspensa (o Registry não recusa), e é isso que o código sob teste
+  precisa fazer.
+  """
+  def com_limpeza_do_registry_suspensa(registro, fun) do
+    particoes =
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.map(&Process.whereis(Module.concat(registro, "PIDPartition#{&1}")))
+      |> Enum.take_while(& &1)
+
+    # Nome interno do Registry: se ele mudar, o teste NÃO pode passar calado
+    # sem ter suspendido nada.
+    if particoes == [],
+      do: ExUnit.Assertions.flunk("partição de #{inspect(registro)} não encontrada")
+
+    Enum.each(particoes, &:sys.suspend/1)
+
+    try do
+      fun.()
+    after
+      Enum.each(particoes, &:sys.resume/1)
+    end
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})

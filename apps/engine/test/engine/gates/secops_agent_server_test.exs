@@ -51,7 +51,7 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
       module: "api",
       session_id: session_id,
       task_id: "task-abc12345",
-      worktree_path: System.tmp_dir!(),
+      worktree_path: pasta_temporaria_propria!(),
       status: "working"
     })
 
@@ -184,13 +184,76 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
                        }
                      }}
 
-    assert_received {:handoff_created, ^project_id, ^session_id, "appsec", "arquiteto",
+    assert_received {:handoff_if_absent, ^project_id, ^session_id, "appsec", "arquiteto",
                      artifact_id}
 
-    assert_received {:handoff_created, ^project_id, ^session_id, "appsec", "dev-lead",
+    assert_received {:handoff_if_absent, ^project_id, ^session_id, "appsec", "dev-lead",
                      ^artifact_id}
 
-    assert_received {:handoff_created, ^project_id, ^session_id, "appsec", "infra", ^artifact_id}
+    assert_received {:handoff_if_absent, ^project_id, ^session_id, "appsec", "infra",
+                     ^artifact_id}
+  end
+
+  # RN-636 (ADR 0182): o AppSec só oferece a quem ainda não recebeu oferta
+  # pendente nem está ativo. A api decide sob o lock do destino; o que se prova
+  # aqui é que o AppSec PEDE nesse modo e que "já atendido" não vira falha.
+  defp threat_model_concluido(state) do
+    session_id = Ecto.UUID.generate()
+    Process.put(:fake_backlog, backlog_com_story(%{"sessionId" => session_id}))
+    Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("emit_threat_model", %{
+        "threatModel" => "checklist STRIDE completo",
+        "requisitosSeguranca" => [],
+        "riscos" => []
+      })
+    ])
+
+    assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run_design, "st-appsec-1"}, state)
+    session_id
+  end
+
+  test "run_design (RN-636): destino com oferta pendente ou já ativo não recebe outra, e isso não é erro",
+       %{state: state, project_id: project_id} do
+    Process.put(:fake_handoff_if_absent, %{
+      "dev-lead" => {:ok, %{"id" => "ho-velho", "desfecho" => "ja_oferecido"}},
+      "infra" =>
+        {:error,
+         {409, %{"reason" => "agente_ja_ativo", "message" => "o agente \"infra\" já está ativo"}}}
+    })
+
+    session_id = threat_model_concluido(state)
+
+    # Os três são PERGUNTADOS no modo "só se ausente" — nunca no modo que
+    # substitui a oferta pendente de outra história.
+    for alvo <- ["arquiteto", "dev-lead", "infra"] do
+      assert_received {:handoff_if_absent, ^project_id, ^session_id, "appsec", ^alvo, _}
+    end
+
+    refute_received {:handoff_created, _, _, _, _, _}
+
+    refute_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "agent.error", actorId: "appsec"}}
+  end
+
+  test "run_design (RN-636): falha de verdade ao oferecer segue narrada, só para aquele destino",
+       %{state: state, project_id: project_id} do
+    Process.put(:fake_handoff_if_absent, %{"infra" => {:error, {500, %{"message" => "boom"}}}})
+
+    session_id = threat_model_concluido(state)
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{
+                       type: "agent.error",
+                       actorId: "appsec",
+                       payload: %{origem: "infra", mensagem: mensagem}
+                     }}
+
+    assert mensagem =~ "ao infra"
+
+    refute_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "agent.error", actorId: "appsec"}}
   end
 
   test "run_design: modelo não conclui — narra agent.error com origem, sem handoff nenhum", %{
@@ -207,7 +270,7 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
     assert_received {:event_appended, ^project_id, ^session_id,
                      %{type: "agent.error", actorId: "appsec", payload: %{origem: "modelo"}}}
 
-    refute_received {:handoff_created, _, _, _, _, _}
+    refute_received {:handoff_if_absent, _, _, _, _, _}
   end
 
   test "run_design: story inexistente no backlog não derruba o processo, sem evento nenhum", %{
@@ -223,6 +286,6 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
 
     assert log =~ "contexto de design indisponível"
     refute_received {:event_appended, _, _, _}
-    refute_received {:handoff_created, _, _, _, _, _}
+    refute_received {:handoff_if_absent, _, _, _, _, _}
   end
 end

@@ -21,6 +21,7 @@ import {
   permissionsFilePath,
   projectScopeRoot,
   projectWorkspacesRoot,
+  raizDoEscopoNoEvento,
   validarWorkspaceMontadoEmDisco,
   workspaceDirNameFor,
 } from '../../../src/infrastructure/filesystem/project-workspaces-root';
@@ -98,9 +99,7 @@ describe('projectScopeRoot', () => {
     process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
     expect(
       projectScopeRoot(noContainer('3f2b1c8e-0a5d-4f6b-9c1e-2d7a8b3c4d5e')),
-    ).toBe(
-      '/var/brabo/3f2b1c8e-0a5d-4f6b-9c1e-2d7a8b3c4d5e',
-    );
+    ).toBe('/var/brabo/3f2b1c8e-0a5d-4f6b-9c1e-2d7a8b3c4d5e');
   });
 
   it.each([
@@ -148,32 +147,38 @@ describe('projectScopeRoot nos modos mounted/runner', () => {
     delete process.env.PROJECT_WORKSPACES_ROOT;
   });
 
-  it.each([
-    ['mounted', montado] as const,
-    ['runner', runner] as const,
-  ])('%s — caminho feliz: a raiz é a pasta do usuário, não a gerenciada', (_nome, fabrica) => {
-    process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
-    expect(projectScopeRoot(fabrica('/home/voce/projetos/loja'))).toBe(
-      '/home/voce/projetos/loja',
-    );
-  });
+  it.each([['mounted', montado] as const, ['runner', runner] as const])(
+    '%s — caminho feliz: a raiz é a pasta do usuário, não a gerenciada',
+    (_nome, fabrica) => {
+      process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
+      expect(projectScopeRoot(fabrica('/home/voce/projetos/loja'))).toBe(
+        '/home/voce/projetos/loja',
+      );
+    },
+  );
 
-  it.each([
-    ['mounted', montado] as const,
-    ['runner', runner] as const,
-  ])('%s — a barra final não muda a raiz — senão o prefixo do escopo mudaria com ela', (_nome, fabrica) => {
-    expect(projectScopeRoot(fabrica('/home/voce/projetos/loja/'))).toBe(
-      '/home/voce/projetos/loja',
-    );
-  });
+  it.each([['mounted', montado] as const, ['runner', runner] as const])(
+    '%s — a barra final não muda a raiz — senão o prefixo do escopo mudaria com ela',
+    (_nome, fabrica) => {
+      expect(projectScopeRoot(fabrica('/home/voce/projetos/loja/'))).toBe(
+        '/home/voce/projetos/loja',
+      );
+    },
+  );
 
   it.each([
     ['/', 'a raiz do sistema — o escopo do agente seria o container inteiro'],
     ['/etc', 'pasta de sistema'],
-    ['/etc/meu-projeto', 'ABAIXO de pasta de sistema — escrever ali é escrever no sistema'],
+    [
+      '/etc/meu-projeto',
+      'ABAIXO de pasta de sistema — escrever ali é escrever no sistema',
+    ],
     ['/data/project-workspaces', 'a raiz gerenciada, que é mount do produto'],
     ['relativo/sem/barra', 'relativo: dependeria do cwd de QUEM resolve'],
-    ['/home/voce/../../etc', '`..` no meio: o caminho gravado não é o que se lê'],
+    [
+      '/home/voce/../../etc',
+      '`..` no meio: o caminho gravado não é o que se lê',
+    ],
     ['', 'vazio'],
   ])('RECUSA %j na derivação (mounted) — %s', (caminho) => {
     expect(() => projectScopeRoot(montado(caminho))).toThrow(
@@ -309,15 +314,15 @@ describe('projectScopeRoot NÃO segue permissionsFilePath (ADR 0055)', () => {
     delete process.env.PROJECT_WORKSPACES_ROOT;
   });
 
-  it.each([
-    ['mounted', montado] as const,
-    ['runner', runner] as const,
-  ])('%s — o escopo continua sendo a pasta do host, e as duas derivações DIVERGEM', (_nome, fabrica) => {
-    process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
-    const projeto = fabrica('/home/voce/projetos/loja');
+  it.each([['mounted', montado] as const, ['runner', runner] as const])(
+    '%s — o escopo continua sendo a pasta do host, e as duas derivações DIVERGEM',
+    (_nome, fabrica) => {
+      process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
+      const projeto = fabrica('/home/voce/projetos/loja');
 
-    expect(projectScopeRoot(projeto)).toBe('/home/voce/projetos/loja');
-  });
+      expect(projectScopeRoot(projeto)).toBe('/home/voce/projetos/loja');
+    },
+  );
 
   it('runner é o único modo em que as duas apontam para lugares diferentes', () => {
     process.env.PROJECT_WORKSPACES_ROOT = '/var/brabo';
@@ -757,5 +762,87 @@ describe('garantirQueryEscalar', () => {
   it('lança o erro do chamador quando o valor é array', () => {
     const erro = new Error('parâmetro repetido');
     expect(() => garantirQueryEscalar(['a', 'b'], () => erro)).toThrow(erro);
+  });
+});
+
+/**
+ * `raizDoEscopoNoEvento` (RN-609) — a raiz do escopo como o event log a
+ * guarda: modo + identificador RELATIVO, nunca o caminho absoluto.
+ */
+describe('raizDoEscopoNoEvento (RN-609)', () => {
+  const original = process.env.BRABO_PROJECTS_BASE;
+  afterEach(() => {
+    if (original === undefined) delete process.env.BRABO_PROJECTS_BASE;
+    else process.env.BRABO_PROJECTS_BASE = original;
+  });
+
+  it('container: o workspace_dir_name, relativo à raiz gerenciada', () => {
+    expect(
+      raizDoEscopoNoEvento({
+        executionMode: 'container',
+        workspaceDirName: 'loja-1a2b3c4d',
+        workspacePath: null,
+      }),
+    ).toEqual({
+      executionMode: 'container',
+      ancora: 'raiz_gerenciada',
+      segmento: 'loja-1a2b3c4d',
+    });
+  });
+
+  it('mounted: o segmento sob a base, sem o $HOME', () => {
+    process.env.BRABO_PROJECTS_BASE = '/home/usuario/brabo';
+    const raiz = raizDoEscopoNoEvento({
+      executionMode: 'mounted',
+      workspaceDirName: 'loja-1a2b3c4d',
+      workspacePath: '/home/usuario/brabo/clientes/loja/',
+    });
+    expect(raiz).toEqual({
+      executionMode: 'mounted',
+      ancora: 'base_de_projetos',
+      segmento: 'clientes/loja',
+    });
+    expect(JSON.stringify(raiz)).not.toContain('/home');
+  });
+
+  it('runner: o workspace_dir_name, nunca a pasta do host', () => {
+    const raiz = raizDoEscopoNoEvento({
+      executionMode: 'runner',
+      workspaceDirName: 'loja-1a2b3c4d',
+      workspacePath: '/home/usuario/dev/loja',
+    });
+    expect(raiz).toEqual({
+      executionMode: 'runner',
+      ancora: 'nome_da_pasta',
+      segmento: 'loja-1a2b3c4d',
+    });
+    expect(JSON.stringify(raiz)).not.toContain('usuario');
+  });
+
+  it('mounted sem base, fora dela ou na própria base: indisponível, e o caminho NÃO cai no lugar', () => {
+    delete process.env.BRABO_PROJECTS_BASE;
+    const semBase = raizDoEscopoNoEvento({
+      executionMode: 'mounted',
+      workspaceDirName: 'loja-1a2b3c4d',
+      workspacePath: '/home/usuario/brabo/loja',
+    });
+    process.env.BRABO_PROJECTS_BASE = '/home/usuario/brabo';
+    const foraDaBase = raizDoEscopoNoEvento({
+      executionMode: 'mounted',
+      workspaceDirName: 'loja-1a2b3c4d',
+      workspacePath: '/home/usuario/legado/loja',
+    });
+    const aPropriaBase = raizDoEscopoNoEvento({
+      executionMode: 'mounted',
+      workspaceDirName: 'loja-1a2b3c4d',
+      workspacePath: '/home/usuario/brabo',
+    });
+    for (const raiz of [semBase, foraDaBase, aPropriaBase]) {
+      expect(raiz).toEqual({
+        executionMode: 'mounted',
+        ancora: 'indisponivel',
+        segmento: null,
+      });
+    }
   });
 });

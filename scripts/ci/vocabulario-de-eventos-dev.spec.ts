@@ -47,6 +47,8 @@ const CAMINHO_DO_CASO_DE_USO =
 
 const CAMINHO_DO_PAINEL = 'apps/web/src/lib/agent-status.ts';
 
+const CAMINHO_DA_ARVORE = 'apps/web/src/lib/timeline-tree.ts';
+
 /**
  * O CORPO TEXTUAL de um literal declarado com `const <nome>` — array, `Set`
  * ou objeto. Deliberadamente simples: as listas são literais por construção
@@ -275,6 +277,71 @@ describe('vocabulário `dev.*`: engine × web (painel do time)', () => {
             '`DEV_STATUS_EVENTS_FORA`. O mapa vence na prática — apague a ' +
             'declaração de exceção, que só serve para enganar quem lê.',
     ).toEqual([]);
+  });
+});
+
+/**
+ * A QUARTA instância da mesma deriva, e a segunda tela do web (AT-087).
+ *
+ * A árvore do time (`timeline-tree.ts`) tem a sua própria tabela de tipos,
+ * `TRADUCAO`, e o que não está nela NÃO vira nó — o que é certo para o log
+ * inteiro e errado para o vocabulário `dev.*`: numa instalação real (14/09) o
+ * engine emitiu `dev.started` e depois `dev.blocked_by_container`, a árvore
+ * descartou o bloqueio e a frase do presente ficou em "começou a task", sobre
+ * um agente parado. O painel ao lado já dizia `aguardando` — duas telas, duas
+ * tabelas, e só uma delas estava coberta por este arquivo.
+ *
+ * Mesma exigência do painel: todo tipo `dev.*` do engine tem uma decisão
+ * EXPLÍCITA — traduzido em `TRADUCAO`, ou declarado em `TRADUCAO_FORA` com o
+ * motivo de a árvore não mostrá-lo. O `ativo` do ramo não é decidido aqui:
+ * a árvore o lê do painel (`statusDoEventoDev`), então a decisão de "isto é
+ * trabalho?" continua tendo UMA fonte, que o bloco acima já cobre.
+ */
+describe('vocabulário `dev.*`: engine × web (árvore do time)', () => {
+  const fonte = ler(CAMINHO_DA_ARVORE);
+  const doEngine = tiposEmitidosPor('engine', 'dev');
+  const traduzidos = chavesDoMapa(CAMINHO_DA_ARVORE, fonte, 'TRADUCAO');
+  const fora = chavesDoMapa(CAMINHO_DA_ARVORE, fonte, 'TRADUCAO_FORA', {
+    vazioOk: true,
+  });
+
+  it('todo tipo `dev.*` do engine tem decisão na árvore — traduzido ou declarado fora', () => {
+    const semDecidir = semDecisao(doEngine, traduzidos, fora);
+    expect(
+      semDecidir,
+      semDecidir.length === 0
+        ? ''
+        : `O engine emite ${semDecidir.join(', ')} e a árvore do time não o ` +
+            `traduz. Em ${CAMINHO_DA_ARVORE}, ou acrescente cada tipo a ` +
+            '`TRADUCAO` (rótulo, `MarcoTipo` e, se o payload tiver, o detalhe), ' +
+            'ou declare-o em `TRADUCAO_FORA` com o motivo de a árvore não ' +
+            'mostrá-lo. Sem decisão, o evento é DESCARTADO e o ramo fica no marco ' +
+            'anterior — foi assim que um dev bloqueado por container aparecia ' +
+            'como "começou a task" (AT-087).',
+    ).toEqual([]);
+  });
+
+  it('a árvore não traduz tipo `dev.*` que o engine não emite', () => {
+    // `dev.rearmed` é o caso que este teste pegou: a api o grava com ator
+    // `user`, `montarArvore` só pendura marco de ator `agent`, e a linha
+    // nunca produziu nó.
+    const sobrando = [...traduzidos, ...fora].filter(
+      (t) => t.startsWith('dev.') && !doEngine.includes(t),
+    );
+    expect(
+      sobrando,
+      sobrando.length === 0
+        ? ''
+        : `${CAMINHO_DA_ARVORE} traduz ${sobrando.join(', ')}, que nenhum ` +
+            'arquivo de `apps/engine/lib/**/*.ex` emite. Se quem emite é a api ' +
+            '(ator `user`/`system`), o marco nunca chega a um ramo de agente; ' +
+            'se o engine parou de emitir ou renomeou, acompanhe dos dois lados.',
+    ).toEqual([]);
+  });
+
+  it('nenhum tipo está traduzido E declarado fora ao mesmo tempo', () => {
+    const nosDois = traduzidos.filter((t) => fora.includes(t));
+    expect(nosDois).toEqual([]);
   });
 });
 

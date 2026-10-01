@@ -30,6 +30,31 @@
   flex: 1;
 }
 
+/* O rótulo do botão nunca quebra ("Novo / projeto", AT-330). */
+.novoProjeto {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/*
+ * Layout móvel (AT-330, RN-643): a barra quebra em duas linhas — título, sino
+ * e "Novo projeto" em cima; a busca embaixo, na largura inteira. A classe vem
+ * de `useLayoutMovel`, nunca de um `@media` próprio (a regra de `layout-movel.ts`).
+ */
+.topbarMovel {
+  height: auto;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  padding: 10px 16px;
+}
+
+.topbarMovel .search {
+  order: 10;
+  flex: 1 0 100%;
+  width: 100%;
+  max-width: none;
+}
+
 .content {
   padding: 24px;
   display: flex;

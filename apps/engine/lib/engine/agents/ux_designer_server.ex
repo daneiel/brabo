@@ -35,7 +35,16 @@ defmodule Engine.Agents.UxDesignerServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Harness.Tools.EmitArtifact
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono, UxDesignerTools}
+
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao,
+    UxDesignerTools
+  }
+
   alias Engine.Sessions.EngineApiClient
 
   @agent "ux-designer"
@@ -67,8 +76,14 @@ defmodule Engine.Agents.UxDesignerServer do
 
   def kickoff(session_id), do: GenServer.cast(via(session_id), :kickoff)
 
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
+
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
   # --- Callbacks ---
 
@@ -80,7 +95,13 @@ defmodule Engine.Agents.UxDesignerServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -95,6 +116,11 @@ defmodule Engine.Agents.UxDesignerServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
      }}
   end
@@ -113,10 +139,48 @@ defmodule Engine.Agents.UxDesignerServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
   @impl true
-  def handle_call({:user_message, text}, from, state) do
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
+  @impl true
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
+  end
+
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
+  @impl true
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
+
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+    fn -> run_turn(work, @max_iterations) end
   end
 
   @impl true
@@ -214,8 +278,11 @@ defmodule Engine.Agents.UxDesignerServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
+    resultado = run_tool(name, args, state)
+    emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+
     {text, desfecho} =
-      case run_tool(name, args, state) do
+      case resultado do
         {:ok, s} -> {s, :ok}
         {:error, s} -> {s, :error}
       end
@@ -239,8 +306,12 @@ defmodule Engine.Agents.UxDesignerServer do
   # --- Kickoff ---
 
   defp kickoff_instruction(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} -> build_kickoff(events)
+    # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
+    # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.product_brief"
+         ]) do
+      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Proponha o protótipo navegável (propose_prototype) a partir da conversa."
     end
   end
@@ -268,23 +339,6 @@ defmodule Engine.Agents.UxDesignerServer do
     #{summary}
     """
   end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
-      _ -> []
-    end
-  end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

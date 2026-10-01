@@ -1,0 +1,34 @@
+{
+  "title": "Chaves de máquina",
+  "eyebrow": "Agente local",
+  "subtitle": "Uma chave de máquina autentica o agente local instalado numa máquina sua (o brabo-runner rodando como serviço). Ela nasce na máquina, na instalação, e só a metade pública chega aqui. A lista é a das SUAS chaves de máquina, inclusive as já revogadas — e funciona sem projeto nenhum, que é justamente quando a instalação cria uma. Chaves de projeto não estão aqui: elas moram nas Configurações de cada projeto.",
+  "subtitleAlcance": "Uma chave de máquina atende todos os seus projetos em modo runner: revogá-la derruba o agente local em todos eles de uma vez.",
+  "subtitleNaoEBatimento": "Chave registrada não é agente rodando: \"último uso\" é a última vez que o agente pediu acesso com ela, nunca prova de que ele está de pé agora — quem sabe do agora é o terminal de um projeto.",
+  "subtitleSubstitui": "Instalar de novo na mesma conta registra uma chave de máquina nova e revoga a anterior; é por isso que uma chave antiga pode aparecer revogada aqui sem ninguém ter clicado em revogar.",
+  "verificando": "Carregando suas chaves de máquina…",
+  "naoSei": "Não consegui ler suas chaves de máquina. Isso não quer dizer que não haja nenhuma — quer dizer que não sei.",
+  "emptyMessage": "Sua conta não tem chave de máquina. Uma é criada quando o instalador do Brabo configura o agente local numa máquina.",
+  "orfa": "Chave ativa que nenhum agente local usou ainda costuma ser de uma instalação que não chegou a subir o agente — ela é inerte, mas continua valendo. Se não reconhecer, revogue.",
+  "table": {
+    "name": "Nome",
+    "created": "Criada",
+    "lastUsed": "Último uso",
+    "lastUsedNever": "nunca usada",
+    "status": "Status",
+    "statusActive": "ativa",
+    "statusRevoked": "revogada",
+    "revokeAria": "Revogar {{name}}",
+    "revokeTitle": "Revogar"
+  },
+  "toast": {
+    "revokeErrorTitle": "Não consegui revogar a chave de máquina"
+  },
+  "modal": {
+    "title": "Revogar chave de máquina",
+    "body": "Revogar “{{name}}” é definitivo: ela para de autenticar o agente local daquela máquina, e ter outra exige instalar o agente de novo.",
+    "alcance": "Isto derruba o agente local em TODOS os seus projetos em modo runner em que ele se conectou com esta chave, não só em um. Sem projeto nenhum ainda, só impede a chave de ser usada de novo.",
+    "precisao": "Só cai o que se conectou com ESTA chave: outro runner seu nesses projetos, autenticado por outra chave ou por um token, continua conectado.",
+    "cancel": "Cancelar",
+    "confirm": "Revogar"
+  }
+}

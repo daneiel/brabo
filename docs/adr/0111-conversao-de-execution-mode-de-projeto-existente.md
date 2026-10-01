@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-23
 - **Context:** closes the "converting `execution_mode` on an EXISTING project" backlog item (Wave 2 of the runner/execution_mode batch, `docs/explanation/backlog.md`), corrects ADR 0104 item 4
-- **Revises (without editing):** [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md) (item 4's claim), [ADR 0072](0072-projeto-local-ou-container.md), [ADR 0081](0081-ciclo-de-vida-do-container-vira-tabela-sem-orquestrador.md)
+- **Revises (without editing):** [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md) (item 4's claim), [ADR 0072](0072-projeto-local-ou-container.md), [ADR 0081](0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
 
 ## Context
 

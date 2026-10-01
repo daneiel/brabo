@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 159 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 199 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -109,13 +109,15 @@ BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
-behaviour with six callbacks (PR QA and SecOps, QA-strategy, the two
-deterministic infra gates, and design AppSec) whose only job is to start the
+behaviour with five callbacks (PR QA and SecOps, the two deterministic infra
+gates, and design AppSec — the QA-strategy one left with
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md), when the test plan
+became the first step of PR QA itself) whose only job is to start the
 per-project GenServer if needed and cast into it. The indirection exists for
 the callers' tests: `Engine.Agents.DevLeadTools` is exercised by a LIGHT test
 with no Ecto sandbox, and starting a real GenServer there just to prove a gate
 was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
-six, `run_appsec_design/2`, closed the last gate that was actionable with no
+five, `run_appsec_design/2`, closed the last gate that was actionable with no
 production caller: `assess_implementability` now asks for the story's design
 threat model IN PARALLEL — the verdict never waits for it, and the ask happens
 only once per story ([RN-539](business-rules.md#rn-539),
@@ -123,7 +125,7 @@ only once per story ([RN-539](business-rules.md#rn-539),
 
 ## Code map
 
-### `apps/api` — NestJS, 444 files
+### `apps/api` — NestJS, 906 files in `src/` (measured 2026-09-25)
 
 Four layers, and the order matters:
 
@@ -143,14 +145,14 @@ auto-instrumentation doesn't catch an already-loaded module, and a separate
 module is what guarantees that: TypeScript hoists all `require`s to the
 top, so a call written between imports would run too late).
 
-### `apps/engine` — Elixir/OTP, 155 files
+### `apps/engine` — Elixir/OTP, 219 files in `lib/` (measured 2026-09-25)
 
 | module | what it is | start with |
 |---|---|---|
 | `harness/` (33) | context assembly, ToolLoop, compaction. **No LLM call happens outside here** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | the QA area (Lead + Automation, Performance/Security and QA-strategy sub-specialties — the Lead's second moment, ADR 0090 — all with an LLM) and SecOps (deterministic) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | the Infra area (conversational, session-scoped Lead + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | the Infra area (conversational, session-scoped Lead — since [RN-617](business-rules.md#rn-617) the seventh conversational agent, reachable from the composer and running its turns on `TurnoAssincrono` — + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | session lifecycle, `:global` registry | `sessions/session_server.ex` |
 | `actions/` (9) | terminal and git executors, lint/scanner detectors | `actions/git_executor.ex` |
 | `agents/` (16) | Creative, PO, Architect, Dev Lead, Staff (ADR 0088, dormant for automatic trigger) — each turn runs on a supervised Task (`TurnoAssincrono`, RN-122), no longer inside `handle_call`, so a `:cancel` can actually interrupt it | `agents/turno_assincrono.ex` |
@@ -159,11 +161,11 @@ top, so a call written between imports would run too late).
 **Entrypoint:** `lib/engine/application.ex` — the whole supervision tree is
 there, and it's the best file to understand what's running.
 
-### `apps/broker` — Node/TS, 8 files
+### `apps/broker` — Node/TS, 9 files in `src/` (measured 2026-09-25)
 
 The only process in the product with access to a Docker daemon
 ([ADR 0130](adr/0130-broker-de-container.md)), and the smallest service here:
-no framework, `node:http`, six routes.
+no framework, `node:http`, six routes (measured 2026-09-25 in `src/servidor.ts`).
 
 | file | what it is |
 |---|---|
@@ -175,7 +177,7 @@ no framework, `node:http`, six routes.
 **Entrypoint:** `src/index.ts`. Docker access itself is not here: it comes from
 `packages/docker-port`, the same file the runner uses.
 
-### `apps/web` — React 19, 70 files
+### `apps/web` — React 19, 487 files in `src/` (measured 2026-09-25)
 
 `src/lib/api-types.ts` and `src/lib/activity.ts` are the two files worth
 reading first: the first is the contract with the api, the second
@@ -331,10 +333,14 @@ from a status, so a network error says "I don't know" instead of spinning in
 "checking…" forever. A registered key is NOT a running agent — the same
 discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
 ACCOUNT, not to this browser, so the strongest sentence available is "your
-account has a paired machine". Both limits are stated on screen, and they are
-why the [ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md) flow is
-not removed: it moves into a `<details>` whose label names the case it still
-answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
+account has a paired machine". Both limits are stated on screen. The
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+browser flow (generate the key, download the binary, write the folder) was
+retired in [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+([RN-687](business-rules.md#rn-687)): the panel now shows the `install.sh`
+command, which leaves once a key serving the project is recognised, and the
+manual PAT command stays in a `<details>` named for the case it answers
+(another machine). The read's minimum comes from `roleAtLeast`
 against the ENDPOINT's `developer`, and a real 403 lands in the same state —
 the workspace role is a proxy, the api is the authority.
 
@@ -493,7 +499,10 @@ port under `application/ports/`.
 table. `session_events` has `unique(session_id, seq)` and `seq` is dense per
 session — the restore test verifies there's no gap. State that needs to
 change (a hypothesis's lifecycle, a handoff's status) lives in its own
-mutable table, alongside the events.
+mutable table, alongside the events. A handoff offer that stops being the current one
+becomes `superseded` in that table and gets its own `handoff.superseded` event
+— never an edit of the `handoff.offered` that announced it ([ADR
+0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 **3. No LLM call outside the Harness.** It's not a convention: the engine
 has no LLM client. It asks the api, which does the metering.
@@ -658,7 +667,11 @@ second shows the model doesn't require the same internal implementation:
 (mirroring `ArquitetoServer`, external contact unchanged by explicit
 request of CLAUDE.md 8c), and delegates to `WorkflowsAgent` — which, with
 no user on the other side, runs as a bounded `ToolLoop`, just like the QA
-subagents. The 8b's generic `delegations` needed ONE adjustment to serve
+subagents. Since [RN-617](business-rules.md#rn-617)
+([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) the Infra Lead
+also takes composer messages, and all three of its turns (kickoff, gate
+correction, message) run on the same `TurnoAssincrono` Task as the other six
+conversational agents. The 8b's generic `delegations` needed ONE adjustment to serve
 the second area: `task_id` became nullable, because Infra delegates over the
 session, not over a backlog task.
 
@@ -698,9 +711,33 @@ erDiagram
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
   projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
+  sessions ||--o{ session_language_overrides : "response language pinned per person (RN-618)"
+  users ||--o{ detected_language_declines : "detected language the person said no to (RN-624)"
 ```
 
-54 tables in total. The most recent is `project_mirror_states`
+56 tables in total. The most recent is `detected_language_declines`
+([RN-624](business-rules.md#rn-624)): one row per person and language the
+person DECLINED when asked "we noticed you write in X — use X for the
+answers?", with the date. Its presence is what keeps the same question from
+coming back; confirming that language later deletes the row. The detection
+itself keeps no state — the sample is read from `session_events` through the
+partial index `session_events_evidencia_de_idioma_idx` (user actor, the two
+evidence types) and the hysteresis is recomputed —, so this table and the
+confirmed pair in `users` are all it writes, and only when the person answers.
+Before it, the most recent was `session_language_overrides`
+([RN-618](business-rules.md#rn-618),
+[ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): the
+response language one person pinned in one session, keyed by the
+`{session_id, user_id}` PAIR so two participants never touch each other. It is
+configuration, not an event — pinning again is an upsert, releasing is a
+`DELETE`. The same ADR adds `users.response_language` (`NULL` is "automatic")
+and the confirmed-detection pair `users.detected_language` /
+`detected_language_confirmed_at`, bound by a CHECK; `users.locale` stays the
+interface language, closed to `pt-BR`/`en`. And `projects.language`
+([RN-619](business-rules.md#rn-619)) is the language of what has no human
+author — shared artifacts and turns nobody typed —, always a concrete
+BCP-47 code. Before it, the most recent was
+`project_mirror_states`
 ([RN-517](business-rules.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
 project, `project_id` unique, holding what the LAST mirror round did — the last
@@ -807,4 +844,4 @@ Derived from history's hotspots and the ADRs that record open state.
 | `TerminalExecutor` runs the managed project's suite **inside** the engine's image | [ADR 0024](adr/0024-fase5-imagens-producao-ci.md) | doesn't scale to arbitrary stacks; the way out is per-project sandboxing |
 | ~~Images aren't published to a registry; the production overlay points at `ghcr.io/OWNER/*`~~ | [ADR 0027](adr/0027-fase5-backup-hardening-release.md) → **closed by** [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) | the four images publish to GHCR on every final tag and the overlay pins by digest from `.release/images.json`. What remains is NOT this debt: nothing deploys automatically, and the images are neither signed nor attested |
 | ~~`SessionPage.tsx` was 169 KiB with 25 test files importing it; `ProjectSettingsTab.tsx` was 90 KiB~~ | [ADR 0122](adr/0122-sessionpage-dividido-em-cinco-prs.md) + [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md) + [ADR 0125](adr/0125-projectsettingstab-dividido-por-secao.md) — **this row CLOSES on both halves** | ADR 0122's five mechanical PRs merged first: PR 1 extracted the pure timeline/turn helpers to `apps/web/src/lib/session-timeline.ts`, PR 2 extracted `StorySlide` to `apps/web/src/routes/StorySlide.tsx`, PR 3 extracted `StructuredQuestionCard` (plus its private helper `permiteOutra`) to `apps/web/src/routes/StructuredQuestionCard.tsx`, PR 4 extracted the backlog-tree helpers (`urlDaPr`, `vinculoDeBacklog`, `montarArvoreDeBacklog`, `totalDeDescendentes`) to `apps/web/src/lib/session-backlog-tree.ts` and `ItemDeBacklog` + `ContextAside` (the whole right-hand sidebar) to `apps/web/src/routes/ContextAside.tsx`, and PR 5 extracted the six readiness derivations (`criativoActive`, `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`, `hasProductBrief`, `activeAgent`) to a `useSessionReadiness` hook in `apps/web/src/lib/session-readiness.ts` — `SessionPage.tsx` went from 3 807 to 2 661 lines, explicitly leaving the turn-channel state cluster (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) out of scope for its own future ADR. ADR 0124 is that ADR: a mechanical dedup PR first made `handleSend`/`handleReadiness`/`handleArchitectureReadiness` call the pre-existing `iniciarTurnoDoAgente`/`finalizarTurnoDoAgente` pair instead of duplicating their arm inline, then a second PR extracted the state, the `connectSessionHeartbeat` channel effect, and the three lifecycle functions into a `useTurnoDoAgente` hook (`apps/web/src/lib/session-turno.ts`). `SessionPage.tsx` is now 2 479 lines; the 25 (24 after PR 1's migration) `SessionPage.*.test.tsx` files passed unedited through all seven PRs across the two ADRs. ADR 0125 closes the OTHER half, in one PR rather than five: `ProjectSettingsTab.tsx` splits into one file per section under `apps/web/src/routes/settings/` (17 sections + a two-symbol `settings/shared.ts` holding only `ORIGIN_TONE` and `formatarCustoMicros`, the two helpers with more than one caller), going from 2 532 to 77 lines while STAYING at its path as the entry and barrel — load-bearing, because `ProjectSettingsTab.test.tsx` imports 11 names from it and `ProjectPage.test.tsx`/`project-tabs.test.tsx` both `vi.mock` it BY PATH. One PR and not five because this file was never shaped like `SessionPage.tsx`: the parent held no state at all (17 JSX children, no hook, no query, no role check), no section took more than `{projectId}`, and 11 of the 17 were already exported. `ProjectSettingsTab.module.css` stays one shared stylesheet with 15 importers (same answer ADR 0122 gave for `SessionPage.module.css`). The full web suite — 142 files, 1 537 tests — passed with ZERO test files edited |
-| `SessionPage.tsx` grew back after its row closed: **2 559 lines** (116 KiB, 26 `SessionPage.*.test.tsx` files), measured on `dev` at `b61bc49cd` on **2026-09-13** — the row above closed it at **2 479** | `git show --numstat` on the two commits that touched it since [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md): `62eebad55` (+8, the "fit for agents" model picker) and `a26ddd84d` (+72, the actionable Infra handoff card, RN-499) | the closed row above is right for `ProjectSettingsTab.tsx` (now a 96-line bar and barrel) and **no longer right for `SessionPage.tsx`**. Nobody did anything wrong — each addition was a legitimate feature — which is exactly why a debt closed **by a number** needs the number re-measured: without it, regression is the sum of correct decisions. This row **declares**, it does not decompose: splitting further is a program with its own ADR, in the mould of 0122/0125. There is no size gate in CI, on purpose — a ratchet on a file nobody is decomposing only produces red PRs. The closed row stays as history |
+| ~~`SessionPage.tsx` grew back after its row closed: **2 559 lines** (116 KiB, 26 `SessionPage.*.test.tsx` files), measured on `dev` at `b61bc49cd` on **2026-09-13** — the row above closed it at **2 479**~~ | `git show --numstat` on the two commits that touched it since [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md): `62eebad55` (+8, the "fit for agents" model picker) and `a26ddd84d` (+72, the actionable Infra handoff card, RN-499) | the closed row above is right for `ProjectSettingsTab.tsx` (now a 96-line bar and barrel) and **no longer right for `SessionPage.tsx`**. Nobody did anything wrong — each addition was a legitimate feature — which is exactly why a debt closed **by a number** needs the number re-measured: without it, regression is the sum of correct decisions. This row **declares**, it does not decompose: splitting further is a program with its own ADR, in the mould of 0122/0125. There is no size gate in CI, on purpose — a ratchet on a file nobody is decomposing only produces red PRs. The closed row stays as history. **The program now exists:** [ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md) (AT-138, 2026-09-28) re-measured **2 637 lines** on `dev` at `018b8cd24c` and declares ten stacked mechanical PRs down to 834, with the size gate born only in the last one. **Closed** by the last PR of that program: the file is **834 lines**, and `apps/web/src/routes/SessionPage.teto.test.ts` fails it at 1 000 or more — the size gate this row refused on a file nobody was decomposing exists now that someone did |

@@ -18,7 +18,10 @@ afterAll(async () => {
 async function criarProjeto() {
   const [user] = await db
     .insert(users)
-    .values({ keycloakSub: 'sub-agent-autonomy', email: 'agent-autonomy@brabo.dev' })
+    .values({
+      keycloakSub: 'sub-agent-autonomy',
+      email: 'agent-autonomy@brabo.dev',
+    })
     .returning();
   const [workspace] = await db
     .insert(workspaces)
@@ -26,7 +29,12 @@ async function criarProjeto() {
     .returning();
   const [project] = await db
     .insert(projects)
-    .values({ workspaceId: workspace.id, name: 'core', slug: 'core', createdBy: user.id })
+    .values({
+      workspaceId: workspace.id,
+      name: 'core',
+      slug: 'core',
+      createdBy: user.id,
+    })
     .returning();
   return project;
 }
@@ -40,45 +48,152 @@ describe('DrizzleAgentAutonomyRepository — precedência do curinga (RN-153)', 
 
   it('só a curinga (auto mode) resolve pra qualquer actionType pedido', async () => {
     const project = await criarProjeto();
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'auto_approve');
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
 
-    expect(await repo.findMode(project.id, 'dev-api', 'terminal')).toBe('auto_approve');
-    expect(await repo.findMode(project.id, 'dev-api', 'write_file')).toBe('auto_approve');
-    expect(await repo.findMode(project.id, 'dev-api', 'pr_open')).toBe('auto_approve');
+    expect(await repo.findMode(project.id, 'dev-api', 'terminal')).toBe(
+      'auto_approve',
+    );
+    expect(await repo.findMode(project.id, 'dev-api', 'write_file')).toBe(
+      'auto_approve',
+    );
+    expect(await repo.findMode(project.id, 'dev-api', 'pr_open')).toBe(
+      'auto_approve',
+    );
   });
 
   it('regra ESPECÍFICA vence a curinga — "auto mode ligado, mas terminal em deny" funciona', async () => {
     const project = await criarProjeto();
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'auto_approve');
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
     await repo.upsert(project.id, 'dev-api', 'terminal', 'deny');
 
     expect(await repo.findMode(project.id, 'dev-api', 'terminal')).toBe('deny');
     // O resto continua herdando da curinga.
-    expect(await repo.findMode(project.id, 'dev-api', 'write_file')).toBe('auto_approve');
+    expect(await repo.findMode(project.id, 'dev-api', 'write_file')).toBe(
+      'auto_approve',
+    );
+  });
+
+  it('resolve devolve a ORIGEM: curinga quando só ela existe, específica quando a específica vence (RN-603)', async () => {
+    const project = await criarProjeto();
+    expect(await repo.resolve(project.id, 'dev-api', 'terminal')).toBeNull();
+
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
+    expect(await repo.resolve(project.id, 'dev-api', 'terminal')).toEqual({
+      mode: 'auto_approve',
+      origem: 'curinga',
+      especifica: null,
+    });
+
+    await repo.upsert(project.id, 'dev-api', 'terminal', 'require_approval');
+    expect(await repo.resolve(project.id, 'dev-api', 'terminal')).toEqual({
+      mode: 'require_approval',
+      origem: 'especifica',
+      especifica: 'require_approval',
+    });
+  });
+
+  // AT-255 (RN-670, ADR 0189): o cenário MEDIDO no uso real de 29/09 — a
+  // curinga ligada nos sete devs e, segundos depois, "Sempre permitir"
+  // gravando `terminal: auto_approve` por cima. A específica tinha o MESMO
+  // modo da curinga e mesmo assim a sombreava, com origem `especifica`, e o
+  // piloto perdia as isenções de escopo e de composto sintetizado.
+  it('específica `auto_approve` sob curinga `auto_approve` resolve como CURINGA: o piloto não se desliga (RN-670)', async () => {
+    const project = await criarProjeto();
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
+    await repo.upsert(project.id, 'dev-api', 'terminal', 'auto_approve');
+
+    expect(await repo.resolve(project.id, 'dev-api', 'terminal')).toEqual({
+      mode: 'auto_approve',
+      origem: 'curinga',
+      especifica: 'auto_approve',
+    });
+  });
+
+  it('com a curinga DESLIGADA, a específica `auto_approve` volta a ser só ela (o escopo vale de novo)', async () => {
+    const project = await criarProjeto();
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'require_approval',
+    );
+    await repo.upsert(project.id, 'dev-api', 'terminal', 'auto_approve');
+
+    expect(await repo.resolve(project.id, 'dev-api', 'terminal')).toEqual({
+      mode: 'auto_approve',
+      origem: 'especifica',
+      especifica: 'auto_approve',
+    });
   });
 
   it('a curinga é por agente: outro agente sem regra continua null', async () => {
     const project = await criarProjeto();
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'auto_approve');
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
 
     expect(await repo.findMode(project.id, 'dev-web', 'terminal')).toBeNull();
   });
 
   it('desligar: gravar a curinga como require_approval por cima some com o auto mode', async () => {
     const project = await criarProjeto();
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'auto_approve');
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'require_approval');
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'require_approval',
+    );
 
-    expect(await repo.findMode(project.id, 'dev-api', 'terminal')).toBe('require_approval');
+    expect(await repo.findMode(project.id, 'dev-api', 'terminal')).toBe(
+      'require_approval',
+    );
   });
 
   it('listForProject devolve a linha curinga como qualquer outra', async () => {
     const project = await criarProjeto();
-    await repo.upsert(project.id, 'dev-api', AGENT_AUTONOMY_ALL_ACTIONS, 'auto_approve');
+    await repo.upsert(
+      project.id,
+      'dev-api',
+      AGENT_AUTONOMY_ALL_ACTIONS,
+      'auto_approve',
+    );
 
     const rows = await repo.listForProject(project.id);
     expect(rows).toEqual([
-      { agentId: 'dev-api', actionType: AGENT_AUTONOMY_ALL_ACTIONS, mode: 'auto_approve' },
+      {
+        agentId: 'dev-api',
+        actionType: AGENT_AUTONOMY_ALL_ACTIONS,
+        mode: 'auto_approve',
+      },
     ]);
   });
 });

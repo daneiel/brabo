@@ -5,11 +5,15 @@ import {
   ModelNotFitForAgentScopeError,
 } from '../../../domain/llm/model-capabilities';
 import { ScopeIdSemProjetoError } from '../../../domain/llm/binding-scope-id';
+import { RoutingPreferenceNotSupportedError } from '../../../domain/llm/routing-preference';
+import { AliasDeRoteamentoLivreError } from '../../../domain/llm/alias-de-roteamento-livre';
 
 type ErroCapturado =
   | ModelNotFitForAgentScopeError
   | ModelNotBindableError
-  | ScopeIdSemProjetoError;
+  | ScopeIdSemProjetoError
+  | RoutingPreferenceNotSupportedError
+  | AliasDeRoteamentoLivreError;
 
 /**
  * 422, e não 400: o pedido está bem formado e o modelo referenciado existe —
@@ -33,6 +37,12 @@ type ErroCapturado =
   ModelNotFitForAgentScopeError,
   ModelNotBindableError,
   ScopeIdSemProjetoError,
+  // ADR 0166: preferência de roteamento para provider que não a declara — 422,
+  // pelo mesmo motivo das outras: a combinação é que não se sustenta.
+  RoutingPreferenceNotSupportedError,
+  // AT-271, RN-679: alias `~` na ativação — 422 com `code` próprio, para a
+  // tela distinguir a recusa da curadoria de um erro genérico.
+  AliasDeRoteamentoLivreError,
 )
 export class LlmBindingErrorFilter implements ExceptionFilter {
   catch(exception: ErroCapturado, host: ArgumentsHost) {
@@ -45,6 +55,12 @@ export class LlmBindingErrorFilter implements ExceptionFilter {
         statusCode: status,
         message: exception.message,
         error: status === 400 ? 'Bad Request' : 'Unprocessable Entity',
+        ...(exception instanceof AliasDeRoteamentoLivreError
+          ? {
+              code: exception.code,
+              modelIds: exception.models.map((m) => m.id),
+            }
+          : {}),
       });
   }
 }

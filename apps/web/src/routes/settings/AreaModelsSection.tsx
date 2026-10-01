@@ -1,18 +1,17 @@
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   clearAreaModelBinding,
-  getAreaModelBinding,
   getProjectModelBinding,
   getWorkspaceModelBinding,
   listModels,
   mensagemDaApi,
   setAreaModelBinding,
 } from '../../lib/api-client';
-import { AREAS } from '../../lib/agents';
+import { AREAS, nomeDoAgente } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
-import type { Model } from '../../lib/api-types';
+import type { Model, RoutingPreference } from '../../lib/api-types';
 import { Button } from '../../components/ui/Button';
 import { ModelPicker } from '../../components/ModelPicker';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -20,6 +19,13 @@ import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca, useVoltarAHerdar } from './heranca';
 import { CadeiaDeCascata, montarCadeia } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import {
+  invalidarBindingsResolvidos,
+  useBindingsResolvidos,
+} from '../../lib/bindings-resolvidos';
+import { AvisoDeBindingsNaoLidos, MarcaDeBindingNaoLido } from './LeituraDosBindings';
 
 /**
  * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
@@ -46,15 +52,13 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: modelsByCategory } = useQuery({
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const areaKeys = Object.keys(AREAS);
-  const bindingQueries = useQueries({
-    queries: areaKeys.map((key) => ({
-      queryKey: ['area-binding', projectId, key],
-      queryFn: () => getAreaModelBinding(projectId, key),
-    })),
-  });
+  // O lote de bindings resolvidos (RN-654) — a MESMA `queryKey` da tabela de
+  // agentes acima, então as duas seções custam uma requisição, não 20.
+  const bindings = useBindingsResolvidos(projectId);
 
   // Os DOIS níveis acima da área, para a cadeia da cascata. As chaves são as
   // MESMAS de `ModelsSection` — as duas seções vivem na mesma aba, e o React
@@ -62,6 +66,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: bindingDoProjeto } = useQuery({
     queryKey: ['project-model-binding', projectId],
     queryFn: () => getProjectModelBinding(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   // O workspace sai do par que esta seção JÁ consulta para decidir o papel —
   // buscar o projeto de novo só para ler `workspaceId` seria um round-trip a
@@ -70,31 +75,33 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { data: bindingDoWorkspace } = useQuery({
     queryKey: ['workspace-model-binding', workspaceId],
     queryFn: () => getWorkspaceModelBinding(workspaceId!),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(workspaceId),
   });
 
   // Nome de exibição para os `title` da cadeia — mesma lista que o
-  // `ModelPicker` desta seção já recebe, sem consulta a mais.
+  // `ModelPicker` desta seção já recebe, sem consulta a mais. É também dela
+  // que sai o PROVIDER do modelo vigente, que decide se há critério de
+  // roteamento a oferecer (ADR 0166).
+  const todosOsModelos: Model[] = modelsByCategory
+    ? [
+        ...Object.values(modelsByCategory.local).flat(),
+        ...Object.values(modelsByCategory.cloud).flat(),
+      ]
+    : [];
   const nomeDoModelo = (modelId: string) =>
-    (modelsByCategory
-      ? [
-          ...Object.values(modelsByCategory.local).flat(),
-          ...Object.values(modelsByCategory.cloud).flat(),
-        ]
-      : []
-    ).find((m) => m.id === modelId)?.displayName;
+    todosOsModelos.find((m) => m.id === modelId)?.displayName;
 
-  function invalidate(areaKey: string) {
-    queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
-    // Todo agente da área pode ter herdado o valor — a coluna Origem da
-    // tabela de cima também precisa reler.
-    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId] });
+  // Relê o lote inteiro (RN-654): todo agente da área pode ter herdado o
+  // valor, e a coluna Origem da tabela de cima lê o MESMO lote.
+  function invalidate() {
+    void invalidarBindingsResolvidos(queryClient, projectId);
   }
 
   async function handleSet(areaKey: string, model: Model) {
     try {
       await setAreaModelBinding(projectId, areaKey, model.id);
-      invalidate(areaKey);
+      invalidate();
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('areaModels.toast.saveError')),
@@ -103,10 +110,33 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
     }
   }
 
+  /**
+   * O critério de roteamento do padrão PRÓPRIO da área (ADR 0166, RN-583) —
+   * regrava o mesmo modelo com o critério novo. Lead e subagentes que herdam
+   * a área passam a usá-lo; quem divergiu tem o do próprio binding.
+   */
+  async function handleRouting(
+    areaKey: string,
+    modelId: string,
+    routingPreference: RoutingPreference | null,
+  ) {
+    try {
+      await setAreaModelBinding(projectId, areaKey, modelId, {
+        routingPreference,
+      });
+      invalidate();
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('roteamento.toast.saveError')),
+        tone: 'danger',
+      });
+    }
+  }
+
   async function handleClear(areaKey: string) {
     try {
       await clearAreaModelBinding(projectId, areaKey);
-      invalidate(areaKey);
+      invalidate();
       showToast({
         title: t('areaModels.toast.reverted', { area: areaKey }),
         tone: 'success',
@@ -130,9 +160,16 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
         {!podeEditar && t('areaModels.subtitle.needsMaintainer')}
       </p>
 
-      {areaKeys.map((key, index) => {
+      {bindings.erro !== null && (
+        <AvisoDeBindingsNaoLidos
+          erro={bindings.erro}
+          tentarDeNovo={bindings.tentarDeNovo}
+        />
+      )}
+
+      {areaKeys.map((key) => {
         const area = AREAS[key];
-        const resolved = bindingQueries[index]?.data;
+        const resolved = bindings.daArea(key);
         const divergiuDoProjeto = resolved?.origin === 'area';
 
         return (
@@ -145,6 +182,11 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                     de ÁREA não tem escopo de agente na cascata
                     (`ResolveModelBindingUseCase`), então não há o caso ambíguo
                     que a tabela de agentes tem. */}
+                {resolved === undefined ? (
+                  // Sem resposta do lote, "sem padrão" seria afirmar o que não
+                  // se leu (RN-654).
+                  <MarcaDeBindingNaoLido falhou={bindings.erro !== null} />
+                ) : (
                 <CadeiaDeCascata
                   niveis={montarCadeia({
                     resolvido: resolved,
@@ -162,11 +204,12 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   rotuloSemModelo={t('areaModels.originChainNoModel')}
                   tituloSemModelo={t('areaModels.originChainNoModelTitle')}
                 />
+                )}
               </div>
               <div className={styles.ajusteHint}>
-                {t('areaModels.card.lead', { lead: area.lead })}
+                {t('areaModels.card.lead', { lead: nomeDoAgente(area.lead) })}
                 {area.members.length > 0
-                  ? t('areaModels.card.subagents', { list: area.members.join(', ') })
+                  ? t('areaModels.card.subagents', { list: area.members.map((m) => nomeDoAgente(m)).join(', ') })
                   : t('areaModels.card.subagentsDynamic')}
               </div>
               <div className={styles.ajusteHint}>
@@ -194,6 +237,19 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   // consumidor do modelo de uma área é um agente dela —, então
                   // o 422 da RN-040 alcança quem escolhe daqui igualzinho.
                   filtroDeAgentesPadrao
+                />
+                {/* Mesmo `podeEditar` (`maintainer`) do picker: é o mesmo
+                    endpoint (ADR 0166, RN-102). Editável só com padrão
+                    PRÓPRIO — herdado, o critério vem com o modelo de cima. */}
+                <PreferenciaDeRoteamento
+                  resolvido={resolved}
+                  modelo={todosOsModelos.find((m) => m.id === resolved?.modelId)}
+                  proprio={divergiuDoProjeto}
+                  podeEditar={podeEditar}
+                  alvo={t('areaModels.card.title', { area: area.label })}
+                  onChange={(preferencia) =>
+                    resolved && handleRouting(key, resolved.modelId, preferencia)
+                  }
                 />
               </div>
             )}

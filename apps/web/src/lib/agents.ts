@@ -55,16 +55,16 @@ export interface AgentDef {
   initials: string;
   role: string;
   /**
-   * Cor do agente, sempre um `var(--token)` quando existe token para ela.
+   * Cor do agente, sempre um `var(--token)` — nunca hex.
    *
-   * Três valores AINDA são hex solto, e são declarados aqui em vez de
-   * convertidos: `#B9A5E8` (Psicólogo leve), `#5EBEB1` (Dev Frontend) e
-   * `#8AA6AE` (SecOps) não têm contraparte semântica em `design/tokens.css`, e
-   * inventar um token para cada um seria abrir três cores novas no design
-   * system de passagem. A consequência é conhecida e está no ADR 0074: esses
-   * três não mudam com o tema — foram escolhidos contra o fundo escuro e no
-   * tema claro ficam mais lavados que os outros. Token de cor de agente é
-   * decisão de produto, não correção de caminho.
+   * Três agentes (Psicólogo leve, Dev Frontend, SecOps) não têm contraparte
+   * semântica, e até o ADR 0181 eram hex soltos aqui (`#B9A5E8`, `#5EBEB1`,
+   * `#8AA6AE`), escolhidos contra o fundo escuro e lavados no claro. Viraram
+   * `--agent-leve`/`--agent-frontend`/`--agent-secops` em `design/tokens.css`,
+   * com valor próprio por tema, dessaturados junto com o resto da paleta e
+   * medidos como elemento de interface (3:1) nas três superfícies pelo
+   * `lib/contraste.test.ts`. Cor de agente NOVA continua sendo decisão de
+   * produto: reuse um semântico antes de abrir outro token.
    */
   color: string;
   icon: ComponentType<{ size?: number; className?: string }>;
@@ -87,7 +87,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'Psicólogo (leve)',
     initials: 'PL',
     role: 'Triagem econômica de sessões simples',
-    color: '#B9A5E8',
+    color: 'var(--agent-leve)',
     icon: HypothesisIcon,
   },
   anamnese: {
@@ -139,7 +139,8 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   // Staff/Principal Engineer (docs/fluxo.yml, camada_decisao_tecnica, ADR
   // 0088) — RFC + PoC descartável para problema sistêmico RECORRENTE,
   // devolvido ao Arquiteto por handoff. Dormente para disparo AUTOMÁTICO
-  // (a Anamnese, que o dispararia, está pausada — ANAMNESE_ENABLED=false);
+  // (nenhum gatilho automático existe — a Anamnese, religada na RN-680, não
+  // o dispara);
   // acionável MANUALMENTE por handoff aceito, mesmo mecanismo genérico dos
   // demais leads (sem entrar em USER_STARTED_AGENTS).
   staff: {
@@ -171,7 +172,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'Dev Frontend',
     initials: 'FE',
     role: 'Implementação de interface',
-    color: '#5EBEB1',
+    color: 'var(--agent-frontend)',
     icon: LayoutSidebarIcon,
   },
   infra: {
@@ -224,7 +225,7 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
     name: 'SecOps',
     initials: 'SO',
     role: 'Segurança e conformidade',
-    color: '#8AA6AE',
+    color: 'var(--agent-secops)',
     icon: LockIcon,
   },
 };

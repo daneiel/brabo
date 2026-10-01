@@ -56,6 +56,15 @@ export interface TimelineEntry {
    * informação neste ponto.
    */
   agentResponse?: boolean;
+  /**
+   * A entrada é MENSAGEM da conversa (RN-644) — fala do usuário
+   * (`chat.message`), resposta de agente (`agent.response`) ou pergunta
+   * estruturada (`chat.structured_question`). É a ÚNICA coisa que o corte do
+   * fio conta ao decidir "as últimas 5": card de handoff, de aprovação, de
+   * história e divisor não são mensagem, e contá-los empurrava a primeira
+   * troca de uma conversa curta para o histórico recolhido.
+   */
+  mensagem?: boolean;
 }
 
 /**

@@ -4,6 +4,7 @@ import { RecordHandoffUseCase } from '../../../src/application/use-cases/graph/r
 import { RecordHypothesisUseCase } from '../../../src/application/use-cases/graph/record-hypothesis.use-case';
 import { RecordAnamneseProfileUseCase } from '../../../src/application/use-cases/graph/record-anamnese-profile.use-case';
 import { RecordInteractionUseCase } from '../../../src/application/use-cases/graph/record-interaction.use-case';
+import { RecordProfileFactUseCase } from '../../../src/application/use-cases/graph/record-profile-fact.use-case';
 import { GraphUnavailableError } from '../../../src/domain/graph/graph-errors';
 import { GRAPH_PROJECTION_AGGREGATE_TYPE } from '../../../src/domain/graph/graph-projection-events';
 import type {
@@ -20,8 +21,10 @@ import { SessionRepository } from '../../../src/application/ports/session-reposi
 /** Mesmo fake usado nos specs dos casos de uso de grafo — `run` mockado, sem driver de verdade. */
 function fakeGraphStore(run: GraphTx['run']): GraphStore {
   return {
-    executeWrite: (work: (tx: GraphTx) => unknown) => Promise.resolve(work({ run })),
-    executeRead: (work: (tx: GraphTx) => unknown) => Promise.resolve(work({ run })),
+    executeWrite: (work: (tx: GraphTx) => unknown) =>
+      Promise.resolve(work({ run })),
+    executeRead: (work: (tx: GraphTx) => unknown) =>
+      Promise.resolve(work({ run })),
   } as unknown as GraphStore;
 }
 
@@ -39,7 +42,7 @@ class FakeOutbox implements OutboxRepository {
   rows: OutboxEvent[] = [];
   private seq = 0;
 
-  async append(input: {
+  append(input: {
     aggregateType: string;
     aggregateId: string;
     eventType: string;
@@ -55,73 +58,87 @@ class FakeOutbox implements OutboxRepository {
       createdAt: new Date(),
       processedAt: null,
     });
+    return Promise.resolve();
   }
 
-  async listUnprocessed(
+  listUnprocessed(
     aggregateType: string,
     limit: number,
   ): Promise<OutboxEvent[]> {
-    return this.rows
-      .filter((r) => r.aggregateType === aggregateType && r.processedAt === null)
-      .slice(0, limit);
+    return Promise.resolve(
+      this.rows
+        .filter(
+          (r) => r.aggregateType === aggregateType && r.processedAt === null,
+        )
+        .slice(0, limit),
+    );
   }
 
-  async markProcessed(id: string): Promise<void> {
+  markProcessed(id: string): Promise<void> {
     const row = this.rows.find((r) => r.id === id);
     if (row) row.processedAt = new Date();
+    return Promise.resolve();
   }
 }
 
 class FakeSessionEvents implements SessionEventRepository {
   events = new Map<string, SessionEvent>();
 
-  async append(): Promise<SessionEvent> {
-    throw new Error('não usado neste teste');
+  append(): Promise<SessionEvent> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async listPaginated(): Promise<never> {
-    throw new Error('não usado neste teste');
+  listPaginated(): Promise<never> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async findById(id: string): Promise<SessionEvent | null> {
-    return this.events.get(id) ?? null;
+  findById(id: string): Promise<SessionEvent | null> {
+    return Promise.resolve(this.events.get(id) ?? null);
   }
-  async listByTypeForProject(): Promise<SessionEvent[]> {
-    throw new Error('não usado neste teste');
+  listByTypeForProject(): Promise<SessionEvent[]> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async listByTypeInSession(): Promise<SessionEvent[]> {
-    throw new Error('não usado neste teste');
+  listByTypeInSession(): Promise<SessionEvent[]> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async listForProjectInWindow(): Promise<SessionEvent[]> {
-    throw new Error('não usado neste teste');
+  findLatestOfTypesInSession(): Promise<SessionEvent | null> {
+    return Promise.reject(new Error('não usado neste teste'));
+  }
+  listForProjectInWindow(): Promise<SessionEvent[]> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
 }
 
 class FakeSessions implements SessionRepository {
   sessions = new Map<string, Session>();
 
-  async create(): Promise<Session> {
-    throw new Error('não usado neste teste');
+  create(): Promise<Session> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async findInProject(projectId: string, sessionId: string) {
+  findInProject(projectId: string, sessionId: string) {
     const session = this.sessions.get(sessionId);
-    return session && session.projectId === projectId ? session : null;
+    return Promise.resolve(
+      session && session.projectId === projectId ? session : null,
+    );
   }
-  async listForProject(): Promise<Session[]> {
-    throw new Error('não usado neste teste');
+  listForProject(): Promise<Session[]> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async findActiveExecutionSession(): Promise<Session | null> {
-    throw new Error('não usado neste teste');
+  findActiveExecutionSession(): Promise<Session | null> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async rename(): Promise<Session | null> {
-    throw new Error('não usado neste teste');
+  rename(): Promise<Session | null> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async findInProjectForUpdate(): Promise<Session | null> {
-    throw new Error('não usado neste teste');
+  findInProjectForUpdate(): Promise<Session | null> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async updateStatus(): Promise<Session> {
-    throw new Error('não usado neste teste');
+  updateStatus(): Promise<Session> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
-  async incrementSeq(): Promise<number | null> {
-    throw new Error('não usado neste teste');
+  incrementSeq(): Promise<{
+    seq: number;
+    status: Session['status'];
+  } | null> {
+    return Promise.reject(new Error('não usado neste teste'));
   }
 }
 
@@ -140,6 +157,7 @@ function buildProjector(opts: {
     new RecordHypothesisUseCase(graph),
     new RecordAnamneseProfileUseCase(graph),
     new RecordInteractionUseCase(graph),
+    new RecordProfileFactUseCase(graph),
   );
 }
 
@@ -180,7 +198,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
 
@@ -200,11 +223,21 @@ describe('GraphProjector', () => {
     const sessions = new FakeSessions();
     sessionEvents.events.set(
       'evt-ev1',
-      makeEvent({ id: 'evt-ev1', sessionId: 'sess-1', seq: 3, type: 'agent.response' }),
+      makeEvent({
+        id: 'evt-ev1',
+        sessionId: 'sess-1',
+        seq: 3,
+        type: 'agent.response',
+      }),
     );
     sessionEvents.events.set(
       'evt-ev2',
-      makeEvent({ id: 'evt-ev2', sessionId: 'sess-1', seq: 5, type: 'agent.response' }),
+      makeEvent({
+        id: 'evt-ev2',
+        sessionId: 'sess-1',
+        seq: 5,
+        type: 'agent.response',
+      }),
     );
     sessionEvents.events.set(
       'evt-hyp',
@@ -229,7 +262,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
 
@@ -255,7 +293,11 @@ describe('GraphProjector', () => {
         seq: 4,
         type: 'anamnese.profile_updated',
         actor: { kind: 'agent', id: 'anamnese' },
-        payload: { userId: 'user-1', competency: 'typescript', level: 'intermediario' },
+        payload: {
+          userId: 'user-1',
+          competency: 'typescript',
+          level: 'intermediario',
+        },
       }),
     );
     await outbox.append({
@@ -266,7 +308,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
 
@@ -275,6 +322,74 @@ describe('GraphProjector', () => {
       dimensao: 'typescript',
       proficiencia: 'intermediario',
     });
+    expect(outbox.rows[0].processedAt).not.toBeNull();
+  });
+
+  async function projetarAceite(payload: Record<string, unknown>) {
+    const outbox = new FakeOutbox();
+    const sessionEvents = new FakeSessionEvents();
+    const sessions = new FakeSessions();
+    sessionEvents.events.set(
+      'evt-aceite',
+      makeEvent({
+        id: 'evt-aceite',
+        sessionId: 'sess-1',
+        seq: 12,
+        type: 'psychologist.hypothesis_accepted',
+        actor: { kind: 'user', id: 'user-1' },
+        payload,
+        createdAt: new Date('2026-10-01T10:00:00.000Z'),
+      }),
+    );
+    await outbox.append({
+      aggregateType: GRAPH_PROJECTION_AGGREGATE_TYPE,
+      aggregateId: 'sess-1',
+      eventType: 'psychologist.hypothesis_accepted',
+      payload: { eventId: 'evt-aceite' },
+    });
+    const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
+    await projector.drainOnce();
+    return { run, outbox };
+  }
+
+  it('RN-680: projeta o aceite da PRÓPRIA pessoa como fato do perfil', async () => {
+    const { run, outbox } = await projetarAceite({
+      hypothesisId: 'hyp-1',
+      agenteAlvo: 'po',
+      projectId: 'proj-1',
+      sujeito: 'user-1',
+      hipotese: 'prefere uma pergunta por vez',
+      sugestao: 'o PO pergunta uma coisa de cada vez',
+      fatoDoPerfil: true,
+    });
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run.mock.calls[0][0]).toContain('FatoDoPerfil');
+    expect(run.mock.calls[0][1]).toEqual({
+      hypothesisId: 'hyp-1',
+      userId: 'user-1',
+      projectId: 'proj-1',
+      agenteAlvo: 'po',
+      hipotese: 'prefere uma pergunta por vez',
+      sugestao: 'o PO pergunta uma coisa de cada vez',
+      aceitoEm: '2026-10-01T10:00:00.000Z',
+    });
+    expect(outbox.rows[0].processedAt).not.toBeNull();
+  });
+
+  it('RN-680: aceite sem fatoDoPerfil (de terceiro, ou anterior à RN) não grava nada, e a linha conclui', async () => {
+    const { run, outbox } = await projetarAceite({
+      hypothesisId: 'hyp-1',
+      agenteAlvo: 'po',
+    });
+
+    expect(run).not.toHaveBeenCalled();
     expect(outbox.rows[0].processedAt).not.toBeNull();
   });
 
@@ -304,7 +419,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
 
@@ -348,6 +468,7 @@ describe('GraphProjector', () => {
       new RecordHypothesisUseCase(graph),
       new RecordAnamneseProfileUseCase(graph),
       new RecordInteractionUseCase(graph),
+      new RecordProfileFactUseCase(graph),
     );
 
     await projector.drainOnce();
@@ -385,6 +506,7 @@ describe('GraphProjector', () => {
       new RecordHypothesisUseCase(unavailableGraphStore()),
       new RecordAnamneseProfileUseCase(unavailableGraphStore()),
       new RecordInteractionUseCase(unavailableGraphStore()),
+      new RecordProfileFactUseCase(unavailableGraphStore()),
     );
     await down.drainOnce();
     expect(outbox.rows[0].processedAt).toBeNull();
@@ -392,7 +514,12 @@ describe('GraphProjector', () => {
     // Segundo ciclo: grafo voltou — o MESMO item, ainda não processado, é
     // retentado com sucesso.
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const up = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const up = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
     await up.drainOnce();
 
     expect(run).toHaveBeenCalledTimes(1);
@@ -422,7 +549,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
     // Simula um replay do outbox (ex.: reconstrução do grafo do zero) — a
@@ -446,7 +578,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await expect(projector.drainOnce()).resolves.toBeUndefined();
     expect(run).not.toHaveBeenCalled();
@@ -466,7 +603,12 @@ describe('GraphProjector', () => {
     });
 
     const run = vi.fn<GraphTx['run']>().mockResolvedValue({ records: [] });
-    const projector = buildProjector({ graphRun: run, outbox, sessionEvents, sessions });
+    const projector = buildProjector({
+      graphRun: run,
+      outbox,
+      sessionEvents,
+      sessions,
+    });
 
     await projector.drainOnce();
 

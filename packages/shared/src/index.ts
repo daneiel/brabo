@@ -83,7 +83,26 @@ export interface LLMProviderCapabilities {
    * degrada olhando a capability, nunca descobrindo na falha.
    */
   readonly embeddings: boolean;
+  /**
+   * O provider sabe receber um CRITÉRIO DE ROTEAMENTO entre os upstreams que
+   * servem o mesmo modelo (ADR 0166) — hoje, só um HUB tem o que rotear.
+   * Camada de PROVIDER apenas: o critério é do hub, e o catálogo não o publica
+   * por modelo.
+   *
+   * Obrigatório pelo mesmo motivo de `embeddings`, e `true` só quando um smoke
+   * contra a API real provou que o hub aceita o campo e o upstream devolvido
+   * responde a ele — nunca por leitura de documentação (ADR 0041).
+   */
+  readonly routingPreference: boolean;
 }
+
+/**
+ * O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). É o
+ * vocabulário do `provider.sort` do OpenRouter, que é o único consumidor hoje;
+ * a lista em runtime mora em `apps/api/src/domain/llm/routing-preference.ts`
+ * (este pacote é 100% tipo).
+ */
+export type RoutingPreference = "price" | "throughput" | "latency";
 
 /**
  * O que se pede a um provider ao gerar embedding (ADR 0075).
@@ -243,6 +262,11 @@ export interface ChatOptions {
   host?: string;
   /** Ferramentas oferecidas ao modelo (tool calling). */
   tools?: ToolDef[];
+  /**
+   * Critério de roteamento do binding vencedor (ADR 0166). Provider que não
+   * declara `capabilities.routingPreference` IGNORA — nunca falha por ele.
+   */
+  routingPreference?: RoutingPreference;
 }
 
 export interface ChatTextDeltaChunk {
@@ -262,6 +286,35 @@ export interface ChatUsageChunk {
    * `undefined` quando o provider não é hub ou não informou.
    */
   upstreamProvider?: string;
+  /**
+   * O CUSTO REAL que o provider disse ter cobrado por esta chamada, em
+   * micro-USD (ADR 0188, RN-665) — no OpenRouter, `usage.cost`. Quando vem,
+   * ele É o custo gravado e mostrado; o preço do catálogo (ADR 0042) fica só
+   * para quando não vem. `undefined` = o provider não disse (ou disse algo que
+   * não é o custo inteiro — ver o hook `extrairCustoReal`).
+   */
+  costMicros?: number;
+  /**
+   * O modelo que a RESPOSTA diz ter servido (`model` do frame) — num hub, o
+   * alias pedido (`~deepseek/deepseek-flash-latest`) resolve para uma versão
+   * datada, e é ela que o custo real cobra (RN-665).
+   */
+  resolvedModel?: string;
+  /** O `id` que o provider deu à resposta (`gen-…` no OpenRouter), para conferir depois. */
+  generationId?: string;
+  /**
+   * Quantos dos `inputTokens` o provider serviu de CACHE (cache read) —
+   * `usage.prompt_tokens_details.cached_tokens` no dialeto OpenAI (RN-666).
+   * PARTE da entrada, nunca somada a ela. `undefined` = o provider não disse,
+   * que é diferente de 0 (disse que não houve cache).
+   */
+  cachedInputTokens?: number;
+  /**
+   * Quantos dos `outputTokens` foram de RACIOCÍNIO —
+   * `usage.completion_tokens_details.reasoning_tokens` (RN-666). Parte da
+   * saída, nunca somada a ela; `undefined` = não disse.
+   */
+  reasoningTokens?: number;
 }
 
 export interface ChatErrorChunk {

@@ -24,18 +24,32 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
     mod
   end
 
+  defp encerrar_dev_agents_do_projeto(project_id) do
+    Engine.Dev.Registry
+    |> Registry.select([{{{:"$1", :_}, :"$2", :_}, [{:==, :"$1", project_id}], [:"$2"]}])
+    |> Enum.each(&DynamicSupervisor.terminate_child(DevAgentSupervisor, &1))
+  end
+
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :worktree_manager, FakeWorktreeManager)
     Application.put_env(:engine, :test_pid, self())
 
+    project_id = Ecto.UUID.generate()
+
     on_exit(fn ->
+      # ANTES de soltar o env (AT-180). Os dev agents que a rota sobe são
+      # filhos do `DevAgentSupervisor`, não do teste: sem isto eles seguiam
+      # vivos, o `delete_env` os deixava com o cliente `Live`, e um claim
+      # tardio (`dev-api-2`, do `parallelize`) falhava contra `localhost:3000`
+      # e emitia `dev.error` pelo cliente que o teste SEGUINTE tivesse posto —
+      # direto no mailbox dele (`AgentCommandControllerTest`, RN-587).
+      encerrar_dev_agents_do_projeto(project_id)
+
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :worktree_manager)
       Application.delete_env(:engine, :test_pid)
     end)
-
-    project_id = Ecto.UUID.generate()
 
     # RN-502/ADR 0143 — a rota sobe/acorda dev agents, e todo claim exige
     # container REGISTRADO `running`.

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
 import navPtBR from '../locales/pt-BR/nav.json';
+import { simularLayoutMovel } from '../test/match-media';
 
 /**
  * Instância REAL de i18next, própria do teste (mesmo padrão de
@@ -283,5 +284,159 @@ describe('ProjectRail — navegação por teclado', () => {
 
     expect(document.activeElement).toBe(visaoGeral);
     expect(visaoGeral.getAttribute('aria-selected')).toBe('true');
+  });
+});
+
+/**
+ * RN-643 (AT-316): abaixo do breakpoint móvel o trilho vira BARRA horizontal
+ * rolável — as mesmas 12 folhas, o eixo do teclado girado junto.
+ */
+describe('ProjectRail — barra horizontal no layout móvel (RN-643)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('vira tablist HORIZONTAL com as 12 abas na mesma ordem, e traz a ativa para a faixa visível', () => {
+    largura = simularLayoutMovel(true);
+    const rolar = vi.fn();
+    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = rolar;
+
+    render(<Controlado inicial="settings" />);
+
+    const lista = screen.getByRole('tablist');
+    expect(lista).toHaveAttribute('aria-orientation', 'horizontal');
+    const abas = within(lista).getAllByRole('tab');
+    expect(abas.map((b) => b.textContent?.replace(/\d+$/, ''))).toEqual(ORDEM_ACHATADA);
+    expect(rolar).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(rolar.mock.contexts[0]).toBe(screen.getByRole('tab', { name: 'Configurações' }));
+  });
+
+  it('as setas esquerda/direita andam, com volta; a seta para baixo não faz nada ali', async () => {
+    largura = simularLayoutMovel(true);
+    const usuario = userEvent.setup();
+    render(<Controlado inicial="overview" />);
+
+    screen.getByRole('tab', { name: 'Visão geral' }).focus();
+    await usuario.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
+
+    await usuario.keyboard('{ArrowDown}');
+    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
+
+    await usuario.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Configurações' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('sem matchMedia (desktop) continua o trilho VERTICAL, e a seta direita não anda', async () => {
+    const usuario = userEvent.setup();
+    render(<Controlado inicial="overview" />);
+
+    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
+    screen.getByRole('tab', { name: 'Visão geral' }).focus();
+    await usuario.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Visão geral' })).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+/**
+ * AT-330 (achado N8 da auditoria da Rodada 29): em 390px a aba ativa nascia
+ * cortada ("Config…") — os contadores chegam depois e empurram a ativa para
+ * fora — e nada dizia que a faixa rola.
+ */
+describe('ProjectRail — a faixa móvel acompanha a ativa e diz que rola (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  /** Dá à faixa as medidas que o jsdom não calcula. */
+  function medidas(el: HTMLElement, { scrollWidth, clientWidth }: { scrollWidth: number; clientWidth: number }) {
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: scrollWidth });
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: clientWidth });
+  }
+
+  it('um contador que chega depois traz a aba ativa de volta para a faixa', () => {
+    largura = simularLayoutMovel(true);
+    const rolar = vi.fn();
+    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = rolar;
+    const semContador = ITENS.map((item) =>
+      item.tipo === 'grupo'
+        ? { ...item, abas: item.abas.map(({ count: _c, ...aba }) => aba) }
+        : item,
+    );
+
+    const tela = render(
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <ProjectRail itens={semContador} active="settings" onChange={() => {}} />
+      </I18nextProvider>,
+    );
+    const chamadasAntes = rolar.mock.calls.length;
+
+    tela.rerender(
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <ProjectRail itens={ITENS} active="settings" onChange={() => {}} />
+      </I18nextProvider>,
+    );
+
+    expect(rolar.mock.calls.length).toBeGreaterThan(chamadasAntes);
+    expect(rolar.mock.contexts.at(-1)).toBe(screen.getByRole('tab', { name: 'Configurações' }));
+
+    // Re-render com o MESMO conteúdo (array novo, mesmas abas) não rola de
+    // novo: quem rolou a faixa à mão não é puxado de volta a cada render.
+    const chamadasDepois = rolar.mock.calls.length;
+    tela.rerender(
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <ProjectRail itens={[...ITENS]} active="settings" onChange={() => {}} />
+      </I18nextProvider>,
+    );
+    expect(rolar.mock.calls.length).toBe(chamadasDepois);
+  });
+
+  it('a borda com conteúdo escondido é marcada, e a marca acompanha a rolagem', () => {
+    largura = simularLayoutMovel(true);
+    render(<Controlado inicial="overview" />);
+    const faixa = screen.getByRole('tablist');
+    medidas(faixa, { scrollWidth: 900, clientWidth: 390 });
+
+    act(() => {
+      faixa.scrollLeft = 0;
+      fireEvent.scroll(faixa);
+    });
+    expect(faixa).toHaveAttribute('data-rola-fim');
+    expect(faixa).not.toHaveAttribute('data-rola-inicio');
+
+    act(() => {
+      faixa.scrollLeft = 200;
+      fireEvent.scroll(faixa);
+    });
+    expect(faixa).toHaveAttribute('data-rola-fim');
+    expect(faixa).toHaveAttribute('data-rola-inicio');
+
+    act(() => {
+      faixa.scrollLeft = 510;
+      fireEvent.scroll(faixa);
+    });
+    expect(faixa).not.toHaveAttribute('data-rola-fim');
+    expect(faixa).toHaveAttribute('data-rola-inicio');
+  });
+
+  it('caso de falha: faixa que cabe inteira não esmaece nada — nem no desktop', () => {
+    largura = simularLayoutMovel(true);
+    render(<Controlado inicial="overview" />);
+    const faixa = screen.getByRole('tablist');
+    medidas(faixa, { scrollWidth: 390, clientWidth: 390 });
+    act(() => {
+      fireEvent.scroll(faixa);
+    });
+    expect(faixa).not.toHaveAttribute('data-rola-fim');
+    expect(faixa).not.toHaveAttribute('data-rola-inicio');
+
+    act(() => largura!.mudar(false));
+    expect(screen.getByRole('tablist')).not.toHaveAttribute('data-rola-fim');
   });
 });

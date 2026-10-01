@@ -84,8 +84,6 @@ describe('useSessionReadiness', () => {
     expect(result.current.arquitetoActive).toBe(true);
     expect(result.current.hasBusinessRule).toBe(true);
     expect(result.current.hasPromotedStory).toBe(true);
-    expect(result.current.hasProductBrief).toBe(true);
-    expect(result.current.activeAgent).toBe('arquiteto');
   });
 
   it('degrada pra falso/null sem nenhuma evidência (sessão nova, backlog undefined)', () => {
@@ -95,8 +93,6 @@ describe('useSessionReadiness', () => {
     expect(result.current.arquitetoActive).toBe(false);
     expect(result.current.hasBusinessRule).toBe(false);
     expect(result.current.hasPromotedStory).toBe(false);
-    expect(result.current.hasProductBrief).toBe(false);
-    expect(result.current.activeAgent).toBeNull();
   });
 
   it('hasPromotedStory exige status diferente de draft — épico só com draft não conta', () => {
@@ -105,18 +101,5 @@ describe('useSessionReadiness', () => {
     );
 
     expect(result.current.hasPromotedStory).toBe(false);
-  });
-
-  it('activeAgent ignora agentes fora de AGENTES_DE_CHAT (ex.: infra) e pega o mais recente por seq entre os elegíveis', () => {
-    const events: SessionEvent[] = [
-      evento(1, 'agent.activated', { agent: 'criativo' }),
-      // Infra não conversa pelo composer (achado 9-fix) — nunca deve virar
-      // `activeAgent`, mesmo sendo o evento de seq mais alto.
-      evento(2, 'agent.activated', { agent: 'infra' }),
-    ];
-
-    const { result } = renderHook(() => useSessionReadiness(events, []));
-
-    expect(result.current.activeAgent).toBe('criativo');
   });
 });

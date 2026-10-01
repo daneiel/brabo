@@ -121,12 +121,15 @@ describe('service install (RN-518)', () => {
     const unit = sistema.arquivos.get(UNIT_LINUX);
     expect(unit).toBeDefined();
     // A pasta e o projeto vão para dentro do arquivo, e o `WorkingDirectory` é
-    // o registro que `uninstall` lê de volta.
-    expect(unit).toContain(`WorkingDirectory="${PASTA}"`);
+    // o registro que `uninstall` lê de volta. SEM aspas: o systemd não faz
+    // unquoting nesta diretiva, e com elas a unit nunca iniciou — quem prova
+    // isso contra o validador de verdade é `servico-systemd.spec.ts`.
+    expect(unit).toContain(`\nWorkingDirectory=${PASTA}\n`);
+    expect(unit).not.toContain('WorkingDirectory="');
     expect(unit).toContain(`"--project" "${PROJETO}"`);
     expect(unit).toContain(`"--dir" "${PASTA}"`);
     expect(unit).toContain('"--api-url" "https://brabo.example"');
-    expect(unit).toContain('Environment=PATH=/usr/local/bin:/usr/bin:/bin');
+    expect(unit).toContain('Environment="PATH=/usr/local/bin:/usr/bin:/bin"');
     // Alvo de SESSÃO, nunca `multi-user.target` (que é do gerenciador de sistema).
     expect(unit).toContain('WantedBy=default.target');
     // `on-abnormal` e nunca `on-failure`: exit 1 do runner é recusa fatal
@@ -383,13 +386,59 @@ describe('service uninstall (RN-518)', () => {
     expect(texto).toContain('precisa saber O QUE remover');
     expect(texto).toContain('Não há unit nenhuma instalada');
   });
+
+  // A unit ANTIGA (`WorkingDirectory="…"`, entre aspas) nunca chegou a INICIAR
+  // — era o defeito —, mas ela está no disco de quem instalou uma versão
+  // publicada. Quem está nesse estado não pode perder também a saída dele: a
+  // leitura de volta aceita as DUAS formas, e é o que este teste fixa.
+  it('lê a pasta de uma unit ANTIGA, com o WorkingDirectory entre aspas', () => {
+    const sistema = new SistemaFalso();
+    sistema.arquivos.set(UNIT_LINUX, `WorkingDirectory="${PASTA}"\n`);
+    sistema.arquivos.set(join(PASTA, NOME_ARQUIVO_CONFIG), '{}');
+    sistema.arquivos.set(join(PASTA, NOME_ARQUIVO_CHAVE), '{}');
+
+    const resposta = desinstalar(
+      contexto({
+        sistema,
+        cwd: '/home/dev/outra-pasta',
+        argv: ['node', 'x', 'service', 'uninstall', '--project', PROJETO],
+      }),
+      depsSimples(),
+    );
+
+    expect(resposta.codigo).toBe(0);
+    expect(sistema.arquivos.has(join(PASTA, NOME_ARQUIVO_CONFIG))).toBe(false);
+    expect(sistema.arquivos.has(join(PASTA, NOME_ARQUIVO_CHAVE))).toBe(false);
+  });
+
+  // O `%` é o único caractere que a forma NOVA escapa (`%%`), porque
+  // `WorkingDirectory=` passa por expansão de especificador. A leitura desfaz
+  // o escape — senão `uninstall` iria limpar uma pasta que não existe.
+  it('lê de volta a pasta com % escapado como %%, e devolve o caractere literal', () => {
+    const pastaComPorcento = `${HOME}/projetos/50%off`;
+    const sistema = new SistemaFalso();
+    sistema.arquivos.set(UNIT_LINUX, `WorkingDirectory=${HOME}/projetos/50%%off\n`);
+    sistema.arquivos.set(join(pastaComPorcento, NOME_ARQUIVO_CHAVE), '{}');
+
+    const resposta = desinstalar(
+      contexto({
+        sistema,
+        cwd: '/home/dev/outra-pasta',
+        argv: ['node', 'x', 'service', 'uninstall', '--project', PROJETO],
+      }),
+      depsSimples(),
+    );
+
+    expect(resposta.codigo).toBe(0);
+    expect(sistema.arquivos.has(join(pastaComPorcento, NOME_ARQUIVO_CHAVE))).toBe(false);
+  });
 });
 
 // ------------------------------------------------------------------- status
 
 describe('service status: os QUATRO estados NÃO colapsam (RN-518/RN-088)', () => {
   function comUnit(sistema: SistemaFalso): SistemaFalso {
-    sistema.arquivos.set(UNIT_LINUX, `WorkingDirectory="${PASTA}"\n`);
+    sistema.arquivos.set(UNIT_LINUX, `WorkingDirectory=${PASTA}\n`);
     return sistema;
   }
 
@@ -561,8 +610,10 @@ describe('service install --machine (RN-545)', () => {
     expect(unit).not.toContain('"--project"');
     expect(unit).not.toContain('"--dir"');
     // O `WorkingDirectory` é onde a CREDENCIAL está: é de lá que
-    // `lerArgumentos` lê a chave de dispositivo sob systemd/launchd.
-    expect(unit).toContain(`WorkingDirectory="${PASTA_DA_MAQUINA}"`);
+    // `lerArgumentos` lê a chave de dispositivo sob systemd/launchd. Sem
+    // aspas — ver o teste irmão da unit de projeto.
+    expect(unit).toContain(`\nWorkingDirectory=${PASTA_DA_MAQUINA}\n`);
+    expect(unit).not.toContain('WorkingDirectory="');
     // `Restart=on-abnormal` fica byte a byte — lista vazia sai com 0 (RN-544),
     // e `on-failure` reergueria uma recusa fatal de join em laço.
     expect(unit).toContain('Restart=on-abnormal');
@@ -605,10 +656,58 @@ describe('service install --machine (RN-545)', () => {
     instalar(ctx, depsDeMaquina());
 
     const unit = sistema.arquivos.get('/home/dev/.cfg/systemd/user/brabo-runner.service');
-    expect(unit).toContain('Environment=XDG_CONFIG_HOME=/home/dev/.cfg');
+    expect(unit).toContain('Environment="XDG_CONFIG_HOME=/home/dev/.cfg"');
     // O VALOR da base NÃO vai para a unit: trocá-la é editar o arquivo e
     // reiniciar, nunca reinstalar.
     expect(unit).not.toContain('"--base"');
+  });
+
+  it('a unit de PROJETO não grava XDG_CONFIG_HOME, mesmo com ela posta (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      xdgConfigHome: '/home/dev/.cfg',
+      argv: ['node', 'x', 'service', 'install'],
+    });
+
+    instalar(ctx, depsInstalar());
+
+    const unit = sistema.arquivos.get(
+      `/home/dev/.cfg/systemd/user/brabo-runner-${PROJETO}.service`,
+    );
+    expect(unit).toBeDefined();
+    expect(unit).not.toContain('XDG_CONFIG_HOME');
+  });
+
+  it('RECUSA XDG_CONFIG_HOME com quebra de linha — seria diretiva nova na unit, e nada é escrito (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      cwd: PASTA_DA_MAQUINA,
+      xdgConfigHome: '/home/dev/.cfg\nExecStartPre=/bin/false',
+      argv: ['node', 'x', 'service', 'install', '--machine'],
+    });
+
+    const resposta = instalar(ctx, depsDeMaquina());
+
+    expect(resposta.codigo).not.toBe(0);
+    expect(resposta.linhas.join('\n')).toContain('XDG_CONFIG_HOME');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA PATH com quebra de linha — vale também para a unit de PROJETO, que o grava (AT-095)', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      path: '/usr/bin\n[Install]',
+      argv: ['node', 'x', 'service', 'install'],
+    });
+
+    const resposta = instalar(ctx, depsInstalar());
+
+    expect(resposta.codigo).not.toBe(0);
+    expect(resposta.linhas.join('\n')).toContain('PATH');
+    expect(sistema.arquivos.size).toBe(0);
   });
 
   it('macOS: o Label não leva projectId, e o log perde o sufixo', () => {
@@ -758,7 +857,7 @@ describe('as duas espécies NÃO se sobrepõem (RN-545)', () => {
       contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
       depsInstalar(),
     );
-    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/x"\n');
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory=/x\n');
     sistema.comandos.length = 0;
     sistema.respostas.set('systemctl --user is-active brabo-runner.service', {
       estado: 'executou',
@@ -784,7 +883,7 @@ describe('as duas espécies NÃO se sobrepõem (RN-545)', () => {
 
   it('status de um projeto DIZ que a unit de máquina existe, e não pergunta o estado dela', () => {
     const sistema = new SistemaFalso();
-    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/x"\n');
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory=/x\n');
 
     const resposta = status(
       contexto({ sistema, argv: ['node', 'x', 'service', 'status'] }),
@@ -815,7 +914,7 @@ describe('as duas espécies NÃO se sobrepõem (RN-545)', () => {
       contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
       depsInstalar(),
     );
-    sistema.arquivos.set(UNIT_MAQUINA_LINUX, `WorkingDirectory="${PASTA_DA_MAQUINA}"\n`);
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, `WorkingDirectory=${PASTA_DA_MAQUINA}\n`);
     sistema.arquivos.set(join(PASTA_DA_MAQUINA, NOME_ARQUIVO_CHAVE), '{}');
 
     const resposta = desinstalar(
@@ -835,8 +934,8 @@ describe('as duas espécies NÃO se sobrepõem (RN-545)', () => {
 
   it('uninstall sem espécie nomeada RECUSA e LISTA as duas — remover a errada apaga a chave errada', () => {
     const sistema = new SistemaFalso();
-    sistema.arquivos.set(UNIT_LINUX, 'WorkingDirectory="/x"\n');
-    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/y"\n');
+    sistema.arquivos.set(UNIT_LINUX, 'WorkingDirectory=/x\n');
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory=/y\n');
 
     const resposta = desinstalar(
       contexto({ sistema, argv: ['node', 'x', 'service', 'uninstall'] }),

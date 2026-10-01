@@ -4,11 +4,11 @@
     "executors": { "label": "Executores" },
     "criativo": { "label": "Criativo" },
     "chat": { "label": "Chat" },
-    "insights": { "label": "Insights" },
+    "insights": { "label": "Percepções" },
     "code": { "label": "Código" },
     "prs": { "label": "PRs" },
     "approvals": { "label": "Aprovações" },
-    "backlog": { "label": "Backlog" },
+    "backlog": { "label": "Histórias" },
     "architecture": { "label": "Arquitetura" },
     "spend": { "label": "Gastos" },
     "settings": { "label": "Configurações" }

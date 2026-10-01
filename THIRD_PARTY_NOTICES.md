@@ -17,7 +17,7 @@ documentação de projeto.
 | **Conteúdo da imagem do engine** | **Sim, se a imagem for publicada** | o binário sai empacotado dentro dela |
 | **Fontes do design system** | **Sim, se a imagem do web for publicada** | desde o ADR 0036 os `.woff2` são auto-hospedados e saem dentro da imagem |
 
-As quatro imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
+As cinco imagens **são publicadas** no GHCR, públicas e por digest, a cada tag
 final ([ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). A
 seção 1 **é obrigação**, não informativo — esta frase dizia o contrário desde
 2026-07-27 e ficou para trás quando a publicação passou a acontecer de verdade.
@@ -87,6 +87,17 @@ docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:<tag> \
   -c 'cat /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md'
 ```
 
+**Desde a AT-120, o mesmo arquivo viaja em TODO artefato publicado**, por
+decisão do mantenedor: dentro das imagens `brabo-api`, `brabo-web`,
+`brabo-broker` e `brabo-backup`, no mesmo caminho e na mesma forma da do engine
+(troque o nome da imagem no comando acima), e junto dos binários do runner como
+o asset `THIRD_PARTY_NOTICES.md` da Release, coberto pelo mesmo `checksums.txt`
+assinado (RN-524). A decisão é conservadora: este repositório não afirma que
+algum desses artefatos dispensa a oferta. Até a AT-120 o comando acima dava
+"Permission denied" na imagem do engine: a pasta nascia sem permissão de
+travessia para o usuário não-root da imagem, e agora nasce `0755` antes da
+cópia.
+
 > **TODO(humano):** o caminho 1 cobre a obrigação com o desenho atual, e é o
 > que está no ar. O **caminho 3** (separar os scanners num sidecar, deixando a
 > imagem do engine livre de copyleft) continua aberto como escolha de
@@ -145,6 +156,12 @@ como copyleft):
 licenças de base Alpine da seção 1. O cliente MinIO (`mc`) **foi removido** na
 Fase 5 — carregava 33 CVEs por ser um binário Go congelado desde setembro/2025
 ([ADR 0027](docs/adr/0027-fase5-backup-hardening-release.md), decisão 1b).
+
+O **servidor** S3 do cluster local não entra aqui porque não é distribuído por
+nós: o SeaweedFS (Apache-2.0) é puxado do Docker Hub pelo próprio cluster, só
+no overlay local. Ele substituiu o MinIO (AGPL-3.0) quando a MinIO deixou de
+publicar a imagem comunitária
+([ADR 0169](docs/adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
 
 ## 4. Dependências de aplicação
 

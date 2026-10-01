@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
@@ -7,6 +7,7 @@ import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
 import { CHAVE_COLAPSADO } from '../lib/sidebar-state';
+import { simularLayoutMovel } from '../test/match-media';
 // Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
 // rótulos, então o teste também lê daqui em vez de repetir uma string.
 import { ABAS_DO_PROJETO } from './project-tabs';
@@ -57,6 +58,12 @@ const estado = vi.hoisted(() => ({
   // os eventos dela — só usados nos testes que miram a seção.
   execSession: null as { id: string } | null,
   sessionEvents: [] as unknown[],
+  // RN-648: a sessão que a Visão geral lê (a mais recente) e os eventos POR
+  // sessão — o mock de `useSessionEvents` responde pela sessão PEDIDA, senão
+  // ler a sessão errada passaria despercebido.
+  latestSession: undefined as { id: string } | undefined,
+  latestSessionQuery: {} as Record<string, unknown>,
+  eventosPorSessao: {} as Record<string, unknown[]>,
 }));
 
 const PROJECT: Project = {
@@ -71,6 +78,7 @@ const PROJECT: Project = {
   workspacePath: null,
   workspaceVerifiedAt: null,
   mirrorPath: null,
+  language: 'pt-BR',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -117,8 +125,27 @@ vi.mock('../lib/hooks', () => ({
   useProjectsSummary: () => ({ data: estado.summaries }),
   // Atividades (RN-198) — só o projeto CORRENTE (`pathname`) as consulta;
   // vazio por padrão é suficiente para os testes que não miram a seção.
-  useActiveExecutionSession: () => ({ session: estado.execSession }),
-  useSessionEvents: () => ({ data: { items: estado.sessionEvents, nextCursor: null } }),
+  useActiveExecutionSession: () => ({
+    session: estado.execSession,
+    isPending: false,
+    isError: false,
+  }),
+  // A sidebar só pede a lista de sessões quando NÃO há execução (RN-648):
+  // `projectId` indefinido é a query desligada, e o mock responde como ela.
+  useLatestSession: (projectId: string | undefined) => ({
+    latest: projectId ? estado.latestSession : undefined,
+    isPending: false,
+    isError: false,
+    ...estado.latestSessionQuery,
+  }),
+  useSessionEvents: (_projectId: string | undefined, sessionId: string | undefined) => ({
+    data: {
+      items: sessionId ? (estado.eventosPorSessao[sessionId] ?? estado.sessionEvents) : [],
+      nextCursor: null,
+    },
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 vi.mock('../lib/api-client', async () => {
@@ -127,6 +154,9 @@ vi.mock('../lib/api-client', async () => {
   const real =
     await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
   return {
+    // O controle de roteamento (ADR 0166) renderiza dentro de Configurações:
+    // nenhum provider com a capability, o estado de produção hoje.
+    listProviderCapabilities: () => Promise.resolve([]),
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
   };
@@ -164,6 +194,9 @@ beforeEach(() => {
   estado.pathname = '/';
   estado.execSession = null;
   estado.sessionEvents = [];
+  estado.latestSession = undefined;
+  estado.latestSessionQuery = {};
+  estado.eventosPorSessao = {};
   document.documentElement.removeAttribute('data-theme');
 });
 
@@ -311,7 +344,7 @@ describe('Shell — marca', () => {
  * lacuna.
  */
 describe('Shell — novo projeto na sidebar', () => {
-  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', () => {
+  it('o botão aparece e abre o mesmo wizard estando DENTRO de um projeto aberto', async () => {
     estado.pathname = '/projects/project-1';
 
     renderShell();
@@ -320,7 +353,8 @@ describe('Shell — novo projeto na sidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo projeto' }));
 
-    expect(screen.getByTestId('wizard-stub')).toBeInTheDocument();
+    // O assistente é carregado sob demanda (AT-300): o stub chega num tick.
+    expect(await screen.findByTestId('wizard-stub')).toBeInTheDocument();
   });
 
   it('também aparece no dashboard — as duas entradas convivem, uma na topbar (Dashboard) e outra na sidebar (aqui)', () => {
@@ -441,13 +475,98 @@ describe('Shell — Atividades', () => {
     ).toBeInTheDocument();
   });
 
-  it('dentro de um projeto sem nenhum evento de agente, diz que ninguém entrou em ação', () => {
+  it('dentro de um projeto cuja sessão mais recente não tem evento de agente, diz isso nomeando a sessão', () => {
     estado.pathname = `/projects/${PROJECT.id}`;
-    estado.sessionEvents = [];
+    estado.latestSession = { id: 's-vazia' };
+    estado.eventosPorSessao = { 's-vazia': [] };
 
     renderShell();
 
-    expect(screen.getByText('Nenhum agente entrou em ação ainda.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nenhum agente entrou em ação na sessão mais recente ainda.'),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * RN-648 (AT-325) — a contradição do levantamento visual: projeto só com
+   * sessões de CONVERSA (nenhuma de execução), o Criativo agindo na sessão que
+   * a Visão geral lê, e a sidebar dizendo que nenhum agente entrou em ação.
+   * Ela lia a sessão de EXECUÇÃO, que ali é `null`.
+   */
+  it('lê a MESMA sessão da Visão geral: sem execução, o Criativo da sessão mais recente aparece', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.execSession = null;
+    estado.latestSession = { id: 's-criativa' };
+    estado.eventosPorSessao = {
+      's-criativa': [
+        {
+          id: 'ev-1',
+          sessionId: 's-criativa',
+          seq: 1,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'criativo' },
+          payload: { content: 'Vamos lá' },
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    renderShell();
+
+    expect(screen.getByTestId('atividades-grupo-criativo')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
+  });
+
+  it('com execução vigente, lê a sessão de EXECUÇÃO (a da aba Executores), e o vazio diz qual', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.execSession = { id: 's-exec' };
+    estado.latestSession = { id: 's-criativa' };
+    estado.eventosPorSessao = {
+      's-exec': [
+        {
+          id: 'ev-dev',
+          sessionId: 's-exec',
+          seq: 4,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'dev-backend' },
+          payload: { content: 'feito' },
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      's-criativa': [],
+    };
+
+    const { unmount } = renderShell();
+    expect(screen.getByTestId('atividades-grupo-dev-backend')).toBeInTheDocument();
+    unmount();
+
+    estado.eventosPorSessao = { 's-exec': [], 's-criativa': [] };
+    renderShell();
+    expect(
+      screen.getByText('Nenhum agente entrou em ação na sessão de execução ainda.'),
+    ).toBeInTheDocument();
+  });
+
+  it('projeto sem sessão nenhuma diz isso, e não que nenhum agente agiu', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.latestSession = undefined;
+
+    renderShell();
+
+    expect(screen.getByText('Este projeto ainda não tem sessão.')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
+  });
+
+  it('falha ao listar as sessões vira erro nomeado, nunca "nenhum agente"', () => {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    estado.latestSessionQuery = { isError: true };
+
+    renderShell();
+
+    expect(screen.getByTestId('atividades-erro')).toHaveTextContent(
+      'Não foi possível carregar as atividades.',
+    );
+    expect(screen.queryByText(/Nenhum agente entrou em ação/)).toBeNull();
   });
 });
 
@@ -470,5 +589,120 @@ describe('Shell — botão de tema', () => {
     renderShell();
 
     expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-643 (AT-316): abaixo do breakpoint móvel a sidebar vira GAVETA. A
+ * consulta vem de `window.matchMedia` (mock em `test/match-media.ts`); sem
+ * ele o jsdom é DESKTOP, que é o caso de falha abaixo.
+ */
+describe('Shell — layout móvel (RN-643)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  function gaveta() {
+    return document.querySelector('aside') as HTMLElement;
+  }
+
+  it('a gaveta nasce fechada, abre pelo menu com o foco dentro e o Esc fecha devolvendo o foco', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+
+    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(gaveta()).not.toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+
+    const dialogo = screen.getByRole('dialog', { name: 'Navegação' });
+    expect(dialogo).toBeVisible();
+    expect(dialogo).toHaveAttribute('aria-modal', 'true');
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+    expect(menu).toHaveAttribute('aria-controls', dialogo.id);
+    expect(dialogo.contains(document.activeElement)).toBe(true);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).not.toBeVisible();
+    expect(document.activeElement).toBe(menu);
+  });
+
+  it('fecha ao seguir um link, pelo X e pelo fundo', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
+
+    fireEvent.click(menu);
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Core API'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar navegação' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(menu);
+    fireEvent.click(screen.getByTestId('fundo-da-gaveta'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(menu);
+  });
+
+  it('fecha quando a rota muda por fora da gaveta', () => {
+    largura = simularLayoutMovel(true);
+    const { rerender } = renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    estado.pathname = `/projects/${PROJECT.id}`;
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nextProvider i18n={novaInstanciaI18n()}>
+          <Shell />
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('na gaveta ignora o colapso gravado do desktop e não oferece "Recolher menu"', () => {
+    window.localStorage.setItem(CHAVE_COLAPSADO, '1');
+    largura = simularLayoutMovel(true);
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+
+    // Expandida: a lista de projetos com nome, não a trilha de iniciais.
+    expect(within(screen.getByRole('dialog')).getByText('Core API')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Recolher menu|Expandir menu/ })).not.toBeInTheDocument();
+  });
+
+  it('sem matchMedia (desktop) não há barra de menu nem diálogo — a sidebar de sempre', () => {
+    renderShell();
+
+    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Recolher menu' })).toBeInTheDocument();
+  });
+
+  it('cruzar o corte para o desktop com a gaveta aberta volta à sidebar fixa', () => {
+    largura = simularLayoutMovel(true);
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+
+    act(() => largura?.mudar(false));
+
+    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(gaveta()).toBeVisible();
+
+    // E voltar ao móvel não reabre a gaveta sozinha.
+    act(() => largura?.mudar(true));
+    expect(gaveta()).not.toBeVisible();
   });
 });

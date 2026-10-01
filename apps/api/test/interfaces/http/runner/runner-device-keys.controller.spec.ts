@@ -5,34 +5,48 @@ import { RunnerDeviceKeysController } from '../../../../src/interfaces/http/runn
 import { REQUIRED_ROLE_KEY } from '../../../../src/interfaces/http/iam/require-role.decorator';
 import type { User } from '../../../../src/domain/iam/user.entity';
 
+/*
+ * `Controller.prototype.<método>` entra aqui como CHAVE de metadata: o
+ * `Reflector` só lê o que os decorators penduraram no método, nunca o invoca.
+ * `@typescript-eslint/unbound-method` não distingue os dois usos, então a
+ * supressão fica aqui, com o motivo (a mesma de
+ * `workspaces-project-folders.controller.spec.ts`).
+ */
+/* eslint-disable @typescript-eslint/unbound-method */
+
 const user = { id: 'user-1' } as User;
 
 function controller() {
-  const register = { execute: vi.fn() };
   const list = { execute: vi.fn() };
   const revoke = { execute: vi.fn() };
   return {
-    controller: new RunnerDeviceKeysController(
-      register as never,
-      list as never,
-      revoke as never,
-    ),
-    register,
+    controller: new RunnerDeviceKeysController(list as never, revoke as never),
     list,
     revoke,
   };
 }
 
 describe('RunnerDeviceKeysController', () => {
-  it('as TRÊS rotas exigem developer — mesma régua de runner-ticket e do PAT', () => {
+  it('as DUAS rotas exigem developer — mesma régua de runner-ticket e do PAT', () => {
     const reflector = new Reflector();
     for (const handler of [
-      RunnerDeviceKeysController.prototype.registerDeviceKey,
       RunnerDeviceKeysController.prototype.listDeviceKeys,
       RunnerDeviceKeysController.prototype.revokeDeviceKey,
     ]) {
       expect(reflector.get(REQUIRED_ROLE_KEY, handler)).toBe('developer');
     }
+  });
+
+  it('o registro pelo navegador SAIU (ADR 0203, RN-687): não há handler de POST nem rota que o alcance', () => {
+    const metodos = Object.getOwnPropertyNames(
+      RunnerDeviceKeysController.prototype,
+    );
+    expect(metodos).not.toContain('registerDeviceKey');
+    expect(metodos.sort()).toEqual([
+      'constructor',
+      'listDeviceKeys',
+      'revokeDeviceKey',
+    ]);
   });
 
   it('revokeDeviceKey continua 204 depois de passar a derrubar a conexão viva (RN-520)', () => {

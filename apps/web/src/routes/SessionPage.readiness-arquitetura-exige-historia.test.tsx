@@ -57,7 +57,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => undefined,
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', async () => {
   const real =
@@ -174,7 +177,7 @@ describe('SessionPage — "Confirmar arquitetura pronta" exige história promovi
     expect(botao).toBeDisabled();
     expect(botao).toHaveAttribute(
       'title',
-      'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura',
+      'Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura',
     );
   });
 

@@ -1,4 +1,4 @@
-import type { LLMProviderName } from '@brabo/shared';
+import type { LLMProviderName, RoutingPreference } from '@brabo/shared';
 import type { Actor } from '../sessions/session-event.entity';
 import type { ModelBindingScope } from './model-binding-scope';
 
@@ -22,9 +22,36 @@ export interface TokenUsage {
    */
   inputPricePerMillionMicros: number;
   outputPricePerMillionMicros: number;
+  /**
+   * O preço acima foi DERIVADO de `custo ÷ tokens` da resposta, não veio do
+   * catálogo (ADR 0179 no Jev, ADR 0188 no chat). É o marcador de que
+   * `costMicros` é o custo REAL que o provider disse ter cobrado.
+   */
+  priceImplicit: boolean;
+  /**
+   * O que o preço de CATÁLOGO teria cobrado pela mesma chamada — só quando
+   * `costMicros` é o real (RN-665); `null` quando o número já é o do catálogo.
+   */
+  catalogCostMicros: number | null;
+  /** O modelo que a resposta disse ter servido (`model` do frame), RN-665. */
+  resolvedModelName: string | null;
+  /** O id da resposta no provider (`gen-…` no OpenRouter), RN-665. */
+  generationId: string | null;
+  /**
+   * Quantos dos `inputTokens` o provider serviu de cache (cache read), e
+   * quantos dos `outputTokens` foram raciocínio (RN-666). PARTES do total,
+   * nunca somadas a ele; `null` = o provider não disse.
+   */
+  cachedInputTokens: number | null;
+  reasoningTokens: number | null;
   latencyMs: number;
   bindingOrigin: ModelBindingScope | null;
   /** Quem serviu de fato, quando a chamada passou por um hub (Fase 9b). */
   upstreamProvider: string | null;
+  /**
+   * O critério de roteamento que FOI AO FIO (ADR 0166, RN-583), congelado como
+   * o preço. `null` = nada foi enviado.
+   */
+  routingPreference: RoutingPreference | null;
   createdAt: Date;
 }

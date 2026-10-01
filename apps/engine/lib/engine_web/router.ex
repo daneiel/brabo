@@ -32,6 +32,10 @@ defmodule EngineWeb.Router do
     pipe_through :internal
 
     post "/sessions", SessionCommandController, :create
+
+    # AT-157 (RN-579): a api avisa o canal da sessão de uma escrita que ela
+    # mesma fez (não passou pela fachada do engine).
+    post "/sessions/:sessionId/event-appended", SessionCommandController, :event_appended
     post "/actions/execute", ActionCommandController, :execute
     post "/actions/execute-git", ActionCommandController, :execute_git
 
@@ -44,14 +48,14 @@ defmodule EngineWeb.Router do
     # sessão — mesmo padrão de `agent/message` (o "agent" vem do corpo, não
     # da URL, porque um endpoint só cobre os quatro conversacionais).
     post "/sessions/:sessionId/agent/cancel", AgentCommandController, :cancel
+    # RN-673: cancela UMA mensagem que espera na fila do agente.
+    post "/sessions/:sessionId/agent/queued-message/cancel",
+         AgentCommandController,
+         :cancel_queued_message
 
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,
          :offer_infra_handoff
-
-    post "/sessions/:sessionId/agent/offer-dev-handoff",
-         AgentCommandController,
-         :offer_dev_handoff
 
     post "/sessions/:sessionId/execution/start", ExecutionCommandController, :start
     post "/sessions/:sessionId/execution/parallelize", ExecutionCommandController, :parallelize
@@ -80,11 +84,18 @@ defmodule EngineWeb.Router do
     # O runner sobe o container do projeto na máquina do usuário (ADR 0137) —
     # ver EngineWeb.ContainerCommandController. Só para projeto
     # mounted/runner; container vai pelo broker, que nunca chama isto.
-    # Revogação de credencial alcançando a conexão viva (ADR 0147 ponto 6,
-    # RN-520) — ver EngineWeb.RunnerConnectionCommandController.
+    # Remoção de membro alcançando a conexão viva (ADR 0147 ponto 6,
+    # RN-520, RN-615) — ver EngineWeb.RunnerConnectionCommandController.
     post "/projects/:projectId/runner/disconnect",
          RunnerConnectionCommandController,
          :disconnect
+
+    # Revogação de UMA credencial (chave de dispositivo ou PAT) derrubando
+    # só as conexões dela, em qualquer projeto (ADR 0201, RN-685). Sem
+    # `:projectId` no caminho: a chave de máquina não tem um.
+    post "/runner/disconnect-credential",
+         RunnerConnectionCommandController,
+         :disconnect_credential
 
     post "/projects/:projectId/containers/start", ContainerCommandController, :start
     post "/projects/:projectId/containers/stop", ContainerCommandController, :stop

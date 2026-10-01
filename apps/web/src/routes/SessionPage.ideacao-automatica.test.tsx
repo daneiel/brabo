@@ -53,7 +53,10 @@ vi.mock('../lib/chat-stream', () => ({
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -168,18 +171,17 @@ describe('SessionPage — a primeira mensagem de uma sessão criativa ativa o Cr
     expect(screen.queryByText('oi')).toBeNull();
   });
 
-  it('sessão CONSULTIVA continua pelo caminho SSE genérico — a correção é só da criativa', async () => {
+  // Nasceu como "sessão CONSULTIVA continua pelo caminho SSE genérico". Desde
+  // a RN-682 (AT-254) a consultiva sem agente não envia: nem o Criativo é
+  // ativado, nem a mensagem vai ao modelo cru.
+  it('sessão CONSULTIVA sem agente não envia — nem ativa o Criativo, nem vai ao SSE genérico (RN-682)', async () => {
     getSession.mockResolvedValue(sessao({ kind: 'consultiva' }));
-    streamChatMessage.mockReturnValue(
-      (async function* () {
-        // sem deltas — só encerra o gerador.
-      })(),
-    );
 
     montar();
     await mandarMensagem('uma dúvida qualquer');
 
-    await waitFor(() => expect(streamChatMessage).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(streamChatMessage).not.toHaveBeenCalled();
     expect(startAgent).not.toHaveBeenCalled();
     expect(sendAgentMessage).not.toHaveBeenCalled();
   });

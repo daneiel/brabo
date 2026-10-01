@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 - **Context:** lets a workspace owner/maintainer search the Hugging Face Hub and pull a GGUF model into the local Ollama daemon from Project/Workspace Settings, closing a gap the local-LLM path had no answer for (getting a model that isn't one of the few baked into the compose entrypoint)
-- **References (without editing):** [ADR 0042](0042-catalogo-com-curadoria-e-preco-congelado.md) ("never activate an auto-discovered model" — the rule this decision applies to a new surface), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (Ollama as the local daemon this pulls into), the original FASE 1 ADR that introduced `proposed_actions` and `decide()`
+- **References (without editing):** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) ("never activate an auto-discovered model" — the rule this decision applies to a new surface), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (Ollama as the local daemon this pulls into), the original FASE 1 ADR that introduced `proposed_actions` and `decide()`
 
 ## Context
 

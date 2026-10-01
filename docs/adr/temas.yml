@@ -1,0 +1,268 @@
+# O tema de cada ADR — e a lista fechada de temas (ADR 0202, AT-137).
+#
+# O tema mora AQUI, e não no ADR: ADR aceito NUNCA é editado, nem para ganhar
+# frontmatter. `docs/adr/index.md` é agrupado por tema a partir deste arquivo,
+# e `pnpm docs:check` (`scripts/docs/temas-de-adr.mjs`) reprova:
+#   - ADR em `docs/adr/` sem tema aqui;
+#   - tema citado em `adrs:` que não está em `temas:`;
+#   - entrada em `adrs:` para ADR que não existe;
+#   - tema da lista sem nenhum ADR;
+#   - no índice: seção de tema ausente, fora da ordem desta lista, linha de ADR
+#     sob a seção errada, fora de seção, repetida ou fora da ordem numérica.
+#
+# ADR novo: UMA linha em `adrs:` com UM tema (o principal — quando dois servem,
+# vale aquele em que alguém procuraria primeiro), e a linha do índice na seção
+# desse tema, em ordem numérica. Quem escreve o ADR propõe o tema; quem revisa
+# o PR confirma. Tema NOVO é mudança desta lista, justificada no PR que o
+# cria; passar de 15 temas exige ADR que revise o 0202.
+#
+# `titulo` é o cabeçalho da seção no índice (o índice está em inglês); `id` é a
+# âncora (`{#tema-<id>}`) e o valor usado em `adrs:`.
+
+temas:
+  - id: git
+    titulo: Git, repository and branch policy
+    descricao: The git provider contract, the repository's birth and adoption, protection and the branch policy.
+  - id: agentes
+    titulo: Agent harness, turns and sessions
+    descricao: How an agent runs — context, the tool loop, the conversational turn, the session and its states.
+  - id: time
+    titulo: The agent team — roles, areas and handoffs
+    descricao: Which agents exist, what each delivers to whom, delegation inside an area and the handoff between them.
+  - id: gates
+    titulo: Gates, QA and security review
+    descricao: The gate registry, the QA and SecOps verdicts and the golden-sets that measure them.
+  - id: execucao
+    titulo: Execution, terminal policy and approvals
+    descricao: The dev agent at work, `proposed_action`, the terminal policy, path scope, auto mode and the absolute ceilings.
+  - id: modos
+    titulo: Where the code lives — execution modes
+    descricao: The three execution modes, the user's folder, the projects base and converting a project between modes.
+  - id: container
+    titulo: Project container and broker
+    descricao: The project container's lifecycle, the image decision, the Docker port and the broker that talks to the daemon.
+  - id: runner
+    titulo: The local runner
+    descricao: The CLI on the user's machine — its channel, credentials, device keys, distribution, base and service.
+  - id: iam
+    titulo: Auth, access and secrets
+    descricao: First-party auth, roles and their ceilings, workspace membership, cross-origin hardening and secret envelopes.
+  - id: llm
+    titulo: LLM providers, models and spend
+    descricao: The provider contract, the model catalog and curation, model bindings, metering and budgets.
+  - id: conhecimento
+    titulo: RAG, knowledge graph and artifacts
+    descricao: Chunks and hybrid search, its measurement, the Neo4j graph and the artifacts projected from the event log.
+  - id: web
+    titulo: Web UI and design system
+    descricao: Screens, navigation, themes and the structure of the web app's largest files.
+  - id: operacao
+    titulo: Operation, deploy and installation
+    descricao: Production images, Kubernetes, observability, backup, the dev compose and the one-line installer.
+  - id: engenharia
+    titulo: CI, release and supply chain
+    descricao: The pipeline, the published images, signing, scanning, pinning, the test layers and the repository's own structure.
+  - id: docs
+    titulo: Documentation
+    descricao: How documentation is generated, verified and published.
+
+adrs:
+  "0001": git
+  "0002": git
+  "0003": git
+  "0004": git
+  "0005": git
+  "0006": agentes
+  "0007": agentes
+  "0008": time
+  "0009": time
+  "0010": time
+  "0011": execucao
+  "0012": execucao
+  "0013": gates
+  "0014": time
+  "0015": time
+  "0016": time
+  "0017": execucao
+  "0018": execucao
+  "0019": execucao
+  "0020": gates
+  "0021": gates
+  "0022": time
+  "0023": time
+  "0024": operacao
+  "0025": operacao
+  "0026": operacao
+  "0027": operacao
+  "0028": git
+  "0029": docs
+  "0030": git
+  "0031": iam
+  "0032": iam
+  "0033": docs
+  "0034": docs
+  "0035": operacao
+  "0036": web
+  "0037": iam
+  "0038": time
+  "0039": engenharia
+  "0040": llm
+  "0041": llm
+  "0042": llm
+  "0043": llm
+  "0044": git
+  "0045": execucao
+  "0046": time
+  "0047": execucao
+  "0048": execucao
+  "0049": llm
+  "0050": iam
+  "0051": llm
+  "0052": execucao
+  "0053": time
+  "0054": gates
+  "0055": execucao
+  "0056": git
+  "0057": gates
+  "0058": iam
+  "0059": iam
+  "0060": web
+  "0061": agentes
+  "0063": llm
+  "0064": llm
+  "0065": container
+  "0066": modos
+  "0067": gates
+  "0068": time
+  "0069": time
+  "0070": operacao
+  "0071": docs
+  "0072": modos
+  "0073": docs
+  "0074": web
+  "0075": llm
+  "0076": llm
+  "0077": llm
+  "0078": web
+  "0079": conhecimento
+  "0080": conhecimento
+  "0081": container
+  "0082": conhecimento
+  "0083": container
+  "0084": iam
+  "0085": time
+  "0086": time
+  "0087": time
+  "0088": time
+  "0089": time
+  "0090": gates
+  "0091": gates
+  "0092": time
+  "0093": time
+  "0094": time
+  "0095": gates
+  "0096": iam
+  "0097": web
+  "0098": agentes
+  "0099": conhecimento
+  "0100": conhecimento
+  "0101": conhecimento
+  "0102": execucao
+  "0103": runner
+  "0104": modos
+  "0105": runner
+  "0106": runner
+  "0107": modos
+  "0108": modos
+  "0109": time
+  "0110": llm
+  "0111": modos
+  "0112": runner
+  "0113": conhecimento
+  "0114": llm
+  "0115": llm
+  "0116": web
+  "0117": docs
+  "0118": runner
+  "0119": engenharia
+  "0120": engenharia
+  "0121": engenharia
+  "0122": web
+  "0123": gates
+  "0124": web
+  "0125": web
+  "0126": web
+  "0127": iam
+  "0128": container
+  "0129": conhecimento
+  "0130": container
+  "0131": container
+  "0132": conhecimento
+  "0133": container
+  "0134": container
+  "0135": container
+  "0136": container
+  "0137": container
+  "0138": conhecimento
+  "0139": git
+  "0140": engenharia
+  "0141": modos
+  "0142": modos
+  "0143": container
+  "0144": container
+  "0145": runner
+  "0146": modos
+  "0147": runner
+  "0148": conhecimento
+  "0149": engenharia
+  "0150": operacao
+  "0151": runner
+  "0152": operacao
+  "0153": operacao
+  "0154": runner
+  "0155": operacao
+  "0156": iam
+  "0157": iam
+  "0158": iam
+  "0159": engenharia
+  "0160": operacao
+  "0161": operacao
+  "0162": operacao
+  "0163": agentes
+  "0165": git
+  "0166": llm
+  "0167": execucao
+  "0168": gates
+  "0169": operacao
+  "0170": operacao
+  "0172": engenharia
+  "0173": iam
+  "0174": runner
+  "0175": agentes
+  "0176": web
+  "0177": agentes
+  "0178": engenharia
+  "0179": agentes
+  "0180": container
+  "0181": web
+  "0182": time
+  "0183": agentes
+  "0184": agentes
+  "0185": time
+  "0186": time
+  "0187": runner
+  "0188": llm
+  "0189": execucao
+  "0190": container
+  "0191": agentes
+  "0192": gates
+  "0193": runner
+  "0194": time
+  "0196": conhecimento
+  "0197": engenharia
+  "0198": llm
+  "0199": container
+  "0200": conhecimento
+  "0201": runner
+  "0202": docs
+  "0203": runner

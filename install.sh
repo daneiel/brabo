@@ -3,14 +3,23 @@
 #
 # USO — e a forma importa:
 #
-#   sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+#   curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
 #
-# E **nunca** `curl … | sh`. O motivo é mecânico, não estético: com o script
-# chegando pelo pipe, o `stdin` do processo É o download, e qualquer `read`
-# para perguntar alguma coisa lê bytes do próprio script ou encontra EOF. Um
-# instalador que não pode perguntar teria de escolher sozinho onde criar pastas
-# no computador de alguém — e a régua deste produto é a oposta (RN-511, o passo
-# de consentimento do `pnpm bootstrap`, que sem TTY relata em vez de consentir).
+# BAIXAR e rodar um ARQUIVO, com `bash`. As duas formas que parecem equivalentes
+# não são, e as duas são RECUSADAS com nome:
+#
+#   - `curl … | sh`: com o script chegando pelo pipe, o `stdin` do processo É o
+#     download, e qualquer `read` para perguntar alguma coisa lê bytes do
+#     próprio script ou encontra EOF. Um instalador que não pode perguntar teria
+#     de escolher sozinho onde criar pastas no computador de alguém — e a régua
+#     deste produto é a oposta (RN-511, o passo de consentimento do
+#     `pnpm bootstrap`, que sem TTY relata em vez de consentir).
+#   - `sh -c "$(curl …)"`, que era a forma DOCUMENTADA até a AT-083: ali o `$0`
+#     é o nome do shell, não um arquivo, e a autoverificação (o hash DESTE
+#     arquivo contra o manifesto assinado, RN-526) não tem o que medir. Não há
+#     porta para pular essa verificação, e não vai haver (ADR 0150) — a saída é
+#     existir um arquivo. Com `dash` como `sh` (Debian/Ubuntu) ela morria antes
+#     ainda, no `set -o pipefail`.
 #
 # O QUE ELE FAZ, em ordem: verifica a própria origem contra o manifesto
 # assinado da Release, baixa e verifica contra o MESMO manifesto os arquivos que
@@ -24,7 +33,8 @@
 # O QUE ELE NUNCA FAZ: gravar a senha que você digitar (ela é lida sem eco,
 # usada e descartada), apagar sua base de projetos ou sua pasta de espelho,
 # apagar qualquer coisa sem um backup que ele mesmo provou restaurar, ligar
-# SMTP por conta própria ou pedir credencial de LLM.
+# SMTP por conta própria, pedir credencial de LLM, ou ligar o broker de
+# container sem perguntar (ele recebe o socket do Docker desta máquina).
 #
 # MODOS DE IMPRESSÃO (não executam nada, não perguntam nada):
 #
@@ -34,7 +44,24 @@
 # Eles existem pelo mesmo motivo do `--print-commands` do `bootstrap.sh`: a
 # parte que erra na prática é a DECISÃO (o que foi detectado, o que seria
 # apagado), e ela se testa sem TTY e sem efeito — ver `install.spec.ts`.
+
+# Este bloco é POSIX e vem ANTES de tudo, porque é o único que roda sob
+# qualquer `sh`: o `dash` do Debian/Ubuntu morria na linha seguinte, no
+# `set -o pipefail`, com um "Illegal option" que não diz o que fazer.
+if [ -z "${BASH_VERSION:-}" ]; then
+  printf '%s\n' '✗ este instalador é um script de bash, e está rodando sob outro shell. Baixe o arquivo e rode com bash:' >&2
+  printf '%s\n' '    curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh' >&2
+  exit 1
+fi
+
 set -euo pipefail
+
+# O arquivo que o bash está lendo, capturado no NÍVEL DE CIMA — dentro de uma
+# função, `BASH_SOURCE[0]` é outra coisa. Vazio quando não há arquivo nenhum
+# (`bash -c "$(curl …)"`, `curl … | bash`): é o que `exigir_o_proprio_arquivo`
+# usa para não confundir um `$0` que por acaso é um arquivo (`/bin/bash -c`
+# deixa `$0=/bin/bash`, que existe e é legível) com o próprio instalador.
+ORIGEM_DO_SCRIPT="${BASH_SOURCE[0]:-}"
 
 # --------------------------------------------------------------------------
 # Constantes
@@ -43,12 +70,12 @@ set -euo pipefail
 REPO='daneiel/brabo'
 
 # O `cosign` que verifica a assinatura precisa ele mesmo de procedência, senão
-# a cadeia só sobe um degrau. Versão PINADA e conferida por `sha256sum` contra
-# os valores abaixo — que são os do `cosign_checksums.txt` oficial da release
-# v3.1.3, copiados aqui de propósito: quem confia neste script o bastante para
-# executá-lo confia no hash que ele carrega, e a cadeia não fica mais frágil do
-# que o elo que a inicia. É o mesmo padrão que o `ci.yml` já aplica a todo
-# binário de terceiro.
+# a cadeia só sobe um degrau. Versão PINADA e conferida por `conferir_hash`
+# contra os valores abaixo — que são os do `cosign_checksums.txt` oficial da
+# release v3.1.3, copiados aqui de propósito: quem confia neste script o
+# bastante para executá-lo confia no hash que ele carrega, e a cadeia não fica
+# mais frágil do que o elo que a inicia. É o mesmo padrão que o `ci.yml` já
+# aplica a todo binário de terceiro.
 COSIGN_VERSAO='v3.1.3'
 
 # `case` e não quatro variáveis lidas por indireção (`${!var}`), por dois
@@ -85,6 +112,12 @@ MARCADOR_SCHEMA=3
 # por esta, porque são quatro no mesmo laço.
 URL_DA_RELEASE="https://github.com/${REPO}/releases/latest/download"
 
+# A forma de rodar que este script ENSINA — nas recusas e no relato sem TTY. Uma
+# constante, para que a frase que manda a pessoa rodar de novo não possa
+# divergir da que o cabeçalho e o runbook documentam (AT-083: ela ensinava a
+# forma quebrada).
+COMO_RODAR="curl -fsSLO ${URL_DA_RELEASE}/install.sh && bash install.sh"
+
 # Os caminhos ABSOLUTOS das cópias verificadas, preenchidos por
 # `materializar_os_arquivos_da_instalacao` — e VAZIOS até lá, de propósito. Até
 # o ADR 0160 este era a constante 'docker/docker-compose.install.yml', relativa
@@ -100,7 +133,7 @@ PROVA_DE_RESTAURACAO=''
 # por ele, que este script prova controle da MÁQUINA às duas rotas que usa.
 CABECALHO_SERVICE_TOKEN='x-brabo-service-token'
 
-# Fonte das imagens. `ghcr` é o default: as quatro publicadas, por DIGEST,
+# Fonte das imagens. `ghcr` é o default: as cinco publicadas, por DIGEST,
 # com a assinatura verificada (ADR 0149). `local` constrói do checkout, e
 # exige árvore limpa em tag — imagem construída de árvore suja não é a versão
 # que ela diz ser.
@@ -111,6 +144,19 @@ FONTE='ghcr'
 # fechamento da instalação as lê para decidir se há binário com que trabalhar.
 RUNNER_BIN=''
 PASTA_DE_CONFIG=''
+
+# O broker de container (ADR 0162), preenchidas por `consentir_broker`.
+# `BROKER_LIGADO` é `sim` só com um "s" digitado E o gid medido — nunca por
+# default, nunca sem terminal. As outras duas são o que ele mediu, e vazias
+# enquanto ele não mediu: é por elas que `escrever_env` sabe o que gravar.
+BROKER_LIGADO='nao'
+DOCKER_GID_MEDIDO=''
+RAIZ_GERENCIADA_NO_HOST=''
+
+# O volume da pasta GERENCIADA (modo `container`), com o prefixo do projeto
+# compose (`name: brabo` no compose de instalação). É o único nome que este
+# script precisa saber do layout do Docker: dele sai a raiz que o broker monta.
+VOLUME_DA_PASTA_GERENCIADA='brabo_project_workspaces'
 
 # --------------------------------------------------------------------------
 # Saída
@@ -129,6 +175,77 @@ ok()      { printf '%s✓%s %s\n' "$C_OK" "$C_RESET" "$*"; }
 recusar() {
   printf '%s✗ %s%s\n' "$C_ERRO" "$*" "$C_RESET" >&2
   exit 1
+}
+
+# --------------------------------------------------------------------------
+# Hash — UMA ferramenta, resolvida ANTES de baixar qualquer coisa
+# --------------------------------------------------------------------------
+
+# O defeito que isto fecha, medido no E2E da v6.1.0 (job `install.sh
+# (macos-14)`): o script chamava `sha256sum` nos cinco pontos de verificação e
+# não tinha alternativa nenhuma. O macOS não traz `sha256sum` — traz
+# `shasum -a 256` —, então `command not found` fazia a comparação falhar e a
+# pessoa lia *"o cosign baixado NÃO bate com o hash pinado neste script. Isso
+# não é um aviso: pare e investigue."* Dois defeitos num: a instalação era
+# impossível na plataforma que este mesmo script promete suportar (há hash de
+# cosign `darwin-*` logo acima), e a mensagem mandava caçar uma adulteração que
+# não houve — o que ensina a ignorar a frase no dia em que ela for verdade.
+#
+# Preenchida por `exigir_ferramenta_de_hash`, e VAZIA até lá. Um uso antes da
+# hora cai na cláusula `*` de `hash_sha256`, que recusa nomeando o defeito como
+# sendo DESTE script — nunca da máquina de quem instala.
+FERRAMENTA_DE_HASH=''
+
+# Roda ANTES do primeiro download, nunca no meio de uma verificação: a máquina
+# que não tem com que conferir não deve chegar a ter o que conferir.
+exigir_ferramenta_de_hash() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    FERRAMENTA_DE_HASH='sha256sum'
+  elif command -v shasum >/dev/null 2>&1; then
+    FERRAMENTA_DE_HASH='shasum'
+  else
+    recusar 'não achei sha256sum nem shasum nesta máquina, e sem um dos dois este instalador não tem como conferir o que baixa. Isto é FERRAMENTA faltando, não sinal de adulteração — nada foi baixado. No macOS o shasum vem com o sistema (verifique o PATH); no Linux, sha256sum vem no coreutils.'
+  fi
+}
+
+# Ecoa só o hash, em uma linha. As duas ferramentas imprimem
+# `<hash>  <arquivo>`, então o corte é o mesmo — e é feito com expansão de
+# parâmetro, não com `cut`, para não somar uma terceira dependência ao caminho
+# que existe justamente porque uma faltou.
+# O `|| falha_ao_calcular_hash` em `hash_sha256` é o que impede o `set -e` de
+# derrubar a substituição de comando CALADO (AT-083): sem ele, uma ferramenta
+# que não consegue ler o arquivo matava o script com o erro cru dela, antes de
+# qualquer recusa. E a recusa é a TERCEIRA, diferente das duas de
+# `conferir_hash`: não faltou ferramenta, e não há hash divergente — não houve
+# o que comparar.
+falha_ao_calcular_hash() {
+  recusar "não consegui calcular o sha256 de '${1}' — ${FERRAMENTA_DE_HASH} falhou ao ler o arquivo. Isto não é sinal de adulteração: não houve o que comparar."
+}
+
+hash_sha256() {
+  local saida
+  case "$FERRAMENTA_DE_HASH" in
+    sha256sum) saida="$(sha256sum "$1")" || falha_ao_calcular_hash "$1" ;;
+    shasum)    saida="$(shasum -a 256 "$1")" || falha_ao_calcular_hash "$1" ;;
+    *) recusar 'hash pedido antes de a ferramenta ter sido resolvida — isto é defeito deste script, não da sua máquina.' ;;
+  esac
+  printf '%s\n' "${saida%% *}"
+}
+
+# As DUAS recusas são diferentes, e a diferença É o ponto: ferramenta que falta
+# é dependência do sistema operacional e se resolve instalando; hash que não
+# bate é incidente e se resolve PARANDO. Cada chamador passa o próprio motivo
+# porque cada um nomeia um arquivo diferente — o texto nunca é genérico.
+#
+# Comparação de STRING, e não `sha256sum -c`, para os dois lados: `shasum`
+# aceita `-c`, mas provar o caminho do manifesto em duas ferramentas custaria
+# mais que provar uma igualdade. A normalização para minúsculas fica aqui, num
+# lugar só, porque um manifesto válido pode trazer o hash em maiúsculas.
+conferir_hash() {
+  local arquivo="$1" esperado="$2" motivo="$3" obtido
+  obtido="$(hash_sha256 "$arquivo" | tr '[:upper:]' '[:lower:]')"
+  esperado="$(printf '%s' "$esperado" | tr '[:upper:]' '[:lower:]')"
+  [ "$esperado" = "$obtido" ] || recusar "$motivo"
 }
 
 # --------------------------------------------------------------------------
@@ -318,6 +435,7 @@ imprimir_estado() {
 # são o ponto — pasta de usuário é acúmulo, não estado do produto (RN-516: o
 # espelho nunca apaga; o instalador tampouco).
 imprimir_plano() {
+  printf 'conferir-hash\tfaz\tsha256sum ou shasum -a 256, resolvido ANTES de baixar; faltando os dois, recusa NOMEANDO a ferramenta e nunca acusa adulteração\n'
   printf 'verificar-origem\tfaz\to checksums.txt assinado da Release, e o hash deste próprio arquivo nele\n'
   printf 'verificar-arquivos-da-instalacao\tfaz\to compose e o que ele monta, baixados da Release e conferidos no mesmo manifesto ANTES de qualquer pergunta\n'
   printf 'usar-arquivo-nao-verificado\tnunca\tum docker/ que já esteja na pasta é substituído pela cópia verificada, nunca lido no lugar dela\n'
@@ -330,10 +448,12 @@ imprimir_plano() {
   printf 'perguntar\tfaz\texige TTY; sem TTY relata e sai 0\n'
   printf 'gravar-marcador\tfaz\t%s\n' "$(caminho_do_marcador)"
   printf 'escolher-fonte\tfaz\t--source=ghcr (digest verificado) ou --source=local (bake, árvore limpa em tag)\n'
-  printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD, no .env com modo 600\n'
+  printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD e AUTH_TOKEN_PEPPER, no .env com modo 600 (o pepper de quem migra é o AUTH_JWT_SECRET atual, RN-613)\n'
   printf 'subir-compose\tfaz\tdocker/docker-compose.install.yml (a cópia verificada, sob a pasta de onde o script roda), com --wait; as migrações vêm no encadeamento\n'
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
+  printf 'ligar-broker\tpergunta\tdefault NÃO; sim mede o gid do socket DE DENTRO de um container e grava COMPOSE_PROFILES, BROKER_URL e DOCKER_GID no .env; sem TTY fica desligado\n'
+  printf 'ligar-broker-sem-perguntar\tnunca\to broker recebe o socket do Docker desta máquina (ADR 0162)\n'
   printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
   printf 'criar-primeira-conta\tpergunta\te-mail e senha no TTY, sem eco; a conta nasce verificada e o passo se cala se já houver gente\n'
   printf 'gravar-senha\tnunca\tnem no .env, nem no marcador, nem em log — lida, usada e descartada\n'
@@ -363,9 +483,24 @@ baixar_cosign() {
     "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSAO}/cosign-${plataforma}" \
     || recusar "não consegui baixar o cosign ${COSIGN_VERSAO}."
 
-  printf '%s  %s\n' "$esperado" "$destino" | sha256sum -c --status \
-    || recusar "o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um aviso: pare e investigue."
+  conferir_hash "$destino" "$esperado" \
+    "o cosign baixado NÃO bate com o hash pinado neste script. Isso não é um aviso: pare e investigue."
   chmod +x "$destino"
+}
+
+# O defeito que isto fecha (AT-083, instalando a v6.1.0 numa máquina limpa):
+# a forma que o runbook documentava, `sh -c "$(curl …)"`, roda o script sem
+# ARQUIVO — o `$0` é o nome do shell —, e a autoverificação logo abaixo fazia
+# `sha256sum bash`. O `set -euo pipefail` derrubava a substituição de comando
+# antes de qualquer recusa, e a pessoa via só o erro cru da ferramenta de hash.
+# A verificação NÃO muda e NÃO ganha porta de pular (ADR 0150): o que muda é
+# que a falta do arquivo é dita pelo nome, com a forma certa, e ANTES de baixar
+# qualquer coisa.
+exigir_o_proprio_arquivo() {
+  if [ -z "$ORIGEM_DO_SCRIPT" ] || [ ! -f "$0" ] || [ ! -r "$0" ]; then
+    recusar "este instalador precisa rodar de um ARQUIVO, e está rodando sem um (por sh -c/bash -c, ou por pipe). Ele confere o próprio hash contra o manifesto assinado da Release antes de fazer qualquer coisa, e sem arquivo não há o que conferir — nada foi baixado nem gravado. Baixe e rode:
+    ${COMO_RODAR}"
+  fi
 }
 
 # A cadeia inteira, e cada elo com um motivo:
@@ -404,7 +539,10 @@ verificar_a_si_mesmo() {
     || recusar "a assinatura do checksums.txt NÃO confere. O manifesto não foi publicado por esta esteira."
   ok 'assinatura do manifesto confere'
 
-  meu_hash="$(sha256sum "$0" | cut -d' ' -f1)"
+  # Nunca chega aqui sem arquivo: `exigir_o_proprio_arquivo` recusou antes do
+  # primeiro download. Se chegar, `hash_sha256` recusa NOMEADO em vez de o
+  # `set -e` derrubar a substituição calado (AT-083).
+  meu_hash="$(hash_sha256 "$0")"
   if ! grep -qi "^${meu_hash}  install.sh$" "${tmp}/checksums.txt"; then
     recusar "o hash deste arquivo não está no manifesto assinado. Ou ele foi alterado, ou não é o instalador desta Release."
   fi
@@ -460,7 +598,7 @@ ARQUIVOS_VERIFICADOS=''
 # delas cai num arquivo do diretório atual: não há caminho de volta para o
 # relativo, e é isso que o spec do E2E cobra.
 baixar_e_verificar_os_arquivos_da_instalacao() {
-  local url="$1" tmp="$2" pasta asset esperado obtido
+  local url="$1" tmp="$2" pasta asset esperado
   pasta="${tmp}/arquivos-da-instalacao"
   mkdir -p "$pasta"
 
@@ -475,9 +613,8 @@ baixar_e_verificar_os_arquivos_da_instalacao() {
     esperado="$(awk -v nome="$asset" '$2 == nome || $2 == "*" nome { print tolower($1); exit }' "${tmp}/checksums.txt")"
     [ -n "$esperado" ] \
       || recusar "o manifesto assinado não cobre ${asset} — recusa, não aviso. Nada foi gravado."
-    obtido="$(sha256sum "${pasta}/${asset}" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')"
-    [ "$esperado" = "$obtido" ] \
-      || recusar "${asset} NÃO bate com o manifesto assinado. Nada foi gravado. Isso não é um aviso: pare e investigue."
+    conferir_hash "${pasta}/${asset}" "$esperado" \
+      "${asset} NÃO bate com o manifesto assinado. Nada foi gravado. Isso não é um aviso: pare e investigue."
   done
 
   ARQUIVOS_VERIFICADOS="$pasta"
@@ -506,7 +643,7 @@ materializar_os_arquivos_da_instalacao() {
     destino="${raiz}/${relativo}"
     mkdir -p "$(dirname "$destino")" || recusar "não consegui criar $(dirname "$destino")."
     if [ -f "$destino" ] && [ ! -L "$destino" ] \
-      && [ "$(sha256sum "$destino" | cut -d' ' -f1)" != "$(sha256sum "${ARQUIVOS_VERIFICADOS}/${asset}" | cut -d' ' -f1)" ]; then
+      && [ "$(hash_sha256 "$destino")" != "$(hash_sha256 "${ARQUIVOS_VERIFICADOS}/${asset}")" ]; then
       detalhe "  ${relativo}: o que estava aqui é substituído pela cópia verificada"
     fi
     rm -f "$destino"
@@ -531,13 +668,156 @@ materializar_os_arquivos_da_instalacao() {
 #
 # `${VAR:-$(gerar)}` respeita valor já exportado: quem já tem um segredo não o
 # vê ser trocado por uma reinstalação.
+#
+# E todo base64 passa por `segredo_base64`, que tira as quebras de linha. O
+# `openssl rand -base64` QUEBRA a saída a cada 64 caracteres: 32 bytes dão 44 e
+# cabem numa linha, mas os 64 bytes do SECRET_KEY_BASE dão 88, em DUAS — e o
+# `.env` saía com uma segunda linha solta (AT-083). Medido em 100 gerações: o
+# Compose recusou 49 com "unexpected character in variable name", e as outras
+# 51 ele ACEITOU — com o segredo cortado em 64 caracteres e uma variável de
+# lixo a mais. Por isso o spec (`install-env.spec.ts`) não pergunta só se o
+# arquivo parseia: pergunta se cada valor chega INTEIRO ao outro lado.
+segredo_base64() {
+  openssl rand -base64 "$1" | tr -d '\n'
+}
+
+# Lê `NOME=valor` de um `.env` SEM executá-lo: `source` num arquivo que pode
+# ter sido editado à mão rodaria o que estivesse nele. Vale a ÚLTIMA ocorrência
+# (é a que o Compose usa), aspas simples ou duplas em volta saem, e um `\r` de
+# arquivo editado no Windows também. Arquivo ausente é resposta vazia.
+valor_no_env_anterior() {
+  local nome="$1" arquivo="$2"
+  [ -n "$arquivo" ] && [ -f "$arquivo" ] || return 0
+  awk -v nome="$nome" '
+    index($0, nome "=") == 1 { v = substr($0, length(nome) + 2); achou = 1 }
+    END {
+      if (!achou) exit
+      sub(/\r$/, "", v)
+      if (length(v) >= 2 && ((substr(v, 1, 1) == "\"" && substr(v, length(v), 1) == "\"") || (substr(v, 1, 1) == "\047" && substr(v, length(v), 1) == "\047"))) {
+        v = substr(v, 2, length(v) - 2)
+      }
+      printf "%s", v
+    }
+  ' "$arquivo"
+}
+
+# O pepper do hash dos tokens (RN-613) é o ÚNICO segredo cuja origem importa
+# numa migração: até ali, sem `AUTH_TOKEN_PEPPER`, a api usava o
+# `AUTH_JWT_SECRET` no lugar — e o compose de instalação nem repassava a
+# variável, então TODA instalação anterior está nesse caso. Gerar um pepper
+# novo para ela deslogaria todo mundo e mataria todo PAT; o que mantém o hash
+# é o valor ATUAL do JWT. A ordem de precedência:
+#
+#   1. exportado no ambiente (quem sabe o que faz);
+#   2. o pepper que o `.env` anterior já tinha;
+#   3. o `AUTH_JWT_SECRET` do `.env` anterior — a MIGRAÇÃO;
+#   4. o `AUTH_JWT_SECRET` exportado — reinstalação reaproveitando o segredo;
+#   5. aleatório — instalação NOVA, pepper próprio desde o primeiro dia.
+#
+# `ORIGEM_DO_PEPPER` diz qual dos cinco valeu, para `main` DIZER no terminal —
+# nunca o valor. Aqui não se imprime nada: o spec lê a saída desta função.
+ORIGEM_DO_PEPPER=''
 gerar_segredos() {
-  GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(openssl rand -base64 32)}"
-  AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(openssl rand -base64 32)}"
-  BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(openssl rand -base64 32)}"
-  CREDENTIALS_MASTER_KEY="${CREDENTIALS_MASTER_KEY:-$(openssl rand -base64 32)}"
-  SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -base64 64)}"
+  local env_anterior="${1:-}" jwt_exportado="${AUTH_JWT_SECRET:-}" anterior
+  if [ -n "${AUTH_TOKEN_PEPPER:-}" ]; then
+    ORIGEM_DO_PEPPER='ambiente'
+  elif anterior="$(valor_no_env_anterior AUTH_TOKEN_PEPPER "$env_anterior")" && [ -n "$anterior" ]; then
+    AUTH_TOKEN_PEPPER="$anterior"
+    ORIGEM_DO_PEPPER='pepper-anterior'
+  elif anterior="$(valor_no_env_anterior AUTH_JWT_SECRET "$env_anterior")" && [ -n "$anterior" ]; then
+    AUTH_TOKEN_PEPPER="$anterior"
+    ORIGEM_DO_PEPPER='jwt-anterior'
+  elif [ -n "$jwt_exportado" ]; then
+    AUTH_TOKEN_PEPPER="$jwt_exportado"
+    ORIGEM_DO_PEPPER='jwt-exportado'
+  else
+    AUTH_TOKEN_PEPPER="$(segredo_base64 32)"
+    ORIGEM_DO_PEPPER='gerado'
+  fi
+
+  GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(segredo_base64 32)}"
+  AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(segredo_base64 32)}"
+  BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(segredo_base64 32)}"
+  CREDENTIALS_MASTER_KEY="${CREDENTIALS_MASTER_KEY:-$(segredo_base64 32)}"
+  SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(segredo_base64 64)}"
   NEO4J_PASSWORD="${NEO4J_PASSWORD:-$(openssl rand -hex 24)}"
+}
+
+# O `.env` da instalação, numa função e não no corpo de `main`, para que o
+# spec (`install-env.spec.ts`) grave o MESMO arquivo que a instalação grava e o
+# passe pelo parser do Compose — a classe de defeito da AT-083 (um valor que o
+# `.env` não comporta) só se prova contra quem vai ler o arquivo.
+#
+# O arquivo nasce com modo 600 ANTES de receber conteúdo: criar com o umask
+# do usuário e apertar depois deixaria os segredos legíveis por uma janela,
+# e é justamente o arquivo que não pode ter essa janela.
+escrever_env() {
+  local env_arquivo="$1"
+  : > "$env_arquivo"
+  chmod 600 "$env_arquivo"
+  cat > "$env_arquivo" <<ENV
+# Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
+# Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
+# \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
+# AUTH_TOKEN_PEPPER (RN-613) é independente do AUTH_JWT_SECRET: numa migração
+# ele nasce com o valor que o JWT tinha, e trocá-lo desloga todo mundo.
+BRABO_API_IMAGE=${BRABO_API_IMAGE}
+BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
+BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
+BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
+BRABO_BROKER_IMAGE=${BRABO_BROKER_IMAGE}
+BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
+GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
+AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+AUTH_TOKEN_PEPPER=${AUTH_TOKEN_PEPPER}
+BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
+CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
+SECRET_KEY_BASE=${SECRET_KEY_BASE}
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
+ENV
+  escrever_env_do_broker "$env_arquivo"
+}
+
+# O terminal diz DE ONDE veio o pepper, nunca o valor — ele vale tanto quanto
+# o JWT, e a saída do instalador vai parar em log de CI e em print de tela.
+dizer_a_origem_do_pepper() {
+  case "$ORIGEM_DO_PEPPER" in
+    jwt-anterior|jwt-exportado)
+      ok 'AUTH_TOKEN_PEPPER: a instalação anterior não tinha um, e ele nasce com o valor ATUAL do AUTH_JWT_SECRET (não impresso).'
+      detalhe '  É o valor que a api já usava no lugar dele: os refresh tokens e os PATs continuam'
+      detalhe '  válidos, e daí em diante o AUTH_JWT_SECRET rotaciona sem deslogar ninguém (RN-613).'
+      ;;
+    pepper-anterior) ok 'AUTH_TOKEN_PEPPER: mantido o da instalação anterior (não impresso).' ;;
+    ambiente) ok 'AUTH_TOKEN_PEPPER: o do ambiente (não impresso).' ;;
+    *) ok 'AUTH_TOKEN_PEPPER: gerado, próprio desta instalação.' ;;
+  esac
+}
+
+# O bloco do broker, SEMPRE junto — as linhas não existem uma sem a outra:
+# `COMPOSE_PROFILES` sem `BROKER_URL` sobe um broker que ninguém chama, e
+# `BROKER_URL` sem o profile aponta a api para um serviço que não sobe. E sem o
+# gid MEDIDO não há bloco nenhum: o default 999 do compose é palpite, e este
+# script não grava palpite (ADR 0162). A recusa aqui é defeito DESTE script —
+# `consentir_broker` só liga depois de medir.
+escrever_env_do_broker() {
+  local env_arquivo="$1"
+  if [ "$BROKER_LIGADO" != 'sim' ]; then
+    cat >> "$env_arquivo" <<'ENV'
+# Broker de container: DESLIGADO (a pergunta do instalador). Para ligar depois,
+# ver docs/runbook.md, "Broker de container na instalação".
+ENV
+    return 0
+  fi
+  case "$DOCKER_GID_MEDIDO" in
+    ''|*[!0-9]*) recusar 'o broker foi ligado sem o gid do socket medido — isto é defeito deste script, não da sua máquina.' ;;
+  esac
+  cat >> "$env_arquivo" <<ENV
+# Broker de container: LIGADO com consentimento no instalador (ADR 0162).
+COMPOSE_PROFILES=container-broker
+BROKER_URL=http://broker:8090
+DOCKER_GID=${DOCKER_GID_MEDIDO}
+PROJECT_WORKSPACES_HOST_ROOT=${RAIZ_GERENCIADA_NO_HOST}
+ENV
 }
 
 # --------------------------------------------------------------------------
@@ -572,7 +852,7 @@ resolver_imagens_do_ghcr() {
   [ -n "$VERSAO_A_INSTALAR" ] || recusar 'o manifesto não traz a versão — sem ela não há como comparar com o que já está instalado.'
 
   local alvo var repo digest entrada
-  for alvo in api engine web backup; do
+  for alvo in api engine web backup broker; do
     entrada="$(printf '%s' "$compacto" | grep -o "{[^{}]*\"alvo\": *\"${alvo}\"[^{}]*}" || true)"
     repo="$(printf '%s' "$entrada" | grep -o '"repositorio": *"[^"]*"' | cut -d'"' -f4)"
     digest="$(printf '%s' "$entrada" | grep -o '"digest": *"[^"]*"' | cut -d'"' -f4)"
@@ -601,13 +881,14 @@ resolver_imagens_locais() {
   VERSAO_A_INSTALAR="$(git describe --exact-match --tags | sed 's/^v//')"
   COMMIT_A_INSTALAR="$(git rev-parse --short=12 HEAD)"
 
-  dizer 'Construindo as quatro imagens (docker buildx bake)…'
+  dizer 'Construindo as cinco imagens (docker buildx bake)…'
   docker buildx bake -f docker-bake.hcl || recusar 'o build local falhou.'
 
   BRABO_API_IMAGE='brabo-api:prod'
   BRABO_ENGINE_IMAGE='brabo-engine:prod'
   BRABO_WEB_IMAGE='brabo-web:prod'
   BRABO_BACKUP_IMAGE='brabo-backup:prod'
+  BRABO_BROKER_IMAGE='brabo-broker:prod'
 }
 
 # --------------------------------------------------------------------------
@@ -649,18 +930,178 @@ consentir_base() {
   ok "base: ${BASE_DE_PROJETOS}"
 }
 
+# --------------------------------------------------------------------------
+# O broker de container — perguntado, nunca ligado por conta própria (ADR 0162)
+# --------------------------------------------------------------------------
+
+# O gid do socket VISTO DE DENTRO de um container, que é o que o `group_add` do
+# compose precisa. Medido com a PRÓPRIA imagem do broker (a mesma que vai subir;
+# nenhuma imagem de terceiro entra nisto), sem rede e com rootfs read-only.
+#
+# Duas escolhas que parecem detalhe e não são:
+#   - `--mount type=bind` e não `-v`: com `-v`, uma origem que não existe é
+#     CRIADA como pasta vazia no host, pelo root do daemon — e o `stat` diria
+#     "directory" sobre uma pasta que este script acabou de pôr ali. `--mount`
+#     recusa, e a recusa é a resposta certa (Docker rootless ou remoto: o
+#     socket não está onde o compose o monta).
+#   - de DENTRO, e não `stat` no host: no Docker Desktop o socket do host é do
+#     usuário e o que o container vê é outro arquivo, dentro da VM. O número do
+#     host seria plausível e errado.
+#
+# O resultado vai para globais (`DOCKER_GID_MEDIDO`, `MOTIVO_DA_MEDICAO`) pelo
+# motivo de `RESPOSTA_VEREDITO`: `$( )` perderia uma das duas.
+MOTIVO_DA_MEDICAO=''
+medir_gid_do_socket() {
+  local saida tipo gid
+  DOCKER_GID_MEDIDO=''
+  MOTIVO_DA_MEDICAO=''
+  if ! saida="$(docker run --rm --network none --read-only --entrypoint stat \
+      --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+      "$BRABO_BROKER_IMAGE" -c '%F %g' /var/run/docker.sock 2>&1)"; then
+    MOTIVO_DA_MEDICAO="$saida"
+    return 1
+  fi
+  # A última linha: um `docker run` que precisou puxar a imagem escreve o
+  # progresso do pull antes, na mesma saída.
+  saida="$(printf '%s\n' "$saida" | tail -n1)"
+  tipo="${saida% *}"
+  gid="${saida##* }"
+  if [ "$tipo" != 'socket' ]; then
+    MOTIVO_DA_MEDICAO="/var/run/docker.sock, visto de dentro de um container, não é um socket (é: ${tipo:-nada})"
+    return 1
+  fi
+  case "$gid" in
+    ''|*[!0-9]*)
+      MOTIVO_DA_MEDICAO="o gid lido não é um número: '${gid}'"
+      return 1
+      ;;
+  esac
+  DOCKER_GID_MEDIDO="$gid"
+  return 0
+}
+
+# A raiz da pasta GERENCIADA no HOST. No compose de instalação ela é o volume
+# nomeado, e o layout do driver `local` põe o conteúdo em
+# `<DockerRootDir>/volumes/<nome>/_data` — é um CÁLCULO, e por isso
+# `conferir_o_broker` o compara com o `Mountpoint` que o daemon devolve depois
+# da subida. Não conseguir calcular não recusa nada: só o modo `container` fica
+# sem raiz, e o broker recusa `start` dele nomeando a variável.
+calcular_raiz_gerenciada() {
+  local raiz_do_docker
+  raiz_do_docker="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+  case "$raiz_do_docker" in
+    /*) RAIZ_GERENCIADA_NO_HOST="${raiz_do_docker%/}/volumes/${VOLUME_DA_PASTA_GERENCIADA}/_data" ;;
+    *)  RAIZ_GERENCIADA_NO_HOST='' ;;
+  esac
+}
+
+# A pergunta. Default NÃO, e só `s`/`sim` liga: o que está em jogo é um serviço
+# desta instalação falar com o Docker desta máquina, e isso não se liga por um
+# Enter distraído. Sem terminal não há pergunta, e o script DIZ que ficou
+# desligado em vez de decidir em silêncio (a régua do `consentir-base.mjs`).
+consentir_broker() {
+  dizer ''
+  dizer "${C_BOLD}O broker de container${C_RESET}"
+  dizer 'Projeto em modo Container ou Pasta montada executa dentro de um container,'
+  dizer 'e quem sobe esse container é o broker — um serviço desta instalação que'
+  dizer 'recebe o socket do Docker DESTA máquina. Quem comanda o broker comanda o'
+  dizer 'seu Docker, e o Docker desta máquina é equivalente a root nela.'
+  dizer 'O que o contém: não publica porta, só a api o alcança (numa rede sem'
+  dizer 'internet), exige o token de serviço, e só sabe cinco operações sobre o'
+  dizer 'container de UM projeto, compostas a partir do que o Arquiteto decidiu —'
+  dizer 'não existe pedido que ligue privileged, rede do host ou uma pasta livre.'
+  dizer 'Sem ele, projeto Container e Pasta montada não executam; o modo Runner usa'
+  dizer 'o Docker desta máquina pelo agente local e não depende dele.'
+  dizer ''
+
+  if [ ! -t 0 ]; then
+    dizer 'Não há terminal para perguntar: o broker fica DESLIGADO.'
+    BROKER_LIGADO='nao'
+    return 0
+  fi
+
+  printf 'Ligar o broker de container? [s/N] '
+  local resposta; read -r resposta || resposta=''
+  case "$resposta" in
+    s|S|sim|SIM) ;;
+    *)
+      BROKER_LIGADO='nao'
+      ok 'broker de container: desligado (dá para ligar depois — docs/runbook.md)'
+      return 0
+      ;;
+  esac
+
+  dizer 'Medindo o grupo do socket do Docker, de dentro de um container…'
+  if ! medir_gid_do_socket; then
+    recusar "não consegui medir o grupo do socket do Docker, e sem ele o broker não abre o socket — este script não grava um palpite no lugar. O que o Docker disse: ${MOTIVO_DA_MEDICAO}
+  Nada foi gravado. Rode o instalador de novo e responda NÃO para instalar sem o broker, ou resolva o que está acima."
+  fi
+  ok "grupo do socket, visto de dentro de um container: ${DOCKER_GID_MEDIDO}"
+
+  calcular_raiz_gerenciada
+  if [ -n "$RAIZ_GERENCIADA_NO_HOST" ]; then
+    ok "raiz da pasta gerenciada no host: ${RAIZ_GERENCIADA_NO_HOST} (conferida depois da subida)"
+  else
+    pendencia 'a raiz da pasta gerenciada: `docker info` não disse onde o Docker guarda os volumes. O broker está ligado para Pasta montada; para o modo Container, preencha PROJECT_WORKSPACES_HOST_ROOT no .env (ver docs/runbook.md).'
+  fi
+
+  BROKER_LIGADO='sim'
+  ok 'broker de container: ligado'
+}
+
+# Depois da subida, com a pilha de pé: o broker respondeu ao healthcheck (o
+# `up --wait` esperou por ele), mas quem anuncia que ele serve tem de perguntar
+# as duas coisas que o healthcheck não pergunta — se a API o alcança pela rede
+# interna, e se a raiz calculada é mesmo onde o daemon guardou o volume. Nenhuma
+# das duas recusa: a pilha está de pé, e o que não confere vira pendência
+# NOMEADA, com o valor certo quando ele é conhecido.
+conferir_o_broker() {
+  local env_arquivo="$1" montado
+  [ "$BROKER_LIGADO" = 'sim' ] || return 0
+
+  if docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$env_arquivo" exec -T api \
+      node -e "fetch('http://broker:8090/health').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))" \
+      >/dev/null 2>&1; then
+    ok 'a api alcança o broker pela rede interna'
+  else
+    pendencia "o broker de container: a api NÃO o alcançou em http://broker:8090. \`docker compose -f ${COMPOSE_DE_INSTALACAO} logs broker\` diz o quê."
+  fi
+
+  [ -n "$RAIZ_GERENCIADA_NO_HOST" ] || return 0
+  montado="$(docker volume inspect --format '{{.Mountpoint}}' "$VOLUME_DA_PASTA_GERENCIADA" 2>/dev/null || true)"
+  if [ "$montado" = "$RAIZ_GERENCIADA_NO_HOST" ]; then
+    ok 'a raiz da pasta gerenciada confere com o volume'
+  else
+    pendencia "a raiz da pasta gerenciada: calculei ${RAIZ_GERENCIADA_NO_HOST}, e o daemon diz que o volume ${VOLUME_DA_PASTA_GERENCIADA} está em '${montado:-lugar nenhum}'. Corrija PROJECT_WORKSPACES_HOST_ROOT no .env e rode \`docker compose -f ${COMPOSE_DE_INSTALACAO} --env-file ${env_arquivo} up -d --wait broker\` — até lá, projeto em modo Container não sobe."
+  fi
+}
+
 # Instala o binário do agente local — e é isto que mata o `chmod +x` manual do
 # ADR 0118 (BRB-031): o navegador não preserva o bit de execução, um script
 # preserva. O binário passa pela MESMA verificação do resto (RN-524): hash
 # contra o `checksums.txt` assinado, que este script já baixou e verificou para
 # conferir a si mesmo.
 instalar_o_runner() {
-  local plataforma="$1" tmp="$2" alvo destino esperado obtido
+  local plataforma="$1" tmp="$2" alvo destino esperado
   case "$plataforma" in
     linux-amd64)  alvo='linux-x64' ;;
     linux-arm64)  alvo='linux-arm64' ;;
-    darwin-amd64) alvo='darwin-x64' ;;
     darwin-arm64) alvo='darwin-arm64' ;;
+    # Mac Intel NÃO tem binário, por decisão (ADR 0174): o runner `macos-13`
+    # foi aposentado pelo GitHub e, no `macos-15-intel`, o Bun quebra o
+    # `onData` do node-pty (oven-sh/bun#25822). A MESMA prova passa sob Node,
+    # então o caminho dele é o pacote npm. Nenhum download é tentado — pedir
+    # um asset que a Release não publica só produziria um 404 com cara de
+    # rede fora. O resto da instalação segue, e `RUNNER_BIN` fica vazio, que é
+    # como o fechamento sabe dizer o que ficou para depois.
+    darwin-amd64)
+      dizer ''
+      dizer "${C_BOLD}Agente local${C_RESET}"
+      dizer 'Mac Intel (darwin-x64) não tem binário do agente local — decisão do ADR 0174.' >&2
+      dizer 'O agente local NÃO foi instalado; o resto da instalação está de pé.' >&2
+      dizer 'Instale pelo npm (roda sob Node): npm install -g @brabo/runner' >&2
+      return 0
+      ;;
     *) recusar "sem binário de runner para '${plataforma}'." ;;
   esac
 
@@ -682,8 +1123,8 @@ instalar_o_runner() {
   # `verificar_a_si_mesmo`; aqui só se confere a linha deste binário.
   esperado="$(grep -i "  ${nome}\$" "${tmp}/checksums.txt" | cut -d' ' -f1 || true)"
   [ -n "$esperado" ] || recusar "o manifesto assinado não cobre ${nome} — recusa, não aviso."
-  obtido="$(sha256sum "${tmp}/${nome}" | cut -d' ' -f1)"
-  [ "$esperado" = "$obtido" ] || recusar "o binário do runner NÃO bate com o manifesto assinado."
+  conferir_hash "${tmp}/${nome}" "$esperado" \
+    "o binário do runner NÃO bate com o manifesto assinado."
   ok 'binário do runner verificado'
 
   destino="${HOME}/.local/bin"
@@ -1153,7 +1594,7 @@ migrar_instalacao_anterior() {
 
   # 2. provar que restaura, ANTES de apagar
   dizer 'Provando que o backup restaura…'
-  BRABO_COMPOSE_FILE="$COMPOSE_DE_INSTALACAO" BACKUP_DIR=/backups \
+  BRABO_COMPOSE_FILE="$COMPOSE_DE_INSTALACAO" BRABO_ENV_FILE="$PWD/.env" BACKUP_DIR=/backups \
     bash "$PROVA_DE_RESTAURACAO" \
     || recusar "o backup NÃO restaurou. Nada foi apagado. Um backup que não restaura não autoriza deleção nenhuma."
   ok 'backup provado'
@@ -1221,17 +1662,26 @@ main() {
     esac
   done
 
+  # ANTES da plataforma e de qualquer download: rodar sem arquivo é defeito de
+  # INVOCAÇÃO, e a pessoa precisa ler a forma certa, não o que viria depois.
+  exigir_o_proprio_arquivo
+
   local plataforma
   plataforma="$(detectar_plataforma)"
 
   case "$plataforma" in
     windows)
-      recusar "Windows está fora de escopo por decisão declarada (ADR 0150), como já é para o serviço do runner (RN-518). Não é uma falha genérica: o mecanismo de instalação ali é outro, e prometê-lo aqui seria pior que recusá-lo."
+      recusar "Windows está fora de escopo por decisão declarada (ADR 0150), como já é para o serviço do runner (RN-518). Não é uma falha genérica: o mecanismo de instalação ali é outro, e prometê-lo aqui seria pior que recusá-lo. O agente local no Windows também não tem binário (ADR 0187): instale pelo npm, que roda sob Node — npm install -g @brabo/runner"
       ;;
     nao-suportado:*)
       recusar "plataforma não suportada: ${plataforma#nao-suportado:}. Suportados: linux e macOS, em amd64 e arm64."
       ;;
   esac
+
+  # ANTES do primeiro download, e não no meio da primeira verificação: a
+  # máquina sem com que conferir não deve chegar a ter o que conferir, e o
+  # `command not found` ali chegava como acusação de adulteração (AT-091).
+  exigir_ferramenta_de_hash
 
   verificar_a_si_mesmo "$plataforma"
 
@@ -1357,7 +1807,7 @@ main() {
     dizer ''
     dizer 'Sem terminal interativo: nada foi decidido nem gravado.'
     dizer 'Para instalar, rode num terminal:'
-    dizer '  sh -c "$(curl -fsSL https://github.com/'"${REPO}"'/releases/latest/download/install.sh)"'
+    dizer "  ${COMO_RODAR}"
     exit 0
   fi
 
@@ -1371,30 +1821,18 @@ main() {
   esac
 
   consentir_base
-  gerar_segredos
+  # Depois da base (a segunda raiz do broker DERIVA dela) e antes do `.env`
+  # (é ele que carrega a decisão): uma recusa aqui não deixa nada gravado.
+  consentir_broker
 
-  # O `.env` nasce com modo 600 ANTES de receber conteúdo: criar com o umask
-  # do usuário e apertar depois deixaria os segredos legíveis por uma janela,
-  # e é justamente o arquivo que não pode ter essa janela.
+  # O `.env` que existir aqui é LIDO antes de ser sobrescrito — só para o
+  # pepper (RN-613), e sem ser executado. Numa migração ele ainda está no lugar:
+  # `migrar_instalacao_anterior` apaga volumes, nunca o arquivo.
   local env_arquivo="${PWD}/.env"
-  : > "$env_arquivo"
-  chmod 600 "$env_arquivo"
-  cat > "$env_arquivo" <<ENV
-# Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
-# Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
-# \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
-BRABO_API_IMAGE=${BRABO_API_IMAGE}
-BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
-BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
-BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
-BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
-GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
-AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
-BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
-CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
-SECRET_KEY_BASE=${SECRET_KEY_BASE}
-NEO4J_PASSWORD=${NEO4J_PASSWORD}
-ENV
+  gerar_segredos "$env_arquivo"
+  dizer_a_origem_do_pepper
+
+  escrever_env "$env_arquivo"
   ok ".env gravado com modo 600"
 
   dizer ''
@@ -1417,6 +1855,8 @@ ENV
   curl -fsS "http://localhost:${engine_port}/health" >/dev/null \
     || recusar "o engine subiu mas não respondeu em /health (porta ${engine_port})."
   ok 'api e engine respondendo'
+
+  conferir_o_broker "$env_arquivo"
 
   if [ -n "$MIGRAR_DE" ]; then
     restaurar_apos_migrar "$MIGRAR_DE"
@@ -1444,7 +1884,8 @@ ENV
     "api": "${BRABO_API_IMAGE}",
     "engine": "${BRABO_ENGINE_IMAGE}",
     "web": "${BRABO_WEB_IMAGE}",
-    "backup": "${BRABO_BACKUP_IMAGE}"
+    "backup": "${BRABO_BACKUP_IMAGE}",
+    "broker": "${BRABO_BROKER_IMAGE}"
   },
   "caminhos": {
     "env": "${env_arquivo}",
@@ -1462,6 +1903,12 @@ JSON
   if [ -n "$CONTA_EMAIL" ]; then
     dizer "  Entre com ${CONTA_EMAIL} e a senha que você acabou de digitar."
   fi
+  if [ "$BROKER_LIGADO" = 'sim' ]; then
+    dizer '  Broker de container: LIGADO — projetos Container e Pasta montada executam.'
+  else
+    dizer '  Broker de container: DESLIGADO — projetos Container e Pasta montada não'
+    dizer '  executam; o modo Runner não depende dele (docs/runbook.md explica como ligar).'
+  fi
 
   # O que ficou pela metade sai NOMEADO, e no fim — onde quem instalou ainda
   # está olhando. Um passo que falha no meio de trinta linhas de saída some.
@@ -1476,10 +1923,10 @@ JSON
 
   dizer ''
   dizer "${C_BOLD}O que este instalador NÃO faz${C_RESET}"
-  dizer 'Não sobe o broker de container: o serviço não existe no compose de'
-  dizer 'instalação, porque a imagem dele não é publicada. Sem broker, projeto'
-  dizer 'em modo Pasta montada não sobe container (ADR 0144); o modo Runner usa'
-  dizer 'o Docker desta máquina e não depende dele.'
+  dizer 'Não liga o broker de container sem perguntar: ele recebe o socket do'
+  dizer 'Docker desta máquina. Sem broker, projeto em modo Container ou Pasta'
+  dizer 'montada não sobe container (ADR 0144, ADR 0162); o modo Runner usa o'
+  dizer 'Docker desta máquina pelo agente local e não depende dele.'
   dizer 'Não liga SMTP e não pergunta servidor de e-mail: MAIL_TRANSPORT segue'
   dizer '`log`, aqui como em produção. A conta criada acima nasceu verificada'
   dizer 'justamente por isso; o registro de quem vier depois continua exigindo'

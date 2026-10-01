@@ -51,6 +51,8 @@
     "startRationale": "Start requested by a human on the containers page.",
     "bloqueio": {
       "ja_esta_de_pe": "The container is already up — stop it before starting again.",
+      "sem_broker_na_instalacao": "This installation cannot start containers for Container or Mounted projects: it has no container broker (BROKER_URL is empty), and the broker is what starts them. Approving the start could only fail. Local runner projects do not depend on it — the local agent starts their container.",
+      "sem_broker_para_parar": "This installation has no container broker (BROKER_URL is empty), and the broker is what stops and removes containers for Container or Mounted projects: stopping or removing could only fail.",
       "sem_imagem_decidida": "No image decided: the Architect (or Infra) must decide one before any container can start.",
       "runner_nunca_confirmou": "No local agent has ever confirmed this project's folder — run `brabo-runner` on that machine before starting.",
       "sem_papel": "Starting a container requires the maintainer role in this workspace.",
@@ -58,6 +60,16 @@
     },
     "ressalva": {
       "runner_pode_estar_desconectado": "The folder was confirmed by a local agent at some point; if it isn't running right now, the action fails once approved."
-    }
+    },
+    "semContainer": {
+      "nuncaProvisionado": "Never provisioned: there is no container to stop or remove.",
+      "removido": "Container removed: there is nothing to stop or remove."
+    },
+    "bloqueioCurto": {
+      "sem_broker_na_instalacao": "No container broker in this installation: starting could only fail.",
+      "sem_broker_para_parar": "No container broker in this installation: stopping and removing could only fail.",
+      "sem_broker_ambos": "No container broker in this installation: starting, stopping and removing could only fail."
+    },
+    "bloqueioDetalhe": "Why?"
   }
 }

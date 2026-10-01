@@ -7,6 +7,8 @@ import type { Architecture } from '../lib/api-types';
 // `ProjectInsightsTab.tsx`, achado #15): a seção saiu de lá inteira e
 // precisa continuar IDÊNTICA visualmente. Duplicar as classes só para ter
 // arquivo de CSS próprio abriria a porta para as duas versões divergirem.
+import { Card } from '../components/ui/Card';
+import { EmptyState } from '../components/ui/EmptyState';
 import styles from './ProjectOverviewTab.module.css';
 
 /**
@@ -45,10 +47,12 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
   const isEmpty = !moduleMap && adrs.length === 0 && pendencies.length === 0;
 
   return (
-    <div className={styles.arch}>
+    // AT-327: a aba começa no topo como as outras — `.arch` (margem de 28px)
+    // é de SEÇÃO que vem depois de outra, e deixava o título 29px abaixo.
+    <div>
       <div className={styles.sectionHeader}>{t('architectureTab.title')}</div>
       {isEmpty ? (
-        <div className={styles.sectionSub}>{t('architectureTab.emptyState')}</div>
+        <EmptyState>{t('architectureTab.emptyState')}</EmptyState>
       ) : (
         <>
           <div className={styles.archLabel}>
@@ -61,20 +65,20 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
           ) : (
             <div className={styles.moduleGrid}>
               {moduleMap.modules.map((m) => (
-                <div key={m.name} className={styles.moduleCard}>
+                <Card key={m.name} radius="md" padding="sm">
                   <div className={styles.moduleName}>{m.name}</div>
                   <div className={styles.moduleStack}>{m.stack}</div>
                   <div className={styles.moduleResp}>{m.responsibility}</div>
                   {m.dependsOn.length > 0 && (
                     <div className={styles.deps}>
                       {m.dependsOn.map((d) => (
-                        <span key={d} className={styles.depChip}>
+                        <Badge key={d} tone="neutral">
                           {d}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}

@@ -13,22 +13,24 @@ class FakeEmbeddingProvider implements LLMProvider {
     toolCalling: false,
     listModels: false,
     embeddings: true,
+    routingPreference: false,
   };
   calls: string[][] = [];
 
+  // eslint-disable-next-line @typescript-eslint/require-await, require-yield
   async *chat(): AsyncGenerator<never> {
     throw new Error('não usado neste teste');
   }
 
-  async embed(inputs: readonly string[]) {
+  embed(inputs: readonly string[]) {
     this.calls.push([...inputs]);
-    return {
+    return Promise.resolve({
       vectors: inputs.map((_, i) => [i, i + 1, i + 2]),
       dimensions: 3,
       model: 'nomic-embed-text',
       inputTokens: inputs.length * 2,
       estimated: false,
-    };
+    });
   }
 }
 
@@ -39,14 +41,18 @@ class ThrowingEmbeddingProvider implements LLMProvider {
     toolCalling: false,
     listModels: false,
     embeddings: true,
+    routingPreference: false,
   };
 
+  // eslint-disable-next-line @typescript-eslint/require-await, require-yield
   async *chat(): AsyncGenerator<never> {
     throw new Error('não usado neste teste');
   }
 
-  async embed(): Promise<never> {
-    throw new LLMConnectionError('ollama', 'daemon fora do ar');
+  embed(): Promise<never> {
+    return Promise.reject(
+      new LLMConnectionError('ollama', 'daemon fora do ar'),
+    );
   }
 }
 
@@ -57,8 +63,10 @@ class NoEmbedProvider implements LLMProvider {
     toolCalling: true,
     listModels: false,
     embeddings: false,
+    routingPreference: false,
   };
 
+  // eslint-disable-next-line @typescript-eslint/require-await, require-yield
   async *chat(): AsyncGenerator<never> {
     throw new Error('não usado neste teste');
   }
@@ -73,7 +81,10 @@ describe('RagEmbeddingService', () => {
     const provider = new FakeEmbeddingProvider();
     const service = new RagEmbeddingService(registryWith(provider));
 
-    const textos = Array.from({ length: RAG_EMBED_BATCH_SIZE + 5 }, (_, i) => `texto ${i}`);
+    const textos = Array.from(
+      { length: RAG_EMBED_BATCH_SIZE + 5 },
+      (_, i) => `texto ${i}`,
+    );
     const resultado = await service.embedMany(textos);
 
     expect(resultado.available).toBe(true);
@@ -95,8 +106,22 @@ describe('RagEmbeddingService', () => {
     expect(provider.calls).toHaveLength(0);
   });
 
+  it('CASO DE FALHA: entrada que não é array (um objeto com length enorme) não vira laço nem chamada ao provider', async () => {
+    const provider = new FakeEmbeddingProvider();
+    const service = new RagEmbeddingService(registryWith(provider));
+
+    const resultado = await service.embedMany({
+      length: 1e9,
+    } as unknown as readonly string[]);
+
+    expect(resultado).toEqual({ vectors: [], available: true });
+    expect(provider.calls).toHaveLength(0);
+  });
+
   it('CASO DE FALHA: provider sem a capability degrada para available: false, sem lançar', async () => {
-    const service = new RagEmbeddingService(registryWith(new NoEmbedProvider()));
+    const service = new RagEmbeddingService(
+      registryWith(new NoEmbedProvider()),
+    );
 
     const resultado = await service.embedMany(['a', 'b']);
 
@@ -106,7 +131,9 @@ describe('RagEmbeddingService', () => {
   });
 
   it('CASO DE FALHA: provider que lança no meio do lote degrada o restante para null, sem lançar', async () => {
-    const service = new RagEmbeddingService(registryWith(new ThrowingEmbeddingProvider()));
+    const service = new RagEmbeddingService(
+      registryWith(new ThrowingEmbeddingProvider()),
+    );
 
     const resultado = await service.embedMany(['a', 'b', 'c']);
 
@@ -116,7 +143,9 @@ describe('RagEmbeddingService', () => {
   });
 
   it('embedQuery devolve o vetor único, ou null com o motivo quando indisponível', async () => {
-    const ok = new RagEmbeddingService(registryWith(new FakeEmbeddingProvider()));
+    const ok = new RagEmbeddingService(
+      registryWith(new FakeEmbeddingProvider()),
+    );
     const okResultado = await ok.embedQuery('pergunta');
     expect(okResultado.available).toBe(true);
     expect(okResultado.vector).toEqual([0, 1, 2]);

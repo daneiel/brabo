@@ -24,6 +24,7 @@ import type {
 import {
   decidirSubida,
   podeDecidirCicloDeVida,
+  semBrokerParaCicloDeVida,
   type AcaoDeSubida,
 } from './containers-subida';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -54,7 +55,11 @@ function AcoesDoContainer({
   papel: Role | undefined;
 }) {
   const { t } = useTranslation('containers');
-  const { latest: latestSession } = useLatestSession(item.projectId);
+  // Sem poll (AT-278, RN-632): a linha só precisa da sessão para PROPOR no
+  // clique, e cada linha em poll de 5s era uma requisição a cada 5s POR
+  // PROJETO do workspace — a página inteira sozinha passava de 100/min com
+  // nove projetos. Montagem e foco da janela bastam.
+  const { latest: latestSession } = useLatestSession(item.projectId, false);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [emAndamento, setEmAndamento] = useState<
@@ -201,7 +206,7 @@ function AcoesDoContainer({
     return (
       <ApprovalCard
         action={item.acaoPendente}
-        variant="queue"
+        detalheRecolhido
         onApprove={() => void aprovar()}
         onDeny={() => void negar()}
         onAlwaysAllow={() => void sempreAprovar()}
@@ -214,12 +219,28 @@ function AcoesDoContainer({
   const semSessao = !latestSession;
   // Parar/remover exigem um container REGISTRADO: num projeto que nunca
   // provisionou não há o que parar nem o que remover.
+  const semBroker = semBrokerParaCicloDeVida(item);
   const podeParar =
     podeDecidir &&
     !semSessao &&
+    !semBroker &&
     (status === 'running' || status === 'provisioning');
   const podeRemover =
-    podeDecidir && !semSessao && status !== null && status !== 'removed';
+    podeDecidir &&
+    !semSessao &&
+    !semBroker &&
+    status !== null &&
+    status !== 'removed';
+  // A falta de broker para parar/remover só se diz quando HAVIA container:
+  // sem registro, o motivo é outro (não há o que parar), dito abaixo.
+  const semBrokerParaParar =
+    semBroker && status !== null && status !== 'removed';
+  // AT-324 (RN-646): Parar/Remover já eram inertes sem container, mas nada
+  // dizia por quê — e o `danger` desabilitado pintava "Remover" em vermelho
+  // cheio, oferecendo remover o que não existe. O motivo agora é TEXTO, uma
+  // vez (ADR 0064), e é o do MUNDO, antes de papel ou sessão.
+  const semContainer =
+    status === null ? 'nuncaProvisionado' : status === 'removed' ? 'removido' : null;
 
   const subida = decidirSubida({ item, papel, temSessao: !semSessao });
 
@@ -227,10 +248,25 @@ function AcoesDoContainer({
   // elemento `disabled` não abre no Chromium. `ja_esta_de_pe` é a exceção:
   // a coluna Registrado já mostra `rodando`, e repetir isso numa linha de
   // texto em toda linha saudável é ruído, não explicação.
-  const motivo =
-    !subida.pode && subida.motivo !== 'ja_esta_de_pe'
-      ? t(`actions.bloqueio.${subida.motivo}`)
+  const motivoDaSubida =
+    !subida.pode && subida.motivo !== 'ja_esta_de_pe' ? subida.motivo : null;
+  const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
+  // A falta de broker é UM fato, mesmo quando trava subir E parar/remover:
+  // uma linha curta só, com o detalhe (o nome da variável, para o operador)
+  // atrás de um `<details>` — o texto longo estourava a célula (AT-324).
+  const chaveCurtaDoBroker = semBrokerNaSubida
+    ? semBrokerParaParar
+      ? 'sem_broker_ambos'
+      : 'sem_broker_na_instalacao'
+    : semBrokerParaParar
+      ? 'sem_broker_para_parar'
       : null;
+  const detalhesDoBroker = [
+    semBrokerNaSubida ? t('actions.bloqueio.sem_broker_na_instalacao') : null,
+    semBrokerParaParar ? t('actions.bloqueio.sem_broker_para_parar') : null,
+  ].filter((texto): texto is string => texto !== null);
+  const motivo =
+    motivoDaSubida && !semBrokerNaSubida ? t(`actions.bloqueio.${motivoDaSubida}`) : null;
   const ressalva = subida.pode && subida.ressalva ? t(`actions.ressalva.${subida.ressalva}`) : null;
 
   return (
@@ -263,6 +299,22 @@ function AcoesDoContainer({
           {item.registrado ? t('actions.startAgain') : t('actions.start')}
         </Button>
       </div>
+      {semContainer && (
+        <p className={styles.motivo}>{t(`actions.semContainer.${semContainer}`)}</p>
+      )}
+      {chaveCurtaDoBroker && (
+        <details className={styles.motivoComDetalhe}>
+          <summary className={styles.motivo}>
+            {t(`actions.bloqueioCurto.${chaveCurtaDoBroker}`)}{' '}
+            <span className={styles.porque}>{t('actions.bloqueioDetalhe')}</span>
+          </summary>
+          {detalhesDoBroker.map((texto) => (
+            <p key={texto} className={styles.detalheDoMotivo}>
+              {texto}
+            </p>
+          ))}
+        </details>
+      )}
       {motivo && <p className={styles.motivo}>{motivo}</p>}
       {ressalva && <p className={styles.ressalva}>{ressalva}</p>}
     </div>
@@ -406,6 +458,7 @@ export function ContainersPage() {
       key: 'actions',
       label: t('table.actions'),
       width: '2fr',
+      largaNoMovel: true,
       render: (item) => <AcoesDoContainer item={item} papel={papel} />,
     },
   ];

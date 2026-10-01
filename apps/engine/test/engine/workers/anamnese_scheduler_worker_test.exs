@@ -113,10 +113,12 @@ defmodule Engine.Workers.AnamneseSchedulerWorkerTest do
       assert_enqueued(worker: AnamneseSchedulerWorker)
     end
 
-    test "default é DESATIVADO quando a flag não está setada" do
+    # RN-680 (ADR 0196): o dono religou a Anamnese em 2026-10-01; o default
+    # do código voltou a ser LIGADO (de 2026-08-10 até ali foi desligado).
+    test "default é ATIVADO quando a flag não está setada" do
       Application.delete_env(:engine, :anamnese_enabled?)
 
-      refute AnamneseSchedulerWorker.enabled?()
+      assert AnamneseSchedulerWorker.enabled?()
     end
   end
 

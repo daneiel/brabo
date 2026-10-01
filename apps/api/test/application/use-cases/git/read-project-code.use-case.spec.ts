@@ -233,10 +233,10 @@ class ProviderFalso implements GitProviderContract {
   commentOnPullRequest = naoDeveria('commentOnPullRequest');
 }
 
-function naoDeveria(metodo: string): never & (() => never) {
+function naoDeveria(metodo: string): never {
   return (() => {
     throw new Error(`A aba Code é só leitura, e chamou ${metodo}`);
-  }) as never & (() => never);
+  }) as never;
 }
 
 /**
@@ -658,6 +658,7 @@ function tarefaFalsa(overrides: Partial<Task>): Task {
     blockedOrigin: null,
     gateStatus: null,
     gateCorrectionCount: 0,
+    module: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

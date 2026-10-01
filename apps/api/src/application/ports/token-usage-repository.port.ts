@@ -1,4 +1,4 @@
-import type { LLMProviderName } from '@brabo/shared';
+import type { LLMProviderName, RoutingPreference } from '@brabo/shared';
 import type { TokenUsage } from '../../domain/llm/token-usage.entity';
 import type { Actor } from '../../domain/sessions/session-event.entity';
 import type { ModelBindingScope } from '../../domain/llm/model-binding-scope';
@@ -16,9 +16,23 @@ export interface RecordTokenUsageInput {
   /** O preço vigente no instante da chamada (Fase 9c, RN-044). */
   inputPricePerMillionMicros: number;
   outputPricePerMillionMicros: number;
+  /** `true` quando o preço é implícito (custo real ÷ tokens), ADR 0179/0188. */
+  priceImplicit?: boolean;
+  /** O que o catálogo teria cobrado, quando `costMicros` é o real (RN-665). */
+  catalogCostMicros?: number | null;
+  /** O modelo que a resposta disse ter servido (RN-665). */
+  resolvedModelName?: string | null;
+  /** O id que o provider deu à resposta (`gen-…`), RN-665. */
+  generationId?: string | null;
+  /** Parte da entrada servida de cache, quando o provider disse (RN-666). */
+  cachedInputTokens?: number | null;
+  /** Parte da saída que foi raciocínio, quando o provider disse (RN-666). */
+  reasoningTokens?: number | null;
   latencyMs: number;
   bindingOrigin: ModelBindingScope | null;
   upstreamProvider: string | null;
+  /** O critério que foi ao fio (ADR 0166) — `null` quando nada foi enviado. */
+  routingPreference: RoutingPreference | null;
 }
 
 export abstract class TokenUsageRepository {

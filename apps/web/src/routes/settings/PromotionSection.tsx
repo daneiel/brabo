@@ -7,9 +7,11 @@ import { Select } from '../../components/ui/Select';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
- * Quem promove história a `ready` (Fase 12c — RN-048).
+ * Quem promove história a `ready` (Fase 12c — RN-048). Projeto NOVO nasce em
+ * `auto` desde a RN-659 (AT-313); o projeto antigo segue no modo que tinha.
  *
  * Salva no `onChange`, sem botão, como o seletor de papel em `MembersSection`:
  * é uma escolha entre dois valores nomeados, não um campo digitado que precise
@@ -22,6 +24,7 @@ export function PromotionSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [saving, setSaving] = useState(false);
 
@@ -65,6 +68,12 @@ export function PromotionSection({ projectId }: { projectId: string }) {
             {project.storyPromotion === 'manual'
               ? t('promotion.card.hintManual')
               : t('promotion.card.hintAuto')}
+          </div>
+          {/* RN-659 (AT-313): o default de projeto NOVO é `auto`; a tela diz
+              isso para quem encontra um projeto antigo em `manual` e se
+              pergunta por que difere do recém-criado. */}
+          <div className={styles.ajusteHint} data-testid="promocao-default">
+            {t('promotion.card.defaultNote')}
           </div>
         </div>
         <div className={styles.ajusteControle}>

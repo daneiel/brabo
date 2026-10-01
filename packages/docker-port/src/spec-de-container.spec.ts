@@ -28,6 +28,37 @@ const VALIDA = {
   pidsLimit: 512,
 };
 
+describe('especificacaoValidada — usuario (ADR 0180)', () => {
+  it('ausente e null são "como sempre"', () => {
+    expect(especificacaoValidada(VALIDA)).not.toHaveProperty('usuario');
+    expect(especificacaoValidada({ ...VALIDA, usuario: null })).not.toHaveProperty('usuario');
+  });
+
+  it('aceita {uid, gid} inteiros positivos', () => {
+    expect(
+      especificacaoValidada({ ...VALIDA, usuario: { uid: 1000, gid: 1000 } }).usuario,
+    ).toEqual({ uid: 1000, gid: 1000 });
+  });
+
+  it.each([
+    [{ uid: 0, gid: 1000 }, 'usuario.uid'],
+    [{ uid: 1000, gid: 0 }, 'usuario.gid'],
+    [{ uid: -1, gid: 1 }, 'usuario.uid'],
+    [{ uid: 1.5, gid: 1 }, 'usuario.uid'],
+    [{ uid: '1000', gid: 1 }, 'usuario.uid'],
+    [{ uid: 1, gid: 3_000_000_000 }, 'usuario.gid'],
+    ['1000:1000', 'usuario.uid'],
+  ])('recusa %j nomeando o campo', (usuario, campo) => {
+    try {
+      especificacaoValidada({ ...VALIDA, usuario });
+      throw new Error('deveria recusar');
+    } catch (e) {
+      expect(e).toBeInstanceOf(EspecificacaoInvalidaError);
+      expect((e as EspecificacaoInvalidaError).campo).toBe(campo);
+    }
+  });
+});
+
 describe('especificacaoValidada — caminho feliz', () => {
   it('devolve a especificação fechada, com a versão do artefato como texto', () => {
     const spec = especificacaoValidada(VALIDA);

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { LLMProviderName } from '@brabo/shared';
+import type { LLMProviderName, RoutingPreference } from '@brabo/shared';
 import { TokenUsageRepository } from '../../ports/token-usage-repository.port';
 import { BudgetRepository } from '../../ports/budget-repository.port';
 import { AgentAreaRepository } from '../../ports/agent-area-repository.port';
@@ -17,7 +17,8 @@ export interface RecordLlmUsageInput {
   sessionId: string;
   actor: Actor;
   provider: LLMProviderName;
-  modelId: string;
+  /** `null` para o que não é modelo do catálogo (o Jev, ADR 0179). */
+  modelId: string | null;
   modelName: string;
   inputTokens: number;
   outputTokens: number;
@@ -30,10 +31,33 @@ export interface RecordLlmUsageInput {
    */
   inputPricePerMillionMicros: number;
   outputPricePerMillionMicros: number;
+  /**
+   * `true` quando o preço acima foi DERIVADO do custo real da resposta
+   * (`custo ÷ tokens`), não veio do catálogo — ADR 0188 (e 0179, no Jev).
+   */
+  priceImplicit?: boolean;
+  /** O que o catálogo teria cobrado, quando `costMicros` é o real (RN-665). */
+  catalogCostMicros?: number | null;
+  /** O modelo que a RESPOSTA disse ter servido — num hub, o alias resolvido (RN-665). */
+  resolvedModelName?: string | null;
+  /** O id que o provider deu à resposta, para conferir a cobrança depois (RN-665). */
+  generationId?: string | null;
+  /**
+   * Quantos dos `inputTokens` vieram de CACHE e quantos dos `outputTokens`
+   * foram raciocínio — PARTES, nunca somadas ao total (RN-666). `null` = o
+   * provider não disse, que é diferente de 0.
+   */
+  cachedInputTokens?: number | null;
+  reasoningTokens?: number | null;
   latencyMs: number;
   bindingOrigin: ModelBindingScope | null;
   /** Só quando um hub informou quem serviu de fato (Fase 9b). */
   upstreamProvider?: string | null;
+  /**
+   * O critério de roteamento que FOI AO FIO (ADR 0166, RN-583) — nunca o que o
+   * binding guarda sem ter sido enviado. Congelado como o preço.
+   */
+  routingPreference?: RoutingPreference | null;
 }
 
 /**
@@ -82,9 +106,16 @@ export class RecordLlmUsageUseCase {
       costMicros: input.costMicros,
       inputPricePerMillionMicros: input.inputPricePerMillionMicros,
       outputPricePerMillionMicros: input.outputPricePerMillionMicros,
+      priceImplicit: input.priceImplicit ?? false,
+      catalogCostMicros: input.catalogCostMicros ?? null,
+      resolvedModelName: input.resolvedModelName ?? null,
+      generationId: input.generationId ?? null,
+      cachedInputTokens: input.cachedInputTokens ?? null,
+      reasoningTokens: input.reasoningTokens ?? null,
       latencyMs: input.latencyMs,
       bindingOrigin: input.bindingOrigin,
       upstreamProvider: input.upstreamProvider ?? null,
+      routingPreference: input.routingPreference ?? null,
     });
 
     const [projectBudget, sessionBudget] = await Promise.all([

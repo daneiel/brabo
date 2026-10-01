@@ -66,6 +66,17 @@ export const priceChangeSourceEnum = pgEnum('price_change_source', [
 
 export const budgetPolicyEnum = pgEnum('budget_policy', ['block', 'allow']);
 
+// O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). Mora aqui
+// porque as DUAS tabelas que o chamam — `model_bindings` (a decisão) e
+// `token_usage` (o que foi ao fio) — moram aqui. Literal, e não importado de
+// `domain/llm/routing-preference.ts`: este arquivo só importa TIPO do domínio,
+// e a igualdade das duas listas é travada por teste.
+export const routingPreferenceEnum = pgEnum('routing_preference', [
+  'price',
+  'throughput',
+  'latency',
+]);
+
 // user_credentials guarda tanto chaves de LLM quanto tokens de git do
 // usuário (github/gitlab) — enum dedicado em vez de alargar llm_provider
 // (que também serve models/token_usage, LLM-only de verdade) ou
@@ -228,6 +239,11 @@ export const modelBindings = pgTable(
     modelId: uuid('model_id')
       .notNull()
       .references(() => models.id),
+    // ADR 0166. `null` = o hub decide sozinho, o comportamento de antes. NÃO
+    // cascateia à parte: viaja com o binding que vence a cascata, e só existe
+    // para provider que declara `routingPreference` (o caso de uso recusa o
+    // resto, e troca de modelo para provider sem a capability a zera).
+    routingPreference: routingPreferenceEnum('routing_preference'),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -334,6 +350,29 @@ export const tokenUsage = pgTable(
     })
       .notNull()
       .default(0),
+    // `true` quando o preço NÃO é de catálogo: foi derivado de `custo ÷ tokens`
+    // da própria resposta — o Jev (ADR 0179) e, desde o ADR 0188 (RN-665), toda
+    // chamada cujo provider devolveu o custo REAL (`usage.cost`). Mantém
+    // `tokens × preço = custo` (RN-044) sem fingir que existe um preço de tabela.
+    priceImplicit: boolean('price_implicit').notNull().default(false),
+    // O que o preço de CATÁLOGO teria cobrado pela mesma chamada, gravado só
+    // quando `cost_micros` é o real (ADR 0188): é a distância entre a estimativa
+    // e a fatura, medida linha a linha. `null` = o número já é o do catálogo.
+    catalogCostMicros: bigint('catalog_cost_micros', { mode: 'number' }),
+    // O modelo que a RESPOSTA disse ter servido (`model` do frame) — num hub, o
+    // alias pedido resolve para uma versão datada (RN-665). `model_name`
+    // continua sendo o do catálogo, a dimensão dos relatórios.
+    resolvedModelName: text('resolved_model_name'),
+    // O id da resposta no provider (`gen-…` no OpenRouter): é por ele que
+    // `GET /generation?id=` confere a cobrança depois (RN-665).
+    generationId: text('generation_id'),
+    // PARTES dos tokens que o provider informou (RN-666, AT-272): quantos da
+    // entrada vieram de CACHE (cache read, cobrado a uma fração do preço) e
+    // quantos da saída foram RACIOCÍNIO. Nunca somadas a `input_tokens` /
+    // `output_tokens`, que já as incluem. `null` = o provider não disse —
+    // diferente de 0, que é "disse que não houve".
+    cachedInputTokens: integer('cached_input_tokens'),
+    reasoningTokens: integer('reasoning_tokens'),
     latencyMs: integer('latency_ms').notNull(),
     bindingOrigin: modelBindingScopeEnum('binding_origin'),
     // Provider SUBJACENTE, quando a chamada passou por um hub que informa quem
@@ -341,6 +380,12 @@ export const tokenUsage = pgTable(
     // aviso e não é nosso para versionar. `null` = não veio de hub, ou o hub
     // não informou.
     upstreamProvider: text('upstream_provider'),
+    // O critério de roteamento que FOI AO FIO nesta chamada (ADR 0166, RN-583)
+    // — congelado como o preço (RN-044): sem ele, comparar `upstream_provider`
+    // e `latency_ms` antes e depois de ligar `throughput` exigiria reconstruir
+    // o binding daquele instante. `null` = nada foi enviado (binding sem
+    // preferência, ou provider que não a declara).
+    routingPreference: routingPreferenceEnum('routing_preference'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -31,7 +31,7 @@ x-app-hardening: &app-hardening
 
 services:
   postgres:
-    image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -58,7 +58,7 @@ services:
   # (senha precisa ter >= 8 caracteres) — a validação não é nossa, mas o
   # efeito é o mesmo, "sem fallback silencioso para um valor público".
   neo4j:
-    image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+    image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
     restart: unless-stopped
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-}
@@ -134,6 +134,13 @@ services:
       # suprir o literal público como fallback e mascarar esse `raise`
       # (RN-114, mesmo padrão do ADR 0059/RN-093).
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-}
+      # Também sem default, e pelo mesmo motivo: desde a RN-601 o `runtime.exs`
+      # de uma release `:prod` recusa subir sem um token de serviço válido — e
+      # o `eval` da migração avalia o MESMO arquivo. Sem estas duas aqui a
+      # migração morria antes de migrar. O Job do k8s já as recebia pelo
+      # `envFrom` de `brabo-secrets`.
+      BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       # Sem PHX_SERVER aqui: migração não sobe endpoint HTTP.
     command: ["/app/bin/engine", "eval", "Engine.Release.migrate()"]
     depends_on:
@@ -173,12 +180,23 @@ services:
       # (ADR 0059, RN-093/RN-114). A linha continua aqui, com valor vazio,
       # porque omiti-la esconderia que a variável existe.
       CREDENTIALS_MASTER_KEY: ${CREDENTIALS_MASTER_KEY:-}
+      # Os `_PREVIOUS` só existem durante uma rotação sem downtime (runbook: "Auth
+      # key rotation" e "Master key rotation"); vazio = sem rotação, o normal. Sem
+      # estas linhas o Compose não os repassa e a rotação não acontece (RN-595).
+      CREDENTIALS_MASTER_KEY_PREVIOUS: ${CREDENTIALS_MASTER_KEY_PREVIOUS:-}
       # Auth first-party (Fase 7a). AUTH_JWT_SECRET deriva o par Ed25519 que
       # assina o access token; BRABO_SERVICE_TOKEN autentica o tráfego interno
       # engine <-> api nos dois sentidos — MESMO valor nos dois serviços deste
       # compose (ver a env do serviço `engine`, abaixo).
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
+      AUTH_JWT_SECRET_PREVIOUS: ${AUTH_JWT_SECRET_PREVIOUS:-}
+      # OBRIGATÓRIO desde a RN-613: sem ele a api recusa subir, e a recusa diz
+      # o conserto — numa instalação que já roda, o valor ATUAL do
+      # AUTH_JWT_SECRET, para ninguém ser deslogado. Até ali este compose nem o
+      # repassava, e o pepper caía no JWT: rotacionar o JWT deslogava todos.
+      AUTH_TOKEN_PEPPER: ${AUTH_TOKEN_PEPPER:-}
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
       ENGINE_URL: ${ENGINE_URL:-http://engine:4000}
@@ -267,6 +285,7 @@ services:
       # levaria 401 em toda chamada interna e o sintoma apareceria só no
       # primeiro handoff.
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       PORT: 4000
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
       # Obrigatórios no release (runtime.exs, bloco :prod):
@@ -290,6 +309,8 @@ services:
       # árvores diferentes.
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
       SESSION_HEARTBEAT_TIMEOUT_MS: ${SESSION_HEARTBEAT_TIMEOUT_MS:-30000}
+      # Teto da conversa ociosa (RN-581): mesmo default do runtime.exs (8h).
+      SESSION_CONVERSATION_IDLE_TIMEOUT_MS: ${SESSION_CONVERSATION_IDLE_TIMEOUT_MS:-28800000}
       TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-15000}
       SECOPS_SCAN_TIMEOUT_MS: ${SECOPS_SCAN_TIMEOUT_MS:-180000}
       # Agentes de fundo desligados por default AQUI (não em dev): este compose
@@ -315,7 +336,10 @@ services:
       START_ANAMNESE: ${START_ANAMNESE:-false}
       START_MODEL_SYNC: ${START_MODEL_SYNC:-true}
       START_GATE_RESCUE: ${START_GATE_RESCUE:-true}
-      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-false}
+      # `ANAMNESE_ENABLED` segue o `true` do código desde a RN-680; aqui o
+      # tick continua desligado por `START_ANAMNESE=false` (acima), então só
+      # a rodada pedida à mão roda.
+      ANAMNESE_ENABLED: ${ANAMNESE_ENABLED:-true}
       PSYCHOLOGIST_ENABLED: ${PSYCHOLOGIST_ENABLED:-false}
       GRAPH_TEMPLATES_ENABLED: ${GRAPH_TEMPLATES_ENABLED:-false}
       GRAPH_INSTRUCTION_TEMPLATES_ENABLED: ${GRAPH_INSTRUCTION_TEMPLATES_ENABLED:-false}
@@ -371,6 +395,7 @@ services:
       # caracteres. A linha fica aqui, vazia, porque omiti-la esconderia que a
       # variável existe.
       BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      BRABO_SERVICE_TOKEN_PREVIOUS: ${BRABO_SERVICE_TOKEN_PREVIOUS:-}
       API_URL: ${API_URL:-http://api:3000}
       # A raiz das pastas de projeto NO HOST. Não tem como derivar do volume
       # nomeado `project_workspaces` — o caminho que o daemon resolve é o do
@@ -510,7 +535,7 @@ services:
     # sem aviso, e um upgrade silencioso de Ollama já quebrou build antes
     # (mudança de rota da API). Atualizar é decisão manual — subir o número
     # aqui, não seguir `latest`.
-    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
     profiles: ["llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -531,7 +556,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
     profiles: ["llm"]
     depends_on:
       ollama:

@@ -146,6 +146,7 @@ function escrever(res: ServerResponse, corpo: unknown): void {
 
 runLLMProviderContract('openai-compatible (base)', () => ({
   dialeto: dialetoOpenAI,
+  posicaoDoSistemaTardio: 'fim_da_conversa',
   // Usa a configuração DE PRODUÇÃO da OpenAI apontada para o servidor falso —
   // uma cópia escrita no teste passaria verde mesmo se a real divergisse.
   criar: (baseUrl) =>
@@ -174,6 +175,7 @@ runLLMProviderContract('openai-compatible (base)', () => ({
  */
 runLLMProviderContract('openai-compatible (base, embeddings ligado)', () => ({
   dialeto: dialetoOpenAI,
+  posicaoDoSistemaTardio: 'fim_da_conversa',
   criar: (baseUrl) => {
     const base = openaiConfig(baseUrl);
     return new OpenAICompatibleProvider(
@@ -285,6 +287,26 @@ describe('OpenAICompatibleProvider — particularidades da base', () => {
     expect(chunks.find((c) => c.type === 'usage')).not.toHaveProperty(
       'upstreamProvider',
     );
+  });
+
+  it('preferência de roteamento é IGNORADA por quem não é hub — nunca vai ao fio, nunca falha (ADR 0166)', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenAI);
+    const provider = new OpenAICompatibleProvider(
+      openaiConfig(servidor.baseUrl),
+    );
+    expect(provider.capabilities.routingPreference).toBe(false);
+
+    const chunks = [];
+    for await (const chunk of provider.chat([{ role: 'user', content: 'oi' }], {
+      model: 'gpt-4o-mini',
+      routingPreference: 'throughput',
+    })) {
+      chunks.push(chunk);
+    }
+    await servidor.fechar();
+
+    expect(chunks.some((c) => c.type === 'error')).toBe(false);
+    expect(servidor.ultimoPedido()).not.toHaveProperty('provider');
   });
 
   it('embed recusa quando a capability não é declarada, sem tocar a rede', async () => {

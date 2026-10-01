@@ -5,6 +5,15 @@ import { REQUIRED_ROLE_KEY } from '../../../../src/interfaces/http/iam/require-r
 import { IS_PAT_ROUTE_KEY } from '../../../../src/interfaces/http/auth/pat-route.decorator';
 import type { User } from '../../../../src/domain/iam/user.entity';
 
+/*
+ * `Controller.prototype.<método>` entra aqui como CHAVE de metadata: o
+ * `Reflector` só lê o que os decorators penduraram no método, nunca o invoca.
+ * `@typescript-eslint/unbound-method` não distingue os dois usos, então a
+ * supressão fica aqui, com o motivo (a mesma de
+ * `workspaces-project-folders.controller.spec.ts`).
+ */
+/* eslint-disable @typescript-eslint/unbound-method */
+
 const user = { id: 'user-1' } as User;
 
 describe('RunnerTicketsController', () => {
@@ -59,12 +68,17 @@ describe('RunnerTicketsController', () => {
     };
     const controller = new RunnerTicketsController(requestTicket as never);
 
-    const resposta = await controller.runnerTicket('projeto-1', user);
+    const resposta = await controller.runnerTicket('projeto-1', user, {
+      credencialDeDispositivo: { tipo: 'device_key', id: 'kid-1' },
+    } as never);
 
+    // A credencial que o `PatAuthGuard` pôs na requisição segue para o
+    // ticket (ADR 0201, RN-685).
     expect(requestTicket.execute).toHaveBeenCalledWith(
       'projeto-1',
       'user-1',
       'runner',
+      { tipo: 'device_key', id: 'kid-1' },
     );
     expect(resposta).toEqual({
       ticket: 'bruto-runner',

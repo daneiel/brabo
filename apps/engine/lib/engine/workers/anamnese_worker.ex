@@ -9,9 +9,16 @@ defmodule Engine.Workers.AnamneseWorker do
   quando o perfil sugere um ajuste com valor, propõe um
   `instruction_patch`.
 
+  **Não roda sem sujeito elegível** (RN-680, ADR 0196): antes de tudo,
+  `Engine.Anamnese.Elegibilidade.avaliar/1` — sem membro efetivo com
+  interação própria na janela, nenhuma chamada ao LLM, e o motivo nomeado
+  vai para o log (e, na rodada pedida à mão, para o event log como
+  `anamnese.run_skipped`). Foi o caso das seis rodadas do uso real de
+  2026-09-29, todas pagas para o modelo concluir "nenhum membro elegível".
+
   **Pula sem gastar nada** quando não há material novo (ver
   `Engine.Anamnese.Triage.should_run?/2`) — mas hipótese aceita na fila
-  SEMPRE força a rodada, senão o loop fechado do Psicólogo nunca
+  força a rodada QUANDO há sujeito, senão o loop fechado do Psicólogo nunca
   completaria. Rodada que não conclui não grava `anamnese_runs`, então a
   janela é reprocessada na próxima (mesma disciplina do Psicólogo).
   """
@@ -20,7 +27,7 @@ defmodule Engine.Workers.AnamneseWorker do
 
   require Logger
 
-  alias Engine.Anamnese.{ContextBuilder, Tools, Triage}
+  alias Engine.Anamnese.{ContextBuilder, Elegibilidade, Tools, Triage}
   alias Engine.Anamnese.Hooks.Termination
   alias Engine.Harness.Hooks
   alias Engine.Harness.Hooks.EventLog
@@ -33,7 +40,7 @@ defmodule Engine.Workers.AnamneseWorker do
 
     case ContextBuilder.fetch(project_id) do
       {:ok, context} ->
-        maybe_analyze(project_id, session_id, context)
+        maybe_analyze(project_id, session_id, context, Map.get(args, "origem"))
 
       {:error, reason} ->
         # PRECISA ser `{:error, _}`: `:ok` marcaria o job `completed` e a
@@ -48,9 +55,46 @@ defmodule Engine.Workers.AnamneseWorker do
   # Sem sessão pra atribuir eventos/custo, a rodada não tem onde narrar —
   # o scheduler escolhe a sessão; se não houver nenhuma no projeto, não
   # há nada a analisar mesmo.
-  defp maybe_analyze(_project_id, nil, _context), do: :ok
+  defp maybe_analyze(_project_id, nil, _context, _origem), do: :ok
 
-  defp maybe_analyze(project_id, session_id, context) do
+  # RN-680: a guarda vem ANTES da triagem e não tem exceção — nem a hipótese
+  # aceita na fila a atravessa. O prompt passa a levar só os SUJEITOS em
+  # "MEMBROS ELEGÍVEIS", não a lista inteira.
+  defp maybe_analyze(project_id, session_id, context, origem) do
+    case Elegibilidade.avaliar(context) do
+      {:ok, sujeitos} ->
+        triar(project_id, session_id, %{context | members: sujeitos})
+
+      {:sem_sujeito, motivo, detalhe} ->
+        Logger.info(
+          "anamnese: rodada NÃO roda em #{project_id} — sem_sujeito_elegivel " <>
+            "(#{motivo}): #{detalhe}; nenhuma chamada ao LLM (RN-680)"
+        )
+
+        narrar_sem_sujeito(project_id, session_id, origem, motivo, detalhe)
+        :ok
+    end
+  end
+
+  # Pelo tick (a cada 15 min, por projeto) é só log: virar evento encheria a
+  # timeline de um aviso repetido. Na rodada pedida à MÃO, quem a pediu espera
+  # um desfecho, e ele vai durável, com o motivo.
+  defp narrar_sem_sujeito(project_id, session_id, "manual", motivo, detalhe) do
+    EngineApiClient.append_event(project_id, session_id, %{
+      type: "anamnese.run_skipped",
+      actorKind: "agent",
+      actorId: Triage.agent(),
+      payload: %{
+        motivo: detalhe,
+        causa: "sem_sujeito_elegivel",
+        detalhe: Atom.to_string(motivo)
+      }
+    })
+  end
+
+  defp narrar_sem_sujeito(_project_id, _session_id, _origem, _motivo, _detalhe), do: :ok
+
+  defp triar(project_id, session_id, context) do
     # Contagem REAL da janela, não o tamanho do recorte que vai no prompt.
     event_count = context.total_event_count
     queued_count = length(context.queued_hypotheses)

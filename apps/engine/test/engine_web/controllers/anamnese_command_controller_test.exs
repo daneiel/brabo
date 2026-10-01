@@ -74,7 +74,8 @@ defmodule EngineWeb.AnamneseCommandControllerTest do
       conn = AnamneseCommandController.run(conn, %{"projectId" => project_id})
 
       assert conn.status == 202
-      assert_enqueued(worker: AnamneseWorker, args: %{project_id: project_id})
+      # RN-680: a rodada pedida à mão vai marcada, para narrar a falta de sujeito.
+      assert_enqueued(worker: AnamneseWorker, args: %{project_id: project_id, origem: "manual"})
     end
 
     test "projeto sem sessão: 409, comportamento existente intocado", %{conn: conn} do

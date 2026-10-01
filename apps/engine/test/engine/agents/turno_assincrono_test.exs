@@ -49,7 +49,8 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     from = from || {self(), make_ref()}
     Process.put(:fake_llm_turn_stream_hang, true)
 
-    assert {:noreply, state_with_task} =
+    # ADR 0163 (RN-578): o aceite volta NA HORA, com o turno ainda rodando.
+    assert {:reply, :ok, state_with_task} =
              CriativoServer.handle_call({:user_message, "oi"}, from, state)
 
     # Prova que o turno REALMENTE chegou a chamar `llm_turn_stream` dentro da
@@ -57,6 +58,51 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     assert_receive :turno_pendurado, 1_000
 
     {state_with_task, from}
+  end
+
+  describe "o aceite sai ANTES do turno terminar (ADR 0163, RN-578)" do
+    # O defeito medido numa instalação real: três cliques de 97,3 s, 97,3 s e
+    # 51,8 s, cada um esperando o turno inteiro do agente que disparou.
+    test "com `from`, responde :ok com a task AINDA viva", %{state: state} do
+      Process.put(:fake_llm_turn_stream_hang, true)
+      from = {self(), make_ref()}
+
+      assert {:reply, :ok, state_with_task} =
+               CriativoServer.handle_call({:user_message, "oi"}, from, state)
+
+      assert_receive :turno_pendurado, 1_000
+      assert Process.alive?(state_with_task.turno_assincrono.task.pid)
+
+      _ = TurnoAssincrono.cancelar(state_with_task)
+    end
+
+    # A ORDEM é contrato: a tela, depois do aceite, lê o log e fecha a faixa
+    # quando o `agent.status` mais recente do agente não é `working`. Se o
+    # `working` do turno novo fosse gravado DEPOIS do aceite, o `idle` do
+    # turno anterior seria o mais recente e a tela fecharia um turno que
+    # acabou de começar.
+    test "o agent.status working já está gravado quando o aceite volta", %{
+      state: state,
+      session_id: session_id
+    } do
+      from = {self(), make_ref()}
+
+      assert {:reply, :ok, state_with_task} =
+               TurnoAssincrono.iniciar(state, from, fn ->
+                 Process.sleep(:infinity)
+               end)
+
+      assert_received {:event_appended, _, ^session_id,
+                       %{type: "agent.status", payload: %{status: "working"}}}
+
+      _ = TurnoAssincrono.cancelar(state_with_task)
+    end
+
+    test "sem `from` (kickoff), continua :noreply", %{state: state} do
+      assert {:noreply, state_with_task} = TurnoAssincrono.iniciar(state, nil, fn -> state end)
+      %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
+      assert_receive {^ref, _}, 1_000
+    end
   end
 
   describe "cancelar/1 mata a task DE VERDADE" do
@@ -81,9 +127,10 @@ defmodule Engine.Agents.TurnoAssincronoTest do
 
       assert cancelado.turno_assincrono == nil
 
-      # `from` foi respondido com o cancelamento — quem fez o `GenServer.call`
-      # original não fica pendurado esperando um turno que não vai terminar.
-      assert_received {^tag, {:error, :cancelado}}
+      # Ninguém é respondido no cancelamento: quem fez o `GenServer.call` já
+      # recebeu o aceite no início (ADR 0163). Um segundo `reply` ao mesmo
+      # `from` seria mensagem órfã na caixa de quem chamou.
+      refute_received {^tag, _}
 
       # O evento TERMINAL foi gravado: sem ele, `GetSessionPendingWorkUseCase`
       # veria `agent.activated` sem `agent.response`/`agent.error` posterior e
@@ -103,6 +150,56 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
       assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
       assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+    end
+  end
+
+  # RN-581: a sessão fechou e o agente está sendo parado. Diferente de
+  # cancelar, NADA é gravado — a api recusaria (sessão encerrada não aceita
+  # conversa) e o canal já foi embora. A task é `async_nolink`: sem isto ela
+  # sobreviveria ao servidor e seguiria chamando o modelo.
+  describe "abandonar/1 e terminate/2 (sessão encerrada)" do
+    test "abandonar mata a task, NÃO responde de novo e NÃO grava nem transmite nada", %{
+      state: state
+    } do
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+      # ADR 0163: o `from` já recebeu `:ok` no aceite e não mora no state.
+      {state_with_task, {_pid, tag}} = turno_pendurado(state)
+      refute Map.has_key?(state_with_task.turno_assincrono, :from)
+      task_pid = state_with_task.turno_assincrono.task.pid
+      # O que o INÍCIO do turno gravou/transmitiu (agent.status working) não é
+      # o assunto — o que se afirma é que abandonar não acrescenta nada.
+      esvaziar_caixa()
+
+      abandonado = TurnoAssincrono.abandonar(state_with_task)
+
+      refute Process.alive?(task_pid)
+      assert abandonado.turno_assincrono == nil
+      refute_received {^tag, _}
+      refute_received {:event_appended, _, _, _}
+      refute_received %Phoenix.Socket.Broadcast{}
+    end
+
+    test "abandonar sem turno é no-op", %{state: state} do
+      assert TurnoAssincrono.abandonar(state) == state
+    end
+
+    defp esvaziar_caixa do
+      receive do
+        _ -> esvaziar_caixa()
+      after
+        0 -> :ok
+      end
+    end
+
+    test "o terminate/2 do servidor abandona o turno em curso", %{state: state} do
+      {state_with_task, _from} = turno_pendurado(state)
+      task_pid = state_with_task.turno_assincrono.task.pid
+      esvaziar_caixa()
+
+      assert :ok = CriativoServer.terminate({:shutdown, :sessao_encerrada}, state_with_task)
+
+      refute Process.alive?(task_pid)
+      refute_received {:event_appended, _, _, _}
     end
   end
 
@@ -127,18 +224,34 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     end
   end
 
-  describe "uma segunda mensagem enquanto o turno está em curso" do
+  # Desde a RN-673 (ADR 0191) a MENSAGEM não passa mais por esta recusa — ela
+  # entra na fila (`fila_de_mensagens_test.exs`). A recusa segue valendo para o
+  # comando que NÃO é fala (revisão do PO, prontidão do Criativo, oferta de
+  # handoff do Arquiteto), que chama `iniciar/3` com `from`.
+  describe "um segundo comando enquanto o turno está em curso" do
     test "responde {:error, :turno_em_andamento} e NÃO sobe uma segunda task", %{state: state} do
       {state_with_task, _from} = turno_pendurado(state)
 
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+      session_id = state.session_id
       segunda_from = {self(), make_ref()}
 
       assert {:reply, {:error, :turno_em_andamento}, ^state_with_task} =
-               CriativoServer.handle_call(
-                 {:user_message, "outra coisa"},
-                 segunda_from,
-                 state_with_task
-               )
+               TurnoAssincrono.iniciar(state_with_task, segunda_from, fn -> state_with_task end)
+
+      # ADR 0163 (RN-578): a recusa deixou de ser calada. Até lá o controller
+      # descartava este retorno e o clique recebia 202 — a mensagem ficava no
+      # log como `chat.message` e nunca chegava ao modelo, sem rastro.
+      assert_received {:event_appended, _, ^session_id,
+                       %{type: "agent.error", payload: %{reason: "turno_em_andamento"} = payload}}
+
+      assert payload.origem == "politica"
+      assert payload.mensagem =~ "não foi atendido"
+      assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
+
+      # E NÃO fecha o turno em curso: `agent.done`/`idle` diriam à tela que
+      # a PRIMEIRA mensagem acabou.
+      refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
 
       # A PRIMEIRA task continua sendo a única — limpa no fim do teste.
       _ = TurnoAssincrono.cancelar(state_with_task)
@@ -146,13 +259,13 @@ defmodule Engine.Agents.TurnoAssincronoTest do
   end
 
   describe "a task que CRASHA (não é cancelamento) também fecha o turno" do
-    test "vira agent.error com origem classificada, e o from recebe {:error, {:crash, _}}", %{
+    test "vira agent.error com origem classificada, e o from só recebeu o aceite", %{
       state: state,
       session_id: session_id
     } do
-      from = {self(), make_ref()}
+      {_pid, tag} = from = {self(), make_ref()}
 
-      {:noreply, state_with_task} =
+      {:reply, :ok, state_with_task} =
         TurnoAssincrono.iniciar(state, from, fn -> raise "boom" end)
 
       %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
@@ -163,7 +276,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
         TurnoAssincrono.tratar_resultado({:DOWN, ref, :process, pid, reason}, state_with_task)
 
       assert final_state.turno_assincrono == nil
-      assert_received {_tag, {:error, {:crash, _reason}}}
+      refute_received {^tag, _}
       assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
       assert payload.mensagem =~ "caiu de forma inesperada"
     end
@@ -183,10 +296,9 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       state: state,
       session_id: session_id
     } do
-      from = {self(), make_ref()}
+      {_pid, tag} = from = {self(), make_ref()}
 
-      {:noreply, state_with_task} =
-        TurnoAssincrono.iniciar(state, from, fn -> {state, ""} end)
+      {:reply, :ok, state_with_task} = TurnoAssincrono.iniciar(state, from, fn -> {state, ""} end)
 
       %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
       assert_receive {^ref, resultado}, 1_000
@@ -203,8 +315,9 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert payload.mensagem =~ "formato que o engine não sabe incorporar"
       assert payload.reason =~ "resultado_de_turno_invalido"
 
-      # Quem chamou não fica pendurado esperando um turno que não vai voltar.
-      assert_received {_tag, {:error, :resultado_invalido}}
+      # Quem chamou já tinha o aceite desde o início; o desfecho é o
+      # `agent.error` durável acima, nunca uma segunda resposta.
+      refute_received {^tag, _}
     end
 
     # O state PRESERVADO é o anterior ao turno: perder o histórico do turno é
@@ -213,7 +326,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     test "preserva o state anterior ao turno", %{state: state} do
       from = {self(), make_ref()}
 
-      {:noreply, state_with_task} =
+      {:reply, :ok, state_with_task} =
         TurnoAssincrono.iniciar(state, from, fn -> :qualquer_coisa end)
 
       %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
@@ -228,9 +341,9 @@ defmodule Engine.Agents.TurnoAssincronoTest do
 
   describe "resultado com :aguardando_aprovacao (ADR 0086, RN-284)" do
     # O caso do Dev Lead: o turno parou no meio de um tool call que virou
-    # `proposed_action` pending. `from` é respondido do MESMO jeito e na
-    # MESMA hora (rompe o bloqueio síncrono), mas o turno NÃO terminou.
-    test "responde ao from, NÃO emite agent.done, e emite agent.status: awaiting_approval", %{
+    # `proposed_action` pending. O turno NÃO terminou. Desde o ADR 0163 o
+    # `from` já foi respondido no `iniciar/3` — como em todo turno.
+    test "NÃO emite agent.done, e emite agent.status: awaiting_approval", %{
       state: state
     } do
       Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
@@ -238,7 +351,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
 
       pendente = %{action_id: "pa-1", tool_call_id: "call-1", tool_name: "propose_execution_plan"}
 
-      {:noreply, state_with_task} =
+      {:reply, :ok, state_with_task} =
         TurnoAssincrono.iniciar(state, from, fn ->
           Map.put(state, :aguardando_aprovacao, pendente)
         end)
@@ -249,10 +362,9 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert {:ok, final_state} =
                TurnoAssincrono.tratar_resultado({ref, resultado}, state_with_task)
 
-      # `from` foi respondido: quem chamou (handle_call síncrono) não fica
-      # pendurado — é isto que rompe o bloqueio de até 180s no momento certo.
+      # O aceite foi a tupla do `iniciar/3`; nada chega ao `from` depois.
       {_pid, tag} = from
-      assert_received {^tag, :ok}
+      refute_received {^tag, _}
 
       # O turno_assincrono foi limpo (mesmo caminho de sempre)...
       assert final_state.turno_assincrono == nil
@@ -276,7 +388,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
       from = {self(), make_ref()}
 
-      {:noreply, state_with_task} = TurnoAssincrono.iniciar(state, from, fn -> state end)
+      {:reply, :ok, state_with_task} = TurnoAssincrono.iniciar(state, from, fn -> state end)
       %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
       assert_receive {^ref, resultado}, 1_000
 
@@ -286,6 +398,94 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       refute Map.has_key?(final_state, :aguardando_aprovacao)
       assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
       assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
+    end
+  end
+
+  # AT-099, RN-585. A tela fecha o turno por DOIS sinais, e só por eles: o
+  # `agent.done` do canal e o `agent.status` persistido que não é `working`
+  # (`turnoTerminouNoLog`, `apps/web/src/lib/session-turno.ts`). Os dois saem
+  # de `finalizar/1`, dentro do `handle_info` do GenServer, DEPOIS de
+  # `turno_assincrono` virar `nil` — e a mensagem seguinte do usuário só é
+  # atendida quando esse `handle_info` devolve o state. É isso que impede a
+  # tela de ver o turno fechado e ouvir 409 `turno_em_andamento` na mensagem
+  # seguinte.
+  #
+  # O que a Task grava (`agent.response`, `agent.error`) NÃO fecha o turno: é
+  # gravado ANTES de o resultado chegar ao GenServer, e nessa janela o turno
+  # continua aberto de verdade. Por isso o teste para o GenServer
+  # (`:sys.suspend/1`) com a Task no portão, deixa a Task terminar, e espera o
+  # `:DOWN` dela: tudo o que ela mandou chegou ANTES do `:DOWN` (ordem entre
+  # um par de processos), então a ausência do sinal de fim é prova, sem
+  # timeout. Uma mutação que emitisse o fim de dentro da Task reprova aqui
+  # sempre, não às vezes.
+  describe "o fim do turno só é visível depois de o turno fechar no GenServer (RN-585)" do
+    alias Engine.Agents.{ArquitetoServer, DevLeadServer, PoServer, StaffServer, UxDesignerServer}
+
+    for servidor <- [
+          CriativoServer,
+          PoServer,
+          ArquitetoServer,
+          DevLeadServer,
+          UxDesignerServer,
+          StaffServer
+        ] do
+      @servidor servidor
+      test "#{inspect(servidor)}: sinal de fim só depois do turno fechado; a mensagem seguinte é aceita" do
+        project_id = Ecto.UUID.generate()
+        session_id = Ecto.UUID.generate()
+        Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+
+        {:ok, pid} = GenServer.start(@servidor, {session_id, project_id})
+
+        :sys.replace_state(pid, fn estado ->
+          Process.put(:fake_llm_turn_stream_gate, true)
+          estado
+        end)
+
+        assert :ok = GenServer.call(pid, {:user_message, "primeira"})
+        assert_receive {:turno_no_portao, task_pid}, 1_000
+
+        # O GenServer para de atender mensagens comuns; `:sys.get_state/1`
+        # continua funcionando (é mensagem de sistema).
+        :ok = :sys.suspend(pid)
+        ref = Process.monitor(task_pid)
+        send(task_pid, :abrir_portao)
+        assert_receive {:DOWN, ^ref, :process, ^task_pid, _}, 1_000
+
+        # A Task terminou e gravou o desfecho dela...
+        assert_received {:event_appended, _, ^session_id, %{type: "agent.response"}}
+        # ...mas o turno segue aberto, e NENHUM dos dois sinais que a tela usa
+        # para fechá-lo saiu.
+        assert %{turno_assincrono: %{task: %Task{}}} = :sys.get_state(pid)
+        refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+
+        refute_received {:event_appended, _, ^session_id,
+                         %{type: "agent.status", payload: %{status: "idle"}}}
+
+        :ok = :sys.resume(pid)
+
+        # O sinal chega agora — e quem o viu pode mandar a próxima mensagem:
+        # ela é ACEITA, nunca recusada como turno em andamento.
+        assert_receive {:event_appended, _, ^session_id,
+                        %{type: "agent.status", payload: %{status: "idle"}}},
+                       1_000
+
+        assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+        assert :sys.get_state(pid).turno_assincrono == nil
+        assert :ok = GenServer.call(pid, {:user_message, "segunda"})
+
+        refute_received {:event_appended, _, ^session_id,
+                         %{type: "agent.error", payload: %{reason: "turno_em_andamento"}}}
+
+        assert_receive {:turno_no_portao, segunda_task}, 1_000
+        send(segunda_task, :abrir_portao)
+
+        assert_receive {:event_appended, _, ^session_id,
+                        %{type: "agent.status", payload: %{status: "idle"}}},
+                       1_000
+
+        GenServer.stop(pid)
+      end
     end
   end
 end

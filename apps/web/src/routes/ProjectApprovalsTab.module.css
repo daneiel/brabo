@@ -69,6 +69,14 @@
 }
 
 /* Vazio de bloco secundário: uma linha, sem moldura. */
+/* A lacuna do motivo da política, dita UMA vez acima da fila (AT-333). */
+.notaDoRecorte {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
 .clean {
   padding: 24px 0;
   color: var(--text-muted);
@@ -79,39 +87,17 @@
  * O vazio da FILA é o estado que o desenho desenhou: moldura tracejada, tile de
  * 48px com o check em teal e uma frase que diz o que isso significa.
  */
-.vazioCard {
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  padding: 44px 24px;
-  text-align: center;
-}
-
-.vazioIcone {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--success) 14%, transparent);
-  display: grid;
-  place-items: center;
-  margin: 0 auto 14px;
-  color: var(--success);
-}
-
-.vazioTexto {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-}
+/* O vazio da fila é `ui/EmptyState` com `tom="sucesso"` (AT-327). */
 
 .banner {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: color-mix(in srgb, var(--warning) 8%, var(--surface-1));
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+  background: var(--warning-panel);
+  border: 1px solid var(--warning-panel-border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   margin-bottom: 16px;
 }
@@ -150,23 +136,13 @@
 /* Botão quadrado só de ícone, como em `ProjectSettingsTab` — 32px, o piso de
    alvo de toque para ícone de ação PRIMÁRIA (PROGRAMA 28, Onda 5/H5; era
    28px). Ação destrutiva, ganha o mesmo piso do `.close` de `Modal`. */
+/* `ui/Button icon size="sm" variant="secondary"` (AT-287); aqui só o
+   centro da célula e o aviso de destrutivo no hover. */
 .revoke {
-  width: 32px;
-  height: 32px;
-  border-radius: 7px;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
   margin: 0 auto;
-  transition:
-    color 0.12s,
-    border-color 0.12s;
 }
 
-.revoke:hover {
+.revoke:hover:not(:disabled) {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  border-color: var(--danger-line);
 }

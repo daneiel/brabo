@@ -1,4 +1,3 @@
-import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   autonomyActionTypeFor,
@@ -35,12 +34,16 @@ import styles from '../routes/ProjectOverviewTab.module.css';
  * evita a requisição em dobro quando as duas correm na mesma sessão).
  */
 export interface AgentTeamGridProps {
-  /** A roster INTEIRA da sessão — alinhamento de índice com `bindingQueries`. */
+  /** A roster INTEIRA da sessão. */
   roster: RosterEntry[];
   /** Os grupos a desenhar, já filtrados por quem chama. */
   groups: RosterGroup[];
   events: SessionEvent[];
-  bindingQueries: UseQueryResult<ResolvedBinding | null>[];
+  /**
+   * O binding resolvido de um agente (RN-654: lido em LOTE por quem chama).
+   * `undefined` é "não sei" — o cartão não afirma modelo nenhum.
+   */
+  bindingDoAgente: (agentId: string) => ResolvedBinding | null | undefined;
   allModels: Model[];
   tokenUsage?: AgentTokenUsage[];
   autonomyRules?: AgentAutonomyRule[];
@@ -55,7 +58,7 @@ export function AgentTeamGrid({
   roster,
   groups,
   events,
-  bindingQueries,
+  bindingDoAgente,
   allModels,
   tokenUsage,
   autonomyRules,
@@ -71,7 +74,7 @@ export function AgentTeamGrid({
   // propõe ação/tem policy).
   function renderLeadCard(index: number, badge?: string) {
     const r = roster[index];
-    const modelId = bindingQueries[index]?.data?.modelId;
+    const modelId = bindingDoAgente(r.id)?.modelId;
     const model = allModels.find((m) => m.id === modelId);
     const autonomyType = autonomyActionTypeFor(r.id);
     // "Auto mode" (RN-153): a curinga `*`, quando gravada, é a regra que
@@ -99,6 +102,12 @@ export function AgentTeamGrid({
         // é o que torna a autonomia AJUSTÁVEL daqui.
         autonomy={rule?.mode === 'auto_approve' ? 'auto' : 'manual'}
         onAutonomyChange={(mode) => onAutonomyChange(r.id, autonomyTypeParaMudar, mode)}
+        // RN-603: só a curinga LIGADA é modo automático — é ela que dispensa o
+        // escopo de caminho. Com o toggle sobre o tipo representativo a regra
+        // é específica e a frase mentiria.
+        autonomyHint={
+          curinga?.mode === 'auto_approve' ? t('agentCard.autonomy.autoModeHint') : undefined
+        }
         onRearm={r.status === 'travado' ? () => onRearm(r.id) : undefined}
         activity={
           r.status === 'travado'
@@ -122,7 +131,7 @@ export function AgentTeamGrid({
   // delegação mais recente.
   function renderMemberCard(index: number) {
     const r = roster[index];
-    const modelId = bindingQueries[index]?.data?.modelId;
+    const modelId = bindingDoAgente(r.id)?.modelId;
     const model = allModels.find((m) => m.id === modelId);
     const custo = tokenUsage?.find((u) => u.actorId === r.id)?.costMicros;
     const outcome = subagentOutcomeLabel(events, r.id);

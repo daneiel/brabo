@@ -13,11 +13,18 @@ import { DomainTransitionErrorFilter } from './interfaces/http/shared/domain-tra
 import { GitProviderErrorFilter } from './interfaces/http/shared/git-provider-error.filter';
 import { LlmBindingErrorFilter } from './interfaces/http/shared/llm-binding-error.filter';
 import { HuggingFaceErrorFilter } from './interfaces/http/shared/huggingface-error.filter';
+import { etagDoCorpoVazio } from './interfaces/http/shared/etag-do-corpo-vazio';
 import { GraphErrorFilter } from './interfaces/http/shared/graph-error.filter';
 import { resolveCorsOrigins } from './infrastructure/security/cors-origins';
 import { resolveOauthStateSecret } from './infrastructure/security/oauth-state-secret';
-import { passphraseAtual } from './infrastructure/security/auth-key-material';
-import { tokenDeServicoAtual } from './infrastructure/security/service-token';
+import {
+  passphraseAtual,
+  pepperAtual,
+} from './infrastructure/security/auth-key-material';
+import {
+  tokenDeServicoAnterior,
+  tokenDeServicoAtual,
+} from './infrastructure/security/service-token';
 import { helmetOptions } from './infrastructure/security/security-headers';
 import { SwaggerModule } from '@nestjs/swagger';
 import { montarDocumento } from './infrastructure/openapi/documento';
@@ -33,7 +40,14 @@ async function bootstrap() {
   // esse boot, e não uma chamada eager aqui, que a exercita.
   resolveOauthStateSecret();
   passphraseAtual();
+  // O pepper deixou de cair no AUTH_JWT_SECRET (RN-613): sem ele, a api
+  // recusa AQUI, com a mensagem que diz como migrar sem deslogar ninguém —
+  // e não no primeiro login, que é quando o operador já foi embora.
+  pepperAtual();
   tokenDeServicoAtual();
+  // O anterior também abre `/internal/*` durante a rotação, e por isso passa
+  // pela mesma régua do atual (RN-598).
+  tokenDeServicoAnterior();
 
   // `bufferLogs`: as linhas emitidas ANTES de o logger estar pronto ficam na
   // fila e são reemitidas em JSON, em vez de sair no formato default do Nest —
@@ -72,6 +86,11 @@ async function bootstrap() {
   // login funcionaria e o refresh falharia, que é o modo de falha mais chato
   // possível: só aparece 15 minutos depois.
   app.use(cookieParser());
+
+  // `ETag` também para o corpo VAZIO (AT-093, RN-579): sem isto, toda rota
+  // que responde `null` — orçamento de sessão ausente, nenhuma execução
+  // ativa — nunca pode voltar 304, e é poll de 5s. Ver o docblock do arquivo.
+  app.use(etagDoCorpoVazio());
 
   // `credentials: true` com origem EXATA (nunca `*`, e o boot falha se alguém
   // tentar em produção — ver cors-origins.ts). É o que permite o browser

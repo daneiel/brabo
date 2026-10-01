@@ -65,7 +65,10 @@ vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -217,7 +220,7 @@ describe('SessionPage — nome e tipo', () => {
 
     expect(await screen.findByText('Consultiva')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Iniciar ideação' })).toBeNull();
-    expect(screen.getByText(/Nenhum agente é ativado/)).toBeTruthy();
+    expect(screen.getByText(/Nenhum agente entra sozinho/)).toBeTruthy();
   });
 });
 

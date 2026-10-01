@@ -44,6 +44,7 @@ function model(
     manualPricing: true,
     isActive: false,
     uses: [],
+    freeRoutingAlias: false,
     availability: 'available',
     lastSeenAt: '2026-08-01T00:00:00.000Z',
     ...over,
@@ -113,6 +114,73 @@ describe('ModelCatalogSection', () => {
     );
   });
 
+  /** AT-271, RN-679: o alias `~` aparece, marcado, com o motivo em texto. */
+  it('alias de roteamento livre já curado aparece ativo, marcado e com o motivo', async () => {
+    listModelCatalog.mockResolvedValue(
+      catalogo([
+        model({
+          name: '~deepseek/deepseek-flash-latest',
+          displayName: 'DeepSeek Flash (latest)',
+          isActive: true,
+          freeRoutingAlias: true,
+        }),
+      ]),
+    );
+    montar();
+
+    expect(await screen.findByText('DeepSeek Flash (latest)')).toBeTruthy();
+    expect(screen.getByText('alias de roteamento livre')).toBeTruthy();
+    expect(screen.getByText(/Preço de vitrine/)).toBeTruthy();
+    // Não some nem é desligado pela tela: segue ativo.
+    expect(screen.getByText('ativo')).toBeTruthy();
+  });
+
+  it('modelo de upstream fixo não ganha a marca nem o motivo', async () => {
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    expect(screen.queryByText('alias de roteamento livre')).toBeNull();
+    expect(screen.queryByText(/Preço de vitrine/)).toBeNull();
+  });
+
+  it('falha: a recusa do alias na ativação mostra o título próprio e a frase da api', async () => {
+    setModelsActive.mockRejectedValue(
+      Object.assign(new Error('api error 422'), {
+        status: 422,
+        body: {
+          statusCode: 422,
+          code: 'alias_de_roteamento_livre',
+          message:
+            'Alias de roteamento livre não entra na curadoria: ~deepseek/deepseek-flash-latest.',
+          modelIds: ['m-1'],
+        },
+      }),
+    );
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Ativar' }));
+
+    expect(
+      await screen.findByText('Alias de roteamento livre não entra na curadoria'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/~deepseek\/deepseek-flash-latest\./),
+    ).toBeTruthy();
+  });
+
+  it('falha de outro tipo na ativação segue com o toast genérico', async () => {
+    setModelsActive.mockRejectedValue(new Error('rede'));
+    montar();
+    await screen.findByText('GPT-4o mini');
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Ativar' }));
+
+    expect(await screen.findByText('Não foi possível salvar')).toBeTruthy();
+  });
+
   it('modelo indisponível continua listado, marcado', async () => {
     listModelCatalog.mockResolvedValue(
       catalogo([model({ availability: 'unavailable', isActive: true })]),
@@ -156,7 +224,7 @@ describe('ModelCatalogSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar catálogo' }));
 
-    expect(await screen.findByText(/2 novo\(s\)/)).toBeTruthy();
+    expect(await screen.findByText(/2 novos · /)).toBeTruthy();
     expect(screen.getByText('sem listagem de catálogo')).toBeTruthy();
     // "Falhou" sem a origem seria diagnóstico por eliminação (ADR 0020).
     expect(screen.getByText('falhou · origem infra')).toBeTruthy();

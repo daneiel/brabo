@@ -14,12 +14,17 @@
     "choose_project_image": "Choosing the project image",
     "create_c4_diagram": "Drawing the C4 diagram",
     "route_modules_to_infra": "Routing modules to candidate images",
+    "declare_module_contracts": "Declaring the contracts between modules",
     "propose_adr": "Drafting an ADR",
     "emit_insight": "Recording an insight",
     "propose_execution_plan": "Putting together the execution plan",
     "assess_implementability": "Assessing whether the story is implementable",
     "propose_prototype": "Designing the prototype",
-    "propose_rfc": "Drafting the RFC"
+    "propose_rfc": "Drafting the RFC",
+    "validate_infra_file": "Validating an infra file",
+    "propose_infra_pr": "Preparing the infra PR",
+    "propose_container_start": "Proposing to start the container",
+    "container_start_via_runner": "Proposing to start the container on your machine"
   },
   "fallback": "Using {{tool}}…"
 }

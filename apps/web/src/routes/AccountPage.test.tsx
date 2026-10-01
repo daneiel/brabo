@@ -4,6 +4,7 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import commonEn from '../locales/en/common.json';
 import commonPtBR from '../locales/pt-BR/common.json';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { AccountPage } from './AccountPage';
 
@@ -34,6 +35,27 @@ vi.mock('../lib/idioma', async (importOriginal) => {
   };
 });
 
+// A seção de chaves de máquina (RN-611) monta na mesma página e pergunta à
+// api: aqui a lista vem vazia — o que ela prova mora em
+// `MachineDeviceKeysSection.test.tsx`.
+vi.mock('../lib/api-client', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../lib/api-client')>();
+  return {
+    ...original,
+    listMachineDeviceKeys: () => Promise.resolve([]),
+    // A seção do idioma das RESPOSTAS (RN-618) também monta aqui; o que ela
+    // prova mora em `ResponseLanguageSection.test.tsx`.
+    getMyPreferences: () =>
+      Promise.resolve({
+        locale: 'pt-BR',
+        responseLanguage: 'automatico',
+        detectedLanguage: null,
+        detectedLanguageConfirmedAt: null,
+        effectiveResponseLanguage: { language: 'pt-BR', origin: 'interface' },
+      }),
+  };
+});
+
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
@@ -53,12 +75,15 @@ function novaInstanciaI18n() {
 
 function montar() {
   const i18n = novaInstanciaI18n();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <I18nextProvider i18n={i18n}>
-      <ToastProvider>
-        <AccountPage />
-      </ToastProvider>
-    </I18nextProvider>,
+    <QueryClientProvider client={client}>
+      <I18nextProvider i18n={i18n}>
+        <ToastProvider>
+          <AccountPage />
+        </ToastProvider>
+      </I18nextProvider>
+    </QueryClientProvider>,
   );
   return { i18n };
 }

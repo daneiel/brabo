@@ -11,6 +11,9 @@ defmodule Engine.Gates.AppSecContextBuilder do
   escrito não havia em `dev` nenhum builder equivalente (busca por
   `qa_estrategia_context`/correlato, vazia) — se a convergência achar algo
   melhor depois de as duas frentes mergearem, este é descartável sem dó.
+  (Desde o ADR 0192 a QA-estratégia saiu do design: o plano de teste nasce
+  da entrega do dev, e este builder ficou sendo o ÚNICO segundo momento
+  pre-dev.)
 
   Zero mudança na api: reusa duas leituras que já existem —
   `EngineApiClient.list_backlog/1` (a árvore épico→história→tarefa, a mesma

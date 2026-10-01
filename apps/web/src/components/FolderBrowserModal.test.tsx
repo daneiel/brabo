@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { act, render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import terminalPtBR from '../locales/pt-BR/terminal.json';
 import { FolderBrowserModal } from './FolderBrowserModal';
+import { INTERVALO_MS } from './EsperaDoRunner';
 import type { FsBrowser } from '../lib/fs-browser';
 
 /**
@@ -36,6 +37,8 @@ import type { FsBrowser } from '../lib/fs-browser';
  * estado inicial de todos os outros casos, e a espera fica em `esperando`.
  */
 let carimboDoProjeto: string | null = null;
+/** Quantas vezes a sonda leu o projeto — o EVENTO que o caso do agente espera. */
+let leiturasDoProjeto = 0;
 
 vi.mock('../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
@@ -48,12 +51,14 @@ vi.mock('../lib/api-client', () => ({
       this.status = status;
     }
   },
-  getProject: () =>
-    Promise.resolve({
+  getProject: () => {
+    leiturasDoProjeto += 1;
+    return Promise.resolve({
       id: 'proj-1',
       workspacePath: null,
       workspaceVerifiedAt: carimboDoProjeto,
-    }),
+    });
+  },
   // O reconhecimento de máquina já pareada (RN-548), que o painel embutido
   // consulta. Sem chave de MÁQUINA ele não renderiza nada, e este arquivo
   // continua afirmando o que afirmava.
@@ -114,6 +119,7 @@ vi.mock('../lib/fs-browser', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   carimboDoProjeto = null;
+  leiturasDoProjeto = 0;
 });
 
 describe('FolderBrowserModal — transporte via runner (não-regressão)', () => {
@@ -385,27 +391,53 @@ describe('FolderBrowserModal — transporte via runner (não-regressão)', () =>
    * reportou a pasta —, a listagem que falhou é REFEITA sozinha, sem a pessoa
    * ter de descobrir que precisa clicar em algo.
    */
+  /**
+   * Relógio FALSO, e é o ponto do teste (AT-240): a sonda da `EsperaDoRunner`
+   * é um `refetchInterval` de `INTERVALO_MS`, e com relógio real o caso
+   * dormia um tique inteiro (3 s) dos 5 s do teto do Vitest — sob carga,
+   * estourava num PR que nem tocava o web. Aqui o tempo é AVANÇADO até o
+   * tique, e o que se espera é o EVENTO (a nova leitura do projeto), nunca o
+   * relógio. `shouldAdvanceTime` mantém o `findBy`/`waitFor` da Testing
+   * Library andando, como em `EsperaDoRunner.test.tsx`.
+   */
   it('quando o agente aparece, a listagem é refeita sozinha', async () => {
-    fakeChannel.diretorioInicial.mockResolvedValue({
-      erro: 'Nenhum runner conectado a este projeto.',
-      motivo: 'sem-agente',
-    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fakeChannel.diretorioInicial.mockResolvedValue({
+        erro: 'Nenhum runner conectado a este projeto.',
+        motivo: 'sem-agente',
+      });
 
-    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
+      renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
-    await screen.findByRole('button', { name: 'Já instalei, conectar' });
-    expect(fakeChannel.listarDiretorio).not.toHaveBeenCalled();
+      await screen.findByRole('button', { name: 'Já instalei, conectar' });
+      expect(fakeChannel.listarDiretorio).not.toHaveBeenCalled();
 
-    // O carimbo MUDA: é assim que `EsperaDoRunner` sabe que o agente
-    // conectou (`workspaceVerifiedAt`, RN-474) — nunca um batimento.
-    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
-    fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
-    carimboDoProjeto = '2026-09-09T12:00:00.000Z';
+      // A espera só adota a BASE (o carimbo de antes) na primeira leitura do
+      // projeto. Trocar o carimbo antes dela o faria virar a base, e a
+      // mudança nunca seria vista — então espera-se a leitura, não um prazo.
+      await waitFor(() => expect(leiturasDoProjeto).toBeGreaterThan(0));
+      const leiturasAntesDoTique = leiturasDoProjeto;
 
-    await waitFor(
-      () => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'),
-      { timeout: 8000 },
-    );
+      // O carimbo MUDA: é assim que `EsperaDoRunner` sabe que o agente
+      // conectou (`workspaceVerifiedAt`, RN-474) — nunca um batimento.
+      fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+      fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
+      carimboDoProjeto = '2026-09-09T12:00:00.000Z';
+
+      // Um tique da sonda — é ele, e não um clique, que refaz a listagem.
+      // Dentro de `act`: o tique atualiza estado da espera e do modal.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(INTERVALO_MS);
+      });
+      expect(leiturasDoProjeto).toBeGreaterThan(leiturasAntesDoTique);
+
+      await waitFor(() =>
+        expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('cleanup no unmount: fecha o canal', async () => {

@@ -10,6 +10,13 @@ on:
     #   - "src/**/*.js"
     #   - "src/**/*.jsx"
 
+# AT-306: push seguido de push no mesmo PR cancela a revisão anterior — ela
+# revisaria um HEAD que já não existe, gastando token para um comentário velho.
+# O grupo é por PR (número), não por ref, porque é o PR que se revisa.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     # PR aberto por BOT não é revisado, e o teste é o `type` do autor — nunca
@@ -53,6 +60,10 @@ jobs:
       !endsWith(github.event.pull_request.user.login, '[bot]')
 
     runs-on: ubuntu-latest
+    # AT-306: sem teto, uma revisão pendurada (modelo sem resposta, ferramenta
+    # esperando) segurava o runner pelas 6h do default. Revisão que passa de
+    # 30min não é mais revisão útil do PR, é custo.
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read
@@ -61,13 +72,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@a874e9ecd7bb36efdad65429c6b35815f5a08f10  # v1
+        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'

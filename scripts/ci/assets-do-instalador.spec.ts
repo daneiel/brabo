@@ -146,7 +146,7 @@ describe('a esteira publica e assina os assets', () => {
   });
 
   it('eles entram no MESMO `sha256sum` que gera o manifesto', () => {
-    expect(gerar).toMatch(/sha256sum brabo-runner-\* install\.sh \$ASSETS_DO_INSTALADOR > checksums\.txt/);
+    expect(gerar).toMatch(/sha256sum brabo-runner-\* install\.sh THIRD_PARTY_NOTICES\.md \$ASSETS_DO_INSTALADOR > checksums\.txt/);
   });
 
   it('o job confere cada linha do manifesto contra o arquivo, depois de verificar a assinatura e antes de anexar', () => {
@@ -159,7 +159,7 @@ describe('a esteira publica e assina os assets', () => {
   });
 
   it('eles são anexados à Release junto com o manifesto', () => {
-    expect(gerar).toMatch(/gh release upload "\$TAG" checksums\.txt checksums\.txt\.bundle install\.sh \$ASSETS_DO_INSTALADOR --clobber/);
+    expect(gerar).toMatch(/gh release upload "\$TAG" checksums\.txt checksums\.txt\.bundle install\.sh THIRD_PARTY_NOTICES\.md \$ASSETS_DO_INSTALADOR --clobber/);
   });
 
   it('o job tem Node para rodar o `.ts`, pinado como o resto', () => {

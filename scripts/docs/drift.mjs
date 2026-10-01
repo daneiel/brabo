@@ -12,10 +12,22 @@
  * cumpri-la, e aí o check passa a mentir. As duas saídas:
  *   - label `docs-not-needed` no PR
  *   - linha `docs-not-needed: <motivo>` no corpo do PR
- * Ambas exigem um humano dizendo por quê, e ficam registradas no PR.
+ * Ambas exigem alguém dizendo por quê, e ficam registradas no PR. Desde a
+ * AT-094 esse alguém pode ser um BOT, numa classe só: PR do Dependabot cujo diff
+ * é só troca de pin de action (`scripts/ci/dependabot-justifica-pin.ts`, que o
+ * passo anterior do `docs-check.yml` chama). O bot ESCREVE a linha no corpo —
+ * ela fica no PR como a de um humano — e este script continua lendo só a linha:
+ * não existe caminho em que "PR de bot" pule a avaliação.
+ *
+ * O corpo vem de `PR_BODY_FILE` quando o arquivo existe, e só então de
+ * `PR_BODY`. O motivo é medido: `PR_BODY` é o do PAYLOAD do evento, e editar o
+ * corpo com o `GITHUB_TOKEN` não dispara `edited`; nem re-executar o job ajuda,
+ * porque a re-execução reusa o payload original (run 34898913072, tentativa 2,
+ * em 17/09: o corpo já tinha a linha, o `PR_BODY` não, e o drift reprovou). O
+ * passo que escreve a linha grava o corpo novo nesse arquivo, no mesmo job.
  */
 import { execFileSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import picomatch from 'picomatch';
 import { lerDocmap, RAIZ, regrasAcionadas } from './docmap.mjs';
 
@@ -48,7 +60,11 @@ if (alterados.length === 0) {
 
 // --------------------------------------------------------------- escape hatch
 
-const corpoPr = process.env.PR_BODY ?? '';
+const arquivoDoCorpo = process.env.PR_BODY_FILE;
+const corpoPr =
+  arquivoDoCorpo && existsSync(arquivoDoCorpo)
+    ? readFileSync(arquivoDoCorpo, 'utf8')
+    : (process.env.PR_BODY ?? '');
 const labelsPr = (process.env.PR_LABELS ?? '').split(',').map((l) => l.trim());
 const motivoNoCorpo = corpoPr.match(/^docs-not-needed:\s*(.+)$/m)?.[1]?.trim();
 const dispensado = labelsPr.includes('docs-not-needed') || Boolean(motivoNoCorpo);

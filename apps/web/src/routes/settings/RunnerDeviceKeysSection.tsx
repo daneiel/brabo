@@ -10,6 +10,10 @@ import {
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { userIdDaSessao } from '../../lib/auth';
 import { podeLerChavesDeDispositivo } from '../../lib/agente-de-maquina';
+import {
+  chavesDoProjetoQueryKey,
+  invalidarChavesDeDispositivo,
+} from '../../lib/chaves-de-dispositivo-queries';
 import type { RunnerDeviceKeyListItem } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -19,6 +23,7 @@ import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * As chaves de dispositivo do runner local — a TELA que a
@@ -107,6 +112,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
   const { data: membros } = useQuery({
     queryKey: ['members', projectId],
     queryFn: () => listProjectMembers(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: comPapel } = useCurrentWorkspaceWithRole();
   const meuId = userIdDaSessao();
@@ -128,7 +134,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     isError,
     isSuccess,
   } = useQuery({
-    queryKey: ['runner-device-keys', projectId],
+    queryKey: chavesDoProjetoQueryKey(projectId),
     queryFn: () => listRunnerDeviceKeys(projectId),
     // A tela deixa de perguntar o que a api negaria (RN-548): um 403
     // previsível viraria "não consegui ler", que é o pior dos dois textos —
@@ -150,7 +156,10 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     try {
       await revokeRunnerDeviceKey(projectId, aRevogar.id);
       setARevogar(null);
-      queryClient.invalidateQueries({ queryKey: ['runner-device-keys', projectId] });
+      // Todas as listagens, não só a deste projeto (RN-611): uma chave de
+      // MÁQUINA aparece na de todo projeto do dono e na da Conta, e
+      // invalidar só esta deixaria as outras anunciando viva a revogada.
+      void invalidarChavesDeDispositivo(queryClient);
     } catch (erro) {
       // A frase da api, e não uma nossa: o que sobra aqui é 403 (papel vencido
       // entre o render e o clique) e rede, e nesses casos a mensagem dela é a
@@ -328,13 +337,13 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
               : t('runnerDeviceKeys.modal.alcanceProjeto')}
           </p>
           {/*
-            E o custo colateral que a RN-520 declarou: o alvo da desconexão é
-            `{projeto, usuário}` e nunca `{chave}` — outro runner SEU no mesmo
-            projeto cai junto, mesmo autenticado por PAT ou por outra chave, e
-            reconecta sozinho se a credencial dele ainda valer. Mudar esse alvo
-            é frente própria, com ADR.
+            E a PRECISÃO, desde o ADR 0201 (RN-685): o alvo da desconexão é a
+            CHAVE, e não mais `{projeto, usuário}` — outro runner SEU no mesmo
+            projeto, autenticado por PAT ou por outra chave, fica de pé. Dizer
+            o alcance certo é a RN-561; a frase antiga ("cai junto") passaria a
+            afirmar uma queda que não acontece.
           */}
-          <p className={styles.subtitle}>{t('runnerDeviceKeys.modal.colateral')}</p>
+          <p className={styles.subtitle}>{t('runnerDeviceKeys.modal.precisao')}</p>
           <div className={styles.acoesDaSecao}>
             <Button variant="secondary" onClick={() => setARevogar(null)}>
               {t('runnerDeviceKeys.modal.cancel')}

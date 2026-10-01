@@ -56,15 +56,20 @@ jobs:
     name: Drift, gerados e build
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    # AT-306: sem teto, um passo pendurado (build do site, render da
+    # referência da API) segurava o runner pelas 6h do default do GitHub.
+    # Medido: 53s frio, 51s quente (docs/reference/rulesets.md) — 15min é
+    # folga de sobra sem deixar um travamento custar horas.
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # O drift check compara com a branch base; sem histórico o range
           # `origin/<base>...HEAD` não resolve.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -131,9 +136,71 @@ jobs:
       # sha, e PR de promoção travado para sempre. Os outros passos continuam
       # rodando: docmap, gerados e build do site dependem só do HEAD, e valem em
       # qualquer degrau.
+      # AT-094: o BOT escreve `docs-not-needed:` no corpo de PR do Dependabot
+      # cujo diff é SÓ troca de pin de action (SHA + comentário de versão).
+      # A decisão mora em `scripts/ci/dependabot-justifica-pin.ts` (testado):
+      # autor que não é o Dependabot, ou qualquer linha que não seja pin, e
+      # nada é escrito — o drift abaixo julga como sempre.
+      #
+      # Mora AQUI, e não num workflow irmão do `dependabot-para-dev.yml`, por
+      # três medições:
+      #   - editar o corpo com o `GITHUB_TOKEN` não dispara `edited`, então um
+      #     workflow separado escreveria a linha e ESTE check ficaria vermelho;
+      #   - re-executar este job não resolve: a re-execução reusa o PAYLOAD
+      #     original, com o corpo antigo (run 34898913072, tentativa 2, 17/09);
+      #   - `pull_request_target`, onde o token escreve sem pedir, só roda o
+      #     workflow da branch DEFAULT (`main`) — a mesma armadilha do
+      #     `pr-police.yml` —, então a regra nova só valeria depois da promoção.
+      # No mesmo job, o passo seguinte lê o corpo novo por `PR_BODY_FILE`, na
+      # ordem, sem corrida e sem redisparo.
+      #
+      # Em `edited`, só avalia quando QUEM editou é o próprio bot (AT-100): o
+      # `@dependabot rebase` emite `synchronize` e `edited` no mesmo segundo, o
+      # `concurrency` cancela um e o sobrevivente pode ser o `edited` — que, com
+      # o passo pulado, deixava o drift ler um corpo sem a linha (#578, runs
+      # 35412983999/35412984299). Se um HUMANO apagou a linha do bot, a vontade
+      # dele manda: a decisão (`editorPodeAvaliar`, testada) recusa em `edited`
+      # com sender que não é o bot. Sem laço: a escrita do passo usa o
+      # `GITHUB_TOKEN`, que não dispara `edited` (AT-094). O token de PR do Dependabot escreve porque este workflow declara
+      # `pull-requests: write` (evento do Dependabot respeita `permissions:`);
+      # se a escrita falhar, nenhum arquivo é gravado e o drift usa o corpo do
+      # evento — falha FECHADO, o PR fica bloqueado como antes.
+      - name: Justificativa do bot para troca de pin (Dependabot)
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMERO: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          PR_TIPO_DO_AUTOR: ${{ github.event.pull_request.user.type }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_SENDER: ${{ github.event.sender.login }}
+          BASE_REF: ${{ github.base_ref }}
+          CORPO_NOVO: ${{ runner.temp }}/corpo-do-pr.md
+        run: |
+          set -euo pipefail
+          TMP="$(mktemp -d)"
+          # O MESMO range que o drift avalia logo abaixo.
+          git diff --no-color --no-ext-diff "origin/$BASE_REF...HEAD" > "$TMP/diff"
+          printf '%s' "$PR_BODY" > "$TMP/corpo.md"
+
+          RESULTADO="$(node scripts/ci/dependabot-justifica-pin.ts "$TMP/diff" "$TMP/corpo.md" "$TMP/novo.md")"
+          ACAO="$(jq -r .acao <<<"$RESULTADO")"
+          echo "dependabot-justifica-pin → $ACAO: $(jq -r .motivo <<<"$RESULTADO")"
+
+          if [ "$ACAO" = "manter" ]; then exit 0; fi
+          if gh pr edit "$PR_NUMERO" --repo "$REPO" --body-file "$TMP/novo.md"; then
+            cp "$TMP/novo.md" "$CORPO_NOVO"
+          else
+            echo "::warning::não consegui editar o corpo do PR — o drift julga pelo corpo do evento"
+          fi
+
       - name: Drift check
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BODY_FILE: ${{ runner.temp }}/corpo-do-pr.md
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.base_ref }}
@@ -170,7 +237,7 @@ jobs:
           node scripts/docs/drift.mjs "origin/$BASE_REF...HEAD"
 
       - name: Cache do Rspack
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: website/node_modules/.cache
           key: rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
@@ -203,14 +270,26 @@ jobs:
       - name: A referência de API renderiza
         run: node scripts/docs/api-render-check.mjs
 
+      # Mesma classe de buraco, outra página: o link que o hook
+      # `onBrokenMarkdownLinks` reescreve para `pathname://` PULA o checador de
+      # link quebrado, então um prefixo de locale duplicado
+      # (`/pt-BR/pt-BR/...`, 404) passa com o build verde. Foram 441 hrefs em
+      # 56 páginas do site pt-BR até a AT-221. Só o HTML gerado mostra isso.
+      #
+      # Localmente: `pnpm docs:build && node scripts/docs/links-do-locale.mjs`.
+      - name: Nenhum link com o locale duplicado
+        run: node scripts/docs/links-do-locale.mjs
+
   # Links EXTERNOS não entram no PR: site de terceiro fora do ar não pode
   # reprovar o trabalho de ninguém. Vira relatório semanal.
   links-externos:
     name: Links externos (semanal)
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    # AT-306: site de terceiro lento não pode prender o runner por 6h.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2
         with:
           args: --no-progress --exclude-mail --accept 200,206,429 './docs/**/*.md' './*.md'

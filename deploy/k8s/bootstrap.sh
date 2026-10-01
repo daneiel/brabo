@@ -6,6 +6,7 @@
 #   BRABO_CLUSTER_TOOL=kind bash ...            # força kind (default: k3d)
 #   BRABO_SKIP_BUILD=1 bash ...                 # usa as imagens já no daemon
 #   BRABO_KEEP_CLUSTER=1 bash ...               # reaproveita cluster existente
+#   BRABO_SKIP_OBSERVABILITY=1 bash ...         # sem Tempo/Loki/Collector/Alloy/Grafana
 #   TAG=v0.2.0-qa.1 bash ...                    # valida uma TAG da esteira
 #
 # O que ele NÃO faz: instalar ingress controller ou mexer em DNS. Os serviços
@@ -91,7 +92,14 @@ pick_cluster_tool() {
 # Cluster
 # ---------------------------------------------------------------------------
 create_cluster_k3d() {
-  if k3d cluster list 2>/dev/null | grep -q "^${CLUSTER_NAME}\b"; then
+  # A lista é LIDA INTEIRA antes do `grep` (AT-242): o `k3d` escreve a tabela
+  # em pedaços (medido: 9 escritas só no cabeçalho), o `grep -q` sai na linha
+  # que casa e, sob `pipefail`, o EPIPE do resto faria um cluster que EXISTE
+  # parecer ausente — e o `cluster create` seguinte reprovaria por nome
+  # repetido. `k3d` que falha continua lido como "sem cluster", como antes.
+  local clusters
+  if clusters="$(k3d cluster list 2>/dev/null)" \
+      && grep -q "^${CLUSTER_NAME}\b" <<<"${clusters}"; then
     if [[ "${BRABO_KEEP_CLUSTER:-}" == "1" ]]; then
       ok "cluster k3d ${CLUSTER_NAME} reaproveitado"; return
     fi
@@ -114,7 +122,11 @@ create_cluster_k3d() {
 }
 
 create_cluster_kind() {
-  if kind get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
+  # Mesma leitura inteira do k3d acima (AT-242): o `kind` escreve um cluster
+  # por linha, cada uma numa escrita (medido: 5 para uma lista curta).
+  local clusters
+  if clusters="$(kind get clusters 2>/dev/null)" \
+      && grep -qx "${CLUSTER_NAME}" <<<"${clusters}"; then
     if [[ "${BRABO_KEEP_CLUSTER:-}" == "1" ]]; then
       ok "cluster kind ${CLUSTER_NAME} reaproveitado"; return
     fi
@@ -235,88 +247,177 @@ helm repo add grafana "${GRAFANA_REPO}" >/dev/null 2>&1 || true
 helm repo add open-telemetry "${OTEL_COLLECTOR_REPO}" >/dev/null 2>&1 || true
 helm repo update >/dev/null
 
-helm upgrade --install external-secrets external-secrets/external-secrets \
-  --version "${ESO_CHART_VERSION}" \
-  --namespace external-secrets --create-namespace \
-  --set installCRDs=true --wait --timeout 5m >/dev/null
-ok "External Secrets Operator"
+# Releases INDEPENDENTES sobem em paralelo (AT-177). O helm roda um `--wait`
+# por release, e em série o bootstrap esperava cada operador ficar Ready antes
+# de começar o seguinte, sem que nenhum dependesse do anterior: ESO, CNPG e
+# Prometheus não se conhecem. O que tem ordem de verdade fica numa MESMA
+# cadeia (o prometheus-adapter lê o Prometheus; o Grafana valida os
+# datasources no boot), e as cadeias correm lado a lado.
+#
+# Cada cadeia escreve num log próprio, e o log só é despejado se ela FALHAR —
+# em paralelo, as saídas misturadas no terminal não diriam de quem é o erro.
+# `aguardar_releases` espera TODAS antes de decidir: morrer na primeira
+# deixaria as outras rodando órfãs, escrevendo num terminal que já saiu.
+RELEASES_TMP="$(mktemp -d)"
+RELEASES_PIDS=()
+RELEASES_NOMES=()
 
-helm upgrade --install cnpg cnpg/cloudnative-pg \
-  --version "${CNPG_CHART_VERSION}" \
-  --namespace cnpg-system --create-namespace --wait --timeout 5m >/dev/null
-ok "CloudNativePG"
+em_paralelo() {
+  local nome="$1"; shift
+  # A duração vai no log da cadeia: despejado só no fim, o instante da linha
+  # no terminal deixa de dizer quanto cada release levou.
+  ( inicio="${SECONDS}"; "$@"; printf '       (%s: %ss)\n' "${nome}" "$((SECONDS - inicio))" ) \
+    >"${RELEASES_TMP}/${nome}.log" 2>&1 &
+  RELEASES_PIDS+=("$!")
+  RELEASES_NOMES+=("${nome}")
+}
+
+aguardar_releases() {
+  local i falhou=0
+  for i in "${!RELEASES_PIDS[@]}"; do
+    if wait "${RELEASES_PIDS[$i]}"; then
+      cat "${RELEASES_TMP}/${RELEASES_NOMES[$i]}.log"
+    else
+      falhou=1
+      printf '\n--- log de %s (falhou) ---\n' "${RELEASES_NOMES[$i]}" >&2
+      cat "${RELEASES_TMP}/${RELEASES_NOMES[$i]}.log" >&2
+    fi
+  done
+  RELEASES_PIDS=(); RELEASES_NOMES=()
+  [[ "${falhou}" == "0" ]] || die "uma ou mais releases do helm falharam (log acima)"
+}
+
+cadeia_eso() {
+  helm upgrade --install external-secrets external-secrets/external-secrets \
+    --version "${ESO_CHART_VERSION}" \
+    --namespace external-secrets --create-namespace \
+    --set installCRDs=true --wait --timeout 5m >/dev/null
+  ok "External Secrets Operator"
+}
+
+cadeia_cnpg() {
+  helm upgrade --install cnpg cnpg/cloudnative-pg \
+    --version "${CNPG_CHART_VERSION}" \
+    --namespace cnpg-system --create-namespace --wait --timeout 5m >/dev/null
+  ok "CloudNativePG"
+}
 
 # metrics-server: sem ele o HPA da api (CPU) nunca sai de <unknown>. O k3s já
 # traz o seu; instalar por cima criaria dois controladores disputando o mesmo
 # APIService.
-if kubectl get deploy -n kube-system metrics-server >/dev/null 2>&1; then
-  ok "metrics-server já presente (k3s)"
-else
-  helm upgrade --install metrics-server metrics-server/metrics-server \
-    --version "${METRICS_SERVER_CHART_VERSION}" \
-    --namespace kube-system \
-    --set 'args={--kubelet-insecure-tls}' --wait --timeout 5m >/dev/null
-  ok "metrics-server"
-fi
+cadeia_metrics_server() {
+  if kubectl get deploy -n kube-system metrics-server >/dev/null 2>&1; then
+    ok "metrics-server já presente (k3s)"
+  else
+    helm upgrade --install metrics-server metrics-server/metrics-server \
+      --version "${METRICS_SERVER_CHART_VERSION}" \
+      --namespace kube-system \
+      --set 'args={--kubelet-insecure-tls}' --wait --timeout 5m >/dev/null
+    ok "metrics-server"
+  fi
+}
 
-# O rótulo do namespace é o que a NetworkPolicy do engine usa para liberar o
-# scrape — `kubernetes.io/metadata.name` é posto automaticamente pelo cluster,
-# mas só na criação.
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+# O Prometheus e o adapter NÃO são observabilidade opcional: o HPA do engine
+# escala por `oban_queue_depth`, que chega pela External Metrics API que o
+# adapter serve a partir do Prometheus. `smoke-k8s` e `hpa-test` dependem dos
+# dois — por isso eles ficam FORA de `BRABO_SKIP_OBSERVABILITY`.
+cadeia_prometheus() {
+  helm upgrade --install prometheus prometheus-community/prometheus \
+    --version "${PROMETHEUS_CHART_VERSION}" \
+    --namespace monitoring \
+    -f "${K8S_DIR}/helm/prometheus-values.yaml" --wait --timeout 5m >/dev/null
+  ok "Prometheus"
 
-helm upgrade --install prometheus prometheus-community/prometheus \
-  --version "${PROMETHEUS_CHART_VERSION}" \
-  --namespace monitoring \
-  -f "${K8S_DIR}/helm/prometheus-values.yaml" --wait --timeout 5m >/dev/null
-ok "Prometheus"
-
-helm upgrade --install prometheus-adapter prometheus-community/prometheus-adapter \
-  --version "${PROMETHEUS_ADAPTER_CHART_VERSION}" \
-  --namespace monitoring \
-  -f "${K8S_DIR}/helm/prometheus-adapter-values.yaml" --wait --timeout 5m >/dev/null
-ok "prometheus-adapter"
+  helm upgrade --install prometheus-adapter prometheus-community/prometheus-adapter \
+    --version "${PROMETHEUS_ADAPTER_CHART_VERSION}" \
+    --namespace monitoring \
+    -f "${K8S_DIR}/helm/prometheus-adapter-values.yaml" --wait --timeout 5m >/dev/null
+  ok "prometheus-adapter"
+}
 
 # --- observabilidade (Fase 5, sessão 3) ------------------------------------
 # Ordem: os backends primeiro (Tempo, Loki), depois quem escreve neles
 # (Collector, Alloy), e o Grafana por último — ele valida os datasources no
-# boot e um datasource inalcançável só polui o log.
-helm upgrade --install tempo grafana/tempo \
-  --version "${TEMPO_CHART_VERSION}" --namespace monitoring \
-  -f "${K8S_DIR}/helm/tempo-values.yaml" --wait --timeout 5m >/dev/null
-ok "Tempo (traces)"
+# boot e um datasource inalcançável só polui o log. Tempo e Loki não se
+# conhecem, nem Collector e Alloy: cada par sobe em paralelo.
+cadeia_tempo() {
+  helm upgrade --install tempo grafana/tempo \
+    --version "${TEMPO_CHART_VERSION}" --namespace monitoring \
+    -f "${K8S_DIR}/helm/tempo-values.yaml" --wait --timeout 5m >/dev/null
+  ok "Tempo (traces)"
+}
 
-helm upgrade --install loki grafana/loki \
-  --version "${LOKI_CHART_VERSION}" --namespace monitoring \
-  -f "${K8S_DIR}/helm/loki-values.yaml" --wait --timeout 8m >/dev/null
-ok "Loki (logs)"
+cadeia_loki() {
+  helm upgrade --install loki grafana/loki \
+    --version "${LOKI_CHART_VERSION}" --namespace monitoring \
+    -f "${K8S_DIR}/helm/loki-values.yaml" --wait --timeout 8m >/dev/null
+  ok "Loki (logs)"
+}
 
-helm upgrade --install otel-collector open-telemetry/opentelemetry-collector \
-  --version "${OTEL_COLLECTOR_CHART_VERSION}" --namespace monitoring \
-  -f "${K8S_DIR}/helm/otel-collector-values.yaml" --wait --timeout 5m >/dev/null
-ok "OpenTelemetry Collector"
+cadeia_otel_collector() {
+  helm upgrade --install otel-collector open-telemetry/opentelemetry-collector \
+    --version "${OTEL_COLLECTOR_CHART_VERSION}" --namespace monitoring \
+    -f "${K8S_DIR}/helm/otel-collector-values.yaml" --wait --timeout 5m >/dev/null
+  ok "OpenTelemetry Collector"
+}
 
-helm upgrade --install alloy grafana/alloy \
-  --version "${ALLOY_CHART_VERSION}" --namespace monitoring \
-  -f "${K8S_DIR}/helm/alloy-values.yaml" --wait --timeout 5m >/dev/null
-ok "Alloy (coleta de logs)"
+cadeia_alloy() {
+  helm upgrade --install alloy grafana/alloy \
+    --version "${ALLOY_CHART_VERSION}" --namespace monitoring \
+    -f "${K8S_DIR}/helm/alloy-values.yaml" --wait --timeout 5m >/dev/null
+  ok "Alloy (coleta de logs)"
+}
 
-# Dashboards versionados no repositório viram ConfigMap. Cada arquivo entra com
-# a chave sendo o nome do arquivo, que é o que o provider do Grafana espera.
-kubectl -n monitoring create configmap brabo-dashboards \
-  --from-file="${K8S_DIR}/observability/dashboards/" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+# O rótulo do namespace é o que a NetworkPolicy do engine usa para liberar o
+# scrape — `kubernetes.io/metadata.name` é posto automaticamente pelo cluster,
+# mas só na criação. Criado ANTES das cadeias: duas delas instalam nele.
+kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
-# Regras de alerta: ConfigMap montado como arquivo de provisioning (ver o
-# comentário em helm/grafana-values.yaml).
-kubectl -n monitoring create configmap brabo-alerts \
-  --from-file="${K8S_DIR}/observability/alerts/brabo-alerts.yaml" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+em_paralelo eso            cadeia_eso
+em_paralelo cnpg           cadeia_cnpg
+em_paralelo metrics-server cadeia_metrics_server
+em_paralelo prometheus     cadeia_prometheus
+aguardar_releases
 
-helm upgrade --install grafana grafana/grafana \
-  --version "${GRAFANA_CHART_VERSION}" --namespace monitoring \
-  -f "${K8S_DIR}/helm/grafana-values.yaml" \
-  --wait --timeout 5m >/dev/null
-ok "Grafana (http://localhost:3001)"
+# `BRABO_SKIP_OBSERVABILITY=1` (AT-177) pula Tempo, Loki, Collector, Alloy e
+# Grafana — os 133 s medidos que as provas de `propriedades.yml` nunca leem.
+# É opt-out EXPLÍCITO, e o padrão não muda: `make deploy-local` continua
+# subindo a stack inteira, porque quem abre o cluster para olhar quer o
+# Grafana. Sem o Collector, api e engine seguem exportando OTLP para um
+# Service que não existe: o exportador falha em segundo plano e nada que
+# as provas medem depende dele (medido na rodada de `propriedades.yml` que
+# introduziu a variável — ver `docs/runbook.md`, "Scheduled property proofs").
+if [[ "${BRABO_SKIP_OBSERVABILITY:-}" == "1" ]]; then
+  info "BRABO_SKIP_OBSERVABILITY=1 — sem Tempo, Loki, Collector, Alloy e Grafana"
+else
+  em_paralelo tempo cadeia_tempo
+  em_paralelo loki  cadeia_loki
+  aguardar_releases
+
+  em_paralelo otel-collector cadeia_otel_collector
+  em_paralelo alloy          cadeia_alloy
+  aguardar_releases
+
+  # Dashboards versionados no repositório viram ConfigMap. Cada arquivo entra
+  # com a chave sendo o nome do arquivo, que é o que o provider do Grafana
+  # espera.
+  kubectl -n monitoring create configmap brabo-dashboards \
+    --from-file="${K8S_DIR}/observability/dashboards/" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+
+  # Regras de alerta: ConfigMap montado como arquivo de provisioning (ver o
+  # comentário em helm/grafana-values.yaml).
+  kubectl -n monitoring create configmap brabo-alerts \
+    --from-file="${K8S_DIR}/observability/alerts/brabo-alerts.yaml" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+
+  helm upgrade --install grafana grafana/grafana \
+    --version "${GRAFANA_CHART_VERSION}" --namespace monitoring \
+    -f "${K8S_DIR}/helm/grafana-values.yaml" \
+    --wait --timeout 5m >/dev/null
+  ok "Grafana (http://localhost:3001)"
+fi
+rm -rf "${RELEASES_TMP}"
 
 # --- segredos --------------------------------------------------------------
 # Gerados aqui e criados IMPERATIVAMENTE. Nunca entram em manifesto, nunca são
@@ -339,8 +440,14 @@ kubectl -n brabo-db create secret generic brabo-pg-credentials \
 # nunca aqui: o ESO parava em "property NEO4J_PASSWORD does not exist", o
 # `brabo-secrets` não nascia e todo pod do namespace ficava em
 # CreateContainerConfigError. Quem mediu foi a segunda rodada de
-# `.github/workflows/propriedades.yml` — a lista abaixo tem de cobrir TODA
-# `property` de base/common/externalsecrets.yaml.
+# `.github/workflows/propriedades.yml`. Desde a AT-220 o ExternalSecret puxa
+# este objeto INTEIRO (`dataFrom.extract`), então uma chave esquecida aqui não
+# derruba mais a sincronização: o `brabo-secrets` nasce sem ela e quem acusa é
+# o consumidor (secretKeyRef em CreateContainerConfigError, api/engine
+# recusando o boot). A lista abaixo continua sendo o inventário das chaves
+# OBRIGATÓRIAS — e tudo o que entrar aqui vira variável de api, engine,
+# migrações e backup. As `_PREVIOUS` NÃO entram: só existem durante uma
+# rotação (docs/runbook.md, "Auth key rotation").
 kubectl -n brabo create secret generic brabo \
   --from-literal=DATABASE_URL="${DATABASE_URL}" \
   --from-literal=SECRET_KEY_BASE="$(openssl rand -hex 32)" \
@@ -350,7 +457,7 @@ kubectl -n brabo create secret generic brabo \
   --from-literal=AUTH_TOKEN_PEPPER="$(openssl rand -hex 32)" \
   --from-literal=BRABO_SERVICE_TOKEN="$(openssl rand -hex 32)" \
   --from-literal=RELEASE_COOKIE="$(openssl rand -hex 24)" \
-  --from-literal=BACKUP_S3_ENDPOINT="http://minio.brabo.svc.cluster.local:9000" \
+  --from-literal=BACKUP_S3_ENDPOINT="http://s3-local.brabo.svc.cluster.local:9000" \
   --from-literal=BACKUP_S3_BUCKET=brabo-backups \
   --from-literal=BACKUP_S3_ACCESS_KEY=brabo-backup \
   --from-literal=BACKUP_S3_SECRET_KEY="$(openssl rand -hex 20)" \
@@ -385,8 +492,8 @@ info "esperando os workloads ficarem Ready"
 kubectl -n brabo rollout status deployment/api --timeout=300s >/dev/null
 kubectl -n brabo rollout status deployment/engine --timeout=300s >/dev/null
 kubectl -n brabo rollout status deployment/web --timeout=300s >/dev/null
-kubectl -n brabo rollout status deployment/minio --timeout=300s >/dev/null
-ok "api, engine, web e MinIO Ready"
+kubectl -n brabo rollout status deployment/s3-local --timeout=300s >/dev/null
+ok "api, engine, web e o S3 local Ready"
 
 # O seed roda DEPOIS dos rollouts, e não antes: o último passo dele ativa uma
 # sessão, o que faz a api chamar o engine por HTTP. Rodando antes, aquele passo
@@ -445,13 +552,47 @@ kubectl -n brabo run seed-smoke --restart=Never --image="${API_IMAGE}" \
 # satisfeito por um pod que NUNCA rodou, e foi isso que deixou o bootstrap
 # anunciar "usuário do smoke pronto" com o seed em CreateContainerConfigError.
 #
-# O segundo é que o seed NÃO é idempotente, ao contrário do que este bloco
-# afirmava: `createWorkspace` não faz upsert, então uma segunda execução morre
-# em `workspaces_slug_unique` — o que acontece sempre que se reaproveita um
-# cluster com BRABO_KEEP_CLUSTER=1. Nesse caso o pod termina em erro e está
-# tudo certo: o usuário já existe desde a primeira vez.
+# O segundo foi o motivo de este bloco ter nascido tolerante: o seed JÁ FOI
+# não-idempotente — a segunda execução morria em `workspaces_slug_unique`, o
+# que acontecia sempre que se reaproveitava um cluster com
+# BRABO_KEEP_CLUSTER=1. Hoje ele É idempotente (`apps/api/src/db/seed.ts`
+# reaproveita workspace, projeto e sessão; ver a convenção no CLAUDE.md), então
+# num cluster reaproveitado o pod também termina `Succeeded`. Um pod em `Error`
+# deixou de ser o desfecho esperado do reaproveitamento e passou a ser defeito
+# do seed — e continua sendo o login, logo abaixo, quem decide (AT-212).
+#
+# AT-176: este wait durava SEMPRE 3m00s (9 execuções medidas) — a assinatura do
+# `--timeout=180s` estourando, não de trabalho. A hipótese (o seed não chama
+# `process.exit` e o processo fica de pé) NÃO foi confirmada: localmente o seed
+# termina sozinho, exit 0, em ~2s. Duas coisas ficam então registradas na saída,
+# para a próxima rodada dizer o que houve em vez de a fase ser só um número:
+# quanto o wait levou e, quando ele NÃO devolveu `Succeeded`, o estado do pod
+# (fase, estado do contêiner, instantes) e o fim do log. O que separa as
+# hipóteses é a linha `Seed concluído.` no log: com ela e o pod ainda `Running`,
+# o processo ficou de pé depois do seed; sem ela, o seed ainda estava
+# bloqueado numa dependência (candidata medida: o GraphStore espera ~90s por um
+# Neo4j que a NetworkPolicy não deixa o pod `migrate-api` alcançar — o ingress
+# do `neo4j` só admite `api` e `engine`).
+#
+# O `|| true` FICA, e por um motivo que não é esconder a falha: o `wait` não é
+# o veredito. Quem decide se o seed deu certo é o login logo abaixo — que morre
+# com `die` —, e este bloco DIZ o que viu (duração, fase, fim do log) em vez de
+# calar.
+seed_wait_inicio="${SECONDS}"
+seed_wait_rc=0
 kubectl -n brabo wait --for=jsonpath='{.status.phase}'=Succeeded \
-  pod/seed-smoke --timeout=180s >/dev/null 2>&1 || true
+  pod/seed-smoke --timeout=180s >/dev/null 2>&1 || seed_wait_rc=$?
+seed_wait_dur=$((SECONDS - seed_wait_inicio))
+if [[ "${seed_wait_rc}" == "0" ]]; then
+  ok "seed-smoke: Succeeded em ${seed_wait_dur}s"
+else
+  warn "seed-smoke: o wait saiu com código ${seed_wait_rc} após ${seed_wait_dur}s às $(date -u +%H:%M:%SZ) (não foi Succeeded)"
+  kubectl -n brabo get pod/seed-smoke \
+    -o jsonpath='  fase={.status.phase} inicio={.status.startTime} contêiner={.status.containerStatuses[0].state}{"\n"}' 2>&1 || true
+  echo "  --- fim do log do seed-smoke ---"
+  kubectl -n brabo logs pod/seed-smoke --tail=15 2>&1 | sed 's/^/  /' || true
+  echo "  --- fim ---"
+fi
 
 seed_login_ok=0
 for _ in $(seq 1 10); do
@@ -492,10 +633,10 @@ ok "usuário do smoke pronto (login verificado)"
 # EndpointSlice, a criação do bucket falhava aqui — e a mensagem do cliente S3
 # fala em credencial, que manda quem investiga procurar chave errada em vez de
 # corrida de rede.
-info "criando o bucket de backup no MinIO"
+info "criando o bucket de backup no S3 local"
 
 for _ in $(seq 1 30); do
-  if [[ -n "$(kubectl -n brabo get endpoints minio -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null)" ]]; then
+  if [[ -n "$(kubectl -n brabo get endpoints s3-local -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null)" ]]; then
     break
   fi
   sleep 2
@@ -513,7 +654,7 @@ criar_bucket() {
   # Nome único por tentativa mesmo assim: com `--rm` a remoção é assíncrona, e
   # reusar o nome faz a chamada seguinte falhar com "already exists" — um erro
   # que se disfarça de falha de conexão no log.
-  kubectl -n brabo run "minio-mb-$$-${1}" \
+  kubectl -n brabo run "s3-mb-$$-${1}" \
     --rm --attach --restart=Never --quiet \
     --image=brabo-backup:prod \
     --image-pull-policy=IfNotPresent \
@@ -547,4 +688,8 @@ done
 [[ ${bucket_criado} -eq 1 ]] || die "não foi possível criar o bucket de backup: ${saida_mb:-sem saída}"
 ok "bucket de backup pronto"
 
-printf '\n\033[32m[bootstrap] cluster pronto\033[0m — web em http://localhost:8088, Grafana em http://localhost:3001\n'
+if [[ "${BRABO_SKIP_OBSERVABILITY:-}" == "1" ]]; then
+  printf '\n\033[32m[bootstrap] cluster pronto\033[0m — web em http://localhost:8088 (sem Grafana: BRABO_SKIP_OBSERVABILITY=1)\n'
+else
+  printf '\n\033[32m[bootstrap] cluster pronto\033[0m — web em http://localhost:8088, Grafana em http://localhost:3001\n'
+fi

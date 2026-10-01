@@ -16,7 +16,11 @@
  *
  * Sempre referencie os tokens semânticos (--surface-*, --text-*,
  * --accent etc.) na UI — nunca a paleta bruta (--terracota-*,
- * --teal-*, --petroleo-*, --areia-*) diretamente.
+ * --teal-*, --petroleo-*, --areia-*, --neutro-*) diretamente.
+ *
+ * Desde o ADR 0181 (2026-09-30) o tema escuro é PRETO NEUTRO com acento
+ * terracota suave, e o claro é o neutro da mesma família — a identidade
+ * terracota ficou no acento, a superfície deixou de ser azul-petróleo.
  *
  * As 3 famílias (Space Grotesk/Archivo/IBM Plex Mono) NÃO são
  * carregadas aqui: a carga é responsabilidade de quem consome este
@@ -72,52 +76,95 @@
   --areia-600: #5e5443;
   --areia-700: #2e2820;
 
-  /* Tokens semânticos — tema dark (primário) */
-  --surface-0: var(--petroleo-700);
-  --surface-1: var(--petroleo-600);
-  --surface-2: var(--petroleo-500);
-  --text-primary: var(--areia-050);
-  --text-secondary: #aec6ce;
-  --text-muted: #6e8a94;
-  --accent: #d6633a;
-  --accent-hover: #e37b4e;
-  --on-accent: #f7eee2;
-  --success: #37b3a4;
-  --warning: #e0982f;
-  --danger: #e05a3e;
-  /* Agentes/IA e ações de agente. Última cor do handoff que não tinha token:
-     `#9c7be0` já estava hard-coded em quatro lugares do web (agents.ts,
-     EventItem, HypothesisCard) porque não havia o que referenciar. */
-  --violet: #9c7be0;
-  --border: #1c4a5a;
-  --border-strong: #2e6072;
-  --code-bg: #03141b;
-  /* Fundo de linha de diff — especificado em COMPONENTS.md desde sempre, mas
-     nunca definido aqui: o ApprovalCard caía no fallback hard-coded e o
-     histórico de versões inventou cor de texto no lugar. */
-  --diff-add: #0e2e24;
-  --diff-del: #331a16;
+  /* Escala NEUTRA (ADR 0181). É a base das superfícies, do texto e das bordas
+     dos DOIS temas desde que o escuro deixou de ser azul-petróleo: preto e
+     cinza sem matiz, na família de mercado, para que a cor fique só onde ela
+     SIGNIFICA alguma coisa (acento, estado, agente). As quatro matrizes acima
+     continuam aqui e continuam valendo como paleta bruta — nenhum módulo as
+     referencia hoje, e tirá-las não compraria nada. */
+  --neutro-000: #ffffff;
+  --neutro-050: #fafafa;
+  --neutro-100: #f4f4f5;
+  --neutro-200: #e4e4e7;
+  --neutro-300: #d4d4d8;
+  --neutro-400: #a1a1aa;
+  --neutro-500: #71717a;
+  --neutro-600: #52525b;
+  --neutro-700: #3a3a42;
+  --neutro-750: #2a2a30;
+  --neutro-800: #1c1c21;
+  --neutro-850: #141417;
+  --neutro-900: #0d0d0f;
+  --neutro-950: #0a0a0c;
+
+  /* Tokens semânticos — tema dark (primário).
+     Desde o ADR 0181 o escuro é PRETO NEUTRO com acento terracota SUAVE (o
+     ADR 0074 continua valendo para o mecanismo — boot, medição nos dois temas,
+     os oito papéis de sintaxe; o que muda é o número). Todo valor abaixo saiu
+     da MEDIÇÃO em apps/web/src/lib/contraste.test.ts, não do rascunho: onde o
+     rascunho reprovava, o número foi ajustado até o piso passar. A dívida de
+     contraste do escuro — cinco pares abaixo de 4,5:1 desde a FASE 16 —
+     ACABOU aqui, e o teste agora a cobra como PISO. */
+  --surface-0: var(--neutro-900);
+  --surface-1: var(--neutro-850);
+  --surface-2: var(--neutro-800);
+  --text-primary: #ececef;
+  --text-secondary: var(--neutro-400);
+  /* Rascunho: #71717a (--neutro-500) — 3,80:1 sobre --surface-1 e 3,51:1
+     sobre --surface-2, a mesma dívida de antes com outra cor. #86868f mede
+     5,38 / 5,10 / 4,70 nas três superfícies e continua um degrau abaixo do
+     --text-secondary (7,17 sobre --surface-1): a hierarquia fica, a dívida
+     não. */
+  --text-muted: #86868f;
+  --accent: #c8744f;
+  --accent-hover: #d98b68;
+  /* ESCURO sobre o acento, e não claro: o creme de antes dava 3,20:1 no botão
+     primário (a "exceção conhecida" do ADR 0036), e branco sobre #c8744f
+     daria 3,46 — e 2,68 no hover. O preto neutro mede 5,61 no acento, 7,25
+     no hover, 7,65 sobre --success e 5,24 sobre --danger (os outros fundos
+     sólidos que usam este token). A exceção do botão primário ACABOU. */
+  --on-accent: var(--neutro-900);
+  --success: #3fb68b;
+  --warning: #d4a13a;
+  --danger: #e5534b;
+  /* Agentes/IA e ações de agente. Dessaturado junto com o resto (era
+     #9c7be0). */
+  --violet: #9d8ad6;
+  /* As três cores de agente que NÃO têm contraparte semântica (Psicólogo
+     leve, Dev Frontend, SecOps). Eram hex soltos em `apps/web/src/lib/
+     agents.ts`, calibrados só contra o escuro e lavados no claro (a
+     consequência que o ADR 0074 declarava). Viraram token por tema no ADR
+     0181 — e entram sozinhos na paridade e no piso de elemento de interface. */
+  --agent-leve: #b8acdf;
+  --agent-frontend: #5fb3a8;
+  --agent-secops: #8f9ba3;
+  --border: var(--neutro-750);
+  --border-strong: var(--neutro-700);
+  --code-bg: var(--neutro-950);
+  /* Fundo de linha de diff — neutro com um toque de estado, discreto: é fundo
+     de linha inteira, e o texto por cima é --text-primary (14+:1). */
+  --diff-add: #12261d;
+  --diff-del: #2b1716;
+  /* Véu atrás de modal. Era rgba(3, 10, 14, .64) solto em
+     `ui/Modal.module.css` — o petróleo de antes em transparência. */
+  --overlay: rgba(0, 0, 0, 0.64);
   /* Realce de sintaxe da aba Code e do Markdown do chat.
-     Os OITO papéis do handoff (`design_handoff_brabo/tokens.css`, bloco
-     `--syn-*`), cada um com token próprio e valor próprio por tema — RN-185.
-     Antes eram três: função, comentário e operador. Os outros cinco reusavam
-     `--accent`/`--warning`/`--violet`/`--success`/`--text-primary`, e o reuso
-     era a razão de a paleta ser medida SÓ no escuro: no claro os semânticos
-     reprovavam contra o `--code-bg` de papel.
-     Todos os oito são calibrados para 4,5:1 contra --code-bg NOS DOIS temas
-     (medido em apps/web/src/lib/contraste.test.ts). Onde o valor do handoff
-     não fecha a medição, ele NÃO é adotado — mesma régua do ADR 0036: a
-     intenção do handoff vale, o número que reprova não. Ver o ADR 0074. */
-  --syntax-keyword: #d6633a;
-  --syntax-function: #5ebeb1;
-  --syntax-string: #e0982f;
-  --syntax-number: #9c7be0;
-  /* Handoff: #5c7a85 — 4,09:1 contra --code-bg, reprova. Mantido o valor da
-     FASE 26, que mede 6,31:1. */
-  --syntax-comment: #7f9aa4;
-  --syntax-type: #37b3a4;
-  --syntax-operator: #8fb0ba;
-  --syntax-text: #dce9ed;
+     Os OITO papéis do handoff, cada um com token próprio e valor próprio por
+     tema — RN-185. Todos medidos a 4,5:1 contra --code-bg NOS DOIS temas
+     (apps/web/src/lib/contraste.test.ts). Onde o papel é o mesmo de um
+     semântico (keyword/accent, string/warning, number/violet, type/success),
+     o valor é o MESMO número: quem pinta hoje é `SyntaxTokens.module.css`,
+     que ainda referencia o semântico. Recalculados no ADR 0181 contra o
+     --code-bg preto (#0a0a0c): keyword 5,71 · function 8,01 · string 8,44 ·
+     number 6,63 · comment 5,06 · type 7,79 · operator 7,72 · text 15,59. */
+  --syntax-keyword: #c8744f;
+  --syntax-function: #5fb3a8;
+  --syntax-string: #d4a13a;
+  --syntax-number: #9d8ad6;
+  --syntax-comment: #80808a;
+  --syntax-type: #3fb68b;
+  --syntax-operator: #a1a1aa;
+  --syntax-text: #e4e4e7;
   /* Os dois valores do handoff, literais. O `--shadow` estava mais raso
      (8px/24px a .35) que a sombra padrão especificada, e a sombra grande do
      login não existia em lugar nenhum — cada tela que precisasse dela ia
@@ -182,62 +229,121 @@
   --sidebar-w-collapsed: 62px;
   --header-h: 60px;
   --tabs-h: 42px;
+
+  /* Tintas semânticas (AT-285). Os módulos repetiam ~110 `color-mix()` sobre
+     os mesmos cinco tons com uma dúzia de porcentagens vizinhas (10, 12, 14,
+     15, 16, 18% para o mesmo papel de "fundo tingido"). A escala agora é UMA:
+     - `-soft`: fundo tingido sobre QUALQUER superfície (mistura com
+       `transparent`, então não carrega o matiz da superfície de baixo);
+     - `-line`: borda tingida, idem;
+     - `-panel` / `-panel-border`: faixa de aviso opaca, misturada com
+       `--surface-1`/`--border` — acompanha a base neutra do tema.
+     As porcentagens são tokens próprios para que cores DINÂMICAS
+     (`--agent-color`, `--status-color`…) usem a mesma escala:
+     `color-mix(in srgb, var(--agent-color) var(--tint-soft), transparent)`.
+     Nenhuma é medida pelo teste de contraste (não resolvem a cor literal): são
+     fundo e borda, e o texto sobre elas continua sendo o tom cheio. */
+  --tint-soft: 12%;
+  --tint-line: 40%;
+  --tint-panel: 8%;
+  --tint-avatar: 18%;
+  --accent-soft: color-mix(in srgb, var(--accent) var(--tint-soft), transparent);
+  --accent-line: color-mix(in srgb, var(--accent) var(--tint-line), transparent);
+  --accent-panel: color-mix(in srgb, var(--accent) var(--tint-panel), var(--surface-1));
+  --accent-panel-border: color-mix(in srgb, var(--accent) var(--tint-line), var(--border));
+  --success-soft: color-mix(in srgb, var(--success) var(--tint-soft), transparent);
+  --success-line: color-mix(in srgb, var(--success) var(--tint-line), transparent);
+  --success-panel: color-mix(in srgb, var(--success) var(--tint-panel), var(--surface-1));
+  --success-panel-border: color-mix(in srgb, var(--success) var(--tint-line), var(--border));
+  --warning-soft: color-mix(in srgb, var(--warning) var(--tint-soft), transparent);
+  --warning-line: color-mix(in srgb, var(--warning) var(--tint-line), transparent);
+  --warning-panel: color-mix(in srgb, var(--warning) var(--tint-panel), var(--surface-1));
+  --warning-panel-border: color-mix(in srgb, var(--warning) var(--tint-line), var(--border));
+  --danger-soft: color-mix(in srgb, var(--danger) var(--tint-soft), transparent);
+  --danger-line: color-mix(in srgb, var(--danger) var(--tint-line), transparent);
+  --danger-panel: color-mix(in srgb, var(--danger) var(--tint-panel), var(--surface-1));
+  --danger-panel-border: color-mix(in srgb, var(--danger) var(--tint-line), var(--border));
+  --violet-soft: color-mix(in srgb, var(--violet) var(--tint-soft), transparent);
+  --violet-line: color-mix(in srgb, var(--violet) var(--tint-line), transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 22%, transparent);
+  --focus-ring-inset: color-mix(in srgb, var(--accent) 45%, transparent);
+  --danger-ring: color-mix(in srgb, var(--danger) 22%, transparent);
 }
 
 /*
  * Tema claro.
  *
- * Os acentos daqui são MAIS ESCUROS que os do handoff, e a razão é estrutural:
- * no tema escuro o `--code-bg` é quase preto (#03141b) e qualquer acento vivo
- * ganha 5:1 de graça; no claro ele é papel (#efe4d2), a um passo das
- * superfícies, e o mesmo acento cai para 3,1–3,9:1 — abaixo do piso de TEXTO,
- * que é o papel que eles exercem no realce de sintaxe. Os números de antes e
- * depois de cada um estão no ADR 0074. RN-184.
+ * Desde o ADR 0181 ele é o NEUTRO da mesma família do escuro: branco e cinza
+ * sem matiz no lugar do papel de areia. A régua do ADR 0074 continua: os
+ * acentos daqui são MAIS ESCUROS que os do escuro porque no claro o
+ * `--code-bg` é quase branco, e o acento que é keyword no realce de sintaxe
+ * precisa de 4,5:1 contra ele. O terracota escurecido (#a4502c) mede 5,08
+ * contra o `--code-bg` e 5,58 com o `--on-accent` branco no botão primário.
+ * RN-184.
  */
 [data-theme='light'] {
-  --surface-0: var(--areia-050);
-  --surface-1: #fcf8f1;
-  --surface-2: #ecddc7;
-  --text-primary: var(--petroleo-600);
-  --text-secondary: #3c5a66;
-  /* Era #80939a: 2,76:1 sobre --surface-0 e 2,40:1 sobre --surface-2 — abaixo
-     até do piso de ELEMENTO de interface (3:1), então não era dívida, era
-     defeito. O valor novo mede 5,17 / 5,68 / 4,50 nas três superfícies, acima
-     dos 4,81 que o escuro já entregava sobre --surface-0: metadado e label são
-     TEXTO, e o claro não tem por que ser pior que o tema primário. */
-  --text-muted: #526670;
-  --accent: var(--terracota-500);
-  --accent-hover: var(--terracota-600);
-  --on-accent: #f7eee2;
-  --success: #136a60;
-  --warning: #8a5410;
-  --danger: #b33a26;
-  /* Valor do handoff (`design_handoff_brabo/tokens.css`, tema claro), que
-     desde a versão nova ESPECIFICA o violeta claro — antes era derivado aqui
-     por não haver referência. */
-  --violet: #6b4fb0;
-  --border: #dec9aa;
-  --border-strong: #c6af8c;
-  --code-bg: #efe4d2;
-  /* Mesma função no tema claro (o par do spec é calibrado pro escuro). */
-  --diff-add: #d6ead9;
-  --diff-del: #f4d9d2;
-  /* Os oito papéis de sintaxe, com valor próprio no claro — não um
-     `color-mix` do escuro, que reprova contra o fundo de papel (medido).
-     Onde o papel é o mesmo de um semântico, o valor é o MESMO número: quem
-     pinta hoje é `SyntaxTokens.module.css`, que ainda referencia o semântico,
-     e duas fontes com números diferentes para o mesmo pixel divergiriam na
-     primeira correção feita de um lado só. */
-  --syntax-keyword: #a5451f;
-  --syntax-function: #186158;
-  --syntax-string: #8a5410;
-  --syntax-number: #6b4fb0;
-  --syntax-comment: #4a6873;
-  --syntax-type: #136a60;
-  --syntax-operator: #456570;
-  --syntax-text: #12262e;
+  --surface-0: var(--neutro-000);
+  --surface-1: var(--neutro-050);
+  --surface-2: var(--neutro-100);
+  --text-primary: #18181b;
+  --text-secondary: var(--neutro-600);
+  /* Rascunho: #71717a — 4,40:1 sobre --surface-2, e o claro fecha os pares
+     de texto em 4,5 desde o ADR 0074. #696972 mede 5,43 / 5,21 / 4,94. */
+  --text-muted: #696972;
+  --accent: #a4502c;
+  --accent-hover: #86401f;
+  --on-accent: var(--neutro-000);
+  --success: #137a55;
+  --warning: #8a5a0a;
+  --danger: #b42a22;
+  --violet: #6a50b8;
+  --agent-leve: #8671c9;
+  --agent-frontend: #1f766c;
+  --agent-secops: #5f6b73;
+  --border: var(--neutro-200);
+  --border-strong: var(--neutro-300);
+  --code-bg: var(--neutro-100);
+  --diff-add: #e3f1ea;
+  --diff-del: #f8e1de;
+  --overlay: rgba(24, 24, 27, 0.4);
+  /* Os oito papéis de sintaxe, com valor próprio no claro, medidos contra o
+     --code-bg (#f4f4f5): keyword 5,08 · function 5,42 · string 5,39 ·
+     number 5,53 · comment 5,75 · type 4,85 · operator 7,03 · text 16,12. */
+  --syntax-keyword: #a4502c;
+  --syntax-function: #1f6f66;
+  --syntax-string: #8a5a0a;
+  --syntax-number: #6a50b8;
+  --syntax-comment: #5f5f68;
+  --syntax-type: #137a55;
+  --syntax-operator: #52525b;
+  --syntax-text: #18181b;
   --shadow:
-    0 1px 2px rgba(10, 46, 61, 0.08),
-    0 12px 32px rgba(10, 46, 61, 0.12);
-  --shadow-lg: 0 24px 60px rgba(10, 46, 61, 0.16);
+    0 1px 2px rgba(24, 24, 27, 0.06),
+    0 12px 32px rgba(24, 24, 27, 0.1);
+  --shadow-lg: 0 24px 60px rgba(24, 24, 27, 0.14);
+
+  /* As tintas do :root, redeclaradas: um custom property com `var()` é
+     calculado no elemento que o declara, então quem aplicar `data-theme` num
+     ancestral que não seja o <html> herdaria a tinta do escuro. */
+  --accent-soft: color-mix(in srgb, var(--accent) var(--tint-soft), transparent);
+  --accent-line: color-mix(in srgb, var(--accent) var(--tint-line), transparent);
+  --accent-panel: color-mix(in srgb, var(--accent) var(--tint-panel), var(--surface-1));
+  --accent-panel-border: color-mix(in srgb, var(--accent) var(--tint-line), var(--border));
+  --success-soft: color-mix(in srgb, var(--success) var(--tint-soft), transparent);
+  --success-line: color-mix(in srgb, var(--success) var(--tint-line), transparent);
+  --success-panel: color-mix(in srgb, var(--success) var(--tint-panel), var(--surface-1));
+  --success-panel-border: color-mix(in srgb, var(--success) var(--tint-line), var(--border));
+  --warning-soft: color-mix(in srgb, var(--warning) var(--tint-soft), transparent);
+  --warning-line: color-mix(in srgb, var(--warning) var(--tint-line), transparent);
+  --warning-panel: color-mix(in srgb, var(--warning) var(--tint-panel), var(--surface-1));
+  --warning-panel-border: color-mix(in srgb, var(--warning) var(--tint-line), var(--border));
+  --danger-soft: color-mix(in srgb, var(--danger) var(--tint-soft), transparent);
+  --danger-line: color-mix(in srgb, var(--danger) var(--tint-line), transparent);
+  --danger-panel: color-mix(in srgb, var(--danger) var(--tint-panel), var(--surface-1));
+  --danger-panel-border: color-mix(in srgb, var(--danger) var(--tint-line), var(--border));
+  --violet-soft: color-mix(in srgb, var(--violet) var(--tint-soft), transparent);
+  --violet-line: color-mix(in srgb, var(--violet) var(--tint-line), transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 22%, transparent);
+  --focus-ring-inset: color-mix(in srgb, var(--accent) 45%, transparent);
+  --danger-ring: color-mix(in srgb, var(--danger) 22%, transparent);
 }

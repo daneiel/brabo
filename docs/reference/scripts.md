@@ -87,6 +87,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api lint:migracao` | `ts-node scripts/lint-migracao.ts` |
 | `pnpm --filter api relatorio:backup` | `ts-node scripts/relatorio-backup.ts` |
 | `pnpm --filter api grafo:reprojetar` | `ts-node src/scripts/reprojetar-grafo.ts` |
+| `pnpm --filter api artefatos:reprojetar` | `ts-node src/scripts/reprojetar-artefatos.ts` |
 | `pnpm --filter api db:generate` | `drizzle-kit generate` |
 | `pnpm --filter api db:migrate` | `drizzle-kit migrate` |
 
@@ -103,6 +104,37 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
 | `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
 
+## runner — `apps/runner/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/runner start` | `node src/index.ts` |
+| `pnpm --filter @brabo/runner build` | `tsup` |
+| `pnpm --filter @brabo/runner build:bin` | `node scripts/build-bin.mjs` |
+| `pnpm --filter @brabo/runner smoke` | `node scripts/smoke-dist.mjs` |
+| `pnpm --filter @brabo/runner smoke:bin` | `node scripts/smoke-bin.mjs` |
+| `pnpm --filter @brabo/runner test` | `vitest run` |
+| `pnpm --filter @brabo/runner typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/runner lint` | `oxlint --deny-warnings src scripts` |
+
+## broker — `apps/broker/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/broker start` | `node src/index.ts` |
+| `pnpm --filter @brabo/broker build` | `tsup` |
+| `pnpm --filter @brabo/broker test` | `vitest run` |
+| `pnpm --filter @brabo/broker typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/broker lint` | `oxlint --deny-warnings src tsup.config.ts vitest.config.ts` |
+
+## docker-port — `packages/docker-port/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --filter @brabo/docker-port test` | `vitest run` |
+| `pnpm --filter @brabo/docker-port typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/docker-port lint` | `oxlint --deny-warnings src vitest.config.ts` |
+
 ## website — `website/package.json`
 
 | command | runs |
@@ -118,12 +150,32 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
 | `pnpm --dir website typecheck` | `tsc` |
 
+## e2e — `e2e/package.json`
+
+| command | runs |
+|---|---|
+| `pnpm --dir e2e test` | `playwright test` |
+| `pnpm --dir e2e test:headed` | `playwright test --headed` |
+| `pnpm --dir e2e relatorio` | `playwright show-report` |
+| `pnpm --dir e2e navegadores` | `playwright install --with-deps chromium` |
+| `pnpm --dir e2e typecheck` | `tsc --noEmit` |
+
 ## scripts — `scripts/package.json`
 
 | command | runs |
 |---|---|
 | `pnpm --filter scripts test` | `vitest run` |
-| `pnpm --filter scripts typecheck` | `tsc --noEmit` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma && tsc --noEmit -p jev/vivo` |
+| `pnpm --filter scripts idioma:medir` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts` |
+| `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
+| `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
+| `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
+| `pnpm --filter scripts jev:analise` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts` |
+| `pnpm --filter scripts jev:menu` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts` |
+| `pnpm --filter scripts jev:vivo` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/vivo/vivo.ts` |
+| `pnpm --filter scripts idioma:validar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts` |
+| `pnpm --filter scripts idioma:diagnosticar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/diagnostico-haiku.ts` |
+| `pnpm --filter scripts idioma:revisar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/revisao.ts` |
 
 ## Makefile
 
@@ -137,12 +189,16 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
 | `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
-| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster) |
+| `make test-restore-mutacao` | Breaks the restore on purpose (dump without a table) and requires the proof to catch it |
+| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
+| `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
+| `make test-reprojecao-artefatos-k8s` | Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first) |
+| `make test-rotacao-chave-mestra-k8s` | Rehearses the master key rotation (three runbook steps) inside the local cluster (needs `make deploy-local` first; leaves the cluster on a new key) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-100 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+136 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

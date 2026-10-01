@@ -104,6 +104,56 @@ defmodule Engine.Dev.WorktreeManagerTest do
     assert WorktreeManager.list(project_id) == ["dev-api"]
   end
 
+  # RN-664 (AT-250) — a branch do agente nasce da de TRABALHO (`dev`), a mesma
+  # que a PR mira e que o gate usa no diff, e não do HEAD do working tree.
+  describe "base explícita (RN-664)" do
+    # Uma `dev` com um commit a mais que o HEAD (a `main`/`master` do setup).
+    defp cria_dev_adiante!(work_dir) do
+      git(work_dir, ["checkout", "-b", "dev"])
+      File.write!(Path.join(work_dir, "SO_NA_DEV.md"), "trabalho integrado")
+      git(work_dir, ["add", "-A"])
+      git(work_dir, ["commit", "-m", "dev"])
+      git(work_dir, ["checkout", "-"])
+    end
+
+    test "a branch nasce da `dev`, não do HEAD", %{work_dir: work_dir} do
+      cria_dev_adiante!(work_dir)
+      refute File.exists?(Path.join(work_dir, "SO_NA_DEV.md"))
+
+      assert {:ok, wt} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a", "dev")
+      assert File.exists?(Path.join(wt.path, "SO_NA_DEV.md"))
+    end
+
+    test "workspace de ANTES da RN-664 (parado na default, só com origin/dev) ganha a `dev` local",
+         %{root: root, work_dir: work_dir} do
+      bare = Path.join(root, "origem.git")
+      git(root, ["init", "--bare", "origem.git"])
+      git(work_dir, ["remote", "add", "origin", bare])
+      cria_dev_adiante!(work_dir)
+      git(work_dir, ["push", "origin", "dev"])
+      git(work_dir, ["fetch", "origin"])
+      git(work_dir, ["branch", "-D", "dev"])
+
+      assert {:ok, wt} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a", "dev")
+      assert File.exists?(Path.join(wt.path, "SO_NA_DEV.md"))
+
+      {_, 0} =
+        System.cmd("git", ["rev-parse", "--verify", "refs/heads/dev"],
+          cd: work_dir,
+          stderr_to_stdout: true
+        )
+    end
+
+    test "sem `dev` nem `origin/dev`: recusa NOMEADA, sem nascer do HEAD", %{work_dir: work_dir} do
+      assert {:error, mensagem} =
+               WorktreeManager.add_worktree(work_dir, "dev-api", "task-a", "dev")
+
+      assert mensagem =~ "não tem a branch `dev`"
+      assert mensagem =~ "RN-664"
+      assert WorktreeManager.list_at(work_dir) == []
+    end
+  end
+
   # RN-507/ADR 0145 — as MESMAS quatro operações, para um projeto
   # `execution_mode: runner`: bifurcam para `Engine.Actions.Workspace.
   # RunnerGit`, pelo canal Phoenix, nunca `File.ls`/`System.cmd` local (que
@@ -155,7 +205,7 @@ defmodule Engine.Dev.WorktreeManagerTest do
 
     defp fake_runner_loop(parent, responder) do
       receive do
-        {:dispatch_exec, ref, command, cwd, _env, from, _timeout_ms} ->
+        {:dispatch_exec, ref, command, cwd, _env, _git_credenciado, from, _timeout_ms} ->
           send(parent, {:comando, command})
           {exit_code, output} = responder.(command, cwd)
 

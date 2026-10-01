@@ -1,0 +1,34 @@
+{
+  "title": "Machine keys",
+  "eyebrow": "Local agent",
+  "subtitle": "A machine key authenticates the local agent installed on one of your machines (brabo-runner running as a service). It is born on the machine, at install time, and only its public half ever reaches here. This lists YOUR machine keys, revoked ones included — and it works with no project yet, which is exactly when the install creates one. Project keys are not here: they live in each project's settings.",
+  "subtitleAlcance": "A machine key serves every project of yours in runner mode: revoking it drops the local agent in all of them at once.",
+  "subtitleNaoEBatimento": "A registered key is not a running agent: \"last used\" is the last time the agent asked for access with it, never proof that it is up right now — what knows about right now is a project's terminal.",
+  "subtitleSubstitui": "Installing again on the same account registers a new machine key and revokes the previous one; that is why an older revoked key may show up here without anyone having clicked revoke.",
+  "verificando": "Loading your machine keys…",
+  "naoSei": "I couldn't read your machine keys. That doesn't mean there are none — it means I don't know.",
+  "emptyMessage": "Your account has no machine key. One is created when the Brabo installer sets up the local agent on a machine.",
+  "orfa": "An active key no local agent has ever used is usually from an install that never got to start the agent — it is inert, but it still works. Revoke it if you don't recognize it.",
+  "table": {
+    "name": "Name",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "lastUsedNever": "never used",
+    "status": "Status",
+    "statusActive": "active",
+    "statusRevoked": "revoked",
+    "revokeAria": "Revoke {{name}}",
+    "revokeTitle": "Revoke"
+  },
+  "toast": {
+    "revokeErrorTitle": "Couldn't revoke the machine key"
+  },
+  "modal": {
+    "title": "Revoke machine key",
+    "body": "Revoking “{{name}}” is final: it stops authenticating the local agent on that machine, and getting a new one means installing the agent again.",
+    "alcance": "It drops the local agent in EVERY project of yours in runner mode where it connected with this key, not just one. With no project yet, it only stops the key from being used again.",
+    "precisao": "Only what connected with THIS key falls: another runner of yours in those projects, authenticated with another key or with a token, stays connected.",
+    "cancel": "Cancel",
+    "confirm": "Revoke"
+  }
+}

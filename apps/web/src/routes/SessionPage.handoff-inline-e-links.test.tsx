@@ -73,7 +73,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -161,7 +164,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -174,7 +177,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // ...e o botão de aceitar existe UMA VEZ SÓ (não duplicado com a topbar).
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
 
@@ -183,7 +186,8 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
   });
 
   it('um handoff.offered ANTIGO (já resolvido) continua como divisor mudo, sem botão', async () => {
-    // Duas ofertas pro MESMO par fromAgent/toAgent: a atual é a de seq maior.
+    // Duas ofertas pro MESMO par fromAgent/toAgent: a atual é a do `handoffId`
+    // pendente (RN-631) — a antiga é de outro handoff, já resolvido.
     handoffsMock.mockReturnValue([HANDOFF_PO]);
     eventos.mockReturnValue({
       items: [
@@ -192,7 +196,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po-antigo', toAgent: 'po' },
           createdAt: '2026-08-10T11:00:00.000Z',
         },
         {
@@ -200,7 +204,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 2,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -213,7 +217,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
 
     // Só UM botão — o da oferta mais recente.
     const botoes = await screen.findAllByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     expect(botoes).toHaveLength(1);
   });
@@ -227,7 +231,7 @@ describe('SessionPage — item 1: aceite de handoff inline no fio', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
         {
@@ -272,7 +276,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'dev-lead' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -281,7 +285,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
     montar();
 
     expect(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar dev-lead' }),
+      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
     ).toBeInTheDocument();
 
     const link = screen.getByRole('link', {
@@ -311,7 +315,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-po', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -319,7 +323,7 @@ describe('SessionPage — item 3: CTA de handoff pro Dev Lead aponta pra Executo
 
     montar();
 
-    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar po' });
+    await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(
       screen.queryByRole('link', { name: /Acompanhe a execução em Executores/ }),
     ).not.toBeInTheDocument();
@@ -349,7 +353,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou o épico "Autenticação de usuários"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 
@@ -380,7 +384,7 @@ describe('SessionPage — item 2: link do PO pras histórias criadas, direto pro
       await screen.findByText('criou a história "Login com e-mail e senha"'),
     ).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 });

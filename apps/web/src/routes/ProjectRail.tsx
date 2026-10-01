@@ -1,5 +1,6 @@
-import { useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLayoutMovel } from '../lib/layout-movel';
 import styles from './ProjectRail.module.css';
 
 /** Uma folha do trilho — sempre uma ABA de verdade, nunca um grupo, e já com
@@ -33,7 +34,10 @@ interface ProjectRailProps {
   onChange: (key: string) => void;
 }
 
-const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+const TECLAS_VERTICAL = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+// Na barra horizontal do layout móvel (RN-643) o eixo gira junto: as setas
+// que andam são as do eixo em que os itens estão dispostos.
+const TECLAS_HORIZONTAL = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
 
 /**
  * O trilho vertical de navegação do projeto (ADR 0126).
@@ -61,10 +65,30 @@ const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
  * antiga correlacionava por POSIÇÃO, lendo `[role="tab"]` do DOM, porque a
  * primitiva `Tabs` não expunha refs; aqui os botões são deste componente, e
  * um `Map` de refs por chave dá a correlação sem consultar o documento.
+ *
+ * ## Layout móvel (RN-643)
+ *
+ * Abaixo do breakpoint móvel (`useLayoutMovel`) os 180px de coluna não cabem
+ * ao lado do conteúdo num telefone, e o trilho vira BARRA HORIZONTAL rolável
+ * acima dele: as mesmas folhas, na mesma ordem, com os cabeçalhos de grupo
+ * inline, `aria-orientation="horizontal"` e as setas esquerda/direita. A aba
+ * ativa é trazida para dentro da faixa visível ao montar e ao trocar.
+ *
+ * AT-330 (achado N8): trazer "ao montar" não bastava — os contadores chegam
+ * DEPOIS (a consulta de cada fila) e as fontes também, e cada um alarga as
+ * abas anteriores e empurra a ativa de volta para fora ("Config…" cortado).
+ * A aba ativa é trazida de novo quando o CONTEÚDO do trilho muda e quando as
+ * fontes terminam de carregar. E a faixa DIZ que rola: as bordas com conteúdo
+ * escondido esmaecem (`data-rola-inicio`/`data-rola-fim`), porque uma barra
+ * cortada rente à margem parecia terminar ali.
  */
 export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
   const { t } = useTranslation('nav');
   const refs = useRef(new Map<string, HTMLButtonElement | null>());
+  const navRef = useRef<HTMLElement>(null);
+  const horizontal = useLayoutMovel();
+  const teclas = horizontal ? TECLAS_HORIZONTAL : TECLAS_VERTICAL;
+  const avancar = horizontal ? 'ArrowRight' : 'ArrowDown';
 
   // A ordem VISUAL achatada — grupo por grupo, aba solta por aba solta. É
   // sobre ela que a seta anda: quem navega por teclado atravessa a fronteira
@@ -74,9 +98,56 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
     () => itens.flatMap((item) => (item.tipo === 'grupo' ? item.abas : [item.aba])),
     [itens],
   );
+  // O que muda a LARGURA das abas: rótulo e contador. Chave estável para o
+  // efeito abaixo — `itens` é um array novo a cada render de quem monta.
+  const conteudo = folhas.map((f) => `${f.key}:${f.label}:${f.count ?? ''}`).join('|');
+
+  // Na barra horizontal a aba ativa pode nascer fora da faixa visível (Gastos
+  // e Configurações ficam no fim) — ela é rolada para dentro, e de novo quando
+  // o conteúdo ou as fontes mudam a largura das anteriores (AT-330).
+  // `scrollIntoView` opcional porque o jsdom não o implementa.
+  useEffect(() => {
+    if (!horizontal) return;
+    const trazer = () =>
+      refs.current.get(active)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    trazer();
+    let vivo = true;
+    void document.fonts?.ready?.then(() => {
+      if (vivo) trazer();
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [horizontal, active, conteudo]);
+
+  // Quais bordas da faixa escondem conteúdo — é o que decide o esmaecimento.
+  const [bordas, setBordas] = useState({ inicio: false, fim: false });
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!horizontal || !nav) return;
+    const medir = () => {
+      const excede = nav.scrollWidth - nav.clientWidth > 1;
+      const proximas = {
+        inicio: excede && nav.scrollLeft > 1,
+        fim: excede && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1,
+      };
+      setBordas((atuais) =>
+        atuais.inicio === proximas.inicio && atuais.fim === proximas.fim ? atuais : proximas,
+      );
+    };
+    medir();
+    nav.addEventListener('scroll', medir, { passive: true });
+    const observador =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
+    observador?.observe(nav);
+    return () => {
+      nav.removeEventListener('scroll', medir);
+      observador?.disconnect();
+    };
+  }, [horizontal, conteudo]);
 
   function aoTeclar(e: KeyboardEvent<HTMLElement>) {
-    if (!TECLAS.includes(e.key)) return;
+    if (!teclas.includes(e.key)) return;
     if (folhas.length === 0) return;
 
     const focado = folhas.findIndex((f) => refs.current.get(f.key) === document.activeElement);
@@ -88,7 +159,7 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
     let proximo = ancora;
     if (e.key === 'Home') proximo = 0;
     else if (e.key === 'End') proximo = folhas.length - 1;
-    else proximo = (ancora + (e.key === 'ArrowDown' ? 1 : -1) + folhas.length) % folhas.length;
+    else proximo = (ancora + (e.key === avancar ? 1 : -1) + folhas.length) % folhas.length;
 
     e.preventDefault();
     const alvo = folhas[proximo];
@@ -124,9 +195,12 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
     // continua sendo texto lido — ele diz de que grupo a próxima leva de abas
     // é —, só não é alvo de seleção.
     <nav
-      className={styles.trilho}
+      ref={navRef}
+      className={[styles.trilho, horizontal && styles.trilhoHorizontal].filter(Boolean).join(' ')}
+      data-rola-inicio={horizontal && bordas.inicio ? '' : undefined}
+      data-rola-fim={horizontal && bordas.fim ? '' : undefined}
       role="tablist"
-      aria-orientation="vertical"
+      aria-orientation={horizontal ? 'horizontal' : 'vertical'}
       aria-label={t('rail.ariaLabel')}
       onKeyDown={aoTeclar}
     >

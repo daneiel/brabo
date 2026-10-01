@@ -6,6 +6,7 @@ import { Alert } from '../../components/ui/Alert';
 import { BranchIcon } from '../../components/ui/icons';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Repositório do projeto e, quando ele foi ADOTADO, as divergências que
@@ -22,6 +23,7 @@ export function RepositorySection({ projectId }: { projectId: string }) {
   const { data: repository } = useQuery({
     queryKey: ['repository', projectId],
     queryFn: () => getRepository(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: planoEstado } = useQuery({
     queryKey: ['bootstrap-plan', projectId],

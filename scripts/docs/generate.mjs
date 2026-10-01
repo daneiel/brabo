@@ -21,6 +21,18 @@ import { createHash } from 'node:crypto';
 import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
+import { aferir as aferirRefsComSimbolo, JANELA, veredito as vereditoDasRefs } from './refs-com-simbolo.mjs';
+import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
+import { aferirContagens } from './contagens-do-codigo.mjs';
+import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
+import { conferirTemas, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
+import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
+import {
+  DESTINO as DESTINO_DO_INVENTARIO,
+  ID_DO_BLOCO as ID_DO_INVENTARIO,
+  inventariar,
+  mensagemDaLacuna,
+} from './inventario-de-env.mjs';
 import {
   arquivos,
   eventosEmitidosPor,
@@ -43,28 +55,6 @@ const AVISO_BLOCO =
  */
 function celulaDeTabela(texto) {
   return texto.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-}
-
-/**
- * Nomes citados na prosa, incluindo a abreviação `PREFIXO_A` / `_B`, que é
- * idioma legítimo de tabela ("`POSTGRES_HOST` / `_USER` / `_PASSWORD`").
- * Sem expandir isso o checker acusa falso-positivo, e falso-positivo treina
- * quem lê a ignorar o aviso — que é o pior resultado possível pra um check.
- */
-function nomesCitados(doc) {
-  const citados = new Set();
-  for (const m of doc.matchAll(/`([A-Z][A-Z_0-9]{2,})`((?:\s*\/\s*`_[A-Z_0-9]+`)+)/g)) {
-    const base = m[1];
-    citados.add(base);
-    for (const s of m[2].matchAll(/`(_[A-Z_0-9]+)`/g)) {
-      // `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` → troca o último trecho.
-      citados.add(base.replace(/_[A-Z0-9]+$/, s[1]));
-      // `POSTGRES_HOST` / `_USER` → também vale como prefixo + sufixo.
-      citados.add(base.split('_')[0] + s[1]);
-    }
-  }
-  for (const m of doc.matchAll(/`([A-Z][A-Z_0-9]{2,})`/g)) citados.add(m[1]);
-  return citados;
 }
 
 const pendencias = [];
@@ -128,13 +118,28 @@ function escreverBloco(rel, id, corpo) {
 // ------------------------------------------------------- 1. scripts.md
 
 function gerarScripts() {
+  // A terceira coluna é o nome que o `--filter` recebe, e só existe quando ele
+  // difere do rótulo: `runner`, `broker` e `docker-port` são `@brabo/*`, e o
+  // comando que a tabela mostra tem de ser o que se COPIA e roda. Os três
+  // ficaram de fora da lista até a AT-218 — a referência dizia "every pnpm
+  // script" e omitia três membros do workspace.
   const pacotes = [
     ['raiz', 'package.json'],
     ['api', 'apps/api/package.json'],
     ['web', 'apps/web/package.json'],
+    ['runner', 'apps/runner/package.json', '@brabo/runner'],
+    ['broker', 'apps/broker/package.json', '@brabo/broker'],
+    ['docker-port', 'packages/docker-port/package.json', '@brabo/docker-port'],
     ['website', 'website/package.json'],
+    // `e2e/` é pacote FORA do workspace, como `website/` (ADR 0120): lockfile
+    // próprio, e por isso `--dir` e não `--filter` (AT-224).
+    ['e2e', 'e2e/package.json'],
     ['scripts', 'scripts/package.json'],
   ];
+
+  // Pacote fora do workspace da raiz: `--filter` exige membership, `--dir`
+  // não — aponta pro diretório e roda como se o pnpm tivesse começado ali.
+  const foraDoWorkspace = new Set(['website', 'e2e']);
 
   let out = `---
 id: scripts
@@ -153,22 +158,30 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
 `;
 
   let total = 0;
-  for (const [rotulo, caminho] of pacotes) {
+  for (const [rotulo, caminho, filtro = rotulo] of pacotes) {
+    // Falha NOMEADA, nunca `continue`: um `package.json` que some ou não
+    // parseia tirava o pacote inteiro da referência em silêncio, e a página
+    // continuava prometendo "every pnpm script" (AT-224). A lista acima é
+    // declarada — pacote que sai do repositório sai dela também.
     let pkg;
     try {
       pkg = JSON.parse(ler(caminho));
-    } catch {
-      continue;
+    } catch (erro) {
+      throw new Error(
+        `scripts.md: não consegui ler \`${caminho}\` (${erro.message}). ` +
+          'Corrija o arquivo, ou tire o pacote da lista em gerarScripts se ele saiu do repositório.',
+      );
     }
     const scripts = Object.entries(pkg.scripts ?? {});
     if (scripts.length === 0) continue;
     total += scripts.length;
 
-    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
-    // membership, `--dir` não — aponta pro diretório e roda como se o pnpm
-    // tivesse começado ali.
     const prefixo =
-      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --dir website ' : `pnpm --filter ${rotulo} `;
+      rotulo === 'raiz'
+        ? 'pnpm '
+        : foraDoWorkspace.has(rotulo)
+          ? `pnpm --dir ${rotulo} `
+          : `pnpm --filter ${filtro} `;
 
     out += `\n## ${rotulo === 'raiz' ? 'Root' : rotulo} — \`${caminho}\`\n\n`;
     out += '| command | runs |\n|---|---|\n';
@@ -201,73 +214,23 @@ function gerarEnv() {
   // distinção `E2E_PASSWORD` aparece ao lado de `SMTP_HOST` numa lista que um
   // operador lê para configurar a máquina dele, e a lista fica PIOR do que
   // estava incompleta.
-  const fontes = [
-    // DOIS globs para a api pelo mesmo motivo do broker, logo abaixo: o `**/`
-    // do pathspec do git exige pelo menos um nível de diretório, então os
-    // arquivos que moram direto em `apps/api/src/` escapavam. O preço estava
-    // medido e pago: `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`) é
-    // variável de PRODUTO — o teto do corpo JSON que a api aceita — e não
-    // aparecia em inventário nenhum.
-    ['api',
-      [...arquivos('apps/api/src/*.ts'), ...arquivos('apps/api/src/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'produto'],
-    ['engine', [...arquivos('apps/engine/lib/**/*.ex'), ...arquivos('apps/engine/config/*.exs')],
-      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g, 'produto'],
-    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g, 'produto'],
-    // O broker (ADR 0130) entra porque é SERVIÇO da instalação: o que ele lê
-    // do ambiente é configuração de quem opera, igual à da api e à do engine.
-    // `apps/runner` continua de FORA de propósito — ele roda na máquina do
-    // usuário e é configurado por flag e por arquivo na pasta do projeto, não
-    // pelo `.env` do deploy.
-    // DOIS globs, e não um: o `**/` do pathspec do git exige PELO MENOS um
-    // nível de diretório, então `apps/broker/src/**/*.ts` devolve VAZIO
-    // enquanto todos os arquivos do broker moram direto em `src/`. Um
-    // inventário que nasce vazio não avisa: ele passa verde.
-    ['broker',
-      [...arquivos('apps/broker/src/*.ts'), ...arquivos('apps/broker/src/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /env\.([A-Z_0-9]{3,})/g, 'produto'],
-    // As duas fontes de FERRAMENTA. Ficaram de fora até 2026-09-12 e o
-    // inventário passou verde o tempo todo — cinco variáveis lidas de verdade,
-    // nenhuma citada em `configuration.md`. Caem na MESMA armadilha do `**/`:
-    // `seed-golden-set-qa.ts` mora direto em `apps/api/scripts/` e
-    // `playwright.config.ts` direto em `e2e/`, então são dois globs cada.
-    //
-    // `e2e/` não é membro do workspace (ADR 0120, mesmo desenho do
-    // `website/`), e foi por isso que escapou da varredura — mas o gerador
-    // LÊ arquivo, não pacote, e membership não muda nada aqui.
-    ['api/scripts',
-      [...arquivos('apps/api/scripts/*.ts'), ...arquivos('apps/api/scripts/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
-    ['e2e',
-      [...arquivos('e2e/*.ts'), ...arquivos('e2e/**/*.ts')]
-        .filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
-  ];
+  const fontes = fontesDoInventarioDeEnv(arquivos);
 
   // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
   // inventário com a marca de lacuna, e na execução SEGUINTE o próprio nome
   // dentro do bloco conta como citação — a lacuna some sem ninguém escrever
   // uma linha de prosa.
-  const citados = nomesCitados(
-    semBlocoGerado(ler('docs/reference/configuration.md'), 'env-inventario'),
-  );
+  const prosa = semBlocoGerado(ler(DESTINO_DO_INVENTARIO), ID_DO_INVENTARIO);
+  const { porFonte, total, lacunas, comTodo } = inventariar(fontes, grepTodos, prosa);
+  const naoDocumentadas = lacunas.length;
   let corpo = '';
-  let total = 0;
-  let naoDocumentadas = 0;
 
-  for (const [app, caminhos, padrao, escopo] of fontes) {
-    const achados = [...grepTodos(padrao, caminhos).entries()].sort(([a], [b]) => a.localeCompare(b));
-    total += achados.length;
-    corpo += `\n**${app}** — ${achados.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
-    for (const [nome, arqs] of achados) {
-      // Does the prose above document it? If not, the gap shows up here
-      // instead of passing silently.
-      const documentada = citados.has(nome);
-      if (!documentada) naoDocumentadas++;
-      corpo += `- \`${nome}\`${documentada ? '' : ' — ⚠️ **no description above**'} <sub>(${[...arqs][0]})</sub>\n`;
+  for (const { app, escopo, variaveis } of porFonte) {
+    corpo += `\n**${app}** — ${variaveis.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
+    for (const { nome, arquivo, documentada } of variaveis) {
+      // Does the prose above document it? If not, the gap shows up here —
+      // and, since AT-211, the check fails on it (see below).
+      corpo += `- \`${nome}\`${documentada ? '' : ' — ⚠️ **no description above**'} <sub>(${arquivo})</sub>\n`;
     }
   }
 
@@ -281,7 +244,20 @@ function gerarEnv() {
     ' whoever develops the product. A tooling variable never belongs in an' +
     " operator's `.env`.\n";
 
-  escreverBloco('docs/reference/configuration.md', 'env-inventario', cabecalho + corpo);
+  escreverBloco(DESTINO_DO_INVENTARIO, ID_DO_INVENTARIO, cabecalho + corpo);
+
+  // O PORTÃO (AT-211): o ⚠️ deixou de ser "lacuna visível" e reprova, nas
+  // duas espécies de fonte, mesmo com o bloco em dia. A regra — inclusive por
+  // que TODO(humano) NÃO reprova — mora em `inventario-de-env.mjs`.
+  for (const nome of comTodo) {
+    console.log(`  TODO      ${nome} — descrita só por TODO(humano) em ${DESTINO_DO_INVENTARIO} (lacuna declarada, não reprova)`);
+  }
+  if (lacunas.length === 0) {
+    console.log(`  ok        inventário de variáveis (${total}, todas descritas)`);
+    return;
+  }
+  pendencias.push('variáveis sem descrição');
+  for (const lacuna of lacunas) console.log(mensagemDaLacuna(lacuna));
 }
 
 // ------------------------------------------- 3. inventário de tipos de evento
@@ -426,6 +402,10 @@ function descobrirProviders() {
       // — a coluna existe justamente para que virar essa flag sem prova fique
       // visível na doc, como aconteceu com `list_models` na Fase 9c.
       embeddings: flag('embeddings'),
+      // ADR 0166. `yes` só no OpenRouter, provado pelo smoke com credencial
+      // real em 2026-09-29 (AT-158). Chave entre `{}` num comentário dentro do
+      // bloco de capabilities corta o match acima — escreva `provider.sort`.
+      routingPreference: flag('routingPreference'),
     });
   }
 
@@ -458,12 +438,12 @@ function gerarProvidersDeLlm() {
   let corpo = `\n${AVISO_BLOCO}\n\n`;
   corpo += `Read from the \`capabilities\` literals in \`apps/api/src/infrastructure/llm/\` — `;
   corpo += `**${ordenados.length} providers**.\n\n`;
-  corpo += '| provider | streaming | tool calling | list_models | embeddings | credential | model origin | summarized quirks | source |\n';
-  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n';
+  corpo += '| provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |\n';
+  corpo += '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n';
   for (const [provider, c] of ordenados) {
     corpo +=
       `| \`${provider}\` | ${marca(c.streaming)} | ${marca(c.toolCalling)} | ${marca(c.listModels)} | ` +
-      `${marca(c.embeddings)} | ` +
+      `${marca(c.embeddings)} | ${marca(c.routingPreference)} | ` +
       `${credencial(provider)} | ${origem(provider, c)} | ${quirks(provider)} | \`${c.arquivo}\` |\n`;
   }
   corpo += '\nA provider without `list_models` is SKIPPED by the catalog sync, with the reason\n';
@@ -475,6 +455,9 @@ function gerarProvidersDeLlm() {
   corpo += '"embeddings" is the ADR 0075 capability, and it is only `yes` with PROOF of\n';
   corpo += 'execution: reading the docs doesn\'t count, and the reason for each `no` is in\n';
   corpo += 'the literal\'s comment, in the file named in the last column.\n';
+  corpo += '"routing preference" is the ADR 0166 capability (a hub choosing the upstream\n';
+  corpo += 'by `price`, `throughput` or `latency`), under the same rule: `yes` only after\n';
+  corpo += 'a smoke against the real API returns the chosen upstream.\n';
 
   escreverBloco('docs/reference/llm-providers.md', 'providers-capabilities', corpo);
 }
@@ -605,6 +588,35 @@ function verificarIndiceAdr() {
   } else {
     console.log('  ok        docs/adr/index.md (todos os ADRs linkados)');
   }
+}
+
+/**
+ * O tema de cada ADR (ADR 0202, AT-137): irmão de `verificarIndiceAdr`. Aquele
+ * pergunta se o ADR está no índice; este, se está no tema CERTO — o de
+ * `docs/adr/temas.yml`, que mora fora do ADR porque ADR aceito não é editado.
+ * A regra inteira está em `temas-de-adr.mjs`. Reprova; `CEGO` também.
+ */
+function verificarTemasDeAdr() {
+  const r = conferirTemas({
+    temasYml: ler(TEMAS_DE_ADR),
+    arquivosAdr: arquivos('docs/adr/[0-9]*.md').map((f) => f.replace('docs/adr/', '')),
+    indice: ler(INDICE_DE_ADR),
+  });
+
+  if (r.cego) {
+    pendencias.push('temas de ADR');
+    console.log(
+      `  CEGO      ${TEMAS_DE_ADR} — ${r.cego}.\n` +
+        '            Ajuste o arquivo, o índice ou scripts/docs/temas-de-adr.mjs.',
+    );
+    return;
+  }
+  if (r.problemas.length === 0) {
+    console.log(`  ok        temas de ADR (${r.adrs} ADRs em ${r.temas} temas, índice agrupado por eles)`);
+    return;
+  }
+  pendencias.push('temas de ADR');
+  for (const p of r.problemas) console.log(`  TEMA      [${p.regra}] ${p.motivo}`);
 }
 
 /**
@@ -878,7 +890,48 @@ function verificarFrasesAncoradasNoCodigo() {
     ? 'apps/api/src/db/schema.ts'
     : 'apps/api/src/db/schema/';
 
+  // Quantas imagens o produto PUBLICA: `ALVOS` de `scripts/ci/images-manifest.ts`
+  // (AT-123). O número por extenso nas duas línguas, porque a prosa o escreve
+  // assim; passar de dez sem estender a tabela vira CEGO, não um erro calado.
+  const alvos = /export const ALVOS = \[([^\]]+)\] as const;/.exec(
+    ler('scripts/ci/images-manifest.ts'),
+  );
+  const POR_EXTENSO = {
+    en: ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'],
+    pt: ['zero', 'uma', 'duas', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez'],
+  };
+  const nImagens = alvos === null ? -1 : [...alvos[1].matchAll(/'[a-z-]+'/g)].length;
+  const imagensEn = POR_EXTENSO.en[nImagens];
+  const imagensPt = POR_EXTENSO.pt[nImagens];
+
+  if (imagensEn === undefined) {
+    pendencias.push('frases ancoradas no código');
+    console.log(
+      '  CEGO      scripts/ci/images-manifest.ts — não achei `export const ALVOS` (ou passou de dez).\n' +
+        '            Sem ela não há de onde derivar quantas imagens o produto publica.',
+    );
+    return;
+  }
+
   const afericoes = [
+    {
+      arquivo: 'THIRD_PARTY_NOTICES.md',
+      padrao: /^As (\S+) imagens \*\*são publicadas\*\*/m,
+      esperado: imagensPt,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
+    {
+      arquivo: 'docs/runbook.md',
+      padrao: /the (\S+) images the product publishes are already resolved/,
+      esperado: imagensEn,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
+    {
+      arquivo: 'docs/reference/brb.md',
+      padrao: /The (\S+) images the product publishes are \*\*deliberately not covered/,
+      esperado: imagensEn,
+      oque: 'quantas imagens o produto publica no GHCR',
+    },
     {
       arquivo: 'docs/explanation/branching-policy.md',
       padrao: /^description: The (.+?) ladder/m,
@@ -922,8 +975,166 @@ function verificarFrasesAncoradasNoCodigo() {
   else
     console.log(
       `  ok        frases ancoradas no código (escada ` +
-        `${afericoes[0].esperado}; schema em ${moradaDoSchema})`,
+        `${afericoes.find((a) => a.arquivo.endsWith('branching-policy.md')).esperado}; ` +
+        `${nImagens} imagens; schema em ${moradaDoSchema})`,
     );
+}
+
+/**
+ * Os números em prosa DERIVADOS do código (AT-123): quantos `overrides`,
+ * quantas perguntas no golden-set, quantas operações no contrato de git,
+ * quantas abas, tabelas, tipos de ação… A tabela e os extratores moram em
+ * `contagens-do-codigo.mjs`, onde cada fonte é testada por mutação.
+ *
+ * Mesmo contrato das duas irmãs acima: DESATUAL e CEGO reprovam, e CEGO
+ * inclui a FONTE sumir — comparar contra nada é o check verde que não olhou.
+ */
+function verificarContagensDerivadasDoCodigo() {
+  const resultados = aferirContagens({
+    ler,
+    listar: arquivos,
+    rodarNode: (rel) => {
+      try {
+        return execFileSync(process.execPath, [rel], { cwd: RAIZ, encoding: 'utf8' });
+      } catch {
+        return null;
+      }
+    },
+    externas: { schemas: contarSchemasDeArtefato(), providers: descobrirProviders().size },
+  });
+
+  let problemas = 0;
+  for (const r of resultados) {
+    if (r.estado === 'ok') continue;
+    problemas++;
+    if (r.estado === 'CEGO') {
+      console.log(`  CEGO      ${r.arquivo} — ${r.motivo}. Ajuste contagens-do-codigo.mjs.`);
+    } else {
+      console.log(`  DESATUAL. ${r.arquivo} — ${r.descricao}: diz ${r.diz}, é ${r.esperado}.`);
+    }
+  }
+
+  if (problemas > 0) pendencias.push('contagens derivadas do código');
+  else console.log(`  ok        contagens derivadas do código (${resultados.length} frases)`);
+}
+
+/**
+ * As refs `caminho:linha` das RNs que nomeiam o SÍMBOLO daquela linha (AT-096).
+ * O padrão, a janela e o que fica de fora estão em `refs-com-simbolo.mjs`.
+ *
+ * Em `block` desde a AT-122 (01/10, decisão do dono): ref que não bate, ou que
+ * não resolve a um arquivo só, REPROVA. Nasceu em `warn` (18/09: 71 erradas
+ * de 187), a lista zerou em 26/09 (#653) e voltou a 140 em cinco dias — o
+ * `warn` não segurou a deriva, e as 140 foram relidas pelo símbolo no mesmo PR
+ * que promoveu. O histórico está em docs/explanation/documentation-workflow.md
+ * ("Line references with a symbol"). A régua do veredito é `veredito` em
+ * `refs-com-simbolo.mjs`, provada por mutação no spec ao lado.
+ *
+ * Extrair ZERO refs continua `CEGO` e reprova: a sintaxe das RNs mudou, ou o
+ * extrator quebrou, e um check cego fica verde para sempre dizendo que conferiu
+ * o que não olhou. NÃO alargue a janela para o vermelho sumir: corrija a ref
+ * pelo SÍMBOLO (a saída diz onde ele aparece mais perto, que é pista e não
+ * conserto — pode ser uma chamada e não a definição).
+ */
+function verificarRefsComSimbolo() {
+  const versionados = execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+  const resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  const { total, batem, naoBatem, naoResolvidas } = resultado;
+  const estado = vereditoDasRefs(resultado);
+
+  if (estado === 'CEGO') {
+    pendencias.push('refs com símbolo');
+    console.log(
+      '  CEGO      refs com símbolo — nenhuma ref `caminho:N` (`símbolo`) nas RNs.\n' +
+        '            O padrão parou de casar; ajuste scripts/docs/refs-com-simbolo.mjs.',
+    );
+    return;
+  }
+
+  const resumo = `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})`;
+  if (estado === 'ok') {
+    console.log(`  ok        refs com símbolo (${resumo})`);
+    return;
+  }
+
+  pendencias.push('refs com símbolo');
+  console.log(`  REPROVA   refs com símbolo — ${resumo}. Corrija cada uma pelo SÍMBOLO:`);
+  for (const r of naoBatem) {
+    const onde = r.achadoEm === null ? 'não aparece no arquivo' : `mais perto em :${r.achadoEm}`;
+    console.log(`            ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}:${r.linha} (\`${r.simbolo}\`) — ${onde}`);
+  }
+  for (const r of naoResolvidas) {
+    console.log(`            ${r.doc}:${r.linhaNoDoc} → \`${r.caminho}\` não resolve a um arquivo só`);
+  }
+}
+
+/**
+ * Todo cabeçalho de RN com `{#rn-NNN}` do MESMO número (AT-230), nos arquivos
+ * de RN de `docs/` e nas traduções pt-BR. A regra e por que o pt-BR entra
+ * estão em `ancoras-de-rn.mjs`.
+ *
+ * Em `block`: a âncora é o contrato dos links de fora, e o `docs:build` não
+ * pega a falta dela (o Docusaurus gera um id pelo texto e compila). Zero
+ * cabeçalhos também reprova — é o check cego.
+ */
+function verificarAncorasDeRn() {
+  const { cabecalhos, problemas } = aferirAncoras(arquivosDeRn(arquivos), ler);
+
+  if (cabecalhos === 0) {
+    pendencias.push('âncoras de RN');
+    console.log(
+      '  CEGO      âncoras de RN — nenhum cabeçalho `### RN-NNN` nos arquivos de RN.\n' +
+        '            Os arquivos mudaram de lugar; ajuste scripts/docs/ancoras-de-rn.mjs.',
+    );
+    return;
+  }
+
+  if (problemas.length === 0) {
+    console.log(`  ok        âncoras de RN (${cabecalhos} cabeçalhos)`);
+    return;
+  }
+
+  pendencias.push('âncoras de RN');
+  for (const p of problemas) {
+    console.log(`  ÂNCORA    ${p.arquivo}:${p.linha} — ${p.rn}: ${p.motivo}`);
+  }
+}
+
+/**
+ * A tabela de procedimentos do runbook (AT-193, EP-015): cada procedimento de
+ * operação nomeia o arquivo que o prova e o gatilho que roda a prova. A regra
+ * inteira está em `procedimentos-do-runbook.mjs`.
+ *
+ * Em `block`, pela régua de `documentation-workflow.md`: a tabela nasceu com
+ * todas as linhas conferidas, então não há dívida herdada, e o que a quebra
+ * depois (um spec renomeado, um workflow que perdeu o `schedule:`) é culpa do
+ * PR que a quebrou — que é quem pode consertá-la. Seção ou tabela ausente, ou
+ * zero linhas, é `CEGO` e também reprova.
+ */
+function verificarProcedimentosDoRunbook() {
+  const r = conferirTabela(ler(RUNBOOK), repositorio(arquivos, ler));
+
+  if (r.cego) {
+    pendencias.push('procedimentos do runbook');
+    console.log(
+      `  CEGO      ${RUNBOOK} — tabela de procedimentos: ${r.cego}.\n` +
+        '            Ajuste a seção ou scripts/docs/procedimentos-do-runbook.mjs.',
+    );
+    return;
+  }
+
+  const resumo = `${r.linhas} procedimentos, ${r.comVerificacao} com verificação nomeada, ${r.declaradasSem} declarados sem`;
+  if (r.problemas.length === 0) {
+    console.log(`  ok        procedimentos do runbook (${resumo})`);
+    return;
+  }
+
+  pendencias.push('procedimentos do runbook');
+  for (const p of r.problemas) {
+    console.log(`  PROCED.   ${RUNBOOK}:${p.linha} — ${p.procedimento} [${p.coluna}]: ${p.motivo}`);
+  }
 }
 
 /**
@@ -1016,14 +1227,20 @@ gerarOpenapi();
 gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
+verificarTemasDeAdr();
 verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
+verificarContagensDerivadasDoCodigo();
+verificarRefsComSimbolo();
+verificarAncorasDeRn();
+verificarProcedimentosDoRunbook();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {
   console.error(
-    `\n[docs:generate] ${pendencias.length} arquivo(s) fora de dia.\n` +
-      'Rode `pnpm docs:generate` e commite o resultado.',
+    `\n[docs:generate] ${pendencias.length} pendência(s): ${pendencias.join(', ')}.\n` +
+      'Arquivo fora de dia se resolve com `pnpm docs:generate` e commit; o resto\n' +
+      '(variável sem descrição, contagem, frase, ref) pede a PROSA — as linhas acima dizem onde.',
   );
   process.exit(1);
 }

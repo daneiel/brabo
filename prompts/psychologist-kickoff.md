@@ -1,6 +1,6 @@
 ---
 name: psychologist-kickoff
-version: "2"
+version: "3"
 pinned: true
 ---
 
@@ -25,6 +25,12 @@ LOG DE EVENTOS DA SESSÃO:{{omission_note}}
 {{events}}
 
 ## Variáveis
+
+Esta seção é documentação e NÃO é semeada: `scripts/dev/seed-prompts.ts`
+corta o corpo do template na linha `## Variáveis` (AT-244). A versão `"3"`
+tem o mesmo texto de prompt da anterior, sem esta seção — antes dela o modelo
+recebia a documentação junto, com cada placeholder citado aqui expandido de
+novo.
 
 Extraído de `apps/engine/lib/engine/workers/psychologist_worker.ex`,
 `initial_message/4` (a mensagem inicial da sessão de análise do

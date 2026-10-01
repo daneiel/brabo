@@ -226,6 +226,67 @@ function casaPrefixo(prefixo: string[], tokens: string[]): boolean {
   return alvo === prefixo.length;
 }
 
+/**
+ * Um PADRÃO de "Sempre permitir" (os tokens que ele casaria por prefixo)
+ * alcança um teto da RN-418? (RN-675.) Alcança quando é verbo privilegiado ou
+ * quando é PREFIXO de uma regra de efeito externo — `git` e `git remote`
+ * cobririam, por casamento de prefixo, `git push` e `git remote add`. A regra
+ * dentro do padrão (`git push origin`) nem chega aqui: o clique sobre esse
+ * comando é recusado inteiro antes (`motivoDeRecusaSempreAprovar`).
+ */
+export function padraoAlcancaTeto(tokens: readonly string[]): boolean {
+  if (tokens.length === 0) return false;
+  if (VERBOS_PRIVILEGIADOS.includes(tokens[0])) return true;
+  return REGRAS.some(
+    (r) =>
+      tokens.length <= r.prefixo.length &&
+      tokens.every((token, i) => token === r.prefixo[i]),
+  );
+}
+
+/**
+ * As ações TIPADAS com efeito externo que o teto da RN-418 cobre (RN-689,
+ * AT-347, decisão do dono de 01/10): a mesma regra do comando de terminal,
+ * agora pela porta tipada. Até aqui o teto só olhava `terminal`, e
+ * `git_push`/`pr_open` nasciam `auto_approved` pelo curinga do piloto, por
+ * regra específica ou por `permissions.json`.
+ *
+ * `git_merge` NÃO entra: tem teto próprio (branch protegida, `decide.ts`).
+ * `deploy` não é tipo de `proposed_action` (`ACTION_TYPES`), então não há o
+ * que tetar — ele só existe como destino da mensagem de terminal acima.
+ */
+export const ACOES_TIPADAS_COM_EFEITO_EXTERNO = [
+  'git_push',
+  'pr_open',
+] as const;
+
+export type AcaoTipadaComEfeitoExterno =
+  (typeof ACOES_TIPADAS_COM_EFEITO_EXTERNO)[number];
+
+export function ehAcaoTipadaComEfeitoExterno(
+  actionType: string,
+): actionType is AcaoTipadaComEfeitoExterno {
+  return (ACOES_TIPADAS_COM_EFEITO_EXTERNO as readonly string[]).includes(
+    actionType,
+  );
+}
+
+const MOTIVO_DA_ACAO_TIPADA: Record<AcaoTipadaComEfeitoExterno, string> = {
+  git_push: EMPURRAR_CODIGO,
+  pr_open: ABRIR_PR,
+};
+
+/** A mensagem do teto sobre a ação tipada (RN-689) — o `reason` do veredito. */
+export function mensagemDoTetoDaAcaoTipada(
+  actionType: AcaoTipadaComEfeitoExterno,
+): string {
+  return (
+    `teto de efeito externo (RN-418): "${actionType}" nunca é auto-aprovável ` +
+    `— ${MOTIVO_DA_ACAO_TIPADA[actionType]}. Fica proposed_action pendente e ` +
+    `o usuário decide caso a caso.`
+  );
+}
+
 /** A mensagem que o agente lê. Diz o que fazer, não só o que não fazer. */
 export function mensagemDeEfeitoExterno(efeito: EfeitoExterno): string {
   return (

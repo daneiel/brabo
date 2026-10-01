@@ -15,11 +15,14 @@
     "voltarAHerdar": "Voltar a herdar"
   },
   "secao": {
+    "naoSalvas_zero": "{{count}} alterações não salvas nesta seção",
     "naoSalvas_one": "{{count}} alteração não salva nesta seção",
     "naoSalvas_other": "{{count}} alterações não salvas nesta seção",
+    "invalidas_zero": "{{count}} valores inválidos — corrija para salvar",
     "invalidas_one": "{{count}} valor inválido — corrija para salvar",
     "invalidas_other": "{{count}} valores inválidos — corrija para salvar",
     "toast": {
+      "salvas_zero": "{{count}} alterações salvas",
       "salvas_one": "{{count}} alteração salva",
       "salvas_other": "{{count}} alterações salvas",
       "parcial": "Salvou {{salvas}} de {{total}}",
@@ -49,7 +52,7 @@
     "title": "Melhores modelos por capacidade",
     "eyebrow": "curadoria · uso real · custo",
     "subtitle": {
-      "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (ADR 0042: curadoria é sempre manual); marque os usos no ",
+      "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (a curadoria é sempre manual); marque os usos no ",
       "link": "Catálogo de modelos",
       "after": ", mais abaixo."
     },
@@ -61,6 +64,7 @@
     },
     "noCuratedCoverage": "sem cobertura curada",
     "noAgentYet": "nenhum agente ainda",
+    "usedByCount_zero": "{{count}} agentes deste projeto",
     "usedByCount_one": "{{count}} agente deste projeto",
     "usedByCount_other": "{{count}} agentes deste projeto",
     "emptyMessage": "Nenhuma capacidade cadastrada."
@@ -76,7 +80,7 @@
     "modeloDesconhecido": "modelo desconhecido",
     "titulo": {
       "vigente": "É deste nível que sai o modelo vigente ({{modelo}}).",
-      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no default do workspace. O Criativo usa {{modelo}}.",
+      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no padrão do workspace. O Criativo usa {{modelo}}.",
       "definido": "{{polo}} neste nível ({{modelo}}), mas um nível mais específico venceu.",
       "vazio": "{{polo}} neste nível.",
       "puladoIndisponivel": "A cascata DESCARTOU este nível: {{modelo}} sumiu do provider.",
@@ -93,7 +97,7 @@
       "intro": "A origem indica onde o valor é resolvido:",
       "mostSpecificWins": "O mais específico vence.",
       "areaWord": "área",
-      "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
+      "areaExplain": "é o padrão que o lead e os subagentes compartilham — configure em",
       "areaLink": "Modelo por área",
       "below": ", logo abaixo.",
       "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
@@ -128,10 +132,12 @@
     "bulk": {
       "label": "Aplicar um modelo a todos os agentes",
       "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "apply_zero": "Aplicar aos {{count}} agentes",
       "apply_one": "Aplicar a {{count}} agente",
       "apply_other": "Aplicar aos {{count}} agentes",
       "applying": "Aplicando…",
       "toast": {
+        "applied_zero": "{{model}} aplicado aos {{count}} agentes",
         "applied_one": "{{model}} aplicado a {{count}} agente",
         "applied_other": "{{model}} aplicado aos {{count}} agentes",
         "error": "Não foi possível aplicar o modelo aos agentes"
@@ -198,17 +204,17 @@
   },
   "execution": {
     "title": "Execução",
-    "eyebrow": "circuit breaker do dev agent",
-    "subtitle": "Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
+    "eyebrow": "parada automática do dev agent",
+    "subtitle": "Parada automática dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
     "card": {
-      "title": "Tasks blocked seguidas até parar",
-      "hintDefault": "usa o default ({{default}})",
+      "title": "Tarefas bloqueadas seguidas até parar",
+      "hintDefault": "usa o padrão ({{default}})",
       "hintConfigured": "configurado para este projeto"
     },
     "save": "Salvar",
     "saving": "Salvando…",
     "toast": {
-      "success": "Teto do circuit breaker salvo",
+      "success": "Teto da parada automática salvo",
       "error": "Não foi possível salvar"
     }
   },
@@ -218,28 +224,40 @@
     "subtitle": "Muda ONDE o comando deste projeto executa — a pasta gerenciada, uma pasta sua montada por bind-mount, ou uma pasta sua conectada pelo runner.",
     "needsMaintainer": "Só quem é maintainer ou owner pode converter.",
     "warning": {
-      "refuses": "Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+      "refuses": "Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a tarefa travada) e tente de novo.",
       "carries": "A conversão leva a POLÍTICA do projeto: o permissions.json muda de lugar com allow/deny/ask intactos.",
       "leavesPath": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver em {{caminho}} — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois.",
-      "leavesManaged": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver na pasta gerenciada deste projeto, no servidor — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois."
+      "leavesManaged": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver na pasta gerenciada deste projeto, no servidor — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois.",
+      "mirrorCleared": "O destino de espelho ({{destino}}) é zerado: toda conversão o limpa, e ele precisa ser declarado de novo depois, se o modo novo aceitar espelho.",
+      "containerRemoved": "O container registrado deste projeto é parado e removido: sair do modo Container o desmonta, e nada o sobe de volta sozinho.",
+      "containerUnknown": "Não consegui ler se este projeto tem container registrado. Se tiver, sair do modo Container o para e o remove.",
+      "verifiedLost": "A pasta confirmada em {{data}} deixa de valer como confirmada: toda conversão zera esse registro, e um projeto Runner precisa que o runner confirme a pasta de novo ao conectar."
     },
     "card": {
       "title": "Modo de execução"
     },
     "selectAria": "Novo modo de execução",
     "pathAria": "Novo caminho da pasta",
+    "noBroker": "Esta instalação não tem o broker de container (BROKER_URL vazia), que é quem sobe os containers de projetos Container e Pasta montada. Converter para qualquer um deles deixaria um projeto que nunca executa. Projetos Runner não dependem dele.",
     "path": {
       "underBase": "A pasta fica dentro da base de projetos desta instalação ({{base}}), e é nela que o navegador abre.",
       "noBase": "Esta instalação não declarou base de projetos montados: não há de onde navegar, e o modo Pasta montada não tem onde existir aqui.",
       "baseUnknown": "Não foi possível consultar a base de projetos desta instalação — não dá para saber se ela existe, então o navegador de pastas fica indisponível. Recarregue a página para tentar de novo.",
       "baseLoading": "Consultando a base de projetos desta instalação…",
-      "runnerTyped": "Aqui o caminho é digitado. O navegador de pastas do modo Runner precisa de um runner já conectado a ESTE projeto, e ele só passa a existir depois que a conversão salva: converta primeiro, depois conecte o runner — é ele que confirma o caminho ao conectar."
+      "runnerTyped": "O caminho digitado aqui é provisório: num projeto Runner, quem decide a pasta é o runner ao conectar, e a confirmação dele sobrescreve este valor (o agente de máquina usa <base>/<pasta do projeto>). É também por isso que não há navegador de pastas aqui: navegar exigiria um runner já conectado a ESTE projeto, e um runner conectado já confirmou a própria pasta. Converta; o próximo passo — conectar o runner — aparece logo abaixo."
     },
     "save": "Converter",
     "saving": "Convertendo…",
     "toast": {
       "success": "Modo de execução convertido",
       "error": "Não foi possível converter"
+    },
+    "nextStep": {
+      "title": "Próximo passo: conectar o runner",
+      "intro": "O projeto agora está no modo Runner e a pasta ainda não foi confirmada. A conversão está salva; o que falta é um runner se conectar a este projeto — é ele que confirma a pasta.",
+      "machineAgent": "Se a sua máquina já tem um agente de máquina de pé: quando ele não atende projeto Runner nenhum, pega este sozinho em até 60 s. Quando já atende outro projeto Runner, NÃO pega — a lista de projetos é lida uma vez, quando o agente sobe —, então reinicie o serviço dele:",
+      "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
     }
   },
   "parallelism": {
@@ -258,6 +276,7 @@
     "card": {
       "title": "Área {{area}}",
       "lead": "Lead: {{lead}}",
+      "membersCount_zero": " — {{count}} membros",
       "membersCount_one": " — {{count}} membro",
       "membersCount_other": " — {{count}} membros",
       "noMembersYet": " — sem membros ainda",
@@ -307,8 +326,9 @@
     },
     "card": {
       "title": "Quem promove",
-      "hintManual": "O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.",
-      "hintAuto": "O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção."
+      "hintManual": "O PO deixa a história completa e ela aguarda você na aba Histórias. Nenhuma tarefa dela é pegável até lá.",
+      "hintAuto": "O PO promove sozinho ao terminar uma história completa.",
+      "defaultNote": "Projeto novo nasce em Automática. Mudar aqui vale só para este projeto; projetos criados antes continuam no modo que tinham."
     },
     "selectAria": "Quem promove histórias",
     "optionManual": "Manual — eu promovo",
@@ -317,6 +337,26 @@
       "manual": "Promoção manual: você decide o que fica pronto",
       "auto": "Promoção automática: o PO promove sozinho",
       "error": "Não foi possível salvar"
+    }
+  },
+  "projectLanguage": {
+    "title": "Idioma do projeto",
+    "eyebrow": "sem autor humano",
+    "subtitle": "O idioma do que ninguém digitou: os artefatos compartilhados (product brief, regras de negócio, ADRs) e os turnos sem autor (abertura dos agentes, dev agents, gates, mensagem de commit, corpo de PR). O que um agente responde a VOCÊ segue o seu idioma das respostas, na Conta.",
+    "artifactsNote": "Inclui o que um agente grava como artefato compartilhado durante a conversa com uma pessoa (regras de negócio, histórias, ADRs…): a resposta sai no idioma dela, o artefato neste.",
+    "card": {
+      "title": "Idioma",
+      "hint": "Hoje: {{idioma}}."
+    },
+    "selectAria": "Idioma do projeto",
+    "otherCode": "Outro código…",
+    "otherLabel": "Código de idioma (BCP-47)",
+    "otherHint": "Ex.: pt-PT, es-MX, fr-CA. A api recusa código que não seja um idioma.",
+    "save": "Salvar",
+    "readOnly": "Só quem é maintainer ou owner do projeto troca o idioma dele. Você vê o valor, e o controle fica inerte.",
+    "toast": {
+      "saved": "Idioma do projeto salvo",
+      "error": "Não foi possível salvar o idioma do projeto"
     }
   },
   "credentials": {
@@ -398,7 +438,7 @@
   },
   "personalAccessTokens": {
     "title": "Tokens de acesso",
-    "eyebrow": "Runner local · ADR 0105",
+    "eyebrow": "Runner local",
     "subtitle": {
       "before": "Um Personal Access Token autentica o ",
       "after": " nesta máquina, escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca aparece de novo depois de emitido."
@@ -426,6 +466,22 @@
       "removeTitle": "Revogar"
     },
     "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+    "admin": {
+      "title": "Todos os tokens do projeto",
+      "eyebrow": "maintainer",
+      "subtitle": "Resposta a incidente — revogue o token de qualquer usuário do projeto, não só o seu.",
+      "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+      "table": {
+        "name": "Nome",
+        "owner": "Dono",
+        "created": "Criado",
+        "status": "Status",
+        "statusRevoked": "revogado",
+        "statusActive": "ativo",
+        "removeAria": "Revogar {{name}} ({{email}})",
+        "removeTitle": "Revogar"
+      }
+    },
     "modal": {
       "title": "Token gerado",
       "bodyBefore": "Copie agora — este token não é recuperável depois de fechar esta janela. Use em ",
@@ -438,7 +494,7 @@
   },
   "runnerDeviceKeys": {
     "title": "Chaves de dispositivo",
-    "eyebrow": "Runner local · RN-519 · RN-561",
+    "eyebrow": "Runner local",
     "subtitle": "Uma chave de dispositivo autentica o brabo-runner sem token digitado à mão: o par Ed25519 nasce na sua máquina ou no seu navegador, e só a metade pública chega aqui. A lista é a das SUAS chaves que servem este projeto, inclusive as já revogadas — sumir com a linha faria esta tela afirmar que a chave nunca existiu.",
     "subtitleAlcance": "Uma chave de MÁQUINA atende todos os seus projetos em modo runner e por isso aparece na lista de todos eles: revogá-la derruba o agente local em todos, não só neste.",
     "subtitleNaoEBatimento": "Chave registrada não é agente rodando: ela prova que o dispositivo foi pareado um dia, nunca que o agente está de pé agora — quem sabe do agora é o terminal do projeto.",
@@ -467,9 +523,9 @@
     "modal": {
       "title": "Revogar chave de dispositivo",
       "body": "Revogar “{{name}}” é definitivo: ela para de autenticar o agente local, e criar outra é um fluxo novo.",
-      "alcanceMaquina": "Esta é uma chave de MÁQUINA: ela atende todos os seus projetos em modo runner, e revogá-la derruba o agente local em todos eles — não só neste projeto.",
-      "alcanceProjeto": "Esta é uma chave de PROJETO: revogá-la derruba o agente local no projeto dela.",
-      "colateral": "Derrubar alcança {projeto, usuário} e nunca uma chave em particular: outro runner seu no mesmo projeto também cai, mesmo autenticado por outra credencial — e reconecta sozinho se a credencial dele ainda valer.",
+      "alcanceMaquina": "Esta é uma chave de MÁQUINA: ela atende todos os seus projetos em modo runner, e revogá-la derruba o agente local que se conectou com ela em todos eles — não só neste projeto.",
+      "alcanceProjeto": "Esta é uma chave de PROJETO: revogá-la derruba o agente local que se conectou com ela, no projeto dela.",
+      "precisao": "Só cai o que se conectou com ESTA chave: outro runner seu no mesmo projeto, autenticado por outra chave ou por um token, continua conectado. Um pedido de conexão feito com ela e ainda não usado também deixa de valer.",
       "cancel": "Cancelar",
       "confirm": "Revogar"
     }
@@ -491,5 +547,28 @@
       "errorTitle": "Erro",
       "errorMessage": "Não foi possível reverter"
     }
+  },
+  "roteamento": {
+    "label": "Roteamento",
+    "ariaLabel": "Preferência de roteamento de {{alvo}}",
+    "options": {
+      "hub": "o hub decide",
+      "price": "menor preço",
+      "throughput": "maior vazão",
+      "latency": "menor latência"
+    },
+    "notSupported": "Sem preferência de roteamento: o provider {{provider}} não declara essa capacidade — ela só é declarada depois de provada contra a API real.",
+    "inherited": "Roteamento: {{valor}} — vem com o modelo do nível {{nivel}}.",
+    "inheritedHint": "Para defini-lo aqui, escolha um modelo próprio para esta linha.",
+    "toast": {
+      "saveError": "Não foi possível salvar a preferência de roteamento"
+    }
+  },
+  "resolvedBindings": {
+    "readError": "Não foi possível ler os modelos vigentes: {{reason}}",
+    "readErrorFallback": "a requisição falhou",
+    "retry": "Tentar de novo",
+    "cellLoading": "lendo…",
+    "cellUnread": "não lido"
   }
 }

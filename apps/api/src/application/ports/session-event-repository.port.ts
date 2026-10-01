@@ -28,6 +28,22 @@ export interface ListPaginatedOptions {
    * sessão inteira, e `latest` a ignora.
    */
   latest?: boolean;
+  /**
+   * Só eventos destes tipos (RN-580). Vazio ou ausente = todos. Existe para o
+   * engine ler "o product brief e as regras" sem baixar a sessão inteira e
+   * filtrar em memória — o que, com o teto de 200, deixava de fora justamente
+   * o artefato que nasce DEPOIS do evento 200. O teto continua valendo: é o
+   * mesmo `limit`, contando só os tipos pedidos.
+   */
+  types?: string[];
+  /**
+   * Só eventos cujo `payload.actionId` é este (AT-336, RN-614): o que a aba
+   * Aprovações pede para mostrar o motivo da política de UMA ação — o
+   * `proposed_action.created` dela — sem depender da janela que carregou. O
+   * `limit` continua valendo, contando só os que casam; o `seq` deixa de ser
+   * contíguo na resposta, então quem filtra NÃO deriva omitidos por subtração.
+   */
+  actionId?: string;
 }
 
 export interface Page<T> {
@@ -57,6 +73,16 @@ export abstract class SessionEventRepository {
     sessionId: string,
     type: string,
   ): Promise<SessionEvent[]>;
+  // O evento MAIS RECENTE (maior `seq`) entre os tipos pedidos, ou `null`.
+  // Usado pelo quinto sinal de trabalho pendente (RN-581): quem falou por
+  // último na conversa. Existe em vez de `listByTypeInSession` porque esta
+  // pergunta é feita a cada heartbeat expirado durante até 8h, e trazer TODAS
+  // as respostas da sessão (texto inteiro) para ler uma só seria o custo
+  // crescendo com a conversa, a cada 30 segundos.
+  abstract findLatestOfTypesInSession(
+    sessionId: string,
+    types: readonly string[],
+  ): Promise<SessionEvent | null>;
   // Janela de tempo do projeto inteiro (Fase 4b — Anamnese analisa
   // "janelas do event log"). `actorKind` filtra interações do usuário;
   // `limit` protege contra janelas patológicas.

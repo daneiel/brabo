@@ -28,7 +28,16 @@ defmodule Engine.Gates.GateRescuerTest do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
 
+    project_id = Ecto.UUID.generate()
+
     on_exit(fn ->
+      # ANTES de soltar o env (AT-204). O resgate religa QaLeadServer e
+      # DevAgentServer REAIS; o dev agent do "correct perdido" segue sozinho
+      # para a próxima task, e sem isto ele vivia além do teste — o claim
+      # tardio gravava com o dono da sandbox morto e o `{:task_blocked, …,
+      # "dev-api"}` dele caía no mailbox do teste SEGUINTE.
+      encerrar_agentes_do_projeto(project_id)
+
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :gate_dispatcher)
       Application.delete_env(:engine, :test_pid)
@@ -39,20 +48,11 @@ defmodule Engine.Gates.GateRescuerTest do
       Application.delete_env(:engine, :gitleaks_fake_available)
     end)
 
-    project_id = Ecto.UUID.generate()
-
     # RN-502/ADR 0143 — o resgate solta o agente para o próximo claim, e todo
     # claim exige container REGISTRADO `running`.
     container_running!(project_id)
 
     %{project_id: project_id, session_id: Ecto.UUID.generate()}
-  end
-
-  defp wait_unregister(registry, key, tentativas \\ 100) do
-    if Registry.lookup(registry, key) != [] and tentativas > 0 do
-      Process.sleep(10)
-      wait_unregister(registry, key, tentativas - 1)
-    end
   end
 
   defp wait_gate_state_gone(project_id, task_id, gate, tentativas \\ 200) do
@@ -83,7 +83,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -102,20 +102,26 @@ defmodule Engine.Gates.GateRescuerTest do
         subagent: "qa-automacao"
       })
 
-      # MATA o processo de verdade — a linha durável sobrevive (Postgres),
-      # o processo não.
-      :ok = DynamicSupervisor.terminate_child(QaLeadSupervisor, pid)
-      wait_unregister(Engine.Gates.Registry, {project_id, "qa"})
-
-      assert GateState.get(project_id, task_id, "qa") != nil,
-             "a linha durável tem que sobreviver ao processo morto"
-
       # Limiar de staleness zerado — sem esperar 15 minutos no teste.
       Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
 
-      # SEM FakeGateDispatcher aqui: o resgate precisa religar um QaLeadServer
-      # DE VERDADE, não só notificar que "religaria".
-      assert :ok = GateRescuer.run()
+      # Com a limpeza do Registry SUSPENSA (AT-204): a chave do processo morto
+      # ainda está lá quando o resgate roda — a janela que o Registry tem de
+      # verdade, aberta de propósito em vez de esperada com `sleep`. O resgate
+      # tem de ler "morto", não "registrado".
+      com_limpeza_do_registry_suspensa(Engine.Gates.Registry, fn ->
+        # MATA o processo de verdade — a linha durável sobrevive (Postgres),
+        # o processo não.
+        :ok = DynamicSupervisor.terminate_child(QaLeadSupervisor, pid)
+        assert [{^pid, _}] = Registry.lookup(Engine.Gates.Registry, {project_id, "qa"})
+
+        assert GateState.get(project_id, task_id, "qa") != nil,
+               "a linha durável tem que sobreviver ao processo morto"
+
+        # SEM FakeGateDispatcher aqui: o resgate precisa religar um
+        # QaLeadServer DE VERDADE, não só notificar que "religaria".
+        assert :ok = GateRescuer.run()
+      end)
 
       # Ninguém chamou QaLeadServer.run/2 de novo — só o GateRescuer. O novo
       # processo roda a área do zero (sem turno de LLM scriptado neste
@@ -142,7 +148,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -206,7 +212,7 @@ defmodule Engine.Gates.GateRescuerTest do
         module: "api",
         session_id: session_id,
         task_id: task_id,
-        worktree_path: System.tmp_dir!(),
+        worktree_path: pasta_temporaria_propria!(),
         status: "awaiting_gate"
       })
 
@@ -226,7 +232,6 @@ defmodule Engine.Gates.GateRescuerTest do
       })
 
       :ok = DynamicSupervisor.terminate_child(QaLeadSupervisor, pid)
-      wait_unregister(Engine.Gates.Registry, {project_id, "qa"})
 
       # Scanners indisponíveis — SecOps aprova rápido, sem achado (mesmo
       # idioma do secops_agent_server_test.exs). Application env, não
@@ -265,7 +270,7 @@ defmodule Engine.Gates.GateRescuerTest do
           %{
             status: "awaiting_gate",
             task_id: task_id,
-            worktree_path: System.tmp_dir!(),
+            worktree_path: pasta_temporaria_propria!(),
             consecutive_blocked: 0
           }
         )

@@ -77,12 +77,19 @@ rules:
   # as RNs dele citam arquivo:linha que anda a cada mudança. `warn`, não
   # `block`: boa parte das mudanças aqui é de STATUS e de apresentação, e cobrar
   # RN de toda uma ensinaria a usar o escape hatch por reflexo.
+  #
+  # `timeline-tree.ts` entrou pela RN-572: a árvore do time decide se um dev
+  # agent está em trabalho lendo o MESMO estado que o painel dá ao evento
+  # (`statusDoEventoDev`), e a tabela dela é comparada com o vocabulário do
+  # engine como a do painel. As duas telas passaram a ser uma regra só, e a
+  # regra que vigia uma vigia a outra.
   - id: roster-de-agentes
     watch:
       - "apps/web/src/lib/agent-status.ts"
+      - "apps/web/src/lib/timeline-tree.ts"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "Presença e status da roster são regra de negócio fora de domain/ (RN-090, RN-287, RN-411, RN-568); mudança aqui costuma mover o arquivo:linha dessas RNs."
+    note: "Presença e status da roster, e o que a árvore do time afirma sobre cada agente, são regra de negócio fora de domain/ (RN-090, RN-118, RN-287, RN-411, RN-568, RN-572); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
   # ------------------------------------------------------------------ dados
 
@@ -129,6 +136,9 @@ rules:
       - "apps/engine/lib/engine/sessions/engine_api_client.ex"
       - "apps/api/src/interfaces/http/internal/**"
       - "apps/engine/lib/engine_web/router.ex"
+      # AT-157: o aviso ao canal é uma chamada api -> engine que nasce fora de
+      # `interfaces/http/internal/` (a api é o CLIENTE, não a rota).
+      - "apps/api/src/infrastructure/http-clients/session-channel-notifier.ts"
     docs: ["docs/reference/internal-api.md"]
     severity: block
 
@@ -193,7 +203,8 @@ rules:
   # `custom.css` a trocar o mecanismo de publicação. Bloquear os dois pelo mesmo
   # motivo ensina a usar o escape hatch por reflexo, e aí ele para de significar
   # alguma coisa. Quem reprova de verdade o comportamento do site é o
-  # `api-render-check.mjs` no `docs-check.yml`, que olha o build, não a prosa.
+  # `api-render-check.mjs` e o `links-do-locale.mjs` no `docs-check.yml`, que
+  # olham o build, não a prosa.
   - id: site-e-publicacao
     watch:
       - "website/**"
@@ -202,6 +213,20 @@ rules:
       - "docs/explanation/documentation-workflow.md"
     severity: warn
     note: "Config do site ou mecanismo de publicação mudou — o documento que explica o mecanismo precisa acompanhar."
+
+  # O MECANISMO que confere a documentação era o outro ponto cego do mapa: os
+  # scripts de `scripts/docs/` só apareciam na regra `scripts` (que cobra o
+  # inventário gerado de comandos, não a explicação). Aferição nova ou
+  # escape hatch novo — as refs com símbolo da AT-096, o `PR_BODY_FILE` do
+  # drift da AT-094 — mudam o que `documentation-workflow.md` promete.
+  # `warn`: um ajuste interno de gerador não muda o mecanismo.
+  - id: mecanismo-de-documentacao
+    watch:
+      - "scripts/docs/*.mjs"
+    docs:
+      - "docs/explanation/documentation-workflow.md"
+    severity: warn
+    note: "Aferição, gerador ou escape hatch mudou? O documento que explica o mecanismo precisa acompanhar."
 
   - id: contrato-web
     watch:
@@ -249,6 +274,25 @@ rules:
     severity: warn
     note: "Atualizar só se mudou contrato de behaviour ou fluxo de gate. `infra/` (área de Infra, Fase 8c) entrou aqui de passagem — não tinha regra nenhuma até então; `dev/` e `agents/` entraram na 12d pelo mesmo motivo."
 
+  # RN-566/RN-577 — as tools de agente que RECUSAM localmente antes de propor
+  # são regra de negócio morando no ENGINE, e nenhuma regra ligava esses
+  # arquivos às RNs: `harness-e-gates` cobra arquitetura/glossário, e
+  # `apps/engine/lib/engine/projects/` (onde mora o predicado de repositório
+  # da RN-577) não era observado por regra nenhuma. Mudar uma recusa — ou o
+  # predicado que ela lê — muda o que a RN afirma, com arquivo:linha.
+  - id: recusas-locais-de-proposta
+    watch:
+      - "apps/engine/lib/engine/infra/infra_lead_server.ex"
+      - "apps/engine/lib/engine/harness/tools/propose_adr.ex"
+      - "apps/engine/lib/engine/projects/project_repository.ex"
+    docs: ["docs/business-rules.md"]
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
+    severity: warn
+    note: "Recusa local de tool (RN-566, RN-577) mudou? A RN diz arquivo:linha e o teste; o predicado tem de continuar o MESMO do caso de uso de execução na api."
+
   # O registro de gates é índice do que barra o trabalho. Gate novo, ou
   # evidência que mudou de lugar, exige a linha no registro e a RN — senão o
   # arquivo vira uma lista que descreve um produto que não existe mais.
@@ -263,7 +307,15 @@ rules:
       # é a forma de envelhecimento que o registro existe para impedir.
       - "apps/api/src/interfaces/http/gates/**"
       - "apps/web/src/components/PrGateTimeline.tsx"
-    docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
+    docs: ["docs/explanation/gates.md"]
+    # As RNs dos gates (070, 071, 084) moraram em `business-rules.md` até ele
+    # ser partido POR TAMANHO e elas irem para `custo.md`. A regra continuou
+    # cobrando o índice, que não contém mais nenhuma delas — cobrar um arquivo
+    # que não tem a regra ensina a usar o escape hatch, que é o defeito que o
+    # `docs_alternativos` nasceu para evitar. Os dois lados da família contam.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
     severity: block
 
   # O fluxo (ADR 0085) declara as RELAÇÕES entre papéis — quem entrega o
@@ -371,6 +423,20 @@ rules:
     severity: warn
     note: "O que a reprojeção reconstrói (e o que NÃO) é o que o runbook diz a quem perdeu o grafo."
 
+  # AT-128 (RN-590): a pasta `docs/` dos artefatos também não tem backup PORQUE é
+  # reprojetável (ADR 0148/0152). Mudança no tradutor ou no que a reprojeção
+  # varre muda o que o runbook promete a quem perdeu a pasta. `warn`: o spec da
+  # reprojeção já compara pasta apagada com pasta reconstruída.
+  - id: artefatos-reprojecao
+    watch:
+      - "apps/api/src/application/artifact-projection/**"
+      - "apps/api/src/scripts/reprojetar-artefatos.ts"
+    docs:
+      - "docs/runbook.md"
+      - "docs/business-rules.md"
+    severity: warn
+    note: "O que a reprojeção da pasta docs/ reconstrói (e o que NÃO) é o que o runbook diz a quem a perdeu."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"
@@ -378,11 +444,46 @@ rules:
     docs: ["docs/runbook.md"]
     severity: warn
 
+  # O instrumento de idioma da AT-160: a heurística, os dois corpora e os
+  # números que saíram do sintético moram numa página só. Mudar a heurística,
+  # o corpus ou a régua de acerto muda o que a página afirma.
+  - id: medicao-do-idioma
+    watch:
+      - "scripts/idioma/**"
+      # Desde a AT-163 (RN-624) a heurística mora na api e o instrumento a
+      # reexporta: mudar os marcadores, a limpeza ou os parâmetros provisórios
+      # muda o que a página afirma tanto quanto mudar o instrumento.
+      - "apps/api/src/domain/iam/heuristica-de-idioma.ts"
+    docs: ["docs/explanation/medicao-do-idioma.md"]
+    severity: warn
+
+  # O replay do Jev da AT-237: o instrumento (passos, state, curva) e os
+  # números que ele produziu moram numa página só. Mudar a fronteira de passo,
+  # o state ou a régua de acerto muda o que a página afirma.
+  - id: medicao-do-jev
+    watch:
+      - "scripts/jev/**"
+    docs: ["docs/explanation/medicao-do-jev.md"]
+    severity: warn
+
+  # A auditoria visual da AT-290: os números do "antes" e do "depois" saíram do
+  # verificador de layout rodado em cada tela. Mudar o que ele conta como
+  # achado muda o que a página compara.
+  - id: auditoria-visual
+    watch:
+      - "scripts/dev/validacao-visual.js"
+    docs: ["docs/explanation/auditoria-visual-rodada-29.md"]
+    severity: warn
+
   - id: scripts
     watch:
       - "package.json"
       - "apps/api/package.json"
       - "apps/web/package.json"
+      - "apps/runner/package.json"
+      - "apps/broker/package.json"
+      - "packages/docker-port/package.json"
+      - "website/package.json"
       - "Makefile"
       - "scripts/**"
     docs: ["docs/reference/scripts.md", "README.md"]
@@ -404,81 +505,27 @@ rules:
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/backmerge-gate.yml"
-      # NÃO é `scripts/ci/**`: era, e cobrou `branching-policy.md` duas vezes
-      # de scripts que não têm nada a ver com branch — `coverage-floor.ts`
-      # (#410, que saiu pelo escape hatch) e `actions-pinadas.ts`. É o mesmo
-      # defeito que já justificou separar `checks-e-rulesets` daqui, e a mesma
-      # consequência: regra que cobra o que não faz sentido ensina a usar o
-      # escape hatch por reflexo, e aí ele para de significar alguma coisa.
+      # Os scripts de `scripts/ci/` que SÃO a política: os que declaram no
+      # docblock que a fonte deles é `branching-policy.md` (pr-police,
+      # approval-ladder, promote, promotion-check, tag-release, version,
+      # archive-branch, os quatro do gate, alarme-de-tag e os dois do
+      # Dependabot), e o spec de cada um. LISTA DE PERMITIDOS, e não mais o
+      # extglob `scripts/ci/!(…)*` que excluía caso a caso: aquele casava com
+      # todo spec novo de `scripts/ci/` — onde moram os testes que leem o
+      # repositório inteiro como texto —, e cada um que nascia sem nada a ver
+      # com degrau, destino ou versão (coverage-floor, actions-pinadas, as flags
+      # do compose, a marca da RN-558, o teto ocioso, onze até a AT-206) virava
+      # `docs-not-needed` ou mais uma exclusão. Regra que cobra o que não faz
+      # sentido ensina a usar o escape hatch por reflexo.
       #
-      # `auditoria-de-dependencias.ts` (ADR 0140) entrou pelo MESMO critério: o
-      # que ele decide é quando um timeout do endpoint de advisories do npm
-      # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
-      # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
-      #
-      # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
-      # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
-      # api consulta (RN-411) e com o mapa que o painel do time consulta
-      # (`apps/web/src/lib/agent-status.ts`), e mora aqui só porque lê TRÊS
-      # apps como texto — `scripts/ci/` é onde vivem os testes que leem o
-      # repositório inteiro. Degrau, destino e versão de branch não aparecem
-      # nele; a doc dele é a própria RN-411 em `docs/business-rules.md`.
-      #
-      # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
-      # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o
-      # `environment:` do serviço `engine` dos dois composes (RN-540), e mora
-      # aqui porque lê o repositório inteiro como texto — a mesma razão do
-      # `vocabulario-de-eventos-dev.spec.ts` acima. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele é a própria RN-540 em
-      # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
-      # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
-      #
-      # `oferta-de-fonte-na-imagem.spec.ts` é o SEXTO, pelo mesmo critério: ele
-      # verifica que o `THIRD_PARTY_NOTICES.md` é copiado para dentro da imagem
-      # do engine (BRB-017) e que o documento não afirma mais que nenhuma imagem
-      # é publicada. Mora aqui porque lê `docker/`, a raiz e o `.dockerignore`
-      # como texto — a mesma razão dos dois acima. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele é `docs/runbook.md`, na seção de
-      # verificação de artefato publicado, que a regra `config-e-inferencia` já
-      # cobra em `block` pelo mesmo Dockerfile.
-      #
-      # `marca-de-credencial-do-runner.spec.ts` é o SÉTIMO, pelo mesmo critério:
-      # ele compara a MARCA da recusa da RN-558 nos dois lados em que ela vive —
-      # `apps/runner/src/index.ts` (TypeScript) e
-      # `apps/engine/lib/engine/runners/credencial_de_git.ex` (Elixir) —, e mora
-      # aqui porque nenhuma das duas suítes alcança a outra linguagem, que é a
-      # mesma razão dos três acima. Degrau, destino e versão de branch não
-      # aparecem nele; a doc dele é a própria RN-558 em `docs/business-rules.md`.
-      #
-      # `imagens-pinadas.ts` é o OITAVO, e pelo critério mais direto de todos:
-      # ele é o irmão do `actions-pinadas.ts`, que já está nesta lista pelo
-      # mesmo motivo. O que ele decide é se uma imagem de terceiro pode entrar
-      # por tag — não toca degrau, destino nem versão de branch. A doc dele é a
-      # mesma do irmão, `cadeia-de-suprimentos-do-ci.md`, e a regra
-      # `cadeia-de-suprimentos-do-ci` abaixo o vigia em `block`.
-      #
-      # `checksums-nao-espera-a-matriz.spec.ts` é o NONO: ele afere que o
-      # manifesto assinado da Release (RN-524) não depende da matriz de
-      # binários. É sobre RELEASE, e portanto o candidato mais plausível desta
-      # lista a pertencer à política — mas a política de branches é sobre
-      # DEGRAU (quem promove o quê, para onde) e sobre a VERSÃO que a função da
-      # branch decide, e nenhuma das duas aparece aqui: o que ele mede é o
-      # ARTEFATO que uma tag já cortada publica. A doc dele é a própria RN-524
-      # em `docs/business-rules.md`.
-      #
-      # `assets-do-instalador.ts` é o DÉCIMO (ADR 0160, RN-570): ele diz quais
-      # arquivos do checkout de uma tag viram asset da Release e com que nome,
-      # para o `install.sh` baixá-los e conferi-los contra o manifesto
-      # assinado. Como o nono, é sobre o ARTEFATO que uma tag já cortada
-      # publica, e não sobre degrau, destino ou a versão que a função da branch
-      # decide. A doc dele é a própria RN-570 em `docs/business-rules.md`, o
-      # ADR 0160 e `cadeia-de-suprimentos-do-ci.md`.
-      #
-      # O extglob EXCLUI os dez pelo nome e continua casando com todo o resto
-      # — inclusive com script de política que ainda não existe. Falha fechado:
-      # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
-      # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz|assets-do-instalador)*"
+      # O preço de trocar exclusão por inclusão era perder o "falha fechado"
+      # (script de política NOVO passaria sem cobrar a doc), e ele NÃO é pago:
+      # `scripts/docs/politica-de-branches.spec.ts` deriva o conjunto do
+      # próprio repositório — todo arquivo de `scripts/ci/` que cita
+      # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
+      # lista divergir. Script de política novo declara a fonte no cabeçalho,
+      # como os catorze, e o spec o cobra aqui.
+      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -549,15 +596,47 @@ rules:
     watch:
       - "scripts/ci/actions-pinadas.ts"
       - "scripts/ci/imagens-pinadas.ts"
+      - "scripts/ci/imagens-do-compose.ts"
     docs:
       - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: block
     note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
 
+  # O QUE a esteira publica — os alvos do bake e o manifesto por digest que o
+  # instalador e o overlay leem. Até o ADR 0162 nenhuma regra vigiava estes
+  # arquivos, e foi assim que "a imagem do broker não é publicada" virou
+  # verdade silenciosa em quatro documentos: o `Dockerfile.prod` existia e o
+  # bake não o construía. Alvo novo (ou um a menos) muda o que se escaneia, se
+  # assina e se instala, e a página que diz isso é a da cadeia de suprimentos.
+  # `warn` e não `block`: trocar cache ou tag de um alvo não é regra nova, e a
+  # decisão de publicar uma imagem a mais já passa pelo `adr-trigger`.
+  - id: imagens-publicadas
+    watch:
+      - "docker-bake.hcl"
+      - "scripts/ci/images-manifest.ts"
+      - "scripts/ci/aplicar-imagens.ts"
+    docs:
+      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: warn
+    note: "Imagem publicada a mais ou a menos muda o que se escaneia, assina, instala e aplica no overlay."
+
   # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no
   # repositório procura isso no getting-started, não num README de pasta.
   #
+  # Os dois golden-sets agendados (ADR 0138, ADR 0168). A cadência, o teto de
+  # tempo e o que faz o job ficar vermelho são decisões escritas em
+  # `gates.md`; um workflow que muda qualquer uma delas sem a página faz a
+  # explicação descrever outro job. `warn`: trocar um SHA de action não muda
+  # nada do que está escrito lá.
+  - id: golden-sets-agendados
+    watch:
+      - ".github/workflows/golden-set-rag.yml"
+      - ".github/workflows/golden-set-qa.yml"
+    docs: ["docs/explanation/gates.md"]
+    severity: warn
+    note: "Mudou a cadência, o teto ou o critério de vermelho de um golden-set agendado? gates.md explica o porquê."
+
   # `warn`, não `block`: spec novo dentro da mesma mecânica (mesmo jeito de
   # subir, mesmo jeito de rodar) não muda nada do que está escrito lá, e
   # cobrar a doc a cada spec ensinaria a usar o escape hatch. O que MUDA a

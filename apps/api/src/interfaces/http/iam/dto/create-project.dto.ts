@@ -6,8 +6,10 @@ import {
   IsPositive,
   IsString,
   Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
+import { TAMANHO_MAXIMO_DO_IDIOMA } from '../../../../domain/iam/idioma-de-resposta';
 import {
   PROJECT_EXECUTION_MODES,
   STORY_PROMOTION_MODES,
@@ -47,13 +49,13 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional({
     enum: STORY_PROMOTION_MODES,
-    example: 'manual',
+    example: 'auto',
     description:
       'Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). ' +
-      '`manual` (new-project default): the PO proposes and YOU decide, in ' +
-      'the Backlog tab. `auto`: a complete story is already born `ready`, ' +
-      'with no human step — this was the behavior up through 12c, and ' +
-      'projects created before it stayed on it. The domain validations ' +
+      '`auto` (new-project default since RN-659): a complete story is ' +
+      'already born `ready`, with no human step. `manual`: the PO proposes ' +
+      'and YOU decide, in the Backlog tab. Changing the default did not ' +
+      'rewrite any existing project. The domain validations ' +
       '(DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only ' +
       'changes who triggers it.',
   })
@@ -98,4 +100,19 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   workspacePath?: string;
+
+  @ApiPropertyOptional({
+    example: 'pt-BR',
+    maxLength: TAMANHO_MAXIMO_DO_IDIOMA,
+    description:
+      "The PROJECT's language (RN-619) — shared artifacts and turns with no " +
+      'human author use it. Any BCP-47 code the server recognizes, stored ' +
+      'canonical; an unrecognized one is a 400. Omitted, the project starts ' +
+      "with its creator's effective response language (RN-618: account " +
+      'choice > confirmed detection > interface language).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(TAMANHO_MAXIMO_DO_IDIOMA)
+  language?: string;
 }

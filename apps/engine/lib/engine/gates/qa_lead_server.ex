@@ -22,21 +22,27 @@ defmodule Engine.Gates.QaLeadServer do
   fingir que há devolveria pro dev sem nada corrigível e ainda queimaria uma
   correção do teto (RN-015).
 
-  ## `run_design/3` — o segundo MOMENTO (ADR 0090)
+  ## O plano de teste é o primeiro passo do ciclo (ADR 0192, RN-674)
 
-  `run/2` (acima) é o caminho de SEMPRE: revisão de PR, estruturalmente
-  amarrada a `DevAgentState.find_by_task_id` (dev agent + worktree já
-  existem). `run_design/3` é um ponto de entrada NOVO e ADITIVO — mesmo
-  processo (`qa-lead`), entregável SEPARADO: o plano de teste de uma STORY,
-  PRE-DEV, sem `task_id` nenhum. Chamado pela ferramenta
-  `assess_implementability` do Dev Lead
-  (`Engine.Agents.DevLeadTools.run_assessment/2`), que não espera aqui —
-  este é `cast`, mesmo estilo de `run/2`. `Engine.Gates.QaEstrategiaAgent`
-  nunca suspende (nenhuma das ferramentas dele passa pelo pipeline de
-  ações), então este caminho não precisa do mecanismo de
-  suspensão/retomada que o resto deste módulo usa — o resultado chega como
-  o evento durável `artifact.plano_de_teste`, e `assess_implementability` o
-  lê na PRÓXIMA chamada.
+  O ADR 0090 deu a este processo um segundo MOMENTO PRE-DEV, `run_design/3`,
+  disparado pelo `assess_implementability` do Dev Lead antes de existir
+  código. O uso real mostrou que ali não havia o que ler (`toolloop.limit_reached`
+  8/8 sem `emit_plano_de_teste`), e o dono decidiu pela saída (b): o plano
+  nasce DEPOIS da entrega. `run_design/3` saiu, e o segundo momento passou a
+  morar DENTRO do ciclo de sempre: `run_area/3` monta o plano
+  (`Engine.Gates.QaEstrategiaAgent.run/6`, com o worktree do dev e a lista de
+  arquivos do diff) ANTES das subespecialidades, e o plano entra no
+  `dev_context` que elas recebem, como `:plano_de_teste`. É um INSUMO do gate
+  `qa-verificada`, nunca um segundo veredito: o contrato externo continua
+  sendo um `qa_verdict` por ciclo.
+
+  O plano é uma vez por TASK: a rodada de correção (RN-015) reencontra o
+  `artifact.plano_de_teste` da mesma `taskId` na cauda da sessão e não paga
+  outro laço. E plano que falha NÃO segura a revisão — a QA-estratégia já
+  narrou a falha com origem (`agent.error`), e a Automação revisa como sempre
+  revisou, pelas regras da story. Fazer a falha do plano bloquear a task
+  mudaria o comportamento de um gate `block` por um insumo novo, e isso não
+  foi decidido.
   """
 
   use GenServer, restart: :temporary
@@ -48,12 +54,14 @@ defmodule Engine.Gates.QaLeadServer do
 
   alias Engine.Dev.{ContextBuilder, DevAgentServer, DevAgentState, Wake}
 
+  alias Engine.Agents.Reidratacao
+
   alias Engine.Gates.{
+    Diff,
     Dispatcher,
     GateState,
     QaAutomacaoAgent,
     QaEstrategiaAgent,
-    QaEstrategiaContext,
     QaLead,
     QaPerformanceSegurancaAgent
   }
@@ -69,13 +77,6 @@ defmodule Engine.Gates.QaLeadServer do
 
   @doc "Dispara a revisão de QA pra `task_id`."
   def run(project_id, task_id), do: GenServer.cast(via(project_id), {:run, task_id})
-
-  @doc """
-  Dispara a avaliação de QA-estratégia (ADR 0090, segundo momento do
-  qa-lead) pra `story_id` — SEM `task_id`, sem worktree. Ver o moduledoc.
-  """
-  def run_design(project_id, session_id, story_id),
-    do: GenServer.cast(via(project_id), {:run_design, session_id, story_id})
 
   @impl true
   def init(project_id) do
@@ -95,23 +96,6 @@ defmodule Engine.Gates.QaLeadServer do
     end
   end
 
-  # ADR 0090 — o segundo momento, aditivo: SEM `DevAgentState.find_by_task_id`,
-  # SEM `dev_state`. `QaEstrategiaAgent.run/4` nunca suspende (ver o
-  # moduledoc), então roda síncrono neste `handle_cast` e o resultado vira
-  # evento durável — nada fica "em voo" para o `GateRescuer` neste caminho.
-  @impl true
-  def handle_cast({:run_design, session_id, story_id}, state) do
-    case QaEstrategiaContext.fetch(state.project_id, session_id, story_id) do
-      {:ok, %{story: story, module_map: module_map}} ->
-        QaEstrategiaAgent.run(state.project_id, session_id, story, module_map)
-        {:noreply, state}
-
-      {:error, reason} ->
-        emit_falha_de_contexto(state.project_id, session_id, story_id, reason)
-        {:noreply, state}
-    end
-  end
-
   # A decisão que segurava o laço de um subagente chegou (ADR 0052, agora
   # também para gates). Retoma DAQUELE subagente de onde parou e segue a área
   # do ponto em que ela havia parado — as delegações já registradas e os
@@ -125,8 +109,11 @@ defmodule Engine.Gates.QaLeadServer do
 
     state = %{state | pendente: nil}
 
-    {:noreply,
-     continuar_area(state, p.em_voo, [{p.delegacao, resultado} | p.colhidos], p.restantes)}
+    # AT-248 (RN-629): o laço retomado PODE suspender de novo — o subagente
+    # roda vários comandos e cada um pede aprovação. O resultado da retomada
+    # passa pelo MESMO tratamento do resultado de `run/5`; antes o
+    # `{:awaiting, _}` entrava em `colhidos` como se fosse parecer.
+    {:noreply, tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)}
   end
 
   # Desfecho de OUTRA ação, ou o lead já não está esperando: ignora em vez de
@@ -152,6 +139,11 @@ defmodule Engine.Gates.QaLeadServer do
 
     case ContextBuilder.fetch(project_id, session_id, task_id) do
       {:ok, dev_context} ->
+        # ADR 0192: o plano de teste da ENTREGA vem primeiro, e entra no
+        # contexto que as subespecialidades recebem (ver o moduledoc).
+        plano = plano_de_teste_da_entrega(project_id, session_id, task_id, dev_state, dev_context)
+        dev_context = Map.put(dev_context, :plano_de_teste, plano)
+
         delegacoes = decidir_delegacoes(dev_context.story)
         registrar_dispensas(project_id, session_id, task_id, delegacoes)
 
@@ -183,43 +175,68 @@ defmodule Engine.Gates.QaLeadServer do
         finalizar_area(state, emVoo, Enum.reverse(colhidos))
 
       [d | resto] ->
-        case agente(d.subagent).run(
-               emVoo.project_id,
-               emVoo.session_id,
-               emVoo.task_id,
-               emVoo.dev_state,
-               emVoo.dev_context
-             ) do
-          {:awaiting, pendente} ->
-            # Só diagnóstico (ADR 0067) — o resgate NÃO tenta retomar este
-            # `ctx` específico (ele não sobrevive a um restart, mesma
-            # limitação do `laço_pendente` do dev agent); ele reinicia a área
-            # inteira. `step` continua "in_progress".
-            GateState.upsert!(%{
-              project_id: emVoo.project_id,
-              task_id: emVoo.task_id,
-              gate: "qa",
-              session_id: emVoo.session_id,
-              step: "in_progress",
-              subagent: d.subagent
-            })
+        resultado =
+          agente(d.subagent).run(
+            emVoo.project_id,
+            emVoo.session_id,
+            emVoo.task_id,
+            emVoo.dev_state,
+            emVoo.dev_context
+          )
 
-            %{
-              state
-              | pendente:
-                  Map.merge(pendente, %{
-                    delegacao: d,
-                    colhidos: colhidos,
-                    restantes: resto,
-                    task_id: emVoo.task_id,
-                    em_voo: emVoo
-                  })
-            }
-
-          resultado ->
-            continuar_area(state, emVoo, [{d, resultado} | colhidos], resto)
-        end
+        tratar_resultado(state, emVoo, d, resultado, colhidos, resto)
     end
+  end
+
+  # UM só lugar decide o que fazer com o resultado de um subagente, venha ele
+  # de `run/5` ou de `retomar/3` (AT-248, RN-629). `{:awaiting, _}` guarda o
+  # estado em voo e PARA a área; qualquer outra coisa é resultado colhido e a
+  # área segue.
+  defp tratar_resultado(state, emVoo, d, {:awaiting, pendente}, colhidos, resto) do
+    # Só diagnóstico (ADR 0067) — o resgate NÃO tenta retomar este `ctx`
+    # específico (ele não sobrevive a um restart, mesma limitação do
+    # `laço_pendente` do dev agent); ele reinicia a área inteira. `step`
+    # continua "in_progress".
+    GateState.upsert!(%{
+      project_id: emVoo.project_id,
+      task_id: emVoo.task_id,
+      gate: "qa",
+      session_id: emVoo.session_id,
+      step: "in_progress",
+      subagent: d.subagent
+    })
+
+    %{
+      state
+      | pendente:
+          Map.merge(pendente, %{
+            delegacao: d,
+            colhidos: colhidos,
+            restantes: resto,
+            task_id: emVoo.task_id,
+            em_voo: emVoo
+          })
+    }
+  end
+
+  defp tratar_resultado(state, emVoo, d, {tag, _} = resultado, colhidos, resto)
+       when tag in [:ok, :blocked],
+       do: continuar_area(state, emVoo, [{d, resultado} | colhidos], resto)
+
+  # Resultado que o lead não conhece: NUNCA derruba a área nem some (RN-059).
+  # Vira bloqueio com origem `codigo` (falta uma cláusula aqui, não é
+  # infra/modelo/política), que `registrar_resultado/5` e
+  # `QaLead.consolidar/1` já sabem tratar — a task é bloqueada com o motivo.
+  defp tratar_resultado(state, emVoo, d, resultado, colhidos, resto) do
+    bloqueio =
+      {:blocked,
+       %{
+         reason: "#{d.label} devolveu um resultado que o QA Lead não reconhece",
+         diagnosis: "resultado inesperado: #{inspect(resultado, limit: 5, printable_limit: 200)}",
+         origin: "codigo"
+       }}
+
+    continuar_area(state, emVoo, [{d, bloqueio} | colhidos], resto)
   end
 
   defp finalizar_area(state, emVoo, resultados) do
@@ -493,19 +510,76 @@ defmodule Engine.Gates.QaLeadServer do
     ArtifactEmitter.append(project_id, session_id, "qa-lead", type, payload)
   end
 
-  # Falha ao montar o contexto de QA-estratégia (story inexistente, api
-  # fora) — NUNCA silenciosa (mesma régua de RN-059). `:story_not_found` é
-  # origem `modelo` (o Dev Lead pediu um `storyId` que não existe); o resto
-  # é `infra` (falha de rede/api).
-  defp emit_falha_de_contexto(project_id, session_id, story_id, reason) do
-    origem = if reason == :story_not_found, do: "modelo", else: "infra"
+  # --- O plano de teste da entrega (ADR 0192, RN-674) ----------------------
 
-    emit(project_id, session_id, "agent.error", %{
-      origem: origem,
-      mensagem:
-        "não consegui montar o contexto de QA-estratégia para a story #{story_id}: " <>
-          inspect(reason),
-      reason: inspect(reason)
-    })
+  # Uma vez por TASK. A leitura é a CAUDA da sessão com o teto da reidratação
+  # (RN-580, ADR 0060) — numa sessão longa o plano pode ter saído da janela, e
+  # aí o custo é um laço repetido, nunca um plano errado. Falha de LEITURA
+  # também cai em gerar: perguntar de novo à api não é mais barato que o
+  # laço, e não gerar deixaria a revisão sem o insumo por uma falha de rede.
+  defp plano_de_teste_da_entrega(project_id, session_id, task_id, dev_state, dev_context) do
+    case plano_ja_emitido(project_id, session_id, task_id) do
+      {:ok, plano} ->
+        plano
+
+      :nenhum ->
+        arquivos = arquivos_alterados(project_id, dev_state.worktree_path)
+
+        case QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               task_id,
+               dev_state,
+               dev_context,
+               arquivos
+             ) do
+          {:ok, plano} -> plano
+          # A QA-estratégia já gravou `agent.error` com a origem (RN-059): a
+          # revisão segue SEM plano, como sempre seguiu antes do ADR 0192.
+          {:error, _motivo} -> nil
+        end
+    end
+  end
+
+  defp plano_ja_emitido(project_id, session_id, task_id) do
+    case EngineApiClient.list_events(project_id, session_id,
+           latest: true,
+           limit: Reidratacao.teto()
+         ) do
+      {:ok, eventos} ->
+        eventos
+        |> Enum.filter(&plano_da_task?(&1, task_id))
+        |> List.last()
+        |> case do
+          nil -> :nenhum
+          evento -> {:ok, plano_do_payload(Map.get(evento, "payload", %{}))}
+        end
+
+      {:error, _reason} ->
+        :nenhum
+    end
+  end
+
+  defp plano_da_task?(%{"type" => "artifact.plano_de_teste", "payload" => payload}, task_id)
+       when is_map(payload),
+       do: Map.get(payload, "taskId") == task_id
+
+  defp plano_da_task?(_evento, _task_id), do: false
+
+  # A MESMA forma que `Engine.Gates.Hooks.TerminationPlanoDeTeste` produz —
+  # quem consome (`QaAutomacaoAgent`) não precisa saber de onde o plano veio.
+  defp plano_do_payload(payload) do
+    %{
+      plano_de_teste: Map.get(payload, "planoDeTeste", ""),
+      criterios_executaveis: Map.get(payload, "criteriosExecutaveis", []),
+      estrategia_de_automacao: Map.get(payload, "estrategiaDeAutomacao", "")
+    }
+  end
+
+  defp arquivos_alterados(project_id, worktree_path) do
+    case Diff.compute(project_id, worktree_path) do
+      {:ok, diff_text} -> {:ok, Diff.changed_paths(diff_text)}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

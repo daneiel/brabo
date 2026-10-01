@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Logger,
   MessageEvent,
   Param,
@@ -32,10 +33,13 @@ import { ServiceRoute } from '../auth/service-route.decorator';
 import { ReportSessionTerminationUseCase } from '../../../application/use-cases/sessions/report-session-termination.use-case';
 import { AppendSessionEventUseCase } from '../../../application/use-cases/sessions/append-session-event.use-case';
 import { ListSessionEventsUseCase } from '../../../application/use-cases/sessions/list-session-events.use-case';
+import { opcoesDaLeituraInterna } from './leitura-interna-de-eventos';
 import { RunLlmTurnUseCase } from '../../../application/use-cases/llm/run-llm-turn.use-case';
 import { StreamLlmTurnUseCase } from '../../../application/use-cases/llm/stream-llm-turn.use-case';
 import { ProposeActionUseCase } from '../../../application/use-cases/actions/propose-action.use-case';
 import { CreateHandoffUseCase } from '../../../application/use-cases/agents/create-handoff.use-case';
+import { AceitarHandoffAutomaticamenteUseCase } from '../../../application/use-cases/agents/aceitar-handoff-automaticamente.use-case';
+import { AceiteImplicitoDoPoUseCase } from '../../../application/use-cases/agents/aceite-implicito-do-po.use-case';
 import { CreateEpicUseCase } from '../../../application/use-cases/backlog/create-epic.use-case';
 import { CreateStoryUseCase } from '../../../application/use-cases/backlog/create-story.use-case';
 import { CreateTaskUseCase } from '../../../application/use-cases/backlog/create-task.use-case';
@@ -43,6 +47,7 @@ import { CreateModuleMapUseCase } from '../../../application/use-cases/architect
 import { AssignStoryModulesUseCase } from '../../../application/use-cases/architecture/assign-story-modules.use-case';
 import { CreateC4DiagramUseCase } from '../../../application/use-cases/architecture/create-c4-diagram.use-case';
 import { RouteModulesToInfraUseCase } from '../../../application/use-cases/architecture/route-modules-to-infra.use-case';
+import { DeclareModuleContractsUseCase } from '../../../application/use-cases/architecture/declare-module-contracts.use-case';
 import { DecidirImagemDoProjetoUseCase } from '../../../application/use-cases/containers/decidir-imagem-do-projeto.use-case';
 import { ClaimNextTaskUseCase } from '../../../application/use-cases/execution/claim-next-task.use-case';
 import { MarkTaskUseCase } from '../../../application/use-cases/execution/mark-task.use-case';
@@ -81,11 +86,19 @@ import { CreateActionInternalDto } from './dto/create-action-internal.dto';
 import { CreateHandoffInternalDto } from './dto/create-handoff-internal.dto';
 import { CreateEpicInternalDto } from './dto/create-epic-internal.dto';
 import { CreateStoryInternalDto } from './dto/create-story-internal.dto';
+import {
+  CreatedStoryResponseDto,
+  SemanticDuplicateCheckInternalDto,
+  SemanticDuplicateCheckResponseDto,
+} from './dto/semantic-duplicate-internal.dto';
+import { VerificarDuplicataSemanticaUseCase } from '../../../application/use-cases/backlog/verificar-duplicata-semantica.use-case';
 import { CreateTaskInternalDto } from './dto/create-task-internal.dto';
 import { CreateModuleMapInternalDto } from './dto/create-module-map-internal.dto';
 import { AssignStoryModulesInternalDto } from './dto/assign-story-modules-internal.dto';
 import { CreateC4DiagramInternalDto } from './dto/create-c4-diagram-internal.dto';
 import { RouteModulesToInfraInternalDto } from './dto/route-modules-to-infra-internal.dto';
+import { DeclareModuleContractsInternalDto } from './dto/declare-module-contracts-internal.dto';
+import { ContratosDeclaradosResponseDto } from './dto/module-contracts.response.dto';
 import { DecideProjectImageInternalDto } from './dto/decide-project-image-internal.dto';
 import { ImagemDecididaResponseDto } from '../containers/dto/containers.response.dto';
 import { ClaimTaskInternalDto } from './dto/claim-task-internal.dto';
@@ -97,7 +110,7 @@ import {
   SessionResponseDto,
 } from '../sessions/dto/sessions.response.dto';
 import { ProposedActionResponseDto } from '../actions/dto/actions.response.dto';
-import { HandoffResponseDto } from '../agents/dto/agents.response.dto';
+import { OfertaInternaDeHandoffResponseDto } from '../agents/dto/agents.response.dto';
 import {
   EpicResponseDto,
   ModuleMapResponseDto,
@@ -154,12 +167,15 @@ export class InternalSessionsController {
     private readonly streamLlmTurn: StreamLlmTurnUseCase,
     private readonly proposeAction: ProposeActionUseCase,
     private readonly createHandoff: CreateHandoffUseCase,
+    private readonly aceiteAutomatico: AceitarHandoffAutomaticamenteUseCase,
+    private readonly aceiteImplicitoDoPo: AceiteImplicitoDoPoUseCase,
     private readonly createEpic: CreateEpicUseCase,
     private readonly createStory: CreateStoryUseCase,
     private readonly createTask: CreateTaskUseCase,
     private readonly createModuleMap: CreateModuleMapUseCase,
     private readonly createC4Diagram: CreateC4DiagramUseCase,
     private readonly routeModulesToInfra: RouteModulesToInfraUseCase,
+    private readonly declareModuleContracts: DeclareModuleContractsUseCase,
     private readonly assignStoryModules: AssignStoryModulesUseCase,
     private readonly decidirImagem: DecidirImagemDoProjetoUseCase,
     private readonly claimNextTask: ClaimNextTaskUseCase,
@@ -178,6 +194,7 @@ export class InternalSessionsController {
     private readonly recordProficiency: RecordProficiencyUseCase,
     private readonly proposeInstructionPatch: ProposeInstructionPatchUseCase,
     private readonly proposeMaxParallel: ProposeMaxParallelUseCase,
+    private readonly duplicataSemantica: VerificarDuplicataSemanticaUseCase,
   ) {}
 
   /**
@@ -258,31 +275,52 @@ export class InternalSessionsController {
   }
 
   /**
-   * Leitura interna dos eventos da sessão — usada pelo engine só pra
-   * REHIDRATAR o histórico de conversa de um agente (o CriativoServer) no
-   * restart. A rota humana equivalente é RBAC-guarded; esta é EngineService.
+   * Leitura interna dos eventos da sessão — usada pelo engine pra REHIDRATAR
+   * o histórico de conversa dos agentes conversacionais e pra ler os
+   * artefatos dos kickoffs (RN-580). A rota humana equivalente é
+   * RBAC-guarded; esta é EngineService. `latest` e `types` são ADITIVOS
+   * (RN-580): sem eles a resposta é a de sempre.
    */
   @Get(':sessionId/events')
   @ApiOperation({
     summary: "Paginates the session's event log for the engine",
     description:
-      "Used to REHYDRATE an agent's conversation history after a restart. The " +
-      'equivalent human route is protected by RBAC; this one, by the service token.',
+      "Used to REHYDRATE a conversational agent's history and to read the " +
+      'artifacts its kickoff needs. The equivalent human route is protected by ' +
+      'RBAC; this one, by the service token. `latest=true` returns the TAIL ' +
+      '(still in ascending `seq`) and ignores `afterSeq`; `types` restricts the ' +
+      'page to those event types. The page is capped at 200 either way (ADR 0060).',
   })
   @ApiQuery({ name: 'projectId', required: true })
   @ApiQuery({ name: 'afterSeq', required: false, example: 40 })
   @ApiQuery({ name: 'limit', required: false, example: 200 })
+  @ApiQuery({
+    name: 'latest',
+    required: false,
+    example: 'true',
+    description: 'Fetches the tail of the log; ignores `afterSeq`.',
+  })
+  @ApiQuery({
+    name: 'types',
+    required: false,
+    example: 'artifact.product_brief,artifact.business_rule',
+    description:
+      'Comma-separated event types (at most 20). Only events of these types count toward `limit`.',
+  })
   @ApiOkResponse({ type: PaginaDeEventosResponseDto })
   listEvents(
     @Param('sessionId') sessionId: string,
     @Query('projectId') projectId: string,
     @Query('afterSeq') afterSeq?: string,
     @Query('limit') limit?: string,
+    @Query('latest') latest?: string,
+    @Query('types') types?: string,
   ) {
-    return this.listSessionEvents.execute(projectId, sessionId, {
-      afterSeq: afterSeq !== undefined ? Number(afterSeq) : undefined,
-      limit: limit !== undefined ? Number(limit) : undefined,
-    });
+    return this.listSessionEvents.execute(
+      projectId,
+      sessionId,
+      opcoesDaLeituraInterna({ afterSeq, limit, latest, types }),
+    );
   }
 
   /**
@@ -312,6 +350,7 @@ export class InternalSessionsController {
       agentId: dto.agentId,
       messages: dto.messages,
       tools: dto.tools,
+      catalogoCompleto: dto.catalogoCompleto,
     });
   }
 
@@ -350,6 +389,7 @@ export class InternalSessionsController {
         agentId: dto.agentId,
         messages: dto.messages,
         tools: dto.tools,
+        catalogoCompleto: dto.catalogoCompleto,
       }),
     ).pipe(map((event) => ({ data: event })));
   }
@@ -363,18 +403,58 @@ export class InternalSessionsController {
     summary: 'Offers a handoff from one agent to another',
     description:
       'Born as `offered`. Who accepts is a PERSON, via the human route — an ' +
-      "agent doesn't activate an agent.",
+      "agent doesn't activate an agent. Two exceptions. The Creative→PO offer " +
+      'carrying the `product_brief` that an "I\'m ready — the need is ' +
+      'validated" click asked for is accepted on behalf of whoever clicked, ' +
+      'with that person as the actor and `implicito` in the payload (RN-658, ' +
+      "ADR 0185). The PO's handoff to the Arquiteto is accepted by the SYSTEM " +
+      'when the backlog is covered (at least one business rule, none without ' +
+      'a story) and the repository is `local` with no git credential in the ' +
+      'project (RN-660, ADR 0186); `aceiteAutomatico` says whether it happened ' +
+      'and, if not, why. Either way the response then carries `status: accepted`.',
   })
-  @ApiCreatedResponse({ type: HandoffResponseDto })
-  handoff(
+  @ApiCreatedResponse({ type: OfertaInternaDeHandoffResponseDto })
+  @ApiConflictResponse({
+    description:
+      '`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in ' +
+      'a non-closed session of the project. The `message` is the text the ' +
+      'agent reads as the tool result.',
+  })
+  async handoff(
     @Param('sessionId') sessionId: string,
     @Body() dto: CreateHandoffInternalDto,
   ) {
-    return this.createHandoff.execute(dto.projectId, sessionId, {
+    const oferta = await this.createHandoff.execute(dto.projectId, sessionId, {
       fromAgent: dto.fromAgent,
       toAgent: dto.toAgent,
       artifactId: dto.artifactId,
+      seAusente: dto.seAusente,
     });
+    // RN-658 (ADR 0185): o handoff Criativo→PO que o "Estou pronto" pediu é
+    // aceito em nome de quem clicou, pelo MESMO caso de uso do card. Fora da
+    // regra, a oferta segue `offered`, como sempre.
+    const aceitoImplicito = await this.aceiteImplicitoDoPo.seCouber(
+      dto.projectId,
+      sessionId,
+      oferta,
+    );
+    // RN-660 (ADR 0186): depois da transação da oferta, nunca dentro: o
+    // aceite provisiona o repositório e chama o engine, e isso não pode
+    // segurar o lock do par (projeto, destino). Os dois aceites são
+    // disjuntos (Criativo→PO × PO→Arquiteto).
+    const aceiteAutomatico = await this.aceiteAutomatico.execute(
+      dto.projectId,
+      sessionId,
+      oferta,
+    );
+    return {
+      ...oferta,
+      status:
+        aceitoImplicito || aceiteAutomatico.aceito
+          ? ('accepted' as const)
+          : oferta.status,
+      aceiteAutomatico,
+    };
   }
 
   /**
@@ -402,9 +482,10 @@ export class InternalSessionsController {
     description:
       '`businessRuleIds` is what feeds the rule→story coverage. Each id has to ' +
       'reference an `artifact.business_rule` event that EXISTS — validation ' +
-      'rejects a made-up id.',
+      'rejects a made-up id. The response also carries `semanticDuplicate` ' +
+      '(RN-681): an embedding-based WARNING against the project stories, never a refusal.',
   })
-  @ApiCreatedResponse({ type: StoryResponseDto })
+  @ApiCreatedResponse({ type: CreatedStoryResponseDto })
   story(
     @Param('sessionId') sessionId: string,
     @Body() dto: CreateStoryInternalDto,
@@ -418,6 +499,38 @@ export class InternalSessionsController {
       dod: dto.dod,
       dor: dto.dor,
       businessRuleIds: dto.businessRuleIds,
+    });
+  }
+
+  /**
+   * A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198). O engine
+   * chama DEPOIS de gravar o `artifact.business_rule` (a regra é evento, não
+   * linha da api) e devolve `message` ao modelo como parte do resultado de
+   * `emit_artifact`. Nunca recusa: a regra já existe. Ela mesma sai da
+   * comparação pelo título normalizado (a RN-080 o faz único no projeto).
+   */
+  @Post(':sessionId/semantic-duplicate-check')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Warns when a just-written business rule looks like an existing one',
+    description:
+      'Embeds the title and the titles of the project rules (the 100 most recent) with the RAG ' +
+      'embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding ' +
+      'provider the check is SKIPPED with the reason, also narrated in the event log. The ' +
+      'embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).',
+  })
+  @ApiOkResponse({ type: SemanticDuplicateCheckResponseDto })
+  semanticDuplicateCheck(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SemanticDuplicateCheckInternalDto,
+  ) {
+    return this.duplicataSemantica.execute({
+      projectId: dto.projectId,
+      sessionId,
+      kind: dto.kind,
+      itemId: null,
+      title: dto.title,
     });
   }
 
@@ -521,6 +634,38 @@ export class InternalSessionsController {
   ) {
     return this.routeModulesToInfra.execute(dto.projectId, sessionId, {
       roteamento: dto.roteamento,
+    });
+  }
+
+  /**
+   * Ferramenta `declare_module_contracts` do Arquiteto (ADR 0200, RN-684): o
+   * que cada módulo EXPÕE a quem depende dele. É o que os dev agents leem
+   * (`GET internal/projects/:projectId/module-contracts`) em vez de abrir o
+   * worktree de outro módulo.
+   */
+  @Post(':sessionId/module-contracts')
+  @ApiOperation({
+    summary: 'Declares a new version of the contracts between modules',
+    description:
+      'The artifact IS the `artifact.module_contracts` event: immutable, ' +
+      'versioned, and with an author, alongside `artifact.module_map`. Each ' +
+      'call carries the WHOLE list and replaces the previous version. What a ' +
+      "module consumes is not written here: it is the current module_map's " +
+      '`dependsOn`.',
+  })
+  @ApiCreatedResponse({ type: ContratosDeclaradosResponseDto })
+  @ApiBadRequestResponse({
+    description:
+      'Empty list, repeated module, module outside the current module_map ' +
+      '(or no module_map), a module with an empty or oversized `expoe`, an ' +
+      'item with an unknown `tipo`, or a missing/oversized `assinatura`.',
+  })
+  moduleContracts(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: DeclareModuleContractsInternalDto,
+  ) {
+    return this.declareModuleContracts.execute(dto.projectId, sessionId, {
+      contratos: dto.contratos,
     });
   }
 

@@ -26,7 +26,8 @@
   },
   "team": {
     "title": "Agent team",
-    "summary": "{{count}} agents · {{working}} working · {{waiting}} waiting",
+    "summary_one": "{{count}} agent · {{working}} working · {{waiting}} waiting",
+    "summary_other": "{{count}} agents · {{working}} working · {{waiting}} waiting",
     "autonomyErrorTitle": "Could not change autonomy",
     "rearmSuccess": "Agent rearmed",
     "rearmErrorTitle": "Could not rearm the agent"
@@ -67,7 +68,8 @@
   },
   "activity": {
     "title": "Activity",
-    "count": "{{count}} events",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events",
     "loadErrorTitle": "Could not load the activity."
   },
   "executionSection": {
@@ -75,6 +77,8 @@
     "activationErrorTitle": "Could not tell if execution was already activated.",
     "introReady": "Activate execution for the dev agents to implement the backlog in parallel.",
     "introNeedsModuleMap": "Define the module_map (Architect) before activating execution.",
+    "introNeedsRepository": "This project has no repository yet, and without one the dev agents have nowhere to work. It is created when you accept the handoff to the Architect — or, if that one was already accepted, the handoff to the Dev Lead.",
+    "provisionNow": "Provision the repository now",
     "activate": "Activate execution",
     "devAgentsLabel": "Dev agents",
     "spinningUp": "Spinning up the agents…",
@@ -94,7 +98,8 @@
     "activateError": "Could not activate execution",
     "unblockError": "Could not unblock the task",
     "authorizationNeededTitle": "Needs your authorization",
-    "authorizationNeededMessage": "The session already has {{count}} agent(s), the lead's cap is {{max}}. The request is in Approvals.",
+    "authorizationNeededMessage_one": "The session already has {{count}} agent, the lead's cap is {{max}}. The request is in Approvals.",
+    "authorizationNeededMessage_other": "The session already has {{count}} agents, the lead's cap is {{max}}. The request is in Approvals.",
     "requestDeniedTitle": "Request denied",
     "requestError": "Could not request"
   },

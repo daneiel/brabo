@@ -6,7 +6,9 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   semântico, diferente do SecOps determinístico) e registra o parecer com
   `emit_qa_verdict` (`Engine.Gates.Tools.EmitQaVerdict` — só aceita aprovar com
   suite verde). Instruções e `coverageMatrix` preservadas byte a byte da Fase
-  4a — só a casca mudou.
+  4a — só a casca mudou. Desde o ADR 0192 (RN-674) a mensagem ganha, NO FIM e
+  só quando existe, o plano de teste que a QA-estratégia escreveu sobre a
+  entrega — insumo, nunca régua nova de veredito (ver `com_o_plano/2`).
 
   ## O que saiu daqui
 
@@ -67,12 +69,17 @@ defmodule Engine.Gates.QaAutomacaoAgent do
     |> handle_outcome(task_id)
   end
 
-  defp build_ctx(project_id, session_id, dev_state, %{
-         task: task,
-         story: story,
-         business_rules_units: business_rules_units,
-         task_state_units: task_state_units
-       }) do
+  defp build_ctx(
+         project_id,
+         session_id,
+         dev_state,
+         %{
+           task: task,
+           story: story,
+           business_rules_units: business_rules_units,
+           task_state_units: task_state_units
+         } = dev_context
+       ) do
     %{
       project_id: project_id,
       session_id: session_id,
@@ -88,7 +95,11 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       token_budget_micros: dev_state.task_budget_micros,
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
-      messages: [initial_message(task, story)],
+      messages: [
+        task
+        |> initial_message(story)
+        |> com_o_plano(Map.get(dev_context, :plano_de_teste))
+      ],
       context_window: 128_000
     }
   end
@@ -141,6 +152,38 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       """,
       :pinned => true
     }
+  end
+
+  # ADR 0192 (RN-674): o plano de teste da QA-estratégia, escrito sobre ESTA
+  # entrega, é INSUMO da revisão — diz onde olhar no passo 2. Ele NÃO muda a
+  # régua do veredito (uma linha de `coverageMatrix` por regra da story, e
+  # `approved` só com suite verde e toda regra coberta): tornar os critérios
+  # do plano obrigatórios mudaria o que o gate `qa-verificada` reprova, e isso
+  # não foi decidido. Sem plano (a QA-estratégia falhou e já narrou a origem),
+  # a mensagem é a de sempre, byte a byte.
+  defp com_o_plano(mensagem, nil), do: mensagem
+
+  defp com_o_plano(mensagem, plano),
+    do: Map.update!(mensagem, "content", &(&1 <> secao_do_plano(plano)))
+
+  defp secao_do_plano(plano) do
+    criterios =
+      plano
+      |> Map.get(:criterios_executaveis, [])
+      |> Enum.map_join("\n", &("- " <> to_string(&1)))
+
+    """
+
+    Plano de teste da QA-estratégia para esta entrega (use no passo 2 para
+    achar QUAL teste cobre cada regra; o veredito continua sendo pelas regras
+    acima):
+    #{Map.get(plano, :plano_de_teste, "")}
+
+    Critérios executáveis:
+    #{criterios}
+
+    Estratégia de automação: #{Map.get(plano, :estrategia_de_automacao, "")}
+    """
   end
 
   defp handle_outcome({:halted, {"emit_qa_verdict", verdict}, _ctx}, _task_id) do

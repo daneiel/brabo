@@ -31,6 +31,7 @@ import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import { CREDENCIAIS_DE_LLM } from '../lib/models';
 import type { Project, UserCredentialMetadata } from '../lib/api-types';
+import { loteSobreLeiturasPorChave } from '../test/lote-de-bindings';
 
 const getProject = vi.fn();
 const updateProject = vi.fn();
@@ -85,8 +86,14 @@ vi.mock('../lib/api-client', async () => {
     deleteCredential: (...args: unknown[]) => deleteCredential(...args),
     testCredential: (...args: unknown[]) => testCredential(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // Nenhum provider com a capability de roteamento (ADR 0166): o estado de
+    // produção enquanto o smoke do OpenRouter não rodar.
+    listProviderCapabilities: () => Promise.resolve([]),
     listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
     getProjectModelBinding: (...args: unknown[]) =>
@@ -129,6 +136,7 @@ function project(over: Partial<Project> = {}): Project {
     workspacePath: null,
     workspaceVerifiedAt: null,
     mirrorPath: null,
+    language: 'pt-BR',
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
     ...over,
@@ -457,7 +465,7 @@ describe('ExecutionSection', () => {
     getProject.mockResolvedValue(project({ maxConsecutiveBlocked: null }));
     montar();
 
-    expect(await screen.findByText(/usa o default \(3\)/)).toBeTruthy();
+    expect(await screen.findByText(/usa o padrão \(3\)/)).toBeTruthy();
     expect(screen.getByDisplayValue('3')).toBeTruthy();
   });
 
@@ -484,7 +492,7 @@ describe('ExecutionSection', () => {
         maxConsecutiveBlocked: 7,
       }),
     );
-    expect(await screen.findByText('Teto do circuit breaker salvo')).toBeTruthy();
+    expect(await screen.findByText('Teto da parada automática salvo')).toBeTruthy();
   });
 
   it('valor inválido (zero, negativo, fracionário): botão desabilitado, nada é salvo', async () => {
@@ -618,22 +626,36 @@ describe('PromotionSection (Fase 12c — RN-048)', () => {
     return montarSecao(<PromotionSection projectId="proj-1" />);
   }
 
-  it('projeto novo cai em manual e explica o que isso significa', async () => {
+  it('projeto antigo em manual segue manual, explica, e a tela diz que projeto novo nasce em Automática (RN-659)', async () => {
     getProject.mockResolvedValue(project({ storyPromotion: 'manual' }));
     montarPromocao();
 
     expect(await screen.findByDisplayValue('Manual — eu promovo')).toBeTruthy();
     expect(screen.getByText(/Nenhuma tarefa dela é pegável até lá/)).toBeTruthy();
+    expect(screen.getByTestId('promocao-default')).toHaveTextContent(
+      'Projeto novo nasce em Automática',
+    );
   });
 
-  it('projeto em auto mostra que é o comportamento anterior, mantido como opção', async () => {
+  it('projeto em auto (o padrão de projeto novo) mostra o valor e o que ele faz', async () => {
     getProject.mockResolvedValue(project({ storyPromotion: 'auto' }));
     montarPromocao();
 
     expect(
       await screen.findByDisplayValue('Automática — o PO promove'),
     ).toBeTruthy();
-    expect(screen.getByText(/comportamento anterior à Fase 12c/)).toBeTruthy();
+    expect(screen.getByText(/O PO promove sozinho/)).toBeTruthy();
+  });
+
+  it('CASO DE FALHA: a api recusa a troca e a tela diz que não salvou', async () => {
+    getProject.mockResolvedValue(project({ storyPromotion: 'auto' }));
+    updateProject.mockRejectedValue(new Error('boom'));
+    montarPromocao();
+
+    const select = await screen.findByLabelText('Quem promove histórias');
+    fireEvent.change(select, { target: { value: 'manual' } });
+
+    expect(await screen.findByText('Não foi possível salvar')).toBeTruthy();
   });
 
   it('trocar o modo salva no onChange, sem botão', async () => {
@@ -1108,7 +1130,7 @@ describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', 
     expect(await screen.findByText('Área Dev')).toBeInTheDocument();
     expect(screen.getByText('Área QA')).toBeInTheDocument();
     expect(screen.getByText('Área Infra')).toBeInTheDocument();
-    expect(screen.getByText(/Lead: dev-lead/)).toBeInTheDocument();
+    expect(screen.getByText(/Lead: Dev Lead/)).toBeInTheDocument();
   });
 
   it('área SEM padrão próprio não mostra "Voltar a herdar"', async () => {

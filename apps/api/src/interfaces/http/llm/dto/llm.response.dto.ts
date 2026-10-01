@@ -1,7 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { LLMProviderCapabilities } from '@brabo/shared';
+import type { CapabilitiesDoProvider } from '../../../../application/use-cases/llm/list-provider-capabilities.use-case';
+import { LLM_PROVIDER_NAMES } from '../../../../domain/llm/llm-provider-names';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
 import { BUDGET_POLICIES } from '../../../../domain/llm/budget-threshold';
 import { MODEL_BINDING_SCOPES } from '../../../../domain/llm/model-binding-scope';
+import { PREFERENCIAS_DE_ROTEAMENTO } from '../../../../domain/llm/routing-preference';
 import {
   MODEL_AVAILABILITIES,
   type Model,
@@ -21,6 +25,10 @@ import type {
   ResolvedBinding,
   SkippedBinding,
 } from '../../../../domain/llm/binding-resolver';
+import type {
+  BindingResolvidoDaChave,
+  BindingsResolvidosEmLote,
+} from '../../../../application/use-cases/llm/resolve-model-bindings-em-lote.use-case';
 import type { UserCredentialMetadata } from '../../../../domain/llm/user-credential.entity';
 import type { AgentTokenUsage } from '../../../../application/ports/token-usage-repository.port';
 import type {
@@ -180,6 +188,18 @@ export class ModelComCuradoriaResponseDto
       'empty list means "nobody has an opinion", not "not fit for it".',
   })
   uses!: UsoDeModelo[];
+
+  @ApiProperty({
+    example: false,
+    description:
+      'OpenRouter free-routing alias (an id starting with `~`): the catalog ' +
+      'price is a showcase price and the bill comes from whichever upstream ' +
+      'served the call. Curation refuses to ACTIVATE it (422 ' +
+      '`alias_de_roteamento_livre`); one activated before the rule stays ' +
+      'active, marked by this flag, and once deactivated it cannot come back. ' +
+      'Derived from provider and name on read, never stored.',
+  })
+  freeRoutingAlias!: boolean;
 }
 export const _chavesModelComCuradoria: MesmasChaves<
   ModelComCuradoriaResponseDto,
@@ -256,6 +276,17 @@ export class ModelBindingResponseDto implements Wire<ModelBinding> {
   @ApiProperty({ example: '01JC4Z0000MODELO00000000001' })
   modelId!: string;
 
+  @ApiProperty({
+    enum: PREFERENCIAS_DE_ROTEAMENTO,
+    nullable: true,
+    example: null,
+    description:
+      'How a hub picks the upstream for this binding (ADR 0166, RN-583). ' +
+      '`null` = the hub decides on its own. Only ever set for a provider that ' +
+      'declares the `routingPreference` capability.',
+  })
+  routingPreference!: Wire<ModelBinding>['routingPreference'];
+
   @ApiProperty({ example: '01JC4Z0000USUARIO0000000001' })
   createdBy!: string;
 
@@ -314,6 +345,17 @@ export class ResolvedBindingResponseDto implements Wire<ResolvedBinding> {
   origin!: Wire<ResolvedBinding>['origin'];
 
   @ApiProperty({
+    enum: PREFERENCIAS_DE_ROTEAMENTO,
+    nullable: true,
+    example: null,
+    description:
+      'The routing preference OF THE BINDING THAT WON the cascade (ADR 0166). ' +
+      'It never cascades on its own: a skipped level takes its preference ' +
+      'with it, and no level inherits only the preference of another.',
+  })
+  routingPreference!: Wire<ResolvedBinding>['routingPreference'];
+
+  @ApiProperty({
     type: [SkippedBindingResponseDto],
     description:
       'More specific scopes the cascade discarded before reaching `origin`. ' +
@@ -324,6 +366,47 @@ export class ResolvedBindingResponseDto implements Wire<ResolvedBinding> {
 export const _chavesBindingResolvido: MesmasChaves<
   ResolvedBindingResponseDto,
   ResolvedBinding
+> = true;
+
+/** Uma chave (agente ou área) do lote e o binding resolvido dela (RN-654). */
+export class BindingResolvidoDaChaveResponseDto implements Wire<BindingResolvidoDaChave> {
+  @ApiProperty({
+    example: 'dev-lead',
+    description: 'The agent slug or the area key, exactly as requested.',
+  })
+  key!: string;
+
+  @ApiProperty({
+    type: ResolvedBindingResponseDto,
+    nullable: true,
+    description:
+      'The SAME value the single-key route answers for this key — `null` ' +
+      'when no level of the cascade has a model.',
+  })
+  binding!: ResolvedBindingResponseDto | null;
+}
+export const _chavesBindingResolvidoDaChave: MesmasChaves<
+  BindingResolvidoDaChaveResponseDto,
+  BindingResolvidoDaChave
+> = true;
+
+/** O lote de bindings resolvidos de um projeto (RN-654, AT-334). */
+export class BindingsResolvidosEmLoteResponseDto implements Wire<BindingsResolvidosEmLote> {
+  @ApiProperty({
+    type: [BindingResolvidoDaChaveResponseDto],
+    description: 'One entry per requested agent, in the order requested.',
+  })
+  agents!: BindingResolvidoDaChaveResponseDto[];
+
+  @ApiProperty({
+    type: [BindingResolvidoDaChaveResponseDto],
+    description: 'One entry per requested area, in the order requested.',
+  })
+  areas!: BindingResolvidoDaChaveResponseDto[];
+}
+export const _chavesBindingsResolvidosEmLote: MesmasChaves<
+  BindingsResolvidosEmLoteResponseDto,
+  BindingsResolvidosEmLote
 > = true;
 
 /**
@@ -799,3 +882,50 @@ export class MySpendResponseDto implements Wire<MySpend> {
   porDia!: SpendPorDiaResponseDto[];
 }
 export const _chavesMySpend: MesmasChaves<MySpendResponseDto, MySpend> = true;
+
+/** A camada de PROVIDER das capabilities (ADR 0041), como o fio a mostra. */
+export class LLMProviderCapabilitiesResponseDto implements Wire<LLMProviderCapabilities> {
+  @ApiProperty({ example: true })
+  streaming!: boolean;
+
+  @ApiProperty({ example: true })
+  toolCalling!: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'The provider can LIST its own catalog (catalog sync).',
+  })
+  listModels!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Text → vector (ADR 0075). Only `true` when proven.',
+  })
+  embeddings!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, ' +
+      '`latency`) to pick among the upstreams serving the same model ' +
+      '(ADR 0166). Only `true` after a smoke against the real API returned ' +
+      'the chosen upstream — reading the docs does not count.',
+  })
+  routingPreference!: boolean;
+}
+export const _chavesCapabilitiesDoProvider: MesmasChaves<
+  LLMProviderCapabilitiesResponseDto,
+  LLMProviderCapabilities
+> = true;
+
+export class ProviderCapabilitiesResponseDto implements Wire<CapabilitiesDoProvider> {
+  @ApiProperty({ enum: LLM_PROVIDER_NAMES, example: 'openrouter' })
+  provider!: Wire<CapabilitiesDoProvider>['provider'];
+
+  @ApiProperty({ type: LLMProviderCapabilitiesResponseDto })
+  capabilities!: LLMProviderCapabilitiesResponseDto;
+}
+export const _chavesProviderCapabilities: MesmasChaves<
+  ProviderCapabilitiesResponseDto,
+  CapabilitiesDoProvider
+> = true;

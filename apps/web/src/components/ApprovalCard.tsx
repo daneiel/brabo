@@ -1,10 +1,17 @@
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
+import { ApiError, mensagemDaApi } from '../lib/api-client';
 import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
+import {
+  fraseDaDecisaoDaPolitica,
+  fraseDaDecisaoForaDoRecorte,
+  type DecisaoDaPoliticaLida,
+} from '../lib/decisao-da-politica';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { Disclosure } from './ui/Disclosure';
 import {
   AlertIcon,
@@ -15,6 +22,8 @@ import {
   TerminalIcon,
   TrashIcon,
 } from './ui/icons';
+import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
+import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -133,13 +142,20 @@ function readFiles(payload: Record<string, unknown>): DiffFile[] | undefined {
 interface ApprovalCardProps {
   action: ProposedAction;
   urgency?: ApprovalUrgency;
-  variant?: 'chat' | 'queue';
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
-  onApprove: () => void;
-  onDeny: (reason?: string) => void;
-  onAlwaysAllow: () => void;
+  /**
+   * Os três callbacks podem devolver a PROMESSA da chamada (AT-256): é ela que
+   * deixa o card segurar os botões enquanto a decisão está em voo e dizer, no
+   * próprio card, a frase da api quando ela recusa — em especial o 409 de
+   * `InvalidActionTransitionError`, de ação que já saiu de `pending` por outro
+   * caminho (auto-aprovação, outra aba, o painel). Devolver `void` continua
+   * valendo: o card só não sabe do desfecho.
+   */
+  onApprove: () => void | Promise<unknown>;
+  onDeny: (reason?: string) => void | Promise<unknown>;
+  onAlwaysAllow: () => void | Promise<unknown>;
   /**
    * "Auto mode" (RN-153) — liga `agent_autonomy` com a curinga `actionType:
    * "*"` pro AGENTE desta ação: nenhum comando FUTURO dele precisa de
@@ -149,12 +165,41 @@ interface ApprovalCardProps {
    * checagem de papel aqui dentro.
    */
   onActivateAutoMode?: () => void;
+  /**
+   * O motivo da política e a raiz do escopo (AT-148, RN-614), lidos do
+   * `proposed_action.created` por `decisaoDaPoliticaDaAcao` — a ação em si
+   * (`proposed_actions`) não guarda nenhum dos dois. Três estados, e eles não
+   * colapsam: `undefined` = esta tela não lê o event log, e o card cala;
+   * `null` = a tela lê, mas o evento não está entre os carregados, e o card
+   * DIZ isso; objeto = a frase de `lib/decisao-da-politica.ts`.
+   */
+  decisaoDaPolitica?: DecisaoDaPoliticaLida | null;
+  /**
+   * O MOTIVO, em texto, de os controles estarem inertes (AT-265): quem chama
+   * sabe que o papel de quem olha não alcança o mínimo do endpoint de decisão.
+   * O que se tira é o controle, nunca a informação — o card continua mostrando
+   * a ação inteira. `title` em botão `disabled` não abre no Chromium, então o
+   * motivo é uma linha visível. Ausente = controles normais.
+   */
+  bloqueio?: string;
+  /**
+   * Quem EMPILHA vários cards (a fila da aba Aprovações, o painel "precisa de
+   * você", as pendências de outras sessões — AT-318) pede o detalhe fechado:
+   * N detalhes abertos são de novo a parede de texto, e empurravam os outros
+   * cards para fora da vista. Ausente = aberto enquanto a ação espera decisão
+   * (o fio da sessão, onde o card é o assunto do momento).
+   *
+   * É a ÚNICA diferença entre as superfícies, e ela é de ESTADO INICIAL de um
+   * colapso, não de aparência: desde a AT-322 o card tem uma variante só —
+   * mesmos botões, mesma largura natural deles, mesmas notas. Quem decide a
+   * largura do card é o CONTÊINER (o fio o centraliza em 560px, RN-173).
+   */
+  detalheRecolhido?: boolean;
 }
 
 export function ApprovalCard({
   action,
   urgency,
-  variant = 'chat',
   selectable,
   selected,
   onToggleSelect,
@@ -162,9 +207,37 @@ export function ApprovalCard({
   onDeny,
   onAlwaysAllow,
   onActivateAutoMode,
+  decisaoDaPolitica,
+  bloqueio,
+  detalheRecolhido,
 }: ApprovalCardProps) {
   const { t } = useTranslation('approvals');
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
+  // AT-256. `emVoo` segura o duplo clique (a segunda chamada era um 409 certo);
+  // `recusa` guarda a frase da api; `obsoleta` é o 409 — a ação JÁ não está
+  // `pending` no servidor, e o card fica inerte até a lista chegar e trocá-lo
+  // pela linha de desfecho. A `ref` fecha a janela entre o clique e o render.
+  const [emVoo, setEmVoo] = useState(false);
+  const [recusa, setRecusa] = useState<string | null>(null);
+  const [obsoleta, setObsoleta] = useState(false);
+  const travaRef = useRef(false);
+
+  async function decidir(chamada: () => void | Promise<unknown>) {
+    if (travaRef.current) return;
+    travaRef.current = true;
+    setEmVoo(true);
+    setRecusa(null);
+    try {
+      await chamada();
+    } catch (erro) {
+      setRecusa(mensagemDaApi(erro));
+      if (erro instanceof ApiError && erro.status === 409) setObsoleta(true);
+    } finally {
+      travaRef.current = false;
+      setEmVoo(false);
+    }
+  }
+  const inerte = emVoo || obsoleta || !!bloqueio;
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
   const actorLabel = actor?.name ?? action.actor.id;
@@ -172,13 +245,11 @@ export function ApprovalCard({
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
-  // `container_remove` entrou no MESMO teto absoluto de `instruction_patch`
-  // (ADR 0136, RN-495) — a api recusa (400) gravar o padrão de "sempre
-  // permitir" pra ele, então mostrar o botão prometeria um efeito que o
-  // clique não produz.
-  const podeSemprePermitir =
-    action.actionType !== 'instruction_patch' &&
-    action.actionType !== 'container_remove';
+  // Tipos do teto (git tipado, `container_remove`, `instruction_patch`,
+  // paralelismo — AT-320): a api recusa (400) gravar o padrão de "sempre
+  // permitir" pra eles, então mostrar o botão prometeria um efeito que o
+  // clique não produz. A lista é a da api, conferida por teste.
+  const podeSemprePermitir = podeOferecerSemprePermitir(action.actionType);
   // Mesma regra de `ehDevDeModulo`/`DEV_LEAD` em
   // `apps/api/src/domain/agents/agent-areas.ts` (RN-507) — sem cópia gerada
   // pro web porque só ESTE componente precisa saber, e só pra trocar o
@@ -192,28 +263,22 @@ export function ApprovalCard({
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
-  const { verbo, frase } = descreverAcao(action.actionType, payload);
+  const { verbo, trechos } = descreverAcao(action.actionType, payload);
   const temCorpoProprio = COM_CORPO_PROPRIO.has(action.actionType);
 
   /*
-   * O default do colapso sai de `variant` e `status`, que JÁ existem — nenhuma
-   * prop nova (FASE 19, item 14). Não é economia de digitação: prop nova
-   * obrigatória obrigaria a abrir os dois call sites, e um deles
-   * (`SessionPage.tsx`) pertence a outra fase da mesma onda.
-   *
-   * A regra que os dois defaults expressam é uma só: abre o que ainda espera
-   * decisão de quem está olhando. No chat a ação pendente é o assunto do
-   * momento; na fila são N cards, e N detalhes abertos são de novo a parede de
-   * texto que esta fase existe para desfazer. E o payload CRU nunca nasce
-   * aberto, em variante nenhuma — despejar JSON é o defeito, não a densidade.
+   * A regra do colapso é uma só: abre o que ainda espera decisão de quem está
+   * olhando, salvo quando quem chama empilha N cards (`detalheRecolhido`). E o
+   * payload CRU nunca nasce aberto, em superfície nenhuma — despejar JSON é o
+   * defeito, não a densidade.
    */
-  const detalheAberto = temCorpoProprio && variant === 'chat' && isPending;
+  const detalheAberto = temCorpoProprio && isPending && !detalheRecolhido;
 
   return (
-    <div
-      className={[styles.card, variant === 'chat' && styles.chat, isCritical && styles.critical]
-        .filter(Boolean)
-        .join(' ')}
+    <Card
+      padding="none"
+      recorta
+      className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}
     >
       <div className={styles.header}>
         {selectable && (
@@ -250,7 +315,31 @@ export function ApprovalCard({
           conhece não tem frase: aí a linha degrada para verbo + "ver detalhes",
           e o detalhe é o payload cru COLAPSADO. O que nunca mais acontece é o
           despejo de `chave: JSON.stringify(valor)` que estava aqui. */}
-      <p className={styles.frase}>{frase ?? `${verbo} — ${SEM_FRASE}.`}</p>
+      <p className={styles.frase}>
+        {trechos
+          ? trechos.map((trecho, indice) =>
+              // AT-322: comando, branch e caminho em mono e SEM aspas — a aspa
+              // reta em fonte proporcional se lia como parte do comando.
+              trecho.codigo ? (
+                <code key={indice} className={styles.codigoNaFrase}>
+                  {trecho.texto}
+                </code>
+              ) : (
+                trecho.texto
+              ),
+            )
+          : `${verbo} — ${SEM_FRASE}.`}
+      </p>
+
+      {/* AT-148 (RN-614): QUAL regra decidiu e, em `terminal`, contra qual
+          raiz relativa — a MESMA frase da linha do evento no painel de log. */}
+      {decisaoDaPolitica !== undefined && (
+        <p className={styles.motivoDaPolitica} data-testid="motivo-da-politica">
+          {decisaoDaPolitica === null
+            ? fraseDaDecisaoForaDoRecorte()
+            : fraseDaDecisaoDaPolitica(decisaoDaPolitica)}
+        </p>
+      )}
 
       <Disclosure
         titulo={temCorpoProprio ? t('approvalCard.details.title') : t('approvalCard.details.rawPayloadTitle')}
@@ -275,17 +364,17 @@ export function ApprovalCard({
       {isPending ? (
         <>
           <div className={styles.actions}>
-            <Button variant="success" onClick={onApprove}>
+            <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
               {t('approvalCard.actions.approve')}
             </Button>
-            <Button variant="danger" onClick={() => onDeny()}>
+            <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
               {t('approvalCard.actions.deny')}
             </Button>
             {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
                 gravar a regra em permissions.json não muda nada, então o botão
                 prometia um efeito que não existe. */}
             {podeSemprePermitir && (
-              <Button variant="secondary" onClick={onAlwaysAllow}>
+              <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
                 {t('approvalCard.actions.alwaysAllow')}
               </Button>
             )}
@@ -294,30 +383,62 @@ export function ApprovalCard({
                 desabilitar sem explicar (action.actor.kind === 'user' também
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && (
-              <Button variant="ghost" onClick={onActivateAutoMode}>
+              <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
                 {t('approvalCard.actions.autoMode')}
               </Button>
             )}
           </div>
-          {variant === 'chat' && podeSemprePermitir && (
-            <span className={styles.note}>
-              <AlertIcon size={12} />
-              {ehAgenteDeModulo
-                ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
-                : t('approvalCard.notes.alwaysAllow')}
-            </span>
+          {/* AT-256: a frase da api, no card — nunca um toast genérico. Vale em
+              toda superfície; `obsoleta` diz o porquê de os botões estarem
+              inertes (o `title` de botão desabilitado não abre no Chromium). */}
+          {bloqueio && (
+            <p className={styles.note} data-testid="bloqueio-da-decisao">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>{bloqueio}</span>
+            </p>
           )}
-          {variant === 'chat' && onActivateAutoMode && (
-            <span className={styles.note}>
-              <AlertIcon size={12} />
-              {t('approvalCard.notes.autoMode', { actor: actorLabel })}
-            </span>
+          {recusa && (
+            <p className={styles.recusa} role="alert" data-testid="recusa-da-decisao">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>
+                {recusa}
+                {obsoleta && ` ${t('approvalCard.notes.obsolete')}`}
+              </span>
+            </p>
+          )}
+          {/* AT-322: a nota de "Sempre permitir" sai em TODA superfície onde o
+              botão sai — antes só no fio, e a mesma decisão tinha texto numa
+              tela e nenhum na outra. O texto só muda com o ATOR (RN-509), nunca
+              com a tela. */}
+          {podeSemprePermitir && (
+            <p className={styles.note} data-testid="nota-sempre-permitir">
+              <AlertIcon size={14} className={styles.noteIcon} />
+              <span>
+                {ehAgenteDeModulo
+                  ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
+                  : t('approvalCard.notes.alwaysAllow')}
+              </span>
+            </p>
+          )}
+          {/* A nota do modo automático sai onde o botão sai (RN-603): é a
+              única frase que diz, antes do clique, o que o botão libera. Desde
+              a RN-670 (ADR 0189) a lista inteira — o que o piloto libera e o
+              que não libera — vem junto, a MESMA dos Executores e do card do
+              agente. */}
+          {onActivateAutoMode && (
+            <>
+              <p className={styles.note} data-testid="nota-modo-automatico">
+                <AlertIcon size={14} className={styles.noteIcon} />
+                <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
+              </p>
+              <OQueOPilotoLibera recolhido />
+            </>
           )}
         </>
       ) : (
         <DecidedLine action={action} />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -504,11 +625,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
       <div className={styles.body}>
         <div className={styles.prTitle}>{title}</div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source}</span>
+          <Badge tone="neutral" square size="md">{source}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target}</span>
+          <Badge tone="neutral" square size="md">{target}</Badge>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
       </div>
@@ -530,11 +651,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
               : t('approvalCard.body.gitMerge.defaultTitle'))}
         </div>
         <div className={styles.prBranches}>
-          <span className={styles.branchPill}>{source ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{source ?? '?'}</Badge>
           <span className={styles.arrow} aria-hidden="true">
             →
           </span>
-          <span className={styles.branchPill}>{target ?? '?'}</span>
+          <Badge tone="neutral" square size="md">{target ?? '?'}</Badge>
         </div>
       </div>
     );
@@ -556,9 +677,9 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.prTitle}>
           {agent}
           {typeof fromVersion === 'number' && (
-            <span className={styles.branchPill} style={{ marginLeft: 8 }}>
+            <Badge tone="neutral" square size="md" style={{ marginLeft: 8 }}>
               v{fromVersion} → v{fromVersion + 1}
-            </span>
+            </Badge>
           )}
         </div>
         {/* Badge de origem: qual hipótese aceita do Psicólogo gerou este

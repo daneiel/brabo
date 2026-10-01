@@ -25,9 +25,10 @@ import { ListPersonalAccessTokensUseCase } from './list-personal-access-tokens.u
 import { RevokePersonalAccessTokenUseCase } from './revoke-personal-access-token.use-case';
 import { ListPersonalAccessTokensAsMaintainerUseCase } from './list-personal-access-tokens-as-maintainer.use-case';
 import { RevokePersonalAccessTokenAsMaintainerUseCase } from './revoke-personal-access-token-as-maintainer.use-case';
-import { RegisterRunnerDeviceKeyUseCase } from './register-runner-device-key.use-case';
 import { ListRunnerDeviceKeysUseCase } from './list-runner-device-keys.use-case';
 import { RevokeRunnerDeviceKeyUseCase } from './revoke-runner-device-key.use-case';
+import { ListMachineDeviceKeysUseCase } from './list-machine-device-keys.use-case';
+import { RevokeMachineDeviceKeyUseCase } from './revoke-machine-device-key.use-case';
 import { ProvisionarUsuarioUseCase } from './provisionar-usuario.use-case';
 import { CriarPrimeiraContaUseCase } from './criar-primeira-conta.use-case';
 import { RegistrarChaveDeMaquinaUseCase } from './registrar-chave-de-maquina.use-case';
@@ -49,9 +50,10 @@ const USE_CASES = [
   RevokePersonalAccessTokenUseCase,
   ListPersonalAccessTokensAsMaintainerUseCase,
   RevokePersonalAccessTokenAsMaintainerUseCase,
-  RegisterRunnerDeviceKeyUseCase,
   ListRunnerDeviceKeysUseCase,
   RevokeRunnerDeviceKeyUseCase,
+  ListMachineDeviceKeysUseCase,
+  RevokeMachineDeviceKeyUseCase,
   ProvisionarUsuarioUseCase,
   CriarPrimeiraContaUseCase,
   RegistrarChaveDeMaquinaUseCase,

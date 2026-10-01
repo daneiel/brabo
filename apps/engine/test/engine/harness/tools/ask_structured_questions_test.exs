@@ -185,4 +185,47 @@ defmodule Engine.Harness.Tools.AskStructuredQuestionsTest do
 
     assert texto =~ "falha ao registrar perguntas"
   end
+
+  describe "o idioma do formulário (RN-667, AT-282)" do
+    # A validação paga (AT-167) achou, para autor `en`, a prosa em inglês e as
+    # perguntas do formulário em português — a descrição da ferramenta dizia
+    # que `label` era "em pt-BR". O idioma é decidido SÓ pela orientação
+    # efêmera da fachada (RN-622); a descrição só aponta para ela.
+    # Nomes e códigos de idioma de TEXTO para o usuário. "chaves ... em INGLÊS"
+    # do `emit_artifact` fica de fora de propósito: fala das chaves do payload,
+    # que são contrato, não texto para a pessoa.
+    @idioma_fixo ~r/pt-BR|em portugu|in English|em ingl|\(en\)/
+
+    test "a descrição manda os textos do formulário seguirem o idioma da resposta" do
+      descricao = AskStructuredQuestions.spec().description
+
+      assert descricao =~ "`label` (string) — o texto da pergunta, no idioma da sua resposta"
+      assert descricao =~ "também para `options`"
+      assert descricao =~ "os textos seguem o idioma da sua resposta"
+    end
+
+    test "a descrição não nomeia idioma nenhum — seria uma segunda orientação fora da fachada" do
+      refute AskStructuredQuestions.spec().description =~ @idioma_fixo
+
+      # A forma que produziu o defeito é reprovada pela mesma régua.
+      assert "- `label` (string) — o texto da pergunta, em pt-BR" =~ @idioma_fixo
+    end
+
+    test "nenhuma ferramenta do harness fixa idioma na descrição" do
+      {:ok, modulos} = :application.get_key(:engine, :modules)
+
+      ferramentas =
+        for m <- modulos,
+            String.starts_with?(Atom.to_string(m), "Elixir.Engine.Harness.Tools."),
+            Code.ensure_loaded?(m),
+            function_exported?(m, :spec, 0),
+            do: m
+
+      assert AskStructuredQuestions in ferramentas
+
+      for m <- ferramentas do
+        refute m.spec().description =~ @idioma_fixo, "#{inspect(m)} fixa idioma na descrição"
+      end
+    end
+  end
 end

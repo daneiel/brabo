@@ -77,12 +77,21 @@
     "hintRunner": "absolute path, as it appears on YOUR machine",
     "mountedUnderBase": "The folder sits <strong>inside this installation's projects base</strong> (<code>{{base}}</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
     "mountedOutsideBase": "This path is <strong>outside this installation's projects base</strong> (<code>{{base}}</code>), and the api <strong>refuses to create</strong> a mounted project outside it. Pick a folder under <code>{{base}}</code>.",
+    "noBroker": "<strong>This installation cannot start a container for Container or Mounted folder projects.</strong> It has no container broker (<code>BROKER_URL</code> is empty), and the broker is what starts the container for those two modes — without a container no development agent works. Use <strong>Local runner</strong>: the code lives in a folder of yours, and the local agent starts the container on your machine.",
     "runnerHint": {
       "intro": "After creating the project, run this on your machine:",
       "introExisting": "The project already exists — run this on your machine:",
       "command": "brabo-runner --project {{id}} --dir {{caminho}}",
       "placeholderId": "<project id>",
       "note": "The runner confirms the path when it connects — no command runs before that."
+    },
+    "browseRunner": {
+      "requires": "<strong>“Browse folder...” only works with <code>brabo-runner</code> running on your machine and connected to this project</strong> — in this mode the list comes from the local agent, not from the server. The click creates the project now, so the agent has something to connect to; then run:",
+      "alternative": "Without the runner running, <strong>type the path in the field above</strong>: it amounts to the same, and the runner confirms the folder when it connects.",
+      "placeholderPath": "<folder>",
+      "blockedName": "Fill in the project name (2 characters or more) before browsing: in this mode the click already creates the project.",
+      "blockedAdoptName": "Fill in the repository to adopt before browsing: in this mode the click already creates the project, named after it.",
+      "blockedPath": "The typed path is not absolute or contains \"..\" — fix it (or clear it) before browsing, or the api refuses the creation."
     }
   },
   "confirm": {
@@ -93,6 +102,8 @@
     "bootstrapLabel": "Bootstrap",
     "visibilityLabel": "Visibility",
     "managedFolder": "folder managed by Brabo",
+    "promotionLabel": "Story promotion",
+    "promotionAutoValue": "automatic — the PO promotes (new-project default; change it in Settings)",
     "bootstrapAdoptValue": "nothing runs without your approval",
     "bootstrapStepsValue_one": "{{count}} Gitflow step",
     "bootstrapStepsValue_other": "{{count}} Gitflow steps",

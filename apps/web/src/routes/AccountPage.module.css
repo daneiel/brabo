@@ -96,7 +96,7 @@
 }
 
 .cardHint {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   margin-top: 2px;
   max-width: 62ch;
@@ -104,4 +104,50 @@
 
 .cardControl {
   width: 220px;
+}
+
+/* Seção de chaves de MÁQUINA (RN-611). As classes abaixo espelham as de
+   `ProjectSettingsTab.module.css` (`.vazioComTexto`, `.remove`,
+   `.acoesDaSecao`) pelo mesmo motivo do topo deste arquivo — com UMA
+   diferença deliberada: o status "ativa" NÃO é verde. Lá, `.status` pinta de
+   `--success`; aqui só há chave de MÁQUINA, e a de máquina nunca ganha verde
+   (RN-548/RN-561): verde leria como "agente de pé", que esta tela não sabe. */
+
+.vazioComTexto {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.statusDaLinha {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.remove {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.remove:not(:disabled):hover {
+  color: var(--danger);
+  border-color: var(--danger-line);
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
 }

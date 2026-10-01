@@ -64,8 +64,11 @@ binary from GitHub Releases so the browser never talks to GitHub
 directly. Public for the same reason as `/metrics`/JWKS: the binary
 itself is not a secret, and requiring a session to download the very
 tool that lets someone authenticate would be backwards. `platform` is a
-closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
-`win32-x64`), never interpolated raw into the GitHub URL — closing the
+closed allowlist (`linux-x64`/`linux-arm64`/`darwin-arm64` —
+the three targets the release matrix builds; `darwin-x64` left in
+[ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) and `win32-x64` in
+[ADR 0187](adr/0187-runner-sem-binario-win32-x64.md), and both are refused with
+their own message pointing at the npm package), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
 asset URL (never the binary's bytes) is cached in memory for a few
 minutes, purely to stay under GitHub's unauthenticated rate limit under
@@ -319,6 +322,20 @@ reason in the URL.
   doesn't enter the computation: the base is **installation**
   configuration, identical for every workspace, and the parameter is there
   only to give the `RolesGuard` a scope.
+
+  Since [ADR 0161](adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)
+  ([RN-573](business-rules.md#rn-573)) the response also carries
+  `brokerConfigurado: boolean` — whether `BROKER_URL` is set, read through
+  `ContainerBrokerPort.configurado()`. It discloses one bit of installation
+  topology (is there a Docker-socket-holding broker at all), never its
+  address, and the minimum stays `maintainer`. The same bit rides on every
+  row of `GET /workspaces/:workspaceId/containers` (`viewer`,
+  [RN-574](business-rules.md#rn-574)), a deliberate widening: that page must
+  say BEFORE the click that `container`/`mounted` cannot start here, and
+  anyone who can see the page could already infer the absence from
+  `naoObservado: broker-nao-configurado` whenever a row is
+  `provisioning`/`running`. It says the
+  variable exists, never that the broker answers.
 - **`GET /workspaces/:workspaceId/project-folders` serves directory
   listings from a client-supplied path, and its whole safety is ONE
   containment** ([RN-504](business-rules.md#rn-504),
@@ -392,8 +409,16 @@ reason in the URL.
   active) before executing anything, and the engine classifies the refusal with
   origin `politica` rather than `codigo`. The refusal text names neither the
   variables nor their values, only how many there were. The credential still
-  does not cross, and that half is declared open: authenticated clone/fetch in
-  `runner` mode requires the container stopped.
+  does not cross the container boundary, and since
+  [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+  ([RN-676](business-rules.md#rn-676)) it does not need to: the engine marks
+  the authenticated `fetch` (`gitCredenciado: true`, set from one place,
+  `RunnerRouter.exec_git_credenciado/5`) and the runner runs THAT command on
+  the host, where the `env` reaches the child process; the dev agent's
+  commands still go to `docker exec`. The trust boundary is the mark, not the
+  `env`: a command carrying `env` WITHOUT the mark is still refused while a
+  container is active, so the credential field never becomes a way out of the
+  container. No ADR 0130 port changed.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
@@ -404,6 +429,13 @@ reason in the URL.
   scope is closed to the project by the path, and the cost per call is
   constant (three reads in the backlog, two in the rules, one query against
   `proposed_actions` filtered by index in the product metrics).
+- **The dev agent's contract read** — `GET /internal/projects/:projectId/module-contracts`
+  ([RN-684](business-rules.md#rn-684), [ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md))
+  — follows the same rule: no secret, nothing beyond the project id, one
+  entry per module of the current `module_map`. Its writing twin,
+  `POST /internal/sessions/:sessionId/module-contracts`, takes only the
+  Architect's declaration (what each module exposes) and validates every name
+  against the current `module_map`; neither route touches a worktree.
 - **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
   ADR 0104) is called only by the engine, after a runner connects and sends
   `workspace_confirm` over the channel — never directly by the runner,
@@ -506,6 +538,16 @@ reason in the URL.
   the segment (`..`, absolute, empty, `NUL` all refused) plus the concatenated
   result before it becomes a `-v`. It also drops `rationale`, which exists so a
   human can review the decision and has no consumer in a `docker run`.
+- **`GET /internal/projects/:projectId/container-spec` gained
+  `usuarioDaPasta`, and the classification didn't change** — still
+  `engine-service`, still called only by the broker ([ADR 0180](adr/0180-container-com-o-dono-da-pasta.md),
+  [RN-627](business-rules.md#rn-627)). The field is the `{ uid, gid }` of the
+  project folder as the api `stat`s it, or `null` (runner mode, unreachable
+  folder, root-owned folder). The broker re-validates it (integers in
+  1..2^31-1; `0` is refused by name) and uses it as `--user`; it never reads a
+  user from a request body, so there is still no field in which a caller writes
+  `privileged`, `cap_add` or a mount. It runs the container with LESS power than
+  before (non-root instead of root), `--cap-drop ALL` intact.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
   RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key
@@ -603,26 +645,28 @@ reason in the URL.
   with a fresh ticket each attempt; the option is now REQUIRED by the type
   (`OpcoesDoSocket`) and asserted by a test over the option passed to the
   constructor, since a test that only checks "it connects" passed throughout.
-- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
-  session JWT**, unlike `runner-ticket` above — the browser, already
-  logged in, registers the Ed25519 public key it just generated (the
-  private half never leaves it) before offering the runner binary for
-  download. Since [RN-551](business-rules.md#rn-551) the browser is no longer
-  the only generator: `brabo-runner device-key create` generates the pair on
-  the MACHINE and writes the private half to disk, mode 600, under
-  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`). What that changes for
-  this page is the shape of the secret, not its travel: the private half still
-  never crosses the wire, and only the public JWK and the registration `id`
-  ever do. What that CLI deliberately does not have is a credential to
-  register with — the registration stays with whoever holds the service token
-  (the installer, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
-  point 1), so each side holds exactly one secret and neither sees the other's.
-  The file the runner reads never exists without its `kid`: `create` writes a
+- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+  session JWT**, unlike `runner-ticket` above — the caller is a screen (the
+  device-keys section of Settings, and the `RunnerOnboardingPanel` recognizing
+  an already-paired machine). Until [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+  ([RN-687](business-rules.md#rn-687)) there was a third, a `POST` through
+  which the browser registered the Ed25519 public key it had just generated
+  (ADR 0118). That flow was retired and the route went with it, because it had
+  no other caller: keys are now born on the machine — `brabo-runner
+  device-key create` ([RN-551](business-rules.md#rn-551)) generates the pair
+  and writes the private half to disk, mode 600, under
+  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`) — and registered by the
+  installer through the internal route below. The private half still never
+  crosses the wire; only the public JWK and the registration `id` ever do.
+  What that CLI deliberately does not have is a credential to register with —
+  the registration stays with whoever holds the service token (the installer,
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 1), so
+  each side holds exactly one secret and neither sees the other's. The file
+  the runner reads never exists without its `kid`: `create` writes a
   `.parcial` name the reader ignores, and `finish --id <id>` stamps and
-  renames. `POST` persists the public key only — there's no "raw secret"
-  to hand back the way `IssuePersonalAccessTokenUseCase` does, because
-  the client already holds the only secret involved (the private key) and
-  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  renames. Project keys registered by the browser BEFORE ADR 0203 keep
+  working: `PatAuthGuard` still accepts them, `GET` lists them and `DELETE`
+  revokes them. `GET` lists the caller's own keys, revoked ones
   included ([RN-519](business-rules.md#rn-519)) — it is what makes
   revocation reachable at all, and until it existed an orphan key (tab
   closed midway through the automatic-setup flow) was invisible and
@@ -639,9 +683,8 @@ reason in the URL.
   which is which (`especie`): a MACHINE key (`projectId: null`) serves every
   project of its owner, so it shows up in every project's listing — without
   that it would be invisible and permanent in every screen, the very defect
-  RN-519 closed, reborn in the new species. This `POST` still creates only
-  project-bound keys; the one that creates MACHINE keys is
-  `POST /internal/machine-device-keys`, below
+  RN-519 closed, reborn in the new species. The route that creates MACHINE
+  keys is `POST /internal/machine-device-keys`, below
   ([RN-552](business-rules.md#rn-552)) — a different route, a different
   credential and a different caller. The KEY MATERIAL it registers is produced
   on the machine: `brabo-runner device-key create`
@@ -654,6 +697,23 @@ reason in the URL.
   Revoking a MACHINE key asks the engine to drop the live runner in EACH
   runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
+- **The MACHINE key is also reachable per ACCOUNT, with no project in the
+  path** ([RN-611](business-rules.md#rn-611)): `GET /users/me/machine-device-keys`
+  and `DELETE /users/me/machine-device-keys/:deviceKeyId`, classified `jwt`
+  because the scope is the caller themselves, like the rest of `/users/me/*`.
+  They exist because the one-line install creates the account and the machine
+  key BEFORE any project, and every other listing needs a `:projectId`: there,
+  the key was live and unreachable. They are deliberately narrow — only
+  MACHINE keys (a project key answers 404, the same as a key that doesn't
+  exist or is someone else's, so nothing leaks) and only the CALLER's (the
+  `userId` comes from the session JWT and goes into the `WHERE`; no parameter
+  names another user, and the `maintainer` view stays out, as RN-519 decided).
+  The `DELETE` is the same revocation as the per-project route, delegated to
+  the same use case: it drops the live connections opened WITH that key, in
+  every project (since [RN-685](business-rules.md#rn-685) the target is the
+  key, not `{project, user}`); with no project yet it
+  only records the revocation, which is all there is to stop — the waiting
+  machine agent (RN-550) has no connection, and its next ticket is refused.
 - **Revoking a device key now reaches the LIVE connection, and the target
   is `{project, user}` — never `{key}`**
   ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
@@ -676,6 +736,17 @@ reason in the URL.
   timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
   the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
   `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  **Revised by [RN-685](business-rules.md#rn-685)
+  ([ADR 0201](adr/0201-revogacao-por-chave.md)): the target is now the KEY.**
+  The ticket records which credential asked for it (the `kid`, or the PAT's
+  id), and the revocation asks the engine
+  (`POST /internal/runner/disconnect-credential`) to void the credential's
+  pending tickets and drop only the runners born from it — the declared cost
+  above is gone: a runner of the same user on a PAT or another key stays up.
+  PAT revocation (own, or as `maintainer`) now drops its connections too. A
+  connection opened with a pre-deploy ticket (no credential) still falls by
+  the pair, and an engine that does not know the route makes the api fall back
+  to `runner/disconnect`; the pair route also stays as member removal's target.
   The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
   stays OUT for device keys — now by decision, not omission: that pair was
   born of incident response to a SHARED secret circulating, and a device
@@ -923,6 +994,44 @@ reason in the URL.
   over HTTP, which is the class of state ADR 0127 was born to eliminate.
   Demoting **another** owner therefore stays allowed — the only way ownership
   gets revoked, and reversible through the same route by any remaining owner.
+- **`DELETE /workspaces/:workspaceId/members/:userId` is `role:owner`, and it
+  is the fifth door of the same family**
+  ([ADR 0173](adr/0173-remocao-de-membro-de-workspace.md),
+  [RN-615](business-rules.md#rn-615)). It did not exist when ADR 0157 was
+  written — the sentence above about "no member `@Delete`" describes that
+  moment. It carries the same cap with no new rule: `remocaoEhAutoRebaixamento`
+  with the workspace role as today's effective role and *none* as the role
+  after, since no level above catches the fall — so **removing YOURSELF is
+  always 403**. That same clause is what protects the **last owner**, without
+  counting: only an `owner` calls the route, nobody removes themselves, so
+  every successful call leaves at least the caller as `owner`. Removing
+  **another** owner is allowed (it is how ownership is revoked entirely), and
+  cap 1 still has no counterpart here — `@RequireRole('owner')` keeps
+  preventing hierarchy inversion. The removal also **cascades**, in one
+  transaction: the target's `project_members` rows in this workspace (without
+  it the project-overrides-workspace rule would keep them inside every project
+  where they had their own row), their PROJECT device keys and their PATs
+  here (every PAT belongs to one project); after commit their live runner
+  connection in each project is dropped, best effort, through the RN-520
+  path. Declared and not done: machine keys (account-wide; they stop reaching
+  this workspace because the role resolves to none), already-connected
+  session sockets. The **owner of record** (`workspaces.created_by`, whose
+  LLM and git credentials agents spend, RN-058) cannot be removed: 409
+  `criador_do_workspace` until `PUT /workspaces/:workspaceId/owner-of-record`
+  (`role:owner`, target must already be `owner`, else 409
+  `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
+  Any owner may transfer it, including to another owner who did not ask.
+- **`GET /workspaces/:workspaceId/members` is `role:viewer`, not the `owner`
+  of the three write routes next to it** ([RN-652](business-rules.md#rn-652),
+  AT-335). The minimum is the endpoint's (RN-102): reading the roster is not
+  maintaining it. `viewer` is what the neighbouring reads use
+  (`GET /workspaces/:workspaceId`, `/projects`) and what
+  `GET /projects/:projectId/members` uses — the read this one completes, since
+  whoever enters a project through the workspace role alone has no project
+  row. Anyone who can open a session can see who spoke in it, and a
+  workspace `viewer` already sees every project of the workspace. The body is
+  the same shape as the project read — `userId`, `name`, `email`, `role` —
+  and nothing else (no `createdAt`, no account state).
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -985,6 +1094,51 @@ reason in the URL.
   inactivity heartbeat, [RN-073](business-rules/custo.md#rn-073)) confirms
   there's no handoff, action, or turn hanging there. It never closes the
   execution session the call itself just activated.
+- **`GET /internal/sessions/:sessionId/pending-work` gained
+  `aguardandoUsuarioDesde`, and no route changed classification**
+  ([RN-581](business-rules.md#rn-581)). Still `engine-service`: the field
+  is the instant a conversational agent's turn ended, read from the same
+  event log the engine already writes, and it only decides how long the
+  engine keeps a session open. The same RN made the session routes that
+  append conversation (`POST .../agents/:agent/message`, the chat,
+  handoffs, `POST .../agents/:agent/start`,
+  `POST /internal/sessions/:sessionId/events`) answer **409**
+  `sessao_encerrada` on a terminal session — a refusal by STATE, after
+  the role check, never a new role. `terminationReason` on the session
+  responses gained one documented value, `conversation_idle_timeout`.
+- **`POST /projects/:projectId/execution/activate` refuses with `409` when
+  the project has no repository, and the classification didn't change**
+  — still `role:maintainer` ([RN-582](business-rules.md#rn-582),
+  [ADR 0165](adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)). The
+  refusal comes before any side effect. Its message is chosen from the
+  project's handoffs, read across ALL its sessions — so it can say "accept
+  the handoff to the Architect/Dev Lead". What it reveals is only that such a
+  handoff exists and its status, which any `viewer` of the project already reads
+  through `GET .../sessions/:sessionId/handoffs`; it never names a session or
+  a user.
+- **Offering a handoff to an agent already active in the project is `409`
+  `agente_ja_ativo`, and the classification didn't change** — the human route
+  `POST .../sessions/:sessionId/handoffs` stays `role:developer` and the
+  internal one stays `engine-service` ([RN-635](business-rules.md#rn-635),
+  [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)). Unlike the refusal above,
+  this one DOES name a session: the message says in which session of the same
+  project the target is active, because it is the text the agent reads as its
+  tool result and the pointer a person needs to go talk to it. Any `viewer` of
+  the project already lists its sessions and reads `agent.activated` in each,
+  so nothing crosses a project boundary. The same routes now answer with the
+  CURRENT offer instead of always a new row (`desfecho`), and the internal one
+  accepts `seAusente` — a switch that can only make the call write LESS.
+- **The internal `POST /internal/sessions/:sessionId/handoffs` may now ACCEPT
+  the Creative→PO offer it creates, and the classification didn't change** —
+  still `engine-service` ([RN-658](business-rules.md#rn-658),
+  [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)). The engine gains no
+  power to activate an agent: the api decides, from the `readiness.confirmed`
+  that a PERSON recorded through `POST .../readiness` (`role:developer`, the same
+  minimum as accepting by the card), and records that person as the actor. The
+  engine cannot forge the mark — it never writes `readiness.confirmed` — and
+  the offer must carry the `product_brief` born after that click, in the same
+  session. `POST .../agents/criativo/validate-necessity` keeps its route and
+  role, with no web caller left ([RN-657](business-rules.md#rn-657)).
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
@@ -992,6 +1146,13 @@ reason in the URL.
   `null`; never the project's most recent session, which is what the
   Executors tab used to read and which silently switched sessions the
   moment another session was born after it.
+- **`GET /workspaces/:workspaceId/projects-summary` gained
+  `roster.activatedAgents`, and the classification didn't change** — still
+  `role:viewer`. The field is the list of agent ids with an `agent.activated`
+  in the project's most recent session ([RN-630](business-rules.md#rn-630)),
+  computed in the same per-session sweep that already produces
+  `executionActivated` and `gatesEverOpened` ([RN-568](business-rules.md#rn-568)).
+  It names no user, no session and no credential, and adds no query.
 - **`POST .../llm-turn` and `POST .../llm-turn-stream` gained
   `modelName` in the response body/final frame, and the classification
   didn't change** — still `engine-service` as always
@@ -1020,6 +1181,33 @@ reason in the URL.
   wildcard to a client that already knows it has `maintainer`/`owner` —
   but what actually guarantees the role is this same
   `@RequireRole('maintainer')`, unchanged.
+- **The Jev tool router is a new OUTBOUND call carrying agent context**
+  ([ADR 0179](adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
+  [RN-625](business-rules.md#rn-625)). Before a chat call to an OpenRouter
+  model, the api POSTs to `https://openrouter.ai/api/alpha/decisions` (the
+  Decisions API, alpha) with the workspace owner's OpenRouter key — the SAME
+  key the chat already spends, decrypted in the same use case, never logged
+  and never returned. What travels is the `state`: the agent id, the last user
+  message (cut at 6,000 characters), the start of the system message (1,500),
+  and up to six recent tool calls with arguments and results cut at 500
+  characters each — plus the tool NAMES and DESCRIPTIONS, never their
+  `parameters`. That is content the chat call already sends to the same
+  OpenRouter account, in a smaller slice, but it now reaches a second model
+  (`typesafe/jev-1.13`) behind it. The switch is per workspace
+  (`PUT /workspaces/:workspaceId/tool-router`, `role:owner`, on by default) and
+  it only fires with an OpenRouter chat model. The router narrows the tool
+  menu and nothing else: it cannot approve, deny, or widen anything, and a
+  call the model makes outside the menu still becomes a Proposed Action under
+  the same policy. Any failure of the call falls to the whole catalog.
+- **`POST .../actions/:actionId/approve_always` gained `desfecho` and
+  `padraoGravado` in the response, and the classification didn't change** —
+  still `role:developer` ([RN-642](business-rules.md#rn-642)). The approval
+  and the recorded pattern now share one transaction; clicking an action that
+  was already APPROVED answers `201` with `desfecho: "ja_aprovada"` instead of
+  `409`, and a DENIED action keeps answering `409` (`acao_ja_recusada`) with
+  nothing written. The RN-418 caps and `container_remove` are still refused
+  with `400` before any state is read, so the idempotent path can never write
+  a pattern the ceiling forbids.
 
 ## Table
 
@@ -1064,6 +1252,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-routing` | engine-service |
+| POST | `/internal/sessions/:sessionId/module-contracts` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
@@ -1076,6 +1265,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| GET | `/internal/projects/:projectId/module-contracts` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
 | POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
@@ -1084,6 +1274,7 @@ reason in the URL.
 | POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
+| POST | `/internal/sessions/:sessionId/semantic-duplicate-check` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/:taskId/block` | engine-service |
@@ -1093,13 +1284,17 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
 | GET | `/runner/projects` | jwt |
+| GET | `/llm/provider-capabilities` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
+| GET | `/users/me/machine-device-keys` | jwt |
+| DELETE | `/users/me/machine-device-keys/:deviceKeyId` | jwt |
 | GET | `/users/me/preferences` | jwt |
 | PATCH | `/users/me/preferences` | jwt |
+| POST | `/users/me/preferences/detected-language` | jwt |
 | GET | `/workspaces` | jwt |
 | POST | `/workspaces` | jwt |
 | DELETE | `/projects/:projectId` | role:maintainer |
@@ -1166,6 +1361,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/members/:userId` | role:maintainer |
 | GET | `/projects/:projectId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
+| GET | `/projects/:projectId/model-bindings/resolved` | role:viewer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | POST | `/projects/:projectId/personal-access-tokens` | role:developer |
@@ -1173,7 +1369,6 @@ reason in the URL.
 | GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
-| POST | `/projects/:projectId/runner-device-keys` | role:developer |
 | GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
@@ -1194,6 +1389,7 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/messages/:messageId/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
@@ -1213,17 +1409,24 @@ reason in the URL.
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/psychologist/reanalyze` | role:maintainer |
 | POST | `/projects/:projectId/sessions/:sessionId/readiness` | role:developer |
+| GET | `/projects/:projectId/sessions/:sessionId/response-language` | role:viewer |
+| PUT | `/projects/:projectId/sessions/:sessionId/response-language` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/socket-ticket` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
+| GET | `/workspaces/:workspaceId/members` | role:viewer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
+| DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
+| PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
+| PUT | `/workspaces/:workspaceId/tool-router` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |

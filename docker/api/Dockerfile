@@ -1,5 +1,4 @@
-# 24-alpine
-FROM node@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81
+FROM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81
 
 # UID/GID do usuário que roda o container — casam com o dono do bind mount
 # no host (ver docker-compose.yml `build.args` e .env.example), pra tudo que
@@ -40,6 +39,14 @@ WORKDIR /workspace
 # alguém provisiona um repositório pela primeira vez.
 RUN mkdir -p /data/git-repos /data/project-workspaces \
   && chown -R "${DEV_UID}:${DEV_GID}" /data
+
+# Os TRÊS volumes de `node_modules` (docker-compose.yml, serviço `api`) seguem a
+# mesma lição, e o defeito é o mesmo: com o volume inexistente, sem o caminho
+# aqui ele nasce `root:root 755` e o `pnpm install` do CMD morre com
+# `EACCES: mkdir '/workspace/node_modules/.pnpm'` (AT-172). O `chown` é só dos
+# pontos de montagem, vazios — nunca recursivo sobre `/workspace`.
+RUN mkdir -p /workspace/node_modules /workspace/apps/api/node_modules /workspace/packages/shared/node_modules \
+  && chown "${DEV_UID}:${DEV_GID}" /workspace/node_modules /workspace/apps/api/node_modules /workspace/packages/shared/node_modules
 
 USER ${DEV_UID}:${DEV_GID}
 

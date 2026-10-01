@@ -3,6 +3,8 @@ defmodule Engine.Harness.ContextManagerTest do
   use ExUnit.Case, async: false
 
   alias Engine.Harness.ContextManager
+  alias Engine.Harness.ContextManager.Default
+  alias Engine.Harness.Tokenizer
   alias Engine.Sessions.FakeEngineApiClient
 
   setup do
@@ -66,6 +68,55 @@ defmodule Engine.Harness.ContextManagerTest do
                      }}
 
     assert before_tokens > after_tokens
+  end
+
+  # RN-580: o resumo era a ÚNICA memória do que foi compactado e morria com o
+  # processo — o evento gravava só as contagens. Agora grava o texto, de quem é,
+  # e quantas mensagens ele substituiu; é o que a reidratação lê de volta.
+  test "context.compacted grava o RESUMO, o agente e quantas mensagens ele substituiu" do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("O usuário quer X.")])
+
+    ctx = %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "criativo",
+      messages: [
+        msg("system", "P", true),
+        msg("user", long, false),
+        msg("assistant", long, false),
+        msg("assistant", "recente", false)
+      ],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+
+    assert {:ok, _} = ContextManager.maybe_compact(ctx)
+
+    assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
+    assert payload.summary == "O usuário quer X."
+    assert payload.agent == "criativo"
+    assert payload.messagesSummarized == 2
+  end
+
+  test "sumarizador falhando: o resumo gravado é o fallback determinístico, nunca vazio" do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+    Process.put(:fake_llm_turn_error, :timeout)
+
+    ctx = %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "po",
+      messages: [msg("system", "P", true), msg("user", long, false), msg("assistant", "r", false)],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+
+    assert {:ok, _} = ContextManager.maybe_compact(ctx)
+
+    assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
+    assert payload.summary == "(1 turnos anteriores omitidos)"
   end
 
   test "sem estouro de janela: não compacta, contexto intacto" do
@@ -335,7 +386,10 @@ defmodule Engine.Harness.ContextManagerTest do
       assert_received {:prompt_template_fetched, "context-manager-summarize", nil}
 
       content = prompt_do_sumarizador()
-      assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos:"
+      # A frase de abertura terminava em ":" até a RN-621; agora termina em "."
+      # e é seguida da instrução de idioma — o teste fixa o texto NOVO.
+      assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos."
+      assert content =~ Default.instrucao_de_idioma()
       assert content =~ "assistant: conteúdo antigo e verboso"
       refute content =~ "{{"
 
@@ -353,9 +407,57 @@ defmodule Engine.Harness.ContextManagerTest do
     refute_received {:prompt_template_fetched, _name, _version}
 
     content = prompt_do_sumarizador()
-    assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos:"
+    assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos."
 
     contents = Enum.map(out.messages, &Map.get(&1, "content"))
     assert Enum.any?(contents, &(&1 =~ "RESUMO"))
+  end
+
+  describe "idioma do resumo (RN-621)" do
+    test "o prompt inline pede o idioma original de cada turno, antes dos turnos" do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("RESUMO")])
+
+      assert {:ok, _out} = ContextManager.maybe_compact(ctx_que_compacta())
+
+      content = prompt_do_sumarizador()
+      assert content =~ "idioma original"
+      assert content =~ "não traduza citações nem código"
+
+      # a instrução vem ANTES dos turnos: turno cujo texto termina o prompt
+      # não pode ser lido como continuação dela
+      {pos_instrucao, _} = :binary.match(content, Default.instrucao_de_idioma())
+      {pos_turnos, _} = :binary.match(content, "assistant: conteúdo antigo")
+      assert pos_instrucao < pos_turnos
+    end
+
+    test "o acréscimo cabe no teto de 50 tokens de entrada por chamada (AT-169, resposta 8)" do
+      instrucao = Default.instrucao_de_idioma()
+
+      # pela heurística do próprio engine (bytes/4) ...
+      assert Tokenizer.estimate(instrucao) <= 50
+      # ... e por uma régua pessimista (1 token a cada 2 bytes), que cobre
+      # tokenizer BPE partindo acento e palavra pt-BR em mais pedaços
+      assert div(byte_size(instrucao) + 1, 2) <= 50
+    end
+
+    test "o template versionado carrega a MESMA instrução que o inline" do
+      template =
+        Path.expand("../../../../../prompts/context-manager-summarize.md", __DIR__)
+        |> File.read!()
+
+      # sem isto, ligar `graph_templates_enabled?` com o template semeado
+      # devolveria o resumo que traduz — as duas trilhas divergiriam calado
+      assert template =~ Default.instrucao_de_idioma()
+    end
+
+    test "o fallback de quando o sumarizador falha não ganha a instrução nem finge resumo" do
+      Process.put(:fake_llm_turns, [{:error, :timeout}])
+
+      assert {:ok, out} = ContextManager.maybe_compact(ctx_que_compacta())
+
+      contents = Enum.map(out.messages, &Map.get(&1, "content"))
+      assert Enum.any?(contents, &(&1 =~ "turnos anteriores omitidos"))
+      refute Enum.any?(contents, &(&1 =~ "idioma original"))
+    end
   end
 end

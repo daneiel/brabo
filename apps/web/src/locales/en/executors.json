@@ -1,7 +1,8 @@
 {
   "tab": {
     "title": "Executors",
-    "summary": "{{count}} agents · {{working}} working · {{waiting}} waiting",
+    "summary_one": "{{count}} agent · {{working}} working · {{waiting}} waiting",
+    "summary_other": "{{count}} agents · {{working}} working · {{waiting}} waiting",
     "subtitle": "Dev agent and QA — who implements and who verifies. The rest of the team is in the Overview.",
     "sessionError": {
       "title": "Could not find this project's execution session."
@@ -32,7 +33,8 @@
     },
     "autonomy": {
       "manual": "manual",
-      "auto": "auto"
+      "auto": "auto",
+      "autoModeHint": "Auto mode: runs any command, even outside the project folder. Push, PR, deploy, sudo/doas and merges into a protected branch still ask for your approval."
     },
     "rearm": "rearm"
   },
@@ -44,7 +46,8 @@
   "agentStatus": {
     "circuitBreaker": {
       "default": "circuit breaker triggered",
-      "withCount": "circuit breaker: {{count}} consecutive blocked tasks"
+      "withCount_one": "circuit breaker: {{count}} consecutive blocked task",
+      "withCount_other": "circuit breaker: {{count}} consecutive blocked tasks"
     },
     "delegation": {
       "completed": "completed the delegation",
@@ -54,13 +57,86 @@
   },
   "timelineTree": {
     "empty": "No agent has taken action in this session yet.",
-    "newSinceLastVisit": "{{count}} new milestone(s) since last visit",
+    "newSinceLastVisit_one": "{{count}} new milestone since last visit",
+    "newSinceLastVisit_other": "{{count}} new milestones since last visit",
     "iteration": "iteration {{n}}",
     "marker": {
       "args": "arguments",
       "result": "result",
       "resultFailed": "result (failed)",
       "error": "error: {{error}}"
+    },
+    "label": {
+      "agentActivated": "took over the work",
+      "agentResponse": "responded",
+      "agentError": "failed",
+      "toolCall": "used a tool",
+      "toolResult": "tool responded",
+      "handoffOffered": "offered the work",
+      "handoffAccepted": "accepted the work",
+      "artifactProductBrief": "issued the brief",
+      "artifactBusinessRule": "issued a business rule",
+      "artifactModuleMap": "issued the module_map",
+      "artifactModuleRouting": "routed modules to infra",
+      "artifactInsight": "issued a hypothesis",
+      "delegationCompleted": "subagent finished",
+      "delegationFailed": "subagent failed",
+      "delegationDispensed": "dismissed the delegation",
+      "devStarted": "looking for a task",
+      "devWorking": "working",
+      "devIdle": "idle",
+      "devAwaitingApproval": "waiting for your approval",
+      "devAwaitingGate": "waiting for the gate",
+      "devBlocked": "blocked",
+      "devBlockedByContainer": "stopped: the project has no running container",
+      "devError": "error",
+      "devIdleTripped": "circuit breaker opened",
+      "prGateChanged": "gate changed"
+    },
+    "now": {
+      "notYet": "hasn't taken action yet",
+      "failed": "stopped due to a failure",
+      "failedWithDetail": "stopped due to a failure ({{detalhe}})",
+      "handedOff": "handed off",
+      "handedOffWithDetail": "handed off {{detalhe}}",
+      "turnEnded": "finished the turn",
+      "withDetail": "{{rotulo}} — {{detalhe}}"
+    },
+    "detail": {
+      "origin": "origin {{origem}}"
+    }
+  },
+  "autoModeTeam": {
+    "title": "Auto mode for the team",
+    "subtitle": "Execution has started. Turning on auto mode for the chosen agents lets their next commands run without asking for approval — including outside the project folder. It is an offer: nothing changes without the click below, and each agent keeps its own manual/auto toggle.",
+    "released": {
+      "summary": "What the autopilot releases and what it does not",
+      "title": "Auto mode is the autopilot — it releases, without asking:",
+      "commands": "any command inside the project's container, even with a path outside the project folder",
+      "compound": "compound commands with a segment that has no rule in permissions.json",
+      "commitBranch": "git commit and creating a LOCAL branch",
+      "alwaysAllow": "clicking \"Always allow\" on this agent does not turn the autopilot off"
+    },
+    "notReleased": {
+      "title": "Auto mode does NOT release — these still ask for your approval:",
+      "merge": "merge into a protected branch (dev, qa, main)",
+      "push": "git push, opening a PR and deploy",
+      "privileged": "sudo and doas",
+      "containerRemove": "removing a container (container_remove)",
+      "instructionPatch": "changing an agent's instructions (instruction_patch)",
+      "parallelize": "parallelizing or raising the parallelism ceiling",
+      "deny": "what is in deny (or ask) in permissions.json stays as written",
+      "turnOff": "To turn it off, use the manual/auto toggle on each agent's card."
+    },
+    "noRole": "Turning on auto mode requires the maintainer role (read from the workspace; the project role is not checked here).",
+    "button_one": "Turn on for {{count}} agent",
+    "button_other": "Turn on for {{count}} agents",
+    "erroGenerico": "Could not turn on auto mode",
+    "result": {
+      "all_one": "Auto mode turned on for {{count}} agent.",
+      "all_other": "Auto mode turned on for all {{count}} agents.",
+      "none": "No agent had auto mode turned on: {{mensagem}}",
+      "some": "Turned on for {{ok}} of {{total}} agents. Still manual: {{falharam}}."
     }
   }
 }

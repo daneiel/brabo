@@ -139,6 +139,7 @@ defmodule Engine.Harness.ArtifactSchemasTest do
       assert :ok =
                ArtifactSchemas.validate("plano_de_teste", %{
                  "storyId" => "st-1",
+                 "taskId" => "task-1",
                  "planoDeTeste" => "cobrir o cadastro",
                  "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
                  "estrategiaDeAutomacao" => "integração"
@@ -151,8 +152,21 @@ defmodule Engine.Harness.ArtifactSchemasTest do
       assert {:error, :criterios_vazios} =
                ArtifactSchemas.validate("plano_de_teste", %{
                  "storyId" => "st-1",
+                 "taskId" => "task-1",
                  "planoDeTeste" => "cobrir o cadastro",
                  "criteriosExecutaveis" => [],
+                 "estrategiaDeAutomacao" => "integração"
+               })
+    end
+
+    # ADR 0192 (RN-674): o plano é da ENTREGA de uma task — sem `taskId` o
+    # `QaLeadServer` não o reencontraria na rodada de correção.
+    test "sem taskId é rejeitado — o plano é da entrega, não da story solta" do
+      assert {:error, {:missing_keys, ["taskId"]}} =
+               ArtifactSchemas.validate("plano_de_teste", %{
+                 "storyId" => "st-1",
+                 "planoDeTeste" => "cobrir o cadastro",
+                 "criteriosExecutaveis" => ["a"],
                  "estrategiaDeAutomacao" => "integração"
                })
     end
@@ -161,6 +175,7 @@ defmodule Engine.Harness.ArtifactSchemasTest do
       assert {:error, {:missing_keys, ["estrategiaDeAutomacao"]}} =
                ArtifactSchemas.validate("plano_de_teste", %{
                  "storyId" => "st-1",
+                 "taskId" => "task-1",
                  "planoDeTeste" => "cobrir o cadastro",
                  "criteriosExecutaveis" => ["a"]
                })

@@ -41,6 +41,56 @@ export interface AcaoLegivel {
   frase: string | null;
 }
 
+/**
+ * Um pedaço da frase, dizendo se é CÓDIGO (comando, branch, caminho, imagem)
+ * ou prosa (AT-322). Quem renderiza põe o código em mono e SEM aspas — antes o
+ * comando vinha entre aspas retas, em fonte proporcional, e a aspa se lia como
+ * parte do comando. A frase em texto puro (`frase`) continua existindo, sem as
+ * aspas também, para quem só precisa da string.
+ */
+export interface TrechoDaFrase {
+  texto: string;
+  codigo: boolean;
+}
+
+export interface AcaoLegivelEmTrechos extends AcaoLegivel {
+  /** A mesma frase, em trechos. `null` exatamente quando `frase` é `null`. */
+  trechos: TrechoDaFrase[] | null;
+}
+
+// Marcas de uso privado do Unicode: nenhum payload real as contém, e elas
+// nunca saem deste módulo — `fraseDaAcao` as remove, `trechosDaFrase` as usa
+// para cortar. É o que deixa cada frase continuar sendo UMA template string.
+const ABRE_CODIGO = '\u{E000}';
+const FECHA_CODIGO = '\u{E001}';
+const MARCAS = /[\u{E000}\u{E001}]/gu;
+
+function codigo(valor: string): string {
+  return `${ABRE_CODIGO}${valor}${FECHA_CODIGO}`;
+}
+
+function semMarcas(marcada: string): string {
+  return marcada.replace(MARCAS, '');
+}
+
+function emTrechos(marcada: string): TrechoDaFrase[] {
+  const trechos: TrechoDaFrase[] = [];
+  let resto = marcada;
+  while (resto.length > 0) {
+    const abre = resto.indexOf(ABRE_CODIGO);
+    if (abre === -1) {
+      trechos.push({ texto: resto, codigo: false });
+      break;
+    }
+    if (abre > 0) trechos.push({ texto: resto.slice(0, abre), codigo: false });
+    const fecha = resto.indexOf(FECHA_CODIGO, abre);
+    const fim = fecha === -1 ? resto.length : fecha;
+    trechos.push({ texto: resto.slice(abre + ABRE_CODIGO.length, fim), codigo: true });
+    resto = fecha === -1 ? '' : resto.slice(fecha + FECHA_CODIGO.length);
+  }
+  return trechos;
+}
+
 const VERBO_DESCONHECIDO = 'propõe uma ação';
 
 export const VERBO_DA_ACAO: Record<ActionType, string> = {
@@ -119,7 +169,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   terminal: (p) => {
     const comando = texto(p, 'command');
     return comando
-      ? `Executa o comando "${curto(comando)}" no terminal do projeto.`
+      ? `Executa ${codigo(curto(comando))} no terminal do projeto.`
       : 'Executa um comando no terminal do projeto.';
   },
 
@@ -132,9 +182,9 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const alvo = arquivos
       ? ` de ${plural(arquivos, 'arquivo', 'arquivos')}`
       : caminho
-        ? ` do arquivo ${caminho}`
+        ? ` do arquivo ${codigo(caminho)}`
         : '';
-    const onde = branch ? ` na branch ${branch}` : ' no repositório do projeto';
+    const onde = branch ? ` na branch ${codigo(branch)}` : ' no repositório do projeto';
     const porque = mensagem ? `: "${curto(mensagem)}"` : '';
     return `Registra um commit${alvo}${onde}${porque}.`;
   },
@@ -142,7 +192,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   git_push: (p) => {
     const branch = texto(p, 'branch');
     return branch
-      ? `Envia a branch ${branch} para o repositório remoto do projeto.`
+      ? `Envia a branch ${codigo(branch)} para o repositório remoto do projeto.`
       : 'Envia a branch de trabalho para o repositório remoto do projeto.';
   },
 
@@ -150,7 +200,12 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const origem = texto(p, 'sourceBranch');
     const destino = texto(p, 'targetBranch');
     const titulo = texto(p, 'title');
-    const rota = origem && destino ? ` de ${origem} para ${destino}` : origem ? ` a partir de ${origem}` : '';
+    const rota =
+      origem && destino
+        ? ` de ${codigo(origem)} para ${codigo(destino)}`
+        : origem
+          ? ` a partir de ${codigo(origem)}`
+          : '';
     const nome = titulo ? `: "${curto(titulo)}"` : '';
     return `Abre uma pull request${rota}${nome}.`;
   },
@@ -174,20 +229,20 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   git_branch_create: (p) => {
     const branch = texto(p, 'branchName');
     const origem = texto(p, 'fromRef');
-    const qual = branch ? ` ${branch}` : '';
-    const partindo = origem ? ` a partir de ${origem}` : '';
+    const qual = branch ? ` ${codigo(branch)}` : '';
+    const partindo = origem ? ` a partir de ${codigo(origem)}` : '';
     return `Cria a branch${qual}${partindo} no repositório do projeto.`;
   },
 
   git_branch_protect: (p) => {
     const branch = texto(p, 'branchName');
-    const qual = branch ? ` ${branch}` : '';
+    const qual = branch ? ` ${codigo(branch)}` : '';
     return `Liga a proteção da branch${qual} — depois disso, nada entra nela sem pull request.`;
   },
 
   write_file: (p) => {
     const caminho = texto(p, 'path');
-    const qual = caminho ? ` ${caminho}` : '';
+    const qual = caminho ? ` ${codigo(caminho)}` : '';
     return `Escreve o arquivo${qual} no workspace — fora da área que este agente altera sozinho.`;
   },
 
@@ -195,7 +250,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const titulo = texto(p, 'title');
     const slug = texto(p, 'slug');
     const nome = titulo ? ` "${curto(titulo)}"` : '';
-    const arquivo = slug ? ` em docs/adr/${slug}.md` : '';
+    const arquivo = slug ? ` em ${codigo(`docs/adr/${slug}.md`)}` : '';
     return `Abre uma pull request com a ADR${nome}${arquivo}.`;
   },
 
@@ -211,7 +266,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const pr = primeiro(p, 'pullRequestId');
     const destino = texto(p, 'targetBranch');
     const qual = pr ? ` #${pr}` : '';
-    const onde = destino ? ` em ${destino}` : '';
+    const onde = destino ? ` em ${codigo(destino)}` : '';
     return `Faz o merge da pull request${qual}${onde} no repositório do projeto.`;
   },
 
@@ -252,10 +307,14 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
         ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
         : '';
     const porque = resumo ? `: "${curto(resumo)}"` : '';
-    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
-    // uma ação separada (ativar execução), depois. Ver o comentário de
-    // `DevLeadTools.classificar/4`.
-    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
+    const tarefas = quantidade(p, 'tarefas');
+    const comTarefas =
+      tarefas !== undefined && tarefas > 0
+        ? ` Cada uma das ${plural(tarefas, 'tarefa', 'tarefas')} vai para o dev do módulo que o Dev Lead escolheu.`
+        : '';
+    // RN-677 (AT-263, ADR 0194): aprovar o plano É ativar a execução — sobe
+    // os dev agents e começa o gasto. A frase diz isso antes do clique.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}`;
   },
 
   assess_implementability: (p) => {
@@ -264,8 +323,9 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
     const porque = justificativa ? `: "${curto(justificativa)}"` : '';
     // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
-    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
-    // parecer; não sobe agente nenhum.
+    // Lead, a partir da história e do `module_map` (desde o ADR 0192 o plano
+    // de teste nasce depois da entrega). Aprovar registra o parecer; não sobe
+    // agente nenhum.
     return `Registra a story como ${rotulo}${porque}.`;
   },
 
@@ -279,7 +339,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const memoriaMb =
       typeof resources?.memoryMb === 'number' ? resources.memoryMb : undefined;
 
-    const qual = imagem ? ` de ${imagem}` : '';
+    const qual = imagem ? ` de ${codigo(imagem)}` : '';
     const specs =
       cpus !== undefined && memoriaMb !== undefined
         ? ` com ${cpus} CPU e ${memoriaMb} MB de memória`
@@ -321,14 +381,30 @@ export function verboDaAcao(actionType: string): string {
   return VERBO_DA_ACAO[actionType as ActionType] ?? VERBO_DESCONHECIDO;
 }
 
-/** A frase do tipo, ou `null` quando o web ainda não o conhece. */
-export function fraseDaAcao(actionType: string, payload: Payload = {}): string | null {
+function fraseMarcada(actionType: string, payload: Payload): string | null {
   const escrever = FRASE_DA_ACAO[actionType as ActionType];
   return escrever ? escrever(payload) : null;
 }
 
-export function descreverAcao(actionType: string, payload: Payload = {}): AcaoLegivel {
-  return { verbo: verboDaAcao(actionType), frase: fraseDaAcao(actionType, payload) };
+/** A frase do tipo, ou `null` quando o web ainda não o conhece. */
+export function fraseDaAcao(actionType: string, payload: Payload = {}): string | null {
+  const marcada = fraseMarcada(actionType, payload);
+  return marcada === null ? null : semMarcas(marcada);
+}
+
+/** A mesma frase de {@link fraseDaAcao}, em trechos de prosa e de código. */
+export function trechosDaFraseDaAcao(actionType: string, payload: Payload = {}): TrechoDaFrase[] | null {
+  const marcada = fraseMarcada(actionType, payload);
+  return marcada === null ? null : emTrechos(marcada);
+}
+
+export function descreverAcao(actionType: string, payload: Payload = {}): AcaoLegivelEmTrechos {
+  const marcada = fraseMarcada(actionType, payload);
+  return {
+    verbo: verboDaAcao(actionType),
+    frase: marcada === null ? null : semMarcas(marcada),
+    trechos: marcada === null ? null : emTrechos(marcada),
+  };
 }
 
 /**

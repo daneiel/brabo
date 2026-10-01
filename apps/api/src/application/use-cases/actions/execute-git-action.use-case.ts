@@ -7,10 +7,12 @@ import { GitProviderRegistry } from '../../ports/git-provider.port';
 import { ProvisionedRepositoryRepository } from '../../ports/provisioned-repository-repository.port';
 import { UserCredentialRepository } from '../../ports/user-credential-repository.port';
 import { ResolveCredentialOwnerUseCase } from '../llm/resolve-credential-owner.use-case';
+import { TaskRepository } from '../../ports/backlog-repository.port';
 import { EncryptionService } from '../../ports/encryption.port';
 import { AppendSessionEventUseCase } from '../sessions/append-session-event.use-case';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
 import type { GitActionExecutionResult } from '../../../domain/git/git-action-execution-result';
+import { BRANCH_DE_TRABALHO } from '../../../domain/actions/protected-branches';
 
 // Coerção segura de campos `unknown` (payload/resultado do engine) para
 // string — evita o `[object Object]` que o String(unknown) permitiria.
@@ -39,6 +41,7 @@ export class ExecuteGitActionUseCase {
     private readonly userCredentials: UserCredentialRepository,
     private readonly encryption: EncryptionService,
     private readonly resolveOwner: ResolveCredentialOwnerUseCase,
+    private readonly tasks: TaskRepository,
   ) {}
 
   async execute(
@@ -129,7 +132,10 @@ export class ExecuteGitActionUseCase {
       const pr = await provider.openPullRequest({
         externalId: repo.externalId,
         sourceBranch: str(payload.sourceBranch),
-        targetBranch: str(payload.targetBranch, repo.defaultBranch),
+        // RN-664: o dev agent manda `targetBranch: 'dev'` explícito; o default
+        // cobre a ação proposta antes disso (sem o campo), que ia para
+        // `repo.defaultBranch` (`main`) e pulava a esteira.
+        targetBranch: str(payload.targetBranch, BRANCH_DE_TRABALHO),
         title: str(payload.title, 'PR'),
         body: str(payload.body) || undefined,
         accessToken,
@@ -190,6 +196,9 @@ export class ExecuteGitActionUseCase {
         updated,
         status === 'executed',
       );
+      if (status === 'executed') {
+        await this.settleMerge(projectId, sessionId, actionId, executionResult);
+      }
 
       return updated;
     });
@@ -227,6 +236,66 @@ export class ExecuteGitActionUseCase {
       eventType: 'task.pr_settled',
       payload: { projectId, sessionId, taskId, agentId, opened },
     });
+  }
+
+  /**
+   * O merge executado fecha a(s) tarefa(s) da PR (AT-275, RN-628).
+   *
+   * Sem isto a tarefa ficava em `in_review` para sempre: o gate de QA/SecOps
+   * termina em `awaiting_user` e ninguém mais mexia no `status`. Só roda
+   * DEPOIS do merge que o humano aprovou (RN-418 — nada aqui mergeia) e só com
+   * `state: 'merged'`. A tarefa é achada pelo `pr_open` que a abriu
+   * (`storyTaskId` no payload, `pullRequestId` no resultado).
+   *
+   * IDEMPOTENTE por construção: `markDoneIfNotDone` é um UPDATE condicional, e
+   * o evento imutável (`backlog.task_status_changed`) só é gravado quando a
+   * linha de fato mudou — merge repetido da mesma PR não move de novo nem
+   * duplica evento. Não consulta o gate (AT-249: gate pendente só AVISA, na
+   * tela). Merge de PR já mergeada não chega aqui: a proposta e a aprovação o
+   * recusam com 409 `pr_ja_mergeado`, e o `LocalGitProvider` também (RN-663).
+   */
+  private async settleMerge(
+    projectId: string,
+    sessionId: string,
+    actionId: string,
+    result: GitActionExecutionResult,
+  ) {
+    if (result.kind !== 'git_merge' || result.state !== 'merged') return;
+
+    const prActions = await this.proposedActions.listByProjectAndType(
+      projectId,
+      'pr_open',
+    );
+    const taskIds = new Set<string>();
+    for (const a of prActions) {
+      const r = a.executionResult;
+      const taskId = (a.payload as { storyTaskId?: unknown }).storyTaskId;
+      if (
+        r &&
+        'kind' in r &&
+        r.kind === 'pr_open' &&
+        r.pullRequestId === result.pullRequestId &&
+        typeof taskId === 'string'
+      ) {
+        taskIds.add(taskId);
+      }
+    }
+
+    for (const taskId of taskIds) {
+      const task = await this.tasks.markDoneIfNotDone(taskId);
+      if (!task) continue;
+      await this.appendSessionEvent.execute(projectId, sessionId, {
+        type: 'backlog.task_status_changed',
+        actor: { kind: 'system', id: 'git-executor' },
+        payload: {
+          taskId,
+          status: 'done',
+          cause: 'pr_merged',
+          pullRequestId: result.pullRequestId,
+          actionId,
+        },
+      });
+    }
   }
 
   private markFailed(

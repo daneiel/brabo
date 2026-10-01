@@ -68,7 +68,13 @@
   opacity: 0.22;
 }
 
-/* Brilho teal atrás do cabeçalho, cortado pelo `overflow` da tela. */
+/*
+ * Brilho de ACENTO atrás do cabeçalho, cortado pelo `overflow` da tela. Era
+ * `--success-soft`, que lia como a marca enquanto o acento era teal; no tema
+ * neutro terracota (ADR 0181) virou névoa verde atrás de uma página terracota
+ * (AT-332). `--accent-soft` existe nos dois temas, e o texto por cima continua
+ * medido em `design-contraste.test.ts` contra o pico do brilho.
+ */
 .brilho {
   position: absolute;
   top: -160px;
@@ -79,7 +85,7 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--success) 14%, transparent),
+    var(--accent-soft),
     transparent
   );
   pointer-events: none;
@@ -387,7 +393,7 @@
   background: var(--surface-0);
   padding: 14px 28px;
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
@@ -409,7 +415,7 @@
   gap: var(--space-3);
   margin-top: 22px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
@@ -450,13 +456,14 @@
  * boa parte dos casos — quem navega por Tab não tinha como saber onde estava.
  */
 /*
- * `--accent-hover` em repouso, e não `--accent` como no mock.
+ * `--accent` em repouso, como no mock.
  *
- * `--accent` sobre `--surface-1` dá 3.88:1 — reprova o 4.5:1 do AA, e estes links
- * são pequenos (11.5px no "Esqueci minha senha"). `--accent-hover` dá 4.90:1 e é
- * o MESMO matiz, só um degrau mais claro; nada de cor inventada. Como o hover
- * perde a mudança de cor, ele ganha o sublinhado — que é indicador melhor de
- * qualquer forma, porque não depende de enxergar cor. Ver
+ * Foi `--accent-hover` até o ADR 0181: `--accent` sobre `--surface-1` dava
+ * 3.88:1 no escuro azul-petróleo e reprovava o 4.5:1 do AA, e estes links são
+ * pequenos (11.5px no "Esqueci minha senha"). Com a paleta neutra o par mede
+ * 5.31:1 no escuro e 5.35:1 no claro, então o degrau emprestado deixou de ser
+ * necessário e o link voltou ao acento do desenho. O hover segue SUBLINHANDO em
+ * vez de mudar de cor — indicador que não depende de enxergar cor. Ver
  * `design-contraste.test.ts`.
  */
 /*
@@ -467,7 +474,7 @@
  * o rótulo do campo, não uma frase, mas a régua de baseline é a mesma.
  */
 .link {
-  color: var(--accent-hover);
+  color: var(--accent);
   text-decoration: none;
   background: none;
   border: none;
@@ -492,7 +499,7 @@
  * aqui quebraria exatamente o alinhamento que aquele comentário defende.
  */
 .linkPequeno {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
 }
 
 .link:focus-visible {

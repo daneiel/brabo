@@ -2,7 +2,7 @@
 -- Kit de colheita da Fase 10c — as queries que produzem o relatório
 --
 -- Uso:
---   docker exec -i brabo-postgres-1 psql -U brabo -d brabo \
+--   docker exec -i brabo-dev-postgres-1 psql -U brabo -d brabo \
 --     -f - < docs/missions/colheita-queries.sql
 --
 -- Cada bloco diz qual parte de `colheita-esqueleto.md` ele preenche. O

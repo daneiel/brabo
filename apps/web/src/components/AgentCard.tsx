@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
+import { Badge } from './ui/Badge';
+import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './AgentCard.module.css';
 
 // `travado` (Fase 12b — RN-047): circuit breaker do dev agent disparado.
@@ -36,6 +38,16 @@ interface AgentCardProps {
   model?: { name: string; provider: string };
   autonomy?: AutonomyMode;
   onAutonomyChange?: (mode: AutonomyMode) => void;
+  /**
+   * Uma frase sob o toggle dizendo o que o "auto" LIBERA e o que continua
+   * pedindo aprovação (RN-603). Quem decide se cabe é o chamador: só a
+   * curinga `"*"` ligada é modo automático — o toggle sobre o tipo
+   * representativo grava uma regra específica, que não libera o escopo.
+   * Desde a RN-670 (ADR 0189) a frase vem com a lista inteira do piloto
+   * (`OQueOPilotoLibera`, recolhida) — a mesma do `ApprovalCard` e dos
+   * Executores.
+   */
+  autonomyHint?: string;
   /** Task/atividade corrente — o que o agente está fazendo AGORA. */
   activity?: { label: string; branch?: string };
   /** Custo acumulado do agente NESTA sessão, em micro-USD. */
@@ -63,6 +75,7 @@ export function AgentCard({
   model,
   autonomy,
   onAutonomyChange,
+  autonomyHint,
   activity,
   tokensMicros,
   badge,
@@ -83,7 +96,11 @@ export function AgentCard({
         <div className={styles.info}>
           <div className={styles.name}>
             {agent.name}
-            {badge && <span className={styles.badge}>{badge}</span>}
+            {badge && (
+              <Badge tone="agent" className={styles.badge}>
+                {badge}
+              </Badge>
+            )}
           </div>
           <div className={styles.role}>{agent.role}</div>
           <span className={styles.status} style={statusStyle}>
@@ -140,6 +157,12 @@ export function AgentCard({
             {t('agentCard.autonomy.auto')}
           </button>
         </div>
+      )}
+      {autonomy && onAutonomyChange && autonomyHint && (
+        <>
+          <p className={styles.autonomyHint}>{autonomyHint}</p>
+          <OQueOPilotoLibera recolhido />
+        </>
       )}
 
       {status === 'travado' && onRearm && (

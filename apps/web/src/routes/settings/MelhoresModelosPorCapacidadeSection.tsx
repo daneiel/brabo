@@ -1,8 +1,7 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   getProject,
-  getAgentModelBinding,
   listModelCatalog,
 } from '../../lib/api-client';
 import { AGENT_LIST } from '../../lib/agents';
@@ -12,6 +11,9 @@ import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { useBindingsResolvidos } from '../../lib/bindings-resolvidos';
+import { MarcaDeBindingNaoLido } from './LeituraDosBindings';
 
 /**
  * Cor de cada uso na tabela de "melhores modelos por capacidade" — só
@@ -59,21 +61,18 @@ export function MelhoresModelosPorCapacidadeSection({
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: catalogo } = useQuery({
     queryKey: ['model-catalog', project?.workspaceId],
     queryFn: () => listModelCatalog(project!.workspaceId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(project?.workspaceId),
   });
-  // MESMA queryKey que `ModelsSection` usa para o binding de cada agente —
-  // o react-query deduplica, então as duas seções montadas juntas custam UMA
-  // rodada de requisições, não duas.
-  const bindingQueries = useQueries({
-    queries: AGENT_LIST.map((agent) => ({
-      queryKey: ['agent-binding', projectId, agent.key],
-      queryFn: () => getAgentModelBinding(projectId, agent.key),
-    })),
-  });
+  // O MESMO lote de bindings resolvidos que `ModelsSection` lê (RN-654) — o
+  // react-query deduplica, então as seções montadas juntas custam UMA
+  // requisição, não uma por agente.
+  const bindings = useBindingsResolvidos(projectId);
 
   if (!catalogo) return null;
 
@@ -83,8 +82,8 @@ export function MelhoresModelosPorCapacidadeSection({
   ];
 
   const usadoPorContagem = new Map<string, number>();
-  for (const query of bindingQueries) {
-    const modelId = query.data?.modelId;
+  for (const agent of AGENT_LIST) {
+    const modelId = bindings.doAgente(agent.key)?.modelId;
     if (modelId) {
       usadoPorContagem.set(modelId, (usadoPorContagem.get(modelId) ?? 0) + 1);
     }
@@ -159,6 +158,11 @@ export function MelhoresModelosPorCapacidadeSection({
       label: t('bestModels.columns.usedBy'),
       width: '1.5fr',
       render: (linha) => {
+        // Sem o lote não há contagem: "nenhum agente ainda" seria afirmar sobre
+        // bindings que não se leram (RN-654).
+        if (!bindings.temResposta) {
+          return <MarcaDeBindingNaoLido falhou={bindings.erro !== null} />;
+        }
         const n = linha.recomendado
           ? usadoPorContagem.get(linha.recomendado.id) ?? 0
           : 0;

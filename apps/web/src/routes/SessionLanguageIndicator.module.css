@@ -1,0 +1,121 @@
+/* O idioma das respostas na barra da sessão (RN-620). Duas linhas dentro dos
+   60px da barra: o controle em cima, a origem em texto miúdo embaixo — a
+   origem é INFORMAÇÃO, não enfeite, então não vai para um `title`. */
+
+.indicador {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 320px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rotulo {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.seletor,
+.campo {
+  height: 26px;
+  min-width: 0;
+  max-width: 200px;
+  padding: 0 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.campo {
+  width: 96px;
+  font-family: var(--font-mono);
+}
+
+
+
+.origem {
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link {
+  color: var(--accent);
+}
+
+/* A pergunta da detecção (RN-624): um cartão pequeno ANCORADO abaixo do
+   indicador — fora do fluxo da barra de 60px, sem modal e sem cobrir o
+   composer. Aparece só quando a api manda `detectionQuestion`. */
+.pergunta {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  max-width: min(340px, 90vw);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-modal);
+}
+
+.textoDaPergunta {
+  margin: 0;
+  font-size: var(--fs-body);
+  white-space: normal;
+}
+
+.notaDaPergunta {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+  white-space: normal;
+}
+
+/* Os botões da barra de idioma são `ui/Button size="sm"` (AT-287). */
+
+/* Dentro do painel do controle agrupado da barra estreita (AT-317): há
+   largura e altura, então a origem QUEBRA em vez de cortar — cortar era o
+   defeito medido ("…o idioma da interfa…") — e a pergunta da detecção entra no
+   fluxo do painel, em vez de flutuar sobre ele. */
+.noPainel {
+  max-width: none;
+}
+
+.noPainel .seletor {
+  max-width: none;
+  flex: 1;
+}
+
+.noPainel .origem {
+  white-space: normal;
+  overflow: visible;
+}
+
+.noPainel .pergunta {
+  position: static;
+  width: auto;
+  max-width: none;
+  box-shadow: none;
+}

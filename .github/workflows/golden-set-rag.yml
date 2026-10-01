@@ -29,7 +29,12 @@ env:
   OTP_VERSION: '27.1.2'
 
 jobs:
+  # pgvector e ollama vêm do compose de dev, não de um literal aqui (ADR 0197).
+  imagens:
+    uses: ./.github/workflows/imagens-do-compose.yml
+
   golden-set-rag:
+    needs: imagens
     name: Golden-set do RAG (ExUnit, contra Ollama real)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -38,7 +43,7 @@ jobs:
         # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
         # ci.yml: as migrations criam a extensão e o corpus indexado depende
         # dela pra busca vetorial.
-        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+        image: ${{ needs.imagens.outputs.pgvector }}
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -51,10 +56,12 @@ jobs:
           --health-timeout 5s
           --health-retries 20
       ollama:
-        # MESMA versão pinada de docker/docker-compose.yml — paridade de
-        # embedding com o que roda em dev é o que faz `floor.json` (chaveado
-        # por MODELO, não por ambiente) continuar válido aqui.
-        image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+        # A MESMA imagem de docker/docker-compose.yml — paridade de embedding
+        # com o que roda em dev é o que faz `floor.json` (chaveado por MODELO,
+        # não por ambiente) continuar válido aqui. Até o ADR 0197 isso era uma
+        # PROMESSA, guardada por um literal igual ao do compose; agora é
+        # CONSTRUÇÃO: a referência é lida do serviço `ollama` do compose.
+        image: ${{ needs.imagens.outputs.ollama }}
         ports:
           - 11434:11434
         # `ollama list` como health-cmd, não `curl` — `curl` roda DENTRO do
@@ -73,13 +80,13 @@ jobs:
       DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
       OLLAMA_HOST: http://localhost:11434
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -93,7 +100,7 @@ jobs:
       # ci.yml: quem grava esta key é o `test-engine` de lá. Cache do Actions
       # é por REPOSITÓRIO, não por workflow, então a key bate mesmo vinda de
       # outro arquivo.
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
             apps/engine/deps

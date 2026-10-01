@@ -66,7 +66,7 @@ export function AttachLocalFolderModal({
       showToast({
         title: t('rag.attachLocalFolder.successTitle'),
         message: t('rag.attachLocalFolder.successMessage', {
-          filesIndexed: relatorio.filesIndexed,
+          count: relatorio.filesIndexed,
           folderName: relatorio.folderName,
           embeddingSuffix: relatorio.embedding.available
             ? ''
@@ -181,13 +181,15 @@ export function AttachLocalFolderModal({
               <div className={styles.estado}>{t('rag.attachLocalFolder.emptyFolder')}</div>
             ) : preview.filesSkipped > 0 ? (
               t('rag.attachLocalFolder.summary', {
-                included: preview.included.length,
-                folderName: preview.folderName,
-                skipped: preview.filesSkipped,
+                files: t('rag.attachLocalFolder.summaryNoSkipped', {
+                  count: preview.included.length,
+                  folderName: preview.folderName,
+                }),
+                skipped: t('rag.attachLocalFolder.skippedCount', { count: preview.filesSkipped }),
               })
             ) : (
               t('rag.attachLocalFolder.summaryNoSkipped', {
-                included: preview.included.length,
+                count: preview.included.length,
                 folderName: preview.folderName,
               })
             )}

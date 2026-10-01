@@ -4,6 +4,10 @@ defmodule Engine.Sessions.EngineApiClient do
   `Application.get_env(:engine, :engine_api_client, ...)`, sem Mox.
   """
 
+  alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Harness.PerfilDoAutor
+  alias Engine.Harness.RoteamentoDeFerramenta
+
   @callback report_termination(
               project_id :: String.t(),
               session_id :: String.t(),
@@ -40,6 +44,27 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, [map()]} | {:error, term()}
 
   @doc """
+  Leitura dos eventos da sessão COM opções (RN-580) — o que a reidratação dos
+  agentes conversacionais e as leituras dos kickoffs usam. Opções (todas
+  opcionais, `keyword`):
+
+    * `:latest` — `true` pede a CAUDA (os `:limit` mais recentes), ainda em
+      ordem crescente de `seq`; ignora `:after_seq`;
+    * `:types` — lista de tipos; só eventos desses tipos voltam;
+    * `:after_seq` — só eventos com `seq` maior que este;
+    * `:limit` — teto da página; a api corta em 200 (ADR 0060) de qualquer jeito.
+
+  `list_events/2` continua existindo, byte a byte, para os chamadores que não
+  migraram (os PRIMEIROS 200, todos os tipos).
+  """
+  @callback list_events(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              opts :: keyword()
+            ) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
   Turno de LLM STREAMADO pros agentes conversacionais (Criativo). Consome a
   SSE da api chamando `on_delta.(text)` por delta de texto; retorna
   `{:ok, %{"message" => ..., "usage" => ...}}` (turno completo acumulado) ou
@@ -51,7 +76,8 @@ defmodule Engine.Sessions.EngineApiClient do
               agent :: String.t(),
               messages :: [map()],
               tools :: [map()],
-              on_delta :: (String.t() -> any())
+              on_delta :: (String.t() -> any()),
+              opts :: keyword()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -64,7 +90,13 @@ defmodule Engine.Sessions.EngineApiClient do
   com épico e quatro histórias prontos e a cadeia sem como seguir.
   """
   @callback session_pending_work(session_id :: String.t()) ::
-              {:ok, %{pending: boolean(), motivo: String.t() | nil}} | {:error, term()}
+              {:ok,
+               %{
+                 pending: boolean(),
+                 motivo: String.t() | nil,
+                 aguardando_usuario_desde: DateTime.t() | nil
+               }}
+              | {:error, term()}
 
   @doc """
   O remoto de trabalho de um projeto (ADR 0056): `%{kind, origin, default_branch,
@@ -91,6 +123,24 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Mesmo `create_handoff/5`, no modo "só se ninguém recebeu ainda" (ADR 0182,
+  RN-636): com oferta pendente ao destino em QUALQUER sessão do projeto, a api
+  devolve a existente (`"desfecho" => "ja_oferecido"`) em vez de substituí-la;
+  com o destino já ativo no projeto, recusa com 409 `agente_ja_ativo`. É o
+  modo do AppSec, que oferece um parecer por história aos mesmos destinos. A
+  decisão mora na api, sob o lock do destino — perguntar antes, daqui, seria
+  corrida com outra oferta.
+  """
+  @callback create_handoff_if_absent(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              from_agent :: String.t(),
+              to_agent :: String.t(),
+              artifact_id :: String.t() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Ferramentas do PO (create_epic/create_story/create_task) — criam linhas de
   backlog na api (nunca SQL direto). `fields` é o corpo camelCase da linha;
   retornam `{:ok, %{"id" => ...}}` (a story também traz `"status"`) ou
@@ -102,6 +152,21 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
   @callback create_task(project_id :: String.t(), session_id :: String.t(), fields :: map()) ::
               {:ok, map()} | {:error, term()}
+
+  @doc """
+  A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198): chamada por
+  `emit_artifact` DEPOIS de gravar a regra. `fields` leva `kind`
+  (`"business_rule"`) e `title`; devolve `{:ok, %{"status" => ..., "message"
+  => texto | nil}}`. Nunca recusa a regra — ela já existe —, e quem chama
+  não deixa uma falha desta chamada virar falha da emissão. A história não
+  passa por aqui: a api checa dentro da própria criação, e o aviso volta no
+  corpo de `create_story` (`"semanticDuplicate"`).
+  """
+  @callback check_semantic_duplicate(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
 
   @doc """
   Ferramentas de LEITURA do PO (RN-164) — as três escopadas ao PROJETO, não à
@@ -411,7 +476,8 @@ defmodule Engine.Sessions.EngineApiClient do
               session_id :: String.t(),
               agent :: String.t(),
               messages :: [map()],
-              tools :: [map()]
+              tools :: [map()],
+              opts :: keyword()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -548,11 +614,51 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
-  def llm_turn(project_id, session_id, agent, messages, tools),
-    do: impl().llm_turn(project_id, session_id, agent, messages, tools)
+  # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
+  # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
+  # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
+  # chamou: é efêmera por construção. As `tools` vão junto porque é por elas
+  # que a orientação sabe se o agente pode gravar artefato do projeto (RN-623).
+  #
+  # RN-625 (ADR 0179): a MESMA fachada narra o passo em que o Jev escolheu a
+  # ferramenta (`tool_router.decided`) e, se o menu restrito fez o modelo
+  # responder sem chamar ferramenta, repete o passo UMA vez com o catálogo
+  # inteiro (`opts: [catalogo_completo: true]`). Ver `RoteamentoDeFerramenta`.
+  #
+  # RN-680 (ADR 0196): os fatos do perfil do AUTOR do turno entram pelo mesmo
+  # lugar, ANTES do idioma — que continua sendo a última mensagem.
+  def llm_turn(project_id, session_id, agent, messages, tools) do
+    enviadas =
+      messages
+      |> PerfilDoAutor.anexar(agent)
+      |> IdiomaDaResposta.anexar(project_id, agent, tools)
+
+    impl().llm_turn(project_id, session_id, agent, enviadas, tools, [])
+    |> repetir_com_catalogo_inteiro(tools, fn ->
+      impl().llm_turn(project_id, session_id, agent, enviadas, tools, catalogo_completo: true)
+    end)
+    |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+  end
+
+  # O menu restrito errou (o modelo não chamou ferramenta nenhuma)? Uma volta
+  # a mais com o catálogo inteiro. Falha da segunda volta mantém a primeira.
+  defp repetir_com_catalogo_inteiro({:ok, resp} = primeira, tools, repetir) do
+    if RoteamentoDeFerramenta.repetir_com_catalogo_inteiro?(resp, tools) do
+      case repetir.() do
+        {:ok, segunda} -> {:ok, RoteamentoDeFerramenta.mesclar_repeticao(resp, segunda)}
+        _ -> primeira
+      end
+    else
+      primeira
+    end
+  end
+
+  defp repetir_com_catalogo_inteiro(outro, _tools, _repetir), do: outro
 
   def propose_action(project_id, session_id, action_type, actor, payload),
-    do: impl().propose_action(project_id, session_id, action_type, actor, payload)
+    do:
+      impl().propose_action(project_id, session_id, action_type, actor, payload)
+      |> avisar_canal(session_id, "proposed_action.created", campo(actor, :id))
 
   def confirm_workspace(project_id, session_id, path, user_id),
     do: impl().confirm_workspace(project_id, session_id, path, user_id)
@@ -576,32 +682,92 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().report_termination(project_id, session_id, reason, to)
 
   def append_event(project_id, session_id, event),
-    do: impl().append_event(project_id, session_id, event)
+    do:
+      impl().append_event(project_id, session_id, event)
+      |> avisar_canal(session_id, campo(event, :type), campo(event, :actorId))
 
   def append_event_returning(project_id, session_id, event),
-    do: impl().append_event_returning(project_id, session_id, event)
+    do:
+      impl().append_event_returning(project_id, session_id, event)
+      |> avisar_canal(session_id, campo(event, :type), campo(event, :actorId))
 
   def list_events(project_id, session_id),
     do: impl().list_events(project_id, session_id)
 
-  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
-    do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
+  def list_events(project_id, session_id, opts),
+    do: impl().list_events(project_id, session_id, opts)
+
+  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
+    enviadas =
+      messages
+      |> PerfilDoAutor.anexar(agent)
+      |> IdiomaDaResposta.anexar(project_id, agent, tools)
+
+    impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta, [])
+    |> repetir_stream_sem_texto(tools, fn ->
+      impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta,
+        catalogo_completo: true
+      )
+    end)
+    |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+  end
+
+  # No stream só se repete quando NADA foi escrito para a pessoa: um delta já
+  # entregue não se desfaz, e duplicar texto é pior que o menu errado.
+  defp repetir_stream_sem_texto({:ok, %{"message" => message} = resp} = primeira, tools, repetir) do
+    if Map.get(message, "content") in [nil, ""] do
+      repetir_com_catalogo_inteiro({:ok, resp}, tools, repetir)
+    else
+      primeira
+    end
+  end
+
+  defp repetir_stream_sem_texto(outro, _tools, _repetir), do: outro
 
   def session_pending_work(session_id), do: impl().session_pending_work(session_id)
 
   def get_git_remote(project_id), do: impl().get_git_remote(project_id)
 
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
-    do: impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+    do:
+      impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+      |> avisar_canal(session_id, "handoff.offered", from_agent)
+
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id),
+    do:
+      impl().create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id)
+      |> avisar_canal(session_id, "handoff.offered", from_agent)
 
   def create_epic(project_id, session_id, fields),
-    do: impl().create_epic(project_id, session_id, fields)
+    do:
+      impl().create_epic(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.epic_created", nil)
 
   def create_story(project_id, session_id, fields),
-    do: impl().create_story(project_id, session_id, fields)
+    do:
+      impl().create_story(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.story_created", nil)
 
   def create_task(project_id, session_id, fields),
-    do: impl().create_task(project_id, session_id, fields)
+    do:
+      impl().create_task(project_id, session_id, fields)
+      |> avisar_canal(session_id, "backlog.task_created", nil)
+
+  # A api grava `backlog.semantic_duplicate_warned`/`_check_skipped` por uma
+  # rota `/internal/*`, que não avisa o canal sozinha (AT-157) — a fachada
+  # avisa, e só quando houve evento: `clean` e `nothing_to_compare` não narram.
+  def check_semantic_duplicate(project_id, session_id, fields) do
+    resultado = impl().check_semantic_duplicate(project_id, session_id, fields)
+
+    tipo =
+      case resultado do
+        {:ok, %{"status" => "warned"}} -> "backlog.semantic_duplicate_warned"
+        {:ok, %{"status" => "skipped"}} -> "backlog.semantic_duplicate_check_skipped"
+        _ -> nil
+      end
+
+    avisar_canal(resultado, session_id, tipo, "duplicata-semantica")
+  end
 
   def list_business_rules(project_id), do: impl().list_business_rules(project_id)
 
@@ -745,6 +911,65 @@ defmodule Engine.Sessions.EngineApiClient do
 
   defp impl,
     do: Application.get_env(:engine, :engine_api_client, Engine.Sessions.EngineApiClient.Live)
+
+  # AT-093 (RN-579): toda escrita que a api CONFIRMOU numa sessão vira um
+  # `event.appended` no canal `session:<id>` — é o que deixa a web trocar o
+  # poll de 3s por invalidação enquanto o canal está vivo. O aviso sai DAQUI,
+  # da fachada, e não de cada chamador: antes só `ArtifactEmitter` e o Infra
+  # Lead avisavam, e o resto dos chamadores de `append_event` (o `EventLog` do
+  # harness, o `ToolLoop`, o `AgentIo` dos dev agents, o `agent.status`) e as
+  # escritas que a api registra como evento (`proposed_action.created`,
+  # `handoff.offered`, `backlog.*_created`) chegavam à tela só pelo poll.
+  #
+  # Só depois do `:ok`/`{:ok, _}`: avisar do que a api RECUSOU faria a web
+  # buscar para não achar nada. E o aviso leva o TIPO e o ator, nunca o
+  # `payload`: a web o usa só como gatilho de refetch, e um `tool.result`
+  # inteiro atravessando o socket a cada ferramenta seria tráfego sem leitor.
+  defp avisar_canal(resultado, session_id, type, actor_id)
+       when is_binary(session_id) and is_binary(type) do
+    if confirmado?(resultado) do
+      Engine.Sessions.LiveBroadcast.event_appended(session_id, type, actor_id)
+    end
+
+    resultado
+  end
+
+  defp avisar_canal(resultado, _session_id, _type, _actor_id), do: resultado
+
+  defp confirmado?(:ok), do: true
+  defp confirmado?({:ok, _}), do: true
+  defp confirmado?(_), do: false
+
+  defp campo(%{} = mapa, chave),
+    do: Map.get(mapa, chave) || Map.get(mapa, Atom.to_string(chave))
+
+  defp campo(_, _), do: nil
+
+  # --- Contrato entre módulos (ADR 0200, RN-684) ---
+  #
+  # No FIM da fachada, e a implementação no fim do `Live`, de propósito: as
+  # RNs citam este arquivo por linha, e um bloco no meio deslocaria dezenas de
+  # referências que nada têm a ver com ele.
+
+  @doc """
+  O Arquiteto DECLARA o contrato (a lista inteira, nova versão a cada chamada)
+  e o dev agent o LÊ — um item por módulo do module_map vigente, com o que ele
+  consome (`dependsOn`) e o que expõe. A leitura não leva `session_id`: o
+  recurso é do projeto.
+  """
+  @callback declare_module_contracts(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              contratos :: [map()]
+            ) ::
+              {:ok, map()} | {:error, term()}
+  @callback list_module_contracts(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  def declare_module_contracts(project_id, session_id, contratos),
+    do: impl().declare_module_contracts(project_id, session_id, contratos)
+
+  def list_module_contracts(project_id), do: impl().list_module_contracts(project_id)
 end
 
 defmodule Engine.Sessions.EngineApiClient.Live do
@@ -763,6 +988,8 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   @behaviour Engine.Sessions.EngineApiClient
   @cabecalho_service_token "x-brabo-service-token"
 
+  require Logger
+
   @impl true
   def report_termination(project_id, session_id, reason, to) do
     post("/internal/sessions/#{session_id}/termination", %{
@@ -774,11 +1001,32 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def append_event(project_id, session_id, event) do
-    post(
-      "/internal/sessions/#{session_id}/events",
-      Map.put(event, :projectId, project_id)
-    )
+    "/internal/sessions/#{session_id}/events"
+    |> post(Map.put(event, :projectId, project_id))
+    |> narrar_recusa_de_sessao_encerrada(session_id, event)
   end
+
+  # RN-581: a api recusa evento de CONVERSA em sessão encerrada com 409 e
+  # `reason: "sessao_encerrada"`. Quase todo chamador de `append_event/3`
+  # descarta o retorno (`_ = ...`), então sem esta linha a recusa seria
+  # silenciosa — e é justamente o sinal de que algo ainda conversa numa
+  # sessão que fechou (RN-059: falha nunca calada). O retorno segue igual.
+  defp narrar_recusa_de_sessao_encerrada(
+         {:error, {409, %{"reason" => "sessao_encerrada"} = corpo}} = erro,
+         session_id,
+         event
+       ) do
+    tipo = Map.get(event, :type) || Map.get(event, "type")
+
+    Logger.warning(
+      "sessão #{session_id}: a api recusou o evento #{inspect(tipo)} — " <>
+        "sessão encerrada (#{Map.get(corpo, "status")}), não aceita mais conversa"
+    )
+
+    erro
+  end
+
+  defp narrar_recusa_de_sessao_encerrada(resultado, _session_id, _event), do: resultado
 
   @impl true
   def append_event_returning(project_id, session_id, event) do
@@ -808,6 +1056,37 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
+  def list_events(project_id, session_id, opts) do
+    # Os parâmetros viajam por `params:` (o Req codifica), nunca interpolados
+    # na URL: `types` é lista de tipos com ponto (`artifact.business_rule`).
+    params =
+      [projectId: project_id, limit: Keyword.get(opts, :limit, 200)] ++
+        if(Keyword.get(opts, :latest, false), do: [latest: "true"], else: []) ++
+        case Keyword.get(opts, :after_seq) do
+          nil -> []
+          seq -> [afterSeq: seq]
+        end ++
+        case Keyword.get(opts, :types) do
+          [_ | _] = tipos -> [types: Enum.join(tipos, ",")]
+          _ -> []
+        end
+
+    url = api_url() <> "/internal/sessions/#{session_id}/events"
+
+    case Req.get(url, headers: headers(), params: params) do
+      {:ok, %Req.Response{status: status, body: %{"items" => items}}}
+      when status in 200..299 ->
+        {:ok, items}
+
+      {:ok, %Req.Response{status: status, body: resp}} ->
+        {:error, {status, resp}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def sync_model_catalog do
     post_returning("/internal/models/sync", %{})
   end
@@ -823,6 +1102,17 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id) do
+    post_returning("/internal/sessions/#{session_id}/handoffs", %{
+      projectId: project_id,
+      fromAgent: from_agent,
+      toAgent: to_agent,
+      artifactId: artifact_id,
+      seAusente: true
+    })
+  end
+
+  @impl true
   def create_epic(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/epics",
@@ -834,6 +1124,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def create_story(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/stories",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def check_semantic_duplicate(project_id, session_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/semantic-duplicate-check",
       Map.put(fields, :projectId, project_id)
     )
   end
@@ -1005,13 +1303,42 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     end
   end
 
+  @doc false
+  # Público só para o teste da forma: o módulo não tem harness HTTP.
+  def pendencia_da_resposta(body) do
+    with {:ok, desde} <- instante(Map.get(body, "aguardandoUsuarioDesde")) do
+      {:ok,
+       %{
+         pending: Map.get(body, "pending", false),
+         motivo: Map.get(body, "motivo"),
+         aguardando_usuario_desde: desde
+       }}
+    end
+  end
+
+  # Instante ISO-8601 da api (RN-581). `nil` é "sem espera de conversa". Um
+  # valor PRESENTE que não parseia vira erro, e não nil, de propósito: nil com
+  # `pending: true` é pendência SEM teto, e um formato quebrado viraria sessão
+  # imortal. Como erro, cai no mesmo caminho da api fora do ar — encerra por
+  # heartbeat, dizendo por quê.
+  defp instante(nil), do: {:ok, nil}
+
+  defp instante(texto) when is_binary(texto) do
+    case DateTime.from_iso8601(texto) do
+      {:ok, dt, _offset} -> {:ok, dt}
+      _ -> {:error, {:aguardando_usuario_desde_invalido, texto}}
+    end
+  end
+
+  defp instante(outro), do: {:error, {:aguardando_usuario_desde_invalido, outro}}
+
   @impl true
   def session_pending_work(session_id) do
     url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
 
     case Req.get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
-        {:ok, %{pending: Map.get(body, "pending", false), motivo: Map.get(body, "motivo")}}
+        pendencia_da_resposta(body)
 
       {:ok, %Req.Response{status: status, body: resp}} ->
         {:error, {status, resp}}
@@ -1217,8 +1544,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
-    body = %{projectId: project_id, agentId: agent, messages: messages, tools: tools}
+  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta, opts) do
+    body =
+      %{projectId: project_id, agentId: agent, messages: messages, tools: tools}
+      |> com_catalogo_completo(opts)
+
     key = {__MODULE__, :sse, make_ref()}
     Process.put(key, %{buffer: "", final: nil})
 
@@ -1299,7 +1629,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def llm_turn(project_id, session_id, agent, messages, tools) do
+  def llm_turn(project_id, session_id, agent, messages, tools, opts) do
     # Timeout generoso e configurável: um turno de LLM não é uma chamada de
     # API comum. Com modelo local (Ollama), o PRIMEIRO turno ainda carrega
     # vários GB de pesos na memória antes de gerar o primeiro token — no
@@ -1318,12 +1648,15 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         result =
           post_returning(
             "/internal/sessions/#{session_id}/llm-turn",
-            %{
-              projectId: project_id,
-              agentId: agent,
-              messages: messages,
-              tools: tools
-            },
+            com_catalogo_completo(
+              %{
+                projectId: project_id,
+                agentId: agent,
+                messages: messages,
+                tools: tools
+              },
+              opts
+            ),
             receive_timeout: llm_turn_timeout_ms()
           )
 
@@ -1334,6 +1667,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         result
       end
     )
+  end
+
+  # ADR 0179: o engine repete o passo pedindo o catálogo INTEIRO (a api não
+  # consulta o Jev). Só isso: nunca uma ferramenta que o agente não tinha.
+  defp com_catalogo_completo(body, opts) do
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: Map.put(body, :catalogoCompleto, true),
+      else: body
   end
 
   defp annotate_llm_turn({:ok, %{"usage" => %{"costMicros" => cost}} = resp}) do
@@ -1356,13 +1697,47 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def propose_action(project_id, session_id, action_type, actor, payload) do
-    post_returning("/internal/sessions/#{session_id}/actions", %{
-      projectId: project_id,
-      actionType: action_type,
-      actor: actor,
-      payload: payload
-    })
+    post_returning(
+      "/internal/sessions/#{session_id}/actions",
+      %{
+        projectId: project_id,
+        actionType: action_type,
+        actor: actor,
+        payload: payload
+      },
+      opcoes_do_propose_action(action_type)
+    )
   end
+
+  # AT-234 (RN-605). Quando a ação nasce AUTO-APROVADA, a api a EXECUTA na
+  # mesma requisição (`ProposeActionUseCase`), e as de ciclo de vida de
+  # container esperam o broker (`TETO_DE_MUTACAO_MS`, 195s: contexto + seis
+  # chamadas de controle de 30s + margem) ou o runner
+  # (`Engine.Runners.RunnerRouter`, 185s no `start`). No default de 15s do Req
+  # um `start` longo — mesmo sem pull — voltava como timeout de transporte
+  # aqui, e o desfecho nomeado da api (inclusive o `PullExcedeuTetoError` do
+  # broker) chegava a ninguém. 225s = o teto da api + 30s de folga. A api
+  # espelha este número como `TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`,
+  # e os testes dos dois lados conferem a ordem broker < api < engine.
+  # `container_remove` fica de fora de propósito: ele nunca nasce auto-aprovado
+  # (teto absoluto de `decide.ts`), então a api nunca o executa aqui dentro.
+  @teto_do_propose_action_de_container_ms 225_000
+
+  @acoes_de_container_executadas_no_propose ~w(
+    container_start
+    container_start_via_runner
+    container_stop
+  )
+
+  @doc false
+  def teto_do_propose_action_de_container_ms, do: @teto_do_propose_action_de_container_ms
+
+  @doc false
+  def opcoes_do_propose_action(action_type)
+      when action_type in @acoes_de_container_executadas_no_propose,
+      do: [receive_timeout: @teto_do_propose_action_de_container_ms]
+
+  def opcoes_do_propose_action(_action_type), do: []
 
   @impl true
   def confirm_workspace(project_id, session_id, path, user_id) do
@@ -1385,8 +1760,32 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       |> por_se_presente(:cwd, cwd)
       |> por_se_presente(:timeoutMs, timeout_ms)
 
-    post_returning("/internal/projects/#{project_id}/container-exec", corpo)
+    post_returning("/internal/projects/#{project_id}/container-exec", corpo,
+      receive_timeout: teto_do_container_exec_ms(timeout_ms)
+    )
   end
+
+  # AT-233 (RN-604). O comando atravessa engine -> api -> broker, e cada salto
+  # tem de esperar MAIS que o de baixo: o broker corta em `timeout_ms`, a api
+  # espera `timeout_ms` + contexto + `ps` + margem (`tetoDaOperacao` em
+  # `container-broker.client.ts`, no máximo `timeout_ms` + 45s), e este lado
+  # espera `timeout_ms` + 90s. Sem isso a chamada caía no default do Req (15s)
+  # — o MESMO número de `TERMINAL_ACTION_TIMEOUT_MS` —, e o desfecho honesto
+  # (`timedOut: true` do broker, ou a recusa nomeada da api) chegava a ninguém.
+  # A api espelha este número como `FOLGA_DO_EXEC_NO_ENGINE_MS`, e os testes
+  # dos dois lados conferem a ordem.
+  @folga_do_exec_no_container_ms 90_000
+
+  # O broker usa 15s quando o pedido vem sem `timeoutMs`
+  # (`TIMEOUT_DE_EXEC_PADRAO_MS`, `packages/docker-port/src/docker-cli.ts`).
+  @exec_padrao_do_broker_ms 15_000
+
+  @doc false
+  def teto_do_container_exec_ms(nil),
+    do: teto_do_container_exec_ms(@exec_padrao_do_broker_ms)
+
+  def teto_do_container_exec_ms(timeout_ms) when is_integer(timeout_ms),
+    do: timeout_ms + @folga_do_exec_no_container_ms
 
   @impl true
   def rag_search(project_id, query, top_k, opts \\ []) do
@@ -1508,4 +1907,18 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   defp service_token, do: Application.fetch_env!(:engine, :service_token)
 
   defp api_url, do: Application.fetch_env!(:engine, :api_url)
+
+  # RN-684 (ADR 0200): no fim do módulo, pelo mesmo motivo do bloco da fachada.
+  @impl true
+  def declare_module_contracts(project_id, session_id, contratos) do
+    post_returning("/internal/sessions/#{session_id}/module-contracts", %{
+      projectId: project_id,
+      contratos: contratos
+    })
+  end
+
+  @impl true
+  def list_module_contracts(project_id) do
+    get_json("/internal/projects/#{project_id}/module-contracts")
+  end
 end

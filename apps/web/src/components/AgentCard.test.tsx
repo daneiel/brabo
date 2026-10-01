@@ -65,6 +65,37 @@ describe('AgentCard', () => {
     expect(onAutonomyChange).toHaveBeenCalledWith('auto');
   });
 
+  it('mostra a frase de autonomia sob o toggle só quando o chamador a passa (RN-603)', () => {
+    const semFrase = renderCard({ autonomy: 'auto', onAutonomyChange: vi.fn() });
+    expect(screen.queryByText('frase do modo automático')).toBeNull();
+    semFrase.unmount();
+
+    renderCard({
+      autonomy: 'auto',
+      onAutonomyChange: vi.fn(),
+      autonomyHint: 'frase do modo automático',
+    });
+    expect(screen.getByText('frase do modo automático')).toBeInTheDocument();
+  });
+
+  it('com a frase, o toggle traz a lista do piloto — o que libera e o que não (RN-670)', () => {
+    renderCard({
+      autonomy: 'auto',
+      onAutonomyChange: vi.fn(),
+      autonomyHint: 'frase do modo automático',
+    });
+    expect(screen.getByTestId('piloto-detalhe')).toBeInTheDocument();
+    expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git commit e criar branch LOCAL');
+    expect(screen.getByTestId('modo-automatico-nao-libera')).toHaveTextContent(
+      'git push, abertura de PR e deploy',
+    );
+  });
+
+  it('CASO DE FALHA: sem a frase (toggle manual/regra específica), a lista do piloto não aparece', () => {
+    renderCard({ autonomy: 'manual', onAutonomyChange: vi.fn() });
+    expect(screen.queryByTestId('piloto-detalhe')).toBeNull();
+  });
+
   describe('rearmar (Fase 12b — RN-047)', () => {
     it('só aparece com status travado E o handler — nenhum dos dois sozinho basta', () => {
       const onRearm = vi.fn();

@@ -1,0 +1,69 @@
+---
+id: workspaces-controller-transfer-ownership
+title: "Transfers the workspace's owner of record"
+description: "The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing 'no credential registered' outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op."
+sidebar_label: "Transfers the workspace's owner of record"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Transfers the workspace's owner of record"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/workspaces/{workspaceId}/owner-of-record"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing "no credential registered" outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./workspaces-controller-transfer-ownership.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./workspaces-controller-transfer-ownership.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./workspaces-controller-transfer-ownership.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

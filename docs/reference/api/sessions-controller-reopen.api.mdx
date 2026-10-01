@@ -1,0 +1,69 @@
+---
+id: sessions-controller-reopen
+title: "Reopens a closed session, keeping everything it had"
+description: "Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit. Requires `developer` (ADR 0184)."
+sidebar_label: "Reopens a closed session, keeping everything it had"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Reopens a closed session, keeping everything it had"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/reopen"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit. Requires `developer` (ADR 0184).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./sessions-controller-reopen.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./sessions-controller-reopen.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./sessions-controller-reopen.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

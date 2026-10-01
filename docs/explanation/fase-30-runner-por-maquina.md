@@ -231,7 +231,9 @@ E o que segue **declarado, não feito**: ninguém CRIA chave de máquina ainda (
 `install.sh`, sessão 6), então hoje a tela só é exercitável com uma chave
 registrada à mão. O comando oferecido é
 `brabo-runner service status --project <id>`, a forma que existe hoje — a por
-máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa não muda o
+máquina chega com a unit da sessão 4 (**fechado depois, AT-106**: com chave de
+máquina reconhecida o painel oferece `brabo-runner service status --machine`;
+com chave de projeto, segue o `--project <id>`). Uma chave de PROJETO ativa não muda o
 painel: é o defeito irmão, um escopo abaixo. E a tela de listar/revogar chave
 continua não existindo.
 
@@ -480,7 +482,7 @@ Declarado nos dois ADRs, e repetido aqui porque é o que dá sentido ao resto:
 - o espelho (RN-515/516/517) e `workspace_create` (RN-532): os dois são por
   projeto e viajam na concessão do `join` daquela conexão
 - o registro normal com verificação de e-mail, e o default `MAIL_TRANSPORT=log`
-- o fluxo de configuração pelo navegador ([ADR 0118](../adr/0118-configuracao-do-runner-pelo-navegador.md))
+- o fluxo de configuração pelo navegador ([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
 
 ## Lacunas que a fase encosta e não resolve
 

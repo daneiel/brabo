@@ -10,7 +10,12 @@ import { ResolveModelBindingUseCase } from './resolve-model-binding.use-case';
 import { CheckBudgetGateUseCase } from './check-budget-gate.use-case';
 import { RecordLlmUsageUseCase } from './record-llm-usage.use-case';
 import { ResolveCredentialOwnerUseCase } from './resolve-credential-owner.use-case';
-import { calculateCostMicros } from '../../../domain/llm/cost-calculator';
+import {
+  DecidirFerramentaDoPassoUseCase,
+  type ToolRouting,
+} from './decidir-ferramenta-do-passo.use-case';
+import { preferenciaEnviada } from '../../../domain/llm/routing-preference';
+import { custoDaChamada } from '../../../domain/llm/custo-da-chamada';
 import type { Actor } from '../../../domain/sessions/session-event.entity';
 
 export interface StreamLlmTurnInput {
@@ -19,6 +24,8 @@ export interface StreamLlmTurnInput {
   agentId?: string;
   messages: ChatMessage[];
   tools?: ToolDef[];
+  /** O engine repete o passo com o catálogo inteiro quando o menu do Jev estava errado (ADR 0179). */
+  catalogoCompleto?: boolean;
 }
 
 export interface LlmTurnUsage {
@@ -30,6 +37,9 @@ export interface LlmTurnUsage {
 
 export type LlmTurnStreamEvent =
   | { type: 'delta'; text: string }
+  // Antes de qualquer `delta`: o Jev está escolhendo a ferramenta (AT-236
+  // resposta 16). Aditivo — o engine ignora frame de tipo desconhecido.
+  | { type: 'tool_routing_started' }
   | {
       type: 'final';
       message: { role: 'assistant'; content: string; toolCalls: ToolCall[] };
@@ -41,6 +51,8 @@ export type LlmTurnStreamEvent =
       // resolver um modelo (`!binding`/`!model`); nos demais casos (inclusive
       // budget excedido) o binding já resolveu e o nome viaja.
       modelName: string | null;
+      /** Ver `RunLlmTurnResult.toolRouting` (ADR 0179). */
+      toolRouting?: ToolRouting;
     };
 
 /**
@@ -65,6 +77,7 @@ export class StreamLlmTurnUseCase {
     private readonly checkBudgetGate: CheckBudgetGateUseCase,
     private readonly recordLlmUsage: RecordLlmUsageUseCase,
     private readonly resolveCredentialOwner: ResolveCredentialOwnerUseCase,
+    private readonly decidirFerramenta: DecidirFerramentaDoPassoUseCase,
   ) {}
 
   async *execute(
@@ -121,6 +134,28 @@ export class StreamLlmTurnUseCase {
     }
 
     const provider = this.llmProviders.get(model.provider);
+    // O critério do binding VENCEDOR, e só se este provider o declara — é o
+    // que vai ao fio e o que congela no metering (ADR 0166, RN-583).
+    const routingPreference = preferenciaEnviada(
+      binding.routingPreference,
+      provider.capabilities,
+    );
+    // O Jev escolhe a ferramenta do passo (ADR 0179) — nunca derruba o turno.
+    const roteamento = {
+      projectId: input.projectId,
+      sessionId: input.sessionId,
+      agentId: input.agentId,
+      provider: model.provider,
+      apiKey,
+      messages: input.messages,
+      tools: input.tools,
+      catalogoCompleto: input.catalogoCompleto,
+    };
+    const plano = await this.decidirFerramenta.preparar(roteamento);
+    if (plano) yield { type: 'tool_routing_started' };
+    const decisaoDoJev = plano
+      ? await this.decidirFerramenta.executar(plano, roteamento)
+      : { tools: input.tools, toolRouting: null };
     let fullText = '';
     let toolCalls: ToolCall[] = [];
     let inputTokens = 0;
@@ -128,13 +163,22 @@ export class StreamLlmTurnUseCase {
     let estimated = false;
     // Só um hub preenche isto; nos providers diretos fica null (Fase 9b).
     let upstreamProvider: string | null = null;
+    // O que a resposta disse sobre si (ADR 0188, RN-665): o custo que o
+    // provider cobrou, o modelo que serviu e o id da geração.
+    let custoRealMicros: number | null = null;
+    let resolvedModelName: string | null = null;
+    let generationId: string | null = null;
+    // Partes da entrada/saída que o provider informou (RN-666); `null` = não disse.
+    let cachedInputTokens: number | null = null;
+    let reasoningTokens: number | null = null;
     let streamError: string | null = null;
 
     try {
       for await (const chunk of provider.chat(input.messages, {
         model: model.name,
         apiKey,
-        tools: input.tools,
+        tools: decisaoDoJev.tools,
+        ...(routingPreference ? { routingPreference } : {}),
       })) {
         if (chunk.type === 'text_delta') {
           fullText += chunk.text;
@@ -146,6 +190,11 @@ export class StreamLlmTurnUseCase {
           outputTokens = chunk.outputTokens;
           estimated = chunk.estimated;
           upstreamProvider = chunk.upstreamProvider ?? null;
+          custoRealMicros = chunk.costMicros ?? null;
+          resolvedModelName = chunk.resolvedModel ?? null;
+          generationId = chunk.generationId ?? null;
+          cachedInputTokens = chunk.cachedInputTokens ?? null;
+          reasoningTokens = chunk.reasoningTokens ?? null;
         } else if (chunk.type === 'error') {
           streamError = chunk.message;
         }
@@ -162,12 +211,16 @@ export class StreamLlmTurnUseCase {
       outputTokens = this.tokenEstimator.count(fullText);
       estimated = true;
     }
-    const costMicros = calculateCostMicros(
+    // O custo REAL, quando o provider o devolveu, é o número; senão, o preço do
+    // catálogo congelado (ADR 0042). Decisão do dono, ADR 0188 (RN-665).
+    const custo = custoDaChamada({
       inputTokens,
       outputTokens,
-      model.inputPricePerMillionMicros,
-      model.outputPricePerMillionMicros,
-    );
+      custoRealMicros,
+      inputPricePerMillionMicros: model.inputPricePerMillionMicros,
+      outputPricePerMillionMicros: model.outputPricePerMillionMicros,
+    });
+    const { costMicros } = custo;
     const latencyMs = Date.now() - startedAt;
     const actor: Actor = { kind: 'agent', id: input.agentId ?? model.name };
 
@@ -184,12 +237,20 @@ export class StreamLlmTurnUseCase {
         estimated,
         costMicros,
         // Congela o preço junto do custo: sem isso o `cost_micros` de ontem é
-        // um número sem procedência quando o preço mudar (RN-044).
-        inputPricePerMillionMicros: model.inputPricePerMillionMicros,
-        outputPricePerMillionMicros: model.outputPricePerMillionMicros,
+        // um número sem procedência quando o preço mudar (RN-044). Com custo
+        // real, o preço é o IMPLÍCITO e o do catálogo vai ao lado (ADR 0188).
+        inputPricePerMillionMicros: custo.inputPricePerMillionMicros,
+        outputPricePerMillionMicros: custo.outputPricePerMillionMicros,
+        priceImplicit: custo.priceImplicit,
+        catalogCostMicros: custo.catalogCostMicros,
+        resolvedModelName,
+        generationId,
+        cachedInputTokens,
+        reasoningTokens,
         latencyMs,
         bindingOrigin: binding.origin,
         upstreamProvider,
+        routingPreference,
       });
     });
 
@@ -199,6 +260,9 @@ export class StreamLlmTurnUseCase {
       usage: { inputTokens, outputTokens, costMicros, estimated },
       error: streamError,
       modelName: model.name,
+      ...(decisaoDoJev.toolRouting
+        ? { toolRouting: decisaoDoJev.toolRouting }
+        : {}),
     };
   }
 }

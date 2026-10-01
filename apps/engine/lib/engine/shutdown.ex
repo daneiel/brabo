@@ -124,13 +124,19 @@ defmodule Engine.Shutdown do
   end
 
   # Emite o evento e solta o nome global, para que outro nó possa assumir.
-  defp release(state) do
+  # Público só para o teste do repasse (`monitor_repasse_test.exs`, AT-078):
+  # sem par no cluster ele é exercitável de ponta a ponta.
+  @doc false
+  def release(state) do
     emit_draining_event(state)
 
     if pid = SessionServer.whereis(state.session_id) do
-      # `expect_stop` evita que o Monitor reporte este stop como término: quem
-      # decide o desfecho é o drain, depois de saber se houve adoção.
-      Engine.Sessions.Monitor.expect_stop(state.session_id)
+      # `expect_handoff` evita que o Monitor reporte este stop como término
+      # (quem decide o desfecho é o drain, depois de saber se houve adoção) E
+      # que ele apague a linha de `session_states` quando o `:DOWN` chegar —
+      # a essa altura o par já a regravou, e apagá-la deixava a sessão sem
+      # linha (AT-078). Sem adoção, quem apaga é `terminate_unadopted/1`.
+      Engine.Sessions.Monitor.expect_handoff(state.session_id)
       SessionServer.stop(pid)
     end
 

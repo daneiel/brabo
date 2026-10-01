@@ -42,7 +42,14 @@ defmodule Engine.Agents.CriativoServer do
     ToolCallRecovery
   }
 
-  alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
+  alias Engine.Agents.{
+    FalhaDeTurno,
+    Reidratacao,
+    ResultadoDeFerramenta,
+    TurnoAssincrono,
+    TurnoOrfao
+  }
+
   alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
@@ -67,8 +74,14 @@ defmodule Engine.Agents.CriativoServer do
     do: {:via, Registry, {Engine.Sessions.Registry, "criativo:" <> session_id}}
 
   @doc "Roteia uma mensagem do usuário pro Criativo (turno streamado)."
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 120_000)
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 120_000)
+
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
   @doc "Confirmação de prontidão do usuário — dispara product_brief + handoff."
   def confirm_readiness(session_id),
@@ -84,7 +97,13 @@ defmodule Engine.Agents.CriativoServer do
       :pinned => true
     }
 
-    history = rehydrate(project_id, session_id)
+    # A conversa que já existe na sessão — a CAUDA, com as perguntas e as
+    # ferramentas deste agente, e o começo resumido quando não cabe (RN-580).
+    # RN-586: o turno que o reinício do engine deixou pela metade fecha com
+    # desfecho durável (nunca reexecuta).
+    _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
+
+    history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
      %{
@@ -96,18 +115,45 @@ defmodule Engine.Agents.CriativoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
      }}
   end
 
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
+  @impl true
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
+  end
+
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
   # O turno passou a rodar numa Task (`TurnoAssincrono`), fora deste
   # `handle_call`: antes o processo inteiro ficava bloqueado até o turno
   # terminar, e um `:cancel` nunca era atendido nesse meio tempo (RN-122).
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
   @impl true
-  def handle_call({:user_message, text}, from, state) do
-    work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work) end)
-  end
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
 
   # Guardrail: zero regras de negócio capturadas → recusa ANTES de subir a
   # Task — nem o turno de consolidação roda, nem o product_brief, nem o
@@ -132,6 +178,22 @@ defmodule Engine.Agents.CriativoServer do
   @impl true
   def handle_cast(:cancel, state) do
     {:noreply, TurnoAssincrono.cancelar(state)}
+  end
+
+  # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
+  # este agente — o turno em curso morre junto, sem gravar nada.
+  @impl true
+  def terminate(_reason, state) do
+    TurnoAssincrono.abandonar(state)
+    :ok
+  end
+
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
+    work = state |> append(user_msg(text)) |> compact()
+    fn -> run_turn(work) end
   end
 
   @impl true
@@ -365,11 +427,11 @@ defmodule Engine.Agents.CriativoServer do
     # as regras", quatro regras iam para o lixo e o painel ficava vazio.
     case fun.() do
       {:ok, texto} ->
-        emit(state, "tool.result", %{tool: tool, ok: true})
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
         {realimentar(state, call, texto, tool), {:ok, tool}}
 
       {:error, motivo} ->
-        emit(state, "tool.result", %{tool: tool, ok: false, erro: to_string(motivo)})
+        emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:error, motivo}))
 
         # O erro VOLTA para o modelo: na volta seguinte ele lê o motivo e
         # reemite corrigido, que é como um laço de ferramenta deve funcionar —
@@ -422,34 +484,21 @@ defmodule Engine.Agents.CriativoServer do
 
   # Refs das regras de negócio já emitidas nesta sessão — lidas do event log
   # (fonte da verdade), não de estado em memória que poderia divergir.
+  #
+  # A leitura é POR TIPO e pela cauda (RN-580). Antes era a leitura geral —
+  # os PRIMEIROS 200 eventos de todos os tipos, filtrados aqui —, então numa
+  # conversa longa a regra capturada depois do evento 200 não entrava no
+  # product_brief, e uma sessão cujas regras vieram todas depois dele era
+  # RECUSADA pelo guardrail de zero regra. O teto continua (200 regras); passou
+  # a contar só regras.
   defp business_rule_refs(state) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} ->
-        events
-        |> Enum.filter(&(Map.get(&1, "type") == "artifact.business_rule"))
-        |> Enum.map(&Map.get(&1, "id"))
-
-      _ ->
-        []
-    end
-  end
-
-  # --- Rehydration ---
-
-  defp rehydrate(project_id, session_id) do
-    case EngineApiClient.list_events(project_id, session_id) do
-      {:ok, events} -> events |> Enum.map(&to_message/1) |> Enum.reject(&is_nil/1)
+    case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
+           "artifact.business_rule"
+         ]) do
+      {:ok, events, _truncado?} -> Enum.map(events, &Map.get(&1, "id"))
       _ -> []
     end
   end
-
-  defp to_message(%{"type" => "chat.message", "payload" => payload}),
-    do: user_msg(Map.get(payload, "text", ""))
-
-  defp to_message(%{"type" => "agent.response", "payload" => payload}),
-    do: assistant_msg(Map.get(payload, "content") || Map.get(payload, "text") || "")
-
-  defp to_message(_event), do: nil
 
   # --- Helpers ---
 

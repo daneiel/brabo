@@ -74,7 +74,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -162,7 +165,7 @@ describe('SessionPage — card acionável do handoff da Infra (RN-499)', () => {
     seq: 1,
     type: 'handoff.offered',
     actor: { kind: 'agent', id: 'arquiteto' },
-    payload: { toAgent: 'infra' },
+    payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
     createdAt: '2026-09-04T12:00:00.000Z',
   };
 
@@ -176,13 +179,38 @@ describe('SessionPage — card acionável do handoff da Infra (RN-499)', () => {
       name: 'Aceitar handoff da Infra',
     });
 
-    // O card DIZ o que o aceite significa — a consequência não é óbvia, e
-    // aceitar não sobe container nenhum sozinho.
-    expect(screen.getByText(/vai PROPOR a subida do container/)).toBeInTheDocument();
+    // O card DIZ o que o aceite significa — a consequência não é óbvia: desde
+    // a RN-671 o aceite já autoriza a subida (AT-348), e o que segue com o
+    // humano é o modo Runner local e o merge da PR de infra.
+    expect(
+      screen.getByText(/já autoriza a subida do container/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/sobe o container sem outro clique/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Continuam pedindo sua decisão a subida num projeto Runner local e o merge da PR de infra/),
+    ).toBeInTheDocument();
     expect(screen.getByText('Arquiteto passou o bastão à Infra')).toBeInTheDocument();
 
     fireEvent.click(botao);
     expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-infra');
+  });
+
+  it('a promessa antiga — a subida "passa por você em Aprovações" — não aparece em nenhum dos dois idiomas (AT-348, RN-671)', async () => {
+    handoffsMock.mockReturnValue([handoff()]);
+    eventos.mockReturnValue({ items: [EVENTO_OFERTA] });
+
+    const { unmount } = montar();
+    await screen.findByRole('button', { name: 'Aceitar handoff da Infra' });
+    expect(screen.queryByText(/passa por você em Aprovações/)).toBeNull();
+    expect(screen.queryByText(/vai PROPOR a subida/)).toBeNull();
+    unmount();
+
+    await i18n.changeLanguage('en');
+    montar();
+    await screen.findByRole('button', { name: 'Accept the Infra handoff' });
+    expect(screen.getByText(/already authorizes starting the container/)).toBeInTheDocument();
+    expect(screen.queryByText(/comes back to you in Approvals/)).toBeNull();
+    expect(screen.queryByText(/will PROPOSE starting/)).toBeNull();
   });
 
   it('o handoff da Infra continua NARRADO no fio como divisor mudo — o card novo não vira card no fio', async () => {
@@ -292,7 +320,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'infra' },
+          payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
           createdAt: '2026-09-04T12:00:00.000Z',
         },
         {
@@ -300,7 +328,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 2,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'dev-lead' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
           createdAt: '2026-09-04T12:00:01.000Z',
         },
       ],
@@ -310,7 +338,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
 
     // O card do fio continua resolvendo pro DEV LEAD, não pro Infra.
     const botaoDevLead = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar dev-lead',
+      name: 'Aceitar handoff e iniciar Dev Lead',
     });
     // ...com o link de Executores que a RN-125 embutiu nele.
     expect(

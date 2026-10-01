@@ -38,9 +38,16 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
         costMicros: input.costMicros,
         inputPricePerMillionMicros: input.inputPricePerMillionMicros,
         outputPricePerMillionMicros: input.outputPricePerMillionMicros,
+        priceImplicit: input.priceImplicit ?? false,
+        catalogCostMicros: input.catalogCostMicros ?? null,
+        resolvedModelName: input.resolvedModelName ?? null,
+        generationId: input.generationId ?? null,
+        cachedInputTokens: input.cachedInputTokens ?? null,
+        reasoningTokens: input.reasoningTokens ?? null,
         latencyMs: input.latencyMs,
         bindingOrigin: input.bindingOrigin,
         upstreamProvider: input.upstreamProvider,
+        routingPreference: input.routingPreference,
       })
       .returning();
 
@@ -57,9 +64,16 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
       costMicros: row.costMicros,
       inputPricePerMillionMicros: row.inputPricePerMillionMicros,
       outputPricePerMillionMicros: row.outputPricePerMillionMicros,
+      priceImplicit: row.priceImplicit,
+      catalogCostMicros: row.catalogCostMicros,
+      resolvedModelName: row.resolvedModelName,
+      generationId: row.generationId,
+      cachedInputTokens: row.cachedInputTokens,
+      reasoningTokens: row.reasoningTokens,
       latencyMs: row.latencyMs,
       bindingOrigin: row.bindingOrigin,
       upstreamProvider: row.upstreamProvider,
+      routingPreference: row.routingPreference,
       createdAt: row.createdAt,
     };
   }

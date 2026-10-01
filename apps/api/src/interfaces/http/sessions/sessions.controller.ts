@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -30,6 +32,7 @@ import { GetSessionUseCase } from '../../../application/use-cases/sessions/get-s
 import { ListSessionsForProjectUseCase } from '../../../application/use-cases/sessions/list-sessions-for-project.use-case';
 import { RenameSessionUseCase } from '../../../application/use-cases/sessions/rename-session.use-case';
 import { TransitionSessionUseCase } from '../../../application/use-cases/sessions/transition-session.use-case';
+import { ReopenSessionUseCase } from '../../../application/use-cases/sessions/reopen-session.use-case';
 import { AppendSessionEventUseCase } from '../../../application/use-cases/sessions/append-session-event.use-case';
 import { ListSessionEventsUseCase } from '../../../application/use-cases/sessions/list-session-events.use-case';
 import { GetSessionEventUseCase } from '../../../application/use-cases/sessions/get-session-event.use-case';
@@ -43,6 +46,7 @@ import { SocketTicketResponseDto } from './dto/socket-ticket.response.dto';
 import {
   PaginaDeEventosResponseDto,
   SessionEventResponseDto,
+  SessionListItemResponseDto,
   SessionResponseDto,
 } from './dto/sessions.response.dto';
 
@@ -58,6 +62,7 @@ export class SessionsController {
     private readonly listSessionsForProject: ListSessionsForProjectUseCase,
     private readonly renameSession: RenameSessionUseCase,
     private readonly transitionSession: TransitionSessionUseCase,
+    private readonly reopenSession: ReopenSessionUseCase,
     private readonly appendSessionEvent: AppendSessionEventUseCase,
     private readonly listSessionEvents: ListSessionEventsUseCase,
     private readonly getSessionEvent: GetSessionEventUseCase,
@@ -122,8 +127,13 @@ export class SessionsController {
 
   @Get()
   @RequireRole('viewer')
-  @ApiOperation({ summary: "Lists the project's sessions" })
-  @ApiOkResponse({ type: [SessionResponseDto] })
+  @ApiOperation({
+    summary: "Lists the project's sessions",
+    description:
+      'Each item carries `technical`: `true` only for the session opened by ' +
+      'repository provisioning (linked from `repo_bootstraps`).',
+  })
+  @ApiOkResponse({ type: [SessionListItemResponseDto] })
   list(@Param('projectId') projectId: string) {
     return this.listSessionsForProject.execute(projectId);
   }
@@ -167,6 +177,41 @@ export class SessionsController {
     return this.transitionSession.execute(projectId, sessionId, dto.status);
   }
 
+  /**
+   * Reabrir é `developer`, o MESMO papel de encerrar pela transição
+   * genérica: quem pode dar a sessão por terminada pode trazê-la de volta.
+   * Decisão do dono (ADR 0184, AT-337) sobre o padrão provisório
+   * `maintainer` do ADR 0183 — mudar de novo é esta linha e a da tela.
+   */
+  @Post(':sessionId/reopen')
+  @HttpCode(200)
+  @RequireRole('developer')
+  @ApiOperation({
+    summary: 'Reopens a closed session, keeping everything it had',
+    description:
+      'Only `closed`/`closed_abnormally` reopen, and only to `active` — ' +
+      '`closing` never goes back (ADR 0183). The session keeps its event ' +
+      'log, artifacts, answered questions and handoffs; `kind` is untouched. ' +
+      'A NEW event `session.reopened` records the previous `closedAt` and ' +
+      '`terminationReason`, which the row clears. A session that carries ' +
+      '`execution.activated` is refused (`sessao_com_execucao`): open a new ' +
+      'session and activate execution there. No time limit. Requires ' +
+      '`developer` (ADR 0184).',
+  })
+  @ApiOkResponse({ type: SessionResponseDto })
+  @ApiConflictResponse({
+    description:
+      'Session is not closed (`reason: sessao_nao_encerrada`), or it ' +
+      'activated execution (`reason: sessao_com_execucao`).',
+  })
+  reopen(
+    @Param('projectId') projectId: string,
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.reopenSession.execute(projectId, sessionId, user.id);
+  }
+
   @Get(':sessionId/events')
   @RequireRole('viewer')
   @ApiOperation({
@@ -191,18 +236,39 @@ export class SessionsController {
     example: 'true',
     description: 'Fetches the tail of the log; ignores `afterSeq`.',
   })
+  @ApiQuery({
+    name: 'actionId',
+    required: false,
+    example: '01JC4Z0000ACAO00000000000001',
+    description:
+      'Only the events whose `payload.actionId` is this action — e.g. its ' +
+      '`proposed_action.created`, which carries the policy `reason` and ' +
+      '`scopeRoot` the action row does not keep (RN-614). Combines with the ' +
+      'other parameters; `seq` is no longer contiguous in the page, so a ' +
+      'caller filtering by action must not derive omitted counts from it. ' +
+      'An empty value is a `400`.',
+  })
   @ApiOkResponse({ type: PaginaDeEventosResponseDto })
+  @ApiBadRequestResponse({ description: '`actionId` is present but empty.' })
   listEvents(
     @Param('projectId') projectId: string,
     @Param('sessionId') sessionId: string,
     @Query('afterSeq') afterSeq?: string,
     @Query('limit') limit?: string,
     @Query('latest') latest?: string,
+    @Query('actionId') actionId?: string,
   ) {
+    // Vazio é pedido malformado, não "todas": um filtro que some quando o
+    // cliente manda a string errada devolveria o log inteiro para quem pediu
+    // o motivo de UMA ação.
+    if (actionId !== undefined && actionId.trim() === '') {
+      throw new BadRequestException('actionId vazio.');
+    }
     return this.listSessionEvents.execute(projectId, sessionId, {
       afterSeq: afterSeq !== undefined ? Number(afterSeq) : undefined,
       limit: limit !== undefined ? Number(limit) : undefined,
       latest: latest === 'true',
+      actionId,
     });
   }
 

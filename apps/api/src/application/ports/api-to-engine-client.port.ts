@@ -53,6 +53,39 @@ export interface EspecificacaoDeContainerParaRunner {
 export type DesfechoDeDesconexaoDeRunner =
   'derrubado' | 'sem_runner' | 'de_outro_dono' | 'timeout';
 
+/**
+ * A credencial de DISPOSITIVO que o `PatAuthGuard` autenticou ao emitir um
+ * ticket de runner (ADR 0201, RN-685): a chave de dispositivo pelo `kid` —
+ * que É o id do registro em `runner_device_keys` (RN-475) — ou o Personal
+ * Access Token pelo id da linha. É o que viaja até a linha do ticket no
+ * engine e deixa a revogação mirar só as conexões abertas com ela.
+ */
+export interface CredencialDeDispositivo {
+  tipo: 'device_key' | 'pat';
+  id: string;
+}
+
+/**
+ * O que o engine respondeu a `disconnectRunnerCredential` — contagens, nunca
+ * um veredito. Servem para o chamador LOGAR: zero derrubados é o caso normal
+ * de quem revoga uma credencial que não estava conectada.
+ *
+ * - `derrubados`: conexões abertas COM a credencial, que caíram;
+ * - `legados`: conexões sem credencial no ticket (emitido por uma api anterior
+ *   ao ADR 0201), do mesmo dono, num projeto do alcance — caem pelo par;
+ * - `intocados`: runners perguntados que seguem de pé (outra credencial,
+ *   outro dono);
+ * - `semResposta`: runners que não responderam no teto;
+ * - `ticketsAnulados`: tickets da credencial ainda não usados, anulados.
+ */
+export interface BalancoDeRevogacaoDeCredencial {
+  derrubados: number;
+  legados: number;
+  intocados: number;
+  semResposta: number;
+  ticketsAnulados: number;
+}
+
 export interface ContainerIniciadoViaRunner {
   containerId: string;
   nome: string;
@@ -93,6 +126,14 @@ export class RunnerRecusouContainerError extends Error {
   }
 }
 
+/**
+ * O que o engine fez com a mensagem (RN-673, ADR 0191): `lida` — subiu o turno
+ * na hora; `enfileirada` — havia turno em curso e ela entrou na fila do agente,
+ * na `posicao` dada, para ser lida (junto com as outras) no fim dele.
+ */
+export type EntregaDaMensagem =
+  { entrega: 'lida' } | { entrega: 'enfileirada'; posicao: number };
+
 export abstract class ApiToEngineClient {
   abstract startSession(
     sessionId: string,
@@ -131,11 +172,40 @@ export abstract class ApiToEngineClient {
   // Roteia uma mensagem do usuário pro agente ativo; o engine roda o turno no
   // harness e narra a resposta via session_events (não retorna o texto aqui —
   // o streaming vai pelo canal Phoenix e a persistência pelo event log).
+  //
+  // `idiomaDaResposta` (RN-622): o idioma em que o agente responde ao AUTOR
+  // desta mensagem, já resolvido. OPCIONAL no fio — `null` não é enviado, e o
+  // engine trata ausente como turno sem orientação (engine antigo o ignora).
+  //
+  // `mensagemId` (RN-673): o id do `chat.message` que a api acabou de gravar —
+  // é por ele que a mensagem que entrar na fila pode ser cancelada. Desde a
+  // RN-673 a mensagem com turno em curso NÃO é mais 409: entra na fila, e a
+  // resposta diz qual dos dois aconteceu.
   abstract sendAgentMessage(
     projectId: string,
     sessionId: string,
     agent: string,
     text: string,
+    idiomaDaResposta?: string | null,
+    mensagemId?: string | null,
+    // RN-680 (ADR 0196): os fatos do perfil do AUTOR neste projeto, já
+    // montados e com teto (`textoDoPerfilDoAutor`). OPCIONAL no fio, como o
+    // idioma — `null` não é enviado, e engine antigo o ignora.
+    perfilDoAutor?: string | null,
+  ): Promise<EntregaDaMensagem>;
+
+  /**
+   * Cancela UMA mensagem que espera na fila do agente (RN-673). Quem decide se
+   * ela ainda está na fila é o processo do agente no engine; já lida ou já
+   * cancelada vira `ConflictException` com a frase do engine. `userId` é quem
+   * cancela — a api já conferiu que é quem a enviou.
+   */
+  abstract cancelQueuedMessage(
+    projectId: string,
+    sessionId: string,
+    agent: string,
+    mensagemId: string,
+    userId: string,
   ): Promise<void>;
 
   // Sinaliza que o usuário confirmou prontidão; o engine instrui o Criativo a
@@ -222,9 +292,6 @@ export abstract class ApiToEngineClient {
     sessionId: string,
   ): Promise<void>;
 
-  /** FASE 14d: o Dev Lead recebe da MESMA confirmação de arquitetura pronta. */
-  abstract offerDevHandoff(projectId: string, sessionId: string): Promise<void>;
-
   // Reprocessamento explícito da análise do Psicólogo (Fase 4b) — o
   // engine enfileira o job do PsychologistWorker com triggeredBy:
   // "manual" (sempre roda, mesmo se já houver análise current pra
@@ -278,11 +345,16 @@ export abstract class ApiToEngineClient {
    *
    * `kind: "runner"` é pro CLI na máquina do usuário (no máximo um
    * conectado por projeto); `kind: "terminal"` é pra aba Terminal da web.
+   *
+   * `credencial` (ADR 0201, RN-685) é a credencial de dispositivo que pediu
+   * o ticket — só o `kind: "runner"` tem uma; o de `terminal` é da sessão da
+   * web e vai sem. É ela que a revogação compara depois.
    */
   abstract requestRunnerTicket(
     projectId: string,
     userId: string,
     kind: 'runner' | 'terminal',
+    credencial?: CredencialDeDispositivo | null,
   ): Promise<{ ticket: string; expiresAt: Date }>;
 
   /**
@@ -318,21 +390,37 @@ export abstract class ApiToEngineClient {
 
   /**
    * Pede ao engine para DERRUBAR a conexão viva do runner de `userId` neste
-   * projeto (ADR 0147 ponto 6, RN-520). Chamado quando uma chave de
-   * dispositivo é revogada: revogar só impedia ticket NOVO, e o runner já
-   * conectado seguia executando comando aprovado com a chave revogada.
-   *
-   * O alvo é `{projeto, usuário}`, NUNCA `{chave}` — a identidade da
-   * credencial que originou o ticket morre no `PatAuthGuard` e nunca chega ao
-   * socket do engine (ver `Engine.Runners.Revogacao`). Custo declarado: um
-   * runner do MESMO usuário conectado com PAT, ou com outra chave, também
-   * cai; ele reconecta sozinho se a credencial dele ainda valer.
+   * projeto, com a credencial que for (ADR 0147 ponto 6, RN-520). Desde o
+   * ADR 0201 este é o alvo da REMOÇÃO DE MEMBRO (RN-615) — que tira a pessoa,
+   * não uma credencial — e, durante o rollout, o plano B da revogação de
+   * chave quando o engine ainda não conhece `disconnectRunnerCredential`.
+   * A revogação de UMA credencial usa `disconnectRunnerCredential`.
    *
    * Devolve o desfecho, para o chamador LOGAR — nunca para decidir nada. Um
-   * `sem_runner` é o caso normal de quem revoga uma chave órfã, não erro.
+   * `sem_runner` é o caso normal, não erro.
    */
   abstract disconnectRunnerOfUser(
     projectId: string,
     userId: string,
   ): Promise<DesfechoDeDesconexaoDeRunner>;
+
+  /**
+   * Pede ao engine para DERRUBAR toda conexão de runner aberta com
+   * `credencial`, em qualquer projeto, e anular os tickets dela ainda não
+   * usados (ADR 0201, RN-685). Outro runner do mesmo usuário, aberto com outra
+   * chave ou com PAT, fica de pé — é a diferença para `disconnectRunnerOfUser`.
+   *
+   * `alcanceLegado` serve SÓ à conexão aberta com ticket emitido antes do
+   * ADR 0201 (sem credencial gravada): a do mesmo `userId`, num dos
+   * `projectIds`, cai pelo par como antes, para a revogação não deixar de
+   * derrubar o que derrubava durante o rollout. `null` não alcança legado
+   * nenhum.
+   *
+   * Lança em falha de transporte ou em resposta não-2xx (inclusive o 404 de
+   * um engine anterior a esta rota) — o chamador decide o plano B.
+   */
+  abstract disconnectRunnerCredential(
+    credencial: CredencialDeDispositivo,
+    alcanceLegado: { userId: string; projectIds: string[] } | null,
+  ): Promise<BalancoDeRevogacaoDeCredencial>;
 }

@@ -56,6 +56,6 @@
 .rodape {
   padding-top: 8px;
   border-top: 1px solid var(--border);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }

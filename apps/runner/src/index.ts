@@ -30,6 +30,11 @@
  */
 
 import { realpathSync } from 'node:fs';
+import {
+  ehCaminhoDoBinarioCompilado,
+  rodandoComoBinarioCompilado,
+} from './binario-compilado.ts';
+import { ocorrenciasDoMarcador } from './auto-teste-pty.ts';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import {
@@ -236,7 +241,11 @@ function uso(): never {
  */
 export function comandoDoRunnerParaServico(): string[] {
   const script = process.argv[1];
-  if (import.meta.url.includes('/$bunfs/') || !script || script.startsWith('/$bunfs/')) {
+  if (
+    ehCaminhoDoBinarioCompilado(import.meta.url) ||
+    !script ||
+    ehCaminhoDoBinarioCompilado(script)
+  ) {
     return [process.execPath];
   }
   try {
@@ -669,42 +678,56 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
     return;
   }
 
+  // ADR 0193 (RN-676) — a decisão do dono: operação de git CREDENCIADA roda
+  // no HOST, e o código roda no container. O engine marca o `git fetch`
+  // autenticado de `RunnerGit` com `gitCredenciado: true` (e SÓ ele: comando
+  // de terminal do dev agent nunca carrega a marca), e este runner o executa
+  // aqui fora mesmo com container ativo — onde o `env` chega ao processo filho
+  // (`exec.ts`, mesclado sobre `process.env`). É a MESMA pasta: `estado.dir` é
+  // o bind-mount de `/work` (`DockerViaCli.start`, `${raiz}:/work:rw`), então
+  // o `.git` que o fetch atualiza no host é o que o container enxerga.
+  //
+  // A marca sozinha não basta: sem `env` não há credencial a proteger, e o
+  // comando segue o roteamento de sempre. É a CONJUNÇÃO que decide, e quem a
+  // produz é o engine — `env` presente sem a marca NÃO escapa do container.
+  const temCredencial = !!msg.env && Object.keys(msg.env).length > 0;
+  const gitCredenciadoNoHost = temCredencial && msg.gitCredenciado === true;
+
   // A ordem importa: esta recusa vem DEPOIS de `validarCwdDentroDaRaiz`, de
   // propósito. `guard.ts` é fronteira de CONTENÇÃO, e um comando que aponta
   // para fora da raiz precisa ouvir ISSO — a credencial que não atravessa é
   // capacidade que falta, não comando que se recusa a conter.
   // RN-558 — a credencial não atravessa o `docker exec`, e a recusa é AQUI.
   //
+  // Desde o ADR 0193 ela ENCOLHEU: só o par (`env` presente, container ativo)
+  // SEM a marca de git credenciado chega aqui. Nenhum chamador do engine
+  // produz isso hoje — é a rede para um `env` que viesse de outro lugar, que
+  // NÃO pode ganhar o host por ter credencial (senão `env` viraria a porta de
+  // saída do container) e não pode rodar no container com as variáveis
+  // vazias. O runner ANTERIOR ao ADR 0193 continua recusando com esta mesma
+  // marca, e é por ela que o engine diz "atualize o runner".
+  //
   // Este processo é o ÚNICO que sabe as duas metades ao mesmo tempo: que o
   // comando veio com credencial (`msg.env`, ADR 0056/RN-507) e que ele será
   // roteado para DENTRO do container (`containerAtivo`, ADR 0137). O engine
   // não sabe a segunda — `containerAtivo` nasce `null` a cada execução do
-  // runner e só é setado por `tratarContainerStart`, então um container
-  // `running` REGISTRADO no banco não implica container ativo NESTE processo
-  // (runner reiniciado com o container de pé roteia pro HOST, e aí a
-  // credencial chega). Por isso a checagem não pode subir para
-  // `RunnerReadiness` nem para `RunnerGit`.
-  //
-  // Recusar em vez de rodar: o `docker exec` não tem campo de `env` (ADR 0130,
-  // sem `-e` livre), então o comando rodaria com o helper de credencial
-  // instalado e as variáveis VAZIAS — um `git fetch` com senha em branco
-  // contra o provider remoto, que falha como erro de autenticação e ainda
-  // gasta uma tentativa de login real. Nada é executado.
-  if (estado.containerAtivo && msg.env && Object.keys(msg.env).length > 0) {
+  // runner e só é setado por `tratarContainerStart`. Por isso a checagem não
+  // pode subir para `RunnerReadiness` nem para `RunnerGit`.
+  if (estado.containerAtivo && temCredencial && !gitCredenciadoNoHost) {
     // A CONTAGEM, nunca os nomes nem os valores: a invariante da RN-507 é que
     // `msg.env` não aparece em log nenhum, e esta saída vai para o event log
     // do produto. O número já diz que havia credencial, que é o que se precisa
     // saber aqui.
-    const quantas = Object.keys(msg.env).length;
+    const quantas = Object.keys(msg.env ?? {}).length;
     const explicacao =
       `[runner recusou o comando: ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}] ` +
-      `o comando veio com credencial (${quantas} variável(is) de ambiente, ADR 0056), ` +
-      `mas este runner tem um container ativo e roteia todo comando para dentro ` +
-      `dele por \`docker exec\`, que NÃO tem campo de \`env\` (ADR 0130: sem \`-e\` ` +
-      `livre, de propósito). Executar assim descartaria a credencial em silêncio e ` +
-      `a falha apareceria como erro de autenticação do git. NADA foi executado. ` +
-      `Enquanto a metade que falta não existir, um repositório remoto autenticado ` +
-      `em modo \`runner\` não pode ser clonado com o container de pé.`;
+      `o comando veio com credencial (${quantas} variável(is) de ambiente, ADR 0056) ` +
+      `SEM a marca de git credenciado, e este runner tem um container ativo: todo ` +
+      `comando sem a marca vai para dentro dele por \`docker exec\`, que NÃO tem ` +
+      `campo de \`env\` (ADR 0130: sem \`-e\` livre, de propósito). Executar assim ` +
+      `descartaria a credencial em silêncio e a falha apareceria como erro de ` +
+      `autenticação do git. NADA foi executado. Só a operação de git que o engine ` +
+      `marca roda no host com a credencial (ADR 0193).`;
     console.warn(`exec ${msg.ref}: recusado — ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}`);
     enviarExecResult(canal, {
       ref: msg.ref,
@@ -716,18 +739,22 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
   }
 
   // Log NUNCA imprime `msg.env` (RN-507/ADR 0145) — só ref/command/cwd, os
-  // mesmos três campos de sempre. A credencial de git só existe no `env` do
-  // processo filho que `executarComando` spawna, nunca em texto.
-  console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
+  // mesmos três campos de sempre, mais ONDE rodou quando é o git no host. A
+  // credencial de git só existe no `env` do processo filho que
+  // `executarComando` spawna, nunca em texto.
+  console.log(
+    `exec ${msg.ref}: ${msg.command} (cwd=${cwd})` +
+      (gitCredenciadoNoHost && estado.containerAtivo ? ' [git credenciado, no host]' : ''),
+  );
   // `env` só se aplica ao caminho HOST (`executarComando`/`spawn`) — o
   // container (`docker exec`, via `packages/docker-port`) não tem campo de
-  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Desde a
-  // RN-558, o par (`env` presente, container ativo) já foi RECUSADO acima com
-  // desfecho nomeado: daqui para baixo, ou não há `env`, ou não há container —
-  // nunca um `env` descartado em silêncio.
-  const resultado = estado.containerAtivo
-    ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
-    : await executarComando(msg.command, cwd, { env: msg.env });
+  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Daqui
+  // para baixo: ou o comando vai ao host (sem container, ou git credenciado
+  // marcado), ou vai ao container SEM `env` — nunca um `env` descartado.
+  const resultado =
+    estado.containerAtivo && !gitCredenciadoNoHost
+      ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
+      : await executarComando(msg.command, cwd, { env: msg.env });
   console.log(
     `exec ${msg.ref}: exit=${resultado.exitCode} timedOut=${resultado.timedOut} ` +
       `bytes=${resultado.output.length}`,
@@ -1218,31 +1245,155 @@ async function manterConexaoDoProjeto(
  * ocorrência do marcador; o `cat` ecoando de volta o que leu soma a
  * SEGUNDA — só a segunda prova que um processo de verdade está do outro
  * lado.
+ *
+ * DUAS voltas, com uma pausa entre elas (AT-342). A primeira sozinha passava
+ * no Linux por sorte de tempo: sob o Bun o `tty.ReadStream` com que o
+ * `node-pty` lê o mestre MORRE no primeiro `EAGAIN` (oven-sh/bun#25822, ver
+ * `leitor-de-pty.ts`), e no Linux a primeira leitura já trazia o eco e a
+ * resposta juntos. No `macos-14` ela trouxe só o eco
+ * (`saida="SELF_TEST_PTY_MARKER\r\n"`) e o timeout disparou com o marcador
+ * UMA vez na saída. A segunda volta só é escrita depois de a primeira
+ * completar e de `PAUSA_ENTRE_VOLTAS_MS` sem nada a ler — é a pausa que força
+ * o leitor a passar por um `EAGAIN` antes de haver dado de novo, e é por ela
+ * que esta prova pega o defeito em QUALQUER plataforma, não só onde o tempo
+ * ajudou. Cada volta exige as mesmas DUAS ocorrências de sempre.
+ *
+ * No Windows não há `/bin/cat`: o filho é `cmd.exe`, a linha escrita é
+ * `echo <marcador>` e as duas ocorrências são o eco do comando digitado e a
+ * saída dele. O ConPTY intercala sequências de controle no que redesenha,
+ * então a contagem é feita sobre a saída SEM as sequências CSI/OSC — o que se
+ * exige continua sendo o marcador inteiro, duas vezes, por volta.
  */
+const MARCADORES_DO_AUTO_TESTE_PTY = ['SELF_TEST_PTY_MARKER', 'SELF_TEST_PTY_SEGUNDA_VOLTA'] as const;
+const PAUSA_ENTRE_VOLTAS_MS = 300;
+const TETO_DO_AUTO_TESTE_PTY_MS = 10_000;
+
+/**
+ * DIAGNÓSTICO de quando o auto-teste reprova — nunca muda o veredito, só diz
+ * o que houve, para o próximo ensaio da matriz responder de uma vez em vez de
+ * uma hipótese por rodada (AT-343: no `windows-latest` chegaram só as
+ * sequências iniciais do ConPTY, `\u001b[?9001h\u001b[?1004h`, e mais nada).
+ *
+ * Abre um SEGUNDO PTY com um filho que escreve sem ler nada
+ * (`cmd.exe /c echo <sonda>` no Windows, `/bin/echo <sonda>` fora dele) e
+ * relata: quantos pedaços de saída chegaram, se a sonda apareceu, se o filho
+ * saiu (e com que código) e o que o stream de leitura do `node-pty` emitiu
+ * (`error`/`end`/`close`). Com isso as hipóteses se separam:
+ * - sonda na saída → a LEITURA funciona, e o que falhou foi a ENTRADA (a
+ *   escrita no PTY do auto-teste nunca chegou ao filho);
+ * - filho saiu e nenhuma sonda → a leitura morreu depois do primeiro pedaço,
+ *   o mesmo defeito da AT-342 por outro caminho;
+ * - filho não saiu → o processo nem rodou até o fim dentro do teto.
+ */
+const MARCADOR_DA_SONDA_PTY = 'SELF_TEST_PTY_SONDA';
+const TETO_DA_SONDA_PTY_MS = 4_000;
+
+async function sondarPty(nodePty: NodePtyModule): Promise<string> {
+  const noWindows = process.platform === 'win32';
+  const [arquivo, argumentos] = noWindows
+    ? ['cmd.exe', ['/c', 'echo', MARCADOR_DA_SONDA_PTY]]
+    : ['/bin/echo', [MARCADOR_DA_SONDA_PTY]];
+  return await new Promise<string>((resolver) => {
+    let saida = '';
+    let pedacos = 0;
+    let saiu: string | null = null;
+    const eventosDoStream: string[] = [];
+    let processo: ReturnType<NodePtyModule['spawn']>;
+    try {
+      processo = nodePty.spawn(arquivo, argumentos, {
+        name: 'xterm-256color',
+        cols: 80,
+        rows: 24,
+        cwd: process.cwd(),
+        env: process.env as Record<string, string>,
+      });
+    } catch (erro) {
+      resolver(`sonda: spawn de ${arquivo} lançou: ${mensagemDeErro(erro)}`);
+      return;
+    }
+    const stream = (processo as unknown as { _socket?: NodeJS.EventEmitter })._socket;
+    for (const evento of ['error', 'end', 'close'] as const) {
+      stream?.on(evento, (erro?: unknown) => {
+        eventosDoStream.push(
+          evento === 'error' ? `error(${(erro as NodeJS.ErrnoException)?.code ?? mensagemDeErro(erro)})` : evento,
+        );
+      });
+    }
+    processo.onData((dado) => {
+      pedacos++;
+      saida += dado;
+    });
+    processo.onExit(({ exitCode }) => {
+      saiu = `saiu com ${exitCode}`;
+    });
+    setTimeout(() => {
+      try {
+        processo.kill();
+      } catch {
+        // já saiu
+      }
+      resolver(
+        `sonda (${arquivo} ${argumentos.join(' ')}): ${pedacos} pedaço(s), ` +
+          `sonda na saída: ${ocorrenciasDoMarcador(saida, MARCADOR_DA_SONDA_PTY) > 0 ? 'SIM' : 'NÃO'}, ` +
+          `filho: ${saiu ?? 'NÃO saiu no teto'}, ` +
+          `stream: ${eventosDoStream.length > 0 ? eventosDoStream.join(',') : 'nenhum evento'}, ` +
+          `saida=${JSON.stringify(saida)}`,
+      );
+    }, TETO_DA_SONDA_PTY_MS);
+  });
+}
+
 async function rodarAutoTestePty(): Promise<void> {
   const nodePty = await carregarNodePty();
   console.log('node-pty carregado com sucesso');
 
+  const noWindows = process.platform === 'win32';
+  const linhaDoMarcador = (marcador: string) => (noWindows ? `echo ${marcador}\r` : `${marcador}\n`);
+
   const shellOriginal = process.env.SHELL;
-  process.env.SHELL = '/bin/cat';
+  process.env.SHELL = noWindows ? 'cmd.exe' : '/bin/cat';
+  let falha: Error | null = null;
   try {
     await new Promise<void>((resolvePromise, rejeitar) => {
       let saida = '';
+      let volta = 0;
+      let pedacos = 0;
+      let filhoSaiu = false;
+      const inicio = Date.now();
+      let ultimoPedacoMs: number | null = null;
       let concluido = false;
+      let teto: ReturnType<typeof setTimeout> | undefined;
       const gerenciador = new GerenciadorDePty(
         process.cwd(),
         (_sessionRef, dataBase64) => {
           if (concluido) return;
+          pedacos++;
+          ultimoPedacoMs = Date.now() - inicio;
           saida += Buffer.from(dataBase64, 'base64').toString('utf8');
-          const ocorrencias = saida.split('SELF_TEST_PTY_MARKER').length - 1;
-          if (ocorrencias >= 2) {
-            concluido = true;
-            gerenciador.fechar('self-test');
-            console.log(`SELF_TEST_PTY_OK: ${JSON.stringify(saida)}`);
-            resolvePromise();
+          const marcador = MARCADORES_DO_AUTO_TESTE_PTY[volta];
+          if (marcador === undefined || ocorrenciasDoMarcador(saida, marcador) < 2) return;
+          volta++;
+          const proximo = MARCADORES_DO_AUTO_TESTE_PTY[volta];
+          if (proximo !== undefined) {
+            setTimeout(
+              () =>
+                gerenciador.escrever(
+                  'self-test',
+                  Buffer.from(linhaDoMarcador(proximo)).toString('base64'),
+                ),
+              PAUSA_ENTRE_VOLTAS_MS,
+            );
+            return;
           }
+          concluido = true;
+          clearTimeout(teto);
+          gerenciador.fechar('self-test');
+          console.log(`SELF_TEST_PTY_OK: ${JSON.stringify(saida)}`);
+          resolvePromise();
         },
-        () => {},
+        () => {
+          filhoSaiu = true;
+        },
         nodePty,
       );
       const resultado = gerenciador.abrir('self-test', 80, 24);
@@ -1252,18 +1403,30 @@ async function rodarAutoTestePty(): Promise<void> {
       }
       gerenciador.escrever(
         'self-test',
-        Buffer.from('SELF_TEST_PTY_MARKER\n').toString('base64'),
+        Buffer.from(linhaDoMarcador(MARCADORES_DO_AUTO_TESTE_PTY[0])).toString('base64'),
       );
-      setTimeout(
-        () =>
-          rejeitar(
-            new Error(`self-test-pty: timeout esperando o marcador. saida=${JSON.stringify(saida)}`),
+      teto = setTimeout(() => {
+        concluido = true;
+        gerenciador.fechar('self-test');
+        rejeitar(
+          new Error(
+            `self-test-pty: timeout esperando o marcador ${MARCADORES_DO_AUTO_TESTE_PTY[volta]} ` +
+              `(volta ${volta + 1} de ${MARCADORES_DO_AUTO_TESTE_PTY.length}). ` +
+              `${pedacos} pedaço(s) de saída, o último aos ${ultimoPedacoMs ?? '-'} ms; ` +
+              `filho ${filhoSaiu ? 'SAIU' : 'não saiu'}. saida=${JSON.stringify(saida)}`,
           ),
-        10_000,
-      );
+        );
+      }, TETO_DO_AUTO_TESTE_PTY_MS);
     });
+  } catch (erro) {
+    falha = erro instanceof Error ? erro : new Error(String(erro));
   } finally {
     process.env.SHELL = shellOriginal;
+  }
+  if (falha) {
+    // O veredito já está dado; a sonda só acrescenta o porquê.
+    console.error(`self-test-pty: diagnóstico — ${await sondarPty(nodePty)}`);
+    throw falha;
   }
 }
 
@@ -1672,7 +1835,13 @@ async function rodarComoAgenteDeMaquina(
 // acontece sob `node`/`bun run` fora de um `--compile`) e, nesse caso, rodar
 // `main()` incondicionalmente — não há ambiguidade "importado por teste vs.
 // executado direto" pra um binário standalone: o próprio entrypoint É o CLI.
-const invocadoComoBinarioCompilado = import.meta.url.includes('/$bunfs/');
+//
+// AT-343: no Windows o prefixo virtual é OUTRO (`B:/~BUN/root/`), e só o de
+// Linux/macOS era reconhecido — o binário de Windows caía no `realpathSync`
+// abaixo e morria com `ENOENT` antes de `main()`. As duas formas moram em
+// `ehCaminhoDoBinarioCompilado`, e `process.argv[1]` entra junto como segunda
+// testemunha.
+const invocadoComoBinarioCompilado = rodandoComoBinarioCompilado(import.meta.url);
 if (
   invocadoComoBinarioCompilado ||
   (process.argv[1] &&

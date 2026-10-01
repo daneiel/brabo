@@ -47,6 +47,9 @@ vi.mock('../lib/hooks', () => ({
 }));
 
 vi.mock('../lib/api-client', () => ({
+  // O controle de roteamento (ADR 0166) renderiza dentro de Configurações:
+  // nenhum provider com a capability, o estado de produção hoje.
+  listProviderCapabilities: () => Promise.resolve([]),
   getProjectEvent: (projectId: string, eventId: string) =>
     getProjectEvent(projectId, eventId),
   deleteMyProficiency: (projectId: string) => deleteMyProficiency(projectId),
@@ -64,6 +67,7 @@ vi.mock('../lib/api-client', () => ({
   // Object.entries e poluía o log com um erro que não é do teste.
   listModels: () => Promise.resolve({ local: {}, cloud: {} }),
   getAgentModelBinding: () => Promise.resolve(null),
+  getResolvedModelBindings: () => Promise.resolve({ agents: [], areas: [] }),
   setAgentModelBinding: () => Promise.resolve({}),
 }));
 

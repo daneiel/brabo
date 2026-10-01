@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { LeitorDeDonoDePasta } from '../../../../src/infrastructure/filesystem/dono-de-pasta';
 import { ObterSpecDeContainerUseCase } from '../../../../src/application/use-cases/containers/obter-spec-de-container.use-case';
 import { ObterEstadoObservadoDoContainerUseCase } from '../../../../src/application/use-cases/containers/obter-estado-observado-do-container.use-case';
 import type { ObterContainerDoProjetoUseCase } from '../../../../src/application/use-cases/containers/obter-container-do-projeto.use-case';
@@ -58,13 +62,91 @@ function montarSpec(
   estado: EstadoDoContainer,
 ): ObterSpecDeContainerUseCase {
   const projects = {
-    findById: async () => project,
+    findById: () => Promise.resolve(project),
   } as unknown as ProjectRepository;
   const obterImagem = {
-    execute: async () => estado,
+    execute: () => Promise.resolve(estado),
   } as unknown as ObterContainerDoProjetoUseCase;
   return new ObterSpecDeContainerUseCase(projects, obterImagem);
 }
+
+describe('ObterSpecDeContainerUseCase — o dono da pasta (ADR 0180)', () => {
+  function comLeitor(
+    dono: { uid: number; gid: number } | null,
+    vistos: string[],
+  ) {
+    const projects = {
+      findById: () =>
+        Promise.resolve(
+          projeto({
+            executionMode: 'container',
+          }),
+        ),
+    } as unknown as ProjectRepository;
+    const obterImagem = {
+      execute: () => Promise.resolve(DECIDIDO),
+    } as unknown as ObterContainerDoProjetoUseCase;
+    const leitor = {
+      ler: (caminho: string) => {
+        vistos.push(caminho);
+        return Promise.resolve(dono);
+      },
+    };
+    return new ObterSpecDeContainerUseCase(projects, obterImagem, leitor);
+  }
+
+  it('devolve o dono medido da pasta gerenciada', async () => {
+    const vistos: string[] = [];
+    const r = await comLeitor({ uid: 1000, gid: 1000 }, vistos).execute(
+      PROJETO,
+    );
+    expect(r.usuarioDaPasta).toEqual({ uid: 1000, gid: 1000 });
+    expect(vistos[0]).toContain('projeto-abcdefgh');
+  });
+
+  it('projeto runner não mede pasta nenhuma', async () => {
+    const vistos: string[] = [];
+    const projects = {
+      findById: () =>
+        Promise.resolve(
+          projeto({
+            executionMode: 'runner',
+            workspacePath: '/home/alguem/x',
+          }),
+        ),
+    } as unknown as ProjectRepository;
+    const obterImagem = {
+      execute: () => Promise.resolve(DECIDIDO),
+    } as unknown as ObterContainerDoProjetoUseCase;
+    const leitor = {
+      ler: (c: string) => {
+        vistos.push(c);
+        return Promise.resolve(null);
+      },
+    } as unknown as LeitorDeDonoDePasta;
+    const r = await new ObterSpecDeContainerUseCase(
+      projects,
+      obterImagem,
+      leitor,
+    ).execute(PROJETO);
+    expect(r.usuarioDaPasta).toBeNull();
+    expect(vistos).toEqual([]);
+  });
+
+  it('LeitorDeDonoDePasta mede o dono real de uma pasta e devolve null para o que não mede', async () => {
+    const leitor = new LeitorDeDonoDePasta();
+    const dir = await mkdtemp(join(tmpdir(), 'at247-'));
+    try {
+      const st = await stat(dir);
+      const esperado =
+        st.uid > 0 && st.gid > 0 ? { uid: st.uid, gid: st.gid } : null;
+      expect(await leitor.ler(dir)).toEqual(esperado);
+      expect(await leitor.ler(join(dir, 'nao-existe'))).toBeNull();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe('ObterSpecDeContainerUseCase — o que o broker lê', () => {
   it('devolve identidade, modo e a decisão vigente do Arquiteto', async () => {
@@ -77,6 +159,7 @@ describe('ObterSpecDeContainerUseCase — o que o broker lê', () => {
       workspaceDirName: 'projeto-abcdefgh',
       executionMode: 'container',
       localizacao: { tipo: 'gerenciada', segmento: 'projeto-abcdefgh' },
+      usuarioDaPasta: null,
       imagem: {
         image: 'node:22-bookworm-slim',
         network: 'egress',
@@ -253,9 +336,9 @@ function brokerDeTeste(
 ): ContainerBrokerPort {
   return {
     configurado: () => overrides.configurado ?? true,
-    inspect: async () => {
-      if (overrides.erro !== undefined) throw overrides.erro;
-      return overrides.resultado ?? null;
+    inspect: () => {
+      if (overrides.erro !== undefined) return Promise.reject(overrides.erro);
+      return Promise.resolve(overrides.resultado ?? null);
     },
   } as unknown as ContainerBrokerPort;
 }
@@ -295,13 +378,35 @@ describe('ObterEstadoObservadoDoContainerUseCase — observado nunca herda regis
     });
   });
 
+  it('`teto-excedido` no inspect cai no MESMO lado de `sem-resposta` (RN-604)', async () => {
+    // A tela distingue configurado de não configurado; o motivo novo do
+    // transporte (AT-233) não abre um terceiro valor de `naoObservado`, e o
+    // texto que o nomeia chega pelo `detalhe`.
+    const caso = new ObterEstadoObservadoDoContainerUseCase(
+      brokerDeTeste({
+        erro: new BrokerIndisponivelError(
+          'teto-excedido',
+          'o broker de container não respondeu `inspect` dentro do teto desta operação (5000ms)',
+        ),
+      }),
+    );
+
+    const resultado = await caso.execute(PROJETO);
+
+    expect(resultado).toMatchObject({
+      observado: null,
+      naoObservado: 'broker-sem-resposta',
+    });
+    expect(resultado.detalhe).toContain('`inspect`');
+  });
+
   it('sem BROKER_URL, declara a ausência e nem chama o broker', async () => {
     let chamou = false;
     const broker = {
       configurado: () => false,
-      inspect: async () => {
+      inspect: () => {
         chamou = true;
-        return null;
+        return Promise.resolve(null);
       },
     } as unknown as ContainerBrokerPort;
 

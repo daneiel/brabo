@@ -5,7 +5,29 @@ import {
   mensagemDeEfeitoExterno,
   comandoPrivilegiadoNoComando,
   mensagemDeComandoPrivilegiado,
+  padraoAlcancaTeto,
 } from '../../../src/domain/actions/external-effect';
+
+describe('padraoAlcancaTeto — o padrão de "sempre permitir" que cobriria um teto (RN-675)', () => {
+  it.each([
+    [['git']],
+    [['git', 'remote']],
+    [['gh', 'pr']],
+    [['sudo']],
+    [['doas', 'ls']],
+  ])('%j alcança um teto', (tokens) => {
+    expect(padraoAlcancaTeto(tokens)).toBe(true);
+  });
+
+  it.each([
+    [['git', 'status']],
+    [['npm', 'test']],
+    [['gh', 'pr', 'list']],
+    [[]],
+  ])('%j não alcança', (tokens) => {
+    expect(padraoAlcancaTeto(tokens)).toBe(false);
+  });
+});
 
 function efeito(comando: string) {
   return efeitoExternoNoComando(parseCommand(comando));
@@ -86,9 +108,7 @@ describe('comandoPrivilegiadoNoComando — sudo/doas, sem ação tipada equivale
   );
 
   it('um sudo escondido no fim de um composto ainda é privilegiado', () => {
-    expect(privilegiado('echo oi && sudo rm -rf /tmp/x')?.comando).toBe(
-      'sudo',
-    );
+    expect(privilegiado('echo oi && sudo rm -rf /tmp/x')?.comando).toBe('sudo');
   });
 
   it('a mensagem explica por que pede decisão humana, sem redirecionar pra ação nenhuma', () => {

@@ -8,7 +8,7 @@ export type ButtonVariant =
   | 'danger'
   | 'success';
 
-export type ButtonSize = 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -25,6 +25,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * altura que ninguém pediu.
    */
   size?: ButtonSize;
+  /**
+   * Botão QUADRADO só de ícone (o "botão de ícone" do handoff, raio `--r-sm`):
+   * largura igual à altura do `size`. O nome acessível é do chamador —
+   * `aria-label` —, porque um ícone não tem texto que o leitor de tela leia.
+   *
+   * `sm` (28px) é o botão DENSO de linha e painel lateral (paginador, idioma da
+   * sessão, revogar numa tabela) — acima do piso de 24px que
+   * `scripts/dev/validacao-visual.js` cobra.
+   */
+  icon?: boolean;
   /**
    * Ação em andamento: mostra o spinner, desabilita o botão e anuncia
    * `aria-busy` (ADR 0036).
@@ -45,6 +55,7 @@ export function Button({
   variant = 'primary',
   fullWidth,
   size = 'md',
+  icon,
   loading,
   disabled,
   className,
@@ -55,6 +66,8 @@ export function Button({
     styles.button,
     styles[variant],
     size === 'lg' && styles.lg,
+    size === 'sm' && styles.sm,
+    icon && styles.icon,
     fullWidth && styles.fullWidth,
     className,
   ]

@@ -9,6 +9,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { User } from '../../../domain/iam/user.entity';
@@ -16,6 +17,7 @@ import { RequireRole } from '../iam/require-role.decorator';
 import { ActivateAgentUseCase } from '../../../application/use-cases/agents/activate-agent.use-case';
 import { SendAgentMessageUseCase } from '../../../application/use-cases/agents/send-agent-message.use-case';
 import { CancelAgentTurnUseCase } from '../../../application/use-cases/agents/cancel-agent-turn.use-case';
+import { CancelQueuedAgentMessageUseCase } from '../../../application/use-cases/agents/cancel-queued-agent-message.use-case';
 import { ConfirmReadinessUseCase } from '../../../application/use-cases/agents/confirm-readiness.use-case';
 import { OfferInfraHandoffUseCase } from '../../../application/use-cases/agents/offer-infra-handoff.use-case';
 import { ValidateNecessityUseCase } from '../../../application/use-cases/agents/validate-necessity.use-case';
@@ -31,6 +33,9 @@ import { OkResponseDto } from '../shared/dto/comuns.response.dto';
 import {
   AgenteAtivadoResponseDto,
   HandoffResponseDto,
+  OfertaDeHandoffResponseDto,
+  ConfirmacaoDeArquiteturaResponseDto,
+  MensagemAoAgenteResponseDto,
 } from './dto/agents.response.dto';
 
 /**
@@ -49,6 +54,7 @@ export class AgentsController {
     private readonly activateAgent: ActivateAgentUseCase,
     private readonly sendAgentMessage: SendAgentMessageUseCase,
     private readonly cancelAgentTurn: CancelAgentTurnUseCase,
+    private readonly cancelQueuedMessage: CancelQueuedAgentMessageUseCase,
     private readonly confirmReadiness: ConfirmReadinessUseCase,
     private readonly offerInfraHandoff: OfferInfraHandoffUseCase,
     private readonly validateNecessity: ValidateNecessityUseCase,
@@ -91,17 +97,36 @@ export class AgentsController {
   @ApiParam({
     name: 'agent',
     example: 'po',
-    description: 'Slug of the active agent.',
+    description:
+      'Slug of the conversational agent that reads the message: criativo, po, ' +
+      'arquiteto, dev-lead, ux-designer or staff. Any other slug — infra ' +
+      'included — is refused with 422; it is never delivered to a default ' +
+      'agent (RN-584).',
   })
   @ApiOperation({
     summary: 'Sends a message to the active agent',
     description:
-      'The response is just the acknowledgment. What the agent replies arrives ' +
-      "via the session's event log and the chat SSE — not through this call.",
+      'The response is just the acknowledgment, and it returns on ACCEPTANCE — ' +
+      "before the agent's turn ends (ADR 0163). What the agent replies arrives " +
+      "via the session's event log and channel — not through this call. If the " +
+      "agent is mid-turn, the message is NOT refused: it joins the agent's " +
+      'queue (`entrega: "enfileirada"`) and is read, with any others queued, in ' +
+      'one turn when the current one ends; it can be cancelled while it waits ' +
+      '(RN-673, ADR 0191).',
   })
-  @ApiCreatedResponse({ type: OkResponseDto })
+  @ApiCreatedResponse({ type: MensagemAoAgenteResponseDto })
   @ApiConflictResponse({
-    description: 'The agent is not active in this session.',
+    description:
+      'The agent is not active in this session; or it is waiting on an ' +
+      'execution-plan decision; or its queue already holds 10 messages ' +
+      '(`fila_de_mensagens_cheia`) — the message was recorded but NOT read by ' +
+      'the agent (ADR 0163, RN-673).',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'The agent does not take chat messages (the Infra Lead works by proposal, ' +
+      'and any slug without its own clause in the engine is refused by name) — ' +
+      'the message was recorded but NO agent read it (RN-584).',
   })
   message(
     @Param('projectId') projectId: string,
@@ -144,11 +169,22 @@ export class AgentsController {
     summary: "Answers a set of the agent's structured questions",
     description:
       'Records `chat.structured_question_answered` and resends the answers to the ' +
-      'agent as a normal message. A question set can only be answered once.',
+      'agent as a normal message. A question set can only be answered once. ' +
+      "Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn " +
+      'keeps running in the engine and its narration, end and failures arrive ' +
+      'through the session channel and the event log (`agent.status`, ' +
+      '`agent.response`, `agent.error`) — never through this response.',
   })
   @ApiCreatedResponse({ type: OkResponseDto })
   @ApiConflictResponse({
-    description: 'This question set has already been answered.',
+    description:
+      'This question set has already been answered; or the agent is still in ' +
+      'the middle of a turn and did not read the answers (ADR 0163).',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'The agent that asked does not take chat messages — the answers were ' +
+      'recorded but NO agent read them (RN-584).',
   })
   submitStructuredQuestionAnswer(
     @Param('projectId') projectId: string,
@@ -164,6 +200,50 @@ export class AgentsController {
       agent,
       questionSetId,
       dto.answers,
+      user.id,
+    );
+  }
+
+  @Post('agents/:agent/messages/:messageId/cancel')
+  @RequireRole('developer')
+  @ApiParam({
+    name: 'agent',
+    example: 'po',
+    description: 'Slug of the agent whose queue holds the message.',
+  })
+  @ApiParam({
+    name: 'messageId',
+    example: '01JC4Z0000EVENTO000000000001',
+    description:
+      'Id of the `chat.message` event (the `mensagemId` the message route returned).',
+  })
+  @ApiOperation({
+    summary: "Cancels one message waiting in the agent's queue",
+    description:
+      'A message sent while the agent is mid-turn waits in a queue and is read ' +
+      'when the turn ends (RN-673). While it waits, the person who SENT it can ' +
+      'cancel it: the engine removes it from the queue and records ' +
+      '`chat.message_cancelled`; it is never shown to the model. Someone ' +
+      "else's message is 403.",
+  })
+  @ApiCreatedResponse({ type: OkResponseDto })
+  @ApiConflictResponse({
+    description:
+      'The message is no longer queued — the agent already read it, or it was ' +
+      'already cancelled; or the session is closed (RN-581).',
+  })
+  cancelQueued(
+    @Param('projectId') projectId: string,
+    @Param('sessionId') sessionId: string,
+    @Param('agent') agent: string,
+    @Param('messageId') messageId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.cancelQueuedMessage.execute(
+      projectId,
+      sessionId,
+      agent,
+      messageId,
       user.id,
     );
   }
@@ -198,9 +278,23 @@ export class AgentsController {
     summary: 'Confirms that the discovery session with the Criativo is done',
     description:
       "It's the button that triggers the `product_brief` and the handoff to " +
-      'the PO. Records `readiness.confirmed` in the event log.',
+      'the PO. Records `readiness.confirmed` in the event log. ' +
+      "Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn " +
+      'keeps running in the engine and its narration, end and failures arrive ' +
+      'through the session channel and the event log (`agent.status`, ' +
+      '`agent.response`, `agent.error`) — never through this response.',
   })
   @ApiCreatedResponse({ type: OkResponseDto })
+  @ApiConflictResponse({
+    description:
+      'The Criativo is still in the middle of a turn — the confirmation was ' +
+      'recorded but the brief did not start (ADR 0163).',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'No business rule was captured in this conversation — there is nothing ' +
+      'to consolidate into a brief yet (ADR 0163).',
+  })
   readiness(
     @Param('projectId') projectId: string,
     @Param('sessionId') sessionId: string,
@@ -222,9 +316,22 @@ export class AgentsController {
     description:
       'Dedicated endpoint instead of reusing `readiness`, which belongs to the ' +
       'Criativo: they are two different milestones of the session, and ' +
-      'conflating them would make the event log ambiguous.',
+      'conflating them would make the event log ambiguous. ' +
+      "Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn " +
+      'keeps running in the engine and its narration, end and failures arrive ' +
+      'through the session channel and the event log (`agent.status`, ' +
+      '`agent.response`, `agent.error`) — never through this response.' +
+      ' The Dev Lead handoff still comes AFTER the Infra one: the engine ' +
+      'holds it until the closing turn ends. Idempotent (ADR 0182, RN-635): a ' +
+      'target that already has a pending offer or is active in the project is ' +
+      'not triggered again, and with both like that nothing is recorded.',
   })
-  @ApiCreatedResponse({ type: OkResponseDto })
+  @ApiCreatedResponse({ type: ConfirmacaoDeArquiteturaResponseDto })
+  @ApiConflictResponse({
+    description:
+      'The Arquiteto is still in the middle of a turn — the confirmation was ' +
+      'recorded but the closing turn did not start (ADR 0163).',
+  })
   handoffInfra(
     @Param('projectId') projectId: string,
     @Param('sessionId') sessionId: string,
@@ -248,7 +355,10 @@ export class AgentsController {
     description:
       'Records `necessity.validated`. Requires the Criativo to have already ' +
       'consolidated a `product_brief` in this session (RN-406) — without it, it ' +
-      'is refused: there is nothing to validate.',
+      'is refused: there is nothing to validate. Since ADR 0185 (RN-657) the ' +
+      '"I\'m ready — the need is validated" click (`POST .../readiness`) ' +
+      'records this event itself, and the web no longer calls this route; it ' +
+      'stays for sessions whose readiness click predates that ADR.',
   })
   @ApiCreatedResponse({ type: OkResponseDto })
   validateNecessityHandoff(
@@ -286,9 +396,15 @@ export class AgentsController {
       "Born as `offered`, exactly like an agent's own `offer_handoff` — " +
       'the only difference is who decided. `toAgent` has to be in the ' +
       'addressable catalog (area lead or area-less agent); a subagent or an ' +
-      'unknown slug is refused with 400.',
+      'unknown slug is refused with 400. At most one pending offer per ' +
+      '(project, target): see `desfecho` (ADR 0182, RN-635).',
   })
-  @ApiCreatedResponse({ type: HandoffResponseDto })
+  @ApiCreatedResponse({ type: OfertaDeHandoffResponseDto })
+  @ApiConflictResponse({
+    description:
+      '`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in ' +
+      'a non-closed session of the project — no offer is created.',
+  })
   requestManual(
     @Param('projectId') projectId: string,
     @Param('sessionId') sessionId: string,

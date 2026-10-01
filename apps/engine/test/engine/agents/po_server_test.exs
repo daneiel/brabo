@@ -249,6 +249,36 @@ defmodule Engine.Agents.PoServerTest do
       assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "id=evt-r1"))
     end
 
+    test "o texto da ferramenta vai para o event log em tool.result, cortado com o total (RN-589)",
+         %{state: state} do
+      Process.put(:fake_business_rules, %{
+        "rules" => [
+          %{
+            "id" => "evt-r1",
+            "title" => String.duplicate("x", 5_000),
+            "description" => "d",
+            "coveredByStoryIds" => [],
+            "covered" => false
+          }
+        ],
+        "uncoveredCount" => 1
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("listar_regras_de_negocio", %{}),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "o que falta?"}, state)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "listar_regras_de_negocio"} = p}}
+
+      assert p.ok == true
+      assert String.length(p.resultado) == Engine.Agents.ResultadoDeFerramenta.teto()
+      assert p.resultadoTotal > String.length(p.resultado)
+    end
+
     test "listar_backlog roda e injeta o resultado como tool-result", %{state: state} do
       Process.put(:fake_backlog, [%{"id" => "ep-1", "title" => "Cadastro", "stories" => []}])
 
@@ -465,6 +495,20 @@ defmodule Engine.Agents.PoServerTest do
 
     # O turno fechou de verdade: sem isto, um `turno_assincrono` pendurado
     # faria a próxima mensagem do usuário responder `:turno_em_andamento`.
+    #
+    # Espera-se o `agent.status: idle` PERSISTIDO antes de ler o state, e não o
+    # `agent.error` acima (AT-099): o `agent.error` é gravado de DENTRO da Task,
+    # antes de o resultado chegar ao GenServer, e ler o state logo depois dele
+    # reprovava ~1 em 4 rodadas com o turno ainda aberto — corretamente. O
+    # `idle` sai de `finalizar/1`, dentro do `handle_info` que já zerou o
+    # turno, e `:sys.get_state/1` só é atendido depois que esse `handle_info`
+    # devolve o state. É também o sinal que a tela usa para fechar o turno
+    # (`turnoTerminouNoLog`), e a RN-585 fixa essa ordem para os seis
+    # conversacionais em `turno_assincrono_test.exs`.
+    assert_receive {:event_appended, ^project_id, ^session_id,
+                    %{type: "agent.status", payload: %{status: "idle"}}},
+                   5_000
+
     assert :sys.get_state(pid).turno_assincrono == nil
 
     GenServer.stop(pid)

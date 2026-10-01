@@ -42,9 +42,13 @@
 
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { NodePtyModule } from './pty.ts';
+import { garantirSpawnHelperExecutavel } from './spawn-helper.ts';
+import { rodandoComoBinarioCompilado as binarioCompilado } from './binario-compilado.ts';
+import { comLeitorDePtyProprio } from './leitor-de-pty.ts';
 
 /**
  * `true` só dentro de um binário compilado pelo `bun build --compile` — o
@@ -54,7 +58,9 @@ import type { NodePtyModule } from './pty.ts';
  * `import.meta.url` é sempre um `file://` real).
  */
 function rodandoComoBinarioCompilado(): boolean {
-  return import.meta.url.includes('/$bunfs/');
+  // As duas formas do caminho virtual — `/$bunfs/` e, no Windows,
+  // `B:/~BUN/root/` (AT-343).
+  return binarioCompilado(import.meta.url);
 }
 
 /**
@@ -92,7 +98,20 @@ export async function carregarNodePty(): Promise<NodePtyModule> {
   if (!rodandoComoBinarioCompilado()) {
     // Caminho de sempre — idêntico ao `import * as nodePty from 'node-pty'`
     // estático que existia antes, só que dinâmico (permite este `if`).
-    return (await import('node-pty')) as unknown as NodePtyModule;
+    //
+    // Antes, no macOS, o `spawn-helper` do `node-pty` ganha o bit de execução
+    // que o `pnpm install`/`npm install` não lhe dá (AT-114, ver
+    // `spawn-helper.ts`). Fora de darwin não toca o disco; falha nomeada em
+    // vez de um `posix_spawnp failed` no primeiro PTY.
+    const raizDoNodePty = dirname(createRequire(import.meta.url).resolve('node-pty/package.json'));
+    const desfecho = garantirSpawnHelperExecutavel({ raizDoNodePty });
+    if (desfecho.tipo === 'corrigido') {
+      console.error(`spawn-helper sem bit de execução — corrigido: ${desfecho.caminho}`);
+    }
+    // Sob `bun run` em dev o `tty.ReadStream` do Bun tem o mesmo defeito do
+    // binário (AT-342) — o embrulho decide sozinho e, sob o Node, devolve o
+    // módulo intacto.
+    return comLeitorDePtyProprio((await import('node-pty')) as unknown as NodePtyModule);
   }
 
   // Import ESTÁTICO por especificador literal — o Bun descobre e inclui
@@ -112,5 +131,7 @@ export async function carregarNodePty(): Promise<NodePtyModule> {
 
   const diretorio = extrairParaDiretorioReal(NATIVE_PTY_FILES);
   const entrada = pathToFileURL(join(diretorio, 'lib', 'index.js')).href;
-  return (await import(entrada)) as unknown as NodePtyModule;
+  // AT-342: sob o Bun o `tty.ReadStream` com que o `node-pty` lê o mestre
+  // morre no primeiro `EAGAIN` — ver `leitor-de-pty.ts`.
+  return comLeitorDePtyProprio((await import(entrada)) as unknown as NodePtyModule);
 }

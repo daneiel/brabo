@@ -62,7 +62,7 @@ canonical roles today, defined in
 |---|---|
 | `criativo` | runs ideation with the user and emits business rules |
 | `po` | turns the brief into a backlog (epics, stories, tasks) with DoD and DoR |
-| `arquiteto` | technical decisions (ADRs) and the module map |
+| `arquiteto` | technical decisions (ADRs), the module map and the contract between modules ([RN-684](business-rules.md#rn-684)) |
 | `dev-backend` · `dev-frontend` | implement; run in an isolated worktree |
 | `infra` | provisioning, deploy, and environments — **proactive**, not an executor |
 | `qa` | semantic gate: tests and acceptance criteria |
@@ -73,6 +73,12 @@ canonical roles today, defined in
 The names are **product roles**, capitalized when used as a noun ("the
 Architect proposed an ADR"). Devs are **dynamic**: one agent per
 `module_map` module, not a fixed list.
+
+**Contract between modules** ([ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) —
+the Architect's versioned `artifact.module_contracts`: per module, what it
+EXPOSES (function, route, event or data shape, with the signature). What it
+consumes is the `module_map`'s `dependsOn`. A dev agent reads it with
+`listar_contratos_de_modulos` instead of another dev's worktree.
 
 **Area** (Phase 8b/8c, [ADR 0038](adr/0038-hierarquia-de-agentes.md)) —
 `qa` and `infra` from the table above became area LEADs: they remain the
@@ -105,17 +111,21 @@ model → the model requests a tool → the tool becomes a `proposed_action`
 has an iteration ceiling; once exhausted, the agent ends with a blocking
 artifact.
 
-**Turn (conversational agent)** — one round of work by one of the five
+**Turn (conversational agent)** — one round of work by one of the
 session-scoped conversational agents (Creative, PO, Architect, Dev Lead,
-Staff — the last one from ADR 0088, dormant for automatic triggering, but
-activatable via manual handoff): one streamed call to the LLM plus the
+UX Designer, Staff — from ADR 0088, dormant for automatic triggering, but
+activatable via manual handoff — and, since
+[RN-617](business-rules.md#rn-617), the Infra Lead): one streamed call to the LLM plus the
 tool loop it triggers. Since [RN-122](business-rules.md#rn-122) it runs on
 a supervised `Task` (`Engine.Agents.TurnoAssincrono`), no longer inside
 the `handle_call` that received the message — that's what lets the
 composer's **"Stop"** button actually cancel the turn (kills the task,
 cuts the connection to the api) instead of just stopping the client-side
-render. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
-Architect, Dev Lead, and Staff 14) — it's a constant on the agent's own
+render. Since [RN-578](business-rules.md#rn-578) the command that starts a
+turn is answered on ACCEPTANCE: the click returns as soon as the Task is up,
+and the end of the turn arrives through the session channel and the event
+log, never through that HTTP response. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
+Architect, Dev Lead, UX Designer, Staff and Infra Lead 14) — it's a constant on the agent's own
 server, not the `ToolLoop`'s ceiling
 (`Engine.Harness.Iteracoes`), which applies to execution and gate agents.
 Staff is the only one with no `kickoff/1`: it stays idle until the first
@@ -128,6 +138,15 @@ also stopped being silent: once exhausted, it emits the SAME
 `toolloop.limit_reached` ([RN-166](business-rules/autenticacao.md#rn-166)), because
 it's the same fact and whoever reads the event log shouldn't need a
 second name for it.
+
+**Rehydration (conversational agent)** — how a conversational agent's
+process rebuilds its history from the event log when it comes up over a
+session that already has a conversation (restart, or the PO taking over from
+the Creative agent). One path for the seven, `Engine.Agents.Reidratacao`
+([RN-580](business-rules.md#rn-580)): it reads the **tail** (the last 200
+events, not the first), brings back structured questions and the agent's own
+tool calls, and when the conversation doesn't fit, opens with a system message
+that states how many earlier events were left out.
 
 **Handoff** — the explicit handover of work from one agent to another.
 Explicit because the destination and the reason are recorded in the event
@@ -182,7 +201,7 @@ which is durable, never the status.
 
 **`proposed_action`** — every action with an external effect (a terminal
 command, commit, push, PR, merge, spend) is **born** here, it never
-executes directly. Thirteen types. Six states
+executes directly. Twenty-one types. Six states
 ([RN-003](business-rules.md#rn-003)).
 
 **`permissions.json`** — the project's policy file. Matches a command
@@ -236,15 +255,20 @@ spinning forever. The subagent inherits the base agent's ceiling
 
 **`implementavel` (implementable) gate** — a PRE-DEV gateway, before a dev
 agent or worktree exists: the Dev Lead assesses whether a story is
-implementable from the **test plan** that QA-strategy produces.
-`dono: dev-lead`, `aprovacao_humana: true`, `severidade: warn`
+implementable from the story itself and the current `module_map` (until
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md) the input was the
+QA-strategy test plan). `dono: dev-lead`, `aprovacao_humana: true`,
+`severidade: warn`
 ([ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 **QA-strategy** — the `qa-lead` in a second MOMENT (same process, a
 deliverable separate from the PR verdict): it produces the **test plan**
-(synthesis, executable criteria, automation strategy) for ONE story,
-before the dev agent writes any code. Never suspends — none of its tools
-go through the action pipeline.
+(synthesis, executable criteria, automation strategy) for ONE task's
+DELIVERY, AFTER the dev agent delivered — the first step of the
+`qa-verificada` review, as input to it, never a verdict of its own
+([RN-674](business-rules.md#rn-674),
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md)). Never suspends —
+none of its tools go through the action pipeline.
 
 **AppSec** — the `secops` in a second MOMENT, the same shape QA-strategy has
 over `qa-lead`: the SAME process (`SecOpsAgentServer.run_design/2`) produces a
@@ -340,6 +364,17 @@ Anamnesis, per competency. Six process competencies, **closed** (`git`,
 technical stacks derived from the `module_map`. Nothing outside the
 catalog has a write path ([RN-024](business-rules.md#rn-024)) — Anamnesis
 profiles technical competency, not the person.
+
+**Eligible subject** — who an Anamnesis round may profile: an EFFECTIVE
+project member (the project row, or else the workspace one), outside the
+opt-out, with their OWN interaction in the window. With nobody, the round
+makes no LLM call ([RN-680](business-rules.md#rn-680)).
+
+**Profile fact** (`FatoDoPerfil`) — a Psychologist hypothesis that the
+person the session belongs to ACCEPTED, projected into the graph from
+`psychologist.hypothesis_accepted` and handed to the agents that talk to
+that person as an ephemeral system message
+([RN-680](business-rules.md#rn-680)).
 
 **`instruction_patch`** — a versioned proposal to change an agent's
 instruction. Never auto-approvable ([RN-007](business-rules.md#rn-007));

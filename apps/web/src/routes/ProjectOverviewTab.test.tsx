@@ -51,10 +51,12 @@ const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
+const getResolvedModelBindings = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
 const activateExecutionMock = vi.fn();
+const getRepository = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -69,11 +71,15 @@ vi.mock('../lib/api-client', async () => {
     getArchitecture: (...args: unknown[]) => getArchitecture(...args),
     getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // A rota por agente segue na api; a aba não a lê mais (RN-654, AT-339), e
+    // o dublê existe para o teste PROVAR isso.
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    getResolvedModelBindings: (...args: unknown[]) => getResolvedModelBindings(...args),
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
     activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
+    getRepository: (...args: unknown[]) => getRepository(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -193,6 +199,7 @@ function resumo(over: Partial<ProjectCardSummary['roster']> = {}): ProjectCardSu
       moduleNames: ['Backend'],
       gatesEverOpened: true,
       delegatedSubagents: [],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,
@@ -226,6 +233,7 @@ beforeEach(() => {
   getSessionTokenUsage.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
+  getResolvedModelBindings.mockResolvedValue({ agents: [], areas: [] });
   listAgentAutonomy.mockResolvedValue([]);
   listWorkspaces.mockResolvedValue([
     {
@@ -242,6 +250,9 @@ beforeEach(() => {
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
   activateExecutionMock.mockResolvedValue({ sessionId: 'sess-1', modules: [] });
+  // O estado normal de um projeto que chega à seção de Execução: repositório
+  // provisionado no aceite ao Arquiteto (RN-582). Os casos sem ele sobrescrevem.
+  getRepository.mockResolvedValue({ id: 'repo-1', projectId: 'proj-1', provider: 'local' });
 });
 
 /**
@@ -392,5 +403,102 @@ describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () 
     expect(
       await screen.findByText('Não foi possível ativar a execução'),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-582 (ADR 0165) — `execution/activate` sem repositório é 409. A tela tira
+ * o CONTROLE e diz o motivo uma vez, em texto (RN-102/ADR 0064), e nunca
+ * transforma "não sei" em "não tem".
+ */
+describe('ProjectOverviewTab — sem repositório, não se oferece ativar (RN-582)', () => {
+  it('repositório ausente CONFIRMADO: botão inerte, motivo em texto e o caminho para provisionar', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockResolvedValue(null);
+
+    montar();
+
+    expect(
+      await screen.findByText(/O projeto ainda não tem repositório/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Provisionar o repositório agora')).toBeInTheDocument();
+    const botao = screen.getByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeDisabled();
+    await userEvent.click(botao);
+    expect(activateExecutionMock).not.toHaveBeenCalled();
+  });
+
+  it('repositório ainda carregando: o botão fica como estava — "não sei" não vira "não tem"', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockReturnValue(new Promise(() => {}));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeEnabled();
+    expect(screen.queryByText(/O projeto ainda não tem repositório/)).not.toBeInTheDocument();
+  });
+
+  it('consulta do repositório FALHOU: o botão fica como estava, e o backend decide', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    getRepository.mockRejectedValue(new ApiError(500, { message: 'fora' }));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Ativar execução' });
+    expect(botao).toBeEnabled();
+    expect(screen.queryByText(/O projeto ainda não tem repositório/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * AT-339 (RN-654) — a Visão geral lê os bindings do roster no LOTE, e não
+ * numa rota por agente.
+ */
+describe('ProjectOverviewTab — bindings em lote (AT-339)', () => {
+  const MODELO = {
+    id: 'm-1',
+    provider: 'openrouter',
+    name: 'modelo-um',
+    displayName: 'Modelo Um',
+  };
+
+  it('mostra o modelo do agente a partir de UMA leitura em lote, sem rota por agente', async () => {
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockResolvedValue({
+      agents: [
+        {
+          key: 'criativo',
+          binding: { modelId: 'm-1', origin: 'agent', routingPreference: null, skipped: [] },
+        },
+      ],
+      areas: [],
+    });
+    montar();
+
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(await grid.findByText(/Modelo Um/)).toBeInTheDocument();
+    // O roster desta fixture é todo do catálogo (dev-backend inclusive), então
+    // uma chamada basta e nenhuma leitura de "extras" nasce.
+    expect(getResolvedModelBindings).toHaveBeenCalledTimes(1);
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('CASO DE FALHA: o lote recusado não vira modelo inventado nem uma rota por agente', async () => {
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockRejectedValue(new ApiError(500, 'falhou'));
+    montar();
+
+    const grid = within(await screen.findByTestId('agent-team-grid'));
+    expect(await grid.findByText('Criativo')).toBeInTheDocument();
+    await vi.waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalled());
+    expect(grid.queryByText(/Modelo Um/)).not.toBeInTheDocument();
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
   });
 });

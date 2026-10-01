@@ -72,6 +72,8 @@ interface Rodada {
   codigo: number;
 }
 
+let entradasEscritas = 0;
+
 /**
  * Roda comandos de shell com o `install.sh` já carregado.
  *
@@ -79,15 +81,35 @@ interface Rodada {
  * abaixo roda NESTE processo, e `spawnSync` bloqueia o event loop — o servidor
  * nunca chegaria a aceitar a conexão, e o `curl` do script morreria no
  * `max-time` de 30s. Foi assim que a primeira versão destes testes travou.
+ *
+ * O `stdin` do filho NUNCA é um pipe escrito por este processo (AT-228, a
+ * mesma forma da AT-217): sem `entrada` ele é `/dev/null` (`'ignore'`), e com
+ * `entrada` é um ARQUIVO já escrito, aberto só para leitura. O pipe fechado
+ * com `stdin.end(...)` tinha uma corrida — com o laço de eventos atrasado pela
+ * carga, o filho saía antes de o `end` ser processado, a escrita no pipe sem
+ * leitor dava `EPIPE`, e o erro sem handler reprovava a rodada com todos os
+ * testes verdes. Para o script o efeito é o mesmo (EOF depois da entrada, sem
+ * TTY), e não sobra escrita que possa falhar.
  */
 function rodar(
   comandos: string,
   opcoes: { env?: NodeJS.ProcessEnv; entrada?: string } = {},
 ): Promise<Rodada> {
   return new Promise((resolver) => {
-    const processo = spawn('bash', ['-c', `source "${caminhoCarregavel()}"\n${comandos}`], {
-      env: { ...process.env, NO_COLOR: '1', ...opcoes.env },
+    const carregavelAgora = caminhoCarregavel();
+    let entrada: number | 'ignore' = 'ignore';
+    if (opcoes.entrada !== undefined) {
+      const arquivo = path.join(path.dirname(carregavelAgora), `entrada-${++entradasEscritas}`);
+      fs.writeFileSync(arquivo, opcoes.entrada);
+      entrada = fs.openSync(arquivo, 'r');
+    }
+    // Caminho vai pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
+    const processo = spawn('bash', ['-c', 'source "$BRABO_ALVO"\n' + comandos], {
+      env: { ...process.env, NO_COLOR: '1', ...opcoes.env, BRABO_ALVO: carregavelAgora },
+      stdio: [entrada, 'pipe', 'pipe'],
     });
+    // O filho herdou uma cópia do descritor; a deste processo já não serve.
+    if (typeof entrada === 'number') fs.closeSync(entrada);
     let stdout = '';
     let stderr = '';
     processo.stdout.setEncoding('utf8');
@@ -99,7 +121,6 @@ function rodar(
       stderr += pedaco;
     });
     processo.on('close', (codigo) => resolver({ stdout, stderr, codigo: codigo ?? -1 }));
-    processo.stdin.end(opcoes.entrada ?? '');
   });
 }
 
@@ -614,5 +635,38 @@ esac
     // instalação por causa do último passo trocaria meia instalação por nenhuma.
     expect(saida.stdout).toContain('SAIU=0');
     expect(saida.stdout).toContain('o binário do agente local não foi instalado');
+  });
+});
+
+// ADR 0174 (AT-065): Mac Intel deixou de ter binário. O instalador não tenta
+// baixar um asset que a Release não publica — diz em texto qual é o caminho
+// (o pacote npm, sob Node) e deixa `RUNNER_BIN` vazio, que é o que faz o
+// fechamento relatar a pendência em vez de chamar um comando inexistente.
+describe('install.sh — o agente local em Mac Intel', () => {
+  it('não baixa nada, aponta o npm e deixa RUNNER_BIN vazio', async () => {
+    const trilha = path.join(os.tmpdir(), `brabo-curl-${process.pid}-${Date.now()}.txt`);
+    const curl = comBinario('curl', `#!/bin/sh\nprintf '%s\\n' "$*" >> '${trilha}'\nexit 0\n`);
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-home-'));
+    try {
+      const r = await rodar(
+        `instalar_o_runner darwin-amd64 '${home}'; echo SAIU=$?\nprintf 'bin=[%s]\\n' "$RUNNER_BIN"`,
+        { env: { PATH: `${curl.dir}:${process.env.PATH ?? ''}`, HOME: home } },
+      );
+      expect(r.stdout).toContain('SAIU=0');
+      expect(r.stdout).toContain('bin=[]');
+      expect(r.stderr).toContain('npm install -g @brabo/runner');
+      expect(r.stderr).toContain('ADR 0174');
+      expect(fs.existsSync(trilha)).toBe(false);
+      expect(fs.existsSync(path.join(home, '.local', 'bin', 'brabo-runner'))).toBe(false);
+    } finally {
+      fs.rmSync(curl.dir, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(trilha, { force: true });
+    }
+  });
+
+  it('Mac Apple Silicon continua pedindo o binário darwin-arm64', () => {
+    expect(fonte()).toMatch(/^\s*darwin-arm64\) alvo='darwin-arm64' ;;$/m);
+    expect(fonte()).not.toMatch(/alvo='darwin-x64'/);
   });
 });

@@ -12,8 +12,7 @@
 # Estágio 1: dependências. Separado do build pra a camada de deps só invalidar
 # quando o lockfile/manifests mudarem, não a cada edição de código.
 # ---------------------------------------------------------------------------
-# 24.11.1-alpine3.21
-FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS deps
 
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
@@ -55,8 +54,7 @@ RUN pnpm --filter api --prod --legacy deploy /prod
 # ---------------------------------------------------------------------------
 # Estágio 3: runtime. Só o compilado, as deps de produção e as migrations.
 # ---------------------------------------------------------------------------
-# 24.11.1-alpine3.21
-FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS runtime
+FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS runtime
 
 # Versão do artefato (ADR 0036). `tracing.ts` já lia `BRABO_VERSION` para o
 # `service.version` do recurso OpenTelemetry, e sempre recebia o fallback "dev" —
@@ -111,6 +109,21 @@ RUN mkdir -p /data/project-workspaces /data/git-repos \
 VOLUME ["/data/project-workspaces", "/data/git-repos"]
 
 WORKDIR /app
+
+# A oferta escrita de fonte viaja DENTRO da imagem, na MESMA forma da do engine
+# (`docker/engine/Dockerfile.prod`, AT-020): o mesmo `THIRD_PARTY_NOTICES.md`,
+# no mesmo caminho, do root e só leitura (0644), copiado ANTES do `USER`. Por
+# decisão do mantenedor (AT-120), TODA imagem publicada a carrega — nenhuma é
+# declarada dispensada. Quem faz `docker pull` não tem o repositório.
+# A PASTA nasce antes, e por um `RUN`, não pelo `COPY`: o BuildKit aplica o
+# `--chmod` também às pastas que o `COPY` cria, e `/usr/share/doc/brabo` nascia
+# `0644` — sem o bit de execução, ninguém além do root a atravessa, e o `cat`
+# como o `USER` da imagem dava "Permission denied" (medido na AT-120, inclusive
+# na imagem do engine). Com a pasta já existente em `0755`, o `COPY` só cria o
+# arquivo.
+RUN install -d -m 0755 /usr/share/doc/brabo
+COPY --chown=root:root --chmod=0644 THIRD_PARTY_NOTICES.md \
+     /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md
 
 # `node` (uid 1000) já vem na imagem oficial — não criamos usuário novo.
 COPY --from=build --chown=node:node /prod/node_modules ./node_modules

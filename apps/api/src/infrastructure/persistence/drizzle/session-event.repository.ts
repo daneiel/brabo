@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, gt, gte, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import {
   SessionEventRepository,
   type ListPaginatedOptions,
@@ -51,6 +51,17 @@ export class DrizzleSessionEventRepository implements SessionEventRepository {
     const conditions = [eq(sessionEvents.sessionId, sessionId)];
     if (opts.afterSeq !== undefined && !opts.latest) {
       conditions.push(gt(sessionEvents.seq, opts.afterSeq));
+    }
+    if (opts.types && opts.types.length > 0) {
+      conditions.push(inArray(sessionEvents.type, opts.types));
+    }
+    // Parametrizado, e sempre DENTRO da sessão (a condição acima): o índice
+    // único `(session_id, seq)` recorta a sessão e o predicado do JSON só roda
+    // sobre as linhas dela — sem índice novo, sem migration.
+    if (opts.actionId !== undefined) {
+      conditions.push(
+        sql`${sessionEvents.payload}->>'actionId' = ${opts.actionId}`,
+      );
     }
 
     // `latest`: pega do fim pelo banco e reverte na memória, pra devolver
@@ -108,6 +119,26 @@ export class DrizzleSessionEventRepository implements SessionEventRepository {
       )
       .orderBy(asc(sessionEvents.createdAt));
     return rows.map((r) => toEntity(r.session_events));
+  }
+
+  async findLatestOfTypesInSession(
+    sessionId: string,
+    types: readonly string[],
+  ): Promise<SessionEvent | null> {
+    if (types.length === 0) return null;
+    const db = currentDb(this.rootDb);
+    const [row] = await db
+      .select()
+      .from(sessionEvents)
+      .where(
+        and(
+          eq(sessionEvents.sessionId, sessionId),
+          inArray(sessionEvents.type, [...types]),
+        ),
+      )
+      .orderBy(desc(sessionEvents.seq))
+      .limit(1);
+    return row ? toEntity(row) : null;
   }
 
   async listByTypeInSession(

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
@@ -155,7 +155,12 @@ describe('provisionamento — a espera tem teto', () => {
 
     expect(await screen.findByText('Trabalhando…')).toBeTruthy();
 
-    await vi.advanceTimersByTimeAsync(180_000 + 1_000);
+    // Dentro de `act`: o estouro do teto é um `setState` disparado por timer.
+    // Com o poll a 1 s (antes da AT-302) uma busca caía logo depois e levava a
+    // renderização junto por acaso; a 3 s, quem a garante é o `act`.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(180_000 + 1_000);
+    });
 
     expect(
       await screen.findByText(/Paramos de acompanhar depois de 3 minutos/),

@@ -3145,3 +3145,116 @@ lacuna ficou MAIOR, de propósito; um processo por máquina é ponto único de
 falha, preço do desenho; e `install --machine` continua sem saber se a chave
 daquela pasta é mesmo de máquina, porque em disco as duas espécies são o mesmo
 arquivo e quem sabe é o servidor
+
+### O golden-set do QA volta a medir e roda agendado, semanal (AT-076/AT-149, ADR 0168)
+
+Duas entregas, uma decisão humana entre elas. A AT-067 tinha medido que o
+relógio cabia num `ubuntu-latest` sem GPU e que o instrumento não media: desde a
+RN-502 o `npm test` de um projeto `container` sem container `running` é
+recusado, e o seed nunca subia um — 0/6 por construção. O mantenedor escolheu o
+"caminho 1" e a AT-076 o entregou: o seed sobe o container de cada caso pelo
+caminho de PRODUÇÃO (`module_map` → roteamento → `container_start` proposto pela
+Infra e aprovado pelo dono → `ExecuteContainerStartUseCase` → broker → `running`
+pela máquina de estados), com `node:24.11.1-bookworm-slim` preso por digest, a
+RN-502 intacta, e container que não sobe virando erro NOMEADO que reprova o
+ExUnit (antes o `{:skip, _}` do corpo passava verde calado). Duas rodadas em CI
+deram 3/6 e 3/6 contra o piso de 1/6, com casos diferentes, em 52 e 86 min de
+job. A AT-149 fechou a cadência: SEMANAL (sábado 01:17 UTC, mais
+`workflow_dispatch`, nunca `pull_request`), em `golden-set-qa.yml`, no molde do
+`golden-set-rag.yml`. Semanal e não noturno porque a rodada custa até 86 min e
+VARIA — o mesmo total por casos diferentes —, e uma por semana basta para o piso
+acusar uma queda. `timeout-minutes: 150` pelo pior caso medido. O veredito é o
+do próprio teste; o workflow acrescenta só duas guardas de INSTRUMENTO (a linha
+de placar tem de existir, e o event log não pode ter recusa da RN-502) e, em
+falha, imprime os logs como o do RAG — sem issue. A imagem a puxar antes do seed
+é LIDA da constante do seed, nunca de um segundo literal, porque o `docker run`
+do broker roda sob o teto de controle de 30 s (RN-604). A rodada de prova, com
+gatilho temporário de `push` removido antes do PR, foi a 36327281774: 3/6 de
+novo, zero recusas da RN-502, 10 min de `mix golden_set.qa` e 13 min 41 s de
+job. Declarado: o broker do CI não tem as cinco camadas do compose, o heartbeat
+fecha as sessões do seed enquanto o QA ainda trabalha nelas (sem efeito
+visível), e PR que mexe no workflow não o executa.
+
+### O Infra Lead conversa pelo composer (AT-141, ADR 0175, RN-617)
+
+A RN-584 (AT-098) tirou o destinatário padrão do chat e deixou a pergunta de
+produto por escrito: o Infra Lead conversa? O mantenedor disse sim em
+2026-09-27, com a condição que a própria RN-584 tinha posto — o turno primeiro.
+O turno do Infra Lead rodava INTEIRO dentro do `handle_call`/`handle_cast`: sem
+aceite, sem "Parar", fora do `TurnoOrfao`, com o 14º passo do laço terminando
+calado e um teto de 180 s menor que os 225 s do `propose_action` de container
+(RN-605). O kickoff, sendo `cast`, não prendia clique, mas prendia o processo —
+8,4 min medidos na AT-089 —, e uma mensagem nesse meio tempo esperaria na fila.
+A etapa 1 pôs os três turnos (kickoff, correção de gate, mensagem) no
+`TurnoAssincrono`, com a consolidação do Workflows dentro da Task; a correção de
+gate que chega com turno em curso ganhou uma fila, porque o `TurnoAssincrono`
+sem `from` a descartaria. A etapa 2 deu ao `infra` a cláusula de `message/2`
+(saiu a recusa `agente_sem_conversa`), o `via_for` do "Parar" e o lugar em
+`AGENTES_DE_CHAT`; o aceite do handoff dele ficou no card próprio da RN-499, e
+o card do fio o exclui por nome. `SOLO_CONVERSATIONAL_AGENTS` não mudou: o Infra
+Lead é lead de área. Declarado: ele não ganhou perguntas estruturadas nem
+leitura de backlog.
+
+### O git credenciado roda no host do runner, o código no container (AT-116, ADR 0193, RN-676)
+
+2026-10-01, rodada 36. A RN-558 tinha fechado a metade do SILÊNCIO — o `git
+fetch` autenticado em modo `runner`, com o container de pé, deixou de rodar com
+as variáveis vazias e passou a ser recusado com a marca
+`credencial-nao-atravessa-o-container` — e declarado a outra metade como ADR
+pendente, porque toda opção conhecida mexia na porta de contenção do ADR 0130.
+A decisão do dono (01/10) escolheu a que não mexe: operação de git credenciada
+no HOST, código no container. Medido antes: o único `exec` do engine com `env`
+era o fetch de `RunnerGit.fetch!/3`; não havia `push` nem `clone` credenciado
+por `exec` (o clone da criação de pasta já rodava no host, RN-532); e a pasta é
+a mesma dos dois lados (`estado.dir` montada em `/work`). O discriminador
+escolhido foi uma MARCA explícita do engine (`gitCredenciado: true`, posta só
+por `RunnerRouter.exec_git_credenciado/5`), e não o `env` que já existia —
+com o `env` como chave, qualquer comando com `env` escaparia do container. A
+recusa da RN-558 sobreviveu encolhida, para `env` sem a marca, e na prática
+passou a significar "runner anterior ao ADR 0193". A prova é a AT-111, dos dois
+lados: no runner, um `git credential fill` e um `git fetch origin` reais com o
+helper do `GitAuth` sucedem no host com container ativo; no engine, a corrente
+pelo `TerminalChannel` real termina em `{:ok, _}`. Os ExUnit não rodaram no
+ambiente da entrega (`repo.hex.pm` 403) e ficaram para o CI.
+
+### A consultiva sem agente pede um agente (AT-254, RN-682)
+
+2026-10-01, rodada 36. No uso real de 29/09 uma sessão consultiva sem agente
+respondeu "não tenho acesso a conversas anteriores": a mensagem sem
+destinatário ia ao SSE de `POST .../chat`, que manda ao modelo vinculado só o
+texto atual — sem histórico, sem prompt de sistema — e grava a resposta com o
+nome do modelo como ator. A decisão do dono (01/10) foi pedir um agente em vez
+de dar histórico ao chat livre. Medido antes: a tela era o único cliente da
+rota (o `curl` impresso pelo seed é dica de desenvolvimento, numa sessão
+criativa), e o caso de uso `SendChatMessageUseCase` tinha um segundo consumidor
+legítimo, os smokes de provider, que o usam como instrumento de ponta a ponta
+numa sessão sem agente. Por isso a recusa da api mora na ROTA, numa guarda
+própria, e o caso de uso ficou intacto. Na tela, a linha do destinatário passou
+a carregar o próprio seletor do handoff manual quando não há agente — o mesmo
+gesto de sempre, agora no lugar onde ele é a única forma de a mensagem ter
+destino —, e o Criativo ficou fora da lista porque a consultiva promete que ele
+não entra.
+
+### A revogação mira a chave, e não o par `{projeto, usuário}` (AT-013, ADR 0201, RN-685)
+
+2026-10-01, rodada 36. A RN-520 tinha feito a revogação alcançar a conexão
+viva, com o alvo `{projeto, usuário}` porque a identidade da credencial morria
+no `PatAuthGuard`; o ADR 0154 pôs *"revogação por chave"* entre o que não
+fazia, e o PR #534 deu à chave de máquina o mesmo par aplicado projeto a
+projeto. A AT-013 ficou bloqueada por recorte e por decisão até o dono
+escolher (01/10): por CHAVE, com ADR, mexendo no engine. Medido antes: o
+ticket nascia de `{userId, kind}`, o socket guardava só projeto/usuário/kind,
+e o canal comparava o usuário — o runner do mesmo usuário com PAT ou outra
+chave caía junto; a conexão da chave de máquina num projeto fora da lista da
+api ficava de pé; o ticket emitido antes da revogação entrava depois dela; e
+revogar PAT não derrubava nada. Entregou-se: duas colunas nuláveis no ticket
+(migration Ecto, a tabela é do engine — o diário do Drizzle ficou na `0068`),
+o guard anotando a credencial depois de autorizar, o id do socket ganhando
+espécie e id da credencial, e uma rota `runner/disconnect-credential` que anula
+os tickets pendentes e pergunta a todo runner do cluster se nasceu dela. A
+proibição da AT-013 (não deixar de derrubar o que caía) virou duas peças de
+transição: a conexão legada cai pelo par nos projetos da linha, e um engine
+sem a rota faz a api voltar ao par. O par ficou como alvo da remoção de
+membro. A tela trocou só o texto da confirmação (RN-561). O runner não mudou.
+Os ExUnit não rodaram no ambiente da entrega (`repo.hex.pm` 403) e ficaram
+para o CI.

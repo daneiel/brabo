@@ -137,12 +137,199 @@ verificação, para a rotação não ter janela de indisponibilidade.
 - **Onde:** `apps/api/src/interfaces/http/auth/engine-service.guard.ts:44` +
   `infrastructure/security/service-token.ts` +
   `apps/engine/lib/engine_web/plugs/verify_service_token.ex`
-- **Teste:** `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`
-  e `test/interfaces/route-surface.spec.ts`
+- **Teste:** `apps/engine/test/engine_web/plugs/verify_service_token_test.exs`,
+  `test/interfaces/route-surface.spec.ts` e, para a rotação do lado da api
+  (anterior aceito só na verificação, quem chama manda o atual, removido o
+  anterior o velho cai), `test/infrastructure/security/service-token.spec.ts`
+  (describe "rotação do BRABO_SERVICE_TOKEN") e
+  `test/interfaces/engine-service.guard.spec.ts` ([RN-597](#rn-597))
 - **Borda:** a isenção de rate limit vem do METADADO da rota, não do guard. O
   `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer guard de controller —
   quando ele decide, o `EngineServiceGuard` ainda não rodou.
 - **Origem:** [ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)
+
+### RN-597 — Trocar o pepper é logout global {#rn-597}
+
+O pepper que chaveia o HMAC dos tokens opacos não tem `_PREVIOUS`, e trocá-lo
+tem consequência, não procedimento: todo refresh token em circulação, todo link
+de verificação de e-mail e de redefinição de senha em aberto e todo token de
+acesso pessoal (PAT) deixam de ser achados, porque o hash recalculado com o
+pepper novo não casa com o gravado. A refresh recusada registra
+`refresh_unknown` (e não `refresh_reuse_detected`), o link diz "Link inválido
+ou expirado", e os baldes de lockout mudam de chave — conta travada destrava. A
+SENHA sobrevive (argon2id com salt por registro, sem pepper): trocar o pepper
+custa um login, nunca uma conta, e a api sobe normalmente com o valor novo.
+
+Até a [RN-613](#rn-613), o pepper sem valor próprio caía no
+`AUTH_JWT_SECRET`, e a rotação do JWT era também a do pepper, com todas as
+consequências acima. Desde ela o pepper é obrigatório em produção e nunca
+emprestado do JWT.
+
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:212`
+  (`pepper`), `:228` (`hashDeToken`), `:247` (`baldeDeEmail`);
+  `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:142`
+- **Teste:** `test/application/use-cases/auth/rotacao-dos-segredos.spec.ts`,
+  contra o Postgres de teste
+- **Borda:** o ALVO de "trocar" inclui o erro de quem separa o pepper do JWT
+  gerando um valor novo em vez de copiar o atual — é a mesma troca, e desloga
+  do mesmo jeito (fixado no mesmo spec, "a ordem errada").
+- **Origem:** [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
+  AT-196
+
+### RN-613 — `AUTH_TOKEN_PEPPER` é obrigatório e próprio; quem migra o define com o `AUTH_JWT_SECRET` atual {#rn-613}
+
+O pepper do HMAC dos tokens opacos (refresh, links de conta, PATs, balde de
+lockout) deixou de cair no `AUTH_JWT_SECRET`. O fallback silencioso
+(`AUTH_TOKEN_PEPPER ?? passphraseAtual()`) fazia de toda rotação "sem
+downtime" do JWT uma troca do pepper, e era o caminho COMUM: os composes de
+produção e de instalação nem repassavam a variável. Em produção a api RECUSA
+subir sem ele, e a recusa diz o conserto — *"defina com o valor ATUAL de
+AUTH_JWT_SECRET para não deslogar ninguém"* —, porque a correção óbvia (gerar
+um aleatório) é a que desloga todo mundo. Com o pepper igual ao JWT antigo o
+hash é byte a byte o de antes, os refresh tokens e os PATs seguem válidos, e
+daí em diante o JWT rotaciona sozinho. Pepper igual ao JWT NÃO é recusado: é o
+estado legítimo de toda instalação migrada. Valem as réguas do JWT (RN-114):
+em branco, os dois literais de exemplo do repositório e menos de 16 caracteres
+derrubam o boot. Fora de produção vale um default de desenvolvimento PRÓPRIO
+(`dev-auth-token-pepper-change-me`), nunca o do JWT.
+
+O `install.sh` faz a migração: instalação NOVA gera um pepper aleatório;
+havendo um `.env` anterior na pasta, ele é LIDO (nunca executado) antes de ser
+sobrescrito, e o pepper dele é mantido — ou, sem pepper, nasce com o
+`AUTH_JWT_SECRET` dele. O terminal diz de onde o valor veio, nunca o valor.
+
+- **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:168`
+  (`pepperAtual`), `:212` (`pepper`); `apps/api/src/main.ts:46` (a checagem de
+  boot); `install.sh:688` (`valor_no_env_anterior`), `:720` (`gerar_segredos`),
+  `:783` (`dizer_a_origem_do_pepper`); a variável nos três composes
+  (`docker/docker-compose.yml`, `docker-compose.prod.yml`,
+  `docker-compose.install.yml`), no `docker/smoke.sh` e no `.env.example`
+- **Teste:** `test/infrastructure/security/auth-key-material.spec.ts`
+  (describe "pepperAtual (RN-613)": recusa sem pepper mesmo com JWT, a
+  mensagem, os exemplos, o piso, igual ao JWT aceito, o default de dev);
+  `test/application/use-cases/auth/rotacao-dos-segredos.spec.ts` (describe "a
+  migração do RN-613": o refresh gravado com a fórmula ANTIGA segue válido com o
+  pepper igual ao JWT antigo e sobrevive à troca do JWT; o describe do
+  `AUTH_JWT_SECRET`: sem pepper fora de produção, trocar o JWT não desloga);
+  `scripts/dev/install-env.spec.ts` (describe "o AUTH_TOKEN_PEPPER do
+  instalador (RN-613)", contra `docker compose config`, valor inteiro)
+- **Borda:** o instalador só enxerga o `.env` da pasta em que roda. Instalação
+  cujo `.env` mora em outro lugar, compose próprio e Kubernetes com
+  `ExternalSecret` fazem a migração à mão, pelo runbook — no Kubernetes a
+  propriedade `AUTH_TOKEN_PEPPER` já existia no `ExternalSecret` e no
+  `bootstrap.sh`, e um provider que não a tenha já reprovava a sincronização.
+  E a migração do instalador apaga os volumes (ADR 0150): o refresh só
+  sobrevive para quem restaura o dump do Postgres, que é o caso que importa.
+- **Origem:** AT-210 (achado da AT-196), decisão do mantenedor: migração com o
+  valor atual
+
+### RN-595 — Toda `_PREVIOUS` que um serviço lê chega a ele pelos três composes, vazia por padrão {#rn-595}
+
+As três rotações sem downtime (`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`,
+`CREDENTIALS_MASTER_KEY`) dependem de o processo ver o valor antigo numa
+variável `_PREVIOUS` durante a janela. O Compose não repassa o ambiente do
+host, e nenhuma das três estava no `environment:` de compose nenhum: definir a
+`_PREVIOUS` no `.env` não tinha efeito, e quem seguia o runbook fazia, sem
+saber, a troca seca que a rotação existe para evitar. Agora a api recebe as
+três, e o engine e o broker recebem `BRABO_SERVICE_TOKEN_PREVIOUS`, nos composes
+de dev, de produção e de instalação, sempre com default VAZIO — definida é
+rotação em andamento, e um default preenchido deixaria a instalação
+eternamente no meio de uma. Vazia é o mesmo que ausente nos três leitores.
+
+- **Onde:** `docker/docker-compose.yml`, `docker/docker-compose.prod.yml` e
+  `docker/docker-compose.install.yml` (serviços `api`, `engine` e `broker`);
+  os leitores são `apps/api/src/infrastructure/security/auth-key-material.ts:136`
+  (`passphraseAnterior`), `apps/api/src/infrastructure/security/service-token.ts:92`
+  (`tokenDeServicoAnterior`), `apps/api/src/infrastructure/security/envelope-encryption.service.ts:93`,
+  `apps/engine/config/runtime.exs:70` e `apps/broker/src/config.ts:85`
+- **Teste:** `scripts/ci/previous-nos-composes.spec.ts` — DERIVA do código dos
+  três serviços a lista de `_PREVIOUS` lidas e reprova a que faltar, ou vier
+  com default não vazio, em qualquer um dos três composes; o bloco "ExternalSecret
+  do k8s" reprova o `ExternalSecret` sem `dataFrom.extract`, uma `_PREVIOUS` em
+  `data:` e o Deployment de api/engine sem `envFrom: brabo-secrets`
+- **Kubernetes (AT-220, decisão do mantenedor):** os Pods leem
+  `envFrom: brabo-secrets`, e o `ExternalSecret`
+  (`deploy/k8s/base/common/externalsecrets.yaml`) puxa o objeto `brabo`
+  INTEIRO do store por `dataFrom.extract` — a `_PREVIOUS` entra quando existe
+  e sai quando é retirada, na sincronização seguinte. Não pode ser listada em
+  `data:`: o ESO não tem chave opcional, e propriedade ausente (o estado
+  normal) reprova a sincronização do Secret inteiro. Custo declarado: TODA
+  chave do objeto vira variável de api, engine, migrações e backup, e a chave
+  OBRIGATÓRIA ausente deixou de reprovar a sincronização — quem acusa é o
+  consumidor. A sincronização por um ESO real foi exercitada à mão num k3d
+  descartável, não em CI
+- **Origem:** AT-201 (achado da AT-196), mesma classe da RN-540; metade
+  Kubernetes na AT-220
+
+### RN-598 — O token de serviço ANTERIOR passa pela mesma régua do atual {#rn-598}
+
+Durante a rotação, `BRABO_SERVICE_TOKEN_PREVIOUS` abre `/internal/*` tanto
+quanto o atual. Ele passa por UMA régua, a mesma do atual (`exigirTokenDeProducao`),
+e nenhuma cópia dela. O espaço em volta é descartado, e um valor feito só de
+espaço conta como ausente. Em produção, o literal público de desenvolvimento
+(`dev-service-token-change-me`) e um valor com menos de 16 caracteres depois
+do trim DERRUBAM o boot da api, com uma mensagem que nomeia
+`BRABO_SERVICE_TOKEN_PREVIOUS`. Antes disso, a variável era comparada crua: um
+anterior com o valor de exemplo abria a porta interna a qualquer um que
+tivesse lido este repositório, e sem dar erro nenhum. A obrigatoriedade é a
+única parte da regra do atual que NÃO é copiada, porque fora da rotação o
+anterior ausente é o estado normal. Um anterior igual ao atual (depois do
+trim) continua não contando como rotação.
+
+- **Onde:** `apps/api/src/infrastructure/security/service-token.ts:63`
+  (`exigirTokenDeProducao`), `:92` (`tokenDeServicoAnterior`);
+  `apps/api/src/main.ts:50` (`tokenDeServicoAnterior`), que roda no boot ao lado do atual
+- **Teste:** `test/infrastructure/security/service-token.spec.ts` (describe
+  "tokenDeServicoAnterior (RN-598)")
+- **Borda:** esta RN é o lado da api. O engine e o broker aplicam a mesma
+  régua desde a [RN-601](#rn-601).
+- **Origem:** AT-205 (achado da AT-196)
+
+### RN-601 — O engine e o broker aplicam aos dois tokens de serviço a régua da api {#rn-601}
+
+Os três processos que comparam o token de serviço usam a mesma régua da
+[RN-598](#rn-598), cada um na sua linguagem. O espaço em volta é descartado, e
+um valor feito só de espaço conta como ausente. Em produção,
+`BRABO_SERVICE_TOKEN` ausente, o literal público de desenvolvimento
+(`dev-service-token-change-me`) ou um valor com menos de 16 caracteres depois
+do trim DERRUBAM o boot, com uma mensagem que nomeia a variável. As duas
+últimas recusas valem também para `BRABO_SERVICE_TOKEN_PREVIOUS` quando ele
+está definido. Um anterior igual ao atual não conta como rotação. Fora de
+produção só o trim se aplica, e o atual vazio cai no default de dev.
+
+Antes, o engine lia os dois crus em `config/runtime.exs`: sem trim, sem piso,
+e em produção subia com o default público quando a variável faltava (e com a
+string vazia quando o compose a passava vazia). Só a api recusar subir
+protegia a instalação. O broker já aplicava a régua ao atual, mas ao anterior
+só o trim.
+
+Duas divergências de forma, declaradas. No engine, "produção" é
+`config_env() == :prod` (a release), e não `NODE_ENV`, que ele não lê; a
+imagem de produção é sempre uma release `:prod`. E a régua fica inline no
+`runtime.exs`, e não num módulo de `lib/`, porque numa release esse arquivo
+roda num config provider antes de o código da aplicação estar carregado.
+
+Consequência: todo processo que avalia esse `runtime.exs` numa release
+`:prod` precisa do token, inclusive a migração (`bin/engine eval
+Engine.Release.migrate()`). Por isso o serviço `migrate-engine` dos composes de
+produção e de instalação passou a receber `BRABO_SERVICE_TOKEN` e
+`BRABO_SERVICE_TOKEN_PREVIOUS`, sem default. O smoke de CI mostrou isso: sem
+eles, a migração morria antes de migrar. O Job de migração do Kubernetes já os
+recebia pelo `envFrom` de `brabo-secrets`.
+
+- **Onde:** `apps/engine/config/runtime.exs:85`
+  (`exigir_token_de_servico_de_producao`), `:105` (`service_token`), `:121`
+  (`service_token_previous`); `apps/broker/src/config.ts:89` (`anterior`),
+  `:125` (`exigirTokenDeProducao`)
+- **Teste:** `apps/engine/test/engine/runtime_service_token_test.exs` (avalia o
+  `runtime.exs` de verdade por `Config.Reader.read!/2`, com `env: :prod` e
+  `:dev`); `apps/broker/src/config.spec.ts` (describe "lerConfiguracao —
+  produção, o token ANTERIOR (RN-601)")
+- **Borda:** a régua é copiada nos três processos, não compartilhada: são três
+  linguagens ou runtimes, e nenhum teste confere que as três cópias continuam
+  iguais. O piso conta caracteres (`String.length` no Elixir, `.length` no TS),
+  o que só difere para token fora do ASCII.
+- **Origem:** AT-216 (achado da AT-205)
 
 ### RN-128 — `sessionId`/`projectId`/`agent`/`agentId` são validados ANTES de virar segmento de URL da requisição interna ao engine {#rn-128}
 
@@ -161,7 +348,7 @@ interpolam id em URL, não só os que o CodeQL reportou:
 
 - dentro de `postCommand`, que a maioria dos métodos já usa
   (`startAgent`, `sendAgentMessage`, `confirmReadiness`, `cancelAgentTurn`,
-  `offerInfraHandoff`, `offerDevHandoff`, `invalidateInstructions`,
+  `offerInfraHandoff`, `invalidateInstructions`,
   `startExecution`, `acceptParallelization`, `rearmDevAgent`,
   `reviseStory`) — o chamador lista as tuplas `(nome, valor)` que já
   interpolou no `path`, e `postCommand` valida TODAS antes de montar a
@@ -1262,6 +1449,11 @@ usa pro roster ao vivo: módulo sem chave fixa em `AGENTS` herda ícone/cor de
 
 ### RN-153 — "Auto mode": o `ApprovalCard` liga autonomia pra QUALQUER ação futura de um agente {#rn-153}
 
+> **Revista pela [RN-603](#rn-603)** (ADR 0167): `decide()` passou a receber
+> também a ORIGEM da autonomia, e o modo automático (a curinga em
+> `auto_approve`) não passa mais pelo teto de escopo de caminho. O que segue
+> abaixo sobre `decide()` "não mudar" descreve o desenho original.
+
 Antes deste RN, `agent_autonomy` só sabia conceder autonomia por
 `(projeto, agente, TIPO de ação)` — uma linha por tipo, upsert de UMA regra
 por vez (`SetAgentAutonomyUseCase`,
@@ -1332,6 +1524,10 @@ representativo — desligar é gravar a mesma curinga como
 
 ### RN-154 — Os três tetos absolutos continuam bloqueando MESMO com "auto mode" ligado {#rn-154}
 
+> **Revista pela [RN-603](#rn-603)** (ADR 0167): os tetos listados aqui
+> seguem valendo em modo automático; o que deixou de valer para ele foi o
+> teto de ESCOPO DE CAMINHO (ADR 0055), que nunca esteve nesta lista.
+
 O desenho do "auto mode" ([RN-153](#rn-153)) é deliberadamente incapaz de
 furar os três tetos que já existiam em `decide()` — eles são aplicados por
 ÚLTIMO, sobre `current.policy`, sem olhar de onde veio a permissividade
@@ -1370,6 +1566,71 @@ nova — só o suficiente pra não ter onde a curinga furar.
   gravado como `auto_approve` e o veredito continuando `require_approval`)
 - **Origem:** restrição de design confirmada pelo usuário ao pedir o "auto
   mode" — os três tetos são a garantia que não pode regredir
+
+### RN-603 — O modo automático libera o escopo de caminho, e só ele {#rn-603}
+
+Decisão do dono do produto em 2026-09-26 (AT-226,
+[ADR 0167](../adr/0167-modo-automatico-libera-o-escopo-de-caminho.md)): com o
+"Modo automático" ligado num agente — a curinga `"*"` da
+[RN-153](#rn-153) resolvida como `auto_approve` —, o agente roda QUALQUER
+comando de terminal sem pedir aprovação, INCLUSIVE fora da pasta do projeto.
+O teto de escopo de caminho do ADR 0055 deixa de valer para esse agente.
+Medido no `exp001` (modo `mounted`, container de pé): 51 comandos pediram
+aprovação com o modo ligado, 47 só por citar `/work` ou `/tmp` — o dev agent
+roda no container e o escopo compara com a raiz do HOST.
+
+`decide()` passa a receber a ORIGEM da autonomia (`ctx.autonomyOrigin`:
+`'especifica'` ou `'curinga'`), resolvida pelo MESMO repositório que já
+resolvia a precedência — `findMode` virou leitura de `resolve`, não uma
+segunda régua. Só a curinga em `auto_approve` é modo automático
+(`modoAutomaticoDoAgente`); origem ausente vale como específica. Em modo
+automático, dois pedidos deixam de existir: o teto de ESCOPO e o
+`require_approval` que o comando COMPOSTO sintetiza quando um segmento não tem
+regra nenhuma em `permissions.json` (o arquivo sem opinião, que nunca rebaixa
+um estágio anterior) — sem o segundo, `cd /work && npm test` seguiria pedindo.
+
+Continua tudo como estava, em modo automático também: `deny` (do arquivo, dos
+padrões embutidos ou de autonomia específica) vence; um `ask` ESCRITO no
+arquivo pede; o teto de efeito externo/comando privilegiado (push, PR,
+deploy, `sudo`/`doas`, [RN-418](../business-rules.md#rn-418)) roda antes e não
+olha a origem; merge em branch protegida, `instruction_patch`,
+`parallelize`/`raise_max_parallel` e `container_remove` nunca são
+auto-aprováveis ([RN-154](#rn-154)). Regra específica do tipo vence a curinga
+no repositório e chega como `'especifica'`: `terminal: require_approval` com a
+curinga ligada segue pedindo. Desligar (o toggle do card do agente grava a
+curinga como `require_approval`) restaura o teto. Desde a
+[RN-670](../business-rules.md#rn-670) (ADR 0189) a específica `auto_approve`
+sob a curinga `auto_approve` — o que "Sempre permitir" de dev agent grava —
+resolve como a CURINGA, e não desliga mais o modo automático; e, fora dele, o
+escopo compara com a pasta REAL de execução ([RN-669](../business-rules.md#rn-669)).
+
+A tela diz, antes do clique, o que o modo libera e o que continua pedindo: a
+nota do `ApprovalCard` aparece nas DUAS variantes (chat e fila de Aprovações),
+e o card do agente mostra uma frase sob o toggle — só quando a CURINGA está
+ligada, porque o toggle sobre o tipo representativo grava regra específica,
+que não libera o escopo.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts:295` (`modoAutomaticoDoAgente`),
+  `apps/api/src/domain/actions/decide.ts:370` (o veredito sintetizado do
+  composto ignorado), `apps/api/src/domain/actions/decide.ts:455` (o teto de
+  escopo pulado),
+  `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
+  (`resolve`, com a origem),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:195`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
+  (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
+  nas duas variantes)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts` ("modo automático
+  libera o escopo de caminho (RN-603)": fora do escopo e composto auto-aprovam;
+  push/`sudo`/`deny`/`ask` escrito seguem; regra específica e curinga
+  desligada não liberam; os outros tetos não mudam),
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  (ponta a ponta com o repositório real),
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts`
+  (`resolve` devolve a origem), `apps/web/src/components/AgentTeamGrid.test.tsx`,
+  `apps/web/src/components/AgentCard.test.tsx`,
+  `apps/web/src/components/ApprovalCard.test.tsx`
+- **Origem:** decisão do dono do produto (AT-226) depois do teste no `exp001`
 
 ### RN-155 — ordenação da timeline usa o vínculo `proposed_action.created`, nunca `action.seq` cru {#rn-155}
 
@@ -1513,6 +1774,12 @@ Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
 [RN-404](../business-rules.md#rn-404) (ADR 0094), que revalida no backend.
 
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
+
+> **Revisada pela [RN-677](../business-rules.md#rn-677) (ADR 0194, decisão do
+> dono em 01/10):** aceitar o handoff ao Dev Lead deixou de encadear a ativação
+> da execução, para TODO papel — o aceite só o traz para PLANEJAR, e quem ativa
+> é a APROVAÇÃO do plano dele (`propose_execution_plan`). O texto abaixo
+> descreve a fusão como ela era.
 
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
 automaticamente quando `toAgent === 'dev-lead'` E o papel EFETIVO de quem
@@ -1920,16 +2187,18 @@ A guarda continua **inalterada e deliberada**: só rola quem já está a menos d
 120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
 a conversa, não sequestra a leitura.
 
-No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
-inteiros da coluna: ganha teto de 560px e fica centralizado, como
+No mesmo fio, o card de aprovação deixa de ocupar os 780px inteiros da
+coluna: ganha teto de 560px e fica centralizado, como
 `.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
 errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
-fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
-a coluna do grid.
+fila da aba Aprovações não muda: lá o card DEVE preencher a coluna do grid.
+Desde a AT-322 o card é UM só em toda superfície e preenche o contêiner —
+quem aplica o teto e a centralização no fio é o contêiner dele
+(`.acaoNoFio`), não mais uma variante do card.
 
 - **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
   efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
-  (`.card.chat`)
+  (`.card`) e `apps/web/src/routes/SessionPage.module.css` (`.acaoNoFio`)
 - **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
   (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
   ter rolado para cima)
@@ -2140,13 +2409,17 @@ ninguém previu cai em `eventos` — nunca some, nunca inventa categoria.
 crescente (o mais novo junto do composer), então as 5 últimas entradas ficam
 abertas em baixo e o histórico recolhido fica no TOPO. O corte é sobre a lista
 já agrupada por agente ([RN-138](../business-rules.md#rn-138)) — quem conta é o que o usuário vê, e
-um colapso de doze mensagens é UMA entrada na tela.
+um colapso de doze mensagens é UMA entrada na tela. **Revista no fio pela
+[RN-644](../business-rules.md#rn-644):** lá o corte conta só MENSAGENS, recua
+até a abertura do turno e o histórico é UM bloco cronológico, não grupos por
+origem (que punham a resposta acima da pergunta). O painel de log segue como
+descrito aqui.
 
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/SessionPage.tsx:284` (o corte do fio), `:1898`
-  (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:504` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2179,7 +2452,7 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:98` (`REGRAS_POR_PAGINA`) e
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:104` (`REGRAS_POR_PAGINA`) e
   a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2253,8 +2526,8 @@ segundo observador da mesma chave com timer ligado ressuscitaria o poll que a
 tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
-- **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:325` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+- **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
+  `:388` (`baixados`); `apps/web/src/routes/ContextAside.tsx:149`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2282,7 +2555,7 @@ subagente, só a narrar o que o lead já registrou. A origem da falha viaja junt
 em `delegation.failed`, pela mesma razão da [RN-059](../business-rules/custo.md#rn-059) — é ela que diz
 se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:1687`
+- **Onde:** `apps/web/src/routes/session-timeline-montagem.tsx:754`
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-181")
 - **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
@@ -2360,7 +2633,9 @@ superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
 3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
 4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
 degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
-segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+seguiu travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41)
+até a [RN-640](../business-rules.md#rn-640) (ADR 0181), que a fechou com a
+paleta neutra e a transformou em piso.
 
 O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
 reprovava até o piso de **elemento de interface**, que é o mais baixo que

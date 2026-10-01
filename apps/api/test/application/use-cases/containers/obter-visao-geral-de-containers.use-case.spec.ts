@@ -66,9 +66,13 @@ const OBSERVADO_OK: EstadoObservado = {
   detalhe: null,
 };
 
-function build(linhas: ContainerOverviewRow[], observar?: () => Promise<EstadoObservado>) {
+function build(
+  linhas: ContainerOverviewRow[],
+  observar?: () => Promise<EstadoObservado>,
+  brokerConfigurado = true,
+) {
   const chamadasAoBroker: string[] = [];
-  const overview = { listForWorkspace: vi.fn(async () => linhas) };
+  const overview = { listForWorkspace: vi.fn(() => Promise.resolve(linhas)) };
   const obterEstadoObservado = {
     execute: vi.fn(async (projectId: string) => {
       chamadasAoBroker.push(projectId);
@@ -76,8 +80,9 @@ function build(linhas: ContainerOverviewRow[], observar?: () => Promise<EstadoOb
     }),
   };
   const useCase = new ObterVisaoGeralDeContainersUseCase(
-    overview as never,
+    overview,
     obterEstadoObservado as never,
+    { configurado: () => brokerConfigurado } as never,
   );
   return { useCase, chamadasAoBroker, overview };
 }
@@ -117,8 +122,9 @@ describe('ObterVisaoGeralDeContainersUseCase', () => {
   });
 
   it('respeita o teto por carga — o que passa do teto vira teto_de_verificacoes_atingido, sem chamar o broker', async () => {
-    const linhas = Array.from({ length: TETO_DE_VERIFICACOES_POR_CARGA + 5 }, (_, i) =>
-      linha(`p-${i}`, 'running'),
+    const linhas = Array.from(
+      { length: TETO_DE_VERIFICACOES_POR_CARGA + 5 },
+      (_, i) => linha(`p-${i}`, 'running'),
     );
     const { useCase, chamadasAoBroker } = build(linhas);
 
@@ -138,9 +144,8 @@ describe('ObterVisaoGeralDeContainersUseCase', () => {
   });
 
   it('naoObservado do broker (recusou/sem-resposta/nao-configurado) nunca é confundido com naoVerificado', async () => {
-    const { useCase } = build(
-      [linha('p-1', 'running')],
-      async () => ({
+    const { useCase } = build([linha('p-1', 'running')], () =>
+      Promise.resolve({
         observado: null,
         naoObservado: 'broker-sem-resposta',
         detalhe: 'timeout',
@@ -207,14 +212,17 @@ describe('ObterVisaoGeralDeContainersUseCase', () => {
     const vazios = Array.from({ length: 25 }, (_, i) =>
       linhaSemContainer(`vazio-${i}`),
     );
-    const reais = Array.from({ length: TETO_DE_VERIFICACOES_POR_CARGA }, (_, i) =>
-      linha(`real-${i}`, 'running'),
+    const reais = Array.from(
+      { length: TETO_DE_VERIFICACOES_POR_CARGA },
+      (_, i) => linha(`real-${i}`, 'running'),
     );
     const { useCase, chamadasAoBroker } = build([...vazios, ...reais]);
 
     const itens = await useCase.execute('ws-1');
 
-    expect(chamadasAoBroker.sort()).toEqual(reais.map((r) => r.projectId).sort());
+    expect(chamadasAoBroker.sort()).toEqual(
+      reais.map((r) => r.projectId).sort(),
+    );
     expect(
       itens.filter((i) => i.naoVerificado === 'teto_de_verificacoes_atingido'),
     ).toHaveLength(0);
@@ -238,5 +246,32 @@ describe('ObterVisaoGeralDeContainersUseCase', () => {
     expect(item.executionMode).toBe('runner');
     expect(item.temImagemDecidida).toBe(true);
     expect(item.workspaceVerifiedAt).toEqual(confirmadoEm);
+  });
+
+  // ADR 0161, RN-574: a tela recusa ANTES do clique a subida de
+  // `container`/`mounted` quando a instalação não tem broker — e para isso a
+  // lista tem de DIZER se tem, em toda linha, inclusive nas que nunca
+  // provisionaram (que são justamente as que a tela oferece subir).
+  it('diz em TODA linha se a instalação tem broker — sem ele, `false`', async () => {
+    const { useCase } = build(
+      [linha('p-running', 'running'), linhaSemContainer('p-novo')],
+      undefined,
+      false,
+    );
+
+    const itens = await useCase.execute('ws-1');
+
+    expect(itens.map((i) => i.brokerConfigurado)).toEqual([false, false]);
+  });
+
+  it('com broker configurado, `true` em toda linha', async () => {
+    const { useCase } = build([
+      linha('p-stopped', 'stopped'),
+      linhaSemContainer('p-novo'),
+    ]);
+
+    const itens = await useCase.execute('ws-1');
+
+    expect(itens.map((i) => i.brokerConfigurado)).toEqual([true, true]);
   });
 });

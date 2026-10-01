@@ -49,5 +49,31 @@ defmodule Engine.Runners.Registry do
     end
   end
 
+  @doc """
+  Os pids de TODOS os runners conectados no cluster, de qualquer projeto.
+
+  Existe para a revogação por CREDENCIAL (ADR 0201, RN-685): uma chave de
+  MÁQUINA atende N projetos, e a pergunta "quais conexões nasceram desta
+  chave?" não tem projeto para endereçar — só quem a responde é cada canal,
+  que guarda a credencial em `socket.assigns`. Perguntar a todos é o que
+  impede uma conexão de escapar por estar num projeto que a api não listou
+  (papel que caiu, modo convertido com a conexão viva). O custo é linear no
+  número de runners conectados, e roda só quando alguém revoga.
+  """
+  @spec todos() :: [pid()]
+  def todos do
+    :global.registered_names()
+    |> Enum.flat_map(fn
+      {:brabo_runner, _project_id} = nome ->
+        case :global.whereis_name(nome) do
+          :undefined -> []
+          pid -> [pid]
+        end
+
+      _outro ->
+        []
+    end)
+  end
+
   defp name(project_id), do: {:brabo_runner, project_id}
 end

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FilesystemModule } from '../../../infrastructure/filesystem/filesystem.module';
+import { EngineHttpClientsModule } from '../../../infrastructure/http-clients/engine-http-clients.module';
 import { SessionsUseCasesModule } from '../sessions/sessions-use-cases.module';
 import { ContainersUseCasesModule } from '../containers/containers-use-cases.module';
 import { CreateWorkspaceUseCase } from './create-workspace.use-case';
@@ -8,6 +9,8 @@ import { GetWorkspaceUseCase } from './get-workspace.use-case';
 import { UpdateWorkspaceUseCase } from './update-workspace.use-case';
 import { DeleteWorkspaceUseCase } from './delete-workspace.use-case';
 import { AddWorkspaceMemberUseCase } from './add-workspace-member.use-case';
+import { RemoveWorkspaceMemberUseCase } from './remove-workspace-member.use-case';
+import { TransferWorkspaceOwnershipUseCase } from './transfer-workspace-ownership.use-case';
 import { CreateProjectUseCase } from './create-project.use-case';
 import { ConfirmProjectWorkspaceUseCase } from './confirm-project-workspace.use-case';
 import { ConvertProjectExecutionModeUseCase } from './convert-project-execution-mode.use-case';
@@ -24,16 +27,21 @@ import { GetProjectPermissionsUseCase } from './get-project-permissions.use-case
 import { SetProjectPermissionsUseCase } from './set-project-permissions.use-case';
 import { ListProjectsForWorkspaceUseCase } from './list-projects-for-workspace.use-case';
 import { ListProjectMembersUseCase } from './list-project-members.use-case';
+import { ListWorkspaceMembersUseCase } from './list-workspace-members.use-case';
 import { GetWorkspaceSummaryUseCase } from './get-workspace-summary.use-case';
 import { GetProjectsStatusForWorkspaceUseCase } from './get-projects-status-for-workspace.use-case';
 import { GetProjectsSummaryForWorkspaceUseCase } from './get-projects-summary-for-workspace.use-case';
 import { GetUnreadEventsForWorkspaceUseCase } from './get-unread-events-for-workspace.use-case';
 import { GetUserPreferencesUseCase } from './get-user-preferences.use-case';
 import { UpdateUserPreferencesUseCase } from './update-user-preferences.use-case';
+import { ResolverIdiomaDaRespostaUseCase } from './resolver-idioma-da-resposta.use-case';
+import { IdiomaDaRespostaNaSessaoUseCase } from './idioma-da-resposta-na-sessao.use-case';
+import { DetectarIdiomaDoAutorUseCase } from './detectar-idioma-do-autor.use-case';
 // Provider direto, e não `imports: [AgentsUseCasesModule]`: o seeding só
 // depende do repositório de áreas (DrizzleModule é global), e importar o
 // módulo de agentes traria sessões e o cliente do engine junto — aresta nova
 // entre IAM e agentes por causa de uma classe sem estado.
+import { SetWorkspaceToolRouterUseCase } from './set-workspace-tool-router.use-case';
 import { SeedAgentAreasUseCase } from '../agents/seed-agent-areas.use-case';
 
 const USE_CASES = [
@@ -44,6 +52,9 @@ const USE_CASES = [
   UpdateWorkspaceUseCase,
   DeleteWorkspaceUseCase,
   AddWorkspaceMemberUseCase,
+  RemoveWorkspaceMemberUseCase,
+  TransferWorkspaceOwnershipUseCase,
+  SetWorkspaceToolRouterUseCase,
   CreateProjectUseCase,
   ConfirmProjectWorkspaceUseCase,
   ConvertProjectExecutionModeUseCase,
@@ -60,16 +71,27 @@ const USE_CASES = [
   SetProjectPermissionsUseCase,
   ListProjectsForWorkspaceUseCase,
   ListProjectMembersUseCase,
+  ListWorkspaceMembersUseCase,
   GetWorkspaceSummaryUseCase,
   GetProjectsStatusForWorkspaceUseCase,
   GetProjectsSummaryForWorkspaceUseCase,
   GetUnreadEventsForWorkspaceUseCase,
   GetUserPreferencesUseCase,
   UpdateUserPreferencesUseCase,
+  ResolverIdiomaDaRespostaUseCase,
+  IdiomaDaRespostaNaSessaoUseCase,
+  DetectarIdiomaDoAutorUseCase,
 ];
 
 @Module({
-  imports: [FilesystemModule, SessionsUseCasesModule, ContainersUseCasesModule],
+  imports: [
+    FilesystemModule,
+    SessionsUseCasesModule,
+    ContainersUseCasesModule,
+    // A cascata da remoção de membro de workspace derruba o runner vivo do
+    // removido (ADR 0173, RN-615), pelo mesmo cliente da RN-520.
+    EngineHttpClientsModule,
+  ],
   providers: USE_CASES,
   exports: USE_CASES,
 })

@@ -9,6 +9,28 @@ keywords: [regras de negócio, domínio, máquina de estados, aprovação, RBAC]
 
 # Regras de negócio
 
+> **Esta tradução está atrás da versão em inglês.** Medido em 2026-09-26
+> (AT-223): a [versão em inglês](pathname://../business-rules) é a fonte, tem
+> 282 RNs nesta página e esta tradução tem 134. As 148
+> abaixo **só existem lá**, e link para uma delas aponta para a versão
+> em inglês:
+>
+> [RN-421](pathname://../business-rules#rn-421)–[RN-427](pathname://../business-rules#rn-427), [RN-432](pathname://../business-rules#rn-432)–[RN-441](pathname://../business-rules#rn-441), [RN-443](pathname://../business-rules#rn-443), [RN-447](pathname://../business-rules#rn-447)–[RN-469](pathname://../business-rules#rn-469), [RN-471](pathname://../business-rules#rn-471)–[RN-481](pathname://../business-rules#rn-481), [RN-485](pathname://../business-rules#rn-485)–[RN-487](pathname://../business-rules#rn-487), [RN-490](pathname://../business-rules#rn-490)–[RN-505](pathname://../business-rules#rn-505), [RN-507](pathname://../business-rules#rn-507)–[RN-509](pathname://../business-rules#rn-509), [RN-511](pathname://../business-rules#rn-511)–[RN-534](pathname://../business-rules#rn-534), [RN-539](pathname://../business-rules#rn-539)–[RN-552](pathname://../business-rules#rn-552), [RN-556](pathname://../business-rules#rn-556)–[RN-563](pathname://../business-rules#rn-563), [RN-565](pathname://../business-rules#rn-565)–[RN-570](pathname://../business-rules#rn-570), [RN-572](pathname://../business-rules#rn-572)–[RN-575](pathname://../business-rules#rn-575), [RN-577](pathname://../business-rules#rn-577)–[RN-582](pathname://../business-rules#rn-582), [RN-584](pathname://../business-rules#rn-584)–[RN-593](pathname://../business-rules#rn-593), [RN-599](pathname://../business-rules#rn-599)–[RN-600](pathname://../business-rules#rn-600).
+>
+> As quatro RNs que esta tradução numerava 421–424 são as
+> RN-428–RN-431 da versão em inglês, e foram renumeradas aqui para a
+> âncora levar à MESMA regra nos dois idiomas; as RN-421–RN-424 da
+> lista acima são outras regras, que só existem em inglês.
+>
+> Medido em 2026-09-26 (AT-229), título E corpo: das RNs presentes, estas
+> têm aqui um enunciado mais antigo que o da versão em inglês:
+>
+> [RN-284](pathname://../business-rules#rn-284), [RN-360](pathname://../business-rules#rn-360), [RN-411](pathname://../business-rules#rn-411), [RN-417](pathname://../business-rules#rn-417), [RN-419](pathname://../business-rules#rn-419), [RN-420](pathname://../business-rules#rn-420).
+>
+> Onde a fonte ainda está em português, a comparação é de texto; onde ela
+> já foi traduzida para o inglês, só dá para comparar o tamanho, e uma
+> diferença de até 12% passa como tradução. Na dúvida, o inglês vale.
+
 Cada regra tem **enunciado**, **onde vive** (`arquivo:linha`) e **o teste que a
 cobre**. Se você mudar uma regra, atualize a linha aqui na mesma mudança — é o
 que o [`.docmap.yml`](https://github.com/daneiel/brabo/blob/dev/docs/.docmap.yml)
@@ -257,7 +279,10 @@ vez de fechar uma.
   `apps/web/src/lib/api-client.ts:773` (`getSessionModelBinding`, o
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:147`
   (`getSessionBinding`, `@Query('agentId')`)
-- **Teste:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+- **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (antes `SessionPage.agente-mais-recente.test.tsx`; desde a
+  [RN-631](pathname://../business-rules#rn-631) o destinatário é ESCOLHIDO, não
+  "o mais recente"),
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
   `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
 - **Borda:** Infra Lead não participa do roteamento do composer nem da
@@ -2034,7 +2059,7 @@ enquanto a tabela não mentir sobre APLICAR (nenhuma tela ou resposta de
 API hoje afirma "o container está limitado a X" — só "a intenção
 registrada era X").
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projectContainers`)
+- **Onde:** `apps/api/src/db/schema/containers.ts` (`projectContainers`)
 - **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
@@ -2615,7 +2640,7 @@ pendência já documentada em RN-086: o mesmo sinal que faria a Anamnese
 propor subir o teto de paralelismo é o que faria ela propor um handoff ao
 Staff, e nenhum dos dois dispara enquanto ela estiver pausada.
 
-### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1`
+### RN-305 — O Staff ativa pelo caminho GENÉRICO de handoff, sem `USER_STARTED_AGENTS`, e sem `kickoff/1` {#rn-305}
 
 `USER_STARTED_AGENTS` (`apps/api/src/domain/sessions/agent-activation.ts`) é
 a exceção do Criativo (inicia SEM handoff, por comando do usuário) — o Staff
@@ -2661,7 +2686,7 @@ existe), ao contrário de po/arquiteto/dev-lead/infra.
   `user_message`)
 - **ADR:** [0088](adr/0088-staff-agente-dormente-para-disparo-automatico.md)
 
-### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action`
+### RN-306 — `propose_rfc` grava o artefato DIRETO e devolve o handoff no MESMO tool call, sem `proposed_action` {#rn-306}
 
 `Engine.Agents.StaffTools.propose_rfc`
 (`apps/engine/lib/engine/agents/staff_tools.ex:41`) é a única ferramenta do
@@ -2888,7 +2913,7 @@ intocados).
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
@@ -3770,7 +3795,7 @@ serviço `ollama` só puxava `llama3.2:1b`, e o RAG degradava para
 léxico-only em SILÊNCIO em qualquer ambiente limpo, sem nenhum sinal de
 que isso estava acontecendo. Serviço novo `ollama-model-loader` (one-shot,
 `docker-compose.yml` dev e prod), lendo `OLLAMA_REQUIRED_MODELS`
-(default `gemma:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
+(default `gemma3:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
 `ollama` existente — o entrypoint dele continua intocado.
 
 A degradação deixou de ser silenciosa: `rag_search` (RN-414) e a busca
@@ -4059,7 +4084,7 @@ e-mail sem NENHUM caractere alfanumérico degradam para o literal
 
 ---
 
-### RN-421 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-421}
+### RN-428 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-428}
 
 `promocoesPendentes`/o carrossel de promoção do PO (RN-148) não depende mais
 de scan sobre a janela dos últimos 200 eventos de `useSessionEvents`. A fonte
@@ -4083,7 +4108,7 @@ corte de leitura.
 
 ---
 
-### RN-422 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-422}
+### RN-429 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-429}
 
 O canal `terminal:<projectId>` ganha dois eventos, no MESMO desenho de relay
 do PTY: `fs_list_dir`/`fs_home_dir` (`:web` pede, engine faz relay DIRETO
@@ -4117,14 +4142,14 @@ de texto livre continua sendo o caminho manual, como antes.
   (ordenação, pasta vazia/inexistente/arquivo, permissão por entrada);
   `FolderBrowserModal.test.tsx` (projectId nulo, navegação, seleção, sem
   runner); `NewProjectWizard.test.tsx` (botão "Procurar pasta...")
-- **ADR:** [0104](adr/0104-navegacao-de-pasta-local-via-o-runner.md), revisa
+- **ADR:** [0107](adr/0107-navegacao-de-pasta-local-via-o-runner.md), revisa
   a [0072](adr/0072-projeto-local-ou-container.md) sem editá-la
 - **Origem:** pedido do dono do produto — "não consegui linkar com uma
   pasta do usuário"
 
 ---
 
-### RN-423 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-423}
+### RN-430 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-430}
 
 A aba `prs` resolve o defeito de `ProjectApprovalsTab.tsx`, que escopava a
 seção "PRs em revisão" a `usePendingActions(projectId, latestSession?.id)`
@@ -4164,7 +4189,7 @@ RN-096 já corrigiu para outros tipos).
 
 ---
 
-### RN-424 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-424}
+### RN-431 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-431}
 
 `contagens.arquiteturaPendente` (régua de abas) vem de
 `architecture.pendencies.length` (divergência de validação cruzada

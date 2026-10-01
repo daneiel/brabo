@@ -134,33 +134,71 @@ tool downloads and verifies on its own, and reproducing its checksum
 table by hand would be a copy that ages. Weaker than the scanner
 binaries, stated rather than implied.
 
-## Container images: digest, with the tag alongside
+## What the images job caches, and what the cache cannot change {#images-job-caches}
 
-Third-party images are pinned by **digest**, in exactly the shape the
-actions use:
+Since AT-304 the `images` job of `ci.yml` keeps three things between runs
+with `actions/cache` (pinned by SHA like every other action), and each one
+was chosen so that the cache saves time without moving a verdict:
+
+| cache | key | what decides the content |
+|---|---|---|
+| the Playwright browser (`~/.cache/ms-playwright`) | exact `@playwright/test` version + hash of `e2e/pnpm-lock.yaml` | the lockfile pin above — a new Playwright is a new key, never a stale hit |
+| the `e2e/` pnpm store (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash of `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, which still checks every tarball's integrity against the lockfile |
+| the Trivy vulnerability database (`/tmp/trivy-cache/seed/db`) | Trivy version + UTC day, restoring the latest earlier day | **Trivy itself**: `--download-db-only` still runs, reads the database's own `NextUpdate`, and downloads again when it has passed |
+
+The last row is the one that could have loosened a gate, and it doesn't:
+the cache only *seeds* the directory, and freshness is judged by the same
+rule Trivy applies on a laptop. What the cache removes is the ~110 MB
+download from the registry on every run — which was also the source of the
+occasional `TOOMANYREQUESTS` failure. `release.yml` does not use this cache:
+a tag scans with a database it downloads itself.
+
+The browser cache holds **only** the browser. The system libraries that
+`--with-deps` installs go into the runner's apt, which no directory cache
+can hold, so a warm run still installs them (`playwright install-deps`).
+
+Scope is GitHub's, not ours: `ci.yml` only runs on `pull_request`, so these
+caches are written in the PR's own scope and read back by that PR's later
+pushes (and from the base branch's scope, which this workflow never writes).
+A PR cannot seed another PR's cache.
+
+## Container images: digest, with the tag inside the reference {#container-images-digest-with-the-tag-alongside}
+
+Third-party images are pinned by **digest**, with the tag they came from
+written **inside the reference**, before the digest — `image:tag@sha256:<index>`
+([ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)):
 
 ```yaml
-image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
 ```
 
 ```dockerfile
-# 24.11.1-alpine3.21
-FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS deps
 ```
 
-**In a Dockerfile the tag goes on the line above, and that is not taste.**
-Docker's parser only recognizes `#` at the *start* of a line, so
-`FROM alpine@sha256:… # 3.20` is not a commented `FROM`, it is a `FROM` with
-three arguments, and the build dies with *"FROM requires either one or three
-arguments"*. This was found the right way — the `images` job's `bake` step
-failed on the first push, in 27 seconds — and it is worth recording that
-`hadolint` had passed the same file: it has its own parser, and a linter
-agreeing is not the build agreeing.
+With both present, Docker pulls by the digest: the tag is information for
+whoever reads the line, and the digest decides the bytes.
 
-The comment is **one token**, with no spaces, in both shapes. That is what
-separates the tag from the *prose* already sitting above nearly every `FROM`
-in this repository — without it, "there is a comment above" would be satisfied
-by any paragraph.
+**Until ADR 0178 the tag lived in a comment** (`neo4j@sha256:…  # 5.26-community`,
+and in a Dockerfile on the line above), mirroring the actions. It moved because
+of a measurement (AT-139, 2026-09-27): Dependabot does not read that comment in
+any format, and a digest-only pin is "updated" to the digest of `latest` — which
+would have taken pgvector, neo4j and node to another major with the comment still
+claiming the old tag and the lint green. With the tag inline, Docker,
+Dependabot and a human all read the same tag. The CloudNativePG `imageName`
+already had this shape, for a different reason: its webhook refuses a
+digest-only reference, because it reads the Postgres version from the tag.
+
+A comment is still **allowed**, but only if it says the same thing: a comment
+that states one tag (a single token with a digit) different from the inline
+one fails the check — it is exactly the leftover a version bump would leave
+lying. **In a Dockerfile a comment at the end of the `FROM` line still fails**:
+Docker's parser only recognizes `#` at the *start* of a line, so
+`FROM alpine:3.20@sha256:… # 3.20` is a `FROM` with three arguments, and the
+build dies with *"FROM requires either one or three arguments"*. This was found
+the right way under ADR 0159 — the `images` job's `bake` step failed on the first
+push, in 27 seconds — and `hadolint` had passed the same file: a linter agreeing
+is not the build agreeing.
 
 This page used to say the opposite — tag pinning was "a deliberate stop,
 not an oversight," buying day-to-day reproducibility "without the
@@ -169,16 +207,18 @@ is **revoked**, and the measurement is why: the 37 third-party references
 in the repository were on tags, and three of the places they run are
 worse than a `docker compose pull` going stale.
 
-- The `FROM` lines are the base of the four images we **publish** to
-  GHCR. A moved tag becomes bytes inside an image we sign and hand to
+- The `FROM` lines are the base of the images we **publish** to
+  GHCR — five since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md). A moved tag becomes bytes inside an image we sign and hand to
   other people.
 - `docker/docker-compose.install.yml` runs on the machine of whoever
-  installed the product, beside their Postgres. In that same file the
-  four **own** images already arrive by digest, through a variable the
+  installed the product, beside their Postgres. In that same file our
+  **own** images already arrive by digest, through a variable the
   installer fills — the third-party ones arrived by tag, next to them.
-- `ci.yml` and `golden-set-rag.yml` run third-party images as job
+- `ci.yml`, `golden-set-rag.yml` and `golden-set-qa.yml` run third-party images as job
   `services:`. That is literally the runner the action rule exists to
-  protect, reached by the other door.
+  protect, reached by the other door. Since
+  [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md) they hold
+  no literal: see *The workflows read the compose* below.
 
 To resolve a tag into the digest to write down — the **index** digest, so
 the pin keeps working on `linux/arm64` as well as `linux/amd64`:
@@ -188,13 +228,14 @@ docker manifest inspect neo4j:5.26-community | head -3   # confirms it is an ind
 docker buildx imagetools inspect neo4j:5.26-community --format '{{.Manifest.Digest}}'
 ```
 
-The trailing `# <tag>` comment is **required**, for the same reason it is
-on actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j
-5.26. And, as with the actions, the rule has a mechanism rather than
-goodwill — `scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which
-fails on any `image:`/`imageName:`/`FROM` that is not a digest, on any
-digest with no tag comment, and on the same tag carrying two different
-digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
+The tag is **required**, for the same reason the version comment is on
+actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j 5.26. And,
+as with the actions, the rule has a mechanism rather than goodwill —
+`scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which fails on any
+`image:`/`imageName:`/`FROM` that is not a digest, on any digest with no
+inline tag (the old comment-only shape included), on a tag comment that
+disagrees with the inline tag, on a comment at the end of a `FROM`, and on
+the same inline tag carrying two different digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
 extension of it: `uses:` lives in workflow YAML with one syntax, images
 live in composes, kustomize manifests and Dockerfiles with three others,
 and one function answering both questions would answer both badly.
@@ -202,8 +243,8 @@ and one function answering both questions would answer both badly.
 What the check deliberately does **not** cover:
 
 - **The images we build ourselves** (`brabo-api`, `brabo-engine`,
-  `brabo-web`, `brabo-backup`, and `brabo-broker`, which is not
-  published). There is no third party who could move anything, and
+  `brabo-web`, `brabo-backup` and `brabo-broker` — the last one
+  published since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). There is no third party who could move anything, and
   `brabo-api:prod` is a *local* tag whose digest does not exist before
   the build. Where they do cross a registry they are **already** by
   digest, through the mechanism that owns them: `.release/images.json`
@@ -220,11 +261,110 @@ What the check deliberately does **not** cover:
 The exception list is by *name* and fails closed: a new third-party image
 never matches `brabo-`, so it is born under the rule.
 
-**The price is real and is not paid here.** An image pinned by digest
-receives no security update until someone changes the digest by hand —
-the same debt the action SHAs carry. `.github/dependabot.yml` enables the
-`github-actions` ecosystem for that reason; the `docker` ecosystem is
-**not** enabled, and turning it on is a separate decision.
+### The workflows read the compose {#the-workflows-read-the-compose}
+
+Until [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md)
+`pgvector` and `ollama` lived twice: in the composes and, as literals, in the
+`services:` of `ci.yml` and the two golden-set workflows. No Dependabot
+ecosystem reads a workflow's `services:`, so every bot PR bumping one of them in
+the compose would have been born red by the "same tag, two digests" rule, and
+the step that would align the workflow on the bot's PR cannot push with the
+`GITHUB_TOKEN`, which is never allowed to change `.github/workflows/`.
+
+The literal is gone. A reusable workflow, `.github/workflows/imagens-do-compose.yml`,
+runs `scripts/ci/imagens-do-compose.ts`, which reads each service's `image:` from
+`docker/docker-compose.yml` (and refuses one that is not
+`image:tag@sha256:<index>`), and the callers write
+`image: ${{ needs.imagens.outputs.pgvector }}`. A duplicate that does not exist
+cannot diverge: the bot's PR touches only the compose, and the CI of that very
+PR already runs against the new image. What `golden-set-rag.yml` used to
+*promise* in a comment — the same Ollama as dev, because the golden-set floor is
+keyed by model and not by environment — is now true by construction.
+
+`imagens-pinadas.ts` learned the new shape and closes the door it opens. In a
+workflow it fails any third-party **literal** (pinned or not); any expression
+that is not exactly `${{ needs.<job>.outputs.<name> }}` — a literal inside the
+expression, an `||` default, `env.`, `vars.`, `format()` are all places a
+mutable reference could hide, and the old pattern did not even match a line
+with spaces; and a `needs.<job>` whose job does not call the reusable workflow,
+or an output it does not declare. Each rule is proved by mutation in its spec.
+
+**The price is real, and Dependabot now pays part of it.** An image pinned by
+digest receives no security update until someone changes the digest — the same
+debt the action SHAs carry. `.github/dependabot.yml` enables `github-actions`
+for that reason and, since ADR 0197, `docker-compose` (`/docker`) and `docker`
+(`/docker/*` and `/deploy/k8s/**`), each grouped into one weekly PR into `dev`.
+Still manual, and declared in ADR 0197: `neo4j` and `ollama` also live in
+`deploy/k8s/base/`, the two ecosystems never share a PR, and a same-tag digest
+re-roll makes both PRs fail until a human joins them; the CloudNativePG
+`imageName` and `IMAGEM_DO_GOLDEN_SET_QA` are read by no ecosystem. Those
+follow the [runbook procedure](../runbook.md#subindo-imagem-de-terceiro).
+
+**A digest guarantees immutability, not availability.** The pin protects
+against the owner of a tag moving it; it does not protect against the
+publisher deleting the repository. That happened with MinIO: the local
+overlay's S3 server was pinned by index digest on `quay.io/minio/minio`,
+MinIO stopped publishing its community image, and the same digest started
+answering 401 (Docker Hub: 404). The bootstrap died at `rollout status` and
+no property proof ran until the server was replaced by SeaweedFS
+([ADR 0169](../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
+The symptom, if it happens again to any pinned image, is `ImagePullBackOff`
+on a digest that has not changed — the fix is a new image from a publisher
+that still serves one, never unpinning.
+
+## The build cache cannot hide a stale package
+
+The final stage (`runtime`) of every `Dockerfile.prod` runs `apk upgrade`.
+BuildKit keys a layer by instruction plus parent layer, never by time, so with
+`cache-from` on, a PR build reused an `apk upgrade` layer frozen at that PR's
+first build (measured: `CACHED` on 5 of 5 images), and Trivy scanned an old
+openssl that the tag, built cold, would not carry. `docker-bake.hcl` therefore
+sets `no-cache-filter = ["runtime"]` on the shared base target: the final stage
+and what follows it are rebuilt every time, the build stages keep their cache
+(that is where the time is), and the scan looks at what the tag would publish.
+It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.
+
+That fixed what the **PR** scans. It could not fix what the **tag** publishes:
+a tag builds cold, from a different run, and until
+[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) nothing scanned it.
+
+## The release scans what it publishes, before signing it
+
+`release.yml` runs Trivy on each image **by digest**, straight from the
+registry (`--image-src remote`), after the bake pushes and records
+`.release/images.json` and **before** `cosign sign`. The order is the
+mechanism: an image that fails is never signed, and `install.sh` does not
+install an unsigned image. The push has already happened by then (it is what
+creates the digest), so a failed tag leaves its tags in the GHCR unsigned and
+without a Release — the correct state, since nothing installs them.
+
+The gate is the **same** rule as the `ci.yml` job, flag for flag:
+`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` and
+the same `.trivyignore.yaml`, whose every entry carries an `expired_at`. A HIGH
+or CRITICAL **with a fix available** fails the release. What has **no** fix is
+reported, not blocking: a second scan without `--ignore-unfixed` and with
+`--exit-code 0` feeds `scripts/ci/trivy-do-release.ts`, which writes the job
+summary and the `trivy-sem-correcao.md` Release asset. That script never
+decides the verdict — Trivy's exit code does —, because a second rule for
+"has a fix" would drift from Trivy's own the first time it added a status.
+There is **no new allowlist**: the step accepts no ignore file but the one the
+PR already uses.
+
+The binary is the same `v0.70.0` with the same `sha256` as `ci.yml`, declared
+twice because a workflow's `env:` cannot be imported. The duplication is
+guarded: `scripts/ci/trivy-do-release.spec.ts` fails when version, hash or the
+gate's flags diverge between the two workflows, when the gate moves after the
+signing, or when a second ignore file appears. Like `install-e2e.yml`, the
+release only runs on a final tag, so that spec is the proof a PR can give.
+
+Measured on 2026-09-27 against the digests of the last release (`v6.1.0`,
+four images, published 2026-09-14), with the same flags: `api` and `web` would
+**fail** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3` `3.3.7-r0`, fixed in
+`3.3.7-r1`), a CVE published after that tag —, `engine` and `backup` pass, and
+nothing HIGH/CRITICAL without a fix appears once `.trivyignore.yaml` is
+applied. Without it, `engine` would carry 56 fixable findings in the
+third-party scanner binaries that file documents. The four scans plus the
+database download took about 30 s.
 
 ## What is still trusted on faith
 
@@ -251,7 +391,7 @@ Declared, not fixed:
   already closed.
 
   Every Dependabot PR enters through `dev` (`target-branch: dev` on the
-  three entries). Security updates ignore that key and open against the
+  five entries — the two image ecosystems included, since ADR 0197). Security updates ignore that key and open against the
   default branch, so `dependabot-para-dev.yml` closes the ones `dev`
   already fixes and retargets the rest — see *Dependabot enters through
   dev* in `branching-policy.md`.
@@ -260,11 +400,13 @@ Declared, not fixed:
   (`npm audit signatures` or equivalent) in any job.
 - ~~**No signing or attestation of our own artifacts.**~~ **Closed by
   [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
-  (BRB-005). `release.yml` signs the four images **by digest** with
+  (BRB-005). `release.yml` signs the images it publishes **by digest** with
   `cosign` keyless — the OIDC identity of the workflow, no key in
   custody anywhere — and `build-runner-binaries.yml` gained a
   consolidating job that publishes **one signed `checksums.txt`**
-  covering the five binaries, rather than five separate signatures.
+  covering the runner binaries (four targets since
+  [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), which dropped
+  `darwin-x64`), rather than one signature per binary.
   Both workflows **verify what they just signed**, in the same run:
   a signature nobody tries to verify is one more file in the release,
   and the failure would otherwise surface on the machine of whoever
@@ -283,18 +425,36 @@ Declared, not fixed:
   spec fails when the installer's own copy of it diverges or when the compose
   gains a relative bind-mount that is not on it.
 
+  **The broker image is the fifth, and it is the one that matters most**
+  ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
+  It was built by nobody until then: the `Dockerfile.prod` existed and passed
+  `hadolint`, but no bake target built it, so it was never scanned and never
+  published, and the installation had no way to offer the service. It now
+  goes through every gate the other four do — the `ci.yml` builds it on every
+  PR, refuses it running as root, runs Trivy on it and brings it up healthy
+  with a read-only rootfs and no network; `release.yml` publishes, records,
+  signs and verifies it by digest with no extra line, because both loops read
+  `.release/images.json`. The reason it needs them more than any other: in an
+  installation that consents, it is the one service that receives the host's
+  Docker socket, so a vulnerability in it is a path to the whole machine.
+  Publishing it makes it a studiable public target; that price is declared
+  in the ADR, not hidden. The Kubernetes overlay does not know it
+  (`argumentosDeSetImage` emits only the four images the kustomize base
+  declares) — there is no broker Deployment, by decision.
+
   What this does **not** cover, and is a different item: **code-signing
   the runner binaries** for the OS (macOS notarization, Windows
   Authenticode), which needs a paid signing identity and stays in
   [the backlog](backlog.md).
 - ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
-  (above): all 37 third-party references — composes, kustomize manifests,
-  Dockerfile `FROM` lines and the workflow `services:` — are pinned by
-  digest with the tag in a comment, and `scripts/ci/imagens-pinadas.ts`
-  fails the `lint` job on the next regression. What is **not** closed, and
-  is the price of the pin rather than a leftover: a digest receives no
-  security update until someone bumps it by hand, and Dependabot's
-  `docker` ecosystem is not enabled — a separate decision.
+  (above): all 33 third-party references — composes, kustomize manifests and
+  Dockerfile `FROM` lines — are pinned by digest with the tag inside the
+  reference (ADR 0178), the workflow `services:` read theirs from the compose
+  (ADR 0197), and `scripts/ci/imagens-pinadas.ts` fails the `lint` job on the
+  next regression. What is **not** closed, and is the price of the pin rather
+  than a leftover: a digest receives no security update until someone bumps
+  it. Dependabot's `docker`/`docker-compose` ecosystems propose those bumps
+  since ADR 0197; what they cannot reach is listed there.
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
 - **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**

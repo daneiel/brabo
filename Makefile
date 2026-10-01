@@ -4,7 +4,7 @@
 # Makefile exists for what isn't JavaScript nor Elixir — bringing up the
 # cluster, applying manifests, validating. Doesn't duplicate package.json
 # on purpose.
-.PHONY: help deploy-local deploy-local-clean smoke-k8s hpa-test rollout-test test-restore test-restore-compose test-reprojecao k8s-validate k8s-logs k8s-down imagens-do-release
+.PHONY: help deploy-local deploy-local-clean smoke-k8s hpa-test rollout-test test-restore test-restore-mutacao test-restore-compose test-reprojecao test-reprojecao-k8s test-reprojecao-artefatos-k8s test-rotacao-chave-mestra-k8s k8s-validate k8s-logs k8s-down imagens-do-release
 
 SHELL := /usr/bin/env bash
 K8S := deploy/k8s
@@ -47,11 +47,18 @@ rollout-test: ## Opens active sessions, does a rollout restart and proves none i
 test-restore: ## Triggers a real backup, restores it into a new database and validates it
 	@bash $(K8S)/test-restore.sh
 
+# The proof of the proof (AT-126, BRB-009): a deliberate break of the restore
+# (the source gets a table the dump does not have) must be CAUGHT. Exits 0 only
+# if the restore REJECTS it and names the missing table; exits 1 if the restore
+# approves it. Independent of `test-restore`, which stays unchanged.
+test-restore-mutacao: ## Breaks the restore on purpose (dump without a table) and requires the proof to catch it
+	@RESTORE_MUTACAO=tabela-faltando bash $(K8S)/test-restore.sh
+
 # The same proof for an installation that has no cluster (ADR 0152). Kept as a
 # SEPARATE target on purpose: unifying it with the one above would make the
 # compose path depend on `kubectl`. The judgement is not duplicated — both run
 # the same `brabo-restore` with the same three validations.
-test-restore-compose: ## Same proof as test-restore, against docker compose (no cluster)
+test-restore-compose: ## Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env
 	@bash docker/backup/test-restore-compose.sh
 
 # The graph is not backed up (ADR 0152, decision 4): it is REPROJECTED from the
@@ -60,6 +67,30 @@ test-restore-compose: ## Same proof as test-restore, against docker compose (no 
 # depend on a backup having happened, on purpose (RN-569).
 test-reprojecao: ## Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up)
 	@pnpm --filter api test -- test/scripts/reprojetar-grafo.spec.ts
+
+# The same proof, one environment up (AT-127): against the local cluster, with the
+# image's own `node scripts/reprojetar-grafo.js` over the cluster's Postgres and
+# Neo4j. Its own scenario, its own project — it depends on no other target, and in
+# particular not on `test-restore`.
+test-reprojecao-k8s: ## Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first)
+	@bash $(K8S)/test-reprojecao.sh
+
+# The artifact folder's sibling (AT-198, RN-590): an `artifact.note` written by
+# the live projector, its `docs/<agent>/` folder deleted inside the api pod,
+# rebuilt by the image's own `node scripts/reprojetar-artefatos.js`, and the
+# file compared byte for byte (sha256) with what the live projector wrote.
+# Its own project; depends on no other target.
+test-reprojecao-artefatos-k8s: ## Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first)
+	@bash $(K8S)/test-reprojecao-artefatos.sh
+
+# The master key rotation rehearsal (AT-146, BRB-010; RN-562/563): the three
+# steps of the runbook against the cluster — both keys published in the
+# `brabo` source Secret, ESO force-synced, api restarted, the image's
+# `node scripts/rewrap-deks.js`, the previous key removed and the api restarted
+# again — with every envelope checked to open at each step. It leaves the
+# cluster on the NEW key, so run it last.
+test-rotacao-chave-mestra-k8s: ## Rehearses the master key rotation (three runbook steps) inside the local cluster (needs `make deploy-local` first; leaves the cluster on a new key)
+	@bash $(K8S)/test-rotacao-chave-mestra.sh
 
 k8s-validate: ## Renders the overlays and validates them against the Kubernetes schema
 	@bash $(K8S)/validate.sh

@@ -32,6 +32,23 @@ defmodule Engine.Runners.SocketTicket do
   Mesmo argumento do irmão de sessão: o token bruto é 256 bits de CSPRNG,
   sem dicionário possível — HMAC com pepper não protegeria nada a mais, e
   duplicaria segredo de auth que hoje só a api conhece.
+
+  ## A credencial que emitiu o ticket (ADR 0201, RN-685)
+
+  Até a RN-685 a linha guardava `project_id`/`user_id`/`kind` e nada mais, e
+  por isso a revogação só sabia mirar o par `{projeto, usuário}` (RN-520). A
+  api passou a dizer QUAL credencial pediu o ticket — `credential_kind`
+  (`"device_key"` ou `"pat"`) e `credential_id` (o `kid` da chave, que é o id
+  do registro, RN-475; ou o id do PAT) —, e é isso que vai para
+  `socket.assigns.credencial` e deixa a revogação derrubar só as conexões
+  daquela credencial.
+
+  Credencial AUSENTE é estado legítimo, e não vira recusa: o ticket de
+  `terminal` é da aba da web (sessão, sem credencial de dispositivo), e o de
+  `runner` emitido por uma api anterior a esta mudança chega sem ela durante
+  o rollout. Um par incompleto ou de espécie desconhecida também vira AUSENTE
+  — nunca uma credencial inventada, que faria a revogação mirar o que não
+  existe.
   """
 
   use Ecto.Schema
@@ -46,6 +63,8 @@ defmodule Engine.Runners.SocketTicket do
     field :project_id, :string
     field :user_id, :string
     field :kind, :string
+    field :credential_kind, :string
+    field :credential_id, :string
     field :ticket_hash, :string
     field :expires_at, :utc_datetime_usec
     field :consumed_at, :utc_datetime_usec
@@ -59,15 +78,33 @@ defmodule Engine.Runners.SocketTicket do
 
   @kinds ~w(runner terminal)
 
+  @especies_de_credencial ~w(device_key pat)
+
+  @typedoc "A credencial que emitiu o ticket — `nil` quando não há (ver moduledoc)."
+  @type credencial :: %{kind: String.t(), id: String.t()} | nil
+
   @doc "Os dois papéis que um ticket pode carregar — ver moduledoc do `EngineWeb.TerminalChannel`."
   def kinds, do: @kinds
 
   @doc """
-  Gera e persiste um ticket novo para `project_id`/`user_id`/`kind`. Devolve
+  Normaliza o par vindo do pedido interno: `%{kind:, id:}` só quando os DOIS
+  existem e a espécie é conhecida (`"device_key"` | `"pat"`); `nil` em
+  qualquer outro caso.
+  """
+  @spec credencial(term(), term()) :: credencial()
+  def credencial(kind, id)
+      when kind in @especies_de_credencial and is_binary(id) and id != "",
+      do: %{kind: kind, id: id}
+
+  def credencial(_kind, _id), do: nil
+
+  @doc """
+  Gera e persiste um ticket novo para `project_id`/`user_id`/`kind`, com a
+  `credencial` que o pediu (ou `nil`). Devolve
   `{:ok, %{ticket: <bruto>, expires_at: DateTime}}` — o valor BRUTO só existe
   neste retorno; a linha grava só o hash.
   """
-  def emitir(project_id, user_id, kind) when kind in @kinds do
+  def emitir(project_id, user_id, kind, credencial \\ nil) when kind in @kinds do
     # 32 bytes de CSPRNG, mesma escolha do irmão de sessão e de
     # `CreateSocketTicketUseCase` do lado api.
     bruto = 32 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
@@ -80,6 +117,8 @@ defmodule Engine.Runners.SocketTicket do
         project_id: project_id,
         user_id: user_id,
         kind: kind,
+        credential_kind: credencial && credencial.kind,
+        credential_id: credencial && credencial.id,
         ticket_hash: hash(bruto),
         expires_at: expira,
         created_at: agora
@@ -94,9 +133,9 @@ defmodule Engine.Runners.SocketTicket do
   @doc """
   Chamado por `EngineWeb.RunnerSocket.connect/3`: existe, não expirou, não
   foi consumido? SEM marcar consumido. Devolve `{:ok, %{project_id:,
-  user_id:, kind:}}` ou `{:error, :invalid}` — os três motivos de recusa
-  (inexistente, expirado, já consumido) respondem igual, de propósito, mesmo
-  raciocínio do irmão de sessão.
+  user_id:, kind:, credencial:}}` ou `{:error, :invalid}` — os três motivos
+  de recusa (inexistente, expirado, já consumido) respondem igual, de
+  propósito, mesmo raciocínio do irmão de sessão.
   """
   def validar(ticket_bruto) do
     hash = hash(ticket_bruto)
@@ -107,11 +146,17 @@ defmodule Engine.Runners.SocketTicket do
           t.ticket_hash == ^hash and
             is_nil(t.consumed_at) and
             t.expires_at > ^DateTime.utc_now(),
-        select: %{project_id: t.project_id, user_id: t.user_id, kind: t.kind}
+        select: %{
+          project_id: t.project_id,
+          user_id: t.user_id,
+          kind: t.kind,
+          credential_kind: t.credential_kind,
+          credential_id: t.credential_id
+        }
 
     case Repo.one(query) do
       nil -> {:error, :invalid}
-      linha -> {:ok, linha}
+      linha -> {:ok, com_credencial(linha)}
     end
   end
 
@@ -119,8 +164,9 @@ defmodule Engine.Runners.SocketTicket do
   Chamado por `EngineWeb.TerminalChannel.join/3`: consome atomicamente,
   exigindo que o `project_id` bata com o do tópico pedido
   (`terminal:<projectId>`). O `UPDATE` condicional É a guarda, sem `SELECT`
-  antes — reuso, ticket de outro projeto e corrida concorrente caem todos
-  em `{:error, :invalid}`.
+  antes — reuso, ticket de outro projeto, corrida concorrente e ticket
+  anulado por revogação (`anular_pendentes_da_credencial/1`) caem todos em
+  `{:error, :invalid}`.
   """
   def consumir(ticket_bruto, project_id) do
     hash = hash(ticket_bruto)
@@ -132,12 +178,50 @@ defmodule Engine.Runners.SocketTicket do
             t.project_id == ^project_id and
             is_nil(t.consumed_at) and
             t.expires_at > ^DateTime.utc_now(),
-        select: %{project_id: t.project_id, user_id: t.user_id, kind: t.kind}
+        select: %{
+          project_id: t.project_id,
+          user_id: t.user_id,
+          kind: t.kind,
+          credential_kind: t.credential_kind,
+          credential_id: t.credential_id
+        }
 
     case Repo.update_all(query, set: [consumed_at: agora_usec()]) do
-      {1, [linha]} -> {:ok, linha}
+      {1, [linha]} -> {:ok, com_credencial(linha)}
       {0, _} -> {:error, :invalid}
     end
+  end
+
+  @doc """
+  Anula os tickets AINDA NÃO CONSUMIDOS de `credencial` — chamado na
+  revogação (ADR 0201, RN-685), ANTES de derrubar as conexões vivas.
+
+  Fecha a janela entre emitir e usar: um ticket pedido segundos antes da
+  revogação ainda passaria no `connect/3` e no `join/3` depois dela, e a
+  conexão nasceria de uma credencial já revogada. Marcar `consumed_at` é o
+  mesmo estado de "já usado" que `validar/1` e `consumir/2` recusam — nenhum
+  estado novo. Devolve quantas linhas anulou. Credencial `nil` não anula
+  nada: sem espécie e id não há o que mirar.
+  """
+  @spec anular_pendentes_da_credencial(credencial()) :: non_neg_integer()
+  def anular_pendentes_da_credencial(%{kind: kind, id: id}) do
+    query =
+      from t in __MODULE__,
+        where:
+          t.credential_kind == ^kind and
+            t.credential_id == ^id and
+            is_nil(t.consumed_at)
+
+    {n, _} = Repo.update_all(query, set: [consumed_at: agora_usec()])
+    n
+  end
+
+  def anular_pendentes_da_credencial(_), do: 0
+
+  defp com_credencial(linha) do
+    linha
+    |> Map.put(:credencial, credencial(linha.credential_kind, linha.credential_id))
+    |> Map.drop([:credential_kind, :credential_id])
   end
 
   defp agora_usec, do: DateTime.utc_now() |> DateTime.truncate(:microsecond)

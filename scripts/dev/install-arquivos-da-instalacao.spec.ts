@@ -100,18 +100,28 @@ interface Rodada {
   codigo: number;
 }
 
-/** Assíncrona: o servidor roda NESTE processo, e `spawnSync` o travaria. */
+/**
+ * Assíncrona: o servidor roda NESTE processo, e `spawnSync` o travaria.
+ *
+ * O `stdin` do filho é `/dev/null` (`'ignore'`), e não um pipe fechado com
+ * `stdin.end('')` (AT-217). O efeito para o script é o mesmo — EOF na primeira
+ * leitura, sem TTY —, mas o pipe tinha uma corrida: com o laço de eventos
+ * atrasado pela carga, o filho saía antes de o `end` ser processado, a escrita
+ * no pipe sem leitor dava `EPIPE`, e o erro sem handler reprovava a rodada com
+ * todos os testes verdes. Sem pipe, não há escrita que possa falhar.
+ */
 function rodar(comandos: string): Promise<Rodada> {
   return new Promise((resolver) => {
-    const processo = spawn('bash', ['-c', `source "${carregavel}"\n${comandos}`], {
-      env: { ...process.env, NO_COLOR: '1' },
+    // Caminho vai pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
+    const processo = spawn('bash', ['-c', 'source "$BRABO_ALVO"\n' + comandos], {
+      env: { ...process.env, NO_COLOR: '1', BRABO_ALVO: carregavel },
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
     let stderr = '';
     processo.stdout.setEncoding('utf8').on('data', (p: string) => (stdout += p));
     processo.stderr.setEncoding('utf8').on('data', (p: string) => (stderr += p));
     processo.on('close', (codigo) => resolver({ stdout, stderr, codigo: codigo ?? -1 }));
-    processo.stdin.end('');
   });
 }
 
@@ -129,11 +139,18 @@ function cenario(checksums: string): { tmp: string; instalacao: string } {
 }
 
 /**
- * O que `main` faz, na ordem que importa: verificar, e SÓ DEPOIS gravar o
- * `.env` e materializar. Uma recusa na verificação sai 1 ali mesmo — e é por
- * isso que o `.env` não existir depois é a asserção de "antes de gravar".
+ * O que `main` faz, na ordem que importa: resolver a ferramenta de hash,
+ * verificar, e SÓ DEPOIS gravar o `.env` e materializar. Uma recusa na
+ * verificação sai 1 ali mesmo — e é por isso que o `.env` não existir depois é
+ * a asserção de "antes de gravar".
+ *
+ * `exigir_ferramenta_de_hash` está aqui porque está no `main`, antes do
+ * primeiro download (AT-091): sem ela, `FERRAMENTA_DE_HASH` fica vazia e
+ * `hash_sha256` recusa nomeando o defeito como sendo do script. Esta sequência
+ * imita o `main`, então imita a ordem dele inteira.
  */
 const sequenciaDoMain = (tmp: string, instalacao: string) => `
+exigir_ferramenta_de_hash
 baixar_e_verificar_os_arquivos_da_instalacao "${url}" "${tmp}"
 : > "${instalacao}/.env"
 materializar_os_arquivos_da_instalacao "${instalacao}"
@@ -264,7 +281,7 @@ describe('install.sh — a ordem em `main` é a garantia', () => {
       'migrar_instalacao_anterior "',
       'Sem terminal interativo',
       'consentir_base',
-      ': > "$env_arquivo"',
+      'escrever_env "$env_arquivo"',
     ]) {
       expect(main.indexOf(depois), depois).toBeGreaterThan(verificacao);
     }
@@ -273,7 +290,12 @@ describe('install.sh — a ordem em `main` é a garantia', () => {
   it('só materializa depois de gravar o `.env`, e imediatamente antes de subir', () => {
     const main = corpoDoMain();
     const materializa = main.indexOf('materializar_os_arquivos_da_instalacao "$PWD"');
-    expect(materializa).toBeGreaterThan(main.indexOf(': > "$env_arquivo"'));
+    // A âncora tem de EXISTIR: `indexOf` devolve -1 quando o texto some, e
+    // "maior que -1" passaria calado — foi o que a extração de `escrever_env`
+    // (AT-083) teria feito com a âncora antiga, `: > "$env_arquivo"`.
+    const gravaEnv = main.indexOf('escrever_env "$env_arquivo"');
+    expect(gravaEnv).toBeGreaterThan(0);
+    expect(materializa).toBeGreaterThan(gravaEnv);
     expect(main.indexOf('up -d --wait')).toBeGreaterThan(materializa);
   });
 

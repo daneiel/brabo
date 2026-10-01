@@ -24,9 +24,11 @@ import { describe, expect, it } from 'vitest';
  * que ninguém reponha o `needs:` nem apague a espera sem que algo fique
  * vermelho.
  *
- * O que este teste NÃO afirma, de propósito: que `darwin-x64` passe a
- * construir. Isso é outra decisão, de dono — trocar o label, tirar a
- * plataforma ou pagar runner —, e o manifesto não pode depender dela.
+ * O que este teste NÃO afirma, de propósito: qual conjunto de alvos a matriz
+ * tem. A decisão sobre o `darwin-x64` veio depois (ADR 0174: a plataforma saiu
+ * da matriz, e `alvos-do-runner.spec.ts` guarda isso) — e a correção daqui
+ * continua valendo para qualquer alvo que fique sem runner, porque o manifesto
+ * não pode depender de nenhum deles.
  */
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -70,7 +72,7 @@ describe('o job `checksums`', () => {
     const espera = passo('Esperar a Release e os binários');
     expect(espera.env?.ESPERA_MAXIMA_DA_RELEASE_SEGUNDOS).toBe('600');
     expect(espera.env?.ESPERA_MAXIMA_DOS_BINARIOS_SEGUNDOS).toBe('1200');
-    // Sai cedo quando os cinco chegam; só o teto sustenta o caso patológico.
+    // Sai cedo quando todos os alvos chegam; só o teto sustenta o caso patológico.
     expect(espera.run).toContain('break');
     expect(espera.run).toContain('sleep');
   });

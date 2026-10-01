@@ -84,6 +84,7 @@ function escrever(res: ServerResponse, corpo: unknown): void {
 
 runLLMProviderContract('nvidia-nim', () => ({
   dialeto: dialetoNvidiaNim,
+  posicaoDoSistemaTardio: 'fim_da_conversa',
   criar: (baseUrl) =>
     new OpenAICompatibleProvider(
       nvidiaNimConfig(baseUrl),
@@ -105,6 +106,7 @@ describe('NvidiaNimProvider — quirks (Fase 11b)', () => {
       // Nenhum smoke com credencial provou o `/embeddings` deste provider
       // (ADR 0075) — a base sabe falar o dialeto, o provider nao declara.
       embeddings: false,
+      routingPreference: false,
     });
     expect(NVIDIA_NIM_BASE_URL).toBe('https://integrate.api.nvidia.com/v1');
   });

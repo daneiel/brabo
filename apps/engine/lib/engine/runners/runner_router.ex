@@ -25,11 +25,39 @@ defmodule Engine.Runners.RunnerRouter do
 
   alias Engine.Runners.Registry
 
-  # Teto default das TRÊS operações de container abaixo — não reusa
-  # `terminal_action_timeout_ms` de propósito: aquela config é do terminal, e
-  # um `docker start`/`pull` implícito de imagem pode legitimamente levar
-  # mais tempo que um comando de terminal comum.
+  # Teto default de `create_workspace` (e, até a AT-234, das TRÊS operações
+  # de container) — não reusa `terminal_action_timeout_ms` de propósito:
+  # aquela config é do terminal, e um clone implícito pode legitimamente
+  # levar mais tempo que um comando de terminal comum.
   @timeout_padrao_ms 60_000
+
+  # AT-234 (RN-605). O runner usa a MESMA porta de Docker do broker
+  # (`DockerViaCli`, `packages/docker-port`), com o mesmo teto de controle de
+  # 30s por chamada, e o pior caso de cada operação é a SOMA delas em série.
+  # Os 60s de antes cobriam duas chamadas — menos que o `resolver` sozinho
+  # (dois `ps`) mais a operação e o `docker version` de diagnóstico —, e o
+  # desfecho nomeado do runner (inclusive `PullExcedeuTetoError`) chegava
+  # como `:timeout`. Espelhos de `TIMEOUT_DE_CONTROLE_MS` e
+  # `CHAMADAS_DE_CONTROLE_NO_START` de `packages/docker-port/src/docker-cli.ts`:
+  # mudou lá, muda aqui.
+  @controle_do_docker_ms 30_000
+  @margem_ms 5_000
+
+  # `start`: dois `ps` + `image inspect` + `pull` + `run` + `docker version`.
+  @chamadas_de_controle_no_start 6
+  # `stop`/`remove`: dois `ps` + `stop` (com os 10s de graça) ou `rm` +
+  # `docker version`.
+  @chamadas_de_controle_no_stop_ou_remove 4
+
+  @timeout_do_start_ms @chamadas_de_controle_no_start * @controle_do_docker_ms + @margem_ms
+  @timeout_do_stop_ou_remove_ms @chamadas_de_controle_no_stop_ou_remove * @controle_do_docker_ms +
+                                  @margem_ms
+
+  @doc false
+  def timeout_do_start_ms, do: @timeout_do_start_ms
+
+  @doc false
+  def timeout_do_stop_ou_remove_ms, do: @timeout_do_stop_ou_remove_ms
 
   @doc """
   Executa `command` no runner conectado a `project_id`, com `cwd` (pode ser
@@ -48,13 +76,33 @@ defmodule Engine.Runners.RunnerRouter do
   nunca recebe uma chave que não sabe interpretar.
   """
   def exec(project_id, command, cwd, timeout_ms, env \\ nil) do
+    despachar_exec(project_id, command, cwd, timeout_ms, env, false)
+  end
+
+  @doc """
+  O `exec` da operação de git CREDENCIADA (ADR 0193, RN-676): o mesmo par
+  `exec`/`exec_result` de `exec/5`, com a MARCA `gitCredenciado: true` no
+  payload — é por ela, e só por ela, que o runner roda o comando no HOST mesmo
+  com um container ativo, onde a credencial do `env` chega ao processo filho.
+
+  Só `Engine.Actions.Workspace.RunnerGit` chama isto (o `git fetch`
+  autenticado); comando de terminal do dev agent passa por `exec/4` e NUNCA
+  carrega a marca, então continua indo ao `docker exec`. Exige `env` não vazio:
+  marca sem credencial não tem o que proteger, e o runner também a ignora.
+  """
+  def exec_git_credenciado(project_id, command, cwd, timeout_ms, env)
+      when is_map(env) and map_size(env) > 0 do
+    despachar_exec(project_id, command, cwd, timeout_ms, env, true)
+  end
+
+  defp despachar_exec(project_id, command, cwd, timeout_ms, env, git_credenciado) do
     case Registry.whereis(project_id) do
       nil ->
         {:error, :not_connected}
 
       pid ->
         ref = Ecto.UUID.generate()
-        send(pid, {:dispatch_exec, ref, command, cwd, env, self(), timeout_ms})
+        send(pid, {:dispatch_exec, ref, command, cwd, env, git_credenciado, self(), timeout_ms})
 
         receive do
           {:runner_exec_result, ^ref, payload} -> {:ok, payload}
@@ -74,7 +122,7 @@ defmodule Engine.Runners.RunnerRouter do
   `"container_start_result"`) | `{:error, :not_connected}` |
   `{:error, :timeout}` — mesmo contrato de `exec/4`.
   """
-  def start_container(project_id, spec, timeout_ms \\ @timeout_padrao_ms) do
+  def start_container(project_id, spec, timeout_ms \\ @timeout_do_start_ms) do
     dispatch(
       project_id,
       :dispatch_container_start,
@@ -85,7 +133,7 @@ defmodule Engine.Runners.RunnerRouter do
   end
 
   @doc "Espelho de `start_container/3` para `container_stop` — `workspace_dir_name` é o payload."
-  def stop_container(project_id, workspace_dir_name, timeout_ms \\ @timeout_padrao_ms) do
+  def stop_container(project_id, workspace_dir_name, timeout_ms \\ @timeout_do_stop_ou_remove_ms) do
     dispatch(
       project_id,
       :dispatch_container_stop,
@@ -96,7 +144,11 @@ defmodule Engine.Runners.RunnerRouter do
   end
 
   @doc "Espelho de `start_container/3` para `container_remove`."
-  def remove_container(project_id, workspace_dir_name, timeout_ms \\ @timeout_padrao_ms) do
+  def remove_container(
+        project_id,
+        workspace_dir_name,
+        timeout_ms \\ @timeout_do_stop_ou_remove_ms
+      ) do
     dispatch(
       project_id,
       :dispatch_container_remove,
@@ -121,9 +173,10 @@ defmodule Engine.Runners.RunnerRouter do
   `exec/5` e das três de container. Quem TRADUZ isso em motivo nomeado é
   `Engine.Runners.PastaDoProjeto`.
 
-  O teto é o mesmo `@timeout_padrao_ms` das operações de container, e pelo
-  mesmo raciocínio: um `git clone` implícito legitimamente leva mais que um
-  comando de terminal comum.
+  O teto é `@timeout_padrao_ms` (60s): um `git clone` implícito
+  legitimamente leva mais que um comando de terminal comum. As operações de
+  container têm tetos próprios desde a AT-234 (RN-605), derivados das
+  chamadas de controle da porta de Docker.
   """
   def create_workspace(project_id, payload, timeout_ms \\ @timeout_padrao_ms) do
     dispatch(

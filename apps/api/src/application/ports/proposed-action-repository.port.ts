@@ -10,6 +10,7 @@ import type { InfraPrExecutionResult } from '../../domain/git/infra-pr-execution
 import type { InstructionPatchExecutionResult } from '../../domain/instructions/instruction-patch-execution-result';
 import type { ContainerStartExecutionResult } from '../../domain/containers/container-start-execution-result';
 import type { ContainerStopOuRemoveExecutionResult } from '../../domain/containers/container-stop-remove-execution-result';
+import type { ExecutionPlanExecutionResult } from '../../domain/execution/execution-plan-execution-result';
 
 export interface NewProposedAction {
   projectId: string;
@@ -39,12 +40,27 @@ export interface ExecutionResultUpdate {
     | InfraPrExecutionResult
     | InstructionPatchExecutionResult
     | ContainerStartExecutionResult
-    | ContainerStopOuRemoveExecutionResult;
+    | ContainerStopOuRemoveExecutionResult
+    | ExecutionPlanExecutionResult;
 }
 
 export interface ListProposedActionsOptions {
   afterSeq?: number;
   limit?: number;
+  /**
+   * A CAUDA da sessão em vez do começo (AT-296, RN-637): as `limit` ações de
+   * `seq` mais alto, devolvidas em ordem crescente, ignorando `afterSeq` —
+   * o mesmo contrato do `latest` dos eventos (ADR 0021). Sem isto, numa
+   * sessão com mais de 200 ações a pendente NOVA ficava fora da primeira
+   * página e sumia do fio, dos Executores e de Aprovações.
+   */
+  latest?: boolean;
+  /**
+   * Só ações neste estado. Hoje só `pending` (AT-296): combinado com
+   * `latest`, traz as pendentes mais novas sem que as decididas ocupem a
+   * janela — e a pendente antiga, que a cauda sozinha perderia, volta junto.
+   */
+  status?: 'pending';
 }
 
 export interface Page<T> {

@@ -26,11 +26,16 @@ import { ResolveModelBindingUseCase } from '../../../../src/application/use-case
 import { CheckBudgetGateUseCase } from '../../../../src/application/use-cases/llm/check-budget-gate.use-case';
 import { ResolveCredentialOwnerUseCase } from '../../../../src/application/use-cases/llm/resolve-credential-owner.use-case';
 import { DrizzleWorkspaceRepository } from '../../../../src/infrastructure/persistence/drizzle/workspace.repository';
+import { DecidirFerramentaDoPassoUseCase } from '../../../../src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case';
 import { RecordLlmUsageUseCase } from '../../../../src/application/use-cases/llm/record-llm-usage.use-case';
 import { RunLlmTurnUseCase } from '../../../../src/application/use-cases/llm/run-llm-turn.use-case';
 import type { LLMProvider } from '../../../../src/application/ports/llm-provider.port';
 import type { LLMProviderRegistry } from '../../../../src/application/ports/llm-provider-registry.port';
-import type { ChatStreamChunk, LLMProviderName } from '@brabo/shared';
+import type {
+  ChatOptions,
+  ChatStreamChunk,
+  LLMProviderName,
+} from '@brabo/shared';
 import { BraboMetrics } from '../../../../src/infrastructure/observability/brabo-metrics';
 
 const { db, pool } = createTestDb();
@@ -67,6 +72,21 @@ const recordLlmUsage = new RecordLlmUsageUseCase(
   new BraboMetrics(),
 );
 
+// Provider `ollama` nestes specs: o roteador nunca é consultado (só com
+// OpenRouter, ADR 0179). Se fosse, o Jev de mentira derrubaria o teste.
+const decidirFerramenta = new DecidirFerramentaDoPassoUseCase(
+  projectRepo,
+  new DrizzleWorkspaceRepository(db),
+  {
+    decidir: () => {
+      throw new Error('o Jev não deve ser chamado com provider != openrouter');
+    },
+  },
+  tokenEstimator,
+  unitOfWork,
+  recordLlmUsage,
+);
+
 class FakeProvider implements LLMProvider {
   name: LLMProviderName = 'ollama';
   readonly capabilities = {
@@ -74,6 +94,7 @@ class FakeProvider implements LLMProvider {
     toolCalling: true,
     listModels: false,
     embeddings: false,
+    routingPreference: false,
   };
   constructor(private readonly script: ChatStreamChunk[]) {}
   async *chat(): AsyncGenerator<ChatStreamChunk> {
@@ -89,6 +110,7 @@ class ThrowingProvider implements LLMProvider {
     toolCalling: true,
     listModels: false,
     embeddings: false,
+    routingPreference: false,
   };
   async *chat(): AsyncGenerator<ChatStreamChunk> {
     await Promise.resolve();
@@ -113,6 +135,7 @@ function buildUseCase(provider: LLMProvider) {
     checkBudgetGate,
     recordLlmUsage,
     resolveCredentialOwner,
+    decidirFerramenta,
   );
 }
 
@@ -270,5 +293,197 @@ describe('RunLlmTurnUseCase', () => {
       .from(tokenUsage)
       .where(eq(tokenUsage.sessionId, session.id));
     expect(usageRows).toHaveLength(0);
+  });
+});
+
+describe('RunLlmTurnUseCase — o custo real vira o número (ADR 0188, RN-665)', () => {
+  // Preço de catálogo do uso real de 29/09: 20 000 / 600 000 micros por milhão.
+  async function comPrecoDeCatalogo(modelId: string) {
+    await db
+      .update(models)
+      .set({
+        inputPricePerMillionMicros: 20_000,
+        outputPricePerMillionMicros: 600_000,
+      })
+      .where(eq(models.id, modelId));
+  }
+
+  it('com `costMicros` na resposta: grava e devolve o custo REAL, o preço implícito, o do catálogo ao lado, o modelo resolvido e o id', async () => {
+    const { project, session, model } = await setup();
+    await comPrecoDeCatalogo(model.id);
+    const provider = new FakeProvider([
+      { type: 'text_delta', text: 'ok' },
+      {
+        type: 'usage',
+        inputTokens: 10_000,
+        outputTokens: 500,
+        estimated: false,
+        costMicros: 1_850,
+        resolvedModel: 'deepseek/deepseek-v3.2-exp',
+        generationId: 'gen-1790000000-abc',
+        upstreamProvider: 'DeepInfra',
+        cachedInputTokens: 9_000,
+        reasoningTokens: 120,
+      },
+    ]);
+
+    const result = await buildUseCase(provider).execute({
+      projectId: project.id,
+      sessionId: session.id,
+      agentId: 'echo',
+      messages: [{ role: 'user', content: 'oi' }],
+    });
+
+    // O número que o engine soma ao orçamento local do laço é o REAL.
+    expect(result.usage).toMatchObject({ costMicros: 1_850, estimated: false });
+
+    const [linha] = await db
+      .select()
+      .from(tokenUsage)
+      .where(eq(tokenUsage.sessionId, session.id));
+    expect(linha).toMatchObject({
+      costMicros: 1_850,
+      estimated: false,
+      priceImplicit: true,
+      // 10 000 × 20 000 / 1e6 + 500 × 600 000 / 1e6 = 200 + 300
+      catalogCostMicros: 500,
+      // 1 850 ÷ 10 500 tokens, por milhão
+      inputPricePerMillionMicros: 176_190,
+      outputPricePerMillionMicros: 176_190,
+      // O catálogo continua sendo a dimensão dos relatórios; o resolvido vai ao lado.
+      modelName: 'llama3.2:3b',
+      resolvedModelName: 'deepseek/deepseek-v3.2-exp',
+      generationId: 'gen-1790000000-abc',
+      upstreamProvider: 'DeepInfra',
+      // RN-666: partes da entrada/saída, sem mexer nos totais.
+      inputTokens: 10_000,
+      outputTokens: 500,
+      cachedInputTokens: 9_000,
+      reasoningTokens: 120,
+    });
+  });
+
+  it('sem `costMicros`: o preço do catálogo continua sendo o número, sem marca de implícito (ADR 0042)', async () => {
+    const { project, session, model } = await setup();
+    await comPrecoDeCatalogo(model.id);
+    const provider = new FakeProvider([
+      { type: 'text_delta', text: 'ok' },
+      {
+        type: 'usage',
+        inputTokens: 10_000,
+        outputTokens: 500,
+        estimated: false,
+      },
+    ]);
+
+    const result = await buildUseCase(provider).execute({
+      projectId: project.id,
+      sessionId: session.id,
+      agentId: 'echo',
+      messages: [{ role: 'user', content: 'oi' }],
+    });
+
+    expect(result.usage.costMicros).toBe(500);
+    const [linha] = await db
+      .select()
+      .from(tokenUsage)
+      .where(eq(tokenUsage.sessionId, session.id));
+    expect(linha).toMatchObject({
+      costMicros: 500,
+      priceImplicit: false,
+      catalogCostMicros: null,
+      inputPricePerMillionMicros: 20_000,
+      outputPricePerMillionMicros: 600_000,
+      resolvedModelName: null,
+      generationId: null,
+      cachedInputTokens: null,
+      reasoningTokens: null,
+    });
+  });
+});
+
+describe('RunLlmTurnUseCase — preferência de roteamento (ADR 0166, RN-583)', () => {
+  /** Guarda as `ChatOptions` recebidas: é o que o adapter põe no fio. */
+  class ProviderQueAnota implements LLMProvider {
+    name: LLMProviderName = 'ollama';
+    recebidas: ChatOptions[] = [];
+    readonly capabilities;
+    constructor(aceitaRoteamento: boolean) {
+      this.capabilities = {
+        streaming: true,
+        toolCalling: true,
+        listModels: false,
+        embeddings: false,
+        routingPreference: aceitaRoteamento,
+      };
+    }
+    async *chat(
+      _messages: unknown,
+      options: ChatOptions,
+    ): AsyncGenerator<ChatStreamChunk> {
+      await Promise.resolve();
+      this.recebidas.push(options);
+      yield { type: 'text_delta', text: 'ok' };
+      yield {
+        type: 'usage',
+        inputTokens: 5,
+        outputTokens: 2,
+        estimated: false,
+        upstreamProvider: 'Baidu',
+      };
+    }
+  }
+
+  async function comPreferencia() {
+    const base = await setup();
+    await bindingRepo.upsert({
+      scope: 'workspace',
+      scopeId: base.workspace.id,
+      modelId: base.model.id,
+      routingPreference: 'throughput',
+      createdBy: base.owner.id,
+    });
+    return base;
+  }
+
+  it('caminho feliz: o critério do binding vencedor vai ao provider e congela em token_usage, ao lado do upstream', async () => {
+    const { project, session } = await comPreferencia();
+    const provider = new ProviderQueAnota(true);
+
+    await buildUseCase(provider).execute({
+      projectId: project.id,
+      sessionId: session.id,
+      agentId: 'echo',
+      messages: [{ role: 'user', content: 'oi' }],
+    });
+
+    expect(provider.recebidas[0]?.routingPreference).toBe('throughput');
+    const [linha] = await db
+      .select()
+      .from(tokenUsage)
+      .where(eq(tokenUsage.sessionId, session.id));
+    expect(linha).toMatchObject({
+      routingPreference: 'throughput',
+      upstreamProvider: 'Baidu',
+    });
+  });
+
+  it('provider sem a capability: nada vai ao fio e a linha registra null — o que não foi enviado não é procedência', async () => {
+    const { project, session } = await comPreferencia();
+    const provider = new ProviderQueAnota(false);
+
+    await buildUseCase(provider).execute({
+      projectId: project.id,
+      sessionId: session.id,
+      agentId: 'echo',
+      messages: [{ role: 'user', content: 'oi' }],
+    });
+
+    expect(provider.recebidas[0]).not.toHaveProperty('routingPreference');
+    const [linha] = await db
+      .select()
+      .from(tokenUsage)
+      .where(eq(tokenUsage.sessionId, session.id));
+    expect(linha.routingPreference).toBeNull();
   });
 });

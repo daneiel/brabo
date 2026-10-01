@@ -25,7 +25,9 @@ defmodule Engine.Harness.ContextManager.Default do
   das `keep_recent` iterações mais recentes, sumariza as mais antigas
   não-pinned via `llm_turn` (agent "context-manager", modelo barato),
   substitui-as por uma mensagem de resumo, preserva as pinned + as recentes,
-  e emite `context.compacted` (`tokensBefore`/`tokensAfter`). Determinístico
+  e emite `context.compacted` (`tokensBefore`/`tokensAfter` e, desde a
+  RN-580, o `summary` que substituiu os turnos, o `agent` e quantas mensagens
+  ele resumiu — `messagesSummarized`). Determinístico
   dado o resumo do modelo.
 
   A janela EFETIVA é `min(context_window, teto_de_transporte)` — ver
@@ -123,7 +125,20 @@ defmodule Engine.Harness.ContextManager.Default do
       type: "context.compacted",
       actorKind: "agent",
       actorId: @summarizer_agent,
-      payload: %{tokensBefore: tokens_before, tokensAfter: tokens_after}
+      # `summary` e `agent` desde a RN-580: antes só as contagens iam para o
+      # log, e o resumo — a ÚNICA memória do que foi compactado — morria com o
+      # processo. A reidratação (`Engine.Agents.Reidratacao`) o lê de volta
+      # quando a conversa passa do teto de leitura; `agent` é o que a deixa
+      # pegar o resumo do PRÓPRIO agente numa sessão com vários. Eventos
+      # gravados antes disto ficam como estão (imutáveis): sem resumo, e a
+      # reidratação diz isso em vez de inventar.
+      payload: %{
+        tokensBefore: tokens_before,
+        tokensAfter: tokens_after,
+        summary: summary,
+        agent: Map.get(ctx, :agent),
+        messagesSummarized: length(older)
+      }
     })
 
     {:ok, %{ctx | messages: new_messages}}
@@ -187,8 +202,25 @@ defmodule Engine.Harness.ContextManager.Default do
   # não do mecanismo.
   defp render_template(body, turnos), do: String.replace(body, "{{turnos}}", turnos)
 
+  # A frase de IDIOMA (RN-621, AT-166): o resumo entra como `system` no lugar
+  # dos turnos que substituiu, e um resumo que traduz tudo para a língua do
+  # prompt apaga o idioma em que a conversa acontecia — o modelo seguinte lê
+  # a memória em pt-BR e responde nela. Ela pede o idioma ORIGINAL de CADA
+  # turno (numa sessão com dois idiomas, os dois sobrevivem) e proíbe traduzir
+  # citação e código, que são texto literal. Mora aqui e no
+  # `prompts/context-manager-summarize.md`, as DUAS trilhas, e o teste confere
+  # que o template carrega a mesma frase e que ela cabe no teto de custo
+  # incremental decidido pelo mantenedor (50 tokens de entrada por chamada).
+  @instrucao_de_idioma "Mantenha cada turno no idioma original; não traduza citações nem código."
+
+  @doc false
+  # Exposta só para o teste do teto de custo e da paridade com o template.
+  def instrucao_de_idioma, do: @instrucao_de_idioma
+
   defp prompt_inline(turnos),
-    do: "Resuma concisamente os turnos abaixo, preservando decisões e fatos:\n\n#{turnos}"
+    do:
+      "Resuma concisamente os turnos abaixo, preservando decisões e fatos. " <>
+        "#{@instrucao_de_idioma}\n\n#{turnos}"
 
   # Conta `content` de TODA mensagem (inclui `role: "tool"`, cujo resultado
   # já viajava por este campo) MAIS a serialização JSON de `toolCalls` de

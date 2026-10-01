@@ -1,6 +1,6 @@
 ---
 name: anamnese-kickoff
-version: "1"
+version: "2"
 pinned: true
 ---
 
@@ -34,6 +34,12 @@ JANELA DO LOG ({{window_from}} → {{window_to}}){{omission_note}}:
 {{events}}
 
 ## Variáveis
+
+Esta seção é documentação e NÃO é semeada: `scripts/dev/seed-prompts.ts`
+corta o corpo do template na linha `## Variáveis` (AT-244). A versão `"2"`
+tem o mesmo texto de prompt da anterior, sem esta seção — antes dela o modelo
+recebia a documentação junto, com cada placeholder citado aqui expandido de
+novo.
 
 Extraído de `apps/engine/lib/engine/workers/anamnese_worker.ex`,
 `initial_message/1` (a mensagem inicial da janela de análise da

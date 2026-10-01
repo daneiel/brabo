@@ -23,8 +23,50 @@ export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
  */
 export type UserLocale = 'pt-BR' | 'en';
 
+/**
+ * De onde veio o idioma em que os agentes respondem (RN-618) — a tela NOMEIA
+ * a origem, nunca mostra o valor sozinho (RN-620).
+ */
+export type OrigemDoIdiomaDaResposta =
+  | 'sessao'
+  | 'conta'
+  | 'detectado'
+  | 'interface';
+
+/** O valor da api para "sem escolha explícita" do idioma das respostas. */
+export const IDIOMA_AUTOMATICO = 'automatico';
+
 export interface UserPreferences {
   locale: UserLocale;
+  /** `'automatico'` ou um código BCP-47 canônico (RN-618). */
+  responseLanguage: string;
+  /** Detectado pelas mensagens E confirmado pela pessoa; `null` sem isso. */
+  detectedLanguage: string | null;
+  detectedLanguageConfirmedAt: string | null;
+  /** O que vale hoje FORA de sessão. */
+  effectiveResponseLanguage: {
+    language: string;
+    origin: OrigemDoIdiomaDaResposta;
+  };
+}
+
+/**
+ * O idioma das respostas de QUEM VÊ, numa sessão (RN-618) — a cadeia inteira,
+ * `GET/PUT .../sessions/:sessionId/response-language`.
+ */
+export interface SessionResponseLanguage {
+  language: string;
+  origin: OrigemDoIdiomaDaResposta;
+  sessionOverride: string | null;
+  account: string;
+  detected: string | null;
+  interfaceLocale: UserLocale;
+  /**
+   * O idioma que as mensagens de quem vê apontam, quando a tela deve
+   * PERGUNTAR se ele vale para as respostas (RN-624) — `null` é "sem
+   * pergunta". A detecção nunca troca a preferência sozinha.
+   */
+  detectionQuestion: string | null;
 }
 
 export interface Workspace {
@@ -71,6 +113,9 @@ export interface Project {
   // maioria, e é por este campo que a tela decide não mostrar a linha de
   // espelho em vez de inventar uma ausência.
   mirrorPath: string | null;
+  // O idioma do PROJETO (RN-619): artefato compartilhado e turno sem autor
+  // humano. Código BCP-47 canônico; nunca "automático".
+  language: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +224,12 @@ export interface ProjectCardSummary {
     moduleNames: string[];
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
+    /**
+     * Agentes com ao menos um `agent.activated` na sessão MAIS RECENTE, a
+     * sessão inteira e não a janela de 200 (RN-630). O cliente SOMA à janela
+     * e só confia quando `latestSessionId` é a sessão que ele lê.
+     */
+    activatedAgents: string[];
     infraActive: boolean;
     /** ADR 0087 — mesmo critério de `infraActive`. */
     uxDesignerActive: boolean;
@@ -214,6 +265,14 @@ export interface ProjectUnreadEvents {
  */
 export interface ProjectsBase {
   projectsBase: string | null;
+  /**
+   * Esta instalação tem broker de container (`BROKER_URL`)? (ADR 0161,
+   * RN-573). `container` e `mounted` só sobem container pelo broker (ADR
+   * 0144); sem ele o assistente não pré-seleciona `mounted`, deixa os dois
+   * cards inertes com o motivo em texto e pré-seleciona `runner`. Diz que a
+   * variável existe, nunca que o broker responde.
+   */
+  brokerConfigurado: boolean;
 }
 
 /**
@@ -269,6 +328,14 @@ export interface ProjectMemberWithUser {
   name: string | null;
   email: string;
 }
+
+/**
+ * Membro do WORKSPACE com nome e e-mail (`GET /workspaces/:id/members`,
+ * AT-335) — a mesma forma de `ProjectMemberWithUser`, com o papel de
+ * WORKSPACE. Sai do schema gerado, não de uma cópia à mão.
+ */
+export type WorkspaceMemberWithUser =
+  components['schemas']['WorkspaceMemberComUsuarioResponseDto'];
 
 export type PermissionListName = 'allow' | 'deny' | 'ask';
 
@@ -352,6 +419,15 @@ export interface Session {
   updatedAt: string;
   closedAt: string | null;
 }
+
+/**
+ * A sessão como `GET /projects/:projectId/sessions` a devolve: a `Session`
+ * mais o marcador `technical` (RN-592), que sai do tipo GERADO do OpenAPI —
+ * `true` só para a sessão que o provisionamento abriu (o vínculo em
+ * `repo_bootstraps`, nunca o nome). O GET de uma sessão não o carrega.
+ */
+export type SessaoListada = Session &
+  Pick<components['schemas']['SessionListItemResponseDto'], 'technical'>;
 
 export type ActorKind = 'user' | 'agent' | 'system';
 
@@ -511,6 +587,13 @@ export interface ModelComCuradoria extends Model {
    * "ninguém opinou", não "não serve".
    */
   uses: UsoDeModelo[];
+  /**
+   * Alias de roteamento livre do OpenRouter (`~…`, RN-679): preço de vitrine,
+   * cobrança pelo upstream que atender. A api recusa ATIVÁ-LO (422
+   * `alias_de_roteamento_livre`); o que já estava ativo segue ativo e vem
+   * marcado por isto.
+   */
+  freeRoutingAlias: boolean;
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;
@@ -558,11 +641,25 @@ export type ModelBindingScope =
   | 'agent'
   | 'session';
 
+/**
+ * O critério com que um HUB escolhe o upstream (ADR 0166, RN-583). Sai do
+ * tipo GERADO do OpenAPI (ADR 0116), não de uma cópia à mão.
+ */
+export type RoutingPreference = NonNullable<
+  components['schemas']['ResolvedBindingResponseDto']['routingPreference']
+>;
+
+/** As capabilities de PROVIDER (ADR 0041), por provider — gerado. */
+export type ProviderCapabilities =
+  components['schemas']['ProviderCapabilitiesResponseDto'];
+
 export interface ModelBinding {
   id: string;
   scope: ModelBindingScope;
   scopeId: string;
   modelId: string;
+  /** Critério do hub gravado NESTE binding (ADR 0166). */
+  routingPreference: RoutingPreference | null;
 }
 
 export interface SkippedBinding {
@@ -575,12 +672,30 @@ export interface ResolvedBinding {
   modelId: string;
   origin: ModelBindingScope;
   /**
+   * O critério do binding que VENCEU a cascata (ADR 0166). Não cascateia à
+   * parte: viaja com o modelo, do mesmo nível que `origin`.
+   */
+  routingPreference: RoutingPreference | null;
+  /**
    * Escopos mais específicos que a cascata descartou antes de chegar em
    * `origin` (Fase 9c). Vazio no caminho normal; é o que permite a UI dizer
    * "o modelo do agente sumiu, caiu para o do projeto" em vez de trocar o
    * modelo em silêncio.
    */
   skipped: SkippedBinding[];
+}
+
+/** Uma chave do lote e o binding resolvido dela (RN-654). */
+export interface BindingResolvidoDaChave {
+  key: string;
+  /** O MESMO valor da rota individual — `null` sem modelo em nível nenhum. */
+  binding: ResolvedBinding | null;
+}
+
+/** `GET /projects/:projectId/model-bindings/resolved` (RN-654, AT-334). */
+export interface BindingsResolvidosEmLote {
+  agents: BindingResolvidoDaChave[];
+  areas: BindingResolvidoDaChave[];
 }
 
 // user_credentials guarda tanto chaves de LLM quanto tokens de git do
@@ -636,21 +751,10 @@ export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSumm
 }
 
 /**
- * Chave de dispositivo do runner local (`lib/runner-bootstrap.ts`) — par
- * Ed25519 gerado no NAVEGADOR do usuário; só a metade PÚBLICA chega até
- * aqui, nunca a privada. Substitui o PAT digitado à mão no fluxo de
- * onboarding "Configurar pasta automaticamente".
- */
-export interface RunnerDeviceKeySummary {
-  id: string;
-  name: string;
-  createdAt: string;
-}
-
-/**
  * A ESPÉCIE de uma chave de dispositivo (ADR 0154, RN-543).
  *
- * `projeto` é a do ADR 0118 — presa ao projeto em que o navegador a gerou.
+ * `projeto` é a do ADR 0118 — presa a um projeto. O navegador deixou de
+ * gerá-la no ADR 0203; as já registradas seguem valendo e aparecem aqui.
  * `maquina` é a que descreve a MÁQUINA (`project_id` nulo no banco): ela
  * aparece na listagem de TODO projeto que atende, e revogá-la derruba o
  * agente local em todos eles.
@@ -658,8 +762,7 @@ export interface RunnerDeviceKeySummary {
 export type RunnerDeviceKeyEspecie = 'projeto' | 'maquina';
 
 /**
- * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519) — mais
- * campos que `RunnerDeviceKeySummary`, que é só o eco do registro.
+ * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519).
  *
  * Inclui as REVOGADAS de propósito: sumir com a linha faria a tela afirmar
  * que a chave nunca existiu. `lastUsedAt` nulo é o sinal da chave ÓRFÃ —
@@ -813,7 +916,7 @@ export type ChatSseEvent =
 
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 
-export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected';
+export type HandoffStatus = 'offered' | 'accepted' | 'completed' | 'rejected' | 'superseded';
 
 export interface Handoff {
   id: string;
@@ -1400,6 +1503,12 @@ export interface ContainerOverviewItem {
   naoVerificado: MotivoDeNaoVerificacao | null;
   /** A `proposed_action` pendente de container deste projeto, se houver. */
   acaoPendente: ProposedAction | null;
+  /**
+   * Esta INSTALAÇÃO tem broker (`BROKER_URL`)? O mesmo valor em toda linha
+   * (ADR 0161, RN-574): sem ele, `container`/`mounted` não sobem container, e
+   * a tela recusa a subida ANTES do clique dizendo por quê.
+   */
+  brokerConfigurado: boolean;
 }
 
 // --- Aba Code, só leitura (FASE 26) — espelha

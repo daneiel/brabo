@@ -1,42 +1,42 @@
 {
-  "versao": "6.0.0",
-  "commit": "de2f61d9dc48",
-  "publicadoEm": "2026-09-13T16:46:18.142Z",
+  "versao": "6.1.0",
+  "commit": "6d56eb387213",
+  "publicadoEm": "2026-09-14T01:05:14.363Z",
   "imagens": [
     {
       "alvo": "api",
       "repositorio": "ghcr.io/daneiel/brabo-api",
-      "digest": "sha256:14c9d028d847a143c465e6e046adb42ab83b898b45cc7a851d19dc09ac6e8990",
+      "digest": "sha256:911506eb6b23ca6fdaf097ba574b44222c2b8c07c21d9dc9549cd26c71ff7add",
       "tags": [
-        "6.0.0",
-        "de2f61d9dc48"
+        "6.1.0",
+        "6d56eb387213"
       ]
     },
     {
       "alvo": "engine",
       "repositorio": "ghcr.io/daneiel/brabo-engine",
-      "digest": "sha256:9f2f08ac837f80151cf8955a6d293fa9d1a2032070f40fe019277b8fe6c51dfa",
+      "digest": "sha256:c8ab17c637c167c5fe1b3ff918aa3749306fa63cd40bfa616732c97e0fd2e7d6",
       "tags": [
-        "6.0.0",
-        "de2f61d9dc48"
+        "6.1.0",
+        "6d56eb387213"
       ]
     },
     {
       "alvo": "web",
       "repositorio": "ghcr.io/daneiel/brabo-web",
-      "digest": "sha256:6a1207dbafda4c12310a14a963b96f6d766b8110099b13229f5aaa3e820ccf58",
+      "digest": "sha256:033a517cde92e5c03e64ac28ebef47b8c4f341c0a7e24d44b2f9ccdcbbce65f7",
       "tags": [
-        "6.0.0",
-        "de2f61d9dc48"
+        "6.1.0",
+        "6d56eb387213"
       ]
     },
     {
       "alvo": "backup",
       "repositorio": "ghcr.io/daneiel/brabo-backup",
-      "digest": "sha256:f4f76b23dd4cb4d52d7a708e143b5c07580bacc9f5a188c1904cfc206a9f4602",
+      "digest": "sha256:eb59eba65ba95d5ad6df3f51823940d30a6f5caa22e209943a7bffd943f32f1d",
       "tags": [
-        "6.0.0",
-        "de2f61d9dc48"
+        "6.1.0",
+        "6d56eb387213"
       ]
     }
   ]

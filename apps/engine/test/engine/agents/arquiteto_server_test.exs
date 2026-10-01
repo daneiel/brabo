@@ -28,8 +28,26 @@ defmodule Engine.Agents.ArquitetoServerTest do
 
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
+    # Desde a RN-577 `propose_adr` só propõe com repositório: o projeto do
+    # setup TEM um. O teste da recusa usa um projeto sem.
+    insert_repo!(project_id)
     {:ok, state} = ArquitetoServer.init({session_id, project_id})
     %{state: state, session_id: session_id}
+  end
+
+  defp insert_repo!(project_id) do
+    Repo.query!(
+      """
+      INSERT INTO public.project_repositories
+        (id, project_id, provider, external_id, url, default_branch, visibility, provisioned_by)
+      VALUES ($1, $2, 'local', '/tmp/repo.git', 'file:///tmp/repo.git', 'main', 'private', $3)
+      """,
+      [
+        Ecto.UUID.dump!(Ecto.UUID.generate()),
+        Ecto.UUID.dump!(project_id),
+        Ecto.UUID.dump!(Ecto.UUID.generate())
+      ]
+    )
   end
 
   defp tool_turn(name, args) do
@@ -84,6 +102,47 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:story_modules_assigned, %{storyId: "st-1", moduleIds: ["api"]}}
     assert_received {:propose_action, "open_adr_pr", _actor, %{slug: "0001-usar-postgres"}}
     assert_received {:event_appended, _, _, %{type: "artifact.insight"}}
+  end
+
+  test "propose_adr em projeto SEM repositório: recusa NOMEADA, NUNCA propõe, deixa rastro (RN-577)" do
+    # Projeto sem repositório — o provisionamento do aceite ao Arquiteto
+    # falhou, ou o projeto passou por ele antes da RN-582: nenhuma linha em
+    # project_repositories (AT-088).
+    project_id = Ecto.UUID.generate()
+    session_id = Ecto.UUID.generate()
+    {:ok, state} = ArquitetoServer.init({session_id, project_id})
+
+    Process.put(:fake_events, brief_rules_backlog())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_adr", %{
+        "title" => "Usar Postgres",
+        "slug" => "0001-usar-postgres",
+        "content" => "# ADR"
+      }),
+      FakeEngineApiClient.final_response("depois-de-recusar-adr")
+    ])
+
+    assert {:noreply, new_state} = sync_cast(ArquitetoServer, :kickoff, state)
+
+    refute_received {:propose_action, "open_adr_pr", _, _}
+
+    # Entrada do laço (RN-163): o modelo lê o motivo e o turno segue.
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_adr"))
+    assert recusa["role"] == "tool"
+    assert recusa["content"] =~ "sem repositório provisionado"
+    assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
+
+    assert_received {:event_appended, _, _,
+                     %{type: "agent.response", payload: %{content: "depois-de-recusar-adr"}}}
+
+    # Rastro durável: a chamada e o porquê.
+    assert_received {:event_appended, _, _, %{type: "tool.call", payload: %{tool: "propose_adr"}}}
+
+    assert_received {:event_appended, _, _,
+                     %{type: "tool.result", payload: %{tool: "propose_adr", ok: false} = r}}
+
+    assert r.erro =~ "sem repositório provisionado"
   end
 
   test "module_map com ciclo vira tool-result de erro (não derruba o loop)", %{state: state} do
@@ -193,13 +252,18 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:handoff_created, _, ^session_id, "arquiteto", "infra", nil}
   end
 
-  test "offer_dev_handoff: oferece o handoff ao dev-lead sem rodar turno de LLM", %{
-    state: state,
-    session_id: session_id
+  # RN-672 (AT-262, ADR 0190): a confirmação de arquitetura pronta oferece SÓ
+  # à Infra. O handoff ao Dev Lead sai da Infra, com o container `running`.
+  test "offer_infra_handoff NÃO oferece ao dev-lead, e a chamada antiga deixou de existir", %{
+    state: state
   } do
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
 
-    assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
+    assert {:reply, :ok, final} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
+
+    refute_received {:handoff_created, _, _, "arquiteto", "dev-lead", _}
+    refute Map.has_key?(final, :handoff_dev_pendente)
+    refute function_exported?(ArquitetoServer, :offer_dev_handoff, 1)
   end
 
   # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui
@@ -216,20 +280,6 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
     assert payload.origem == "infra"
     assert payload.mensagem =~ "Não consegui oferecer o handoff ao infra"
-
-    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
-  end
-
-  test "offer_dev_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
-       %{state: state, session_id: session_id} do
-    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
-    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
-
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
-
-    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
-    assert payload.origem == "infra"
-    assert payload.mensagem =~ "Não consegui oferecer o handoff ao dev-lead"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
   end

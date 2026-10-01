@@ -71,15 +71,33 @@ export abstract class TaskRepository {
     projectId: string,
     idPrefix: string,
   ): Promise<Task | null>;
-  // Pega ATOMICAMENTE a próxima task `todo` cuja story é `ready` e cujos
-  // moduleIds contêm `module` (FOR UPDATE SKIP LOCKED) — 2 devs nunca pegam a
-  // mesma. Marca in_progress + assignedTo. Retorna null se não há task pegável.
+  // As tasks DESTE projeto entre `ids` (as de outro projeto, ou inexistentes,
+  // simplesmente não voltam) — é por ela que o plano do Dev Lead confere que
+  // cada tarefa citada existe aqui (AT-274, RN-678).
+  abstract findInProjectByIds(
+    projectId: string,
+    ids: string[],
+  ): Promise<Task[]>;
+  // Grava o módulo de cada tarefa do plano aprovado (AT-274, RN-678).
+  abstract assignModules(
+    assignments: ReadonlyArray<{ taskId: string; module: string }>,
+  ): Promise<void>;
+  // Pega ATOMICAMENTE a próxima task `todo` cuja story é `ready` e cujo
+  // MÓDULO é `module` (FOR UPDATE SKIP LOCKED) — 2 devs nunca pegam a mesma.
+  // Desde a RN-678 o módulo é o da TAREFA (atribuído pelo Dev Lead no plano);
+  // tarefa sem módulo só é pegável quando a story tem UM módulo só, e ele é
+  // `module` — o único caso em que "o dev daquele módulo" não é ambíguo.
+  // Marca in_progress + assignedTo. Retorna null se não há task pegável.
   abstract claimNext(
     projectId: string,
     module: string,
     agentId: string,
   ): Promise<Task | null>;
   abstract updateStatus(id: string, status: TaskStatus): Promise<Task>;
+  // O merge da PR fecha a tarefa (AT-275, RN-628): `done` só se ainda não
+  // estava. Atômico (UPDATE ... WHERE status <> 'done') e devolve `null` se
+  // nada mudou — é isso que torna o merge repetido idempotente, sem evento.
+  abstract markDoneIfNotDone(id: string): Promise<Task | null>;
   // Quantas tasks `todo` de story `ready` estão disponíveis pro módulo — usado
   // pra sugerir paralelização (≥2 = ramos independentes disponíveis).
   abstract countClaimableByModule(

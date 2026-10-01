@@ -35,11 +35,11 @@ defmodule Engine.Dev.DevAgentSupervisor do
         max_consecutive_blocked \\ nil,
         resume \\ nil
       ) do
-    case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
-      [{pid, _}] ->
+    case pid_vivo(project_id, agent_id) do
+      pid when is_pid(pid) ->
         {:ok, pid, :existing}
 
-      [] ->
+      nil ->
         spec =
           {server_for(impl),
            {project_id, agent_id, module, session_id, task_budget_micros, max_gate_corrections,
@@ -63,6 +63,19 @@ defmodule Engine.Dev.DevAgentSupervisor do
           {:error, reason} ->
             {:error, reason}
         end
+    end
+  end
+
+  # Só um pid VIVO conta como `:existing` (AT-204). O Registry apaga a chave
+  # de forma ASSÍNCRONA — a partição limpa quando recebe o EXIT —, então logo
+  # depois de um agente morrer o lookup ainda pode devolver o pid morto (medido:
+  # ~2% das vezes logo depois de `terminate_child/2`), e o `DevRehydrator`
+  # tomaria por vivo o agente que tem de reerguer. Registrar de novo a chave de
+  # um pid morto não é recusado pelo Registry, então subir por cima é seguro.
+  defp pid_vivo(project_id, agent_id) do
+    case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
+      [{pid, _}] -> if Process.alive?(pid), do: pid
+      [] -> nil
     end
   end
 

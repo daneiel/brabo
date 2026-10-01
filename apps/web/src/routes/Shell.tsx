@@ -1,4 +1,15 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { emailDaSessao, sair } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
@@ -9,6 +20,7 @@ import {
   useProjects,
   useProjectsStatus,
   useProjectsSummary,
+  useLatestSession,
   useSessionEvents,
 } from '../lib/hooks';
 import {
@@ -22,6 +34,8 @@ import { desempateDoProjeto, nomesRepetidos } from '../lib/project-label';
 import { AGENTS } from '../lib/agents';
 import { agruparPorInstancia, montarArvore, type GrupoDeAgente, type RamoDeAgente } from '../lib/timeline-tree';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
+import { useLayoutMovel } from '../lib/layout-movel';
+import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,14 +59,21 @@ import {
   ChevronRightIcon,
   LogoMark,
   LogoutIcon,
+  MenuIcon,
   MoonIcon,
   PlusIcon,
   ServerIcon,
   SunIcon,
   UserIcon,
+  XIcon,
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
-import { NewProjectWizard } from './NewProjectWizard';
+import { Button } from '../components/ui/Button';
+// O assistente de novo projeto é um chunk próprio (AT-300): ele só abre por
+// clique, e trazia para o bundle inicial o navegador de pastas inteiro.
+const NewProjectWizard = lazy(() =>
+  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
+);
 import styles from './Shell.module.css';
 
 // Iniciais do e-mail (não há campo de nome no JWT nem endpoint de perfil —
@@ -76,6 +97,11 @@ function iniciaisDoProjeto(nome: string): string {
     partes.length >= 2 ? [partes[0]?.[0], partes[1]?.[0]] : [nome[0], nome[1]];
   return letras.filter((c): c is string => !!c).join('').toUpperCase();
 }
+
+/** O que recebe foco dentro da gaveta móvel (RN-643) — para o foco inicial e o
+ * laço do Tab. `disabled` e `tabindex="-1"` ficam de fora. */
+const SELETOR_FOCAVEL =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function rotuloDoAgente(agente: string): string {
   return AGENTS[agente as keyof typeof AGENTS]?.name ?? agente;
@@ -355,7 +381,10 @@ function GrupoDeAtividade({
 }
 
 export function Shell() {
-  const { t } = useTranslation('shell');
+  const {
+    t,
+    i18n: { language },
+  } = useTranslation('shell');
   const navigate = useNavigate();
   const { data: workspace } = useCurrentWorkspace();
   const { data: workspaceWithRole } = useCurrentWorkspaceWithRole();
@@ -384,7 +413,76 @@ export function Shell() {
   // Só o colapso MANUAL desde o ADR 0126 — o sinal automático da aba de
   // Código (`autoColapsado`, RN-201) saiu junto com `AutoCollapseContext`.
   const [colapsadoManual, setColapsadoManual] = useState(lerColapsado);
-  const colapsado = colapsadoManual;
+  // --- Layout móvel (RN-643) ----------------------------------------------
+  // Abaixo do breakpoint a sidebar vira GAVETA: some da página, abre por cima
+  // do conteúdo pelo botão de menu da barra do topo e fecha ao navegar, no Esc,
+  // no X e no fundo. Na gaveta ela é sempre EXPANDIDA — o colapso manual
+  // (RN-195) é preferência do desktop, gravada e intocada aqui, e volta a
+  // valer quando a janela cruza o corte de novo.
+  const movel = useLayoutMovel();
+  const colapsado = !movel && colapsadoManual;
+  const [gavetaAberta, setGavetaAberta] = useState(false);
+  const idDaGaveta = useId();
+  const gavetaRef = useRef<HTMLElement>(null);
+  const botaoDeMenuRef = useRef<HTMLButtonElement>(null);
+
+  function fecharGaveta({ devolverFoco }: { devolverFoco: boolean }) {
+    setGavetaAberta(false);
+    if (devolverFoco) botaoDeMenuRef.current?.focus();
+  }
+
+  // Fecha ao navegar — inclusive navegação que não veio de clique na gaveta
+  // (o `navigate` do wizard, o botão voltar do navegador).
+  useEffect(() => {
+    setGavetaAberta(false);
+  }, [pathname]);
+
+  // Voltar ao desktop com a gaveta aberta não pode deixá-la "aberta" guardada
+  // para a próxima vez que a janela encolher.
+  useEffect(() => {
+    if (!movel) setGavetaAberta(false);
+  }, [movel]);
+
+  // Aberta, o foco ENTRA na gaveta (é um diálogo modal) e o Esc a fecha
+  // devolvendo o foco ao botão que a abriu — de qualquer lugar da página.
+  useEffect(() => {
+    if (!movel || !gavetaAberta) return;
+    gavetaRef.current?.querySelector<HTMLElement>(SELETOR_FOCAVEL)?.focus();
+    function aoTeclar(e: globalThis.KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setGavetaAberta(false);
+      botaoDeMenuRef.current?.focus();
+    }
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [movel, gavetaAberta]);
+
+  // Tab não escapa da gaveta aberta (`aria-modal`): do último volta ao
+  // primeiro, e vice-versa.
+  function prenderFoco(e: KeyboardEvent<HTMLElement>) {
+    if (!movel || !gavetaAberta || e.key !== 'Tab') return;
+    const focaveis = Array.from(
+      gavetaRef.current?.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL) ?? [],
+    );
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (!primeiro || !ultimo) return;
+    if (e.shiftKey && document.activeElement === primeiro) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primeiro.focus();
+    }
+  }
+
+  // Clicar num LINK da gaveta fecha — mesmo quando ele não troca o pathname
+  // (as abas do projeto mudam só o `?tab=`).
+  function fecharAoSeguirLink(e: MouseEvent<HTMLElement>) {
+    if (!movel) return;
+    if ((e.target as Element).closest('a')) setGavetaAberta(false);
+  }
 
   function alternarColapso() {
     setColapsadoManual((atual) => {
@@ -421,14 +519,46 @@ export function Shell() {
   // O handoff não diz se "Atividades" agrega TODOS os projetos ou só o
   // aberto; agregar todos exigiria uma consulta de eventos POR projeto — a
   // mesma classe de N+1 que a RN-090/091 fechou no dashboard. Decisão: fica
-  // escopada ao projeto da rota atual, reusando o MESMO par de hooks
-  // (`useActiveExecutionSession` + `useSessionEvents`) que
-  // `AgentTimelineTree` já usa em `SessionPage` — mesma `queryKey`, sem
-  // requisição nova quando as duas telas estão montadas juntas.
-  const { session: execSession } = useActiveExecutionSession(currentProject?.id);
-  const { data: eventsPage } = useSessionEvents(currentProject?.id, execSession?.id);
+  // escopada ao projeto da rota atual.
+  //
+  // QUAL sessão (RN-648, AT-325): a de EXECUÇÃO vigente quando existe — é ela
+  // que tem os dev agents e as instâncias `-2` que o agrupamento da RN-198
+  // existe para mostrar, com a MESMA `queryKey` da aba Executores —, e,
+  // quando NÃO existe execução, a MESMA sessão da Visão geral e do card do
+  // Dashboard (a mais recente de trabalho, `useLatestSession`). Antes a
+  // segunda metade não existia: num projeto só com sessões de conversa a
+  // sessão lida era `null`, e a sidebar dizia "nenhum agente entrou em ação"
+  // ao lado de uma Visão geral com o Criativo aguardando. A lista de sessões
+  // só é pedida nesse caso, e com o frescor de um ciclo de projeto: quando a
+  // sidebar a habilita, a moldura do projeto já a trouxe.
+  const execucao = useActiveExecutionSession(currentProject?.id);
+  const semExecucao = !!currentProject && execucao.session === null;
+  const sessoes = useLatestSession(
+    semExecucao ? currentProject.id : undefined,
+    INTERVALO_DO_PROJETO_MS,
+    INTERVALO_DO_PROJETO_MS,
+  );
+  const sessaoDaAtividade = execucao.session ?? (semExecucao ? sessoes.latest : undefined);
+  const origemDaAtividade: 'execucao' | 'recente' = execucao.session ? 'execucao' : 'recente';
+  const eventosDaAtividade = useSessionEvents(currentProject?.id, sessaoDaAtividade?.id);
+  const eventsPage = eventosDaAtividade.data;
   const events = useMemo(() => eventsPage?.items ?? [], [eventsPage]);
-  const { ramos } = useMemo(() => montarArvore(events), [events]);
+  // Os estados que antes caíam todos em "nenhum agente" (RN-470): lendo,
+  // falhou, projeto sem sessão, e — só então — a sessão lida sem agente, com
+  // o texto dizendo QUAL sessão foi lida.
+  const estadoDaAtividade: 'carregando' | 'erro' | 'sem-sessao' | 'pronto' =
+    execucao.isError || (semExecucao && sessoes.isError) || eventosDaAtividade.isError
+      ? 'erro'
+      : execucao.isPending || (semExecucao && sessoes.isPending)
+        ? 'carregando'
+        : !sessaoDaAtividade
+          ? 'sem-sessao'
+          : eventosDaAtividade.isPending
+            ? 'carregando'
+            : 'pronto';
+  // `language` na dependência: os rótulos da árvore saem traduzidos de
+  // `montarArvore` (AT-134), e trocar o idioma tem de refazê-los.
+  const { ramos } = useMemo(() => montarArvore(events, language), [events, language]);
   const grupos = useMemo(() => agruparPorInstancia(ramos), [ramos]);
 
   const [agentesAbertos, setAgentesAbertos] = useState(lerAgentesAbertos);
@@ -443,8 +573,63 @@ export function Shell() {
   }
 
   return (
-    <div className={[styles.layout, colapsado && styles.colapsado].filter(Boolean).join(' ')}>
-      <aside className={styles.sidebar}>
+    <div
+      className={[styles.layout, colapsado && styles.colapsado, movel && styles.movel]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {movel && (
+        <header className={styles.barraMovel}>
+          <button
+            ref={botaoDeMenuRef}
+            type="button"
+            className={styles.botaoDeMenu}
+            aria-expanded={gavetaAberta}
+            aria-controls={idDaGaveta}
+            aria-label={t('sidebar.mobile.openMenu')}
+            onClick={() => setGavetaAberta(true)}
+          >
+            <MenuIcon size={20} />
+          </button>
+          <Link to="/" className={styles.brand} aria-label={t('sidebar.brand.dashboardLink')}>
+            <span className={styles.brandTile} aria-hidden="true">
+              <LogoMark size={18} />
+            </span>
+            <span className={styles.brandName}>Brabo</span>
+          </Link>
+        </header>
+      )}
+
+      {movel && gavetaAberta && (
+        <div
+          className={styles.fundoDaGaveta}
+          data-testid="fundo-da-gaveta"
+          aria-hidden="true"
+          onClick={() => fecharGaveta({ devolverFoco: true })}
+        />
+      )}
+
+      <aside
+        id={idDaGaveta}
+        ref={gavetaRef}
+        className={styles.sidebar}
+        hidden={movel && !gavetaAberta}
+        {...(movel
+          ? { role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar.mobile.drawerLabel') }
+          : {})}
+        onKeyDown={prenderFoco}
+        onClick={fecharAoSeguirLink}
+      >
+        {movel && (
+          <button
+            type="button"
+            className={styles.fecharGaveta}
+            aria-label={t('sidebar.mobile.closeMenu')}
+            onClick={() => fecharGaveta({ devolverFoco: true })}
+          >
+            <XIcon size={18} />
+          </button>
+        )}
         {/* O monograma B no ladrilho terracota — a MESMA marca das telas de
             auth, e a única que o handoff reconhece. Até a FASE 17a aqui morava
             o `BrandIcon`, um cubo isométrico sem parentesco nenhum com ela: o
@@ -495,15 +680,20 @@ export function Shell() {
           <div className={styles.corpo}>
             <div className={styles.navLabelRow}>
               <span className={styles.navLabel}>{t('sidebar.nav.projectsLabel')}</span>
-              <button
+              <Button
                 type="button"
-                className={styles.newProjectButton}
-                onClick={() => setWizardOpen(true)}
+                icon
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setGavetaAberta(false);
+                  setWizardOpen(true);
+                }}
                 title={t('sidebar.nav.newProject')}
                 aria-label={t('sidebar.nav.newProject')}
               >
                 <PlusIcon size={16} />
-              </button>
+              </Button>
             </div>
             <nav className={styles.nav}>
               {/* A lista falhou: a sidebar DIZ, em vez de ficar vazia como se o
@@ -631,8 +821,20 @@ export function Shell() {
               {!currentProject && (
                 <p className={styles.atividadesVazio}>{t('sidebar.activities.openProjectHint')}</p>
               )}
-              {currentProject && grupos.length === 0 && (
-                <p className={styles.atividadesVazio}>{t('sidebar.activities.empty')}</p>
+              {currentProject && estadoDaAtividade === 'erro' && (
+                <p className={styles.atividadesVazio} data-testid="atividades-erro">
+                  {t('sidebar.activities.loadError')}
+                </p>
+              )}
+              {currentProject && estadoDaAtividade === 'sem-sessao' && (
+                <p className={styles.atividadesVazio}>{t('sidebar.activities.noSession')}</p>
+              )}
+              {currentProject && estadoDaAtividade === 'pronto' && grupos.length === 0 && (
+                <p className={styles.atividadesVazio}>
+                  {origemDaAtividade === 'execucao'
+                    ? t('sidebar.activities.emptyExecution')
+                    : t('sidebar.activities.empty')}
+                </p>
               )}
               {currentProject &&
                 grupos.map((grupo) => (
@@ -652,25 +854,28 @@ export function Shell() {
           <BotaoDeTema colapsado={colapsado} />
           <LinkDeContainers colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
-          <button
-            type="button"
-            className={styles.footerButton}
-            aria-expanded={!colapsado}
-            title={
-              colapsado
-                ? t('sidebar.collapseButton.expand')
-                : t('sidebar.collapseButton.collapse')
-            }
-            aria-label={
-              colapsado
-                ? t('sidebar.collapseButton.expand')
-                : t('sidebar.collapseButton.collapse')
-            }
-            onClick={alternarColapso}
-          >
-            {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
-            {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
-          </button>
+          {/* Na gaveta não há o que recolher — ela já some inteira. */}
+          {!movel && (
+            <button
+              type="button"
+              className={styles.footerButton}
+              aria-expanded={!colapsado}
+              title={
+                colapsado
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
+              }
+              aria-label={
+                colapsado
+                  ? t('sidebar.collapseButton.expand')
+                  : t('sidebar.collapseButton.collapse')
+              }
+              onClick={alternarColapso}
+            >
+              {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
+              {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
+            </button>
+          )}
 
           <div className={styles.userCard}>
             <span className={styles.avatar}>{email ? iniciaisDoEmail(email) : '?'}</span>
@@ -701,7 +906,12 @@ export function Shell() {
       </main>
 
       {wizardOpen && workspace && (
-        <NewProjectWizard workspaceId={workspace.id} onClose={() => setWizardOpen(false)} />
+        // Fallback nulo: o assistente é um modal por cima da tela, e o clique
+        // que o abre já é a resposta visível; um esqueleto no meio do layout
+        // piscaria no lugar errado.
+        <Suspense fallback={null}>
+          <NewProjectWizard workspaceId={workspace.id} onClose={() => setWizardOpen(false)} />
+        </Suspense>
       )}
     </div>
   );

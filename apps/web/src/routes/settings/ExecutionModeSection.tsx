@@ -3,22 +3,26 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   convertProjectExecutionMode,
+  getContainerLifecycle,
   getProject,
   getProjectsBase,
   mensagemDaApi,
 } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
-import type { ExecutionMode } from '../../lib/api-types';
+import { conversaoSemBroker } from '../containers-subida';
+import type { CicloDeVidaDoContainer, ExecutionMode, Project } from '../../lib/api-types';
 import { Alert } from '../../components/ui/Alert';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { FolderIcon } from '../../components/ui/icons';
 import { FolderBrowserModal } from '../../components/FolderBrowserModal';
+import { RunnerOnboardingPanel } from '../../components/RunnerOnboardingPanel';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * Onde o código do projeto mora — `container` (padrão), `mounted` (pasta do
@@ -69,6 +73,60 @@ type EstadoDaBase =
   | { tipo: 'presente'; base: string };
 
 /**
+ * O que se sabe sobre o container REGISTRADO deste projeto, do ponto de vista
+ * do aviso (AT-144). Três estados e não dois (RN-468): "tem", "não tem" e
+ * "não consegui ler" — a leitura que falhou nunca vira "não tem".
+ */
+export type ContainerParaOAviso = 'registrado' | 'ausente' | 'naoSei';
+
+/**
+ * As consequências CONDICIONAIS da conversão (AT-144, RN-560): só o que vale
+ * para ESTE projeto, e nada do que não se aplica. Cada uma espelha uma linha
+ * de `ConvertProjectExecutionModeUseCase`, e a condição é a MESMA do caso de
+ * uso — nunca uma régua própria da tela:
+ *
+ * - `espelho`: `mirrorPath` preenchido. Toda conversão o zera (RN-515).
+ * - `container`: o projeto é `container` HOJE e tem linha em
+ *   `project_containers` fora de `removed`. O caso de uso só desprovisiona ao
+ *   SAIR de `container` (`removerContainerSeExistir`, RN-449) — em
+ *   `mounted`/`runner` ele não toca o container, e o aviso não diz o
+ *   contrário. Como todo destino a partir de `container` é "sair" (converter
+ *   para o próprio `container` não tem caminho a mudar), a condição não
+ *   depende do modo escolhido no seletor.
+ * - `pastaConfirmada`: `workspaceVerifiedAt` preenchido. Toda conversão o
+ *   zera (RN-450).
+ *
+ * Os dados são os que a seção já tem (`Project`) mais o ciclo de vida do
+ * container, lido pela rota que JÁ existe (`GET .../container/lifecycle`,
+ * `viewer`) — nenhum endpoint novo.
+ */
+function consequenciasCondicionais(
+  project: Pick<Project, 'executionMode' | 'mirrorPath' | 'workspaceVerifiedAt'>,
+  container: ContainerParaOAviso | null,
+): {
+  espelho: string | null;
+  container: ContainerParaOAviso | null;
+  pastaConfirmada: string | null;
+} {
+  return {
+    espelho: project.mirrorPath,
+    container:
+      project.executionMode === 'container' && container !== 'ausente' ? container : null,
+    pastaConfirmada: project.workspaceVerifiedAt,
+  };
+}
+
+function containerParaOAviso(consulta: {
+  isSuccess: boolean;
+  isError: boolean;
+  data?: CicloDeVidaDoContainer | null;
+}): ContainerParaOAviso | null {
+  if (consulta.isError) return 'naoSei';
+  if (!consulta.isSuccess) return null;
+  return consulta.data && consulta.data.status !== 'removed' ? 'registrado' : 'ausente';
+}
+
+/**
  * Converte o `execution_mode` de um projeto EXISTENTE (RN-447..450, ADR
  * 0111) — via `PUT .../execution-mode`, rota DEDICADA e separada do PATCH
  * genérico de `ExecutionSection`/`ParallelismSection` acima: a api move o
@@ -102,15 +160,35 @@ type EstadoDaBase =
  * api continua sendo quem valida o caminho (`validarExecutionModeEWorkspacePath`
  * e o CHECK do banco), e o navegador não "garante" nada.
  *
- * O ramo `runner` continua DIGITADO, de propósito, e a seção passa a DIZER
- * isso em texto em vez de só não oferecer botão nenhum (ADR 0064: tira-se o
- * controle, nunca a informação). Abrir o navegador de runner aqui exigiria
- * `origem: { tipo: 'runner', projectId }`, e um projeto que ainda NÃO é
- * `runner` não tem runner conectado — a espera terminaria num erro com cara
- * de bug. Onboardar antes de a conversão salvar registra chave num projeto
- * que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa com
- * 400; a ordem "converte, depois onboarda" é decisão de produto à parte,
- * declarada no `CLAUDE.md` e NÃO reaberta aqui.
+ * ## O ramo `runner`: converte, DEPOIS onboarda (RN-612, AT-143)
+ *
+ * Onboardar antes de a conversão salvar registra chave num projeto que ainda
+ * não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa com 400 — então a
+ * ordem é a outra, e a tela a torna UM gesto seguido do outro: salvar a
+ * conversão para `runner` monta, logo abaixo, o MESMO `RunnerOnboardingPanel`
+ * da aba Código e do wizard, já com o `projectId` de um projeto que agora É
+ * `runner`. Nada de régua nova: quem valida o caminho continua sendo a api
+ * (léxico) e o runner (disco), e a confirmação do runner SOBRESCREVE o
+ * caminho digitado (RN-423) — por isso o campo é dito provisório.
+ *
+ * O painel fica enquanto o projeto é `runner` sem pasta confirmada, ou até o
+ * fim da visita em que a conversão salvou (para a `EsperaDoRunner` poder
+ * mostrar a confirmação em vez de sumir no instante em que ela chega).
+ *
+ * O que foi MEDIDO no código, e está dito na tela: com chave de MÁQUINA
+ * (RN-543/548) o painel reconhece a máquina pareada; o agente de máquina que
+ * está ESPERANDO (zero projetos, RN-550) pega o projeto sozinho em até 60 s
+ * (cadência 15/30/60 s de `espera-de-projetos.ts`); o que já atende OUTRO
+ * projeto NÃO pega — a lista é lida uma vez, no start, com conexão viva — e o
+ * gesto é reiniciar o serviço. Sem chave de máquina, o atrito é o mesmo da
+ * criação de projeto (parear e rodar um comando).
+ *
+ * O navegador de pastas NÃO é oferecido no ramo `runner`, e não por falta de
+ * ordem: `origem: { tipo: 'runner', projectId }` exige um runner conectado a
+ * ESTE projeto, e um runner conectado já confirmou a PRÓPRIA pasta (`--dir`,
+ * ou `<base>/<workspaceDirName>` no agente de máquina) — escolher outra ali
+ * seria uma segunda conversão que a próxima reconexão desfaria. A seção diz
+ * isso em texto (ADR 0064).
  *
  * Salvar só habilita quando algo de fato MUDOU em relação ao par (modo,
  * caminho) atual do projeto — reenviar o mesmo par seria uma chamada que a
@@ -121,7 +199,7 @@ type EstadoDaBase =
  * RN-469, que esta seção não converte para autosave.
  */
 export function ExecutionModeSection({ projectId }: { projectId: string }) {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: comPapel } = useCurrentWorkspaceWithRole();
@@ -135,6 +213,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   // A base é da INSTALAÇÃO e a rota pede `maintainer` — o mesmo mínimo da
   // conversão. Para quem não alcança esse mínimo a consulta nem sai: ela
@@ -150,8 +229,22 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   const [caminhoDraft, setCaminhoDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [navegadorAberto, setNavegadorAberto] = useState(false);
+  // A conversão para `runner` salvou NESTA visita — mantém o painel de
+  // onboarding na tela depois de a pasta ser confirmada (ver o docblock).
+  const [convertidoParaRunner, setConvertidoParaRunner] = useState(false);
+  // O container só entra no aviso quando o projeto é `container` HOJE (o caso
+  // de uso só desprovisiona ao sair dele), então a consulta só sai nesse caso.
+  // `viewer` na rota: o aviso é informação, e vale para quem não converte.
+  const cicloQuery = useQuery({
+    queryKey: ['container-lifecycle', projectId],
+    queryFn: () => getContainerLifecycle(projectId),
+    enabled: project?.executionMode === 'container',
+    retry: false,
+  });
 
   if (!project) return null;
+
+  const condicionais = consequenciasCondicionais(project, containerParaOAviso(cicloQuery));
 
   const modo = modoDraft ?? project.executionMode;
   const caminhoAtual = project.workspacePath ?? '';
@@ -177,8 +270,24 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   // O navegador só monta com o que ele exige para existir: o ramo `mounted`,
   // um `workspaceId` e uma base CONFIRMADA. "Não sei" nunca vira "tem"
   // (RN-513), e o botão sem base abriria um modal que listaria o nada.
+  // AT-105/RN-591: só a ausência CONFIRMADA bloqueia; carregando ou consulta
+  // falha não afirmam nada (a mesma leitura de três estados da criação).
+  const semBroker = conversaoSemBroker({
+    atual: project.executionMode,
+    alvo: modo,
+    brokerConfigurado: baseQuery.isSuccess
+      ? baseQuery.data.brokerConfigurado
+      : null,
+  });
   const podeNavegar =
     modo === 'mounted' && !!workspaceId && estadoDaBase.tipo === 'presente';
+
+  // O próximo passo aparece quando o projeto JÁ É `runner` (a conversão
+  // salvou) e não há troca de modo pendente no seletor.
+  const mostrarProximoPasso =
+    project.executionMode === 'runner' &&
+    modoDraft === null &&
+    (project.workspaceVerifiedAt === null || convertidoParaRunner);
 
   async function handleSave() {
     setSaving(true);
@@ -188,6 +297,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         ...(precisaCaminho ? { workspacePath: caminho.trim() } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      if (modo === 'runner') setConvertidoParaRunner(true);
       setModoDraft(null);
       setCaminhoDraft(null);
       showToast({ title: t('executionMode.toast.success'), tone: 'success' });
@@ -229,6 +339,31 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
             ? t('executionMode.warning.leavesPath', { caminho: caminhoAtual })
             : t('executionMode.warning.leavesManaged')}
         </div>
+        {/* As condicionais (AT-144): só o que vale para ESTE projeto. Nenhuma
+            linha para o que não se aplica, e "não consegui ler" tem texto
+            próprio — nunca vira "não há container". */}
+        {condicionais.espelho && (
+          <div style={{ marginTop: 6 }} data-testid="aviso-espelho">
+            {t('executionMode.warning.mirrorCleared', { destino: condicionais.espelho })}
+          </div>
+        )}
+        {condicionais.container === 'registrado' && (
+          <div style={{ marginTop: 6 }} data-testid="aviso-container">
+            {t('executionMode.warning.containerRemoved')}
+          </div>
+        )}
+        {condicionais.container === 'naoSei' && (
+          <div style={{ marginTop: 6 }} data-testid="aviso-container">
+            {t('executionMode.warning.containerUnknown')}
+          </div>
+        )}
+        {condicionais.pastaConfirmada && (
+          <div style={{ marginTop: 6 }} data-testid="aviso-pasta-confirmada">
+            {t('executionMode.warning.verifiedLost', {
+              data: new Date(condicionais.pastaConfirmada).toLocaleString(i18n.language),
+            })}
+          </div>
+        )}
       </Alert>
 
       <div className={styles.ajusteCard} style={{ marginTop: 12 }}>
@@ -299,13 +434,40 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         </div>
       )}
 
+      {semBroker && (
+        <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
+          {t('executionMode.noBroker')}
+        </div>
+      )}
+
       <Button
         style={{ marginTop: 12 }}
         onClick={() => void handleSave()}
-        disabled={!podeEditar || !mudouAlgo || !valido || saving}
+        disabled={!podeEditar || !mudouAlgo || !valido || saving || semBroker}
       >
         {saving ? t('executionMode.saving') : t('executionMode.save')}
       </Button>
+
+      {mostrarProximoPasso && (
+        // O segundo passo da conversão para `runner` (RN-612): o MESMO painel
+        // da aba Código, com o `projectId` de um projeto que agora É `runner`.
+        <div style={{ marginTop: 16 }} data-testid="proximo-passo-runner">
+          <div className={styles.ajusteTitulo}>{t('executionMode.nextStep.title')}</div>
+          <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
+            {t('executionMode.nextStep.intro')}
+          </div>
+          <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
+            {t('executionMode.nextStep.machineAgent')}
+          </div>
+          <code style={{ display: 'block', marginTop: 6 }}>
+            {t('executionMode.nextStep.restartLinux')}
+          </code>
+          <code style={{ display: 'block', marginTop: 4, marginBottom: 12 }}>
+            {t('executionMode.nextStep.restartMac')}
+          </code>
+          <RunnerOnboardingPanel projectId={projectId} />
+        </div>
+      )}
 
       {navegadorAberto && podeNavegar && workspaceId && (
         // `origem: { tipo: 'api', workspaceId }` — o MESMO transporte do

@@ -71,7 +71,10 @@ vi.mock('../lib/session-channel', () => ({
   },
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -137,6 +140,7 @@ async function enviarMensagem(texto: string) {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   await i18n.changeLanguage('pt-BR');
   canalHandlers = undefined;
   eventos.mockReturnValue({ items: eventosIniciais });
@@ -189,10 +193,13 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
       expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull(),
     );
 
-    const campo = screen.getByPlaceholderText(
+    screen.getByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
-    expect(campo).not.toBeDisabled();
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
 
     // A promessa original também pode resolver depois (o engine responde
     // 202 ao `sendAgentMessage` assim que o `GenServer.call` desbloqueia) —
@@ -215,9 +222,8 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
     // Continua streaming: o botão "Parar" segue disponível — cancelar
     // falhou, o turno real no engine não foi interrompido.
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)'),
-    ).toBeDisabled();
+    // RN-673: com o turno em curso o composer segue em modo "Pôr na fila".
+    expect(screen.getByRole('button', { name: 'Pôr na fila' })).toBeInTheDocument();
   });
 
   it('canal entrega onAgentDone primeiro: some mesmo sem a rota de cancelar', async () => {
@@ -232,6 +238,51 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
 
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull(),
+    );
+  });
+});
+
+describe('SessionPage — o composer oferece o Infra Lead (RN-617)', () => {
+  // Criativo e Infra na sessão: o Infra Lead é uma das OPÇÕES do seletor de
+  // destinatário, e é a pessoa quem o escolhe (RN-631 — desde ela o
+  // destinatário não é mais "o ativado mais recente"). Até a RN-617 `infra`
+  // não estava em `AGENTES_DE_CHAT` e a mensagem seguia para o Criativo.
+  const comInfraAtiva = [
+    ...eventosIniciais,
+    {
+      id: 'e1',
+      seq: 2,
+      type: 'agent.activated',
+      actor: { kind: 'agent', id: 'infra' },
+      payload: { agent: 'infra' },
+      createdAt: '2026-08-10T12:00:01.000Z',
+    },
+  ];
+
+  it('envia ao Infra Lead e o "Parar" para o turno DELE', async () => {
+    eventos.mockReturnValue({ items: comInfraAtiva });
+    sendAgentMessage.mockImplementation(() => new Promise<void>(() => {}));
+    cancelAgentTurn.mockResolvedValue({ ok: true });
+
+    montar();
+    fireEvent.change(await screen.findByLabelText('Para'), {
+      target: { value: 'infra' },
+    });
+    await enviarMensagem('por que essa imagem?');
+
+    await waitFor(() =>
+      expect(sendAgentMessage).toHaveBeenCalledWith(
+        'proj-1',
+        ID,
+        'infra',
+        'por que essa imagem?',
+      ),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Parar' }));
+
+    await waitFor(() =>
+      expect(cancelAgentTurn).toHaveBeenCalledWith('proj-1', ID, 'infra'),
     );
   });
 });

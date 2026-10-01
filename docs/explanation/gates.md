@@ -72,6 +72,44 @@ The two cases that forced the field to exist:
 Without `evidencia`, the rule "a `block` gate without proof fails"
 would turn the product's two hardest locks permanently red.
 
+## Two validations, and only one of them runs in production
+
+The registry is validated in two layers, and the split is not cosmetic:
+
+| layer | what it asserts | who runs it |
+|---|---|---|
+| `validarRegistro` | claims about the **content** — `block` needs `script`, the four human gates stay human, `active` needs evidence, no duplicate id, no orphan `entrada` | anyone who reads the registry, including the api at runtime |
+| `validarLocalizadores` | the `teste`/`ci` **target file exists** | the test against the real file, and phase 2 of `validacao-gates.ts` — never the api |
+
+The first is true wherever the registry is read. The second is a claim
+about the **repository**, and it only makes sense inside a checkout.
+
+The two used to be one function, and the api's loader called it. The
+consequence was measured on the installed v6.1.0: `GET /gates` answered
+`500` with `RegistroDeGatesInvalido` listing all eleven targets as "does
+not exist" — twelve 5xx responses in about 55 minutes. Nothing was wrong
+with the registry. The production image carries `/app/docs/gates.yml`
+and nothing else from `docs/`; `apps/api/test/`, `scripts/ci/` and
+`.github/` never enter it, so a repository claim evaluated against that
+tree fails for every gate, in every installation.
+
+Nothing was loosened. The rule still exists, still covers the same
+targets, and a target that disappears still fails — it just runs where
+the question means something. Two guards keep it that way: the test that
+climbs to the repository root and checks every locator, and a loader test
+that rebuilds the image's tree on disk (a root with `docs/gates.yml` and
+nothing else) and asserts the registry loads. Putting the check back in
+the loader turns that second one red with the exact message the
+installation produced.
+
+And the api serving the registry is now exercised against the production
+image: `docker/smoke.sh` calls `GET /gates` and `GET /internal/gates`
+(service token) and requires the registry back from both. The body check
+is one shell function, `checar_registro_de_gates`, which
+`scripts/ci/smoke-gates.spec.ts` runs against the three bodies without
+bringing the stack up. No unit suite could have caught the original failure
+— vitest and ExUnit run from a checkout, where the targets exist.
+
 ## The shared-type trap
 
 `qa-verificada` and `secops-segura` **are not two event types**: both
@@ -104,6 +142,12 @@ Three phases, in this order: **registry** (loads and validates),
 **locators** (does the `teste`/`ci` target exist?) and **event log**
 (latest passage, with event id). The first two never touch the
 database — that's what makes the script useful in CI without Postgres.
+
+Phase 2 reports **every** locator in the registry, not just the ones on
+`active`+`block` gates. It used to have its own narrower loop while the
+api's loader had a wider one, and `rag-acertivo` — `active`, `warn`,
+citing both a workflow and a test — never showed up in the table. One
+rule now, `validarLocalizadores`, shared with the test.
 
 | exit code | when |
 |---|---|
@@ -164,6 +208,16 @@ The real work sits outside the file: the Dev Lead needed a new tool
 ("can be the qa-lead itself in a second moment") — had to exist to
 feed the assessment with a real test plan. The registry only started
 describing what the code now does.
+
+That input did not survive real use.
+[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
+([RN-674](../business-rules.md#rn-674)) moved the test plan to AFTER the
+dev's delivery — written PRE-DEV it had no code to read and ran out of
+iterations — and the gate's `entrada` changed from `plano-de-teste` to
+`module_map`: the Dev Lead judges the story and the module map it already
+has. The plan now feeds `qa-verificada`, as input to the one verdict that
+gate already gives. Same lesson in the other direction: the registry line
+changed because WHO DELIVERS WHAT TO WHOM changed, not to make a gate pass.
 
 ## A registry can age in the wrong direction — stale, not inactive
 
@@ -244,7 +298,7 @@ reason moved from "no CI can run this" to "this CI doesn't sit on the merge
 path" — `warn` keeps describing exactly what's true, just not the same
 truth it described before.
 
-## The QA golden-set in CI: the clock fits, the instrument doesn't measure
+## The QA golden-set in CI: the clock fits, the instrument measures, and it runs weekly
 
 The golden-set of the QA Automation agent's semantic judgment
 ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) is what
@@ -294,13 +348,146 @@ That is why no `golden-set-qa.yml` was committed. A scheduled workflow
 that is red on every run for a reason unrelated to what it measures is
 worse than none — background red teaches people to ignore red. The design
 that was measured stays in the repository history (the workflow as of
-commit `e7d7d1b16`, including a temporary diagnostic step), ready for when
-the harness can measure again. Making it measure again means deciding how
-the golden-set runs the suite under RN-502 — a real container brought up
-through the broker by the seed, or something else — and that is a
-decision for a human. Relaxing the refusal so the harness passes is not
-one of the options: it would weaken the isolation RN-502 exists for, to
-make a test pass.
+commit `e7d7d1b16`, including a temporary diagnostic step). Making it
+measure again meant deciding how the golden-set runs the suite under
+RN-502, and that was a decision for a human. Relaxing the refusal so the
+harness passes was never one of the options: it would weaken the
+isolation RN-502 exists for, to make a test pass.
+
+### The decision, and the second measurement (AT-076)
+
+On 2026-09-27 the maintainer chose the first path: **the seed brings up a
+real container through the broker and registers it `running`, by the
+production path.** RN-502 is untouched; what changed is that the seed now
+satisfies its precondition. For each case, after cloning the skeleton into
+the project's managed folder, `apps/api/scripts/golden-set-qa-container.ts`
+walks the same use cases a real project walks, in its own `consultiva`
+session: `CreateModuleMapUseCase` (one module), `RouteModulesToInfraUseCase`
+(one candidate image), `ProposeActionUseCase` for `container_start` with
+actor `agent/infra`, and `ApproveActionUseCase` as the project owner. The
+approval runs `ExecuteContainerStartUseCase`, which records the election as
+a new `artifact.project_image` through `DecidirImagemDoProjetoUseCase` (so
+`validarDecisaoDeImagem` judges the image), calls `ContainerBrokerPort.start`
+and registers `provisioning → running` through the state machine. The seed
+proposes and approves instead of calling the execution use case directly
+because two rules live on the proposal side — the named 409
+`sem_broker_na_instalacao` ([RN-591](../business-rules.md#rn-591)) and
+`decide()`'s policy for `container_start` — and a harness that skipped them
+would stop following production the day either changed.
+
+The image is `node:24.11.1-bookworm-slim`, pinned by the multi-platform
+index digest in the seed (the ADR 0159 rule, although that file sits outside
+the trees `imagens-pinadas.ts` scans). Debian rather than Alpine because the
+broker keeps the container alive with `sleep infinity`. The geometry that
+makes the three sides see the same code: the worktree **is** the managed
+project folder (`projectScopeRoot`), the broker mounts
+`<PROJECT_WORKSPACES_HOST_ROOT>/<workspace_dir_name>` at `/work`, and the
+engine translates the QA's `cwd` into `/work` before the `exec`. In the CI
+job the api, the engine and the broker all run natively on the runner, so
+`PROJECT_WORKSPACES_ROOT` (api, engine) and `PROJECT_WORKSPACES_HOST_ROOT`
+(broker) are the same path; the broker is the only process that talks to
+Docker.
+
+A case whose container does not come up now fails the seed with
+`ContainerDoGoldenSetNaoSubiuError`, naming the step and the reason the
+product gave, and the ExUnit module **fails** when the api is up but the
+seed fails. Before, it returned `{:skip, _}` from the test body — which
+ExUnit does not treat as a skip: the test passed, green, having measured
+nothing.
+
+Measured with a temporary `push`-triggered workflow on the branch (removed
+before the PR, as AT-067 did):
+
+| run | model pull | image pull | container up (proposal → executed) | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|---|
+| [36291440108](https://github.com/daneiel/brabo/actions/runs/36291440108) | 15 s | 6 s | 0.20–0.28 s per case | 48 min 29 s | 52 min 38 s | 3/6 |
+| [36294037297](https://github.com/daneiel/brabo/actions/runs/36294037297) | 15 s | 6 s | 0.22–0.30 s per case | 83 min 16 s | 86 min 16 s | 3/6 |
+
+Against the three criteria, in both runs: the event log has **zero** RN-502
+refusals (no terminal action and no session event mentions it); `npm test`
+ran inside the container with `exit 0` in five of the six cases in the first
+run and in all six in the second (the gaps are empty `command`s the broker
+refused by name — the model unreliability ADR 0123 already recorded); and
+the score is reported as it came, 3/6 twice, against the floor of 1/6.
+
+| case | expected | 36291440108 | 36294037297 |
+|---|---|---|---|
+| `rf-covered` | approved | ✓ approved | ✓ approved |
+| `rf-uncovered` | changes_requested | ✓ changes_requested | ✓ changes_requested |
+| `rf-single-clean` | approved | ✗ changes_requested | ✗ `blocked(modelo)` |
+| `rf-mismatched-filename` | approved | ✗ changes_requested | ✓ approved |
+| `rf-partial-coverage` | changes_requested | ✗ `blocked(modelo)` | ✗ `blocked(modelo)` |
+| `rf-skipped-test` | changes_requested | ✓ changes_requested | ✗ approved |
+
+Same total, different cases: the misses are now the model's judgment and its
+variance, which is what the golden-set exists to measure — `rf-skipped-test`
+approved once, counting a `test.skip` as coverage, and `rf-single-clean` ran
+`npm test` 30 times in the second run before ending `blocked(modelo)`.
+
+The runs got longer (48 and 83 min against 19–23 min) because the cases now
+do the work: they read files and reason about coverage instead of stopping
+at the refusal, and a case that repeats itself now repeats real
+executions. A scheduled job needs a `timeout-minutes` above the 86 min seen
+here. Two things were seen and not changed here: the api→broker call has
+a 5 s ceiling for every operation, `start` included, so a `container_start`
+whose image is not yet in the daemon would time out while the pull
+continues (the job pulls the image first; not measured without it); and the
+engine's heartbeat closed the idle sessions (`heartbeat_timeout`) about
+30 s after the seed, while the QA kept proposing and running commands in
+them (the QA runs in the `mix` process, outside any session process), with
+no visible effect on the round.
+
+### Scheduled, weekly (AT-149)
+
+On 2026-09-27 the maintainer chose the cadence: **weekly**
+([ADR 0168](../adr/0168-golden-set-do-qa-em-ci-semanal.md)).
+`.github/workflows/golden-set-qa.yml` is the AT-076 design made permanent —
+api, engine and broker native on the runner, only the broker talking to
+Docker, the same managed folder on the three sides — on `schedule` plus
+`workflow_dispatch`, never `pull_request`, the same posture as
+`golden-set-rag.yml`.
+
+Weekly and not nightly like the RAG job, for two measured reasons. The RAG
+run costs ~20 minutes and is deterministic, so yesterday's drop is a real
+drop. This one costs 52 to 86 minutes and **varies**: the two AT-076 runs
+reached the same 3/6 through different cases. A nightly run would spend hours
+of runner a week to read the same trend with more noise; one run a week is
+what the ratchet floor needs to show a fall, and `workflow_dispatch` answers
+right away after a change to the QA prompt or the seed. It runs on Saturday
+at 01:17 UTC: away from the RAG's daily 06:00, the property proofs' Sunday
+04:00 and the external-link check's Monday 06:00; on Saturday so that a red
+run waits for the week to start; at minute 17 because Actions delays, and may
+drop, schedules at the top of the hour. `timeout-minutes` is 150: the 86 min
+measured plus room for a run in which more than one case hits the iteration
+ceiling. That is the model's variance, and the job does not measure the clock.
+
+The verdict is the test's own: below the `passRate` that `floor.json` records
+for the model, ExUnit fails. The workflow only adds two instrument guards —
+the score line must exist (the test skips when the api is down, and a skip in
+an unattended run is a green that measured nothing) and the event log must
+hold no RN-502 refusal (the AT-067 signature) — and on failure it prints the
+logs, as the RAG job does. The image to pre-pull is read from the seed's own
+constant (`IMAGEM_DO_GOLDEN_SET_QA`), not from a second literal: the
+broker's `docker run` runs under the Docker port's 30 s control ceiling
+([RN-604](../business-rules.md#rn-604)), and a job that pulled one image
+while the seed asked for another would put the pull inside that ceiling.
+
+The proof run, with a temporary `push` trigger on the branch removed before
+the PR:
+
+| run | model pull | image pull | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|
+| [36327281774](https://github.com/daneiel/brabo/actions/runs/36327281774) | 15 s | 5 s | 10 min 13 s | 13 min 41 s | 3/6 |
+
+Zero RN-502 refusals in the event log, all six containers `running` before
+the first case. The same 3/6 once more, through yet another set of cases —
+`rf-covered`, `rf-uncovered` and `rf-skipped-test` hit; `rf-single-clean` and
+`rf-mismatched-filename` got `changes_requested` where `approved` was
+expected, and `rf-partial-coverage` was approved with partial coverage. The
+run took a sixth of the AT-076 ones (10 against 48–83 minutes of
+`mix golden_set.qa`): no case this time repeated itself until the iteration
+ceiling. The timeout stays sized by the slowest run measured, not the
+fastest.
 
 ## A gate can be missing from the registry while `fluxo.yml` already assigns it
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UnitOfWork } from '../../ports/unit-of-work.port';
 import { SessionRepository } from '../../ports/session-repository.port';
 import { ProposedActionRepository } from '../../ports/proposed-action-repository.port';
@@ -16,8 +20,14 @@ import { ExecuteInstructionPatchUseCase } from './execute-instruction-patch.use-
 import { ExecuteGitActionUseCase } from './execute-git-action.use-case';
 import { ExecuteParallelizationUseCase } from '../execution/execute-parallelization.use-case';
 import { ExecuteMaxParallelRaiseUseCase } from '../execution/execute-max-parallel-raise.use-case';
+import { ExecuteExecutionPlanUseCase } from '../execution/execute-execution-plan.use-case';
 import { assertTransition } from '../../../domain/actions/action-state-machine';
 import { GIT_EXECUTED_ACTION_TYPES } from '../../../domain/actions/git-action-types';
+import {
+  mergeouAPr,
+  pullRequestIdDoPayload,
+  recusaDeMerge,
+} from '../../../domain/actions/merge-de-pr';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
 import { Traced } from '../../../infrastructure/observability/traced.decorator';
 
@@ -41,6 +51,7 @@ export class ApproveActionUseCase {
     private readonly executeInstructionPatch: ExecuteInstructionPatchUseCase,
     private readonly metrics: BraboMetrics,
     private readonly appendSessionEvent: AppendSessionEventUseCase,
+    private readonly executeExecutionPlan: ExecuteExecutionPlanUseCase,
   ) {}
 
   @Traced('application')
@@ -49,12 +60,14 @@ export class ApproveActionUseCase {
     sessionId: string,
     actionId: string,
     decidedBy: string,
+    aoAprovar?: (aprovada: ProposedAction) => Promise<void>,
   ): Promise<ProposedAction> {
     const approved = await this.approve(
       projectId,
       sessionId,
       actionId,
       decidedBy,
+      aoAprovar,
     );
 
     if (approved.actionType === 'terminal') {
@@ -168,6 +181,18 @@ export class ApproveActionUseCase {
       );
     }
 
+    // AT-263 (RN-677, ADR 0194): aprovar o plano do Dev Lead ATIVA a
+    // execução e grava o módulo de cada tarefa (RN-678). Antes ele ficava
+    // `approved` para sempre, sem consumidor, e a ativação vinha encadeada no
+    // aceite do handoff (RN-161, revisada).
+    if (approved.actionType === 'propose_execution_plan') {
+      return this.avisarQuemEsperava(
+        projectId,
+        sessionId,
+        await this.executeExecutionPlan.execute(projectId, sessionId, approved),
+      );
+    }
+
     if (GIT_EXECUTED_ACTION_TYPES.includes(approved.actionType)) {
       return this.avisarQuemEsperava(
         projectId,
@@ -220,11 +245,19 @@ export class ApproveActionUseCase {
     return acao;
   }
 
+  /**
+   * `aoAprovar` roda DENTRO da transação da decisão, depois de
+   * `assertTransition` passar e da linha virar `approved` — e ANTES da
+   * execução. É por ele que "sempre permitir" grava o padrão junto com a
+   * decisão (RN-642): ação que já saiu de `pending` lança aqui, antes de o
+   * padrão existir, e um padrão que falha ao gravar desfaz a aprovação.
+   */
   private approve(
     projectId: string,
     sessionId: string,
     actionId: string,
     decidedBy: string,
+    aoAprovar?: (aprovada: ProposedAction) => Promise<void>,
   ) {
     return this.unitOfWork.runInTransaction(async () => {
       const session = await this.sessions.findInProject(projectId, sessionId);
@@ -237,6 +270,28 @@ export class ApproveActionUseCase {
       if (!current) throw new NotFoundException('Ação não encontrada');
 
       assertTransition(current.status, 'approved');
+
+      // A proposta nasceu antes de a PR ser mergeada por OUTRA (duas
+      // pendentes da mesma PR, criadas antes da RN-663, ou uma corrida):
+      // aprovar mergearia de novo. 409 nomeado, e a ação fica `pending` para
+      // quem a vê negar. Só `pr_ja_mergeado` conta aqui — uma irmã viva não
+      // impede decidir esta.
+      if (current.actionType === 'git_merge') {
+        const pullRequestId = pullRequestIdDoPayload(current.payload);
+        if (pullRequestId !== null) {
+          const recusa = recusaDeMerge(
+            pullRequestId,
+            (
+              await this.proposedActions.listByProjectAndType(
+                projectId,
+                'git_merge',
+              )
+            ).filter((a) => mergeouAPr(a, pullRequestId)),
+            actionId,
+          );
+          if (recusa) throw new ConflictException(recusa);
+        }
+      }
 
       const updated = await this.proposedActions.updateDecision(actionId, {
         status: 'approved',
@@ -272,6 +327,10 @@ export class ApproveActionUseCase {
           from: current.status,
         },
       });
+
+      // Antes do contador: se o padrão do "sempre permitir" falhar, a
+      // transação desfaz a decisão e nada foi decidido para contar.
+      if (aoAprovar) await aoAprovar(updated);
 
       // Contador e não consulta ao banco: uma ação aprovada que executa muda
       // de status para `executed`, então `count(status='approved')` subconta

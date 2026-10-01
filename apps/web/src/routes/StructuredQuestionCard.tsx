@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { answerStructuredQuestion, mensagemDaApi } from '../lib/api-client';
+import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
+import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
@@ -74,6 +77,7 @@ export function StructuredQuestionCard({
   respondida,
   respostasExistentes,
   onTurnoIniciado,
+  onTurnoAceito,
   onTurnoTerminado,
 }: {
   projectId: string;
@@ -91,6 +95,13 @@ export function StructuredQuestionCard({
    * `streaming`/`statusAgent`, e este caminho não ligava nenhum dos dois.
    */
   onTurnoIniciado: () => void;
+  /**
+   * ADR 0163 (RN-578) — a api ACEITOU as respostas e o turno segue no engine.
+   * A chamada resolve no aceite, não no fim do turno; quem sabe acompanhar o
+   * fim (canal + leitura do log) é a página.
+   */
+  onTurnoAceito: () => void;
+  /** A chamada falhou ou foi recusada: desfaz o arme de `onTurnoIniciado`. */
   onTurnoTerminado: () => void;
 }) {
   const { t } = useTranslation('sessionPage');
@@ -108,7 +119,7 @@ export function StructuredQuestionCard({
 
   if (respondida) {
     return (
-      <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+      <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
         <span className={styles.structuredQuestionCabecalho}>
           <AvatarDoAgente id={agent} />
           <span className={styles.handoffPill}>
@@ -124,7 +135,7 @@ export function StructuredQuestionCard({
             </div>
           ))}
         </dl>
-      </div>
+      </Card>
     );
   }
 
@@ -137,31 +148,40 @@ export function StructuredQuestionCard({
   async function handleSubmit() {
     if (enviando || !completo) return;
     setEnviando(true);
-    // RN-174: o turno começa AQUI, antes do `await` — a chamada é síncrona no
-    // engine (o mesmo `SendAgentMessageUseCase` de `handleSend`) e pode levar
-    // dezenas de segundos. Armar depois de ela resolver seria armar quando o
-    // turno já acabou.
+    // RN-174: o turno começa AQUI, antes do `await` — o indicador precisa
+    // estar de pé quando o `agent.status` do canal chegar.
     onTurnoIniciado();
     try {
       await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
+      // ADR 0163 (RN-578): resolver é o ACEITE. Até lá a chamada segurava o
+      // turno inteiro (97,3 s medidos numa instalação real) e o `finally`
+      // tratava "resolveu" como "o turno acabou".
+      onTurnoAceito();
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      // RN-624: as respostas são evidência do idioma de quem respondeu.
+      void queryClient.invalidateQueries({ queryKey: chaveDoIdiomaDaSessao(projectId, sessionId) });
       showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
+      onTurnoTerminado();
+      // AT-154 (RN-581): a sessão fechou. As respostas continuam nos campos
+      // (o estado é deste card); a tela diz por quê e refaz a leitura da sessão.
+      if (ehRecusaDeSessaoEncerrada(erro)) {
+        showToast({ title: t('toasts.sessaoEncerrada'), tone: 'danger' });
+        queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+        return;
+      }
       showToast({
         title: mensagemDaApi(erro, t('perguntas.erroEnviar')),
         tone: 'danger',
       });
     } finally {
       setEnviando(false);
-      // Mesma rede de segurança de `handleSend`/`handleReadiness`: resolver
-      // esta chamada é sinal de fim de turno tão confiável quanto o
-      // `agent.done` do canal, e `finalizarTurnoDoAgente` é idempotente.
-      onTurnoTerminado();
     }
   }
 
   return (
-    <div className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
+    <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
       <span className={styles.structuredQuestionCabecalho}>
         <AvatarDoAgente id={agent} />
         <span className={styles.handoffPill}>
@@ -266,6 +286,6 @@ export function StructuredQuestionCard({
       >
         {t('perguntas.enviarRespostas')}
       </Button>
-    </div>
+    </Card>
   );
 }

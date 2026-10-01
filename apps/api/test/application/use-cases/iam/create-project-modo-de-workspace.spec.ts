@@ -9,6 +9,9 @@ import { DrizzleProjectRepository } from '../../../../src/infrastructure/persist
 import { DrizzleAgentAreaRepository } from '../../../../src/infrastructure/persistence/drizzle/agent-area.repository';
 import { DrizzleUnitOfWork } from '../../../../src/infrastructure/persistence/drizzle/drizzle-unit-of-work';
 import { CreateProjectUseCase } from '../../../../src/application/use-cases/iam/create-project.use-case';
+import { ResolverIdiomaDaRespostaUseCase } from '../../../../src/application/use-cases/iam/resolver-idioma-da-resposta.use-case';
+import { DrizzleUserRepository } from '../../../../src/infrastructure/persistence/drizzle/user.repository';
+import { DrizzleSessionLanguageOverrideRepository } from '../../../../src/infrastructure/persistence/drizzle/session-language-override.repository';
 import { SeedAgentAreasUseCase } from '../../../../src/application/use-cases/agents/seed-agent-areas.use-case';
 import { projectScopeRoot } from '../../../../src/infrastructure/filesystem/project-workspaces-root';
 
@@ -28,6 +31,10 @@ const criarProjeto = new CreateProjectUseCase(
   new DrizzleUnitOfWork(db),
   projetos,
   new SeedAgentAreasUseCase(new DrizzleAgentAreaRepository(db)),
+  new ResolverIdiomaDaRespostaUseCase(
+    new DrizzleUserRepository(db),
+    new DrizzleSessionLanguageOverrideRepository(db),
+  ),
 );
 
 const temporarias: string[] = [];
@@ -131,10 +138,14 @@ describe('o projeto escolhe onde o código mora (RN-169/RN-421, ADR 0104)', () =
     });
 
     expect(projeto.executionMode).toBe('runner');
-    expect(projeto.workspacePath).toBe('/home/voce/projetos/loja-nunca-montada');
+    expect(projeto.workspacePath).toBe(
+      '/home/voce/projetos/loja-nunca-montada',
+    );
     // Nasce NÃO verificado — só a confirmação do runner preenche isto.
     expect(projeto.workspaceVerifiedAt).toBeNull();
-    expect(projectScopeRoot(projeto)).toBe('/home/voce/projetos/loja-nunca-montada');
+    expect(projectScopeRoot(projeto)).toBe(
+      '/home/voce/projetos/loja-nunca-montada',
+    );
   });
 });
 

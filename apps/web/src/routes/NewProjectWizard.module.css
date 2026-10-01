@@ -53,9 +53,16 @@
   text-align: left;
 }
 
+/* Inerte, mas legível: o card continua dizendo o que o modo é (ADR 0064),
+   e o motivo de não poder escolhê-lo vem em texto logo abaixo da grade. */
+.providerOption:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .providerOption.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .providerLabel {
@@ -65,7 +72,7 @@
 }
 
 .providerDesc {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -134,7 +141,7 @@
 
 .toggleOption.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--accent-soft);
   color: var(--text-primary);
 }
 

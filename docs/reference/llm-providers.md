@@ -52,7 +52,7 @@ the four `ChatStreamChunk` types.
 | --- | --- |
 | `text_delta` | a piece of generated text |
 | `tool_calls` | the model requested tools (single chunk, not incremental) |
-| `usage` | token count, with the `estimated` flag |
+| `usage` | token count, with the `estimated` flag; and, when the response says so, the real cost (`costMicros`), the model that served (`resolvedModel`), the response id (`generationId`) and the cached/reasoning PARTS of the token counts (`cachedInputTokens`, `reasoningTokens`, RN-666) — [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) |
 | `error` | failure classified by `code` — **never an exception** |
 
 A failure becomes a chunk, not an exception, because the turn has already spent
@@ -110,17 +110,17 @@ from the model's name would be a guess dressed up as data.
 
 Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — **9 providers**.
 
-| provider | streaming | tool calling | list_models | embeddings | credential | model origin | summarized quirks | source |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `anthropic` | yes | yes | yes | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | yes | yes | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | yes | yes | yes | no | API key | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | yes | yes | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
-| `ollama` | yes | yes | yes | yes | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
-| `openai` | yes | yes | yes | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | yes | yes | yes | no | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | yes | yes | yes | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | yes | yes | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `anthropic` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `bitdeer` | yes | yes | no | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | yes | yes | yes | no | no | API key | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | yes | yes | no | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `ollama` | yes | yes | yes | yes | no | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost`; Free-routing alias (`~…`) is synced but cannot be curated | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | yes | yes | yes | no | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 A provider without `list_models` is SKIPPED by the catalog sync, with the reason
 logged in the report — never treated as "the catalog came back empty".
@@ -131,6 +131,9 @@ provider's prose section below — the why for each one lives there, not here.
 "embeddings" is the ADR 0075 capability, and it is only `yes` with PROOF of
 execution: reading the docs doesn't count, and the reason for each `no` is in
 the literal's comment, in the file named in the last column.
+"routing preference" is the ADR 0166 capability (a hub choosing the upstream
+by `price`, `throughput` or `latency`), under the same rule: `yes` only after
+a smoke against the real API returns the chosen upstream.
 <!-- END:GENERATED:providers-capabilities -->
 
 The default for `supports_tool_calling` is `false`. This is deliberate: a model
@@ -282,6 +285,14 @@ provider registry. The "Update catalog" button on the curation screen calls the
 cost was already immutable before Phase 9c; what was missing was being
 **reproducible** — without the recorded price, `tokens × price = cost` would stop
 adding up the moment someone corrected the table.
+
+Since [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+([RN-665](../business-rules/custo.md#rn-665)) the catalog price is the number
+only when the response doesn't carry the real cost. When it does (OpenRouter's
+`usage.cost`), that is `cost_micros`, both price columns hold the IMPLICIT price
+(`cost ÷ tokens`, flagged by `price_implicit`), and what the catalog would have
+charged goes alongside in `catalog_cost_micros` — so `tokens × price = cost`
+still holds on every row, real or estimated.
 
 Every price change writes a row in `model_price_changes`, append-only,
 with the before/after pair and the origin (`manual` | `sync`). The pair is written
@@ -441,9 +452,42 @@ What diverges is normalized, not hidden:
 | tool call arguments | already deserialized | sliced string, reassembled by index | `input_json_delta`, reassembled by the SDK |
 | response without `usage` | doesn't emit a chunk | counts locally with `estimated: true` | **impossible** — `usage` is mandatory in `message_start` |
 | `tool` role | its own message | `role: "tool"` + `tool_call_id` | `tool_result` block inside a `user` turn |
+| `system` AFTER `user`/`tool` | kept in place, last item of `messages` | kept in place, last item of `messages` | **hoisted**: appended to the top-level `system` parameter (`\n\n`-joined after the prompt already there) and removed from `messages` |
 
 The Anthropic row is the costliest: results from parallel calls need to arrive in
 the **same** `user` turn, so consecutive `tool` messages are grouped.
+
+### A `system` message at the end of the conversation (AT-161)
+
+The late-`system` row exists because the language guidance of AT-081 plans to
+send **one** ephemeral `role: "system"` message at the END of the list, on
+every call of a turn — after `user` on the first call, after `tool` on the
+following ones. The contract suite answers, for each of the nine providers,
+where that message lands in the **serialized body**: each harness declares
+`posicaoDoSistemaTardio` and the contract checks it in both positions, plus
+that the text appears exactly once and the rest of the conversation keeps its
+order (`apps/api/test/contract/llm-provider.contract.ts`).
+
+| provider | adapter | where the late `system` lands |
+| --- | --- | --- |
+| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr | compatible base (`toWireMessage`) | end of `messages`, `role: "system"` |
+| Ollama | own (`messages` sent as-is) | end of `messages`, `role: "system"` |
+| Anthropic | own (official SDK) | end of the top-level `system`; position lost |
+
+No adapter drops or duplicates it. What the fake server cannot say is whether
+the REAL provider accepts that body — it accepts anything. That is a separate,
+manual smoke, `apps/api/test/infrastructure/llm/sistema-tardio.smoke.spec.ts`,
+one `describe` per provider, each gated on the same key the acceptance smokes
+use (plus `ANTHROPIC_TEST_KEY`; Ollama by `OLLAMA_SISTEMA_TARDIO_SMOKE=1`).
+Which ones have run is tracked in
+[provider acceptance](../explanation/aceite-providers.md). Without that run, a
+provider is **not proven** to accept a late `system` — the ADR 0041/0042 rule.
+
+**Observation, not measured (AT-081 gap 2):** on Anthropic the hoist means the
+guidance changes the top `system` block, which comes BEFORE the conversation —
+so every change in its text changes the request prefix, and with it whatever
+prompt caching the prefix would get. Cache is not observable in the product
+today (AT-082), so this is recorded, not quantified.
 
 ## OpenRouter — the first hub (Phase 11a)
 
@@ -475,6 +519,22 @@ Quirks found and tested
   a string code is mapped by substring
   (`mapearCodigoDeFrame`) with `upstream` as a safe default — never silence, even
   for a code outside the map;
+- **Real cost in `usage.cost`** (ADR 0188, RN-665): the last stream frame
+  carries what the hub charged, in USD; `extrairCustoRealOpenRouter` turns it
+  into micro-USD and the metering records it as the number. With
+  `is_byok: true` the field is the hub's fee, not the inference, so it is NOT
+  read and the row falls back to the catalog. `model` (the dated version an
+  alias like `~deepseek/deepseek-flash-latest` resolved to) and `id` (`gen-…`)
+  are read by the base for every provider of the dialect;
+- **Free-routing alias (`~…`) is synced but cannot be curated** (AT-271,
+  [RN-679](../business-rules/custo.md#rn-679)): an id like
+  `~deepseek/deepseek-flash-latest` always redirects to the latest model of the
+  family, its catalog price is a showcase price, and the bill comes from
+  whichever upstream served the call. Sync keeps it in the catalog (dropping
+  it would mark an already-curated one `unavailable`); activating it is 422
+  `alias_de_roteamento_livre`, and the curation read marks it with
+  `freeRoutingAlias`. One activated before the rule stays active and can be
+  turned off — once off, it does not come back;
 - **Connection test**: `GET /key` (official doc) validates the key without
   spending tokens on an actual chat call. It's the first `LLMCredentialConnectionTester`
   on the LLM side. Since [ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)

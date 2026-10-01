@@ -19,14 +19,14 @@ import { fileURLToPath } from 'node:url';
  * Isso é conferência visual, e o par só entra na lista abaixo depois de alguém
  * olhar de onde ele vem — o comentário de cada linha é essa procedência.
  *
- * ## Uma exceção conhecida, e ela é do design system
+ * ## A exceção do botão primário ACABOU (ADR 0181)
  *
- * `--on-accent` sobre `--accent` dá 3.20:1 no botão primário, contra os 4.5:1 que
- * texto de 14px/600 exige. Não é defeito desta entrega: é o par terracota do
- * design system, usado em todo botão primário da aplicação. Consertar exige
- * escurecer `--accent` até `--terracota-500` (5.27:1), o que muda a cor da marca
- * em toda a UI — decisão de design, não de implementação. Está registrada no ADR
- * 0036 e afirmada abaixo com o valor ATUAL, para não poder piorar sem ninguém ver.
+ * Do ADR 0036 ao ADR 0181, `--on-accent` sobre `--accent` dava 3.20:1 no botão
+ * primário do escuro, contra os 4.5:1 que texto de 14px/600 exige, e o teste
+ * travava esse valor como exceção conhecida do design system. A paleta neutra
+ * do ADR 0181 trocou o `--on-accent` do escuro pelo preto neutro — 5.61:1 sobre
+ * o terracota suave —, então o que era número travado virou PISO nos dois
+ * temas, afirmado abaixo.
  *
  * ## Tema claro
  *
@@ -113,11 +113,15 @@ describe.each<[string, Record<string, string>]>([
       // Texto digitado e placeholder do campo preenchido.
       ['--text-primary', '--surface-2', 'texto digitado no campo'],
       ['--text-secondary', '--surface-2', 'placeholder do campo preenchido'],
-      // `.hint` do Input, sobre o card. Era --text-muted (3.89) até a Fase 7.
+      // `.hint` do Input, sobre o card. Era --text-muted (3.89) até a Fase 7;
+      // ficou no secondary por hierarquia depois que o muted passou (ADR 0181).
       ['--text-secondary', '--surface-1', 'texto de apoio do campo'],
-      // `.link` em repouso. Era --accent (3.88) no mock.
-      ['--accent-hover', '--surface-1', 'link sobre o corpo do card'],
-      ['--accent-hover', '--surface-0', 'link no rodapé do card'],
+      // `.link` em repouso. Foi --accent-hover enquanto o --accent dava 3.88
+      // sobre o card; desde o ADR 0181 é o --accent do mock, e o hover
+      // sublinha. O hover continua medido porque `a:hover` global o usa.
+      ['--accent', '--surface-1', 'link sobre o corpo do card'],
+      ['--accent', '--surface-0', 'link no rodapé do card'],
+      ['--accent-hover', '--surface-1', 'link em hover (a:hover global)'],
     ])('%s sobre %s (%s) passa AA', (frente, fundo) => {
       expect(contraste(frente, fundo, tema)).toBeGreaterThanOrEqual(AA);
     });
@@ -136,22 +140,31 @@ describe.each<[string, Record<string, string>]>([
   });
 });
 
-describe('exceção conhecida do design system — o botão primário', () => {
-  it('no tema DARK reprova o AA, e o valor está travado onde está', () => {
-    // 3.20:1 para texto de 14px/600, que exige 4.5. Consertar é escurecer
-    // `--accent` (terracota-500 daria 5.27) — muda a marca em toda a UI, e é
-    // decisão de design. O teste existe para o número não PIORAR em silêncio.
-    const atual = contraste('--on-accent', '--accent', DARK);
-    expect(atual).toBeCloseTo(3.2, 1);
-    expect(atual).toBeGreaterThanOrEqual(AA_GRAFICO);
+describe('o botão primário — a exceção que deixou de existir', () => {
+  it.each<[string, Record<string, string>]>([
+    ['dark', DARK],
+    ['light', LIGHT],
+  ])('no tema %s o texto do botão primário passa AA, em repouso e em hover', (_nome, tema) => {
+    // O escuro saiu de 3.20 (travado como exceção) para o preto neutro sobre o
+    // terracota suave; o claro já passava desde o ADR 0074 com o terracota
+    // escurecido. Cair abaixo de 4.5 em qualquer um é regressão, não dívida.
+    expect(contraste('--on-accent', '--accent', tema)).toBeGreaterThanOrEqual(AA);
+    expect(contraste('--on-accent', '--accent-hover', tema)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('no tema LIGHT a exceção não existe: o accent JÁ é o terracota-500', () => {
-    // O ADR 0074 escureceu o accent do claro até `--terracota-500` — a mesma
-    // saída que o comentário acima descreve como "muda a marca em toda a UI".
-    // No claro ela foi tomada, e o motivo é que lá o accent precisa servir de
-    // TEXTO sobre `--code-bg` (keyword do realce de sintaxe), o que no escuro
-    // o fundo quase preto já dava de graça. O dark segue com a exceção.
-    expect(contraste('--on-accent', '--accent', LIGHT)).toBeGreaterThanOrEqual(AA);
+  it('a cor de marca continua terracota nos dois temas — o conserto não apagou a identidade', () => {
+    // A régua que o ADR 0036 temia ("muda a marca em toda a UI") é medida aqui
+    // pelo MATIZ: o acento segue na faixa laranja-avermelhada (10°–30°) nos
+    // dois temas, e só a luminosidade/saturação mudaram.
+    for (const tema of [DARK, LIGHT]) {
+      const h = hex('--accent', tema);
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      expect(max).toBe(r);
+      const matiz = (60 * ((g - b) / (max - min)) + 360) % 360;
+      expect(matiz).toBeGreaterThanOrEqual(10);
+      expect(matiz).toBeLessThanOrEqual(30);
+    }
   });
 });

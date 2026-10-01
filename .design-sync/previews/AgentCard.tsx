@@ -41,7 +41,7 @@ const secops = {
   key: 'secops' as const,
   name: 'SecOps',
   role: 'Segurança e conformidade',
-  color: '#8AA6AE',
+  color: 'var(--agent-secops)',
   icon: LockIcon,
 };
 

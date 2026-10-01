@@ -1,12 +1,10 @@
 import { useState, type CSSProperties } from 'react';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   ApiError,
   getProject,
   clearAgentModelBinding,
-  getAgentModelBinding,
-  getAreaModelBinding,
   getProjectAgentCosts,
   getProjectModelBinding,
   getWorkspaceModelBinding,
@@ -14,10 +12,15 @@ import {
   mensagemDaApi,
   setAgentModelBinding,
 } from '../../lib/api-client';
-import { AGENT_LIST, AREAS, areaFor } from '../../lib/agents';
+import { AGENT_LIST, areaFor } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
-import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-types';
+import type {
+  Model,
+  ModelBindingScope,
+  ResolvedBinding,
+  RoutingPreference,
+} from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
 import { Button } from '../../components/ui/Button';
@@ -34,6 +37,13 @@ import {
 } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { useAplicacaoEmLote } from './aplicar-a-todos';
+import { PreferenciaDeRoteamento } from './PreferenciaDeRoteamento';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import {
+  invalidarBindingsResolvidos,
+  useBindingsResolvidos,
+} from '../../lib/bindings-resolvidos';
+import { AvisoDeBindingsNaoLidos, MarcaDeBindingNaoLido } from './LeituraDosBindings';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -81,43 +91,32 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: modelsByCategory } = useQuery({
     // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
     // um cache global devolveria a curadoria de outro workspace.
     queryKey: ['models', projectId],
     queryFn: () => listModels(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
-  const bindingQueries = useQueries({
-    queries: AGENT_LIST.map((agent) => ({
-      queryKey: ['agent-binding', projectId, agent.key],
-      queryFn: () => getAgentModelBinding(projectId, agent.key),
-    })),
-  });
-
-  // O padrão de cada ÁREA (ADR 0064, RN-102) — uma busca por área, não por
-  // agente: lead e subagentes de uma mesma área compartilham a mesma pergunta.
-  const areaKeys = Object.keys(AREAS);
-  const areaBindingQueries = useQueries({
-    queries: areaKeys.map((key) => ({
-      queryKey: ['area-binding', projectId, key],
-      queryFn: () => getAreaModelBinding(projectId, key),
-    })),
-  });
-  const bindingDaAreaPorChave = new Map(
-    areaKeys.map((key, index) => [key, areaBindingQueries[index]?.data]),
-  );
+  // O vigente de cada agente e o padrão de cada ÁREA (ADR 0064, RN-102) numa
+  // leitura só (RN-654): a mesma `queryKey` que `AreaModelsSection` e
+  // `MelhoresModelosPorCapacidadeSection` leem, servida por UMA requisição.
+  const bindings = useBindingsResolvidos(projectId);
 
   // Os dois níveis de cima da cascata, buscados UMA vez — é deles que sai a
   // coluna FALLBACK de todas as linhas.
   const { data: bindingDoProjeto } = useQuery({
     queryKey: ['project-model-binding', projectId],
     queryFn: () => getProjectModelBinding(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const { data: bindingDoWorkspace } = useQuery({
     queryKey: ['workspace-model-binding', project?.workspaceId],
     queryFn: () => getWorkspaceModelBinding(project!.workspaceId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
     enabled: Boolean(project?.workspaceId),
   });
 
@@ -140,8 +139,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
   // O Criativo é o agente de start (`herdarModeloDeStart`) — a resolução DELE
   // é o que diz se algum outro agente pode ter herdado o modelo dele.
-  const resolvidoDoCriativo =
-    bindingQueries[AGENT_LIST.findIndex((a) => a.key === AGENTE_DE_START)]?.data;
+  const resolvidoDoCriativo = bindings.doAgente(AGENTE_DE_START);
 
   /**
    * Os níveis que a cadeia de um agente percorre. `session` fica de fora: esta
@@ -151,7 +149,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   function cadeiaDoAgente(agentKey: string, resolvido: ResolvedBinding | null | undefined) {
     const areaDoAgente = areaFor(agentKey);
     const daArea = areaDoAgente
-      ? bindingDaAreaPorChave.get(areaDoAgente.key)
+      ? bindings.daArea(areaDoAgente.key)
       : undefined;
     const niveis: ModelBindingScope[] = areaDoAgente
       ? ['workspace', 'project', 'area', 'agent']
@@ -166,13 +164,24 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         // Só existe padrão PRÓPRIO de área quando a área não herdou o dela.
         area: daArea?.origin === 'area' ? daArea.modelId : undefined,
       },
-      herdadoDoStart: herdouDoCriativo({
-        agentKey,
-        resolvido,
-        daArea,
-        doProjeto: bindingDoProjeto,
-        doCriativo: resolvidoDoCriativo,
-      }),
+      herdadoDoStart: herdadoDoStartDe(agentKey, resolvido),
+    });
+  }
+
+  /** O agente pousou no modelo do Criativo, sem linha própria (RN-470). */
+  function herdadoDoStartDe(
+    agentKey: string,
+    resolvido: ResolvedBinding | null | undefined,
+  ) {
+    const areaDoAgente = areaFor(agentKey);
+    return herdouDoCriativo({
+      agentKey,
+      resolvido,
+      daArea: areaDoAgente
+        ? bindings.daArea(areaDoAgente.key)
+        : undefined,
+      doProjeto: bindingDoProjeto,
+      doCriativo: resolvidoDoCriativo,
     });
   }
 
@@ -193,7 +202,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   ) {
     const areaDoAgente = areaFor(agentKey);
     const bindingDaArea = areaDoAgente
-      ? bindingDaAreaPorChave.get(areaDoAgente.key)
+      ? bindings.daArea(areaDoAgente.key)
       : undefined;
 
     if (origin === 'session' || origin === 'agent') {
@@ -221,8 +230,10 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     0,
   );
 
-  function invalidarBindingDoAgente(agentKey: string) {
-    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+  // O lote é relido inteiro (RN-654): a linha trocada pode mudar a de quem
+  // herda do Criativo, e não há mais uma chave por agente para reler sozinha.
+  function invalidarBindingDoAgente() {
+    void invalidarBindingsResolvidos(queryClient, projectId);
   }
 
   /**
@@ -244,12 +255,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     alvos: AGENT_LIST.map((a) => ({ chave: a.key, nome: a.name })),
     aplicar: (agentKey) =>
       setAgentModelBinding(projectId, agentKey, modeloEmLote!.id),
-    // Uma invalidação por agente CONFIRMADO — nunca a chave inteira
-    // `['agent-binding', projectId]`: reler as 19 apagaria da tela a diferença
-    // entre a linha que a api gravou e a que ela recusou, que é justamente o
-    // que o relatório parcial acabou de contar.
+    // UMA releitura do lote quando algum agente foi CONFIRMADO (RN-654). Reler
+    // não apaga a diferença entre a linha gravada e a recusada: a recusada
+    // volta com o valor que o banco guarda, que é o de antes — e o relatório
+    // parcial já contou quais foram.
     aoConcluir: (chaves) => {
-      for (const chave of chaves) invalidarBindingDoAgente(chave);
+      if (chaves.length > 0) invalidarBindingDoAgente();
     },
     sucessoDeTodos: (total) =>
       t('modelsSection.bulk.toast.applied', {
@@ -305,10 +316,36 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   async function handleModelChange(agentKey: string, model: Model) {
     try {
       await setAgentModelBinding(projectId, agentKey, model.id);
-      invalidarBindingDoAgente(agentKey);
+      invalidarBindingDoAgente();
     } catch (erro) {
       showToast({
         title: mensagemDaApi(erro, t('modelsSection.toast.setError')),
+        tone: 'danger',
+      });
+    }
+  }
+
+  /**
+   * O critério de roteamento do binding PRÓPRIO do agente (ADR 0166, RN-583).
+   *
+   * Regrava o MESMO modelo com o critério novo — o PUT é do binding inteiro,
+   * e o critério não existe fora dele. Mesmo desfecho de `handleModelChange`:
+   * relê só no sucesso, e a recusa (o 422 de provider sem a capability, que o
+   * controle já não oferece, ou o 403 de papel) vai por `mensagemDaApi`.
+   */
+  async function handleRoutingChange(
+    agentKey: string,
+    modelId: string,
+    routingPreference: RoutingPreference | null,
+  ) {
+    try {
+      await setAgentModelBinding(projectId, agentKey, modelId, {
+        routingPreference,
+      });
+      invalidarBindingDoAgente();
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('roteamento.toast.saveError')),
         tone: 'danger',
       });
     }
@@ -348,14 +385,14 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   async function handleClearAgentBinding(agentKey: string, agentName: string) {
     try {
       await clearAgentModelBinding(projectId, agentKey);
-      invalidarBindingDoAgente(agentKey);
+      invalidarBindingDoAgente();
       showToast({
         title: t('modelsSection.toast.reverted', { agent: agentName }),
         tone: 'success',
       });
     } catch (erro) {
       if (erro instanceof ApiError && erro.status === 404) {
-        invalidarBindingDoAgente(agentKey);
+        invalidarBindingDoAgente();
         showToast({
           title: t('modelsSection.toast.alreadyInherits', { agent: agentName }),
           tone: 'accent',
@@ -396,38 +433,59 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'model',
+      largaNoMovel: true,
       label: t('modelsSection.columns.model'),
       width: '1.7fr',
       render: (agent) => {
-        const index = AGENT_LIST.indexOf(agent);
-        const resolved = bindingQueries[index]?.data;
+        const resolved = bindings.doAgente(agent.key);
+        const modeloVigente = allModels.find((m) => m.id === resolved?.modelId);
         return modelsByCategory ? (
-          <ModelPicker
-            models={modelsByCategory}
-            selectedModelId={resolved?.modelId}
-            onSelect={(model) => handleModelChange(agent.key, model)}
-            variant="inline"
-            // Desabilitar, não esconder (ADR 0064): quem não tem `developer`
-            // continua VENDO o modelo vigente do agente — e a cadeia inteira na
-            // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
-            // picker, e não num overlay daqui, porque overlay não bloqueia o
-            // teclado.
-            disabled={!podeEditar}
-            // Abre com "aptos para agentes" MARCADO. Este picker grava no
-            // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
-            // com que a api recusa manda a pessoa exatamente para este filtro
-            // ("Use o filtro 'aptos para agentes' no seletor de modelos"), que
-            // até agora nenhuma tela ligava. Oferecer o modelo chat-only aqui
-            // era oferecer um clique que só existe para ser recusado.
-            //
-            // Isto torna IMPROVÁVEL a causa mais comum de 422, nunca
-            // impossível: `SetModelBindingUseCase` recusa por outras duas
-            // (modelo desativado no workspace e sumido do provider, RN-043),
-            // que este filtro não cobre — o modelo `unavailable` continua
-            // listado, MARCADO, de propósito. O toast de `handleModelChange`
-            // continua sendo o que conta o desfecho.
-            filtroDeAgentesPadrao
-          />
+          <span className={styles.modeloComRoteamento}>
+            <ModelPicker
+              models={modelsByCategory}
+              selectedModelId={resolved?.modelId}
+              onSelect={(model) => handleModelChange(agent.key, model)}
+              variant="inline"
+              // Desabilitar, não esconder (ADR 0064): quem não tem `developer`
+              // continua VENDO o modelo vigente do agente — e a cadeia inteira na
+              // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
+              // picker, e não num overlay daqui, porque overlay não bloqueia o
+              // teclado.
+              disabled={!podeEditar}
+              // Abre com "aptos para agentes" MARCADO. Este picker grava no
+              // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
+              // com que a api recusa manda a pessoa exatamente para este filtro
+              // ("Use o filtro 'aptos para agentes' no seletor de modelos"), que
+              // até agora nenhuma tela ligava. Oferecer o modelo chat-only aqui
+              // era oferecer um clique que só existe para ser recusado.
+              //
+              // Isto torna IMPROVÁVEL a causa mais comum de 422, nunca
+              // impossível: `SetModelBindingUseCase` recusa por outras duas
+              // (modelo desativado no workspace e sumido do provider, RN-043),
+              // que este filtro não cobre — o modelo `unavailable` continua
+              // listado, MARCADO, de propósito. O toast de `handleModelChange`
+              // continua sendo o que conta o desfecho.
+              filtroDeAgentesPadrao
+            />
+            {/* O critério de roteamento mora com o modelo (ADR 0166): é do
+                binding, e só é editável na linha que TEM binding próprio —
+                `origin: 'agent'` que não seja a herança do Criativo. Mesmo
+                `podeEditar` do picker ao lado, porque é o MESMO endpoint. */}
+            <PreferenciaDeRoteamento
+              resolvido={resolved}
+              modelo={modeloVigente}
+              proprio={
+                resolved?.origin === 'agent' &&
+                !herdadoDoStartDe(agent.key, resolved)
+              }
+              podeEditar={podeEditar}
+              alvo={agent.name}
+              onChange={(preferencia) =>
+                resolved &&
+                handleRoutingChange(agent.key, resolved.modelId, preferencia)
+              }
+            />
+          </span>
         ) : null;
       },
     },
@@ -436,11 +494,11 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       // Larga o suficiente para a CADEIA (`settings/cascata.tsx`) caber em uma
       // ou duas linhas. Era `0.8fr` quando a célula tinha uma palavra só; as
       // proporções do handoff descreviam aquela célula, não esta.
+      largaNoMovel: true,
       label: t('modelsSection.columns.origin'),
       width: '1.75fr',
       render: (agent) => {
-        const index = AGENT_LIST.indexOf(agent);
-        const resolved = bindingQueries[index]?.data;
+        const resolved = bindings.doAgente(agent.key);
         const areaDoAgente = areaFor(agent.key);
         // `origin === 'agent'` é o agente DIVERGINDO — de uma área, quando ele
         // tem uma, ou do projeto/workspace, quando não tem (RN-102). Nos dois
@@ -452,6 +510,15 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         // provar (ver `cascata.tsx`), e é justamente nele que a ação ainda
         // importa — apagar a linha faz o agente passar a acompanhar o Criativo.
         const divergiu = resolved?.origin === 'agent';
+        // Sem resposta do lote não há cadeia a desenhar: "sem modelo" seria a
+        // tela afirmando o que não leu (RN-654).
+        if (resolved === undefined) {
+          return (
+            <span className={styles.origem}>
+              <MarcaDeBindingNaoLido falhou={bindings.erro !== null} />
+            </span>
+          );
+        }
         return (
           <span className={styles.origem}>
             <CadeiaDeCascata
@@ -501,8 +568,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       label: t('modelsSection.columns.fallback'),
       width: '1.15fr',
       render: (agent) => {
-        const index = AGENT_LIST.indexOf(agent);
-        const resolved = bindingQueries[index]?.data;
+        const resolved = bindings.doAgente(agent.key);
         const nome = fallbackDe(agent.key, resolved?.origin);
         if (nome) return <span className={styles.fallback}>{nome}</span>;
         // Sem binding nenhum a coluna Origem já disse tudo — repetir a ausência
@@ -634,6 +700,13 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               : t('modelsSection.bulk.apply', { count: AGENT_LIST.length })}
           </Button>
         </div>
+      )}
+
+      {bindings.erro !== null && (
+        <AvisoDeBindingsNaoLidos
+          erro={bindings.erro}
+          tentarDeNovo={bindings.tentarDeNovo}
+        />
       )}
 
       <Table

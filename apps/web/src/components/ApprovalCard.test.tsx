@@ -2,6 +2,12 @@ import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
+import {
+  decisaoDaPoliticaDaAcao,
+  fraseDaDecisaoDaPolitica,
+  lerDecisaoDaPolitica,
+  type DecisaoDaPoliticaLida,
+} from '../lib/decisao-da-politica';
 // Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
 // `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
 // global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
@@ -123,20 +129,132 @@ describe('ApprovalCard', () => {
     render(
       <ApprovalCard
         action={makeAction()}
-        variant="chat"
         onApprove={vi.fn()}
         onDeny={vi.fn()}
         onAlwaysAllow={vi.fn()}
         onActivateAutoMode={vi.fn()}
       />,
     );
-    expect(screen.getByText(/libera TODA ação futura/)).toBeInTheDocument();
-    expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
+    expect(screen.getByText(/git push, PR, deploy, sudo\/doas/)).toBeInTheDocument();
+    // Dentro da NOTA: a lista do piloto (RN-670), logo abaixo, também fala de
+    // paralelismo, e o que este teste cobra é a frase da nota.
+    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(/paralelismo/);
+  });
+
+  it('com o botão do modo automático, traz a lista do piloto — a MESMA dos Executores (RN-670)', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('piloto-detalhe')).toBeInTheDocument();
+    expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git commit e criar branch LOCAL');
+    expect(screen.getByTestId('modo-automatico-nao-libera')).toHaveTextContent('container_remove');
+  });
+
+  it('CASO DE FALHA: sem o botão (sem papel), a lista do piloto também não aparece', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+    );
+    expect(screen.queryByTestId('piloto-detalhe')).toBeNull();
+  });
+
+  it('mostra a nota do "Modo automático" também na variante queue (RN-603)', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        detalheRecolhido
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
+  });
+
+  /*
+   * AT-322: uma variante só. A superfície que empilha cards (`detalheRecolhido`
+   * — fila de Aprovações, painel "precisa de você", pendências de outras
+   * sessões) e o fio da sessão mostram os MESMOS botões e as MESMAS notas; só o
+   * estado inicial do colapso muda.
+   */
+  describe('AT-322 — uma variante só nas quatro superfícies', () => {
+    function botoesENotas(detalheRecolhido: boolean) {
+      const { unmount } = render(
+        <ApprovalCard
+          action={makeAction()}
+          detalheRecolhido={detalheRecolhido}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+      const botoes = screen
+        .getAllByRole('button')
+        .map((b) => b.textContent)
+        .filter((texto) => !/Detalhes/.test(texto ?? ''));
+      const nota = screen.getByTestId('nota-sempre-permitir').textContent;
+      unmount();
+      return { botoes, nota };
+    }
+
+    it('fila e fio: mesmos botões e a mesma nota de "Sempre permitir"', () => {
+      const noFio = botoesENotas(false);
+      const naFila = botoesENotas(true);
+      expect(naFila).toEqual(noFio);
+      expect(noFio.botoes).toEqual(['Aprovar', 'Negar', 'Sempre permitir']);
+      expect(noFio.nota).toMatch(/permissions\.json/);
+    });
+
+    it('o comando sai em mono, num <code>, e sem aspas na frase', () => {
+      render(
+        <ApprovalCard
+          action={makeAction({ payload: { command: 'pnpm test --filter reservas' } })}
+          detalheRecolhido
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+      const codigo = screen.getByText('pnpm test --filter reservas', { selector: 'code' });
+      const frase = codigo.closest('p')!;
+      expect(frase.textContent).toBe('Executa pnpm test --filter reservas no terminal do projeto.');
+      expect(frase.textContent).not.toMatch(/["“”]/);
+    });
+
+    it('caso de falha: tipo do teto não ganha a nota em superfície nenhuma', () => {
+      for (const detalheRecolhido of [false, true]) {
+        const { unmount } = render(
+          <ApprovalCard
+            action={makeAction({ actionType: 'git_push', payload: { branch: 'feature/x' } })}
+            detalheRecolhido={detalheRecolhido}
+            onApprove={vi.fn()}
+            onDeny={vi.fn()}
+            onAlwaysAllow={vi.fn()}
+          />,
+        );
+        expect(screen.queryByTestId('nota-sempre-permitir')).toBeNull();
+        unmount();
+      }
+    });
   });
 
   it('mostra a nota de permissions.json na variante chat', () => {
-    render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+    render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
+  });
+
+  it('a nota de "sempre permitir" diz a unidade do padrão: verbo + subcomando, por segmento (RN-675)', () => {
+    render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+    expect(screen.getByTestId('nota-sempre-permitir')).toHaveTextContent(
+      'uma regra por segmento do comando, por verbo + subcomando',
+    );
   });
 
   // RN-509 (Frente 2): "sempre permitir" de um Dev Agent de módulo escopa
@@ -147,7 +265,6 @@ describe('ApprovalCard', () => {
     render(
       <ApprovalCard
         action={makeAction({ actor: { kind: 'agent', id: 'dev-checkout' } })}
-        variant="chat"
         onApprove={vi.fn()}
         onDeny={vi.fn()}
         onAlwaysAllow={vi.fn()}
@@ -163,7 +280,6 @@ describe('ApprovalCard', () => {
     render(
       <ApprovalCard
         action={makeAction({ actor: { kind: 'agent', id: 'dev-lead' } })}
-        variant="chat"
         onApprove={vi.fn()}
         onDeny={vi.fn()}
         onAlwaysAllow={vi.fn()}
@@ -221,7 +337,7 @@ describe('ApprovalCard', () => {
     render(
       <ApprovalCard
         action={makeAction()}
-        variant="queue"
+        detalheRecolhido
         selectable
         selected={false}
         onToggleSelect={onToggleSelect}
@@ -234,6 +350,26 @@ describe('ApprovalCard', () => {
     fireEvent.click(screen.getByRole('checkbox'));
     expect(onToggleSelect).toHaveBeenCalledTimes(1);
   });
+
+  // AT-320: a auditoria de 30/09 viu o botão (e a nota "libera este tipo de
+  // ação só para dev-api") num `git_push` — a metade TIPADA do teto da RN-418.
+  it.each<ActionType>(['git_push', 'pr_open', 'git_merge'])(
+    '%s de dev-api: não oferece "Sempre permitir" nem a nota do escopo',
+    (actionType) => {
+      render(
+        <ApprovalCard
+          action={makeAction({ actionType, actor: { kind: 'agent', id: 'dev-api' } })}
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Sempre permitir' })).toBeNull();
+      expect(screen.queryByText(/só para/)).toBeNull();
+    },
+  );
 
   describe('instruction_patch (Fase 4b)', () => {
     function patchAction(payload: Record<string, unknown> = {}) {
@@ -374,7 +510,7 @@ describe('ApprovalCard', () => {
       render(
         <ApprovalCard
           action={mergeAction()}
-          variant="queue"
+          detalheRecolhido
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -386,7 +522,9 @@ describe('ApprovalCard', () => {
 
       expect(screen.getByText('feat: aba de PRs')).toBeTruthy();
       expect(screen.getByText('feature/task-a1b2c3d4')).toBeTruthy();
-      expect(screen.getByText('dev')).toBeTruthy();
+      // AT-322: a frase também cita a branch, num `<code>` — o que se confere
+      // aqui é o CORPO do detalhe, então o código da frase fica de fora.
+      expect(screen.getByText('dev', { ignore: 'script, style, p > code' })).toBeTruthy();
       expect(screen.queryByText(/"pullRequestId"/)).toBeNull();
     });
 
@@ -394,7 +532,7 @@ describe('ApprovalCard', () => {
       render(
         <ApprovalCard
           action={mergeAction({ title: undefined })}
-          variant="queue"
+          detalheRecolhido
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -455,7 +593,7 @@ describe('ApprovalCard', () => {
 
     it('mostra a FRASE do que vai acontecer, não as chaves do payload', () => {
       render(
-        <ApprovalCard action={acaoDeTeto()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+        <ApprovalCard action={acaoDeTeto()} detalheRecolhido onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
       );
 
       expect(screen.getByText(/Sobe o teto de agentes em paralelo da área dev de 2 para 4/)).toBeTruthy();
@@ -465,10 +603,10 @@ describe('ApprovalCard', () => {
       expect(screen.queryByText(/^proposto: 4$/)).toBeNull();
     });
 
-    it('o payload cru nasce COLAPSADO — em qualquer variante', () => {
-      for (const variant of ['chat', 'queue'] as const) {
+    it('o payload cru nasce COLAPSADO — em qualquer superfície', () => {
+      for (const detalheRecolhido of [false, true]) {
         const { unmount } = render(
-          <ApprovalCard action={acaoDeTeto()} variant={variant} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+          <ApprovalCard action={acaoDeTeto()} detalheRecolhido={detalheRecolhido} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
         );
 
         const cabecalho = screen.getByRole('button', { name: /Payload cru/ });
@@ -491,7 +629,7 @@ describe('ApprovalCard', () => {
      */
     it('abrir o colapso revela o payload como JSON legível, não como despejo', () => {
       render(
-        <ApprovalCard action={acaoDeTeto()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+        <ApprovalCard action={acaoDeTeto()} detalheRecolhido onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
       );
 
       fireEvent.click(screen.getByRole('button', { name: /Payload cru/ }));
@@ -506,12 +644,12 @@ describe('ApprovalCard', () => {
      * fase): nenhuma prop nova, e por isso nenhum call site precisou mudar.
      */
     it('detalhe rico nasce ABERTO no chat enquanto a ação está pendente', () => {
-      render(<ApprovalCard action={makeAction()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+      render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
       expect(screen.getByRole('button', { name: /Detalhes/ }).getAttribute('aria-expanded')).toBe('true');
     });
 
     it('e nasce FECHADO na fila, onde são N cards de uma vez', () => {
-      render(<ApprovalCard action={makeAction()} variant="queue" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+      render(<ApprovalCard action={makeAction()} detalheRecolhido onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
       expect(screen.getByRole('button', { name: /Detalhes/ }).getAttribute('aria-expanded')).toBe('false');
     });
 
@@ -519,7 +657,6 @@ describe('ApprovalCard', () => {
       render(
         <ApprovalCard
           action={makeAction({ status: 'executed' })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -545,7 +682,6 @@ describe('ApprovalCard', () => {
             actionType: 'write_file',
             payload: { path: 'apps/api/src/foo.ts', content: 'export const foo = 1;\n' },
           })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -554,7 +690,7 @@ describe('ApprovalCard', () => {
 
       const cabecalho = screen.getByRole('button', { name: /Detalhes/ });
       expect(cabecalho.getAttribute('aria-expanded')).toBe('true');
-      expect(screen.getByText('apps/api/src/foo.ts')).toBeTruthy();
+      expect(screen.getByText('apps/api/src/foo.ts', { ignore: 'script, style, p > code' })).toBeTruthy();
       expect(screen.getByText(/export const foo = 1;/)).toBeTruthy();
       // Nem o payload cru genérico nem o rótulo dele aparecem — write_file
       // tem corpo próprio agora, não cai mais no fallback.
@@ -569,7 +705,6 @@ describe('ApprovalCard', () => {
             actionType: 'write_file',
             payload: { path: 'apps/api/src/big.ts', content: linhas.join('\n') },
           })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -583,7 +718,7 @@ describe('ApprovalCard', () => {
       expect(preview.textContent).toContain('linha 1');
       expect(preview.textContent).toContain('linha 25');
       expect(preview.textContent).not.toContain('linha 40');
-      expect(screen.getByText(/25 de 40 linha\(s\)/)).toBeTruthy();
+      expect(screen.getByText(/25 de 40 linhas/)).toBeTruthy();
     });
 
     it('write_file com content vazio mostra a mensagem de fallback, não um preview em branco', () => {
@@ -593,7 +728,6 @@ describe('ApprovalCard', () => {
             actionType: 'write_file',
             payload: { path: 'apps/api/src/foo.ts', content: '' },
           })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -607,7 +741,6 @@ describe('ApprovalCard', () => {
       render(
         <ApprovalCard
           action={makeAction({ actionType: 'write_file', payload: {} })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -621,7 +754,6 @@ describe('ApprovalCard', () => {
       render(
         <ApprovalCard
           action={makeAction({ actionType: 'terminal', payload: { command: '' } })}
-          variant="chat"
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -640,7 +772,7 @@ describe('ApprovalCard', () => {
           // exercitar o caminho — o compilador impediria justamente o cenário
           // que aconteceu duas vezes em produção.
           action={makeAction({ actionType: 'deploy_producao' as ActionType, payload: { host: 'prod-1' } })}
-          variant="queue"
+          detalheRecolhido
           onApprove={vi.fn()}
           onDeny={vi.fn()}
           onAlwaysAllow={vi.fn()}
@@ -677,7 +809,7 @@ describe('ApprovalCard', () => {
 
     it('nasce fechada, com aria-controls apontando pra uma região que existe mesmo escondida', () => {
       render(
-        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+        <ApprovalCard action={acaoComArquivos()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
       );
 
       const faixaA = screen.getByRole('button', { name: /a\.ts/ });
@@ -692,7 +824,7 @@ describe('ApprovalCard', () => {
 
     it('clicar abre o diff daquele arquivo, e abrir outro fecha o anterior (exclusivo)', () => {
       render(
-        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+        <ApprovalCard action={acaoComArquivos()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
       );
 
       const faixaA = screen.getByRole('button', { name: /a\.ts/ });
@@ -706,5 +838,65 @@ describe('ApprovalCard', () => {
       expect(faixaA.getAttribute('aria-expanded')).toBe('false');
       expect(faixaB.getAttribute('aria-expanded')).toBe('true');
     });
+  });
+});
+
+describe('ApprovalCard — o motivo da política e a raiz do escopo (AT-148, RN-614)', () => {
+  const PAYLOAD_DO_EVENTO = {
+    actionId: 'action-1',
+    actionType: 'terminal',
+    status: 'pending',
+    reason: 'default: require_approval',
+    scopeRoot: { executionMode: 'mounted', ancora: 'base_de_projetos', segmento: 'clientes/loja' },
+  };
+
+  function renderCom(decisao: DecisaoDaPoliticaLida | null | undefined) {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        decisaoDaPolitica={decisao}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+      />,
+    );
+  }
+
+  it('mostra a MESMA frase de `fraseDaDecisaoDaPolitica` — a da linha do log', () => {
+    const decisao = decisaoDaPoliticaDaAcao('action-1', [
+      {
+        id: 'ev-1',
+        sessionId: 'session-1',
+        seq: 7,
+        type: 'proposed_action.created',
+        actor: { kind: 'agent', id: 'dev-api' },
+        payload: PAYLOAD_DO_EVENTO,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    renderCom(decisao);
+    const esperado = fraseDaDecisaoDaPolitica(lerDecisaoDaPolitica(PAYLOAD_DO_EVENTO));
+    expect(screen.getByTestId('motivo-da-politica').textContent).toBe(esperado);
+    expect(esperado).toContain('default: require_approval');
+    expect(esperado).toContain('“clientes/loja” dentro da base de projetos');
+  });
+
+  it('evento antigo, sem os campos: o card diz "não registrado"', () => {
+    renderCom(lerDecisaoDaPolitica({ actionId: 'action-1', actionType: 'terminal' }));
+    expect(screen.getByTestId('motivo-da-politica').textContent).toContain(
+      'Motivo da política não registrado',
+    );
+  });
+
+  it('`null` (a tela lê o log, o evento não está na janela) é dito, distinto de "não registrado"', () => {
+    renderCom(null);
+    expect(screen.getByTestId('motivo-da-politica').textContent).toBe(
+      'Motivo da política fora dos eventos carregados nesta tela',
+    );
+  });
+
+  it('`undefined` (tela que não lê o log): o card cala', () => {
+    renderCom(undefined);
+    expect(screen.queryByTestId('motivo-da-politica')).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { ModelsSection } from './ModelsSection';
 import { AreaModelsSection } from './AreaModelsSection';
+import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
  * O ESTADO INICIAL do filtro "aptos para agentes" nas duas seções que gravam
@@ -56,7 +57,13 @@ vi.mock('../../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
     getProject: (...args: unknown[]) => getProject(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // Nenhum provider com a capability de roteamento (ADR 0166): o estado de
+    // produção enquanto o smoke do OpenRouter não rodar.
+    listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     setAgentModelBinding: vi.fn(),
     clearAgentModelBinding: vi.fn(),
     getAreaModelBinding: (...args: unknown[]) => getAreaModelBinding(...args),
@@ -126,6 +133,7 @@ function project(): Project {
     workspacePath: null,
     workspaceVerifiedAt: null,
     mirrorPath: null,
+    language: 'pt-BR',
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
   };

@@ -263,6 +263,73 @@ describe('ProjectPrsTab — botão Merge', () => {
     expect(botaoMerge.getAttribute('title')).toBe('QA pediu mudanças');
   });
 
+  it('gate de QA pendente AVISA em texto, nomeando o gate, e o Merge segue ativo (AT-249, RN-663)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_qa' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+    expect(botaoMerge).toBeEnabled();
+    expect(screen.getByTestId('aviso-gate-pendente')).toHaveTextContent(
+      'O gate qa-verificada ainda está pendente',
+    );
+  });
+
+  it('o aviso acompanha também o card da proposta pendente', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_secops' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+
+    montar();
+
+    expect(await screen.findByRole('button', { name: 'Aprovar' })).toBeEnabled();
+    expect(screen.getByTestId('aviso-gate-pendente')).toHaveTextContent('secops-segura');
+  });
+
+  it('gates já passados (awaiting_user): nenhum aviso', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ gateStatus: 'awaiting_user' }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    await screen.findByRole('button', { name: 'Merge' });
+    expect(screen.queryByTestId('aviso-gate-pendente')).toBeNull();
+  });
+
+  it('CASO DE FALHA: aprovar o merge de PR já mergeada mostra a frase da api (409)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+    approveAction.mockRejectedValue(
+      new ApiError(409, {
+        code: 'pr_ja_mergeado',
+        message: 'A PR pr-a já foi mergeada: não há o que mergear.',
+      }),
+    );
+
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
+    expect(
+      await screen.findByText(/A PR pr-a já foi mergeada: não há o que mergear\./),
+    ).toBeInTheDocument();
+  });
+
   it('sem sessão no projeto, o Merge fica desabilitado', async () => {
     getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
     useLatestSession.mockReturnValue({ latest: undefined });
@@ -292,7 +359,7 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
   // do container (RN-105) e mostrava o 409 dele como erro transitório, com
   // "Tentar de novo" — a afordância errada para um estado que só o
   // Arquiteto resolve, decidindo a imagem.
-  it('409 do portão vira o mesmo estado dedicado da aba Code, não um banner com Tentar de novo', async () => {
+  it('409 do portão vira o estado dedicado, com o texto da aba PRs e não o da aba Código (AT-323)', async () => {
     getCodePullRequests.mockRejectedValue(
       new ApiError(409, {
         message:
@@ -303,11 +370,30 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     montar();
 
     expect(
-      await screen.findByText('A aba Code ainda não está liberada'),
+      await screen.findByText('A lista de PRs ainda não está liberada'),
     ).toBeInTheDocument();
-    expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
+    // O motivo nomeia a aba Código pelo MESMO rótulo do trilho, nunca "Code".
+    expect(screen.getByText(/mesmo caminho da aba Código/)).toBeInTheDocument();
+    expect(screen.getByText(/as duas abas, Código e PRs/)).toBeInTheDocument();
+    expect(screen.queryByText(/aba Code/)).not.toBeInTheDocument();
+    expect(screen.queryByText('A aba Código ainda não está liberada')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Tentar de novo')).not.toBeInTheDocument();
+  });
+
+  it('409 no diff aberto por id também usa o texto da aba PRs', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [], truncated: false });
+    getCodeDiff.mockRejectedValue(new ApiError(409, { message: 'portão' }));
+
+    montar();
+
+    const campo = await screen.findByRole('textbox');
+    fireEvent.change(campo, { target: { value: '42' } });
+    fireEvent.submit(campo.closest('form')!);
+
+    expect(
+      await screen.findByText('A lista de PRs ainda não está liberada'),
+    ).toBeInTheDocument();
   });
 
   it('erro de verdade (não o gate) continua com o banner e Tentar de novo', async () => {
@@ -317,6 +403,6 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
-    expect(screen.queryByText('A aba Code ainda não está liberada')).not.toBeInTheDocument();
+    expect(screen.queryByText('A lista de PRs ainda não está liberada')).not.toBeInTheDocument();
   });
 });

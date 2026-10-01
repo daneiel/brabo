@@ -299,7 +299,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
 
     expect(c.bad).toBe(true);
     expect(c.color).toBe('var(--danger)');
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
     expect(c.text).toContain('3');
     expect(c.text).toContain('Rearme');
     expect(c.text).not.toContain('atividade em');
@@ -308,7 +308,7 @@ describe('classifyEvent — reagendamento e circuit breaker (Fase 12b)', () => {
   it('idle_tripped sem contador ainda diz o essencial', () => {
     const c = classifyEvent(ev('dev.idle_tripped', 'dev-api', {}));
     expect(c.bad).toBe(true);
-    expect(c.text).toContain('circuit breaker');
+    expect(c.text).toContain('parada automática');
   });
 
   it('awaiting_gate e rearmed deixam de cair no genérico', () => {
@@ -448,5 +448,77 @@ describe('classifyEvent — épico sem história (RN-165)', () => {
     expect(c.bad).toBe(true);
     expect(c.text).toContain('sem nenhuma história');
     expect(c.text).not.toContain('()');
+  });
+});
+
+describe('classifyEvent — reabertura de sessão (ADR 0183, RN-649)', () => {
+  it('diz que a sessão foi reaberta e por que ela tinha fechado', () => {
+    const c = classifyEvent(
+      ev('session.reopened', 'user-1', {
+        from: 'closed',
+        to: 'active',
+        closedAt: '2026-09-13T16:46:36.000Z',
+        terminationReason: 'heartbeat_timeout',
+      }),
+    );
+    expect(c.kind).toBe('session');
+    expect(c.text).toBe('sessão reaberta (tinha fechado por heartbeat_timeout)');
+  });
+
+  it('sem causa gravada, não inventa uma', () => {
+    const c = classifyEvent(ev('session.reopened', 'user-1', { terminationReason: null }));
+    expect(c.text).toBe('sessão reaberta');
+  });
+});
+
+describe('classifyEvent — aceite automático do handoff (RN-660)', () => {
+  it('o aceite pelo sistema é narrado como automático, não como oferta', () => {
+    const c = classifyEvent(
+      ev('handoff.accepted', 'handoff-auto-accept', {
+        toAgent: 'arquiteto',
+        automatico: true,
+      }),
+    );
+    expect(c.text).toContain('aceito automaticamente');
+    expect(c.text).not.toContain('ofereceu');
+  });
+
+  it('a falha do aceite automático é ruim e diz o erro', () => {
+    const c = classifyEvent(
+      ev('handoff.auto_accept_failed', 'handoff-auto-accept', {
+        toAgent: 'arquiteto',
+        error: 'engine fora',
+      }),
+    );
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('engine fora');
+  });
+});
+
+describe('classifyEvent — duplicata semântica (RN-681)', () => {
+  it('o aviso nomeia o item, o parecido e a similaridade — e não é "ruim"', () => {
+    const c = classifyEvent(
+      ev('backlog.semantic_duplicate_warned', 'duplicata-semantica', {
+        kind: 'story',
+        title: 'Endpoint GET /hello público que devolve saudação imediata',
+        similarToTitle: 'Endpoint público de saudação determinística',
+        similarity: 0.86,
+      }),
+    );
+    expect(c.bad).toBe(false);
+    expect(c.text).toContain('história');
+    expect(c.text).toContain('Endpoint público de saudação determinística');
+    expect(c.text).toContain('0.86');
+  });
+
+  it('a checagem pulada diz o motivo', () => {
+    const c = classifyEvent(
+      ev('backlog.semantic_duplicate_check_skipped', 'duplicata-semantica', {
+        kind: 'business_rule',
+        reason: 'provider "ollama" não respondeu',
+      }),
+    );
+    expect(c.text).toContain('pulada');
+    expect(c.text).toContain('ollama');
   });
 });

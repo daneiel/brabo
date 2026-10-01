@@ -25,29 +25,27 @@ que escolheu a implementação. Ver também a
 [ADR 0107](https://github.com/daneiel/brabo/blob/main/docs/adr/0107-navegacao-de-pasta-local-via-o-runner.md)
 para o argumento de segurança da navegação de pasta.
 
-## Modo automático (recomendado)
+## Pelo instalador (recomendado)
 
-Na tela do projeto (modo `runner`), use o botão **"Configurar pasta
-automaticamente"**: o navegador baixa, numa pasta escolhida por você, três
-arquivos já configurados — o binário (`brabo-runner`/`brabo-runner.exe`),
-`brabo-runner.config.json` (projeto + URL da api) e uma chave de dispositivo
-(`brabo-runner-device-key.jwk.json`). Com os três na mesma pasta, basta:
+O caminho é o instalador do Brabo — o mesmo comando que a tela do projeto
+(modo `runner`) mostra:
 
 ```sh
-# Linux/macOS
-chmod +x ./brabo-runner && ./brabo-runner
+curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
 ```
 
-```powershell
-# Windows
-.\brabo-runner.exe
-```
+Ele baixa o binário, confere contra o `checksums.txt` assinado da release, o
+instala já executável (`install -m 0755`) e pareia a máquina pelo terminal
+(`device-key create`/`finish`, abaixo), instalando o agente de máquina como
+serviço (RN-547).
 
-Sem digitar id de projeto nem token — o CLI lê o config e a chave de
-dispositivo da própria pasta de onde ele é executado (duplo-clique no
-Windows Explorer já herda o `cwd` da pasta). `--project`, `--dir` e
-`--token` continuam existindo para os fluxos abaixo, e uma flag explícita
-sempre vence o arquivo local quando os dois aparecem.
+Até o ADR 0203 havia um **modo automático pelo navegador** (ADR 0118): a tela
+gravava numa pasta o binário, `brabo-runner.config.json` e uma chave de
+dispositivo. Ele foi **aposentado** — era o único caminho que terminava em
+`chmod +x` manual. Uma pasta configurada assim **continua funcionando**: o CLI
+segue lendo o config e a chave da própria pasta de onde é executado, sem id de
+projeto nem token, e uma flag explícita sempre vence o arquivo local quando os
+dois aparecem.
 
 ## Instalação
 
@@ -67,17 +65,24 @@ de Node, npm nem toolchain de compilação instalados:
 |---|---|
 | Linux x64 | `brabo-runner-linux-x64` |
 | Linux ARM64 | `brabo-runner-linux-arm64` |
-| macOS Intel | `brabo-runner-darwin-x64` |
 | macOS Apple Silicon | `brabo-runner-darwin-arm64` |
-| Windows x64 | `brabo-runner-win32-x64.exe` |
 
 > A tabela é a MATRIZ, não o que cada Release tem: até a `v5.0.0` só os dois
-> binários Linux chegaram a ser anexados (confira com `gh release view`). O
-> `darwin-x64` em particular não é publicado: o runner `macos-13` foi
-> aposentado pelo GitHub, e no `macos-15-intel` o binário constrói mas
-> reprova no `--self-test-pty`, por um bug do Bun com o `node-pty` no macOS
-> (oven-sh/bun#25822). Detalhe no comentário da matriz em
-> `.github/workflows/build-runner-binaries.yml`.
+> binários Linux chegaram a ser anexados (confira com `gh release view`).
+>
+> **macOS Intel não tem binário, por decisão** (ADR 0174): o runner
+> `macos-13` foi aposentado pelo GitHub, e no `macos-15-intel` o binário
+> constrói mas reprova no `--self-test-pty`, por um bug do Bun com o
+> `node-pty` no macOS (oven-sh/bun#25822). A MESMA prova passa sob Node, então
+> no Mac Intel o caminho é `npm install -g @brabo/runner` — e é isso que o
+> `install.sh` diz em vez de baixar.
+>
+> **Windows não tem binário, por decisão** (ADR 0187): o binário constrói e
+> carrega o `node-pty`, mas sob o Bun o pipe de saída do ConPTY termina depois
+> do primeiro pedaço — até `cmd.exe /c echo` morre com 0xC000013A, a mesma
+> família do bug do Mac Intel. No Windows o caminho é
+> `npm install -g @brabo/runner`, sob Node; o `install.sh` já recusava Windows
+> (ADR 0150).
 
 ```sh
 # Linux/macOS
@@ -208,11 +213,14 @@ Agora o runner **recusa** esse par antes de executar qualquer coisa, com uma
 saída que diz o que aconteceu, por quê, e que **nada** foi executado. A recusa
 nunca cita nome nem valor das variáveis — só quantas eram.
 
-**O que isso significa na prática:** clonar ou atualizar um repositório
-**remoto autenticado** em modo runner só funciona com o container **parado**.
-Repositório local (sem credencial) não é afetado, nem `workspace_create`, que
-roda no host. Entregar a credencial ao `docker exec` mexeria na porta de
-contenção e é decisão à parte — a metade aberta está declarada na RN-558.
+**Desde o ADR 0193 (RN-676) o git credenciado roda no HOST:** o engine marca o
+`git fetch` autenticado com `gitCredenciado: true`, e este runner, com a marca
+**e** um `env` não vazio, executa o comando no host mesmo com o container de pé
+— a mesma pasta, já que ela é o bind-mount de `/work`. Os comandos do dev agent
+continuam indo ao `docker exec`, que segue sem `env`. Um `env` **sem** a marca,
+com container ativo, continua recusado como acima: é a marca do engine, e não a
+credencial, que decide ir ao host. Repositório local (sem credencial) não é
+afetado, nem `workspace_create`, que sempre rodou no host.
 
 ### Agente de MÁQUINA: sem `--project`, uma conexão por projeto (RN-544)
 
@@ -227,7 +235,8 @@ brabo-runner --api-url https://brabo.exemplo
 ```
 
 O modo com `--project` **não mudou em nada** — ele continua sendo o caminho de
-quem usa o fluxo do navegador (ADR 0118) ou flags explícitas, com uma conexão
+quem tem uma pasta configurada pelo antigo fluxo do navegador (ADR 0118,
+aposentado no ADR 0203) ou usa flags explícitas, com uma conexão
 só. As **duas** condições do modo novo são obrigatórias e por motivos
 diferentes: a credencial de máquina é o que a rota aceita, e a base é de onde a
 pasta de cada projeto é derivada. Sem base, rodar sem `--project` cai no bloco
@@ -283,6 +292,39 @@ pnpm --filter runner start -- --project <projectId> --dir <pasta-absoluta> --tok
 Requer **Node.js 22.6 ou mais recente** (o *type stripping* nativo de `.ts`
 que este caminho usa só existe a partir daí).
 
+### macOS: o `spawn-helper` do `node-pty` ganha o bit de execução no startup (AT-114)
+
+O tarball do `node-pty@1.1.0` traz `prebuilds/darwin-<arch>/spawn-helper` com
+modo `0644`, e nem o `pnpm install` nem o `npm install` o marcam executável. O
+`node-pty` EXECUTA esse arquivo a cada terminal aberto; sem o bit, o erro é
+`posix_spawnp failed` — o mesmo de arquivo ausente. Por isso, sob **Node** (pelo
+fonte, como acima, e pelo pacote `npm install -g`), o runner confere o
+`spawn-helper` ao carregar o `node-pty` (`src/spawn-helper.ts`): só em macOS,
+idempotente (já executável não é tocado), procurando na MESMA ordem do
+`node-pty` (`build/Release`, `build/Debug`, `prebuilds/darwin-<arch>`). Se o
+bit falta, ele o acrescenta e diz isso no `stderr`. Se o `spawn-helper` (ou o
+`pty.node`) não existe, ou se o `chmod` é recusado — uma instalação global de
+outro dono —, o runner PARA com erro nomeando o caminho e o conserto
+(`chmod +x "<caminho>"`), em vez de falhar no primeiro terminal. Sob `pnpm` o
+arquivo é hardlink do store, então o `chmod` vale também para o store.
+
+O binário standalone não depende disso: ele embute o conteúdo do
+`spawn-helper` e o extrai com `0755` (`native-pty-loader.ts`). E isto não é o
+bug do Bun (oven-sh/bun#25822), que reprova o binário mesmo com o bit certo.
+
+Esse bug do Bun é MEDIDO (AT-342): sob o Bun, o `tty.ReadStream` com que o
+`node-pty` lê o PTY é um `fs.ReadStream`, e a primeira leitura sem dados no fd
+não-bloqueante sobe como `EAGAIN`, destrói o stream e fecha o fd — o terminal
+para de receber saída depois do primeiro pedaço, em qualquer plataforma Unix.
+Sob o Bun (o binário, ou `bun run` em dev) o runner troca esse leitor, só
+durante o `spawn`, por um leitor próprio do mesmo fd que espera e tenta de novo
+no `EAGAIN` (`leitor-de-pty.ts`; o fd ocioso é consultado a no máximo 32 ms).
+Sob o Node nada muda. O `--self-test-pty` faz duas voltas com uma pausa entre
+elas, e é a pausa que reprova o leitor antigo — antes, no Linux, a prova
+passava porque a primeira leitura trazia o eco e a resposta juntos. No Windows
+o self-test usa `cmd.exe` (não há `/bin/cat`) e conta o marcador sem as
+sequências de controle do ConPTY.
+
 ## Chave de dispositivo pelo terminal (`device-key create | finish`)
 
 O par Ed25519 pode nascer **nesta máquina**, sem passar pelo navegador (ADR
@@ -330,7 +372,7 @@ aberto, instale-o como **serviço de usuário** — `systemd --user` no Linux,
 `LaunchAgent` no macOS (ADR 0147, RN-518):
 
 ```sh
-# de dentro da pasta configurada pelo botão "Configurar pasta automaticamente"
+# de dentro de uma pasta com brabo-runner.config.json (o antigo fluxo do navegador)
 brabo-runner service install
 brabo-runner service status
 brabo-runner service uninstall
@@ -402,6 +444,28 @@ O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 `docker`): mudou o seu PATH, rode `service install` de novo.
 
+> **Unit instalada por uma versão anterior não inicia — reinstale.** Até esta
+> correção o `WorkingDirectory=` saía **entre aspas**, e o systemd não faz
+> unquoting nessa diretiva (ao contrário do `ExecStart=`, onde as aspas são o
+> certo): o valor deixava de começar com `/`, a unit era recusada na carga
+> (`Loaded: bad-setting`, `WorkingDirectory= path is not absolute`) e **nunca
+> iniciava**, nas duas espécies. Não há conserto parcial nem arquivo para
+> editar — `service install` sobrescreve o arquivo inteiro, então basta rodá-lo
+> de novo. `status` e `uninstall` continuam lendo a pasta de uma unit no estado
+> antigo, de propósito: quem está nele não pode perder também a saída dele.
+> O `%` é o único caractere que a pasta escapa (`%%`), porque essa diretiva
+> passa por expansão de especificador — espaço vai literal, já que a linha
+> inteira é o caminho.
+>
+> **`XDG_CONFIG_HOME` ou `PATH` com `%`, espaço, aspas ou barra: reinstale
+> também.** Até a AT-095 os dois saíam crus (`Environment=XDG_CONFIG_HOME=…`),
+> e `Environment=` separa por espaço e expande `%`: a unit subia, mas com
+> `/home/eu/50%off com espaco` o serviço recebia `/home/eu/50<id-do-os>ff` e
+> procurava a chave numa pasta que não existe. Agora a atribuição inteira vai
+> entre aspas e escapada. Quebra de linha nesses dois valores é recusada no
+> `install`. Confira o valor que o systemd entendeu, nunca o arquivo:
+> `systemctl --user show -p Environment brabo-runner.service`.
+
 ## Reconexão
 
 Quando a conexão cai, o runner **pede um ticket NOVO** e tenta de novo, com
@@ -429,12 +493,17 @@ de aprovação de sempre (todo comando de agente continua nascendo uma ação
 proposta, sujeita à política do projeto) e o seu consentimento em rodar este
 binário na própria máquina, com os seus privilégios.
 
-## Testes e typecheck deste workspace
+## Testes, typecheck e lint deste workspace
 
 ```bash
 pnpm --filter runner test
 pnpm --filter runner typecheck
+pnpm --filter runner lint
 ```
+
+O `lint` é o mesmo `oxlint` do web, em modo verificação (sem `--fix`), sobre
+`src/` e `scripts/`, com a categoria `correctness` como erro e
+`--deny-warnings` — e é o passo "Oxlint (runner)" do job `Lint` do `ci.yml`.
 
 Construir o binário standalone (exige [Bun](https://bun.sh) instalado —
 `curl -fsSL https://bun.sh/install | bash` — só na plataforma ATUAL; nunca

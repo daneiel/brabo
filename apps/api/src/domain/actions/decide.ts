@@ -2,12 +2,14 @@ import { roleAtLeast, type Role } from '../iam/role';
 import type { PermissionPolicy, PermissionsFile } from './permissions-file';
 import { matchesPattern, parseCommand } from './command-matcher';
 import { isProtectedBranch } from './protected-branches';
-import { comandoNoEscopo } from './path-scope';
+import { comandoNoEscopo, comandoNoEscopoDoContainer } from './path-scope';
 import {
   efeitoExternoNoComando,
   mensagemDeEfeitoExterno,
   comandoPrivilegiadoNoComando,
   mensagemDeComandoPrivilegiado,
+  ehAcaoTipadaComEfeitoExterno,
+  mensagemDoTetoDaAcaoTipada,
 } from './external-effect';
 
 export type ActionType =
@@ -87,11 +89,19 @@ export const ACTION_TYPES: readonly ActionType[] = [
  *
  * A resolução do curinga (uma regra ESPECÍFICA sempre vence a curinga) mora
  * no repositório (`DrizzleAgentAutonomyRepository.findMode`), não aqui —
- * `decide()` continua recebendo só o `PermissionPolicy` já resolvido, exatamente
- * como antes do curinga existir. É por isso que os três tetos abaixo (escopo,
- * merge protegido, instruction_patch, paralelismo) valem para "auto mode" sem
- * precisar saber que ele existe: eles agem sobre `current.policy ===
- * 'auto_approve'`, não sobre a origem dela.
+ * `decide()` recebe o `PermissionPolicy` já resolvido e, desde a RN-603 (ADR
+ * 0167), também a ORIGEM dele (`autonomyOrigin`: regra específica ou curinga).
+ * Os tetos de merge protegido, instruction_patch, paralelismo, remoção de
+ * container e efeito externo/comando privilegiado continuam agindo sobre
+ * `current.policy === 'auto_approve'`, sem olhar a origem. O ÚNICO que olha é
+ * o teto de ESCOPO DE CAMINHO (ADR 0055): ele deixa de valer quando o agente
+ * está em modo automático (curinga `auto_approve`) — decisão do dono do
+ * produto, ver `modoAutomaticoDoAgente`.
+ *
+ * Desde a RN-670 (ADR 0189) o modo automático é o PILOTO AUTOMÁTICO: aprova
+ * tudo, inclusive `git commit` e branch LOCAL, menos os tetos absolutos — e
+ * "Sempre permitir" gravando `terminal: auto_approve` por cima não o desliga
+ * (o repositório resolve essa específica como a curinga).
  */
 export const AGENT_AUTONOMY_ALL_ACTIONS = '*' as const;
 export type AgentAutonomyActionType =
@@ -192,9 +202,25 @@ export interface DecideAction {
   cwd?: string; // só usado pra actionType === 'terminal' (escopo de caminho)
 }
 
+/**
+ * De onde veio o `autonomyMode` resolvido: da linha ESPECÍFICA do tipo de ação
+ * ou da CURINGA `"*"` ("modo automático", RN-153). Quem resolve é o
+ * repositório (`AgentAutonomyRepository.resolve`) — a precedência específica >
+ * curinga continua morando lá, uma vez só.
+ */
+export type AutonomyOrigin = 'especifica' | 'curinga';
+
 export interface DecideContext {
   effectiveRole: Role | null;
   autonomyMode: PermissionPolicy | null;
+  /**
+   * Origem de `autonomyMode` (RN-603, ADR 0167). AUSENTE equivale a
+   * `'especifica'`: quem não informa a origem mantém o veredito de antes, com
+   * o teto de escopo inteiro. Só `autonomyMode === 'auto_approve'` vindo da
+   * `'curinga'` é "modo automático" — `'*': require_approval` (o toggle
+   * desligado) e `'*': deny` não ganham poder nenhum.
+   */
+  autonomyOrigin?: AutonomyOrigin;
   permissionsFile: PermissionsFile;
   /**
    * Raiz do projeto no disco (`<workspaces_root>/<projectId>`), quando
@@ -226,17 +252,50 @@ export interface DecideContext {
    * Docker somado à validação de `/work` que o BROKER já faz
    * (`DiretorioForaDoEscopoError`, `apps/broker/src/operacoes.ts`) — e o
    * teto de escopo abaixo continua rodando por cima, como defesa em
-   * profundidade, sobre os MESMOS caminhos de host de sempre (o `cwd`/
-   * `command` que chegam aqui nunca são traduzidos para `/work` — essa
-   * tradução acontece só depois, no engine, ao montar a chamada pro
-   * broker).
+   * profundidade — desde a RN-669 contra a pasta REAL de execução (`/work` +
+   * `/tmp` do container, ver `execucaoNoContainer`), com o `cwd` de host
+   * traduzido aqui como o engine o traduz ao montar a chamada pro broker.
    */
   containerExecutionActive?: boolean;
+  /**
+   * `true` quando o comando de terminal vai rodar DENTRO de um container
+   * `running` REGISTRADO — projeto `container` ou `mounted` (RN-502: sem ele,
+   * o engine recusa e o comando não roda em lugar nenhum). Muda a RAIZ do
+   * teto de escopo (RN-669, ADR 0189): `/work` (onde moram a pasta e os
+   * `.worktrees` do projeto) mais o `/tmp` do container, com o `cwd` de host
+   * traduzido para `/work` como o engine traduz. Ausente/`false` mantém a
+   * raiz de sempre, a pasta do projeto no host — e ali `/tmp` fica fora.
+   *
+   * Distinto de `containerExecutionActive` de propósito: aquele é o PISO de
+   * auto-aprovação, e é só do modo `container` (RN-493); este é ONDE o
+   * comando roda, e vale também para `mounted`. `runner` nunca o recebe: a
+   * escolha host-vs-container é interna ao runner (ADR 0137, RN-558), e a
+   * api não sabe se um runner reiniciado está roteando para o host.
+   */
+  execucaoNoContainer?: boolean;
 }
 
 export interface Decision {
   policy: PermissionPolicy;
   reason: string;
+}
+
+/**
+ * O agente está em "modo automático" (RN-153) — o PILOTO AUTOMÁTICO desde a
+ * RN-670 —: a curinga `"*"` resolvida como `auto_approve`. Uma regra
+ * específica que diga OUTRA coisa vence no repositório, com origem
+ * `'especifica'`; uma específica `auto_approve` (o que "Sempre permitir"
+ * grava) resolve como a curinga e NÃO desliga o piloto (RN-670, ADR 0189).
+ *
+ * É o que a RN-603 (ADR 0167) usa para dispensar DOIS pedidos de aprovação que
+ * não são teto de efeito, e sim ausência de opinião sobre o comando: o teto de
+ * ESCOPO DE CAMINHO e o `require_approval` que o comando composto SINTETIZA
+ * quando um segmento não tem regra. Nenhum outro teto olha para isto.
+ */
+function modoAutomaticoDoAgente(ctx: DecideContext): boolean {
+  return (
+    ctx.autonomyMode === 'auto_approve' && ctx.autonomyOrigin === 'curinga'
+  );
 }
 
 /**
@@ -292,6 +351,7 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   }
 
   const noEscopo = terminalNoEscopo(action, ctx);
+  const modoAutomatico = modoAutomaticoDoAgente(ctx);
 
   const fileVerdict = decideFromPermissionsFile(
     action,
@@ -300,7 +360,16 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   );
   if (fileVerdict) {
     if (fileVerdict.policy === 'deny') return fileVerdict;
-    current = fileVerdict;
+    // Modo automático (RN-603): o `require_approval` que o comando composto
+    // SINTETIZA por um segmento sem regra não é opinião de ninguém — é o
+    // arquivo sem opinião, e o arquivo sem opinião nunca rebaixa um estágio
+    // anterior (docblock de `decide`). Sem isto, `cd /work && npm test` do dev
+    // agent continuaria pedindo aprovação em modo automático. Um `ask`
+    // ESCRITO no arquivo continua valendo: é regra do usuário, e regra
+    // explícita vence a curinga, como no repositório.
+    if (!(modoAutomatico && fileVerdict.sintetizado)) {
+      current = { policy: fileVerdict.policy, reason: fileVerdict.reason };
+    }
   }
 
   // TETO DA FRONTEIRA DO CONTAINER + COMANDO PRIVILEGIADO (ADR 0065, RN-106
@@ -316,7 +385,7 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   // event log, decidida caso a caso, a recusá-la sem deixar rastro. Isso só é
   // seguro porque a fresta que o `deny` original tapava à força — "sempre
   // permitir" gravando o padrão em `allow` e abrindo a porta pra sempre — foi
-  // fechada na FONTE: `ApproveAlwaysActionUseCase`/`patternForAction` recusam
+  // fechada na FONTE: `ApproveAlwaysActionUseCase`/`patternsForAction` recusam
   // gravar padrão pra ação com efeito externo git ou comando privilegiado
   // (ver approve-always-action.use-case.ts). Sem essa fresta fechada, este
   // teto viraria decorativo do mesmo jeito que os outros tetos alertam: um
@@ -325,6 +394,23 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   // git com efeito externo continua tendo ação TIPADA pra redirecionar
   // (`git_push`/`pr_open`/`git_merge`/`deploy`); `sudo`/`doas` não têm — a
   // mensagem só explica por que aquele comando pede decisão humana.
+  //
+  // Desde a RN-689 (AT-347, decisão do dono de 01/10) o teto vale também pela
+  // porta TIPADA: `git_push` e `pr_open` nunca são auto-aprováveis — nem pelo
+  // curinga do piloto automático (RN-670), nem por regra específica (a
+  // semeadura da ativação dos dev agents incluída), nem por `permissions.json`.
+  // Até aqui só o COMANDO era tetado, e a ação para a qual a mensagem dele
+  // redireciona nascia `auto_approved`. `deny` já retornou acima e continua
+  // vencendo. `git_merge` fica com o teto próprio, logo abaixo.
+  if (
+    ehAcaoTipadaComEfeitoExterno(action.actionType) &&
+    current.policy === 'auto_approve'
+  ) {
+    return {
+      policy: 'require_approval',
+      reason: mensagemDoTetoDaAcaoTipada(action.actionType),
+    };
+  }
   if (action.actionType === 'terminal' && action.command) {
     const tokens = parseCommand(action.command);
     const efeito = efeitoExternoNoComando(tokens);
@@ -348,7 +434,26 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   // o código da plataforma que executa o agente. Fora do escopo vira
   // `require_approval` e não `deny` de propósito: o agente pode ter razão
   // legítima para olhar fora, e quem decide continua sendo o usuário.
-  if (noEscopo === false && current.policy === 'auto_approve') {
+  //
+  // EXCEÇÃO (RN-603, ADR 0167): agente em MODO AUTOMÁTICO (curinga `"*"` em
+  // `auto_approve`) não passa por este teto. Decisão do dono do produto: ligar
+  // o modo automático É o usuário decidindo, de uma vez, que aquele agente
+  // pode rodar qualquer comando — inclusive fora da pasta do projeto. Medido
+  // no `exp001`: 47 de 51 pedidos depois do automático ligado vinham só daqui,
+  // porque o dev agent roda no container (`/work`) e o escopo compara com a
+  // raiz do HOST. O teto de efeito externo/privilegiado ACIMA já rodou e
+  // continua valendo; `deny` já retornou; regra específica do tipo vence a
+  // curinga no repositório. Voltar o toggle para manual restaura este teto.
+  //
+  // Mantida pela decisão do dono de 01/10 (ADR 0189): a garantia é a
+  // contenção do container, que nunca monta o checkout nem os arquivos do
+  // Brabo — e a comparação com a raiz do HOST, que gerava os falsos
+  // positivos, foi corrigida para quem NÃO está no piloto (RN-669).
+  if (
+    noEscopo === false &&
+    current.policy === 'auto_approve' &&
+    !modoAutomatico
+  ) {
     return {
       policy: 'require_approval',
       reason:
@@ -477,6 +582,19 @@ function terminalNoEscopo(
   if (action.actionType !== 'terminal' || !ctx.projectScopeRoot) return null;
   if (!action.command) return null;
 
+  // RN-669 (ADR 0189, AT-258): com o comando rodando DENTRO do container, o
+  // escopo compara com a pasta REAL de execução (`/work` + `/tmp` do
+  // container), e não com a raiz do host — que é onde o comando NÃO roda. Era
+  // daqui que vinham os 37 "escopo" do uso real de 29/09: `/work/...` e
+  // `/tmp` comparados com `/home/<usuario>/projetos-brabo/<projeto>`.
+  if (ctx.execucaoNoContainer) {
+    return comandoNoEscopoDoContainer(
+      parseCommand(action.command),
+      action.cwd,
+      ctx.projectScopeRoot,
+    );
+  }
+
   return comandoNoEscopo(
     parseCommand(action.command),
     action.cwd,
@@ -489,11 +607,18 @@ function ehCdNoEscopo(tokens: string[]): boolean {
   return tokens[0] === 'cd';
 }
 
+/**
+ * Veredito do arquivo. `sintetizado` marca o `require_approval` que NENHUMA
+ * regra escreveu: o comando composto com um segmento sem regra alguma (nem
+ * `ask`). É o único veredito que o modo automático pode ignorar (RN-603).
+ */
+type VereditoDoArquivo = Decision & { sintetizado?: true };
+
 function decideFromPermissionsFile(
   action: DecideAction,
   file: PermissionsFile,
   noEscopo: boolean,
-): Decision | null {
+): VereditoDoArquivo | null {
   const segments =
     action.actionType === 'terminal' && action.command
       ? parseCommand(action.command)
@@ -538,10 +663,12 @@ function decideFromPermissionsFile(
           'permissions.json: todos os segmentos do comando composto batem em allow',
       };
     }
+    const askEscrito = perSegment.some((v) => v?.policy === 'require_approval');
     return {
       policy: 'require_approval',
       reason:
         'permissions.json: comando composto com ao menos um segmento não coberto por allow',
+      ...(askEscrito ? {} : { sintetizado: true as const }),
     };
   }
 

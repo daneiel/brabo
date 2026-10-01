@@ -9,7 +9,10 @@ import {
   type ProjectExecutionMode,
   type StoryPromotionMode,
 } from '../../../../domain/iam/project.entity';
-import type { WorkspaceMember } from '../../../../domain/iam/workspace-member.entity';
+import type {
+  WorkspaceMember,
+  WorkspaceMemberWithUser,
+} from '../../../../domain/iam/workspace-member.entity';
 import type {
   ProjectMember,
   ProjectMemberWithUser,
@@ -59,6 +62,15 @@ export class WorkspaceResponseDto implements Wire<Workspace> {
 
   @ApiProperty({ example: '01JC4Z0000USUARIO0000000001' })
   createdBy!: string;
+
+  @ApiProperty({
+    example: true,
+    description:
+      'Whether the tool-routing step by the Jev (ADR 0179) runs for this ' +
+      'workspace. On by default; it only acts when the turn model is from ' +
+      'OpenRouter, so `true` on a workspace without OpenRouter does nothing.',
+  })
+  toolRouterEnabled!: boolean;
 
   @ApiProperty({ example: '2026-07-20T09:12:00.000Z', format: 'date-time' })
   createdAt!: string;
@@ -205,6 +217,21 @@ export class ProjectResponseDto implements Wire<Project> {
   })
   mirrorPath!: string | null;
 
+  @ApiProperty({
+    example: 'pt-BR',
+    description:
+      "The PROJECT's language (RN-619): the language of everything with no " +
+      'human author — shared artifacts (product brief, business rules, ADRs) ' +
+      'and turns nobody typed (kickoff, dev agents, gates, commit messages, ' +
+      'PR bodies). A canonical BCP-47 code, open list. A new project starts ' +
+      "with its creator's effective response language (RN-618). Set through " +
+      '`PATCH /projects/:projectId` (`maintainer`). The engine sends it to ' +
+      'the model as an ephemeral system message at the end of every LLM ' +
+      'call of a turn with no human author (RN-622); an artifact emitted ' +
+      "during a person's turn still follows that person's response language.",
+  })
+  language!: string;
+
   @ApiProperty({ example: '01JC4Z0000USUARIO0000000001' })
   createdBy!: string;
 
@@ -228,11 +255,12 @@ export class ProjectResponseDto implements Wire<Project> {
 
   @ApiProperty({
     enum: STORY_PROMOTION_MODES,
-    example: 'manual',
+    example: 'auto',
     description:
       'Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the ' +
       'PO proposes and the user decides. `auto`: automatic promotion on ' +
-      'creation (opt-in; where projects predating 12c ended up).',
+      'creation — the new-project default since RN-659; projects created ' +
+      'before it keep whatever value they had.',
   })
   storyPromotion!: StoryPromotionMode;
 
@@ -305,6 +333,33 @@ export const _chavesMembroComUsuario: MesmasChaves<
   ProjectMemberWithUser
 > = true;
 
+/**
+ * Membro do WORKSPACE com nome e e-mail (AT-335, RN-652) — a mesma forma da
+ * de projeto, e nada além: sem `createdAt`, sem estado de conta.
+ */
+export class WorkspaceMemberComUsuarioResponseDto implements Wire<WorkspaceMemberWithUser> {
+  @ApiProperty({ example: '01JC4Z0000USUARIO0000000002' })
+  userId!: string;
+
+  @ApiProperty({
+    ...PAPEL,
+    description:
+      'The WORKSPACE role — what every project of the workspace inherits ' +
+      'unless a project row overrides it (RN-471).',
+  })
+  role!: Role;
+
+  @ApiProperty({ type: String, example: 'Senior Dev', nullable: true })
+  name!: string | null;
+
+  @ApiProperty({ example: 'dev@brabo.dev' })
+  email!: string;
+}
+export const _chavesMembroWsComUsuario: MesmasChaves<
+  WorkspaceMemberComUsuarioResponseDto,
+  WorkspaceMemberWithUser
+> = true;
+
 // --- Resumo do dashboard (RN-090) ---
 
 /**
@@ -346,6 +401,17 @@ export class RosterFactsResponseDto implements Wire<RosterFacts> {
       'whatever the outcome — dismissal is a recorded decision, not silence.',
   })
   delegatedSubagents!: string[];
+
+  @ApiProperty({
+    example: ['arquiteto', 'infra'],
+    description:
+      'Agents with at least one `agent.activated` in the session, most ' +
+      'recently activated first (by `seq`), one entry per agent (RN-630). ' +
+      'Covers the WHOLE session, not the 200-event window: the client sums ' +
+      'it to the window and trusts it only when `latestSessionId` is the ' +
+      'session it is reading.',
+  })
+  activatedAgents!: string[];
 
   @ApiProperty({
     example: false,
@@ -537,6 +603,21 @@ export class ProjectsBaseResponseDto {
       'not offer it. Never a failure — absent is a normal state.',
   })
   projectsBase!: string | null;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'Whether this installation has a container broker configured ' +
+      '(`BROKER_URL` set, ADR 0130). `container` and `mounted` projects only ' +
+      'start a container through the broker (ADR 0144), and without one ' +
+      'every dev agent is blocked forever (ADR 0143). With `false` the ' +
+      'project wizard does not pre-select Mounted, keeps Container and ' +
+      'Mounted visible but not selectable with the reason in text, and ' +
+      'pre-selects Runner (ADR 0161, RN-573). It says the variable exists, ' +
+      'never that the broker answers. Installation configuration, like ' +
+      '`projectsBase`: the same for every workspace.',
+  })
+  brokerConfigurado!: boolean;
 }
 
 /**

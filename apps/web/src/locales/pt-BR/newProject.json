@@ -77,12 +77,21 @@
     "hintRunner": "caminho absoluto, como ele aparece na SUA máquina",
     "mountedUnderBase": "A pasta fica <strong>dentro da base de projetos</strong> desta instalação (<code>{{base}}</code>) — a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
     "mountedOutsideBase": "Este caminho está <strong>fora da base de projetos</strong> desta instalação (<code>{{base}}</code>), e a api <strong>recusa a criação</strong> de um projeto montado fora dela. Escolha uma pasta sob <code>{{base}}</code>.",
+    "noBroker": "<strong>Esta instalação não sobe container para os modos Container e Pasta montada.</strong> Ela não tem o broker de container (<code>BROKER_URL</code> vazia), que é quem sobe o container desses dois modos — e sem container nenhum agente de desenvolvimento trabalha. Use <strong>Runner local</strong>: o código mora numa pasta sua, e o agente local sobe o container na sua máquina.",
     "runnerHint": {
       "intro": "Depois de criar o projeto, rode na sua máquina:",
       "introExisting": "O projeto já existe — rode na sua máquina:",
       "command": "brabo-runner --project {{id}} --dir {{caminho}}",
       "placeholderId": "<id do projeto>",
       "note": "O runner confirma o caminho ao conectar — nenhum comando roda antes disso."
+    },
+    "browseRunner": {
+      "requires": "<strong>“Procurar pasta...” só funciona com o <code>brabo-runner</code> rodando na sua máquina e conectado a este projeto</strong> — neste modo a lista vem do agente local, não do servidor. O clique cria o projeto agora, para o agente ter a que se conectar; depois rode:",
+      "alternative": "Sem o runner rodando, <strong>digite o caminho no campo acima</strong>: dá no mesmo, e o runner confirma a pasta quando conectar.",
+      "placeholderPath": "<pasta>",
+      "blockedName": "Preencha o nome do projeto (2 caracteres ou mais) antes de procurar a pasta: neste modo o clique já cria o projeto.",
+      "blockedAdoptName": "Preencha o repositório a adotar antes de procurar a pasta: neste modo o clique já cria o projeto, com o nome tirado dele.",
+      "blockedPath": "O caminho digitado não é absoluto ou tem \"..\" — corrija-o (ou apague-o) antes de procurar a pasta, senão a api recusa a criação."
     }
   },
   "confirm": {
@@ -93,7 +102,10 @@
     "bootstrapLabel": "Bootstrap",
     "visibilityLabel": "Visibilidade",
     "managedFolder": "pasta gerenciada pelo Brabo",
+    "promotionLabel": "Promoção de histórias",
+    "promotionAutoValue": "automática — o PO promove (padrão de projeto novo; muda em Configurações)",
     "bootstrapAdoptValue": "nada roda sem sua aprovação",
+    "bootstrapStepsValue_zero": "{{count}} passos de Gitflow",
     "bootstrapStepsValue_one": "{{count}} passo de Gitflow",
     "bootstrapStepsValue_other": "{{count}} passos de Gitflow",
     "unknownProvider": "—"

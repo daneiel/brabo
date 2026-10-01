@@ -33,7 +33,7 @@
   border-color: var(--accent);
   outline: 2px solid transparent;
   outline-offset: 0;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 @media (forced-colors: active) {

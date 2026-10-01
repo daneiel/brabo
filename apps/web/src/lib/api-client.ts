@@ -53,6 +53,7 @@ import type {
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  WorkspaceMemberWithUser,
   ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
@@ -62,8 +63,12 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  BindingsResolvidosEmLote,
+  RoutingPreference,
+  ProviderCapabilities,
   PromoteStoriesResult,
   Role,
+  SessaoListada,
   Session,
   SessionEvent,
   SessionKind,
@@ -76,10 +81,10 @@ import type {
   UserCredentialMetadata,
   UserLocale,
   UserPreferences,
+  SessionResponseLanguage,
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
-  RunnerDeviceKeySummary,
   RunnerDeviceKeyListItem,
   Workspace,
   WorkspaceSummary,
@@ -357,6 +362,8 @@ export const updateProject = (
   input: {
     maxConsecutiveBlocked?: number;
     storyPromotion?: StoryPromotionMode;
+    // O idioma do projeto (RN-619) — `maintainer`, pela mesma rota.
+    language?: string;
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
@@ -374,6 +381,12 @@ export const convertProjectExecutionMode = (
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
+/**
+ * Os membros do WORKSPACE (AT-335, `viewer`): quem entra num projeto só pelo
+ * papel de workspace não tem linha em `listProjectMembers`.
+ */
+export const listWorkspaceMembers = (workspaceId: string) =>
+  get<WorkspaceMemberWithUser[]>(`/workspaces/${workspaceId}/members`);
 export const addProjectMember = (
   projectId: string,
   input: { userId: string; role: Role },
@@ -407,31 +420,31 @@ export const revokePersonalAccessTokenAsMaintainer = (
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
 
 /**
- * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
- * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
- * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
- */
-export const registerRunnerDeviceKey = (
-  projectId: string,
-  input: { name: string; publicKeyJwk: string },
-) =>
-  post<RunnerDeviceKeySummary>(
-    `/projects/${projectId}/runner-device-keys`,
-    input,
-  );
-/**
  * As chaves de dispositivo PRÓPRIAS que servem este projeto (RN-519) —
  * inclusive as de MÁQUINA (`especie: 'maquina'`), que servem todo projeto do
  * dono sem pertencer a nenhum (ADR 0154, RN-543).
  *
- * Quem consome hoje é o reconhecimento de agente de máquina do
- * `RunnerOnboardingPanel` (`lib/agente-de-maquina.ts`, RN-548). A TELA de
- * listar e revogar chave continua não existindo — é frente própria.
+ * Quem consome é o reconhecimento de agente de máquina do
+ * `RunnerOnboardingPanel` (`lib/agente-de-maquina.ts`, RN-548) e a seção de
+ * chaves de dispositivo das Configurações do projeto (RN-561).
  */
 export const listRunnerDeviceKeys = (projectId: string) =>
   get<RunnerDeviceKeyListItem[]>(`/projects/${projectId}/runner-device-keys`);
 export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
   del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
+
+/**
+ * As chaves de MÁQUINA do PRÓPRIO usuário, por CONTA — sem projeto no caminho
+ * (RN-611). Existe porque a instalação de uma linha cria a conta e a chave de
+ * máquina ANTES de qualquer projeto, e as duas rotas acima exigem um. Devolve
+ * só `especie: 'maquina'`, revogadas incluídas; a revogação é a MESMA da rota
+ * por projeto (derruba o agente local em todos os projetos do dono em modo
+ * runner), e responde 404 para chave de projeto ou de outra pessoa.
+ */
+export const listMachineDeviceKeys = () =>
+  get<RunnerDeviceKeyListItem[]>('/users/me/machine-device-keys');
+export const revokeMachineDeviceKey = (deviceKeyId: string) =>
+  del<void>(`/users/me/machine-device-keys/${deviceKeyId}`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);
@@ -594,7 +607,7 @@ export const renameSession = (
   name: string | null,
 ) => patch<Session>(`/projects/${projectId}/sessions/${sessionId}`, { name });
 export const listSessions = (projectId: string) =>
-  get<Session[]>(`/projects/${projectId}/sessions`);
+  get<SessaoListada[]>(`/projects/${projectId}/sessions`);
 export const getSession = (projectId: string, sessionId: string) =>
   get<Session>(`/projects/${projectId}/sessions/${sessionId}`);
 export const transitionSession = (
@@ -602,10 +615,19 @@ export const transitionSession = (
   sessionId: string,
   status: 'active' | 'closing' | 'closed' | 'closed_abnormally',
 ) => post<Session>(`/projects/${projectId}/sessions/${sessionId}/transition`, { status });
+/**
+ * Reabre uma sessão `closed`/`closed_abnormally` (ADR 0183, RN-649/650). Rota
+ * própria, e não a de transição: pede `developer` (ADR 0184) e grava
+ * `session.reopened`.
+ */
+export const reopenSession = (projectId: string, sessionId: string) =>
+  post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
+  // `actionId` (AT-336): só os eventos daquela ação — o motivo da política
+  // mora no `proposed_action.created` dela, e a ação não o guarda.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; actionId?: string } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
@@ -660,9 +682,24 @@ export const sendAgentMessage = (
   agent: string,
   text: string,
 ) =>
+  post<{
+    ok: true;
+    mensagemId: string;
+    // RN-673: `enfileirada` — o agente estava no meio de um turno e a
+    // mensagem entrou na fila dele, para ser lida no fim (junto com as outras).
+    entrega: 'lida' | 'enfileirada';
+    posicao?: number;
+  }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, { text });
+// RN-673: cancela UMA mensagem que espera na fila do agente — só quem a
+// enviou; já lida ou já cancelada volta 409 com a frase do engine.
+export const cancelQueuedAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  messageId: string,
+) =>
   post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
-    { text },
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/messages/${messageId}/cancel`,
   );
 // RN-122: o botão "Parar" do composer — mata a chamada ao LLM em curso no
 // engine (Task.shutdown, brutal_kill), cortando a conexão no meio pra
@@ -688,15 +725,6 @@ export const confirmArchitectureReadiness = (
 ) =>
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
-  );
-// Gate `necessidade-validada` (RN-406, ADR 0095) — confirmação humana de
-// que o `product_brief` do Criativo reflete a necessidade de negócio.
-// Endpoint dedicado: não reaproveita `confirmReadiness` (que só exige
-// regra capturada, RN-142) nem o aceite do handoff pelo PO (estrutural,
-// sem julgar conteúdo).
-export const validateNecessity = (projectId: string, sessionId: string) =>
-  post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/criativo/validate-necessity`,
   );
 // RN-162: submissão do formulário de `chat.structured_question` — grava
 // `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
@@ -923,7 +951,8 @@ export const proposeAction = (
 export const listActions = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number } = {},
+  // `latest`/`status` (AT-296, RN-637): a CAUDA da sessão e só as pendentes.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; status?: 'pending' } = {},
 ) =>
   get<Page<ProposedAction>>(
     `/projects/${projectId}/sessions/${sessionId}/actions${qs(opts)}`,
@@ -1027,6 +1056,21 @@ export const listModelPriceChanges = (workspaceId: string, modelId: string) =>
     `/workspaces/${workspaceId}/models/${modelId}/price-changes`,
   );
 
+/**
+ * As capabilities de PROVIDER dos nove (ADR 0166). Fato do código da
+ * instalação, igual para todo mundo — a tela lê `routingPreference` daqui
+ * antes de oferecer critério de roteamento num binding.
+ */
+export const listProviderCapabilities = () =>
+  get<ProviderCapabilities[]>('/llm/provider-capabilities');
+
+/**
+ * O corpo do PUT de binding. `routingPreference` AUSENTE preserva o gravado
+ * (se o provider do modelo aceita), `null` limpa — ver RN-583. Por isso a
+ * troca de modelo de sempre continua mandando só `modelId`.
+ */
+type CorpoDeBinding = { routingPreference?: RoutingPreference | null };
+
 export const getWorkspaceModelBinding = (workspaceId: string) =>
   get<{ modelId: string } | null>(`/workspaces/${workspaceId}/model-binding`);
 export const setWorkspaceModelBinding = (workspaceId: string, modelId: string) =>
@@ -1059,13 +1103,36 @@ export const setSessionModelBinding = (
     { modelId },
   );
 
+/**
+ * Os bindings RESOLVIDOS de vários agentes e áreas numa requisição só (RN-654,
+ * AT-334). Cada chave volta com EXATAMENTE o que a rota individual responderia
+ * (`getAgentModelBinding`/`getAreaModelBinding`) — a cascata é a mesma, no
+ * servidor. É o que as seções de modelo de Configurações leem: eram 20
+ * requisições por carga, contra o teto de 300/min do USUÁRIO (RN-579).
+ */
+export const getResolvedModelBindings = (
+  projectId: string,
+  agents: readonly string[],
+  areas: readonly string[],
+) =>
+  get<BindingsResolvidosEmLote>(
+    `/projects/${projectId}/model-bindings/resolved${qs({
+      agents: agents.length > 0 ? agents.join(',') : undefined,
+      areas: areas.length > 0 ? areas.join(',') : undefined,
+    })}`,
+  );
 export const getAgentModelBinding = (projectId: string, agentSlug: string) =>
   get<ResolvedBinding | null>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
 export const setAgentModelBinding = (
   projectId: string,
   agentSlug: string,
   modelId: string,
-) => put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, { modelId });
+  extra: CorpoDeBinding = {},
+) =>
+  put<void>(`/projects/${projectId}/agent-bindings/${agentSlug}`, {
+    modelId,
+    ...extra,
+  });
 /**
  * "Voltar a herdar" (ADR 0064, RN-102) — APAGA o binding do agente, nunca
  * grava nele o modelo da área. Copiar pareceria igual na tela e viraria uma
@@ -1080,7 +1147,12 @@ export const setAreaModelBinding = (
   projectId: string,
   areaKey: string,
   modelId: string,
-) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
+  extra: CorpoDeBinding = {},
+) =>
+  put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, {
+    modelId,
+    ...extra,
+  });
 export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
   del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
 
@@ -1090,8 +1162,42 @@ export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
 // esperar o próximo refresh, nunca como fonte primária.
 export const getMyPreferences = () =>
   get<UserPreferences>('/users/me/preferences');
-export const updateMyPreferences = (input: { locale: UserLocale }) =>
-  patch<UserPreferences>('/users/me/preferences', input);
+// Os dois campos são independentes na api (RN-618): mandar só `locale` não
+// toca o idioma das respostas, e vice-versa.
+export const updateMyPreferences = (input: {
+  locale?: UserLocale;
+  responseLanguage?: string;
+}) => patch<UserPreferences>('/users/me/preferences', input);
+// A resposta à pergunta da detecção (RN-624): `confirm` grava o detectado
+// CONFIRMADO; `decline` grava a recusa, e o mesmo idioma não é perguntado de
+// novo. 409 `deteccao_mudou` quando as mensagens já não apontam o idioma.
+export const answerDetectedLanguage = (
+  language: string,
+  answer: 'confirm' | 'decline',
+) =>
+  post<UserPreferences>('/users/me/preferences/detected-language', {
+    language,
+    answer,
+  });
+
+// O idioma das respostas de quem chama, numa sessão (RN-618). `language:
+// null` solta o override e volta a herdar da Conta.
+export const getSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+) =>
+  get<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+  );
+export const setSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+  language: string | null,
+) =>
+  put<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+    { language },
+  );
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

@@ -118,6 +118,35 @@ e verifica por conta própria, e reproduzir a tabela de checksum dela à mão
 seria uma cópia que envelhece. Mais fraco que os binários dos scanners,
 dito em vez de subentendido.
 
+## O que o job de imagens guarda em cache, e o que o cache não muda {#images-job-caches}
+
+Desde a AT-304 o job `images` do `ci.yml` guarda três coisas entre execuções
+com `actions/cache` (preso por SHA como toda action), e cada uma foi escolhida
+para poupar tempo sem mover veredito nenhum:
+
+| cache | chave | quem decide o conteúdo |
+|---|---|---|
+| o navegador do Playwright (`~/.cache/ms-playwright`) | versão exata do `@playwright/test` + hash de `e2e/pnpm-lock.yaml` | o pin do lockfile acima — Playwright novo é chave nova, nunca acerto velho |
+| o store do pnpm do `e2e/` (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash de `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, que continua conferindo a integridade de cada tarball contra o lockfile |
+| a base de vulnerabilidades do Trivy (`/tmp/trivy-cache/seed/db`) | versão do Trivy + dia UTC, restaurando o dia anterior mais recente | **o próprio Trivy**: o `--download-db-only` continua rodando, lê o `NextUpdate` da base e baixa de novo quando ele passou |
+
+A última linha é a que poderia afrouxar um portão, e não afrouxa: o cache só
+*semeia* o diretório, e o frescor é julgado pela mesma régua que o Trivy usa
+numa máquina local. O que o cache tira é o download de ~110 MB do registry a
+cada execução — que era também a fonte do `TOOMANYREQUESTS` ocasional. O
+`release.yml` não usa esse cache: a tag escaneia com uma base que ela mesma
+baixa.
+
+O cache do navegador guarda **só** o navegador. As bibliotecas de sistema que
+o `--with-deps` instala vão para o apt do runner, que nenhum cache de
+diretório alcança, então a execução quente ainda as instala
+(`playwright install-deps`).
+
+O escopo é o do GitHub, não o nosso: o `ci.yml` só roda em `pull_request`,
+então esses caches são gravados no escopo do próprio PR e relidos pelos
+pushes seguintes dele (e do escopo da branch base, que este workflow nunca
+grava). Um PR não semeia o cache de outro.
+
 ## Imagens de container
 
 Imagem de terceiro está presa por tag, não por digest:
@@ -131,6 +160,62 @@ digest de imagem que não publicamos.
 As imagens que a gente **publica** são o oposto: as quatro de produção vão
 para o GHCR e o overlay as prende **por digest**, registrado por tag em
 `.release/images.json` ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)).
+
+## O cache do build não pode esconder um pacote velho
+
+O estágio final (`runtime`) de todo `Dockerfile.prod` roda `apk upgrade`. O
+BuildKit chaveia a camada por instrução mais camada-pai, nunca por tempo; com
+`cache-from` ligado, o build de um PR reaproveitava uma camada de `apk upgrade`
+congelada no primeiro build dele (medido: `CACHED` em 5 de 5 imagens), e o Trivy
+escaneava um openssl velho que a tag, construída a frio, não teria. Por isso o
+`docker-bake.hcl` põe `no-cache-filter = ["runtime"]` no alvo base
+compartilhado: o estágio final e o que vem depois são refeitos sempre, os
+estágios de build mantêm o cache (é onde está o tempo), e o scan olha o que a
+tag publicaria. Não é allowlist do Trivy. O custo é de uns 7–9 s por imagem, em
+paralelo.
+
+Isso corrigiu o que o **PR** escaneia. Não podia corrigir o que a **tag**
+publica: a tag constrói a frio, noutra execução, e até o
+[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) ninguém a escaneava.
+
+## O release escaneia o que publica, antes de assinar
+
+O `release.yml` roda o Trivy em cada imagem **por digest**, direto do registry
+(`--image-src remote`), depois de o bake empurrar e registrar o
+`.release/images.json` e **antes** do `cosign sign`. A ordem é o mecanismo:
+imagem reprovada nunca é assinada, e o `install.sh` não instala imagem sem
+assinatura. O push já aconteceu nesse ponto (é ele que cria o digest), então
+uma tag reprovada deixa as tags dela no GHCR sem assinatura e sem Release — o
+estado certo, porque nada as instala.
+
+O portão é a **mesma** régua do job do `ci.yml`, flag por flag:
+`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` e o
+mesmo `.trivyignore.yaml`, com `expired_at` em toda entrada. HIGH ou CRITICAL
+**com correção disponível** reprova o release. O que **não** tem correção é
+relatado e não bloqueia: um segundo scan, sem `--ignore-unfixed` e com
+`--exit-code 0`, alimenta `scripts/ci/trivy-do-release.ts`, que escreve o
+resumo do job e o asset `trivy-sem-correcao.md` da Release. O script nunca
+decide o veredito — quem decide é o código de saída do Trivy —, porque uma
+segunda régua de "tem correção" divergiria da dele no primeiro status novo.
+**Sem allowlist nova**: o passo não aceita arquivo de exceções além do que o PR
+já usa.
+
+O binário é o mesmo `v0.70.0` com o mesmo `sha256` do `ci.yml`, declarado duas
+vezes porque `env:` de workflow não se importa. A duplicação é guardada:
+`scripts/ci/trivy-do-release.spec.ts` reprova quando versão, hash ou flags do
+portão divergem entre os dois workflows, quando o portão vai para depois da
+assinatura, ou quando aparece um segundo arquivo de exceções. Como o
+`install-e2e.yml`, o release só roda em tag final, então esse spec é a prova
+que um PR consegue dar.
+
+Medido em 2026-09-27 contra os digests do último release (`v6.1.0`, quatro
+imagens, publicado em 2026-09-14), com as mesmas flags: `api` e `web`
+**reprovariam** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3` `3.3.7-r0`,
+corrigida em `3.3.7-r1`), CVE publicada depois daquela tag —, `engine` e
+`backup` passam, e nenhum HIGH/CRITICAL sem correção aparece com o
+`.trivyignore.yaml` aplicado. Sem ele, o `engine` teria 56 achados corrigíveis
+nos binários de scanner de terceiro que aquele arquivo documenta. Os quatro
+scans mais o download da base levaram uns 30 s.
 
 ## O que ainda é confiado na fé
 

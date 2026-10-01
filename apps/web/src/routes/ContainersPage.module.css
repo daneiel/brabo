@@ -39,6 +39,10 @@
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+  /* Piso de alvo de toque de 24px (AT-330, `validacao-visual.js`). */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .projectLink:hover {
@@ -105,6 +109,29 @@
   font-size: 12px;
   color: var(--text-muted);
   margin: 0;
+}
+
+/* AT-324: o motivo longo (o da falta de broker) estourava a célula e
+   triplicava a altura da linha. A linha curta é o `<summary>`; o detalhe,
+   que nomeia a variável para o operador, abre sob demanda. `<details>` é
+   nativo e acessível por teclado — nada de `title` num botão desabilitado. */
+.motivoComDetalhe {
+  margin: 0;
+}
+
+.motivoComDetalhe > summary {
+  cursor: pointer;
+}
+
+.porque {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.detalheDoMotivo {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
 }
 
 .ressalva {

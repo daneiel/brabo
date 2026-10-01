@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Actor } from '../../../domain/sessions/session-event.entity';
+import type { AceiteImplicito } from '../../../domain/sessions/estou-pronto';
 import { HandoffRepository } from '../../ports/handoff-repository.port';
 import { AgentAutonomyRepository } from '../../ports/agent-autonomy-repository.port';
 import { ProjectRepository } from '../../ports/project-repository.port';
@@ -11,6 +12,10 @@ import { ProvisionedRepositoryRepository } from '../../ports/provisioned-reposit
 import { AppendSessionEventUseCase } from '../sessions/append-session-event.use-case';
 import { ProvisionRepositoryUseCase } from '../git/provision-repository.use-case';
 import { ActivateAgentUseCase } from './activate-agent.use-case';
+import {
+  AGENTE_GATILHO_DO_REPOSITORIO,
+  AGENTE_SEGUNDA_PORTA_DO_REPOSITORIO,
+} from '../../../domain/execution/repositorio-para-executar';
 
 // InfraAgent NUNCA aplica nada em ambiente, só propõe (Fase 4a) — a PR de
 // infra fica pending por padrão em decide() (open_infra_pr: 'maintainer'),
@@ -19,19 +24,50 @@ import { ActivateAgentUseCase } from './activate-agent.use-case';
 // PR de verdade ainda precisa ser mergeada manualmente no provider). O
 // terminal genérico fica negado por policy — defesa em profundidade além
 // da estrutural (o tool registry do InfraAgent nunca inclui `Terminal`).
+//
+// `container_start` nasce `auto_approve` desde o ADR 0190 (RN-671, decisão do
+// dono em 01/10), revisando o "nunca semeado" do ADR 0133: no aceite, o
+// SERVIDOR do Infra Lead propõe a subida sozinho quando há roteamento
+// (`subir_no_aceite/2`, `infra_lead_server.ex`), e a semente é o que a faz
+// executar sem um segundo clique. Nenhum teto se move: o papel mínimo segue
+// `maintainer` (o efetivo de quem abriu a sessão, em `decide()`), as recusas
+// por modo/estado do engine (RN-566/RN-610) e por broker ausente da api
+// (RN-591) continuam ANTES da autonomia, e só esta ação entra —
+// `container_start_via_runner` e `container_stop` seguem configuráveis e
+// nunca semeados, e `container_remove` segue no teto absoluto (RN-495).
 const INFRA_AUTONOMY_SEEDS: ReadonlyArray<{
   actionType: string;
   policy: 'auto_approve' | 'deny';
 }> = [
   { actionType: 'open_infra_pr', policy: 'auto_approve' },
   { actionType: 'terminal', policy: 'deny' },
+  { actionType: 'container_start', policy: 'auto_approve' },
 ];
 
-// Quem recebe o handoff que faz o repositório nascer (RN-522). O gatilho é o
-// Dev Lead e não a ativação da execução porque são instantes DISTINTOS, nesta
-// ordem: o Arquiteto entrega, e só depois os dev agents começam. É no primeiro
-// que "o desenvolvimento começou" passa a ser verdade.
-const AGENTE_QUE_DISPARA_PROVISIONAMENTO = 'dev-lead';
+// Quem recebe os handoffs cujo aceite provisiona o repositório (RN-582,
+// ADR 0165). São DOIS, e não por redundância:
+//
+// - `arquiteto` é o GATILHO. O Arquiteto é o primeiro agente com ferramenta
+//   que escreve no repositório (`open_adr_pr`), e o Infra Lead, ativado por um
+//   handoff DELE, é o segundo (`open_infra_pr`). Sob a RN-522 o gatilho era o
+//   Dev Lead, e os dois trabalhavam antes dele sem repositório (AT-092).
+// - `dev-lead` é a SEGUNDA PORTA, idempotente. É a saída do projeto que passou
+//   pelo Arquiteto antes desta mudança (handoff ao Dev Lead ainda `offered`),
+//   e a retomada natural de um provisionamento que falhou no aceite ao
+//   Arquiteto. Com o repositório já de pé, `ProvisionRepositoryUseCase` não
+//   cria nada e converge com todos os passos satisfeitos (ADR 0005) — provado
+//   pelas duas portas em `accept-handoff-provisiona-uma-vez.spec.ts`.
+//
+// NÃO é a ativação da execução: aquele endpoint RECUSA sem repositório (409),
+// em vez de provisionar — ver `ActivateExecutionUseCase`.
+//
+// Os dois nomes vêm de `domain/execution/repositorio-para-executar.ts`, que é
+// quem também escreve a frase da recusa da ativação — uma fonte, para a
+// recusa nunca mandar aceitar um handoff que não provisiona.
+export const AGENTES_QUE_PROVISIONAM_O_REPOSITORIO: readonly string[] = [
+  AGENTE_GATILHO_DO_REPOSITORIO,
+  AGENTE_SEGUNDA_PORTA_DO_REPOSITORIO,
+];
 
 // `local` é o único provider que não pede credencial nenhuma
 // (`provision-repository.use-case.ts`, o `if (providerName !== 'local')`), e é
@@ -47,14 +83,34 @@ const ATOR_DO_PROVISIONAMENTO: Actor = {
 };
 
 /**
+ * O aceite feito pelo SISTEMA em vez de uma pessoa (RN-660, ADR 0186): quem
+ * grava `handoff.accepted` e `agent.activated` passa a ser o ator de sistema, e
+ * o `criterio` que dispensou o clique vai no payload — é por ele que o aceite
+ * automático fica auditável no event log. `userId` continua sendo uma pessoa
+ * real (quem abriu a sessão): é em nome dela que o repositório é provisionado.
+ */
+export interface AceitePeloSistema {
+  ator: Actor;
+  criterio: Record<string, unknown>;
+}
+
+/**
  * O usuário aceita um handoff oferecido — transiciona offered→accepted, grava
  * `handoff.accepted` e ATIVA o agente destino (PO). A regra de ativação
  * (agent-activation) exige um handoff accepted endereçado ao agente — que
  * passa a existir exatamente por esta aceitação.
  *
- * Desde a RN-522, o aceite endereçado ao **Dev Lead** também provisiona o
- * repositório git do projeto: criar projeto deixou de provisionar (RN-541), e
- * este é o momento em que o desenvolvimento começa.
+ * O aceite endereçado ao **Arquiteto** também provisiona o repositório git do
+ * projeto (RN-582, ADR 0165 — antes era o Dev Lead, RN-522): criar projeto
+ * deixou de provisionar (RN-541), e o Arquiteto é o primeiro agente que
+ * precisa de onde escrever. O aceite ao Dev Lead repete a chamada, como
+ * segunda porta idempotente.
+ *
+ * O aceite IMPLÍCITO (RN-658, ADR 0185) passa por aqui também, e grava os
+ * MESMOS eventos, com o MESMO ator humano (quem clicou "Estou pronto"): a
+ * única diferença é `implicito` no payload de `handoff.accepted` e de
+ * `agent.activated`, dizendo de qual clique o aceite veio. Nenhum evento novo,
+ * nenhum ator de sistema no lugar da pessoa.
  */
 @Injectable()
 export class AcceptHandoffUseCase {
@@ -73,7 +129,10 @@ export class AcceptHandoffUseCase {
     sessionId: string,
     handoffId: string,
     userId: string,
+    peloSistema?: AceitePeloSistema,
+    implicito?: AceiteImplicito,
   ) {
+    const ator: Actor = peloSistema?.ator ?? { kind: 'user', id: userId };
     const handoff = await this.handoffs.findById(handoffId);
     if (!handoff || handoff.sessionId !== sessionId) {
       throw new NotFoundException('Handoff não encontrado');
@@ -84,12 +143,32 @@ export class AcceptHandoffUseCase {
       );
     }
 
+    // RN-581: antes de marcar `accepted`. Aceitar é o que ATIVA o agente
+    // seguinte; numa sessão encerrada isso subiria um conversacional que
+    // ninguém mais escuta, e o `updateStatus` abaixo não volta atrás.
+    await this.appendEvent.garantirQueAceita(
+      projectId,
+      sessionId,
+      'handoff.accepted',
+      ator,
+    );
+
     const accepted = await this.handoffs.updateStatus(handoffId, 'accepted');
 
     await this.appendEvent.execute(projectId, sessionId, {
       type: 'handoff.accepted',
-      actor: { kind: 'user', id: userId },
-      payload: { handoffId, toAgent: handoff.toAgent },
+      actor: ator,
+      payload: peloSistema
+        ? {
+            handoffId,
+            toAgent: handoff.toAgent,
+            automatico: true,
+            emNomeDe: userId,
+            criterio: peloSistema.criterio,
+          }
+        : implicito
+          ? { handoffId, toAgent: handoff.toAgent, implicito }
+          : { handoffId, toAgent: handoff.toAgent },
     });
 
     if (handoff.toAgent === 'infra') {
@@ -103,7 +182,7 @@ export class AcceptHandoffUseCase {
       }
     }
 
-    if (handoff.toAgent === AGENTE_QUE_DISPARA_PROVISIONAMENTO) {
+    if (AGENTES_QUE_PROVISIONAM_O_REPOSITORIO.includes(handoff.toAgent)) {
       await this.provisionarRepositorio(projectId, sessionId, userId);
     }
 
@@ -113,19 +192,22 @@ export class AcceptHandoffUseCase {
       sessionId,
       handoff.toAgent,
       userId,
+      peloSistema ? ator : undefined,
+      implicito,
     );
 
     return accepted;
   }
 
   /**
-   * O repositório do projeto nasce aqui (RN-522).
+   * O repositório do projeto nasce aqui (RN-582; a RN-522 tinha o gatilho no
+   * Dev Lead, que continua chamando isto como segunda porta).
    *
    * POR QUE A FALHA NÃO PODE SUBIR. Este caso de uso não tem transação: quando
    * este método roda, `updateStatus('accepted')` e o evento `handoff.accepted`
    * já estão COMMITADOS. Um throw daqui devolveria 500 ao usuário sobre um
    * handoff que, no banco, foi aceito — e ainda impediria o `activateAgent`
-   * logo abaixo, deixando o Dev Lead sem acordar por causa de uma falha de
+   * logo abaixo, deixando o agente sem acordar por causa de uma falha de
    * git. Então a falha vira EVENTO nomeado e o aceite segue: o desfecho fica
    * no event log, com origem, em vez de virar uma resposta vazia (a régua de
    * `agent.error`, RN-059).

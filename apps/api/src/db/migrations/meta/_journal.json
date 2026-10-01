@@ -421,6 +421,69 @@
       "when": 1789251753464,
       "tag": "0059_key_id_no_envelope",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1789780309390,
+      "tag": "0060_preferencia_de_roteamento",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1790644815256,
+      "tag": "0061_idioma_de_resposta",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790646511139,
+      "tag": "0062_idioma_do_projeto",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790659733966,
+      "tag": "0063_deteccao_de_idioma",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790742127919,
+      "tag": "0064_ciclo_de_vida_do_handoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790795212024,
+      "tag": "0065_default_de_promocao_auto",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1790801711650,
+      "tag": "0066_roteamento_pelo_jev",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1790809923733,
+      "tag": "0067_custo_real_no_metering",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1790815344427,
+      "tag": "0068_modulo_da_tarefa",
+      "breakpoints": true
     }
   ]
 }

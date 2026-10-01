@@ -143,14 +143,111 @@ estado lido do repositório e não da conversa.
 | O motivo da política no `proposed_action.created` (AT-066) | RN-567 |
 | Imagem de terceiro por digest, e o lint irmão (AT-036, BRB-004) | ADR 0159 |
 | O `checksums.txt` deixa de ser refém da matriz (AT-051) | RN-565 |
-| A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
+| A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada; a adjacência (a idempotência de `ensure!` marcava pronto o workspace cujo `fetch` falhou) fechou no AT-112 | RN-558 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
 | A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (AT-012) | RN-561 |
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
 | O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
+| A pasta `docs/` dos artefatos também se reconstrói do event log (AT-128) | RN-590 |
 | As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
+| O instalador acusava adulteração por falta de `sha256sum` no macOS (AT-091) | RN-526, CHANGELOG |
+| O Arquiteto e o Infra Lead propunham PR em projeto sem repositório (AT-088) | RN-577 |
+| O repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (AT-092) | ADR 0165, RN-582 |
+| O critério de roteamento do hub no binding de modelo, congelado no metering (AT-090) | ADR 0166, RN-583 |
+| O registro de gates respondia 500 na imagem publicada (AT-086) | RN-070 |
+| O `Environment=` da unit entregava OUTRO valor ao serviço (AT-095) | RN-518, CHANGELOG |
+| A árvore do time dizia "começou a task" sobre dev bloqueado por container (AT-087) | RN-572 |
+| A tela só oferece o modo que a instalação executa; o broker do instalador parou na imagem (AT-085) | ADR 0161, RN-573/574 |
+| O broker vira a quinta imagem publicada, e o instalador pergunta se o liga (AT-097) | ADR 0162, RN-575 |
+| O clique que dispara turno responde ao aceitar, e a recusa deixa de ser calada (AT-089) | ADR 0163, RN-578 |
+| A tela de Sessão para de pollar a 3s com o canal vivo, e o corpo vazio ganha ETag (AT-093) | RN-579, CHANGELOG |
+| A mensagem ao `infra` era lida pelo Criativo; o chat deixa de ter destinatário padrão (AT-098) | RN-584 |
+| A sessão do provisionamento não vira a mais recente, e o 409 da ativação não aponta handoff de sessão encerrada (AT-131) | RN-582 |
+| A web reconhece a sessão técnica pelo marcador da api, não pelo nome (AT-183) | RN-592 |
+| O Infra Lead recusa a subida por estado, na ordem da `/containers` (AT-142) | RN-610 |
+| O Infra Lead conversa pelo composer, e o turno dele passa pelo `TurnoAssincrono` (AT-141) | ADR 0175, RN-617 |
+| O pepper do auth deixa de cair no `AUTH_JWT_SECRET`, e quem migra o define com o valor atual (AT-210, BREAKING) | RN-613 |
+| O modo automático libera o escopo de caminho, e só ele (AT-226) | ADR 0167, RN-603 |
+| O teto da chamada ao broker é por operação, e o do engine passa do da api (AT-233) | RN-604 |
+| O pull de imagem vira passo nomeado do `start`, sob o teto de controle (AT-234) | RN-605 |
+| O golden-set do QA volta a medir sob a RN-502 e roda agendado, semanal (AT-076/AT-149) | ADR 0168 |
+| O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação (AT-173) | ADR 0170 |
+| A raiz do escopo no `proposed_action.created`, relativa e nunca absoluta (AT-147) | RN-609 |
+| A chave de máquina ganha listagem e revogação por CONTA (AT-118) | RN-611 |
+| A remoção de membro de workspace nasce, protegida pela mesma cláusula, e a titularidade se transfere (AT-115) | ADR 0173, RN-615, RN-616 |
+| O release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) | ADR 0172 |
+| `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava depois (AT-138, BRB-015) | ADR 0176 |
+| O idioma das RESPOSTAS vira preferência da conta, com override por sessão, separado do `users.locale` (AT-162) | ADR 0177, RN-618 |
+| O projeto ganha idioma, o de artefato compartilhado e turno sem autor (AT-243) | ADR 0177, RN-619 |
+| A barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) | RN-620 |
+| O idioma chega ao modelo por mensagem de sistema efêmera no fim de cada chamada (AT-164) | RN-622 |
+| O artefato gravado num turno com autor sai no idioma do projeto (AT-245) | RN-623 |
+| A tag da imagem de terceiro entra na referência, antes do digest; o Dependabot de imagem segue desligado (AT-139) | ADR 0178 |
+| A api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) | RN-624 |
+| O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
+| O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
+| O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| A Infra sobe o container com o menor recurso elegível, derivado do `module_map` (AT-261) | ADR 0199, RN-683 |
+| O contrato entre módulos vira artefato do Arquiteto, e o dev o lê em vez do worktree alheio (AT-276) | ADR 0200, RN-684 |
+| A oferta de fonte em todo artefato publicado — as cinco imagens e a Release do runner (AT-120, BRB-017) | runbook, The written offer of source |
+| O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
+| O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
+| A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
+| O piloto automático: "Sempre permitir" não o desliga, e o escopo compara com a pasta real de execução (AT-259/255/258) | ADR 0189, RN-669, RN-670 |
+| "Sempre permitir" grava verbo + subcomando, um padrão por segmento (AT-257, fecha a AT-170) | ADR 0189, RN-675 |
+| Aprovar o plano do Dev Lead ativa a execução; a tarefa ganha o módulo que ele atribui (AT-263/AT-274) | ADR 0194, RN-677, RN-678 |
+| A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado (AT-246) | ADR 0197 |
+| A curadoria recusa o alias `~` do OpenRouter, preço de vitrine (AT-271) | RN-679 |
+| A Anamnese religada: não roda sem sujeito elegível, e a hipótese aceita vira fato do perfil (AT-277) | ADR 0196, RN-680 |
+| O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
+| O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
+| O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
+| A Infra sobe o container sozinha no aceite do handoff (AT-260) | ADR 0190, RN-671 |
+| O handoff ao Dev Lead sai da Infra, só com o container `running` (AT-262) | ADR 0190, RN-672 |
+| O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
+| "Sempre permitir" aprova e grava o padrão na mesma transação; clique em ação já aprovada vira sucesso nomeado, e os tipos do teto (git tipado) deixam de oferecer o botão (AT-310/AT-320) | RN-642 |
+| O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
+| O handoff manual ganha botão de aceite, e oferta pendente não esconde as seguintes (AT-253) | RN-631 |
+| O handoff manual não declara prontidão, e a oferta a agente ativo noutra sessão não é acionável (AT-293/AT-294) | RN-633 |
+| Depois de "Ativar execução", a tela vai à sessão de execução (AT-295) | RN-634 |
+| Duas abas não batem no teto: leitura de projeto a 15s, e o canal com janela em toda tela que o ouve (AT-278) | RN-632 |
+| O fio corta por mensagem, não parte a troca e recolhe o histórico na ordem (AT-319) | RN-644 |
+| A barra da sessão se arruma pela própria largura: modelo e idioma num controle só, sem perder a origem (AT-317) | RN-620 |
+| A aprovação chega à janela certa: cauda das ações, fila do projeto, pendências em sessão encerrada e aviso pelo canal (AT-296..299, AT-318) | RN-637, RN-638 |
+| A aba PRs fala da lista de PRs, e Parar/Remover sem container dizem por quê (AT-323/AT-324) | RN-646 |
+| O handoff deixa de repetir e de ficar obsoleto: uma oferta pendente por destino, `superseded` ao ativar (AT-291/292) | ADR 0182, RN-635/636 |
+| A sessão encerrada pode ser reaberta, com o log intacto e o fechamento anterior como evento novo (AT-071) | ADR 0183, RN-649/650 |
+| Reabrir sessão é `developer`, e o dono confirma sem prazo e a recusa com execução (AT-337) | ADR 0184, RN-650 |
+| Code-splitting por rota, o streaming fora da página e os polls do bootstrap (AT-300/301/302) | RN-639, CHANGELOG |
+| Layout móvel pós-login: a sidebar vira gaveta e o trilho do projeto vira barra horizontal (AT-316) | RN-643 |
+| Configurações no teto: configuração vale um minuto, não polla, e o sumário deita (AT-321) | RN-645 |
+| No telefone a Sessão ganha gaveta de contexto e barra que quebra linha; tabelas viram cartões (AT-328/AT-330) | RN-651 |
+| A sidebar, o card do Dashboard e o painel de artefatos não se contradizem (AT-325) | RN-648 |
+| Cada mensagem do fio aparece sob o ator do evento, nunca sob quem vê a tela (AT-329) | RN-652 |
+| Os últimos textos fixos do web vão para os locales, e a paridade de chaves vira teste (AT-289) | CHANGELOG |
+| A interface em pt-BR sem jargão em inglês nem número de RN/ADR, com o nome do agente e plural do i18next (AT-326) | CHANGELOG |
+| Plural do i18next em todos os namespaces e `_zero` no pt-BR; o brilho do login vira acento; a lacuna do motivo da política dita uma vez na fila de Aprovações (AT-331/332/333) | CHANGELOG, RN-614 |
+| O cartão de aprovação é um só nas quatro superfícies; controle segmentado, estado vazio, CTA e botão desabilitado seguem um padrão (AT-322/AT-327) | CHANGELOG, design/README.md |
+| Os modelos vigentes de agentes e áreas numa leitura só: a carga de Configurações cai de 49 para 30 (AT-334) | RN-654 |
+| O fio nomeia quem entra pelo papel de workspace, e cada cartão de Aprovações lê o próprio motivo da política (AT-335/AT-336) | RN-655, RN-656 |
+| Projeto novo nasce com promoção de histórias automática (AT-313) | RN-659 |
+| O handoff do PO ao Arquiteto é aceito pelo sistema com backlog coberto e repositório local (AT-314) | ADR 0186, RN-660 |
+| O modo automático oferecido em lote para o time no início da execução (AT-315) | RN-661 |
+| Um clique "Estou pronto — a necessidade está validada" fecha a prontidão, o gate `necessidade-validada` e o aceite do PO (AT-311/AT-312) | ADR 0185, RN-657/658 |
+| A Visão geral e a aba Executores leem os modelos do time pelo lote, e os cartões das pendências de outras sessões no chat mostram o motivo da política (AT-339/AT-340) | RN-654, RN-656 |
+| O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
+| A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
+| O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
+| A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
+| A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
+| O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
+| A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
+| O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
+| O fluxo do runner pelo navegador é aposentado; o painel manda para o instalador (AT-014, BRB-031, BREAKING) | ADR 0203, RN-687 |
+| As refs `caminho:N` (`símbolo`) das RNs relidas pelo símbolo, e a aferição promovida a `block` (AT-122) | documentation-workflow.md |
+| O teto da RN-418 vale também para `git_push`/`pr_open` TIPADOS, e a ativação deixa de semeá-los (AT-347) | RN-689 |
 
 ## Estado atual e aberto
 
@@ -186,12 +283,39 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   ele aceita — as cinco camadas de contenção seguem intactas. Consequência:
   `DOCKER_GID` passa a importar para toda máquina de desenvolvimento, e
   `preflight.mjs` RELATA o estado dele a cada subida (errar não quebra o boot,
-  quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
+  quebra o uso, e o sintoma aparece só no `container_start`). Desde a RN-599
+  o compose de DEV também dá default a `BROKER_URL` (`http://broker:8090`, o
+  serviço do mesmo arquivo) — produção e instalação seguem `${BROKER_URL:-}`,
+  e essa divergência também é a decisão, não uniformize —, e o preflight
+  RELATA a pasta gerenciada no mesmo molde do `DOCKER_GID`: sem
+  `PROJECT_WORKSPACES_HOST_DIR` o broker fica sem
+  `PROJECT_WORKSPACES_HOST_ROOT` e o modo `container` não sobe container; o
+  `~` é acusado porque o Compose o expande no bind-mount e NÃO na variável do
+  broker. Relata, nunca recusa nem grava o `.env`. Em PRODUÇÃO, sem
   o profile ligado, `container_start` continua terminando `failed` com
-  `BrokerIndisponivelError`. O
+  `BrokerIndisponivelError`. Na INSTALAÇÃO por Release
+  (`docker-compose.install.yml`) o serviço `broker` EXISTE desde o ADR 0162
+  (RN-575), desligado sob o MESMO profile, e quem o liga é o `install.sh`,
+  PERGUNTANDO — só um "s" digitado liga, o `DOCKER_GID` é MEDIDO de dentro de
+  um container com a própria imagem do broker (recusa nomeada, nunca o 999 de
+  palpite), e `COMPOSE_PROFILES`/`BROKER_URL`/`DOCKER_GID`/
+  `PROJECT_WORKSPACES_HOST_ROOT` vão juntos para o `.env` ou nenhum vai. É o
+  argumento da RN-512 (quem instala na PRÓPRIA máquina já tem o socket), com
+  consentimento no lugar do "sobe por padrão" do dev porque quem instala nunca
+  leu este repositório. `BRABO_BROKER_IMAGE` é obrigatória ligado ou não — o
+  Compose interpola o arquivo inteiro antes de filtrar por profile (medido). E
+  desde o ADR 0161 (RN-573/574) a TELA sabe se há broker: `brokerConfigurado`
+  (`ContainerBrokerPort.configurado()`, a mesma fonte do estado observado) vem
+  em `GET .../projects-base` e em cada linha de `GET .../containers`, o
+  assistente para de pré-selecionar `mounted` sem broker confirmado e a
+  `/containers` recusa antes do clique a subida de `container`/`mounted`. As
+  duas metades são a MESMA decisão do mantenedor ("os dois"). O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
-  `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
-  `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
+  `container_start` é `proposed_action` de verdade (`maintainer`) — e desde
+  o ADR 0190 (RN-671) é SEMEADA `auto_approve` no aceite do handoff da Infra,
+  com o SERVIDOR do Infra Lead propondo a primeira subida sozinho no kickoff
+  quando há roteamento (`container`/`mounted`; `runner` segue pelo modelo e
+  com aprovação) —, e
   `ExecuteContainerStartUseCase` chama `ContainerBrokerPort.start` de
   verdade quando aprovada — o Infra Lead elege uma das candidatas do
   roteamento do Arquiteto (`artifact.module_routing`, ADR 0131) e a eleição
@@ -208,9 +332,9 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `remove` também têm chamador: a página global de containers
   (`/containers`) propõe `container_stop`/`container_remove` — dois tipos
   novos, sempre um HUMANO clicando "Parar"/"Remover" numa linha da tela,
-  nunca um agente. `container_stop` segue o MESMO calibre de
-  `container_start` (`maintainer`, pode ser configurado auto-aprovável,
-  nunca seedado); `container_remove` — o mais destrutivo dos três, descarta
+  nunca um agente. `container_stop` segue o calibre de
+  `container_start` (`maintainer`, pode ser configurado auto-aprovável), mas
+  NUNCA é semeado — a semente do ADR 0190 é só a da subida; `container_remove` — o mais destrutivo dos três, descarta
   o container e exige reprovisionar do zero — entra no MESMO teto absoluto
   de git push/comando privilegiado (RN-418): nunca auto-aprovável, "sempre
   permitir" recusado na fonte. A tela em si tem seu próprio teto: perguntar
@@ -253,21 +377,47 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   payload dela, com eleição de imagem, nunca fazia sentido pra um caminho
   sem roteamento contra o qual eleger) — `container_start_via_runner` é o
   tipo novo, exclusivo desse modo
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
-  aguardando spec; Staff dormente para disparo automático (acionável manual)
-
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`,
-  `PSYCHOLOGIST_ENABLED=false`), aguardando spec. A pausa segue valendo e a
-  decisão de produto NÃO mudou — o que mudou na RN-540 é que ela passou a ser
-  REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec; Staff dormente para disparo automático (acionável manual —
+  nenhum código o dispara, nem a Anamnese)
+- A Anamnese foi RELIGADA em 2026-10-01 por decisão do dono (RN-680, ADR
+  0196): `ANAMNESE_ENABLED` volta ao default `true` no `runtime.exs` e nos
+  três composes (`START_ANAMNESE` não mudou: `false` só no de produção,
+  divergência já declarada), com duas correções que são regra. (1) A rodada
+  NÃO roda sem SUJEITO elegível — membro EFETIVO do projeto
+  (`listEffectiveMembers`, a régua da RN-471; criar projeto não grava
+  `project_members`, e era por isso que toda rodada do uso real de 29/09
+  terminava paga em "nenhum membro elegível"), fora do opt-out, com
+  interação PRÓPRIA na janela (`Engine.Anamnese.Elegibilidade`, antes da
+  triagem; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
+  chamada ao LLM nem ao RAG, motivo nomeado no log e, só na rodada pedida à
+  mão, `anamnese.run_skipped`. (2) A hipótese que a PRÓPRIA pessoa aceitou
+  (quem aceita é o autor da sessão) vira `FatoDoPerfil` no grafo, traduzido
+  de `psychologist.hypothesis_accepted` pelo MESMO `GraphEventTranslator`, e
+  entra no turno dos agentes que conversam com ela como mensagem `system`
+  EFÊMERA (`Engine.Harness.PerfilDoAutor`, o caminho do idioma da RN-622;
+  lida por `QueryUserContextUseCase`, escopada ao projeto, 5 fatos, teto de
+  2 000 caracteres). Aceite de terceiro e recusa ficam só registrados.
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec — e a Anamnese esteve pausada junto até a RN-680. A pausa do
+  Psicólogo segue valendo e a decisão de produto NÃO mudou — o que mudou na
+  RN-540 é que ela passou a ser REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
   do serviço `engine` de compose NENHUM, o Compose não repassa o ambiente do
   host, e `ANAMNESE_ENABLED=true` no `.env` era inerte — `runtime.exs` caía no
   default `"false"` em silêncio, enquanto TRÊS lugares (os docblocks dos dois
   workers e `docs/reference/configuration.md`) prometiam que "ligar de volta é
   `X=true` e reiniciar". Medido no container: `[true] [] []`. As oito flags
-  BOOLEANAS do `runtime.exs` estão nos dois composes agora, cada uma com o
-  MESMO default do código, e `scripts/ci/flags-do-engine-no-compose.spec.ts`
-  DERIVA a lista e reprova a próxima que faltar. E ligar a Anamnese periódica
+  BOOLEANAS do `runtime.exs` estão nos TRÊS composes agora (o de instalação
+  desde a AT-202), cada uma com o MESMO default do código salvo as duas chaves
+  de boot que PRODUÇÃO desliga de propósito, DECLARADAS no spec, e
+  `scripts/ci/flags-do-engine-no-compose.spec.ts` DERIVA a lista e reprova a
+  próxima que faltar. A INSTALAÇÃO tinha a mesma divergência por CÓPIA e deixou
+  de ter (AT-219): ali `START_OUTBOX_DRAIN=false` deixava o outbox sem
+  consumidor nenhum — sessão encerrada não parava, dev agent esperando
+  decisão/gate/container nunca acordava. Não "uniformize" produção e
+  instalação em nenhum dos sentidos. As duas chaves de boot ligadas não gastam
+  token com as flags de PRODUTO desligadas: o `kickoff/0` da Anamnese não
+  agenda job, e o drain não enfileira o Psicólogo. E ligar a Anamnese periódica
   são DUAS variáveis: `START_ANAMNESE` é a chave de BOOT (decide se o tick é
   agendado) e `ANAMNESE_ENABLED` é a flag de PRODUTO (decide se uma rodada nova
   pode acontecer) — o Psicólogo tem só a segunda, porque o gatilho automático
@@ -294,8 +444,21 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   alcance, declarado (ADR 0087/0089)
 
 **Lacunas aceitas e declaradas:**
+- **O piloto automático confia na contenção do container, e ela tem bordas
+  que a prova NÃO cobre (ADR 0189).** Provado em
+  `apps/broker/src/contencao-do-brabo.spec.ts`: uma pasta só, em `/work`,
+  estritamente abaixo da raiz do broker, sem socket nem privilégio. Declarado e
+  NÃO remendado (a decisão foi descrever): no compose de PRODUÇÃO nada no host
+  confere que `BRABO_PROJECTS_BASE` não contém o checkout/a pasta do `.env`
+  (o preflight só roda no `pnpm dev`, e a api compara com o próprio `cwd`); o
+  `install.sh` confere a base só no consentimento, sem teste; no modo `runner`
+  nada compara a pasta com um checkout do Brabo na máquina do usuário;
+  `segmentoDeProjetoValidado` aceita `.` (a api nunca o produz); e a rede
+  `egress` alcança as portas publicadas da máquina. Fechar qualquer uma é
+  decisão do dono, não correção de passagem
 - **O Infra Lead propunha `container_start` às cegas; desde a RN-566 ele
-  recusa por MODO, e o que sobra da lacuna é a IMAGEM.** A metade fechada:
+  recusa por MODO, desde a RN-610 por ESTADO, e o que sobra da lacuna é a
+  IMAGEM em `container`/`mounted`, de propósito.** A metade fechada:
   `dispatch_container_start/2` consulta LOCALMENTE o `execution_mode`
   (`Project.get/1`, mesmo processo BEAM, sem HTTP — rede no laço do agente
   era o que a correção não podia custar) antes de chamar `propose_action`, e
@@ -308,23 +471,56 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   tocar o prompt/instrução do Infra Lead"* — foi MEDIDO e não se confirmou:
   nenhuma linha de prompt mudou, e o texto da recusa é o que o modelo lê como
   resultado de ferramenta (entrada do laço, RN-163, nunca `agent.error`).
-  **A metade que SEGUE ABERTA:** nem as duas tools nem
-  `GetInfraContextUseCase` sabem de IMAGEM DECIDIDA, então propor sem imagem
-  continua possível em `container`/`mounted` — e ali a recusa por imagem
-  inverteria a ordem, porque eleger a imagem é o que essa proposta FAZ
-  (RN-491). A `/containers` checa as TRÊS coisas (imagem, modo, pasta
-  confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
-  contexto do Infra Lead com modo e presença de runner é frente à parte, mais
-  cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
-  `mounted` pode dar certo de verdade, pelo broker
-- **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
-  `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
-  engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,
-  então a leitura provável é corrida intermitente na adoção/drenagem, não
-  atraso. Declarado e NÃO corrigido: o workflow agendado existe para pegar
-  isto, e a próxima ocorrência sai com o teto esperado, a réplica de cada
-  sessão e as linhas do engine que citam a órfã. A correção é do engine, não
-  da prova — não afrouxe o teto para o verde voltar
+  Desde a RN-610 (AT-142) o agente recusa também por ESTADO, na ordem da
+  `/containers` e com as mesmas leituras locais (Postgres direto e o registro
+  de runners, nunca HTTP): as DUAS tools recusam container já REGISTRADO
+  `running`/`provisioning`, e `container_start_via_runner` recusa sem imagem
+  decidida (ela não elege, sobe a decidida) e com pasta nunca confirmada
+  (`workspace_verified_at` nulo), antes da checagem de runner conectado que já
+  fazia. `GetInfraContextUseCase` NÃO mudou — a decisão foi recusa no
+  despacho, não contexto. **O que SEGUE ABERTO, de propósito:** propor
+  `container_start` SEM imagem decidida continua possível em
+  `container`/`mounted`, porque ali a recusa por imagem inverteria a ordem —
+  eleger a imagem é o que essa proposta FAZ (RN-491); não "complete" a régua
+  da tela ali. Broker ausente na instalação e papel/sessão também não são
+  checados pelo agente (o primeiro a api recusa ao propor, RN-591). O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
+  `mounted` pode dar certo de verdade, pelo broker. Desde a RN-591 a instalação SEM
+  broker também é dita: a api recusa a proposta com 409
+  `sem_broker_na_instalacao` (a fonte é `ContainerBrokerPort.configurado()`; o
+  engine NÃO lê `BROKER_URL`, e o texto da recusa chega ao modelo), a conversão
+  de modo e "Parar"/"Remover" ficam inertes com o motivo em texto — só a
+  ausência CONFIRMADA bloqueia a conversão, "não sei" não Desde a RN-577 o mesmo
+  molde vale para a PR: `propose_infra_pr` (e o `propose_adr` do Arquiteto)
+  recusam LOCALMENTE, antes de propor, projeto SEM repositório — o predicado é
+  o MESMO de `ExecuteAdrPrUseCase`/`ExecuteInfraPrUseCase` (linha em
+  `project_repositories`, lida direto do Postgres por
+  `ProjectRepository.recusa_de_pr_sem_repositorio/2`), e no Infra Lead a
+  pergunta vem ANTES do HALT, para não gastar o laço do Workflows numa PR
+  impossível. A recusa deixa `tool.call` e `tool.result` (`ok: false`, com o
+  motivo) no event log. ONDE o repositório nasce NÃO foi decidido ali (é a
+  AT-092): o texto da recusa descreve o gatilho de hoje, o aceite do handoff
+  ao Dev Lead (RN-522)
+- **O `rollout-test` acusou sessão órfã de forma intermitente — TRÊS em treze
+  rodadas** do `propriedades.yml` (BRB-009, AT-078). A causa provável foi
+  CORRIGIDA na RN-588: o `Monitor` do pod antigo apagava a linha de
+  `session_states` que o par acabara de regravar; o drain agora marca o repasse
+  (`Monitor.expect_handoff/1`) e o Monitor não a apaga. Provado em ExUnit
+  (entrelaçamento determinístico), NÃO no k3d — a confirmação é a próxima
+  sequência de rodadas verdes, e uma nova órfã traria a linha de log do
+  Monitor ("mantido"/"apagado"). Restam inferência: o instante do apagamento
+  nunca foi medido, e a leitura vem do artefato da rodada `35452845830`.
+  Histórico, até a correção: a rodada `35448353884`
+  com as cinco sessões no MESMO pod antigo: quatro adotadas, uma sem dono e sem
+  drenagem por 120s. Nas rodadas verdes a convergência leva 2–3s, então a
+  leitura provável é corrida na adoção/drenagem, não atraso. Declarado e NÃO
+  corrigido, e a regra do AT-078 é NENHUMA correção antes de reproduzir: o log
+  que diria o que houve morria com o pod antigo, e desde o AT-078 a prova o
+  guarda (`deploy/k8s/rollout-evidencia.sh`, artefato `rollout-evidencia`),
+  junto com o instante do scale-down do HPA — o confundidor conhecido, que
+  derruba réplicas NOVAS ~75s depois do rollout — e o veredito de a órfã ter
+  ficado sem dono ANTES ou DEPOIS dele. A correção é do engine, não da prova —
+  não afrouxe o teto, não ponha `sleep`, não mude o que conta como adotada ou
+  drenada para o verde voltar
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
@@ -337,13 +533,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   lista por projeto da sidebar (`LinhaDeAba`, RN-196). Pré-existente (a
   régua horizontal duplicava a mesma lista), só ficou visualmente paralela;
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
-- A presença de QA/SecOps e dos membros de área (`gatesEverOpened`,
-  `delegatedSubagents`) deixou de sofrer da janela de 200 eventos (RN-568): as
-  duas telas passam o agregado do resumo como `agregado`, que SOMA à janela e
-  só vale com o resumo da MESMA sessão. O que sobra: `executionActivated` na aba
-  Executores continua lido do resumo SEM essa guarda de sessão — com uma sessão
-  mais nova que a de execução, os dev agents somem da aba. Declarado, não
-  corrigido
+- A presença de QA/SecOps, dos membros de área e dos dev agents
+  (`gatesEverOpened`, `delegatedSubagents`, `executionActivated`) deixou de
+  sofrer da janela de 200 eventos (RN-568): as duas telas passam o agregado do
+  resumo como `agregado`, que SOMA à janela e só vale com o resumo da MESMA
+  sessão. Desde o AT-130 o `executionActivated` da aba Executores passa pela
+  mesma guarda (antes um resumo de sessão mais nova apagava os dev agents), e
+  `deriveAgentRoster` também o lê da janela — a lacuna fechou
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111). O órfão CONTINUA; o que mudou na
   RN-560 é que a tela parou de dizer o contrário: o aviso afirmava *"isto
@@ -351,24 +547,33 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fatos separados (o que a conversão RECUSA, o que ela LEVA — a política do
   `permissions.json` —, e o que ela NÃO leva), NOMEANDO o caminho antigo, que
   some da tela assim que a conversão salva. Ele não promete detecção de diff
-  (I/O por modo, impossível para `runner` do lado da api) e não lista TODAS as
-  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e container
-  removido seguem ditos só no caso de uso e nas RNs. Migrar conteúdo entre
-  modos continua fora, sem dono
-- `ExecutionModeSection` ENCOLHEU para o ramo `runner` (RN-559): converter para
-  `mounted` abre o MESMO `FolderBrowserModal` da criação, com
-  `origem: { tipo: 'api', workspaceId }` — mesmo componente, mesmo endpoint,
-  nenhuma régua nova (quem valida o caminho continua sendo a api). O que segue
-  aberto é converter para `runner`, que continua sem `RunnerOnboardingPanel` e
-  sem navegador, digitado no escuro. Ficou fora da RN-473 de propósito, e a
-  RN-559 NÃO reabriu: onboardar ANTES de a conversão salvar registra chave num
-  projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a
-  confirmação com 400; o transporte de navegador daquele ramo
-  (`{ tipo: 'runner', projectId }`) exige um runner conectado a ESSE projeto,
-  que só passa a existir depois da conversão, e a espera terminaria num erro
-  com cara de bug. A ordem "converte, depois onboarda" é decisão de produto à
-  parte, sem dono. O que a RN-559 acrescentou ali é a tela DIZER isso em texto,
-  em vez de só não oferecer botão nenhum (ADR 0064)
+  (I/O por modo, impossível para `runner` do lado da api). Desde a AT-144 ele
+  diz também as consequências CONDICIONAIS, e só quando valem para ESTE
+  projeto: o espelho zerado (`mirrorPath` preenchido), o container removido (o
+  projeto é `container` HOJE e o ciclo de vida existe fora de `removed` — a
+  MESMA condição de `removerContainerSeExistir`, que só roda ao SAIR de
+  `container`; em `mounted`/`runner` o caso de uso não toca o container e o
+  aviso não diz o contrário) e a pasta confirmada que deixa de valer
+  (`workspaceVerifiedAt` preenchido). Nada de listar o que não se aplica, e a
+  leitura do ciclo de vida que falha vira texto próprio, nunca "não há
+  container". Migrar conteúdo entre modos continua fora, sem dono
+- `ExecutionModeSection` fechou os DOIS ramos: `mounted` abre o MESMO
+  `FolderBrowserModal` da criação (RN-559, `origem: { tipo: 'api', workspaceId
+  }`), e `runner` é converte, DEPOIS onboarda (RN-612, AT-143): salvar a
+  conversão monta, na mesma seção, o `RunnerOnboardingPanel` do projeto agora
+  `runner`. A ordem inversa segue impossível (onboardar antes registra chave
+  num projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase`
+  recusa com 400) — não a reabra mexendo nessa recusa. A medição que decidiu
+  foi de CÓDIGO: o agente de máquina que ESPERA (zero projetos, RN-550) pega o
+  projeto sozinho em até 60 s; o que já atende OUTRO projeto só depois de
+  reiniciar o serviço, porque a lista é lida uma vez com conexão viva — a tela
+  DIZ os dois casos, com o comando, sem afirmar qual é o da pessoa. O caminho
+  digitado é PROVISÓRIO (a confirmação do runner o sobrescreve, RN-423, e o
+  agente de máquina usa `<base>/<workspaceDirName>`), e o navegador de pastas
+  segue FORA do ramo `runner` por construção, não por ordem: o transporte
+  `{ tipo: 'runner', projectId }` exige runner conectado, e um runner conectado
+  já confirmou a própria pasta — escolher outra seria uma conversão que a
+  próxima reconexão desfaz
 - **A chave de dispositivo TEM tela desde a RN-561, e o que sobra da lacuna
   mudou de assunto.** A metade de api existe desde a RN-519
   (`RunnerDeviceKeysController` com `GET`, a revogada NA lista e `lastUsedAt`
@@ -398,20 +603,37 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   existem: o MATERIAL nasce no terminal (RN-551, `brabo-runner device-key
   create`, par gerado na máquina) e quem REGISTRA a pública é a RN-552
   (`POST /internal/machine-device-keys`, pelo service token).
-  **O que segue aberto, e agora é só isto:** (1) numa instalação que ainda não
-  tem PROJETO, a listagem e a revogação — as duas por
-  `/projects/:projectId/runner-device-keys` — não têm projeto contra o que
-  responder, então nem a seção nova alcança uma chave de máquina recém-criada;
-  fazer a tela ser de CONTA exigiria rota nova, e não é o que a RN-561 fez. É por
-  isso que registrar SUBSTITUI a anterior em vez de deixar órfãs: uma órfã ali
-  seria viva e inalcançável. E a rota só serve instalação de UMA pessoa (409 com
+  **O que segue aberto, e agora é só isto:** (1) a instalação SEM PROJETO
+  deixou de ser lacuna na RN-611 (AT-118): a chave de MÁQUINA tem listagem e
+  revogação por CONTA — `GET`/`DELETE /users/me/machine-device-keys`, sem
+  `@RequireRole` (escopo é a própria pessoa, como `users/me/*`), SÓ a espécie de
+  máquina (chave de projeto é 404, a mesma resposta de alheia ou inexistente) e
+  SÓ as do chamador — e a seção "Chaves de máquina" na Conta (`/account`). A
+  revogação por conta DELEGA a `RevokeRunnerDeviceKeyUseCase` e o alvo NÃO muda.
+  Registrar SUBSTITUI a anterior CONTINUA, pela razão que não dependia de tela
+  (o token de serviço não fabrica credencial em série; a máquina reinstalada não
+  deixa chave viva esquecida) — a Conta passa a MOSTRAR a substituída, revogada,
+  e diz por quê. As listas de chave têm DUAS `queryKey`s
+  (`['runner-device-keys', projectId]` e `['machine-device-keys']`), e toda
+  revogação passa por `invalidarChavesDeDispositivo`
+  (`apps/web/src/lib/chaves-de-dispositivo-queries.ts`), que invalida a de
+  projeto por PREFIXO e a da Conta sempre: a de máquina aparece nas duas, e
+  invalidar só a própria deixa o painel anunciando a revogada. Segue aberto: a
+  rota que CRIA chave de máquina só serve instalação de UMA pessoa (409 com
   duas ou mais), então instalação com time não tem por onde criar chave de
-  máquina — declarado, não acaso. (2) O ALVO da revogação continua sendo
-  `{projeto, usuário}` e NUNCA `{chave}` (RN-520): a tela DIZ isso na
-  confirmação e não muda: outro runner seu no mesmo projeto cai junto, mesmo
-  com PAT ou outra chave, e reconecta se a credencial ainda valer. Mudar o
-  alvo exige coluna nova em `runner_socket_tickets` e contrato novo de auth —
-  frente própria, com ADR. (3) A visão de `maintainer` (listar/revogar de
+  máquina — declarado, não acaso. (2) O ALVO da revogação deixou de ser
+  `{projeto, usuário}` e passou a ser a CHAVE (RN-685, ADR 0201, revisando a
+  RN-520): `runner_socket_tickets` guarda QUAL credencial pediu o ticket
+  (`credential_kind`/`credential_id`, nuláveis — `terminal` e ticket de api
+  anterior não têm), o socket a guarda em `assigns` e no `id`, e a revogação
+  de chave ou de PAT pede `POST /internal/runner/disconnect-credential`, que
+  anula os tickets pendentes dela e pergunta a TODO runner do cluster se nasceu
+  dela — outro runner seu, com PAT ou outra chave, fica de pé, e a confirmação
+  da tela diz isso. NÃO apague as duas peças de transição: a conexão LEGADA
+  (ticket sem credencial) cai pelo par nos projetos que a api manda, e engine
+  sem a rota faz a revogação de chave voltar ao par — sem elas a revogação
+  deixaria de derrubar o que derrubava (RN-519). O par
+  `runner/disconnect` continua, como alvo da remoção de membro (RN-615). (3) A visão de `maintainer` (listar/revogar de
   qualquer usuário) segue FORA por DECISÃO da RN-519, não por omissão.
   Desde a RN-548 o web também CONSOME essa
   listagem para outra pergunta — `RunnerOnboardingPanel` reconhece máquina já
@@ -425,46 +647,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   do navegador, então nem "esta máquina está pareada" cabe. A seção nova herda
   esse vocabulário INTEIRO em vez de inventar um segundo: `lastUsedAt` é uso
   registrado, "ativa"/"revogada" fala da LINHA e nunca de conexão, e a espécie
-  de máquina nunca ganha verde. É por essas duas
-  ressalvas que o fluxo do ADR 0118 NÃO foi removido: ele muda de LUGAR (um
-  `<details>` com o rótulo do caso que resolve), e aposentá-lo segue sendo o
-  BRB-031
-- **A credencial de git NÃO atravessa o container do runner, e o caminho
-  COMUM é justamente esse — mas desde a RN-558 ele FALHA DIZENDO ISSO.** A
-  geometria não mudou e não muda de passagem: `RunnerReadiness` (RN-507)
-  exige container `running` REGISTRADO antes de QUALQUER operação de
-  `RunnerGit` — inclusive o `git fetch` autenticado inicial —, a ÚNICA
-  forma de esse registro existir num projeto `runner` é o MESMO runner ter
-  subido o próprio container, e é esse mesmo sucesso que marca
-  `estado.containerAtivo` nele; `tratarExec` roteia pra dentro do container
-  (sem campo de `env`, ADR 0130: sem `-e` livre) sempre que `containerAtivo`
-  está setado, e só usa o caminho HOST (que carrega a credencial) quando
-  está `null`. O que a RN-558 fechou foi a METADE do SILÊNCIO: esse par
-  (`env` presente + container ativo) deixou de EXECUTAR — rodava com o
-  helper instalado e as variáveis vazias, e a falha chegava como token
-  inválido ou rede fora — e passou a ser RECUSADO com desfecho nomeado
-  (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` em `index.ts`, reconhecida por
-  `Engine.Runners.CredencialDeGit` no engine), origem `politica` e não
-  `codigo`, e evento durável. Quem recusa é o RUNNER, e SÓ ele pode:
-  `containerAtivo` nasce `null` a cada execução e um container `running`
-  REGISTRADO no banco NÃO implica container ativo naquele processo (runner
-  reiniciado com o container de pé roteia pro HOST, e ali a credencial
-  chega) — não suba essa checagem para `RunnerReadiness`, que fica byte a
-  byte como está. A marca é constante de PROTOCOLO partida entre duas
-  linguagens, com guarda em
-  `scripts/ci/marca-de-credencial-do-runner.spec.ts`. **A METADE que segue
-  ABERTA:** a credencial continua sem atravessar o `docker exec`, então
-  clone/fetch de repositório REMOTO AUTENTICADO em modo `runner` só funciona
-  com o container parado. Fechar exige decidir COMO uma operação credenciada
-  fala com um `docker exec` sem campo de `env`, e toda opção conhecida mexe
-  na porta de contenção do ADR 0130 — é ADR, nunca correção de passagem.
-  Adjacência medida e NÃO corrigida: a recusa acontece depois de
-  `init_from_bare!` já ter feito `git init`, e o `git_dir?` de `ensure!`
-  marca o workspace pronto numa tentativa seguinte — a segunda tentativa
-  falha adiante, no `worktree add`, em vez de repetir a recusa (defeito
-  PRÉ-EXISTENTE da idempotência, vale para qualquer `fetch` que falhe).
-  Repositório `local` (sem credencial), os modos `container`/`mounted` e o
-  `workspace_create` (roda no HOST) não são afetados
+  de máquina nunca ganha verde. O fluxo do ADR 0118 (o navegador gerando a
+  chave, baixando o binário e gravando a pasta) foi APOSENTADO no ADR 0203
+  (RN-687, BRB-031 fechado): o painel manda para o `install.sh`, com o
+  comando, e o instalador SAI do painel quando há chave reconhecida; o comando
+  manual com PAT fica no `<details>`, como o caminho de OUTRA máquina. A rota
+  `POST .../runner-device-keys` saiu junto (sem chamador); `GET`/`DELETE`
+  ficam, e chave de PROJETO já registrada continua valendo e revogável — não
+  "limpe" a espécie `projeto` do banco nem do guard: é ela que mantém de pé o
+  runner configurado pelo navegador antes do ADR 0203. Preço declarado:
+  instalação com TIME não tem mais caminho sem PAT para parear uma segunda
+  máquina, e `GET /runner-releases/binary` ficou sem consumidor de produção,
+  mantido por decisão à parte
 - **O instalador sobe de uma pasta vazia desde a RN-570 (ADR 0160), mas só a
   partir da PRÓXIMA tag final.** O compose de instalação e os três arquivos que
   a instalação usa por caminho relativo viajam como assets `brabo-install-*` no
@@ -475,10 +669,22 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `scripts/ci/assets-do-instalador.ts` e o `case` do `install.sh` (bash 3.2, sem
   Node) — e o spec reprova a divergência e todo bind-mount relativo do compose
   fora dela: bind-mount novo no compose de instalação ENTRA NA TABELA, senão não
-  viaja. Adjacência medida e NÃO corrigida: `test-restore-compose.sh` chama o
-  Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
-  prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
-  é apagado), mas a migração por compose não fecha
+  viaja. A prova de restauração da MIGRAÇÃO fechou (AT-102): o `install.sh` passa
+  `BRABO_ENV_FILE="$PWD/.env"` a `test-restore-compose.sh`, que o entrega ao
+  Compose por `--env-file` (e recusa arquivo inexistente, sem cair noutro), e o
+  compose de instalação passou a DECLARAR o volume `backup_local` — a ausência
+  dele invalidava o arquivo inteiro assim que o profile `backup` ligava, por um
+  motivo que nem o `.env` corrigia
+- O broker da instalação (ADR 0162, RN-575) só existe a partir da PRÓXIMA tag
+  final: o `install.sh` exige `broker` no `images.json`, que Releases
+  anteriores não têm, e a prova ponta a ponta (o E2E responde SIM à pergunta e
+  confere o broker healthy, a api o alcançando e a raiz conferida) só roda em
+  tag. Não medidos: o `DOCKER_GID` e a raiz da pasta gerenciada no Docker
+  Desktop do macOS (a metade interativa do E2E é só Linux); Docker rootless ou
+  remoto cai na recusa da medição, porque o compose monta
+  `/var/run/docker.sock` fixo. Desligar depois exige `rm -sf broker` com o
+  profile — `up --remove-orphans` NÃO o remove (medido: serviço sob profile
+  desligado continua DEFINIDO, não é órfão)
 - `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
   disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
   SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
@@ -491,8 +697,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Dívida de contraste do tema ESCURO travada por número (ADR 0074)
-- Gasto de embedding fora do metering (corte declarado do ADR 0075)
+- Gasto de embedding fora do metering (corte declarado do ADR 0075), salvo a
+  checagem de duplicata semântica (ADR 0198, RN-681), que é linha própria
+- O limiar da duplicata semântica (0,80, RN-681) é PONTO DE PARTIDA NÃO
+  calibrado: os vetores reais dos pares de calibração não puderam ser gravados
+  (registry do Ollama e Hugging Face bloqueados no ambiente). Gravar é
+  `apps/api/scripts/gravar-vetores-de-duplicata.ts` com o Ollama de pé; a prova
+  (`limiar-de-duplicata.calibracao.spec.ts`) PULA até lá. Não mexa no número
+  sem gravar, e se a gravação não separar os pares, reveja os pares ou o texto
+  comparado — nunca afrouxe o teste
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
   fecharam depois)
@@ -515,64 +728,86 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
   dentro do request HTTP — a api não tem fila própria; corte declarado,
   candidato a ADR quando o volume de pulls justificar (ADR 0115)
+- A chamada ao broker tem teto POR OPERAÇÃO desde a RN-604 (`tetoDaOperacao`,
+  `container-broker.client.ts`), e a cadeia do `exec` é broker < api <
+  engine — mexer no teto de um salto sem o de cima reabre o defeito, e os
+  testes dos dois lados conferem a ordem. Segue aberto, por DECISÃO do
+  mantenedor (AT-234, opção D, RN-605): imagem grande não sobe na primeira
+  tentativa. O pull é passo explícito do `start` (`image inspect` → `pull`)
+  sob o MESMO `TIMEOUT_DE_CONTROLE_MS` de 30s, e o estouro é
+  `PullExcedeuTetoError` (504, origem `infra`) — antes saía "código -1" com
+  `origem: null`. Matar o CLI CANCELA o pull (medido): a imagem NÃO segue
+  baixando por trás. Não suba o teto de passagem: as outras três saídas
+  (teto próprio, `start` assíncrono, pull antecipado) foram medidas e
+  recusadas. Os tetos de quem espera o `start` contam as SEIS chamadas de
+  controle (`CHAMADAS_DE_CONTROLE_NO_START`): 195s na api, 185s no
+  `RunnerRouter`, 225s no `propose_action` do engine para as ações de
+  container que a api executa auto-aprovadas. E `timeoutMs` acima de ~255s
+  esbarra nos 300s de cabeçalhos do `fetch` do Node
 
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
   rodou real); `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` idem para git
+- A capability `routingPreference` (ADR 0166, RN-583) é `true` SÓ no
+  OpenRouter desde 2026-09-29 (AT-158), PROVADA:
+  `openrouter-provider.roteamento.smoke.spec.ts` rodou com credencial real e o
+  critério mudou o upstream que serviu (`meta-llama/llama-3.3-70b-instruct`:
+  `price` → DeepInfra, `throughput` → Groq). A prova é a DIFERENÇA entre
+  critérios, não o aceite do campo — o modelo antigo do smoke devolvia o mesmo
+  upstream para todos e não provava nada. Os outros oito seguem `false` e,
+  para eles, a feature segue DORMENTE (422 na rota). Ligar outro provider exige
+  o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
+  prova. Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- Binário standalone: DOIS dos cinco alvos chegam à Release. `v4.0.1` e
-  `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
-  `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
-  `v4.0.0` FOI corrigida, com espera de teto 600s em
-  `build-runner-binaries.yml`. O que falta são os outros três, e são TRÊS
-  causas distintas, não uma: `win32-x64` e `darwin-arm64` reprovam no BUILD
-  por motivo próprio de plataforma (o `.node` do `node-pty` fora de
-  `build/Release`; `--self-test-pty` com `posix_spawnp failed`), e as duas
-  correções JÁ ESTÃO na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca
-  exercitadas — o que falta aí é uma TAG, não uma sessão. `darwin-x64`
-  (`macos-13`) é o único que nunca chegou a construir: ele fica **24h00m01s**
-  na fila e é cancelado, o MESMO número nas três tags, que é o teto do
-  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A causa está MEDIDA
-  (AT-065, 2026-09-13): `macos-13` é label SEM RUNNER, a imagem foi aposentada
-  pelo GitHub em dez/2025 (e ficou 30min na fila de novo, num ensaio por
-  `workflow_dispatch`). O label Intel que o GitHub oferece no lugar,
-  `macos-15-intel`, agenda em segundos e CONSTRÓI, mas reprova no
-  `--self-test-pty`: sob o Bun o `onData` do `node-pty` nunca entrega a saída
-  do filho — bug ABERTO do runtime (oven-sh/bun#25822, nenhuma release
-  corrigida), com a MESMA prova passando sob Node no mesmo runner. Ou seja, o
-  bloqueio deixou de ser runner (pagar runner não resolve) e passou a ser o
-  Bun, e a matriz segue com `macos-13` de propósito: trocar o label não faz o
-  alvo publicar. Decidir entre esperar o Bun (e aí trocar o label) ou tirar a
-  plataforma (a promessa vira quatro alvos, em ADR novo) é decisão de dono.
-  Não medido, mas o issue do Bun foi aberto em darwin ARM64: é provável que o
-  `darwin-arm64` esbarre no mesmo defeito depois do conserto do
-  `spawn-helper`, e aí "falta uma TAG" não bastaria para ele. O que
-  DEIXOU de depender dessa decisão é o manifesto assinado: desde a RN-565 o
-  job `checksums` não tem `needs: build`, então o `darwin-x64` na fila não
-  segura mais o `checksums.txt` por um dia
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
-  fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
-  arquivo para inglês como idioma primário
-- Golden-set de regressão do julgamento semântico do QA de Automação (ADR
-  0123) — a frase "ligar em CI exige segredo de LLM de API OU infra nova"
-  foi MEDIDA (AT-067, 2026-09-13) e a metade de INFRA caiu: num
-  `ubuntu-latest` sem GPU, no molde do `golden-set-rag.yml` (mais o ENGINE de
-  pé como servidor, porque é ele quem roda o `npm test`), o pull de
-  `qwen2.5-coder:latest` leva 13–15s, um turno de LLM ~20s de mediana, e
-  `mix golden_set.qa` roda de ponta a ponta em 19m15s e 22m53s (job inteiro
-  22–26min, runs 34769447405 e 34770869429). O RELÓGIO cabe; o INSTRUMENTO
-  não mede: desde a RN-502 (ADR 0143, 2026-09-04) o `npm test` é
-  auto-aprovado e RECUSADO pelo engine (projeto `container` sem container
-  `running` — o seed, de 2026-08-30, nunca registra um), nenhum caso vê
-  `exit 0`, `approved` fica impossível, e o modelo, lendo a recusa, pede
-  `container_start`/`docker-compose up` (ficam `pending`) ou repete
-  `npm test` até o teto de 60 — 0/6 nas duas rodadas, abaixo do piso 1/6.
-  Vale igual na máquina local. Por isso NÃO nasceu `golden-set-qa.yml`
-  (vermelho toda noite por motivo alheio ao que mede); o desenho medido fica
-  no histórico (`e7d7d1b16`) e a narrativa em `docs/explanation/gates.md`.
-  O que segue com dono humano é decidir COMO o golden-set executa a suíte
-  sob a RN-502 (container de verdade pelo broker no seed, ou outra coisa) —
-  afrouxar a recusa para o harness passar NÃO é opção
+- Binário standalone: TRÊS alvos na matriz desde o ADR 0187, os três PROVADOS
+  em ensaio, e DOIS chegando à Release. `v4.0.1` e `v5.0.0` anexam
+  `brabo-runner-linux-x64` e `-linux-arm64` (medido com `gh release view`) — a
+  corrida com o `release.yml` que derrubava o anexo na `v4.0.0` FOI corrigida,
+  com espera de teto 600s em `build-runner-binaries.yml`. O `darwin-arm64`
+  CONSTRÓI e passa o smoke em ensaio (`workflow_dispatch` com tag vazia, runs
+  36779817686 e 36805241339): o que o derrubava era o oven-sh/bun#25822, MEDIDO —
+  sob o Bun o `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro
+  `EAGAIN` do fd não-bloqueante, e o terminal do binário parava depois do
+  primeiro pedaço nas três plataformas Unix (o Linux passava na prova por sorte
+  de tempo). Sob o Bun o runner lê o PTY com leitor próprio
+  (`apps/runner/src/leitor-de-pty.ts`, RN-688), e o `--self-test-pty` faz uma
+  segunda volta depois de uma pausa, que reprova o leitor antigo também no
+  Linux — falta só uma TAG para ele chegar à Release. O `win32-x64` SAIU por
+  decisão do mantenedor (ADR 0187, AT-343), no molde do Mac Intel: quatro
+  ensaios (36775746724, 36779817686, 36780804339, 36781729045) o levaram até
+  carregar o `node-pty` (o caminho virtual `B:/~BUN/root/`, também sem os
+  dois-pontos, reconhecido em `apps/runner/src/binario-compilado.ts` — fica,
+  é o ponto de partida da volta), e a SONDA do auto-teste mediu que sob o Bun
+  o pipe de saída do ConPTY termina depois do primeiro pedaço: até
+  `cmd.exe /c echo` morre com 0xC000013A. O `darwin-x64` (Mac Intel) saiu antes
+  (ADR 0174, AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse
+  bug do Bun que reprova, com a MESMA prova passando sob Node — e ali só com
+  `chmod +x` no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a
+  AT-114 o runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
+  (`apps/runner/src/spawn-helper.ts`, só darwin, erro nomeado se falta ou o
+  `chmod` é recusado), provado por teste e NUNCA num macOS real. Mac Intel e
+  Windows usam `npm install -g @brabo/runner`: o proxy recusa os dois com 400
+  próprio (`SEM_BINARIO_POR_DECISAO`, nome e ADR por plataforma), o `install.sh`
+  diz isso sem baixar no Mac Intel e, no Windows, na recusa que ele já fazia da
+  instalação inteira (ADR 0150). Os TRÊS lugares que enumeram alvos (matriz,
+  `PLATAFORMAS` da api, o `case` do `install.sh` — a lista do web saiu com o
+  fluxo do navegador, ADR 0203) são amarrados por
+  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel ou o Windows é ADR
+  novo, depois de o Bun corrigir, nunca só devolver as linhas da matriz
+- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
+  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
+  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+  texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
+  de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
+  reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
+  texto só em pt-BR em `.ts` de `lib/` (o `classifyEvent` de `activity.ts`,
+  por exemplo). Desde a AT-326, `i18n-vocabulario.test.ts` reprova número de
+  RN/ADR em frase de tela, jargão em inglês no pt-BR ("handoff", "gate",
+  "binding", "LLM", "dev agent", "lead" e "runner" ficam: são do glossário) e
+  plural por "(s)" — em TODOS os namespaces e nos dois idiomas desde a
+  AT-331, que acrescentou `_zero` obrigatório ao lado de todo `_one` no pt-BR
+  (o CLDR do `pt` põe o 0 em `one`) e frase com `{{count}}` sem plural,
+  salvo invariante declarada no próprio teste
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
@@ -604,7 +839,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   projetado ganha tradução ALI, nunca num segundo tradutor — e não toca a
   outbox dele; `PromptTemplate` não vem do event log e volta por
   `scripts/dev/seed-prompts.ts`; pgvector CONTINUA sendo
-  o índice vetorial dos chunks, o grafo não guarda embedding
+  o índice vetorial dos chunks, o grafo não guarda embedding; a pasta `docs/`
+  dos artefatos (ADR 0148) é a SEGUNDA projeção derivada e tem o mesmo
+  caminho de volta — `pnpm --filter api artefatos:reprojetar` (RN-590), pelo
+  MESMO `ArtifactEventTranslator` do `ArtifactProjector`, sem backup, sem tocar
+  a outbox e sem apagar nada
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
   `i18next` (fundação de i18n, RN-425) atrás de `lib/i18n.ts`/`lib/idioma.ts`
@@ -613,7 +852,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
-  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico
+  local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico.
+  Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
+  `.preload` que o router espera), e os painéis das abas do projeto também
+  (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de
+  toda tela vão em `codeSplitting.groups` do `vite.config.ts` por lista de
+  PERMITIDOS: um grupo genérico de `node_modules` puxaria `mermaid`/`xterm`
+  para o bundle inicial (AT-300)
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
   na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
   embutido no bundle) para executar comandos aprovados e terminal
@@ -723,13 +968,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `proposed_action` — é configuração consentida (a linha da RN-516).
   `--project`/`--dir`/`--token` são
   OPCIONAIS quando a pasta tem `brabo-runner.config.json` e a chave de
-  dispositivo gravados pelo fluxo do navegador (RN-464..466, ADR 0118):
-  o navegador gera um par Ed25519 (Web Crypto), registra a chave pública
-  como `runner_device_keys` e grava os três arquivos numa pasta via File
-  System Access API (fallback de dois downloads fora do Chromium) —
+  dispositivo (RN-464..466, ADR 0118) — gravados, até o ADR 0203, pelo fluxo
+  do navegador, que gerava o par Ed25519 (Web Crypto), registrava a pública
+  como `runner_device_keys` e gravava os três arquivos via File System Access
+  API. Esse fluxo foi APOSENTADO (ADR 0203, RN-687), mas a LEITURA da pasta
+  continua: quem a configurou assim segue funcionando —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
   dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a RN-551
-  (ADR 0155 ponto 4) o navegador NÃO é mais o único gerador: `brabo-runner
+  (ADR 0155 ponto 4) o gerador é o TERMINAL: `brabo-runner
   device-key create` gera o par NA MÁQUINA e `device-key finish --id <id>`
   carimba o `kid`. São DOIS comandos porque o `kid` É o id do registro no
   SERVIDOR (RN-475) e só existe depois dele — o `create` grava um `.parcial`
@@ -834,15 +1080,24 @@ o RACIOCÍNIO da triagem, que continua valendo.
   no ambiente do processo filho que `apps/runner/src/exec.ts` spawna no
   HOST do usuário: mesclado sobre `process.env` (nunca substitui —
   perderia PATH), nunca repassado ao `docker exec` (a porta de Docker não
-  ganhou campo de `env`, de propósito) e nunca logado. Desde a RN-558,
-  "nunca repassado ao `docker exec`" deixou de significar "roda sem a
-  credencial": com container ativo, um `exec` que carrega `env` é RECUSADO
-  com desfecho nomeado — ver a lacuna em "Estado atual e aberto", cuja
-  metade do `env` segue aberta
+  ganhou campo de `env`, de propósito) e nunca logado. Desde o ADR 0193
+  (RN-676, decisão do dono) o git CREDENCIADO roda no HOST e o código no
+  container: o engine marca o `git fetch` autenticado de `RunnerGit` com
+  `gitCredenciado: true` — por UM ponto, `RunnerRouter.exec_git_credenciado/5`
+  — e o runner, com a marca E `env` não vazio, roda o comando no host mesmo
+  com container ativo (a mesma pasta: `estado.dir` é o bind-mount de `/work`).
+  O discriminador é a MARCA, nunca o `env`: `env` sem a marca, com container
+  ativo, segue RECUSADO pela RN-558 (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE`, par
+  de protocolo com `Engine.Runners.CredencialDeGit`, guarda em
+  `scripts/ci/marca-de-credencial-do-runner.spec.ts`) — senão o `env` viraria
+  a porta de saída do container. Na prática essa recusa só aparece com runner
+  ANTERIOR ao ADR 0193. Quem decide host×container continua sendo o RUNNER
+  (`containerAtivo` nasce `null` a cada execução): não suba isso para
+  `RunnerReadiness`, que fica byte a byte, e não dê `env` à `DockerPort`
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
-  framework web (são seis rotas, `node:http` puro), imagem própria em
+  framework web (são seis rotas, medido em 2026-09-25, `node:http` puro), imagem própria em
   `docker/broker/`, e o binário `docker` DENTRO da imagem (`docker-cli`, só o
   cliente) — preço declarado da decisão de usar um mecanismo só dos dois lados.
   **Ele não aceita especificação de container**: recebe um `projectId` e uma
@@ -870,9 +1125,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Desde a RN-512 (ADR 0146) sobe POR PADRÃO no compose local e
-  permanece sob `profiles: ["container-broker"]` no de produção — a divergência
-  entre os dois arquivos é a decisão, não descuido; a imagem dele NÃO é
-  publicada no GHCR (as quatro do ADR 0119 seguem sendo quatro). A imagem de
+  permanece sob `profiles: ["container-broker"]` no de produção e no de
+  INSTALAÇÃO — a divergência entre o de dev e os outros dois é a decisão, não
+  descuido; no de instalação quem liga o profile é o `install.sh`, perguntando
+  (ADR 0162, RN-575). A imagem de PRODUÇÃO (`docker/broker/Dockerfile.prod`) é
+  a QUINTA publicada no GHCR desde o ADR 0162, com os mesmos gates das outras
+  quatro (Trivy, non-root, healthy read-only sem rede no `ci.yml`; digest,
+  assinatura e verificação no `release.yml`) — e o Kubernetes NÃO a conhece, de
+  propósito: não há Deployment de broker, e `argumentosDeSetImage` emite só as
+  quatro que a base do kustomize declara. A imagem de
   DEV instala as dependências no BUILD e NUNCA em runtime, e isso é
   consequência direta da rede: sem egress não há registry alcançável, e a
   resposta a "o corepack/pnpm não baixa" é SEMPRE tirar o registry do caminho
@@ -912,7 +1173,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
-  `package.json`: já são catorze na raiz e treze no website, cada um com o
+  `package.json`: já são dezoito na raiz e dezessete no website, cada um com o
   advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
   escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
   versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já
@@ -930,11 +1191,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - LLM: roteador na api com suite de contrato; base OpenAI-compatível
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
-  preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
-- Deploy: Kubernetes (k3d/kind em validação local). As quatro imagens de
+  preço congelado no metering (ADR 0042) — que desde o ADR 0188 só é o
+  número quando a resposta NÃO traz o custo real: o `usage.cost` do
+  OpenRouter vence, com `price_implicit` marcando a linha (a MESMA coluna
+  do Jev) e o do catálogo ao lado em `catalog_cost_micros`, RN-665; 9 providers (ADR 0043); o Jev
+  (`typesafe/jev-1.13`, Decisions API do OpenRouter) escolhe o menu de
+  ferramentas de cada passo por uma porta PRÓPRIA, `ToolRouter`, fora do
+  `LLMProviderRegistry` e do catálogo `models` (ADR 0179, RN-625): só com
+  provider OpenRouter, só RESTRINGE (P3), ligado por padrão por workspace, e
+  qualquer falha dele deixa o catálogo inteiro — o turno nunca falha por causa
+  dele, e ele não aprova, não nega nem escolhe modelo
+- Deploy: Kubernetes (k3d/kind em validação local). As cinco imagens de
   produção são PUBLICADAS no GHCR a cada tag final, públicas e por digest
-  (ADR 0119) — `.release/images.json` registra o que cada tag publicou, e
-  `make imagens-do-release` aplica no overlay. O overlay do repositório
+  (ADR 0119; a quinta, o broker, desde o ADR 0162) — `.release/images.json`
+  registra o que cada tag publicou, e `make imagens-do-release` aplica no
+  overlay as QUATRO que o kustomize conhece (o broker fica fora do k8s). O overlay do repositório
   guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
@@ -947,25 +1218,44 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `scripts/ci/actions-pinadas.ts` reprova no job `lint` quem esquecer, e
   todo `curl` de binário passa por `sha256sum -c`. Desde o ADR 0159 essa
   regra tem uma IRMÃ, e o argumento é o mesmo palavra por palavra: toda
-  IMAGEM de terceiro é presa por DIGEST, com a tag num comentário ao lado
-  (`neo4j@sha256:…  # 5.26-community`), e o digest é o do ÍNDICE, nunca o de
+  IMAGEM de terceiro é presa por DIGEST, e o digest é o do ÍNDICE, nunca o de
   uma plataforma — pinar o manifesto de `linux/amd64` quebraria `linux-arm64`
-  sem aviso. Em DOCKERFILE o comentário vai na linha DE CIMA, e isso NÃO é
-  gosto: o parser do Docker só reconhece `#` no INÍCIO da linha, então
-  `FROM x@sha256:… # tag` é um `FROM` com TRÊS argumentos e o build morre —
-  aprendido errando, e o `hadolint` tinha passado nos cinco Dockerfiles (parser
-  próprio; linter concordar não é build concordar). O comentário é UM TOKEN,
-  sem espaço, nos dois formatos: é o que separa a tag da PROSA que já mora
-  acima de quase todo `FROM`. Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
+  sem aviso. Desde o ADR 0178 (AT-139) a TAG mora DENTRO da referência, antes
+  do digest — `neo4j:5.26-community@sha256:…`, e no Dockerfile
+  `FROM node:24.11.1-alpine3.21@sha256:… AS deps` —, e NÃO num comentário, que
+  era a forma do ADR 0159: o Dependabot não lê comentário em formato nenhum e
+  atualiza pin só de digest para o digest da `latest`, com o comentário
+  mentindo e o lint verde. Com os dois, o Docker puxa pelo digest. Comentário
+  ao lado é PERMITIDO só se disser a MESMA tag (um token com dígito que
+  diverge reprova), e em DOCKERFILE comentário no FIM da linha do `FROM`
+  continua proibido: o parser do Docker só reconhece `#` no INÍCIO da linha,
+  então `FROM x@sha256:… # tag` é um `FROM` com TRÊS argumentos e o build
+  morre — aprendido errando, e o `hadolint` tinha passado (parser próprio;
+  linter concordar não é build concordar). Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
   (compose E `FROM` de Dockerfile), `deploy/k8s/` e `.github/workflows/` —
   esta última é `services:` de job, ou seja, o MESMO runner que a regra das
   actions protege, alcançado pela outra porta, e foi o lugar que o próprio
-  levantamento do `BRB-004` não tinha visto. `scripts/ci/imagens-pinadas.ts`
-  reprova no job `lint`, e reprova TRÊS coisas: referência mutável, digest
-  sem a tag em comentário, e a MESMA tag com dois digests diferentes — a
-  terceira existe porque `golden-set-rag.yml` PROMETE em comentário rodar a
+  levantamento do `BRB-004` não tinha visto. E desde o ADR 0197 (AT-246) os
+  workflows NÃO têm literal de imagem nenhum: o `image:` dos `services:` é
+  `${{ needs.imagens.outputs.<imagem> }}`, de um job `imagens` que chama o
+  reutilizável `.github/workflows/imagens-do-compose.yml`, que lê o serviço do
+  compose de DEV (`scripts/ci/imagens-do-compose.ts`, tabela
+  `IMAGENS_DOS_WORKFLOWS`). Serviço novo de workflow entra por ESSE caminho —
+  imagem no compose, linha na tabela, output no reutilizável (o spec reprova
+  se divergirem) —, nunca com um literal. Job EXIGIDO que dependa de `imagens`
+  leva `if: ${{ !cancelled() }}`, senão `imagens` vermelho o deixaria
+  `skipped`, que conta como verde. `scripts/ci/imagens-pinadas.ts`
+  reprova no job `lint`, e reprova: referência mutável, digest sem a tag
+  INLINE (inclusive a forma antiga, tag só no comentário), comentário que
+  diverge da tag inline, comentário no fim do `FROM`, a MESMA tag inline com
+  dois digests diferentes, e — num WORKFLOW — imagem literal (mesmo por
+  digest), expressão que não seja EXATAMENTE `${{ needs.<job>.outputs.<x> }}`
+  (literal na expressão, `||`, `env.`, `vars.`, `format()` são onde um literal
+  mutável se esconde) e `needs` de job que não chama o reutilizável. A regra
+  dos dois digests nasceu da promessa do `golden-set-rag.yml` de rodar a
   mesma versão do compose de dev (o piso do golden-set é chaveado por MODELO,
-  não por ambiente), e com digest isso deixa de ser promessa. São DOIS
+  não por ambiente); desde o ADR 0197 essa promessa é CONSTRUÇÃO, e a regra
+  segue guardando composes × Dockerfiles × manifests. São DOIS
   scripts e não um: `uses:` mora em YAML de workflow com uma sintaxe, imagem
   mora em compose, manifest do kustomize e Dockerfile com outras três. O
   check NÃO cobre as imagens que o PRODUTO publica, e isso é decisão com três
@@ -976,18 +1266,43 @@ o RACIOCÍNIO da triagem, que continua valendo.
   referência interpolada (`${BRABO_API_IMAGE:?…}`) e estágio de multi-stage.
   A lista de exceções é por NOME e falha fechado: imagem de terceiro nova
   nunca casa com `brabo-`. Preço DECLARADO e não pago aqui: digest congela, e
-  imagem congelada não recebe correção de segurança até alguém trocá-lo à mão
-  — o ecossistema `docker` do Dependabot NÃO está ligado, e ligá-lo é decisão
-  à parte. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
+  imagem congelada não recebe correção de segurança até alguém trocá-lo — e
+  desde o ADR 0197 o Dependabot `docker-compose` (`/docker`) e `docker`
+  (`/docker/*` e `/deploy/k8s/**`, NUNCA `/docker` sem o `/*`: o `docker`
+  também lê YAML e abriria um segundo PR para os composes) estão LIGADOS,
+  `target-branch: dev`, cada um com UM grupo — sem grupo, a mesma tag em três
+  pastas de Dockerfile viraria três PRs vermelhos. Segue DECLARADO: `neo4j` e
+  `ollama` moram também em `deploy/k8s/base/`, os dois ecossistemas nunca
+  dividem um PR, e uma re-publicação da MESMA tag faz os dois PRs nascerem
+  vermelhos pela regra dos dois digests até um humano juntá-los — não afrouxe
+  a regra para eles passarem. O `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
   pelo mesmo motivo que a irmã não tem: as duas moram aqui e em
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
   0149) a esteira também ASSINA o que publica: `cosign` keyless (OIDC do
-  Actions) nas quatro imagens por DIGEST — nunca por tag, que é ponteiro
-  móvel — e UM `checksums.txt` assinado cobrindo os cinco binários do
-  runner, não cinco assinaturas. Os dois workflows VERIFICAM o que
+  Actions) nas imagens publicadas (cinco desde o ADR 0162) por DIGEST — nunca por tag, que é ponteiro
+  móvel — e UM `checksums.txt` assinado cobrindo os binários do runner
+  (quatro alvos desde o ADR 0174), não uma assinatura por binário. Os dois workflows VERIFICAM o que
   assinaram no mesmo run, porque assinatura que ninguém tenta verificar é
-  arquivo a mais e a falha apareceria só na máquina de quem instala. Desde a
+  arquivo a mais e a falha apareceria só na máquina de quem instala. E desde
+  o ADR 0172 (AT-179) o `release.yml` ESCANEIA o que publica antes de
+  assinar: Trivy sobre o DIGEST de cada imagem do `.release/images.json`
+  (`--image-src remote`), entre o registro e o `cosign sign` — imagem
+  reprovada não é assinada, e o `install.sh` não instala imagem sem
+  assinatura. Até ali só o `ci.yml` escaneava, e ele escaneia um build LOCAL do
+  PR, enquanto a tag constrói FRIA noutra execução (AT-110). O portão usa as
+  flags do `ci.yml` BYTE A BYTE (`--severity HIGH,CRITICAL --ignore-unfixed
+  --exit-code 1`, o MESMO `.trivyignore.yaml`) e o veredito é o código de
+  saída do Trivy, nunca uma régua em TS; o que NÃO tem correção é RELATADO
+  (resumo do job e asset `trivy-sem-correcao.md`, por
+  `scripts/ci/trivy-do-release.ts`) e não bloqueia. Sem allowlist nova — não
+  acrescente `--ignorefile`, `--skip-*` nem `--vex` ao release para uma tag
+  passar. Versão, `sha256` e flags do Trivy existem nos DOIS workflows, de
+  propósito (`env:` não se importa), e `scripts/ci/trivy-do-release.spec.ts`
+  reprova a divergência e o portão depois da assinatura: quem sobe o Trivy sobe
+  nos dois no mesmo PR. Preço declarado: o push vem antes do scan, então tag
+  reprovada deixa imagem SEM assinatura no GHCR e sem Release. Desde a
   RN-525 o proxy `GET /runner-releases/binary` VERIFICA — mas só o sha256
   contra o `checksums.txt` da mesma release, nunca a ASSINATURA dele: é
   INTEGRIDADE e não procedência, e está escrito assim no docblock, na
@@ -997,14 +1312,29 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma rota `@Public()` depender de um SEGUNDO host de terceiro
   (`tuf-repo-cdn.sigstore.dev`) para verificar algo que nenhuma Release
   carrega ainda, o que a régua dos ADRs 0041/0042 proíbe declarar sem prova.
-  Quem verifica assinatura é o `install.sh`, com `cosign` pinado. Fica FORA,
+  Quem verifica assinatura é o `install.sh`, com `cosign` pinado — e ele roda
+  na máquina DOS OUTROS, então não assume ferramenta que o SO possa não ter:
+  hash é UMA função com DUAS ferramentas aceitas (`sha256sum` **ou**
+  `shasum -a 256`), resolvidas ANTES do primeiro download e nunca no meio de
+  uma verificação, pela mesma disciplina que já fez o `case` de
+  `sha_do_cosign` recusar array associativo (bash 3.2 do macOS) e
+  `comparar_versoes` recusar `sort -V`. Faltar as DUAS é recusa PRÓPRIA, que
+  nomeia a ferramenta — NUNCA a de hash divergente, que é a de INCIDENTE
+  (*"pare e investigue"*): o script chamava `sha256sum` direto nos cinco
+  pontos de verificação, o macOS não o traz, e o `command not found` chegava
+  como acusação de adulteração, bloqueando toda instalação na plataforma que
+  ele mesmo suporta e ensinando a ignorar a frase no dia em que ela for
+  verdade (AT-091, RN-526). Ferramenta ausente e hash divergente são recusas
+  DIFERENTES, com textos diferentes — não as colapse. Fica FORA,
   declarado: code-signing de SO dos binários (notarização, Authenticode) e a
   metade de PROCEDÊNCIA do proxy — BRB-005 segue aberto só nela. E desde a
   RN-565 o manifesto NÃO é mais refém da matriz: o job `checksums` perdeu o
   `needs: build` e passou a esperar os ASSETS da Release, com teto, em vez do
   JOB mais lento — que podia nem começar. O número é medido nas três tags que
-  existem: `darwin-x64` fica 24h00m01s na fila e é cancelado, o MESMO valor
-  nas três, enquanto os outros quatro terminam em no máximo 4m18s. `always()`
+  existem: `darwin-x64` ficava 24h00m01s na fila e era cancelado, o MESMO
+  valor nas três, enquanto os outros quatro terminavam em no máximo 4m18s (o
+  alvo saiu da matriz depois, no ADR 0174; a correção vale para qualquer alvo
+  sem runner). `always()`
   cobria dependência CANCELADA e por isso o job RODAVA; o que ele nunca
   cobriu foi QUANDO, e um manifesto que chega um dia depois é, para quem
   instala, um manifesto ausente (RN-525/526 recusam sem ele, em TODA
@@ -1025,7 +1355,19 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é `scripts/dev/install-e2e.spec.ts`, e ele guarda as duas formas de o E2E
   apodrecer calado — o gatilho afrouxado, e uma frase do `install.sh` reescrita
   (que não faz as asserções falharem: faz elas SUMIREM). Mesma decisão, mesmo
-  motivo, do golden-set do RAG (ADR 0138)
+  motivo, do golden-set do RAG (ADR 0138) e do golden-set do QA
+  (`golden-set-qa.yml`, SEMANAL, ADR 0168 — api, engine e broker nativos no
+  runner, o socket do Docker só no broker, e a imagem dos casos lida do
+  próprio seed, nunca de um segundo literal no workflow). E ele guarda uma TERCEIRA, medida na
+  AT-083: o instrumento que não mede. O passo "com TTY" rodava
+  `script -qec "… < respostas"`, o `<` ficava DENTRO do `script`, e o
+  instalador nunca viu terminal — o comentário afirmava o contrário. Quem roda o
+  instalador agora é um driver de pty em Python, e o spec EXTRAI esse driver do
+  workflow e o roda contra um instalador de mentira; lógica de workflow que só
+  roda em tag se prova assim, em PR, nunca por leitura. A forma de instalar é
+  BAIXAR e rodar um arquivo (`curl -fsSLO … && bash install.sh`, RN-526) — o
+  `sh -c "$(curl …)"` antigo nunca funcionou, porque a autoverificação calcula o
+  hash de `$0`; não reabra essa forma nem dê à verificação uma porta de pular
 
 ## Convenções
 - Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
@@ -1036,7 +1378,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma que existe custa caro. Não "limpe" essa lista.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
-  hotfix/ nasce de main. Formato funcao/descritivo,
+  hotfix/ nasce de main. Os AGENTES seguem a mesma régua desde a RN-664: o
+  worktree do dev agent nasce de `dev`, a PR dele e a de ADR miram `dev`, e o
+  gate julga o diff contra `dev` — os três juntos, nunca um só (o gate
+  julgaria um diff que não é o da PR); repositório sem `dev` falha nomeado,
+  sem queda para a default. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
   PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
   de barras), mas só quando o AUTOR é o próprio Dependabot
@@ -1060,7 +1406,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   e o `permissions.json` de cada projeto não tinha onde ser escrito — ou seja,
   provisionar repositório era impossível na máquina de quem desenvolve o
   produto. Ao acrescentar volume nomeado novo, crie o diretório na imagem;
-  esquecer não dá erro de build, dá 403 em runtime. Volume JÁ criado continua
+  esquecer não dá erro de build, dá 403 em runtime. Vale também para os
+  `node_modules` de `api` e `web` (AT-172: `EACCES` no `pnpm install`), e o
+  ponto de montagem DENTRO do bind-mount do host o Docker cria como root —
+  isso a imagem não alcança, e quem o cria antes é o `preflight.mjs`. Os do
+  ENGINE (`_build`/`deps`/`.mix`/`.hex`) já nasciam com o dono certo — medido
+  do zero na AT-182, o `docker/engine/Dockerfile` os cria antes do `USER`. Volume JÁ criado continua
   com o dono antigo: a correção vale para volume novo, e destravar um ambiente
   existente exige `docker volume rm` (ou um `chown` pontual como root).
 - `docker compose up --wait` só prova o que tem `healthcheck` — para serviço
@@ -1083,7 +1434,44 @@ o RACIOCÍNIO da triagem, que continua valendo.
   banco numa derrubada do ambiente. E script que AFIRMA um estado pergunta antes
   de afirmar: `scripts/dev/reset-total.sh` bate em `/health` dos três e imprime
   `ps` antes da frase final, que nomeia o que ficou de pé — e qualquer falha no
-  meio sai com o passo nomeado, nunca com a frase de sucesso.
+  meio sai com o passo nomeado, nunca com a frase de sucesso. O reset NÃO
+  remove nem recria volume nenhum (AT-181), e DIZ isso no começo e no fim:
+  "total" é o banco e as imagens, e o preço é que ele nunca reproduz um
+  PRIMEIRO CLONE — defeito de volume inexistente (AT-172) se prova num projeto
+  compose DESCARTÁVEL (`-p <nome> run --rm --no-deps`, `down -v`), nunca nele.
+  `scripts/dev/reset-total.spec.ts` reprova linha executável que apague volume.
+  E o que o faria morrer DEPOIS do `DROP SCHEMA` por motivo do HOST ou de um
+  VOLUME é perguntado ANTES do primeiro efeito (AT-203): as migrations e o seed
+  rodam no host, com o `deps`/`_build`/`node_modules` do CHECKOUT, então o
+  script roda `mix deps.get` + `mix compile` em `apps/engine` (um `mix.lock`
+  novo o derrubava com `lock mismatch` e o banco apagado), confere
+  `drizzle-kit`/`ts-node`, e confere a senha do Neo4j contra a do volume (o
+  Neo4j só aplica `NEO4J_AUTH` na CRIAÇÃO de `neo4j_data`) — recusando com
+  `RESET NÃO COMEÇOU`, e nomeando a senha também se o `up --wait` reprovar por
+  ela. Pré-requisito novo de host entra em `scripts/dev/reset-total-lib.sh`,
+  antes do `stop`; `reset-total-ordem.spec.ts` roda o script inteiro com
+  binários de mentira no PATH e reprova a ordem invertida.
+- O compose de DEV é o projeto Docker `brabo-dev` e o de INSTALAÇÃO é `brabo`
+  (ADR 0170, AT-173) — containers `brabo-dev-api-1` × `brabo-api-1`, volumes
+  `brabo-dev_pgdata` × `brabo_pgdata`. Até ali os dois eram `brabo`, UM projeto
+  numa máquina com os dois: o banco da instalação recebeu migration do dev, e o
+  `DROP SCHEMA` do reset cairia nele. NÃO renomeie o de instalação (desligaria
+  as instalações existentes dos próprios volumes) e NÃO volte o de dev a
+  `brabo`; o overlay de observabilidade repete `brabo-dev` porque o `name:` do
+  último `-f` vence. Comando ou doc de DEV cita `brabo-dev-*`; o que fala da
+  INSTALAÇÃO (o `brabo_project_workspaces` que o `install.sh` mede) continua
+  `brabo`. O `preflight.mjs` e o `reset-total.sh` RECUSAM enquanto houver na
+  máquina container do compose de instalação — pelo ARQUIVO do rótulo
+  `com.docker.compose.project.config_files`, em qualquer estado e qualquer
+  `-p` — ou se o dev resolver o projeto `brabo`; no reset é o PRIMEIRO passo,
+  antes do preflight. A régua mora em DOIS lugares de propósito
+  (`scripts/dev/instalacao-na-maquina.mjs` e `recusar_se_ha_instalacao` em
+  `reset-total-lib.sh`, porque o spec do reset roda com `node` de mentira). Os
+  volumes `brabo_*` do dev antigo só geram AVISO, derivado das chaves que SÓ o
+  compose de dev declara; nenhum script apaga volume, e o procedimento de cópia
+  está no runbook ("Moving a dev environment to brabo-dev"). Prova de guarda ou
+  de subida se faz num projeto DESCARTÁVEL (`-p <nome>`), nunca contra o
+  `brabo-dev` corrente nem contra uma instalação real.
 - `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
   (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
   que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).
@@ -1119,6 +1507,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o destino do PR e o redundante é REDIRECIONADO, não fechado. Depois de
   redirecionar, os checks da `dev` só rodam com `@dependabot rebase` de quem
   tem escrita (evento do `GITHUB_TOKEN` não dispara workflow).
+  PR do Dependabot que SÓ troca pin de action (SHA do `uses:` + comentário de
+  versão, mesma action, mesma indentação) ganha `docs-not-needed:` escrito
+  pelo BOT, num passo do job `Drift, gerados e build` antes do drift
+  (`scripts/ci/dependabot-justifica-pin.ts`, AT-094) — autor E diff, as duas;
+  qualquer outra linha e nada é escrito. NÃO mova isso para workflow irmão: o
+  `GITHUB_TOKEN` não dispara `edited`, re-executar o job reusa o corpo ANTIGO
+  do payload (medido, run 34898913072) e `pull_request_target` só roda o
+  workflow da `main`. É por isso que o drift lê `PR_BODY_FILE` antes de
+  `PR_BODY`. A linha do bot é marcada e sai sozinha se o diff deixar de ser
+  pin; a de humano nunca é tocada.
 - Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
   (`.github/workflows/archive-merged-branch.yml`) — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico
@@ -1144,12 +1542,46 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
+  Estado TERMINAL recusa CONVERSA com 409 nomeado (`sessao_encerrada`,
+  RN-581), e "conversa" é TIPO de conversa OU ATOR conversacional — nunca uma
+  lista de permitidos por tipo: o Psicólogo e a Anamnese escrevem numa sessão
+  fechada com o MESMO vocabulário do Criativo, e a decisão humana sobre ação
+  pendente continua entrando. O heartbeat não fecha sessão com conversacional
+  esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
+  turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
+  continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
+  para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
+  transição genérica continua recusando `closed → active`, e `closing →
+  active` segue proibido por qualquer caminho. Não ponha `active` em
+  `ALLOWED_TRANSITIONS` dos terminais. O fechamento anterior vira o evento NOVO
+  `session.reopened` (a coluna é limpa, o evento guarda quando e por quê), o
+  `kind` não muda, e sessão com `execution.activated` NÃO reabre (409
+  `sessao_com_execucao`); papel `developer` (o mesmo de encerrar), sem prazo e
+  essa recusa são decisão do dono desde o ADR 0184 (AT-337), não mais padrão
+  provisório. O `SessionLifecycleWorker` ignora o
+  fechamento que a reabertura já desfez (lê o `status` da sessão).
 - A sessão tem DUAS classificações, e elas não se sobrescrevem: `kind`
   (`consultiva|criativa`) é a INTENÇÃO de criação, gravada e imutável; o
   evento `execution.activated` é o ESTADO de execução, e continua sendo
   ele que `findActiveExecutionSession` procura. `execution.activated` em
   sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
   Não faça a derivação por evento olhar `kind`
+- O repositório de projeto CRIADO nasce no aceite do handoff ao ARQUITETO
+  (RN-582, ADR 0165), dentro de `AcceptHandoffUseCase`, ANTES de
+  `activateAgent` — criar projeto não provisiona (RN-541). O aceite ao Dev Lead
+  repete a chamada como SEGUNDA PORTA idempotente (a saída do projeto que
+  passou pelo Arquiteto sem repositório); não a remova. E
+  `execution/activate` sem repositório é 409 antes de qualquer efeito —
+  RECUSA, nunca provisiona: provisionar ali esconderia um efeito de git na
+  ativação e deixaria Arquiteto e Infra, que trabalham antes dela, sem onde
+  escrever. Desde o ADR 0186 (RN-660) esse aceite tem um SEGUNDO autor: a
+  oferta `po → arquiteto` é aceita pelo SISTEMA quando o backlog está coberto
+  (≥ 1 regra, nenhuma sem história, a mesma `computeCoverage` da aba Backlog),
+  o repositório é `local` e o projeto não tem conexão de git — sempre por
+  `AcceptHandoffUseCase` e com o ator `handoff-auto-accept` no log. Não
+  estenda a outro par de agentes nem a repositório remoto sem ADR
 - O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
   para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
   como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
@@ -1180,16 +1612,47 @@ o RACIOCÍNIO da triagem, que continua valendo.
   autonomia pra QUALQUER tipo de ação do agente, ligada pelo `ApprovalCard`
   ("Modo automático") e desligada pelo mesmo toggle manual/auto do card do
   agente na Visão Geral/Executores. Regra específica sempre vence a
-  curinga; a resolução mora no repositório (`findMode`), nunca em
-  `decide()`. Tetos continuam absolutos MESMO com auto mode ligado, e não
-  têm exceção configurável em lugar nenhum — merge em branch protegida,
+  curinga; a resolução mora no repositório (`resolve`, com `findMode` como
+  leitura dele), nunca em `decide()`, que recebe o modo E a ORIGEM
+  (`autonomyOrigin`). O teto de ESCOPO DE CAMINHO (ADR 0055) NÃO vale em auto
+  mode (RN-603, ADR 0167, decisão do dono): ligar o modo automático é o
+  usuário decidindo de uma vez que aquele agente roda qualquer comando,
+  inclusive fora da pasta — medido no `exp001`, 47 de 51 pedidos vinham só do
+  escopo, porque o dev agent roda no container (`/work`) e o escopo compara
+  com a raiz do HOST. Só a curinga em `auto_approve` tem esse poder; regra
+  ESPECÍFICA (`terminal: auto_approve`) segue com o escopo, e o toggle
+  "manual" o restaura. Desde a RN-670 (ADR 0189, decisão do dono de 01/10, que
+  MANTEVE a RN-603) isso é o PILOTO AUTOMÁTICO: `git commit` e branch LOCAL
+  passam, e a específica `auto_approve` SOB a curinga `auto_approve` — o que
+  "Sempre permitir" de dev agent grava — resolve COMO a curinga no repositório,
+  então o clique não desliga mais o piloto; não "conserte" isso deixando de
+  gravar a específica (ela é o que vale quando o toggle volta a manual). E fora
+  do piloto o escopo compara com a pasta REAL de execução (RN-669): com
+  container `running` em `container`/`mounted`, `/work` + o `/tmp` do
+  container, com o `cwd` de host traduzido como o engine traduz; sem ele, a
+  pasta do host, com o `/tmp` do host fora. `runner` fica na raiz do host, de
+  propósito (a api não sabe se o runner roteia para o container). Os DEMAIS tetos continuam absolutos MESMO com auto
+  mode ligado, e não têm exceção configurável em lugar nenhum — merge em
+  branch protegida,
   `instruction_patch`, `parallelize`/`raise_max_parallel` (RN-154), e o
   teto de efeito externo/comando privilegiado — git push/PR/deploy e
   sudo/doas — que revisou a RN-106 (RN-418, ADR 0102): antes era `deny`
   incondicional, agora é `require_approval` incondicional, com a mesma
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
-  recusa gravar padrão pra esses comandos).
+  recusa gravar padrão pra esses comandos). O teto vale pelas DUAS portas
+  desde a RN-689: o COMANDO de terminal e as ações TIPADAS `git_push` e
+  `pr_open` — nem curinga, nem regra específica, nem `permissions.json` as
+  promovem, e por isso a ativação semeia só `git_commit` para os dev agents
+  (push e PR do dev passam pela sua aprovação, RN-050). `git_merge` tem o
+  teto próprio; `open_adr_pr`/`open_infra_pr` ficam fora por decisão. Desde a RN-661 a aba Executores
+  OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
+  só com o clique, e dizendo o que o modo automático não libera; nunca a grave
+  sem clique. E desde a RN-675 (ADR 0189, fecha a AT-170) o padrão que "sempre
+  permitir" grava em `permissions.json` é VERBO + SUBCOMANDO, um por SEGMENTO
+  (`patternsForAction`), nunca o comando inteiro: verbo + flag fica exato e
+  unidade que é prefixo de um teto da RN-418 (`git remote`, `gh pr`) também —
+  não troque isso por uma lista de verbos (é o espaço dos achados Z/AD).
 - O papel de PROJETO sobrepõe o de workspace nos DOIS sentidos —
   `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`, e
   NÃO é "o maior dos dois" (RN-471). Restringir alguém num projeto sensível é
@@ -1213,7 +1676,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   restrição que o teto 1 impede de criar. Desde o ADR 0157 (RN-557) o teto 2
   vale por QUATRO portas e nos DOIS SENTIDOS: `POST workspaces/:id/members`
   deixou de ser upsert sem teto (era passa-adiante sem ator, num escopo onde
-  não há nível acima para segurar a queda nem rota que remova membro), e a
+  não há nível acima para segurar a queda — e, até o ADR 0173, nem rota que
+  removesse membro), e a
   auto-PROMOÇÃO — que o ADR 0127 declarou como capacidade que ficava — é
   BRECHA e fecha, nas duas rotas de associação: é a única metade do movimento
   que ESCALA privilégio. A comparação virou UM classificador
@@ -1226,7 +1690,32 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `@RequireRole('owner')` da rota já a impede — pô-lo faria de `owner` um
   estado absorvente, do qual ninguém sai por HTTP. E o teto NÃO conta owners:
   a cláusula já garante que um workspace nunca chega a zero, porque tirar o
-  último exigiria que ele mesmo o fizesse. Segue possível e declarado:
+  último exigiria que ele mesmo o fizesse. Desde o ADR 0173 (RN-615) há a
+  QUINTA porta, `DELETE workspaces/:id/members/:userId` (`owner`, 204), e ela
+  também não tem régua nova: é `remocaoEhAutoRebaixamento` com o papel de
+  WORKSPACE como o efetivo de hoje e `null` como o de depois — no workspace
+  não há nível acima, então remover a SI MESMO é sempre 403 (frase própria,
+  `MENSAGEM_TETO_AUTO_REMOCAO_DO_WORKSPACE`). O ÚLTIMO owner fica protegido
+  por essa MESMA cláusula, sem contagem: só `owner` chama a rota e ninguém se
+  remove, então toda remoção deixa ao menos o chamador — o mínimo `owner` da
+  rota é METADE da prova, e está asserido em teste; não o baixe. Remover OUTRO
+  `owner` passa (é como se revoga propriedade), e o teto 1 segue sem par. A
+  remoção CASCATEIA numa transação — as linhas de `project_members` do
+  removido nos projetos do workspace (sem isso a sobreposição o manteria
+  dentro), as chaves de dispositivo de PROJETO e os PATs dele ali — e depois
+  derruba o runner vivo dele em cada projeto pelo caminho da RN-520, sem
+  derrubar a remoção se o engine falhar. Fica de fora, declarado: chave de
+  MÁQUINA, socket de sessão já conectado, terminal `:web`. O TITULAR
+  (`workspaces.created_by`, de quem é a credencial que os agentes gastam,
+  RN-058, e o relatório de gasto, RN-060) NÃO sai: 409 `criador_do_workspace`
+  até `PUT workspaces/:id/owner-of-record` (`owner`, destino JÁ `owner`, senão
+  409 `titular_precisa_ser_owner`) passar a titularidade (RN-616). Titular não
+  é autorização — quem autoriza continua sendo o papel —, e a transferência
+  não confere se o novo titular tem credencial: sem ela, o turno termina com o
+  desfecho de sempre ("Nenhuma credencial cadastrada"). Não há tela de membros
+  de workspace; as rotas são de API. A LEITURA (`GET workspaces/:id/members`,
+  RN-655) é `viewer`, e não o `owner` das escritas: ler não é manter, e é por
+  ela que o fio da sessão nomeia quem entra só pelo papel de workspace. Segue possível e declarado:
   rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
   workspace (única forma de revogar propriedade, reversível pela mesma rota);
   reescrever o próprio papel com o MESMO valor (upsert idempotente não é
@@ -1259,7 +1748,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   passo), só oferece `mounted` com a base CONHECIDA e presente — carregando ou
   consulta FALHADA não viram oferta, "não sei" nunca vira "tem" —, e com base
   ele PRÉ-SELECIONA o modo sugerindo `<base>/<slug>`, sem jamais sobrescrever
-  escolha humana nem caminho digitado.
+  escolha humana nem caminho digitado. Desde a RN-573 (ADR 0161) a
+  pré-seleção exige TAMBÉM o broker CONFIRMADO (`brokerConfigurado`, na MESMA
+  rota): base não é broker, e `container`/`mounted` só sobem container por ele
+  (ADR 0144). Ausência CONFIRMADA deixa os dois cards NA TELA mas inertes, com
+  o motivo UMA vez em texto, e pré-seleciona `runner`; broker DESCONHECIDO não
+  pré-seleciona `mounted` e também não trava nada nem afirma ausência — são
+  três estados, não dois.
   A base NÃO entra em `caminhoDeWorkspaceLocalValido` (que roda em toda LEITURA
   e faria projeto montado legado explodir ao ser lido): é regra de criação e
   conversão. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout do
@@ -1340,6 +1835,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   INFRA elegendo entre as candidatas do próprio roteamento do Arquiteto
   (`container_start`, `'infra-lead'`) — nunca um caminho paralelo, os dois
   passam por `DecidirImagemDoProjetoUseCase`/`validarDecisaoDeImagem`.
+  Os RECURSOS que a Infra sobe vêm do `module_map` desde a RN-683 (ADR 0199):
+  cada módulo declara `resources` e o mínimo é a SOMA (um container por
+  projeto), com piso no padrão de hoje enquanto houver módulo sem declaração —
+  nunca um número inventado, nunca o máximo entre módulos. Quem deriva é a
+  api (`recursos-minimos.ts`); o engine manda `resources` vazio e não soma.
   Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — nos
   TRÊS modos de execução desde a RN-494/ADR 0135, que revogou a dispensa
   que `mounted`/`runner` tinham (RN-169/RN-421). `mounted`/`runner`
@@ -1347,7 +1847,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o `brabo-runner`, na máquina do usuário (ADR 0137, RN-497). O que mudou
   aqui foi só a exigência de alguém ter decidido a imagem antes de abrir a
   leitura.
-  `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
+  `git push`, abertura de PR e deploy NÃO saem pelo terminal, e as ações
+  TIPADAS `git_push`/`pr_open` também não se auto-aprovam (RN-689) — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
   mesmo dentro do escopo do projeto, mesmo com auto mode ligado, mesmo com
@@ -1369,13 +1870,18 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do broker) e ramifica por `execution_mode` — `container`/`mounted` propõem
   `container_start`, `runner` propõe `container_start_via_runner`, cada um com
   o payload que o schema dele aceita. Ela RECUSA localmente (botão inerte, com
-  o motivo em TEXTO) sem imagem decidida, em `runner` sem pasta jamais
+  o motivo em TEXTO) em `container`/`mounted` numa instalação SEM broker
+  (`sem_broker_na_instalacao`, RN-574 — antes da imagem, e `!== true`: "não
+  sei" não vira "tem"), sem imagem decidida, em `runner` sem pasta jamais
   confirmada, e para papel abaixo de `maintainer` — o mínimo do ENDPOINT, por
   `roleAtLeast`. Desde a RN-566 o AGENTE também ramifica por modo antes de
   propor: as duas tools do Infra Lead passam por `recusa_local_de_subida/2`
   (`infra_lead_server.ex`), que lê o projeto UMA vez e recusa com motivo
-  NOMEADO — a MESMA ramificação por DESTINO, nunca uma segunda régua. O que
-  ele NÃO checa, e a tela checa, é imagem decidida e pasta confirmada.
+  NOMEADO — a MESMA ramificação por DESTINO, nunca uma segunda régua. Desde
+  a RN-610 ele recusa também container já de pé (as duas tools) e, em
+  `runner`, imagem não decidida e pasta nunca confirmada; o que ele NÃO
+  checa, e a tela checa, é imagem decidida em `container`/`mounted` (eleger
+  é o que a proposta faz) e broker/papel/sessão.
   A política de terminal do ADR 0055 (escopo de caminho, allowlist
   estreito) segue valendo como está — mas ela não decide mais ONDE o comando
   roda quando NÃO há container: desde o ADR 0143 (RN-502), `container` e
@@ -1408,12 +1914,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
   na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
   atores externos) vem do tool call.
+- O CONTRATO entre módulos também é artefato do ARQUITETO
+  (`artifact.module_contracts`, versionado, sem tabela, o vigente substitui —
+  RN-684, ADR 0200), e é SEPARADO do `module_map` de propósito: não o
+  transforme em campo do mapa. Por módulo ele diz só o que o módulo EXPÕE; o
+  que ele consome é o `dependsOn` do mapa, derivado na leitura. O dev agent o
+  lê por `listar_contratos_de_modulos` (sem parâmetro, `ctx.module`), e o
+  kickoff dele diz que a interface de outro módulo NÃO se lê no worktree alheio.
 - `decision_record` é o outro polo do mesmo espectro: reusa o padrão
   GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
   `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —
   uma decisão é log append-only, nunca um "vigente" que se substitui
-  (RN-505). Os SEIS conversacionais (Criativo, PO, Arquiteto, Dev Lead,
-  UX Designer, Staff) podem emitir; distinto de `open_adr_pr` (só o
+  (RN-505). Seis dos SETE conversacionais (Criativo, PO, Arquiteto, Dev
+  Lead, UX Designer, Staff — o Infra Lead não tem `emit_artifact`) podem
+  emitir; distinto de `open_adr_pr` (só o
   Arquiteto, commit real em `docs/adr/*.md` + PR + aprovação humana) —
   os dois COEXISTEM, para escalas diferentes de decisão, nunca um
   substituindo o outro.
@@ -1435,6 +1949,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
   silenciosa — reporta origem ao lead, que decide e registra evento.
 - O contrato externo dos gates é estável: quem consome vê um veredito
   por gate, independente da estrutura interna da área.
+- Validação que fala do REPOSITÓRIO não roda em RUNTIME (RN-070). O registro
+  de gates é validado em DUAS camadas, e a divisão não é cosmética:
+  `validarRegistro` afirma sobre o CONTEÚDO (vale onde quer que o registro
+  seja lido, e é a única que `gate-registry.loader.ts` chama) e
+  `validarLocalizadores` afirma que o arquivo de prova existe no disco — só
+  faz sentido dentro de um checkout, e quem a cobra é o teste do arquivo real
+  e a fase 2 do `validacao-gates.ts`. Juntas numa função só custaram `GET
+  /gates` respondendo 500 em TODA instalação: a imagem de produção leva
+  `/app/docs/gates.yml` e nada de `apps/api/test/`, `scripts/ci/` ou
+  `.github/`, então os onze alvos "não existiam". NÃO devolva a checagem ao
+  loader — há teste que reconstrói a árvore da imagem em disco e fica
+  vermelho —, e não a troque por `try/catch` devolvendo registro vazio:
+  registro inválido por conteúdo continua LANÇANDO. A lição é geral: suíte
+  que roda de um checkout não prova nada sobre o que a IMAGEM carrega, e
+  quem faz essa pergunta é `docker/smoke.sh`.
 - A lista de áreas tem UMA fonte —
   `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
   engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
@@ -1470,6 +1999,83 @@ o RACIOCÍNIO da triagem, que continua valendo.
   é asserida por teste sobre a OPÇÃO passada ao construtor: teste que só
   verifica "conecta" passa com o defeito de pé, e passou. Comentário não é
   mecanismo.
+- O teto de 300 req/min é do USUÁRIO, não da aba, e NÃO se resolve subindo o
+  teto (RN-579, AT-093: um navegador na Sessão fazia 118/min de mediana e 263
+  de pico). Com o canal `session:<id>` VIVO (join confirmado), as queries da
+  sessão pollam no fallback de 15s (30s o orçamento) e quem diz QUANDO buscar
+  é o `event.appended` — que a fachada `EngineApiClient` emite para TODA
+  escrita que a api confirmou, só com `type`/`actorId`. Query nova de sessão
+  passa por `intervaloDaSessao` (`apps/web/src/lib/canal-vivo.ts`), senão um
+  único observador em 3s segura a chave inteira em 3s; invalidação pelo canal
+  passa por `criarInvalidadorDoCanal`, que tem janela por alvo — invalidar por
+  aviso SEM janela só troca poll por rajada. O número é guardado por
+  `canal-vivo.orcamento.test.tsx` (uma aba: 123/min caído, 46 vivo). Leitura
+  de PROJETO (lista de sessões, contadores do trilho) nenhum canal avisa, e
+  polla no ritmo de projeto, `INTERVALO_DO_PROJETO_MS` (15s, incondicional);
+  quem só precisa do dado no CLIQUE não polla (`useLatestSession(id, false)`,
+  as linhas de `/containers`); e TODA tela que ouve `session:<id>` — não só a
+  de Sessão: Executores e Visão geral também — passa pelo MESMO
+  `criarInvalidadorDoCanal` (RN-632, AT-278: a aba Executores fazia 630 GET de
+  eventos/min com um dev agent em rajada). O número de DUAS abas, com as telas
+  de verdade, é guardado por `duas-abas.orcamento.test.tsx`. Dado de
+  CONFIGURAÇÃO (as seções de Configurações, o workspace/papel) nasce com
+  `staleTime: FRESCOR_DA_CONFIGURACAO_MS` (`query-policy.ts`, um minuto) e sem
+  poll (RN-645, AT-321): com `staleTime: 0` cada seção que montava depois da
+  moldura refazia a busca dela, e voltar à aba refazia 31. Estado operacional
+  (container, gasto, `lastUsedAt`) fica fora, com o default. Os bindings
+  RESOLVIDOS de agentes e áreas vêm num LOTE só
+  (`GET .../model-bindings/resolved`, RN-654), sob UMA `queryKey` que as três
+  seções de modelo, a Visão geral e a aba Executores leem (os `dev-<modulo>`
+  fora do catálogo numa leitura em lote a mais, sob o mesmo prefixo, AT-339) —
+  não volte a uma query por chave. Guardado por
+  `configuracoes.orcamento.test.tsx`. Escrita
+  que NÃO passa pelo engine (humano noutra aba, transição feita pela api)
+  também avisa desde a AT-157: a api pede ao engine
+  `POST /internal/sessions/:id/event-appended` DEPOIS do commit
+  (`SessionChannelNotifier`, `aposCommit`), e não pede para escrita vinda do
+  engine (`/internal/*`), que a fachada já avisou. É melhor esforço: o aviso
+  perdido cai no fallback de 15s. Caso de uso novo que grave em
+  `session_events` sem `AppendSessionEventUseCase` chama o notifier. E 304 não reduz a contagem do rate limit —
+  o guard conta antes do handler —, mas corpo `null` agora tem `ETag`
+  (`etag-do-corpo-vazio.ts`): sem ele, a rota que responde vazio nunca
+  voltava 304. A leitura de 4s da cauda que acompanha um turno aceito
+  (RN-578) NÃO vira fallback de 15s: ela é a rede contra o `agent.done`
+  perdido, e o aviso pode se perder junto; o que o canal faz é ANTECIPÁ-LA
+  (`avisoPedeVerificacaoDoTurno`, só o `agent.status` do agente acompanhado).
+- O que muda por TOKEN não mora no estado da `SessionPage` (RN-639, AT-301):
+  o texto em curso e a faixa de atividade ficam no store de
+  `lib/streaming-do-turno.ts`, assinado por `useSyncExternalStore` só por quem
+  os desenha (a bolha em `SessionFio.tsx`, `TurnActivityStripDoStore`), e a
+  página assina booleanos. Estado novo de streaming entra no store, nunca num
+  `useState` do `useTurnoDoAgente` — `SessionPage.streaming-isolado.test.tsx`
+  conta os renders da página e reprova o token que a re-renderiza.
+- Arquivo que outro PROGRAMA vai parsear se prova contra o PARSER dele, nunca
+  contra uma asserção de string — é a mesma lição do `#` no `FROM` do
+  Dockerfile ("linter concordar não é build concordar"), medida uma segunda
+  vez e mais cara. A unit de `systemd --user` do `brabo-runner` saía com
+  `WorkingDirectory="…"` e NUNCA iniciou, em instalação nenhuma e nas duas
+  espécies (`bad-setting`, `path is not absolute`), com a suíte VERDE: cada
+  asserção pedia de volta exatamente a forma errada. As TRÊS diretivas que
+  carregam valor não têm a mesma sintaxe — `ExecStart=` é unquoted e separado
+  em palavras (cada argumento entre aspas, `\`→`\\`, `%`→`%%`, `$`→`$$`),
+  `WorkingDirectory=` toma a linha INTEIRA (aspa nenhuma, espaço literal, só
+  `%`→`%%`) e `Environment=` é LISTA separada por espaço (a atribuição inteira
+  entre aspas, `"VAR=valor"`, com `\`, `"` e `%` escapados — AT-095). Não reuse
+  o escape de uma na outra. `systemd-analyze --user verify` sobre a unit GERADA
+  (`apps/runner/src/servico-systemd.spec.ts`) prova que ela CARREGA, e não
+  basta: `Environment=X=/a/50%off b` carrega e entrega OUTRO valor. O que prova
+  o VALOR é o despejo de `systemd --test --user --unit=<u>` sobre uma pasta de
+  units temporária, comparado com o gravado; as formas antigas ficam fixadas
+  como reprovadas; sem systemd na máquina o teste PULA nomeando o motivo — nunca
+  passa em silêncio nem reprova por ambiente, a mesma régua do golden-set. O
+  plist do macOS não tinha o defeito (o valor vai num `<string>` de XML), e a
+  leitura de volta aceita as DUAS formas, para não tirar `status`/`uninstall`
+  de quem tem a unit quebrada em disco — o conserto é REINSTALAR. Terceira vez,
+  AT-083: o `.env` do `install.sh` saía com o `SECRET_KEY_BASE` quebrado em duas
+  linhas (`openssl rand -base64` quebra aos 64), e o Compose ora recusava, ora
+  ACEITAVA cortando o segredo. `scripts/dev/install-env.spec.ts` passa o `.env`
+  das funções de verdade por `docker compose config` e cobra cada valor INTEIRO
+  do outro lado — "parseia" não basta quando o parser aceita o arquivo errado.
 - O produto NUNCA sobrescreve configuração de repositório do usuário
   (proteções, branches) sem plano aprovado explicitamente (regra da
   FASE 12, origem no ADR 0028).
@@ -1481,31 +2087,131 @@ o RACIOCÍNIO da triagem, que continua valendo.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
-- Os seis agentes conversacionais rodam laço bounded de tool use, com
+- Os SETE agentes conversacionais rodam laço bounded de tool use, com
   teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
-  Lead, UX Designer e Staff 14 — raciocínio, não conversa leve) — não o
-  teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de
-  execução e de gate. Erro de ferramenta é ENTRADA do laço, não fim de
-  linha; teto esgotado é narrado, nunca silêncio, nos SEIS (RN-163;
+  Lead, UX Designer, Staff e Infra Lead 14 — raciocínio, não conversa
+  leve) — não o teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos
+  agentes de execução e de gate. O Infra Lead é o sétimo desde a RN-617
+  (ADR 0175): conversa pelo composer, com os mesmos `TurnoAssincrono`,
+  `Reidratacao` e `TurnoOrfao` dos outros, e a correção de gate que chega com
+  turno em curso entra numa FILA (`correcoes_pendentes`) em vez de se perder.
+  Erro de ferramenta é ENTRADA do laço, não fim de
+  linha; teto esgotado é narrado, nunca silêncio, nos SETE (RN-163;
   RN-459 fechou os quatro que ainda terminavam calados — só PO e
-  Criativo tinham corrigido antes); e o agente não anuncia ação que o
+  Criativo tinham corrigido antes; o Infra Lead, na RN-617); e o agente não anuncia ação que o
   código não vá executar — o que se promete é decidido pelo teto, nunca
   por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e
   fica ocioso até a primeira `user_message`, porque não há artefato de
   sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
   tela de Sessão narra em tempo real o que o agente está fazendo numa
   faixa acima do composer — o fio só recebe a bolha de resposta depois
+  que o turno termina (RN-460). Os sete reconstroem o histórico por UM
+  caminho, `Engine.Agents.Reidratacao` (RN-580) — não reintroduza
+  `rehydrate/2` por servidor: lê a CAUDA (`latest`, teto 200 do ADR 0060),
+  traz pergunta estruturada e as PRÓPRIAS ferramentas como texto (nunca
+  `role: "tool"`: o evento não tem id de chamada), pula
+  `chat.structured_question_answered` (a resposta já vem no `chat.message`) e,
+  quando a conversa não cabe, abre com o número de omitidos por SUBTRAÇÃO do
+  `seq`. Leitura de kickoff é POR TIPO (`eventos_do_tipo/3`), nunca filtro em
+  memória sobre a leitura geral. O `tool.result` dos sete leva o TEXTO que a
+  ferramenta devolveu (`resultado`, 2.000 caracteres, `resultadoTotal` quando
+  corta — RN-589), montado por `Engine.Agents.ResultadoDeFerramenta`; não grave
+  o evento à mão num servidor. O Infra Lead passa pelo mesmo módulo, e o Dev
+  Lead suspenso grava na RETOMADA (`action_settled`), nunca na suspensão
+  (RN-593).
   que o turno termina (RN-460).
+- O idioma chega ao modelo por UM caminho (RN-622): a fachada
+  `EngineApiClient` (`llm_turn/5`, `llm_turn_stream/6`) acrescenta, no FIM de
+  toda chamada de LLM, uma mensagem `system` EFÊMERA montada por
+  `Engine.Harness.IdiomaDaResposta` — nunca em `state.messages`, nunca em
+  `agent_instructions`, nunca por servidor. Turno COM autor usa o idioma que a
+  api resolveu para ele (`idiomaDaResposta` no `agent/message`, posto no
+  dicionário só durante o `handle_call` e herdado pela Task do turno); turno
+  SEM autor usa `projects.language`; o `context-manager` fica fora. Falha na
+  resolução = turno SEM orientação, nunca queda e nunca o idioma do projeto no
+  lugar do da pessoa. Teto de 50 tokens de entrada por chamada (AT-169).
+  Desde a RN-623 (AT-245), num turno COM autor cuja chamada leva ferramenta
+  que grava artefato compartilhado (`ferramentas_de_artefato/0`, lista por
+  NOME — ferramenta nova de artefato entra nela no mesmo PR), e com o idioma
+  do projeto DIFERENTE do do autor, a MESMA mensagem ganha a cláusula
+  "artefatos no idioma do projeto"; só com os dois códigos na forma curta
+  (`idioma[-Escrita][-Região]`), que é o que segura o teto. Não mova isso para
+  a descrição de cada ferramenta. E descrição de ferramenta NUNCA nomeia idioma
+  (RN-667): o "em pt-BR" do `label` de `ask_structured_questions` era uma
+  segunda orientação, fixa, que punha o formulário em português para autor
+  `en`; ela diz "no idioma da sua resposta", e um teste reprova as 22
+  ferramentas do harness se alguma voltar a fixar um.
+- O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
+  PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
+  resposta `confirm` grava `users.detected_language`; `decline` grava em
+  `detected_language_declines` e o idioma não volta a ser perguntado. A
+  detecção roda na LEITURA, fora do envio da mensagem, e falha vira "sem
+  pergunta". A heurística tem UMA casa,
+  `apps/api/src/domain/iam/heuristica-de-idioma.ts` — sem `import` de
+  propósito, porque `scripts/idioma/` a REEXPORTA (type stripping, com
+  tsconfig próprio sem `verbatimModuleSyntax`) para medir o mesmo código; não
+  a copie de volta para o instrumento, e não a transforme em `.mts` (quebra o
+  `ts-node` da api). Os limiares
+  (`PARAMETROS_PROVISORIOS`) são PROVISÓRIOS, do corpus sintético, até o dono
+  medir o real.
+- O clique que dispara turno de agente conversacional responde ao ACEITAR,
+  nunca no fim do turno (ADR 0163, RN-578): `TurnoAssincrono.iniciar/3`
+  devolve `{:reply, :ok, _}` assim que a Task sobe — DEPOIS de persistir
+  `agent.status: working`, e essa ordem é contrato (é ela que deixa a tela,
+  lendo a cauda do log depois do aceite, saber que o `agent.status` mais
+  recente é do turno novo). O desfecho vai pelo canal e pelo `agent.error`
+  durável, NUNCA pelo HTTP (nos SETE conversacionais — o Infra Lead desde a
+  RN-617, que tirou o turno dele de dentro do `handle_call`); a recusa ANTES de o turno subir é síncrona e
+  NOMEADA (409 `turno_em_andamento`/`aguardando_aprovacao`, 422
+  `sem_regra_de_negocio`) e o controller do engine não descarta mais o
+  retorno — era esse descarte que fazia mensagem recusada virar 202 calado.
+  Na tela, "a chamada resolveu" deixou de significar "o turno acabou": depois
+  do aceite chama-se `acompanharTurnoPeloLog`, nunca `finalizarTurnoDoAgente`.
+  Não volte a segurar o request pelo turno.
+  Desde a RN-673 (ADR 0191) a MENSAGEM do usuário não recebe mais
+  `turno_em_andamento`: com turno em curso ela entra na FILA do agente
+  (`TurnoAssincrono.receber_mensagem/4`, 202 com `entrega: "enfileirada"`), e
+  no fim do turno as pendentes viram UM turno, na ordem. O estado mora no LOG
+  (`chat.message_queued`/`_delivered`/`_cancelled`, todos com o id do
+  `chat.message`), nunca em tabela — o `init/1` reconstrói a fila e o boot
+  acorda quem tem pendente. Teto de 10 por agente e sessão (409
+  `fila_de_mensagens_cheia`); quem ENVIOU cancela enquanto pende. A fila é
+  UMA, em `TurnoAssincrono` — servidor novo só fornece `turno_de_mensagem/2`,
+  nunca fila própria. `turno_em_andamento` segue para o que não é fala
+  (revisão, prontidão, oferta de handoff), e o Dev Lead suspenso segue
+  recusando com `aguardando_aprovacao`.
+  O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
+  processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
+  + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos sete
+  (`Engine.Agents.TurnoOrfao`, RN-586; o Infra Lead desde a RN-617); NUNCA
+  reexecuta o turno, e só fecha o que não tem processo vivo em nenhum nó. Sem
+  isso a faixa da tela e o sinal de trabalho pendente da RN-064 ficavam presos
+  para sempre.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
-  `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora
-  (rompendo o bloqueio do `GenServer.call` de até 180s), mas emite
-  `agent.status: awaiting_approval` em vez de `agent.done` quando o `state`
-  devolvido carrega `:aguardando_aprovacao` com valor não-nulo. Enquanto
-  suspenso, `user_message` não inicia turno novo — vira `agent.error`
-  explicando a pendência. Sem tabela de estado própria: restart do engine
+  Desde o ADR 0163 o `from` já foi respondido no aceite (como em todo turno);
+  o que a suspensão muda é o FECHO: `agent.status: awaiting_approval` em vez
+  de `agent.done` quando o `state` devolvido carrega `:aguardando_aprovacao`
+  com valor não-nulo. Enquanto suspenso, `user_message` não inicia turno novo
+  — vira `agent.error` explicando a pendência, e 409 no clique. Sem tabela de estado própria: restart do engine
   durante a espera perde a inscrição no `Engine.Dev.Wake`, lacuna aceita e
   declarada (a decisão continua registrada em Aprovações).
+- A execução é ATIVADA pela APROVAÇÃO do plano do Dev Lead, nunca pelo
+  aceite do handoff a ele (RN-677, ADR 0194, revisa a RN-161): aceitar o Dev
+  Lead só o traz para PLANEJAR, e o web não encadeia mais
+  `execution/activate`. Aprovar (ou auto-aprovar) `propose_execution_plan`
+  roda `ExecuteExecutionPlanUseCase`, que grava o módulo das tarefas e chama o
+  MESMO `ActivateExecutionUseCase` do botão — não escreva uma segunda régua de
+  ativação: o 409 sem repositório, o 409 de sessão consultiva e
+  `findActiveExecutionSession` moram ali. O botão explícito "Ativar execução"
+  (card do Dev Lead e Visão Geral) continua como gesto próprio. A tarefa tem
+  MÓDULO (`tasks.module`, RN-678), atribuído pelo Dev Lead em
+  `tarefas: [{ taskId, modulo }]` e validado contra o `module_map` vigente na
+  proposta (400 `plano_de_execucao_invalido`) e de novo na aprovação; o claim é
+  pelo módulo da TAREFA (`daTarefaDoModulo`, o mesmo predicado na contagem),
+  e tarefa sem módulo só é pegável quando a história tem UM módulo — não
+  alargue essa ponte para "qualquer módulo da história", que é o defeito que a
+  regra fecha.
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
@@ -1535,6 +2241,22 @@ o RACIOCÍNIO da triagem, que continua valendo.
   não tem a data de um registro DIZ de onde tirou a que mostra, ou não mostra
   data: a pendência de arquitetura não tem instante gravado e a linha declara
   que a data é da história relacionada.
+  O chat da sessão é o TERCEIRO lugar onde isso vale (RN-626): mostra as
+  pendências dos agentes em OUTRAS sessões do projeto com o mesmo `ApprovalCard`
+  e os mesmos endpoints, cada fila com o próprio título e contagem, e o
+  "Mergear" do card da PR aberta só PROPÕE o merge — quem confirma é o
+  clique humano no card, e o teto da RN-418 não se move. O card fica inerte
+  enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
+  incluído); reabrir a sessão retoma do log o turno em curso. A fila de
+  mensagem que esta linha dava como decisão pendente FECHOU na RN-673 (ADR
+  0191) — ver a convenção do clique que responde ao aceitar.
+  Quem pergunta "o que espera decisão" — contador do trilho, painel, aba
+  Aprovações, roster da Visão geral/Executores/Código — lê a fila do PROJETO
+  (`useProjectPendingActions`, chave `['project-pending-actions', projectId]`),
+  NUNCA a sessão mais recente (RN-638), e cada card decide pelo `sessionId` da
+  PRÓPRIA ação; o aviso `proposed_action.*` de qualquer canal invalida essa
+  chave. A leitura de ações por SESSÃO é a CAUDA (`latest`) mais as pendentes
+  quando a cauda vem cheia (RN-637) — nunca a primeira página.
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO
@@ -1626,8 +2348,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Evento tem DUAS classificações no cliente, e elas não se substituem:
   `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
   (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
-  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, consumida pelo
-  painel de log E pelo fio; a precedência dos `if` é a regra (mecanismo
+  origem tem UMA fonte, `apps/web/src/lib/activity.ts`, e é o eixo dos
+  grupos do painel de log — o FIO não agrupa por origem desde a RN-644 (lá o
+  histórico recolhido é UM bloco cronológico e o corte conta MENSAGENS,
+  recuando até a abertura do turno); a precedência dos `if` é a regra (mecanismo
   vence ator, ator vence prefixo de agente) e tipo desconhecido cai em
   `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
@@ -1655,7 +2379,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   outros oito degradam com `false` (RN-191), e virar essa flag exige smoke com
   credencial, nunca leitura de doc. O gasto de embedding NÃO passa pelo
   metering ainda — corte declarado do ADR 0075, porque `token_usage.session_id`
-  é `NOT NULL` e indexar repositório não acontece dentro de sessão.
+  é `NOT NULL` e indexar repositório não acontece dentro de sessão. A ÚNICA
+  exceção é a checagem de duplicata semântica (ADR 0198, RN-681), que roda na
+  emissão de história/regra, dentro de sessão, e grava linha própria (ator
+  `system`/`duplicata-semantica`); o `uso` que `RagEmbeddingService` devolve é
+  ignorado pela indexação e pela busca de propósito — não o "aproveite" lá.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
   medido por teste sobre os tokens e layout é verificado no navegador
@@ -1666,9 +2394,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   ARQUIVO e não script inline — a imagem serve sob `script-src 'self'`, e
   inline passa em dev e é bloqueado em produção. A preferência mora em
   `localStorage['brabo.theme']` e a API é `apps/web/src/lib/tema.ts`;
-  nenhum componente escreve o atributo por conta própria. Dívida de
-  contraste é do tema ESCURO e está travada por número — não afrouxe um
-  piso para passar, e não deixe o claro nascer pior que o primário.
+  nenhum componente escreve o atributo por conta própria. Desde o ADR 0181
+  (RN-640) a paleta é NEUTRA (escuro preto, claro branco, acento terracota) e
+  NÃO há dívida de contraste: os cinco pares que o escuro devia desde a FASE 16
+  são PISO nos dois temas. Não afrouxe um piso para passar, não reabra dívida
+  "registrada", e não deixe o claro nascer pior que o primário. Cor que sai do
+  CSS (Mermaid, xterm, minimapa) cai em `lib/tokens-padrao.ts`, conferido
+  contra o `:root` por teste — não escreva fallback em hex no chamador; cor de
+  agente é `var(--token)`; e `var(--x)` sem declaração reprova
+  (`design-tokens-existentes.test.ts`).
 - O handoff estabelece a INTENÇÃO; a medição estabelece o NÚMERO, e o
   produto estabelece o MECANISMO. Já valeu três vezes: as fontes (ADR
   0036), o boot de tema inline e cinco dos oito `--syn-*` que reprovam
@@ -1681,7 +2415,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   três telas de decisão (Aprovações, chat da sessão, Insights) a
   consomem. `apps/web/src/lib/aprovacoes.test.ts` lê `ACTION_TYPES` do
   `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
-  nasce colapsado (RN-096).
+  nasce colapsado (RN-096). Valor de CÓDIGO na frase (comando, branch,
+  caminho, imagem) entra por `codigo()`, nunca entre aspas: o card o desenha
+  em mono por `trechosDaFraseDaAcao` (AT-322). O `ApprovalCard` tem UMA
+  variante nas quatro superfícies — não reintroduza prop de aparência por
+  tela; a largura é do contêiner e só o colapso inicial varia
+  (`detalheRecolhido`).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
   com envelope encryption; nunca em plaintext no banco ou em logs. Desde a
   RN-563 (ADR 0158) o envelope carrega `key_id` — a IMPRESSÃO DIGITAL
@@ -1706,8 +2445,18 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (`apps/api/test/scripts/rewrap-deks.spec.ts`, contra Postgres de verdade e
   contra as duas tabelas) — e é por ela que `rewrap-deks.ts` tem o núcleo
   exportado (`reenvelopar`) com o `main()` sob `require.main === module`:
-  importar o script não pode rodar a rotação.
+  importar o script não pode rodar a rotação. A rotação NUNCA rodou em
+  ambiente real (mantenedor, 2026-09-27); desde a AT-146 ela tem um ENSAIO no
+  cluster, semanal e último alvo do `propriedades.yml`
+  (`make test-rotacao-chave-mestra-k8s`): os três passos do runbook pela fonte
+  do `ExternalSecret`, com restart da api e o `rewrap-deks.js` da imagem —
+  ensaio, não rotação de ambiente real.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
+- Subagentes das rodadas do backlog têm DUAS definições em `.claude/agents/`,
+  por esforço de raciocínio (decisão do dono, 30/09): `analista` (esforço
+  MÉDIO, somente leitura) levanta requisitos e mede antes de uma atividade, e
+  `executor` (esforço BAIXO) executa a atividade já especificada. Não troque
+  os papéis: esforço médio é só para raciocínio de levantamento.
 
 ## Documentação é parte da definição de pronto (permanente)
 - Ao alterar código, consulte docs/.docmap.yml e atualize os docs
@@ -1732,7 +2481,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (nunca reinicie por arquivo) e para a mesma contagem, que o docs:check afere
   somando os três por glob. Âncora `{#rn-NNN}` é o contrato: ela não muda
   quando uma RN muda de arquivo, e link de fora aponta para o arquivo que a
-  hospeda hoje.
+  hospeda hoje. Cabeçalho de RN sem ela, ou com outro número, REPROVA o
+  `docs:check` — nos três arquivos e nas traduções pt-BR deles
+  (`scripts/docs/ancoras-de-rn.mjs`, AT-230): o `docs:build` não pega, porque
+  sem âncora o Docusaurus gera um id pelo título e compila.
 - TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
   "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
   O gatilho é o mesmo do docmap, e o motivo é que este arquivo é o único
@@ -1756,18 +2508,75 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Frase ancorada num lugar do CÓDIGO entra em
   `verificarFrasesAncoradasNoCodigo` (`scripts/docs/generate.mjs`) — mesma
   tabela-por-frase das contagens, só que o esperado é DERIVADO do artefato e
-  não é um número. Hoje são três: a escada da esteira no `description` do
+  não é um número. Hoje são seis: a escada da esteira no `description` do
   `branching-policy.md`, derivada de `ESCADA` em `scripts/ci/pr-police.ts`
   (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), e as duas frases
   de `db:generate` (`README.md` e `docs/getting-started.md`), derivadas de
-  `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
+  `apps/api/src/db/schema.ts` ser ou não barrel; e, desde a AT-123, as três
+  frases de QUANTAS imagens o produto publica (`THIRD_PARTY_NOTICES.md`,
+  `docs/runbook.md`, `docs/reference/brb.md`), derivadas de `ALVOS` em
+  `scripts/ci/images-manifest.ts`. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+  CONTAGEM em prosa cuja fonte é um lugar do código (overrides, perguntas do
+  golden-set, operações do contrato de git e da `DockerPort`, abas, tabelas,
+  tipos de ação, serviços do compose…) entra em
+  `scripts/docs/contagens-do-codigo.mjs` (AT-123) — uma linha por FRASE, um
+  extrator por fonte, cada extrator provado por MUTAÇÃO no `.spec.ts` ao lado.
+  Número que muda a cada PR (arquivos por app) é DATADO, não derivado.
+  Irmã em `block` desde a AT-122 (nasceu `warn` na AT-096):
+  `verificarRefsComSimbolo` confere, nos três arquivos
+  de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
+  que herda o caminho do MESMO item — contra o código, ±3 linhas. Só esse
+  padrão: ref sem símbolo, par por `/` e símbolo que não é identificador ficam
+  de FORA, de propósito (aferição barulhenta é desligada no primeiro mês).
+  REPROVA a ref que não bate e a que não resolve a um arquivo só, e ZERO refs
+  extraídas é `CEGO` (`veredito` em `refs-com-simbolo.mjs`, provado por
+  mutação no spec ao lado). O `warn` não segurou a deriva: a lista zerou em
+  26/09 e voltou a 140 em cinco dias. As traduções pt-BR das RNs NÃO são
+  aferidas. Ao escrever RN nova, cite `caminho:N` (`símbolo`) — é o que a
+  torna conferível — e releia pelo símbolo, nunca por um número antigo. PR que
+  desloca código citado por RN corrige a ref no MESMO PR. NÃO alargue a janela
+  para o vermelho sumir, nem estreite o padrão para esconder ref real.
+- O runbook termina com a tabela `procedure | anchor | verification |
+  schedule` dos procedimentos de OPERAÇÃO (AT-193, EP-015), e o `docs:check` a
+  confere em `block` (`scripts/docs/procedimentos-do-runbook.mjs`, provado por
+  mutação no spec ao lado): arquivo citado em `verification` que não está no
+  git, `make <alvo>` que o `Makefile` não tem, célula vazia ou "see below",
+  âncora que não é `{#id}` explícito de cabeçalho, e workflow cujo `on:` não
+  tem o gatilho que a classe do segmento afirma (`weekly` → `schedule:`,
+  `every PR` → `pull_request`, `every tag` → `push: tags`; `manual` não cita
+  workflow). Sem prova, a célula começa com `**None**` — DECLARA, nunca fica
+  vazia. Procedimento de operação novo no runbook ganha linha ali; renomear um
+  spec ou tirar o `schedule:` de um workflow citado reprova o PR que o fez. Só
+  o runbook em inglês tem a tabela: a tradução pt-BR está atrás (AT-209) e uma
+  segunda cópia sem conferência seria a cópia que a tabela existe para
+  substituir.
+- O índice de ADR é agrupado por TEMA, e o tema mora FORA do ADR (ADR 0202,
+  AT-137): `docs/adr/temas.yml` tem a lista fechada (15 temas) e UM tema por
+  ADR. ADR novo ganha a linha dele ali e a linha do índice na seção do tema, em
+  ordem numérica, no MESMO PR — o `docs:check`
+  (`scripts/docs/temas-de-adr.mjs`, `block`) reprova ADR sem tema, tema fora
+  da lista ou sem ADR, e linha na seção errada. O índice é CONFERIDO, nunca
+  gerado (as frases são curadas). Tema novo é mudança da lista, justificada no
+  PR; passar de 15 exige ADR.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de
   DOIS globs: `**/` no pathspec do git exige pelo menos um nível de diretório,
-  e um inventário que nasce vazio não avisa, passa verde.
+  e um inventário que nasce vazio não avisa, passa verde. As fontes moram em
+  `scripts/docs/fontes-de-env.mjs`, provadas contra a árvore real pelo spec ao
+  lado, e em `e2e/` o `.spec.ts` NÃO é filtrado: ali o spec É o código que lê
+  o ambiente (AT-124). Os `deploy/k8s/*.sh` são fonte `ferramenta` desde a
+  AT-212, casados SÓ pela expansão com default (`${X:-…}`): `${X}` puro é
+  variável do próprio script. E o ⚠️ é PORTÃO desde a AT-211, nas DUAS espécies de
+  fonte: o `docs:check` reprova toda variável sem descrição mesmo com o bloco
+  regenerado (antes, regenerado, o ⚠️ ficava commitado e passava), nomeando a
+  variável, o arquivo que a lê e a seção de `configuration.md` onde escrever
+  (`scripts/docs/inventario-de-env.mjs`, provado por mutação no spec ao lado).
+  Um `**TODO(humano):**` na linha que cita a variável NÃO reprova, de
+  propósito: é lacuna DECLARADA, e reprová-lo empurraria quem não sabe a
+  resposta a inventar uma. O ⚠️ do inventário de EVENTOS segue sem reprovar.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use

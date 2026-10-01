@@ -1,5 +1,5 @@
 import { Injectable, Optional } from '@nestjs/common';
-import type { ModeloDoCatalogo } from '@brabo/shared';
+import type { ModeloDoCatalogo, RoutingPreference } from '@brabo/shared';
 import { TokenEstimator } from '../../application/ports/token-estimator.port';
 import {
   OpenAICompatibleProvider,
@@ -200,6 +200,44 @@ export function parseErrorFrameOpenRouter(
 }
 
 /**
+ * O critério de roteamento no formato do OpenRouter: `provider: { sort }`,
+ * com o MESMO vocabulário de `RoutingPreference` (`price`, `throughput`,
+ * `latency`). Só o `sort` — os outros campos do objeto `provider` (`order`,
+ * `only`, `ignore`, `allow_fallbacks`, `max_price`) não foram pedidos e cada
+ * um é decisão de produto própria (ADR 0166).
+ */
+export function campoDeRoteamentoOpenRouter(
+  preferencia: RoutingPreference,
+): Record<string, unknown> {
+  return { provider: { sort: preferencia } };
+}
+
+/**
+ * O custo REAL da chamada, que o OpenRouter devolve em `usage.cost` (USD, número
+ * decimal) no frame final do stream (ADR 0188, RN-665). Vira micro-USD inteiro
+ * pelo mesmo arredondamento do resto do metering.
+ *
+ * Com `is_byok: true` o custo NÃO é lido: numa chamada com a chave do próprio
+ * provedor configurada no OpenRouter, `cost` é a taxa do hub, e a inferência é
+ * cobrada pelo provedor por fora. Gravar só a taxa como "custo real" seria gravar
+ * menos do que foi cobrado — o defeito que o ADR fecha — então a linha cai no
+ * preço do catálogo, como antes. É LEITURA da doc, não medição: nenhuma chamada
+ * BYOK foi feita (declarado no ADR 0188).
+ *
+ * Número negativo, não finito ou em string é "não disse", nunca zero.
+ */
+export function extrairCustoRealOpenRouter(
+  usage: Record<string, unknown>,
+): number | undefined {
+  if (usage.is_byok === true) return undefined;
+  const custo = usage.cost;
+  if (typeof custo !== 'number' || !Number.isFinite(custo) || custo < 0) {
+    return undefined;
+  }
+  return Math.round(custo * 1_000_000);
+}
+
+/**
  * A extração é exportada à parte, como as demais funções de config deste
  * arquivo, para a suite de contrato exercitar ESTA config apontando pro
  * servidor falso — não uma cópia escrita no teste.
@@ -221,6 +259,13 @@ export function openrouterConfig(
       // hub roteia embedding para provedores diferentes dos de chat, e a prova
       // de um endpoint não é prova do outro (ADR 0075).
       embeddings: false,
+      // PROVADO em 2026-09-29 (ADR 0166, RN-583, AT-158):
+      // `openrouter-provider.roteamento.smoke.spec.ts` rodou contra a API real
+      // e o critério mudou o upstream que serviu (`price` → DeepInfra,
+      // `throughput` → Groq, em `meta-llama/llama-3.3-70b-instruct`).
+      // A prova vale para o fio `provider.sort` e o `provider` do frame;
+      // qual upstream cada critério escolhe é decisão do hub e muda com o tempo.
+      routingPreference: true,
     },
     authHeaders: (apiKey) => ({
       Authorization: `Bearer ${apiKey ?? ''}`,
@@ -238,6 +283,12 @@ export function openrouterConfig(
       typeof frame.provider === 'string' ? frame.provider : undefined,
     parseErrorFrame: parseErrorFrameOpenRouter,
     parseCatalogo: parseCatalogoOpenRouter,
+    campoDeRoteamento: campoDeRoteamentoOpenRouter,
+    // O custo que o hub cobrou vira o número do metering (ADR 0188, RN-665).
+    // Provado pela resposta GRAVADA na suíte de contrato (a forma de
+    // `usage.cost` medida nas chamadas reais da medição de idioma, AT-163);
+    // a prova com credencial, em stream, é o smoke `openrouter-provider.smoke`.
+    extrairCustoReal: extrairCustoRealOpenRouter,
   };
 }
 
