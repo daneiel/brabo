@@ -337,13 +337,13 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
               : t('runnerDeviceKeys.modal.alcanceProjeto')}
           </p>
           {/*
-            E o custo colateral que a RN-520 declarou: o alvo da desconexão é
-            `{projeto, usuário}` e nunca `{chave}` — outro runner SEU no mesmo
-            projeto cai junto, mesmo autenticado por PAT ou por outra chave, e
-            reconecta sozinho se a credencial dele ainda valer. Mudar esse alvo
-            é frente própria, com ADR.
+            E a PRECISÃO, desde o ADR 0201 (RN-685): o alvo da desconexão é a
+            CHAVE, e não mais `{projeto, usuário}` — outro runner SEU no mesmo
+            projeto, autenticado por PAT ou por outra chave, fica de pé. Dizer
+            o alcance certo é a RN-561; a frase antiga ("cai junto") passaria a
+            afirmar uma queda que não acontece.
           */}
-          <p className={styles.subtitle}>{t('runnerDeviceKeys.modal.colateral')}</p>
+          <p className={styles.subtitle}>{t('runnerDeviceKeys.modal.precisao')}</p>
           <div className={styles.acoesDaSecao}>
             <Button variant="secondary" onClick={() => setARevogar(null)}>
               {t('runnerDeviceKeys.modal.cancel')}

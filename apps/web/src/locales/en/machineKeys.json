@@ -26,8 +26,8 @@
   "modal": {
     "title": "Revoke machine key",
     "body": "Revoking “{{name}}” is final: it stops authenticating the local agent on that machine, and getting a new one means installing the agent again.",
-    "alcance": "It drops the local agent in EVERY project of yours in runner mode, not just one. With no project yet, it only stops the key from being used again.",
-    "colateral": "Dropping reaches {project, user} and never one particular key: another runner of yours in those projects also falls, even authenticated with a different credential — and reconnects on its own if that credential is still valid.",
+    "alcance": "It drops the local agent in EVERY project of yours in runner mode where it connected with this key, not just one. With no project yet, it only stops the key from being used again.",
+    "precisao": "Only what connected with THIS key falls: another runner of yours in those projects, authenticated with another key or with a token, stays connected.",
     "cancel": "Cancel",
     "confirm": "Revoke"
   }

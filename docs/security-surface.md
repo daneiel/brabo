@@ -700,8 +700,9 @@ reason in the URL.
   `userId` comes from the session JWT and goes into the `WHERE`; no parameter
   names another user, and the `maintainer` view stays out, as RN-519 decided).
   The `DELETE` is the same revocation as the per-project route, delegated to
-  the same use case: it drops the live runner in each runner-mode project the
-  owner reaches, target `{project, user}` unchanged; with no project yet it
+  the same use case: it drops the live connections opened WITH that key, in
+  every project (since [RN-685](business-rules.md#rn-685) the target is the
+  key, not `{project, user}`); with no project yet it
   only records the revocation, which is all there is to stop — the waiting
   machine agent (RN-550) has no connection, and its next ticket is refused.
 - **Revoking a device key now reaches the LIVE connection, and the target
@@ -726,6 +727,17 @@ reason in the URL.
   timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
   the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
   `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  **Revised by [RN-685](business-rules.md#rn-685)
+  ([ADR 0201](adr/0201-revogacao-por-chave.md)): the target is now the KEY.**
+  The ticket records which credential asked for it (the `kid`, or the PAT's
+  id), and the revocation asks the engine
+  (`POST /internal/runner/disconnect-credential`) to void the credential's
+  pending tickets and drop only the runners born from it — the declared cost
+  above is gone: a runner of the same user on a PAT or another key stays up.
+  PAT revocation (own, or as `maintainer`) now drops its connections too. A
+  connection opened with a pre-deploy ticket (no credential) still falls by
+  the pair, and an engine that does not know the route makes the api fall back
+  to `runner/disconnect`; the pair route also stays as member removal's target.
   The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
   stays OUT for device keys — now by decision, not omission: that pair was
   born of incident response to a SHARED secret circulating, and a device
