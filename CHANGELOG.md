@@ -2,7 +2,7 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## Unreleased
+## v7.0.0 — 2026-10-01
 
 ### ⚠ Mudanças incompatíveis
 
@@ -72,6 +72,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   - **Desenvolvimento:** o compose de dev e o `.env.example` ganham um pepper
     de dev PRÓPRIO (`dev-auth-token-pepper-change-me`); a sessão local cai uma
     vez, e é só entrar de novo.
+
+- **runner**: aposenta o fluxo do runner pelo navegador e manda para o instalador (AT-014) (8430361a5e)
+- **auth**: AUTH_TOKEN_PEPPER obrigatório e próprio, com migração pelo valor atual do JWT (AT-210) (c1f9c9e7dc)
+- **dev**: o compose de dev vira brabo-dev e recusa subir ao lado de uma instalação (AT-173) (64a12ef027)
 
 ### Novidades
 
@@ -836,6 +840,171 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   contada e o script sai com 1. Runbook: "Losing the artifact folder". Não
   entra em backup — é derivada.
 
+- **web/api**: a criação de projeto e a página de containers **só oferecem o
+  modo que a instalação executa**. Numa instalação sem broker de container (a
+  instalação por Release — a imagem do broker não é publicada), o assistente
+  deixa de pré-selecionar "Pasta montada": os cards Container e Pasta montada
+  continuam visíveis mas inertes, um aviso em texto diz que esta instalação
+  não sobe container para esses modos, e "Runner local" vem pré-selecionado
+  ([RN-573](docs/business-rules.md#rn-573)). A página `/containers` recusa
+  antes do clique a subida de projeto `container`/`mounted` nessa instalação,
+  com o motivo em texto, em vez de deixar aprovar uma `container_start` que só
+  pode falhar ([RN-574](docs/business-rules.md#rn-574)). A api passa a
+  devolver `brokerConfigurado` em `GET /workspaces/:id/projects-base` e em
+  cada linha de `GET /workspaces/:id/containers` — sem rota nova
+  ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
+  Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
+  está certo: sem a variável a api nunca chama o broker.
+- **api/web**: o repositório do projeto **nasce no aceite do handoff ao
+  Arquiteto**, e não mais no do Dev Lead — o Arquiteto e o Infra Lead escrevem
+  no repositório antes do Dev Lead, e numa instalação real propuseram PRs para
+  um repositório que ainda não existia. O aceite ao Dev Lead continua
+  provisionando, como segunda porta que não cria nada quando o repositório já
+  existe: é a saída do projeto que passou pelo Arquiteto sem ganhar repositório.
+  `POST /projects/:id/execution/activate` sem repositório deixa de responder 201
+  e passa a responder **409**, dizendo qual handoff falta aceitar ou onde
+  provisionar; a Visão Geral deixa "Ativar execução" inerte com esse motivo em
+  texto, e o card do handoff ao Dev Lead tira o atalho de ativar enquanto não
+  há repositório ([RN-582](docs/business-rules.md#rn-582),
+  [ADR 0165](docs/adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)).
+  A recusa do Arquiteto e do Infra Lead a propor PR sem repositório
+  ([RN-577](docs/business-rules.md#rn-577)) muda de texto junto: deixa de
+  mandar esperar o aceite ao Dev Lead e diz que, com o gatilho no Arquiteto,
+  chegar ali é provisionamento que falhou ou projeto anterior à regra.
+
+- **api/web**: o binding de modelo ganha um **critério de roteamento**
+  (`price` | `throughput` | `latency`) para o hub escolher o upstream, e ele
+  **congela em `token_usage`** ao lado do `upstream_provider`
+  ([RN-583](docs/business-rules/custo.md#rn-583),
+  [ADR 0166](docs/adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md)).
+  Motivo medido (AT-090): 23 de 24 chamadas de um modelo via OpenRouter
+  caíram num upstream ~4x mais lento, porque o corpo saía sem `provider.sort`.
+  O critério viaja com o binding que venceu a cascata, nunca cascateia
+  sozinho; `PUT .../model-binding` aceita `routingPreference` nos cinco
+  escopos (ausente preserva, `null` limpa, valor para provider sem a
+  capability é 422), e `GET /llm/provider-capabilities` é rota nova. **A
+  feature nasce DORMENTE**: a capability `routingPreference` é `false` nos nove
+  providers, inclusive no OpenRouter, porque ainda não foi provada contra a
+  API real — a tela diz isso em texto e nada muda no fio. Virá-la é um PR de
+  uma linha acompanhado da saída de
+  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`.
+  Migration `0060_preferencia_de_roteamento` (duas colunas anuláveis, sem
+  backfill).
+
+- **instalador/esteira**: o **broker de container vira a quinta imagem
+  publicada**, e o `install.sh` **pergunta** se o liga
+  ([ADR 0162](docs/adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
+  [RN-575](docs/business-rules.md#rn-575)). Numa instalação por Release,
+  projeto Container ou Pasta montada nunca executava — quem sobe o container
+  desses modos é o broker, e a instalação não tinha o serviço porque a imagem
+  não existia no registry (`ghcr.io/daneiel/brabo-broker` respondia `denied`).
+  Agora `docker-bake.hcl` tem o alvo `broker`, e a imagem passa pelos mesmos
+  gates das outras quatro: construída e escaneada (Trivy) a cada PR, recusada
+  se rodar como root, provada subindo healthy com rootfs read-only e sem rede,
+  e publicada, registrada em `.release/images.json`, assinada e verificada por
+  digest a cada tag. O compose de instalação ganha o serviço **desligado**, sob
+  o profile `container-broker`, com as cinco camadas do ADR 0130 intactas. O
+  instalador pergunta *"Ligar o broker de container? [s/N]"* depois da base,
+  dizendo em texto que ligar entrega o socket do Docker da máquina ao serviço;
+  só um "s" liga, e aí ele **mede** o grupo do socket de dentro de um container
+  (recusa nomeada se não conseguir — nunca o `999` de palpite) e grava
+  `COMPOSE_PROFILES`, `BROKER_URL`, `DOCKER_GID` e a raiz da pasta gerenciada no
+  `.env`, juntos. Depois da subida confere que a api alcança o broker e que a
+  raiz calculada é a do volume; o que não confere vira pendência nomeada. A
+  decisão aparece no resumo final, e a frase de fechamento deixa de dizer que
+  só a Pasta montada fica sem container sem o broker — o modo Container também
+  fica. **Vale a partir da próxima tag**: o instalador exige `broker` no
+  `images.json`, que Releases anteriores não têm. O Kubernetes não conhece o
+  broker (`make imagens-do-release` segue aplicando quatro imagens).
+
+- **ci**: PR do Dependabot que **só troca o pin de uma action** (o SHA do
+  `uses:` e o comentário de versão ao lado) deixa de ficar bloqueado pelo drift
+  da documentação. O passo novo do `docs-check.yml` escreve no corpo do PR a
+  linha `docs-not-needed: <motivo>`, marcada como do bot, quando o autor é o
+  Dependabot **e** toda linha alterada é troca de pin — decidido por
+  `scripts/ci/dependabot-justifica-pin.ts`, testado. Job, gatilho, `with:`
+  novo, dependência pnpm, workflow novo ou autor humano: nada é escrito, e o
+  docmap julga como sempre. Se um push posterior trouxer algo além do pin, a
+  linha do bot é **removida**; a de um humano nunca é tocada. Os #578/#580
+  tinham sido destravados à mão. O drift passa a ler o corpo de
+  `PR_BODY_FILE` quando o passo o reescreve — editar o corpo com o
+  `GITHUB_TOKEN` não dispara `edited`, e re-executar o job reusa o corpo
+  antigo do evento (medido na run 34898913072).
+
+- **docs**: o `pnpm docs:check` passa a **conferir as refs `caminho:linha` das
+  RNs que nomeiam o símbolo** daquela linha — `` `install.sh:1463` (`fechar_a_instalacao`) ``
+  e a continuação `` `:1165` (`post_interno`) `` — contra o código, numa janela
+  de ±3 linhas, nos três arquivos de RN. Em **warn**: lista o que não bate, com
+  a linha mais próxima onde o símbolo aparece, e não reprova; só reprova se o
+  padrão extrair ZERO refs (`CEGO`). Medido em 18/09: 592 refs `…:N`, 187 casam
+  o padrão, 116 batiam e 71 não. O bullet de código da
+  [RN-547](docs/business-rules.md#rn-547) foi relido pelo símbolo e corrigido
+  (`fechar_a_instalacao` em `:966` → `:1463`, `post_interno` em `:682` →
+  `:1165`, e os demais do mesmo bullet); ficam 63, listados pelo check. Padrão,
+  janela e critério para `block` em
+  `docs/explanation/documentation-workflow.md`.
+
+- **runner**: o binário de Windows sai da matriz, pelo molde do Mac Intel (AT-342, AT-343) (d1b09c4ec3)
+- **runner**: a revogação mira a CHAVE, e não o par {projeto, usuário} (AT-013) (59101794d7)
+- **engine/api**: contrato entre módulos vira artefato do Arquiteto, lido pelo dev (AT-276) (f97894b648)
+- **backlog**: duplicata semântica de história e regra vira aviso por embedding (AT-171) (e48d6fadf0)
+- **infra**: a Infra sobe o container com o menor recurso elegível, derivado do module_map (AT-261) (e5037d8a16)
+- **anamnese**: religa a Anamnese sem rodar sem sujeito, e a hipótese aceita vira fato do perfil (AT-277) (5dd3fb9435)
+- **api,engine,web**: aprovar o plano do Dev Lead ativa a execução e a tarefa ganha módulo (AT-263, AT-274) (fe6d073c10)
+- **actions**: sempre permitir grava verbo + subcomando, um padrão por segmento (AT-257, AT-170) (9a25c43073)
+- **engine**: a mensagem com turno em curso entra numa fila e é lida no fim do turno (AT-267) (51f6ee68bb)
+- **infra**: o handoff ao Dev Lead sai da Infra, só com o container running (AT-262) (a6158ee362)
+- **actions**: piloto automático, sempre permitir que não o desliga e escopo na pasta real (AT-259, AT-255, AT-258) (269984b378)
+- **engine**: o plano de teste nasce depois da entrega do dev (AT-269) (89cbb17db5)
+- **infra**: a Infra sobe o container sozinha no aceite do handoff (AT-260) (e7cd266fdb)
+- **api**: o metering lê cache e reasoning tokens (AT-272) (8397a73e23)
+- **api**: o custo real do provider vira o número do metering (AT-270) (05ef2b7947)
+- **web**: pendências de outras sessões no chat mostram o motivo da política (AT-340) (d08ac33da8)
+- **fluxo**: menos cliques do brief à execução (AT-313, AT-314, AT-315) (6aea992eb4)
+- **sessoes**: "Estou pronto" fecha a necessidade e aceita o PO (AT-311, AT-312) (78383039b5)
+- **sessoes**: developer também reabre sessão encerrada (AT-337) (dc3ec6a48c)
+- **api,web**: o fio nomeia quem entra pelo workspace e cada cartão de Aprovações lê o próprio motivo (AT-335, AT-336) (210d75fa86)
+- **sessoes**: reabrir sessão encerrada com o estado preservado (AT-071) (3b61c3e15a)
+- **handoff**: uma oferta pendente por destino, superseded ao ativar (AT-291, AT-292) (bc37a486a8)
+- **web**: tema escuro preto neutro com acento terracota suave (AT-283, AT-284) (7bfeee6425)
+- **api**: o merge executado marca a tarefa como done, uma vez so (AT-275) (c83b7c8cc6)
+- **engine**: narra tool_router.decided, soma o custo do Jev e repete o passo com o catálogo inteiro (AT-238) (00f22d9a0f)
+- **api**: o laço pergunta ao Jev qual ferramenta e restringe o menu do modelo (AT-238) (75203ac7b6)
+- **web**: decidir no chat — card inerte, turno retomado do log, pendências de outras sessões e Mergear (AT-256/268/265/266) (93f4230736)
+- **api**: liga a capability routingPreference no OpenRouter, provada por smoke real (AT-158) (51448e8aa9)
+- **web**: a barra da sessão pergunta o idioma detectado e deixa corrigir (AT-163) (e6ff0a248d)
+- **api**: a api detecta o idioma do autor e pergunta antes de usá-lo (AT-163) (4cebfb38eb)
+- **engine**: o artefato gravado num turno com autor sai no idioma do projeto (AT-245) (819c99df0b)
+- **idioma**: o idioma do autor chega ao modelo por mensagem de sistema efêmera (AT-164) (d2847bdf0c)
+- **web**: a barra da sessão mostra o idioma das respostas de quem vê, com a origem, e troca só para ele (AT-165) (f818a7a729)
+- **iam**: o projeto ganha idioma, o de artefato compartilhado e turno sem autor (AT-243) (7d97aae36f)
+- **iam**: o idioma das respostas dos agentes vira preferência da conta, com override por sessão (AT-162) (5130851198)
+- **engine**: o resumo da compactação mantém o idioma original de cada turno (AT-166) (1978fda17a)
+- **api**: o titular do workspace não sai sem transferir, e a titularidade se transfere (AT-115) (15e14c662c)
+- **api**: remoção de membro de workspace, com o teto 2 herdado (AT-115) (b667a96155)
+- **web**: o composer oferece o Infra Lead, e o engine o faz conversar (AT-141) (d26d3fec61)
+- **engine**: o turno do Infra Lead passa pelo TurnoAssincrono (AT-141) (47ce6a100e)
+- **web**: a tela mostra o motivo da política e a raiz do escopo (AT-148) (69220d78b9)
+- **ci**: o release escaneia com Trivy o que publica, por digest, antes de assinar (AT-179) (2d4995644f)
+- **docs**: o docs:check reprova variável de ambiente sem descrição (AT-211) (05694a6761)
+- **web**: converter para runner monta o onboarding, e o aviso diz as condicionais (AT-143, AT-144) (d093ff5007)
+- **web**: seção de chaves de máquina na Conta (AT-118) (12babad00a)
+- **api**: chave de máquina listada e revogada pela conta (AT-118) (c727ec13da)
+- **engine**: o Infra Lead recusa a subida por estado, na ordem da /containers (AT-142) (8055503982)
+- **api**: proposed_action.created diz a raiz do escopo, relativa e nunca absoluta (AT-147) (bbc62b8c9e)
+- **docs**: o docs:check confere a tabela de procedimentos do runbook (AT-193) (9bcb800cc3)
+- **acoes**: o modo automático libera o escopo de caminho, e só ele (bc436f20d3)
+- **sessao**: escrita feita pela api também avisa o canal da sessão (9ac29d246f)
+- **api**: reprojeta a pasta docs/ dos artefatos a partir do event log (AT-128, RN-590) (07a119ef03)
+- **engine**: o texto que a ferramenta devolveu entra no tool.result dos seis conversacionais (AT-151, RN-589) (35ab55a25e)
+- **web**: controle do critério de roteamento nas seções de modelo (379749b207)
+- **api**: critério de roteamento do hub no binding de modelo, congelado no metering (79914943af)
+- **web**: a tela não oferece ativar a execução sem repositório (7ec48bdb1d)
+- **engine**: a fachada avisa o canal da sessão de toda escrita que a api confirmou (0b477266b2)
+- **api**: o repositório nasce no aceite ao Arquiteto, e ativar sem ele é 409 (651e49c1fc)
+- **instalador**: broker de container vira a quinta imagem publicada, e o install.sh pergunta se o liga (072ea006db)
+- **web,api**: a tela só oferece o modo que a instalação executa (9624de8abe)
+
 ### Desempenho
 
 - **api/web**: os modelos vigentes de todos os agentes e áreas vêm numa
@@ -896,6 +1065,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   seguiam a 1 s com o repositório pronto (AT-302, RN-639). O `/status` passa
   por `pollQueParaNoErro`: serviço que não responde deixa de ser perguntado
   por timer.
+
+- **ci**: CI mais rápido sem runner pago (AT-303..306). Os nomes dos checks
+  exigidos NÃO mudam.
+  - O job `Build, scan e smoke das imagens de produção` classifica o diff do
+    PR no primeiro passo (`scripts/ci/diff-toca-imagem.ts`) e, quando nada
+    dele entra em imagem, no smoke ou no E2E (só `docs/` exceto
+    `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
+    exceto o `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`),
+    pula bake, Trivy, broker, smoke e E2E POR PASSO e termina verde dizendo
+    por quê. Na dúvida, roda tudo. O spec prova a lista contra os
+    Dockerfiles reais, por mutação.
+  - O mesmo job guarda em cache o navegador do Playwright (chave: versão +
+    `e2e/pnpm-lock.yaml`), o store do pnpm do `e2e/` e a base do Trivy (chave
+    diária; quem decide se ela está velha continua sendo o próprio Trivy).
+  - `Testes TS (api)` e `Testes TS (web)` rodam em dois shards cada; o job com
+    o nome antigo agrega: confere os dois shards, junta os relatórios `blob`
+    e aplica o MESMO piso de cobertura sobre a soma
+    (`vitest --merge-reports --coverage`).
+  - `claude-code-review.yml` ganha `concurrency` (cancela a revisão de um
+    HEAD que já mudou) e teto de 30 min; `docs-check.yml` ganha
+    `timeout-minutes`.
+
+- **web**: Visão geral e Executores leem os bindings em lote (AT-339) (1f0724b41b)
+- **bindings**: os modelos vigentes de agentes e áreas numa leitura só (AT-334) (6d718d3cac)
+- **web**: bootstrap acompanhado a 3 s com parada no fim, e /status para no erro (AT-302) (6821f48724)
+- **web**: o streaming do turno não re-renderiza a SessionPage (AT-301) (b3007988ca)
+- **web**: code-splitting por rota e vendors em chunks próprios (AT-300) (cdb00fc4a4)
+- **ci**: pula imagens por passo, caches e shards de vitest (AT-303..307) (310e438287)
+- **k8s**: o bootstrap de prova pula a observabilidade e sobe os operadores em paralelo (AT-177) (0bc1a29c83)
+- **web**: com o canal da sessão vivo, a tela de Sessão invalida por aviso e polla só como fallback (a66b055d99)
 
 ### Correções
 
@@ -2262,134 +2461,118 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   segue sem rodar em PR; o driver é exercitado em PR por
   `scripts/dev/install-e2e.spec.ts`.
 
-### Desempenho
-
-- **ci**: CI mais rápido sem runner pago (AT-303..306). Os nomes dos checks
-  exigidos NÃO mudam.
-  - O job `Build, scan e smoke das imagens de produção` classifica o diff do
-    PR no primeiro passo (`scripts/ci/diff-toca-imagem.ts`) e, quando nada
-    dele entra em imagem, no smoke ou no E2E (só `docs/` exceto
-    `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
-    exceto o `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`),
-    pula bake, Trivy, broker, smoke e E2E POR PASSO e termina verde dizendo
-    por quê. Na dúvida, roda tudo. O spec prova a lista contra os
-    Dockerfiles reais, por mutação.
-  - O mesmo job guarda em cache o navegador do Playwright (chave: versão +
-    `e2e/pnpm-lock.yaml`), o store do pnpm do `e2e/` e a base do Trivy (chave
-    diária; quem decide se ela está velha continua sendo o próprio Trivy).
-  - `Testes TS (api)` e `Testes TS (web)` rodam em dois shards cada; o job com
-    o nome antigo agrega: confere os dois shards, junta os relatórios `blob`
-    e aplica o MESMO piso de cobertura sobre a soma
-    (`vitest --merge-reports --coverage`).
-  - `claude-code-review.yml` ganha `concurrency` (cancela a revisão de um
-    HEAD que já mudou) e teto de 30 min; `docs-check.yml` ganha
-    `timeout-minutes`.
-
-### Novidades
-
-- **web/api**: a criação de projeto e a página de containers **só oferecem o
-  modo que a instalação executa**. Numa instalação sem broker de container (a
-  instalação por Release — a imagem do broker não é publicada), o assistente
-  deixa de pré-selecionar "Pasta montada": os cards Container e Pasta montada
-  continuam visíveis mas inertes, um aviso em texto diz que esta instalação
-  não sobe container para esses modos, e "Runner local" vem pré-selecionado
-  ([RN-573](docs/business-rules.md#rn-573)). A página `/containers` recusa
-  antes do clique a subida de projeto `container`/`mounted` nessa instalação,
-  com o motivo em texto, em vez de deixar aprovar uma `container_start` que só
-  pode falhar ([RN-574](docs/business-rules.md#rn-574)). A api passa a
-  devolver `brokerConfigurado` em `GET /workspaces/:id/projects-base` e em
-  cada linha de `GET /workspaces/:id/containers` — sem rota nova
-  ([ADR 0161](docs/adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md)).
-  Em desenvolvimento, sem `BROKER_URL` no `.env`, o aviso também aparece — e
-  está certo: sem a variável a api nunca chama o broker.
-- **api/web**: o repositório do projeto **nasce no aceite do handoff ao
-  Arquiteto**, e não mais no do Dev Lead — o Arquiteto e o Infra Lead escrevem
-  no repositório antes do Dev Lead, e numa instalação real propuseram PRs para
-  um repositório que ainda não existia. O aceite ao Dev Lead continua
-  provisionando, como segunda porta que não cria nada quando o repositório já
-  existe: é a saída do projeto que passou pelo Arquiteto sem ganhar repositório.
-  `POST /projects/:id/execution/activate` sem repositório deixa de responder 201
-  e passa a responder **409**, dizendo qual handoff falta aceitar ou onde
-  provisionar; a Visão Geral deixa "Ativar execução" inerte com esse motivo em
-  texto, e o card do handoff ao Dev Lead tira o atalho de ativar enquanto não
-  há repositório ([RN-582](docs/business-rules.md#rn-582),
-  [ADR 0165](docs/adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md)).
-  A recusa do Arquiteto e do Infra Lead a propor PR sem repositório
-  ([RN-577](docs/business-rules.md#rn-577)) muda de texto junto: deixa de
-  mandar esperar o aceite ao Dev Lead e diz que, com o gatilho no Arquiteto,
-  chegar ali é provisionamento que falhou ou projeto anterior à regra.
-
-- **api/web**: o binding de modelo ganha um **critério de roteamento**
-  (`price` | `throughput` | `latency`) para o hub escolher o upstream, e ele
-  **congela em `token_usage`** ao lado do `upstream_provider`
-  ([RN-583](docs/business-rules/custo.md#rn-583),
-  [ADR 0166](docs/adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md)).
-  Motivo medido (AT-090): 23 de 24 chamadas de um modelo via OpenRouter
-  caíram num upstream ~4x mais lento, porque o corpo saía sem `provider.sort`.
-  O critério viaja com o binding que venceu a cascata, nunca cascateia
-  sozinho; `PUT .../model-binding` aceita `routingPreference` nos cinco
-  escopos (ausente preserva, `null` limpa, valor para provider sem a
-  capability é 422), e `GET /llm/provider-capabilities` é rota nova. **A
-  feature nasce DORMENTE**: a capability `routingPreference` é `false` nos nove
-  providers, inclusive no OpenRouter, porque ainda não foi provada contra a
-  API real — a tela diz isso em texto e nada muda no fio. Virá-la é um PR de
-  uma linha acompanhado da saída de
-  `openrouter-provider.roteamento.smoke.spec.ts` com `OPENROUTER_TEST_KEY`.
-  Migration `0060_preferencia_de_roteamento` (duas colunas anuláveis, sem
-  backfill).
-
-- **instalador/esteira**: o **broker de container vira a quinta imagem
-  publicada**, e o `install.sh` **pergunta** se o liga
-  ([ADR 0162](docs/adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
-  [RN-575](docs/business-rules.md#rn-575)). Numa instalação por Release,
-  projeto Container ou Pasta montada nunca executava — quem sobe o container
-  desses modos é o broker, e a instalação não tinha o serviço porque a imagem
-  não existia no registry (`ghcr.io/daneiel/brabo-broker` respondia `denied`).
-  Agora `docker-bake.hcl` tem o alvo `broker`, e a imagem passa pelos mesmos
-  gates das outras quatro: construída e escaneada (Trivy) a cada PR, recusada
-  se rodar como root, provada subindo healthy com rootfs read-only e sem rede,
-  e publicada, registrada em `.release/images.json`, assinada e verificada por
-  digest a cada tag. O compose de instalação ganha o serviço **desligado**, sob
-  o profile `container-broker`, com as cinco camadas do ADR 0130 intactas. O
-  instalador pergunta *"Ligar o broker de container? [s/N]"* depois da base,
-  dizendo em texto que ligar entrega o socket do Docker da máquina ao serviço;
-  só um "s" liga, e aí ele **mede** o grupo do socket de dentro de um container
-  (recusa nomeada se não conseguir — nunca o `999` de palpite) e grava
-  `COMPOSE_PROFILES`, `BROKER_URL`, `DOCKER_GID` e a raiz da pasta gerenciada no
-  `.env`, juntos. Depois da subida confere que a api alcança o broker e que a
-  raiz calculada é a do volume; o que não confere vira pendência nomeada. A
-  decisão aparece no resumo final, e a frase de fechamento deixa de dizer que
-  só a Pasta montada fica sem container sem o broker — o modo Container também
-  fica. **Vale a partir da próxima tag**: o instalador exige `broker` no
-  `images.json`, que Releases anteriores não têm. O Kubernetes não conhece o
-  broker (`make imagens-do-release` segue aplicando quatro imagens).
-
-- **ci**: PR do Dependabot que **só troca o pin de uma action** (o SHA do
-  `uses:` e o comentário de versão ao lado) deixa de ficar bloqueado pelo drift
-  da documentação. O passo novo do `docs-check.yml` escreve no corpo do PR a
-  linha `docs-not-needed: <motivo>`, marcada como do bot, quando o autor é o
-  Dependabot **e** toda linha alterada é troca de pin — decidido por
-  `scripts/ci/dependabot-justifica-pin.ts`, testado. Job, gatilho, `with:`
-  novo, dependência pnpm, workflow novo ou autor humano: nada é escrito, e o
-  docmap julga como sempre. Se um push posterior trouxer algo além do pin, a
-  linha do bot é **removida**; a de um humano nunca é tocada. Os #578/#580
-  tinham sido destravados à mão. O drift passa a ler o corpo de
-  `PR_BODY_FILE` quando o passo o reescreve — editar o corpo com o
-  `GITHUB_TOKEN` não dispara `edited`, e re-executar o job reusa o corpo
-  antigo do evento (medido na run 34898913072).
-
-- **docs**: o `pnpm docs:check` passa a **conferir as refs `caminho:linha` das
-  RNs que nomeiam o símbolo** daquela linha — `` `install.sh:1463` (`fechar_a_instalacao`) ``
-  e a continuação `` `:1165` (`post_interno`) `` — contra o código, numa janela
-  de ±3 linhas, nos três arquivos de RN. Em **warn**: lista o que não bate, com
-  a linha mais próxima onde o símbolo aparece, e não reprova; só reprova se o
-  padrão extrair ZERO refs (`CEGO`). Medido em 18/09: 592 refs `…:N`, 187 casam
-  o padrão, 116 batiam e 71 não. O bullet de código da
-  [RN-547](docs/business-rules.md#rn-547) foi relido pelo símbolo e corrigido
-  (`fechar_a_instalacao` em `:966` → `:1463`, `post_interno` em `:682` →
-  `:1165`, e os demais do mesmo bullet); ficam 63, listados pelo check. Padrão,
-  janela e critério para `block` em
-  `docs/explanation/documentation-workflow.md`.
+- **api**: o laço do embedding só itera array de verdade (CodeQL js/loop-bound-injection) (3323f4ce5a)
+- **scripts**: fecha os dois últimos alertas novos do CodeQL da promoção (d669e57c98)
+- **ci**: caminho dos specs de shell pelo ambiente, fora do argv do bash -c (fc1a5b6ebd)
+- **api**: o teto da RN-418 vale também para git_push e pr_open tipados (AT-347) (03221def73)
+- **web**: o card do handoff da Infra diz o que a RN-671 faz sozinha (AT-348) (b447310b62)
+- **seguranca**: fecha os sete alertas novos do CodeQL da promoção (AT-344, AT-345, AT-346) (b4da45e60f)
+- **sessao**: a consultiva sem agente pede um agente em vez do modelo cru (AT-254) (996bce51dc)
+- **llm**: curadoria recusa o alias de roteamento livre do OpenRouter (AT-271) (88a6c141f4)
+- **runner**: git credenciado roda no host do runner, código no container (AT-116) (94baaa08c4)
+- **actions**: merge de PR recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) (1776b18ebc)
+- **engine**: a Infra não anuncia subida de container que não fez (AT-264) (280d3f6b6e)
+- **engine**: PR do dev agent mira dev, e o gate julga o diff contra dev (AT-250) (b2913a675c)
+- **engine**: o formulário estruturado segue o idioma da resposta (AT-282) (9ba9ff9141)
+- **docker**: tira api, web e broker do Alpine 3.21 pela CVE-2026-75804 (1d96d7d4c6)
+- **runner**: o carregador do node-pty reconhece o binário de Windows sem os dois-pontos (AT-343) (f804cd3338)
+- **runner**: o binário lê o PTY sob o Bun e reconhece o caminho virtual do Windows (AT-342, AT-343) (578369e55e)
+- **runner**: o spawn-helper do node-pty ganha o bit de execução no macOS sob Node (AT-114) (c755ca01e5)
+- **deps**: fecha os HIGH de 30/09 por overrides (fast-uri, undici, brace-expansion, grpc-js) (385a3be81b)
+- **api**: o aceite pelo sistema (RN-660) e o implícito do "Estou pronto" (RN-658) convivem no AcceptHandoff e no ActivateAgent (4318f314ec)
+- **web**: as telas restantes cabem em 390px — tabela em cartões, /status, Dashboard, Criativo e trilho (AT-330) (c034715f95)
+- **web**: a Sessão ganha layout móvel — gaveta de contexto e barra que quebra linha (AT-328) (1d922f309a)
+- **web**: plural do i18next em todos os namespaces, e a lacuna do motivo dita uma vez (AT-331, AT-333) (335f921281)
+- **web**: o brilho do login passa a ser acento, não verde de estado (AT-332) (85ff65ce99)
+- **web**: cada mensagem do fio sai sob o ator do evento, não sob quem vê (AT-329) (723b4ce34b)
+- **web**: sidebar, card do Dashboard e artefatos não se contradizem (AT-325) (04e3d8c973)
+- **web**: interface pt-BR sem jargão em inglês nem número de RN/ADR, com nome do agente e plural do i18next (AT-326) (869faf58ae)
+- **web**: sumário de Configurações deita acima das seções em qualquer largura (AT-321) (fd45b09642)
+- **web**: configuração vale um minuto e não polla na aba Configurações (AT-321) (513899371b)
+- **ci**: o upload dos relatórios dos shards inclui o diretório oculto (AT-305) (1e4c8649c8)
+- **web**: layout móvel pós-login — sidebar em gaveta e trilho em barra horizontal (AT-316) (055bdb26f2)
+- **web**: Parar/Remover sem container dizem por quê, e o motivo do broker cabe na célula (AT-324) (a4abf192e0)
+- **web**: a aba PRs fala da lista de PRs e a aba Código se chama Código (AT-323) (874162fa06)
+- **api,web**: "sempre permitir" recusa também os TIPOS do teto (AT-320) (106e3ba658)
+- **ci**: spec sem picomatch e merge com vitest run (AT-303/AT-305) (41f93a5339)
+- **web**: a barra da sessão se arruma pela própria largura (AT-317) (be8dfb4692)
+- **aprovacoes**: a aprovação chega à janela certa (AT-296..299, AT-318) (c165c9b775)
+- **web**: o fio corta por mensagem e recolhe o histórico na ordem (AT-319) (fe805ba6ef)
+- **web**: handoff manual não declara prontidão, oferta a agente ativo no projeto fica muda e a ativação leva à sessão de execução (AT-293/AT-294/AT-295) (a40e9f3b80)
+- **api**: "sempre permitir" aprova e grava o padrão na mesma transação (AT-310) (2c16956eea)
+- **web**: textos fixos restantes vão para os locales e a paridade de chaves vira teste (AT-289) (7887b5d2e9)
+- **web**: ativação lida da sessão pedida e oferta fora da janela com botão (AT-251/AT-253) (ffd344b6c0)
+- **seguranca**: nodemailer 10 na api e PyJWT 2.15 na imagem do engine (55c4297ce1)
+- **web**: o handoff manual ganha botão de aceite e não esconde as ofertas seguintes (AT-253) (b78ecca7a5)
+- **web**: duas abas não batem no teto de 300 req/min (AT-278) (0da693b667)
+- **web**: o chat mostra e deixa escolher o destinatário, e a oferta é casada por handoffId (AT-251) (b00cfab289)
+- **api**: teto de caracteres antes de tokenizar o estado do Jev, testes do metering com áreas e superfície de segurança (AT-238) (ac0f7f243f)
+- **broker**: container do projeto roda com o dono da pasta (AT-247) (8f02239528)
+- **api**: a ativação do agente é lida da sessão inteira, não da janela de 200 (AT-252, RN-630) (8b395ef488)
+- **engine**: o QA Lead registra o subagente que suspende de novo na retomada (AT-248) (82c334ffff)
+- **scripts**: o seeder de prompts não semeia a seção de documentação (AT-244) (34f145b6d3)
+- **k8s**: o ensaio da rotação lê o log da api e a saída do rewrap inteiros antes do grep (AT-146) (31b3398df3)
+- **k8s**: o ExternalSecret puxa o objeto inteiro do store, e as _PREVIOUS chegam aos Pods (AT-220) (64fae535a9)
+- **deps**: mint 1.11.0 fecha as três advisories do hex.audit (461b29e677)
+- **backup**: a prova de restauração lê a lista de serviços inteira antes do grep (AT-241) (ec29cf894b)
+- **ci**: produtor | grep -q sob pipefail lido inteiro antes do grep (AT-242) (986c0cd973)
+- **docker**: a instalação drena o outbox e agenda o tick da Anamnese (AT-219) (c8c2cbf9ed)
+- **k8s**: o destino S3 do overlay local passa a ser o SeaweedFS (AT-200) (ed1603061d)
+- **docker-port**: o pull de imagem vira passo nomeado do start, sob o teto de controle (AT-234) (4ccd7a4f4b)
+- **api,engine**: teto por operação na chamada ao broker (AT-233) (63863a1e98)
+- **golden-set**: o seed do QA sobe o container de verdade antes de o QA rodar (51614a9dfa)
+- **docs**: as RN-305 e RN-306 ganham âncora, e o docs:check reprova cabeçalho sem ela (4c888c061f)
+- **docs**: 23 links de ADR com slug errado, e a exceção adr/ deixa de engoli-los (11f3dbb485)
+- **engine**: parar_da_sessao lista só quem ela parou, não chave velha do Registry (AT-204) (bc2342e27d)
+- **engine**: reerguer agente não toma a chave velha do Registry por processo vivo (AT-204) (79ac2bb445)
+- **docs**: o link reescrito no site pt-BR deixa de sair com o locale duplicado (ce0e879179)
+- **web**: criar projeto pela tela deixa de sair em rajada de 400 (7fe97fbaaf)
+- **web**: o Procurar pasta do modo runner diz antes do clique que exige o brabo-runner (94f5277274)
+- **docker**: a migração do engine recebe os tokens de serviço (3107f86fda)
+- **engine,broker**: os dois tokens de serviço passam pela régua da api (ba4f0e5908)
+- **dev**: a api encontra o broker no compose de dev, e a falta da pasta gerenciada é dita (35cd599532)
+- **api**: o BRABO_SERVICE_TOKEN_PREVIOUS passa pela mesma régua de produção do token atual (ec1570e6f6)
+- **dev**: o reset total confere o host e a senha do neo4j antes do DROP SCHEMA (e46eead38f)
+- **ci**: o spec das _PREVIOUS passa no typecheck, e a referência diz onde elas chegam (4c2bbfdda9)
+- **docker**: o compose de instalação mapeia as seis flags booleanas do engine (9fa297a5f6)
+- **docker**: as variáveis _PREVIOUS chegam aos containers dos três composes (e137f785e4)
+- **docs**: o SQL do incidente de custo usa um valor que existe no enum (AT-194) (36ffdc1c57)
+- **engine**: o Dev Lead suspenso e o Infra Lead gravam o tool.result pelo módulo comum (AT-190) (0f059eefff)
+- **api**: tira os três no-unsafe-assignment do spec de projects-summary (AT-188) (e17d5631fd)
+- **web**: os rótulos da árvore do time passam pelo i18n (AT-134) (652393c285)
+- **web**: o painel do runner oferece service status --machine para chave de máquina (f0b8b73b82)
+- **api,web,engine**: a instalação sem broker é dita na conversão, em parar/remover e no Infra Lead (a61595c4ee)
+- **api**: remove asserção desnecessária que reprovava o lint da reprojeção (AT-128) (902cd0bfdc)
+- **sessoes**: a sessão de bootstrap não vira a mais recente e o 409 da ativação não aponta sessão encerrada (62e4410f5d)
+- **docker**: volume novo de node_modules deixa de nascer root na api e na web (AT-172) (d7032721c9)
+- **instalador**: a prova de restauração da migração enxerga o .env e o volume de backup (af2d9cd705)
+- **api**: a sugestão de paralelização não conta módulo com dev agent bloqueado (AT-104) (f3106002b5)
+- **web**: o painel do runner reconhece chave de projeto já pareada (AT-107) (86a09c8f2e)
+- **engine**: Infra Lead e run_assessment leem a cauda da sessão (AT-150) (4426b530c9)
+- **web**: a tela trata o 409 de sessão encerrada e o Encerrar fica inerte nos dois estados terminais (89e9313531)
+- **engine**: ensure! desfaz o init quando o fetch falha e não marca pronto na 2ª tentativa (b56683c188)
+- **engine**: o teto de conversa ociosa vale com a aba aberta (AT-152) (dbad241081)
+- **engine**: mint sobe para 1.10.1 e fecha o advisory EEF-CVE-2026-82672 (798aec2dd4)
+- **engine**: turno interrompido por reinício fecha com agent.error infra e idle (AT-156) (08824f98d5)
+- **engine**: a recusa de mensagem que nenhum agente leu fica no fio como agent.error (AT-132, RN-587) (583fb5d309)
+- **engine**: o Monitor do pod antigo não apaga a linha que o par regravou no repasse (AT-078) (0160572ba4)
+- **web**: executionActivated da aba Executores passa pela guarda de sessão da RN-568 (AT-130) (3647c91a4f)
+- **engine**: mensagem de chat deixa de ter destinatário padrão (AT-098, RN-584) (862cedf6d7)
+- **engine**: abandonar/1 volta a matar o turno depois do aceite imediato do ADR 0163 (a17d55a631)
+- **engine**: conversa ociosa segura a sessão até 8h, e a sessão fechada para os conversacionais (c7e25ab03d)
+- **api**: sessão encerrada recusa conversa, e a espera pelo usuário vira sinal de trabalho pendente (4139ecae0a)
+- **web**: resolver a chamada deixa de significar fim de turno (3c9e3e138e)
+- **api**: a recusa do agente chega ao clique com o status e a frase do engine (bb62ec3c69)
+- **engine**: o turno conversacional responde ao aceitar, e a recusa vira 409/422 nomeado (fe30182e83)
+- **api**: resposta de corpo vazio ganha ETag e passa a voltar 304 (2ab0129b27)
+- **engine**: o agente conversacional reidrata o FIM da conversa, com perguntas e ferramentas (7bb4d0f5ad)
+- **engine**: arquiteto e infra lead recusam PR em projeto sem repositório antes de propor (02daba0f93)
+- **instalador**: baixar e rodar um arquivo, recusas nomeadas e .env que o Compose aceita (54e1e0edb2)
+- **runner**: Environment= da unit vai entre aspas e escapado, e o valor efetivo passa a ser provado (18ac17b3ea)
+- **web**: a árvore do time deixa de afirmar trabalho sobre dev bloqueado por container (1fadcb000f)
+- **api**: o registro de gates deixa de exigir, em runtime, o que a imagem não carrega (8546157cba)
+- **instalador**: hash por sha256sum ou shasum, e falta de ferramenta deixa de acusar adulteração (a63921e8fa)
+- **runner**: a unit do agente local perde as aspas e passa a iniciar (61c0fbd8f3)
 
 ### Testes
 
@@ -2523,6 +2706,66 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `rollout-evidencia` em toda rodada que chegou à prova. Nada muda no que conta
   como adotada ou drenada, nem no teto de 120s.
 
+- **api**: o aceite de paralelização fora do module_map semeia só git_commit (AT-347) (a2cf51453f)
+- **jev**: falha de conta/rede no jev:vivo não vira execução medida (AT-239) (0eab0cb0e9)
+- **scripts**: teste ao vivo do Jev com e sem roteamento, pronto e não rodado (AT-239) (8635754c7d)
+- **api**: specs da Anamnese acompanham a assinatura com a fila (AT-277 × AT-267) (bcbc39d217)
+- **jev**: a porta do molde da QA-estratégia acompanha o ADR 0192 (AT-269) (b14bc81c99)
+- **runner**: o --self-test-pty que reprova diz por quê, com uma sonda sem entrada (AT-343) (3a9eb75ae8)
+- **runner**: o spec do systemd pula nomeando o motivo quando o verify não valida nem uma unit mínima (9a6f9ef727)
+- **e2e**: o ciclo do turno chega pelo canal da sessão numa terceira origem (AT-338) (2664e67937)
+- **web**: o spec do layout móvel mocka userIdDaSessao, que a autoria da mensagem passou a ler (AT-328, AT-329) (932faa57d0)
+- **e2e**: aprovação inline decidida do chat da sessão (AT-068) (400668c15e)
+- **web**: os orçamentos de requisição medem a aba montada, não o Suspense (6c367e3381)
+- **idioma**: revisão humana das 146 respostas e diagnóstico do Haiku por posição da orientação (AT-167, AT-279) (b682a8fb48)
+- **scripts**: menu restrito do Jev, cinco políticas medidas por cobertura (AT-236) (7179a3e3e0)
+- **jev**: segunda rodada da medição — variantes de state, equivalências e o gap por causa (AT-237) (f3fb1299ba)
+- **idioma**: validação paga de idioma e custo pelo protocolo da AT-082 (AT-167) (0d4a5901cb)
+- **scripts**: replay do Jev contra os passos gravados no event log (AT-237) (751742099a)
+- **api**: prettier no spec do cliente do engine (0c5f3d421b)
+- **scripts**: 'sim', 'feito' e 'blz' rotulados pt, não und; números refeitos (8c7719a605)
+- **scripts**: instrumento que mede a heurística de idioma contra corpus rotulado (AT-160) (e077821a07)
+- **k8s**: o ensaio da rotação da chave mestra roda no cluster, toda semana (AT-146) (49e72c21f7)
+- **k8s**: a reprojeção no cluster exercita a Hipotese e o PerfilAnamnese (AT-191) (3845064a32)
+- **web**: trava o SessionPage.tsx abaixo de 1 000 linhas e fecha o BRB-015 (ADR 0176, PR 10) (f0a534a212)
+- **k8s**: a reprojeção da pasta de artefatos roda no cluster, como a do grafo (AT-198) (e13c129e43)
+- **ci**: o extrator de alvos passa no typecheck estrito (AT-065) (4bfd2834f9)
+- **api**: a remoção de membro de workspace entra na superfície sem corpo (AT-115) (b57a2ea5b3)
+- **ci**: o cabeçalho do workflow nomeia o segundo job (AT-195) (2f79643c7c)
+- **ci**: a restauração da instalação por compose e dos bare repos entra na agenda (AT-195) (1c9afc6d12)
+- **web**: o caso do agente no FolderBrowserModal avança o tique em vez de dormir (AT-240) (efc9b00de7)
+- **docker-port**: reproduz o pull de imagem que estoura o teto de controle (AT-234) (7fd563de26)
+- **ci**: gatilho temporário de push para provar o golden-set do QA (AT-149) (00b57aaf21)
+- **golden-set**: o spec da subida do container sem any inseguro no lint (8887a73aa5)
+- **ci**: remove o gatilho temporário da medição do golden-set do QA (f1ab3b39ec)
+- **ci**: medição temporária do golden-set do QA com container pelo broker (AT-076) (7d04bd3373)
+- **install**: o spec do fechamento para de reprovar por EPIPE (AT-228) (0f591a1453)
+- **engine**: specs que sobem agente real o encerram no on_exit (AT-204) (73b8575858)
+- **install**: o spec dos arquivos da instalação para de reprovar por EPIPE (f2536352a0)
+- **engine**: specs de gate usam pasta temporária própria, não o /tmp da máquina (AT-204) (49fd5f12e9)
+- **ci**: a régua dos tokens de serviço é a mesma na api, no broker e no engine (f262e74567)
+- **docs**: o inventário de env passa a ver os testes do Playwright (AT-124) (12f78f988b)
+- **api**: a rotação dos segredos do auth, passo a passo do runbook (d5399dd935)
+- **engine**: ConversacionaisTest lê o processo vivo, não a entrada do Registry (AT-175) (8b047ed7e9)
+- **smoke**: o smoke da imagem de produção chama GET /internal/gates (AT-109) (3f4f97c905)
+- **k8s**: o rollout-evidencia.spec espera o evento, não o relógio (AT-174) (88a63ef14a)
+- **engine**: ExecutionCommandControllerTest encerra os dev agents que a rota sobe (AT-180) (75a48ba6cd)
+- **engine**: CreateModuleMapTest e AppSecContextBuilderTest deixam de correr em paralelo (AT-133) (0dd5fe3976)
+- **engine**: soltar o lock global de sessão espera o Monitor apagar a linha (AT-189) (47f2020377)
+- **api**: prova por provider onde vai a mensagem de sistema no fim da conversa (AT-161) (6d12a9391e)
+- **k8s**: a quebra proposital do restore é pega pela prova agendada (AT-126) (75461cee6d)
+- **k8s**: as arestas do cenário da reprojeção são contadas nos dois sentidos (AT-127) (166caa0491)
+- **k8s**: o cenário da reprojeção ganha eventos e o cypher sai do pod do Neo4j (AT-127) (f36a45a4dc)
+- **k8s**: a reprojeção do grafo roda no cluster, quarto alvo do propriedades.yml (AT-127) (32d4649915)
+- **runner**: a corrente da RN-558 ponta a ponta pelo canal real (AT-111) (b0904ea9ea)
+- **ci**: a guarda dos destinos do composer entende recusar_mensagem/5 e cobra a gravacao do agent.error (RN-587) (91c1ba9ebe)
+- **k8s**: colunas do events.log separadas e o que a evidência não pega (0e34d09ec7)
+- **k8s**: o rollout-test grava o dono durante o rollout e a linha de session_states (634130bcea)
+- **k8s**: o rollout-test guarda o log dos pods antigos e separa o HPA (AT-078) (89e6a5bcbc)
+- **engine**: o teste do PO espera o fim do turno, e a ordem do fim vira RN-585 (1345be8fe0)
+- **web**: os mocks do api-client que alcançam Configurações ganham a capability de roteamento (8fd4fdd34c)
+- **api**: o stub do append no spec das duas portas ganha garantirQueAceita (7b4124de6c)
+
 ### Refatorações
 
 - **web**: `apps/web/src/routes/SessionPage.tsx` sai de 2 637 para **834
@@ -2540,6 +2783,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `SessionPage.teto.test.ts` reprova o arquivo com 1 000 linhas ou mais —
   quem passar do teto tira um recorte, nunca sobe o número.
 
+- **web**: cartão de aprovação único e padrões de tela (AT-322, AT-327) (3699ea5e2b)
+- **web**: Card, Chip, Badge e Button na tela, e a escala sem meio-degrau (AT-286, AT-287, AT-288) (9d78c2a0eb)
+- **web**: tintas semânticas no lugar dos color-mix soltos (AT-285) (8ddf391f07)
+- **web**: as ações de handoff e execução da Sessão viram useAcoesDeHandoff (ADR 0176, PR 9) (6fb7fb00c5)
+- **web**: o fio da sessão sai do SessionPage para session-fio (ADR 0176, PR 1) (b3b6638cb0)
+- **web**: a montagem da timeline sai do SessionPage para session-timeline-montagem (ADR 0176, PR 2) (353af42f88)
+- **web**: a barra do topo da Sessão vira SessionTopbar (ADR 0176, PR 3) (8e0d69cdb6)
+- **web**: o conteúdo do fio da Sessão vira SessionFio (ADR 0176, PR 4) (06deb873e9)
+- **web**: a faixa do composer da Sessão vira SessionComposer (ADR 0176, PR 5) (9216a7cb77)
+- **web**: as derivações de handoff da Sessão saem para lib/session-handoffs (ADR 0176, PR 6) (ad5f892521)
+- **web**: a rolagem do fio da Sessão vira o hook useRolagemDoFio (ADR 0176, PR 7) (8683eac488)
+- **web**: a promoção de histórias pelo fio vira usePromocaoDeHistorias e DevolverHistoriaModal (ADR 0176, PR 8) (237130c7d5)
+- **sessoes**: a web lê o marcador `technical` da api em vez do nome da sessão (9071f49718)
+- **web**: o aviso do canal deixa de declarar um payload que não chega mais (eed90ab9bc)
+
 ### Documentação
 
 - **docs**: o [ADR 0176](docs/adr/0176-sessionpage-abaixo-de-mil-linhas.md)
@@ -2551,6 +2809,195 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   com os 28 arquivos `SessionPage.*.test.tsx` passando sem edição — até 834
   linhas, e a trava de CI (1 000 linhas ou mais reprovam) nasce só no último,
   por decisão do mantenedor.
+
+- ref da RN-681 relida pelo símbolo depois do guard do embedMany (196ef1c51d)
+- **jev**: o usage da chave confere com a soma de usage.cost (AT-239) (84c9f9f021)
+- **jev**: medição ao vivo com e sem o Jev, veredito restringir (AT-239) (f3a9c835ef)
+- **contributing**: contorno do origin SSH que pendura e do git reescrito em worktree (AT-187) (43237d2eae)
+- relê pelo símbolo as refs das RNs e promove a aferição a block (AT-122) (ef9493954a)
+- **adr**: a contagem de ADRs e o ensaio do ADR 0187 (AT-343) (acad6bd367)
+- **adr**: índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) (a5e4f1bc5a)
+- **anamnese**: contrato interno e glossário do sujeito elegível e do fato do perfil (AT-277) (f7694d4f95)
+- contagens de ADR e o inventário de eventos depois do ADR 0191 (AT-267) (c2df41fd43)
+- **internal-api**: o costMicros do turno é o custo real quando o provider o devolve (AT-270) (7fd24d267b)
+- **api**: o costMicros do turno interno diz que é o custo real quando o provider o devolve (AT-270) (089fd4a02a)
+- **internal-api**: o contrato de /llm-turn com o roteador de ferramenta do Jev (1cb1fd8aa3)
+- RN-654 e RN-656 cobrem a Visão geral, os Executores e o chat (AT-339/AT-340) (93006e2de3)
+- contagens e gerados após a integração da rodada 32 (b17aeabc9e)
+- **bindings**: o link da RN-470 aponta para custo.md (AT-334) (25de069d93)
+- contagem de ADRs e próximo número com o ADR 0186 (AT-314) (15c5df91a1)
+- **eventos**: inventário gerado com handoff.auto_accept_failed (AT-314) (e8ac2b16cf)
+- contagem de RNs após a integração da rodada 31 (07414e3be6)
+- **events**: session.reopened no catálogo de eventos (AT-071) (f37f07579e)
+- contagem de RNs após a integração da rodada 30 (c8c6922808)
+- auditoria visual "depois" da Rodada 29, com a comparação ao "antes" (AT-290) (e80b6e3f2f)
+- contagem de RNs após a integração da rodada 29 (fa92fc2b4d)
+- contagem de RNs do README depois da integração com a dev (AT-319) (caa9c3f7b0)
+- RN-645 — orçamento de requisições e largura da aba Configurações (AT-321) (6f03a930c4)
+- RN-639, CHANGELOG e CLAUDE.md da lane perf-web (AT-300/301/302) (fa556eb2a9)
+- **web**: link da RN-180 na RN-631 aponta o arquivo que a hospeda (AT-251) (1c8c712216)
+- superfície, runbook e CLAUDE.md para o container com o dono da pasta (AT-247) (ecfa8bb21a)
+- contagem de ADRs (176) e próximo número (0181); tipos do web regenerados (AT-247) (0e4065a466)
+- **api**: manifesto do OpenAPI regenerado depois do empilhamento (AT-247) (2ce94fd12f)
+- **security**: roster.activatedAgents no resumo do projeto, classificação inalterada (AT-252) (556544b011)
+- ADR 0179 e RN-625 do roteamento de ferramenta pelo Jev (AT-238) (7f2456d7ec)
+- **readme**: contagem de RNs 471 depois da integração de RN-626 e RN-629 (b27718aa55)
+- RN-626, decidir no chat onde o dono está (AT-256/268/265/266) (64fcfa24a9)
+- RN-624, a detecção do idioma do autor e a medição (AT-163) (abf7307847)
+- **api-interna**: idiomaDaResposta no agent/message e a orientação no fim do llm-turn (RN-622) (e52527ac1c)
+- **claude**: o SessionPage abaixo de 1 000 linhas entra no Histórico, e a tabela perde as linhas em branco que a partiam (AT-138) (333e018474)
+- o runbook e o CHANGELOG contam os quatro caminhos do tradutor no cluster, medidos (AT-191) (159c85fb0a)
+- ADR 0176, o programa que leva o SessionPage.tsx abaixo de 1 000 linhas (AT-138) (6b761ce09a)
+- o runbook conta o alvo da reprojeção de artefatos e a rodada que o provou (AT-198) (66abfee70c)
+- o runbook e o CHANGELOG contam a prova da reprojeção de artefatos no cluster (AT-198) (09935b7dab)
+- contagem de ADRs (172) e o manifesto da OpenAPI depois do rebase sobre a dev (AT-065) (ed833d67fb)
+- contagem de ADRs (171), refs do build-runner-binaries e a tabela do índice de ADRs sem linhas soltas depois do rebase (AT-065) (190df51373)
+- ADR 0174 — o binário standalone deixa de prometer o Mac Intel (AT-065) (153a82109c)
+- a rotação sem janela no Kubernetes, pelo cofre de segredos (AT-220) (016a57014f)
+- contagens de ADRs (171) e RNs (462) depois do rebase sobre a dev (02b19eb54e)
+- ADR 0173 e RN-615, a remoção de membro de workspace (AT-115) (4e13772c39)
+- ADR 0175 e RN-617, o Infra Lead como sétimo conversacional (AT-141) (647a615b76)
+- a restauração por compose e os bare repos na agenda, medidos (AT-195) (4a47525c9b)
+- o cache do bake nas provas foi medido e recusado (AT-178) (9c428eda2c)
+- o README conta 459 RNs depois do rebase sobre a dev (95a4972d57)
+- RN-614, o motivo e a raiz da política na tela (AT-148) (ca9cffe2db)
+- a instalação drena o outbox — CHANGELOG, runbook, configuration e CLAUDE.md (AT-219) (3591149414)
+- a observabilidade fora das provas e o helm em paralelo, medidos (AT-177) (5a5f7fbfe1)
+- o README conta 458 RNs depois do rebase sobre a dev (fcf0ec4205)
+- contagem de ADRs (169) e o próximo número depois do rebase sobre a dev (8f05ea514c)
+- ADR 0172 e a cadeia de suprimentos do CI com o Trivy no release (AT-179) (209fd3641c)
+- descreve HUGGINGFACE_API_TOKEN e HUGGINGFACE_HUB_URL no configuration.md (AT-211) (e1ad6de76f)
+- a contagem de ADRs (168) depois do rebase sobre a dev (1262449b4d)
+- ADR 0169, o SeaweedFS no lugar do MinIO no overlay local (AT-200) (7b4435d8e9)
+- o README conta 457 RNs depois do rebase sobre a dev (cb7f383836)
+- RN-611, a chave de máquina por conta (AT-118) (07ab3903da)
+- o README conta 455 RNs depois do rebase sobre a dev (48d090d87b)
+- RN-610, a recusa por estado do Infra Lead (AT-142) (0a8d6e7bb8)
+- RN-609, a raiz do escopo no proposed_action.created (AT-147) (e6361c33bc)
+- **runbook**: a reprojeção total roda em janela de manutenção, sem teto (AT-145) (1e6c9b8c5c)
+- contagem de ADRs (167) e o próximo número (0171) com o ADR 0170 (86cfcbcdb7)
+- ADR 0170, o compose de dev brabo-dev e a migração dos volumes (AT-173) (e2a7fe26f2)
+- o mecanismo da tabela de procedimentos, no workflow de docs e no CLAUDE.md (AT-193) (9c93273f78)
+- **runbook**: a tabela de procedimentos e como cada um se verifica (AT-193, AT-197) (0843d50386)
+- o registro de BRB cobre os 33 ids, com o estado do vault ao lado do medido (AT-186) (7eab65b3cd)
+- **i18n**: a tradução pt-BR do ADR 0107 deixa de morar sob o número 0104 (AT-231) (b2841a1d88)
+- **adr**: aceita os ADRs 0154 e 0155, com notas de aceitação (AT-108) (7bb8172e06)
+- RN-605, o pull nomeado e os tetos do start (AT-234) (abbdbfed69)
+- **golden-set**: o golden-set do QA roda agendado, semanal (ADR 0168, AT-149) (efa7cf0930)
+- **claude**: o teto por operação do broker e o que dele segue aberto (RN-604) (d68eb31383)
+- **rn**: RN-604, o teto por operação do cliente do broker (120d2a7d56)
+- **qa**: o golden-set do QA volta a medir sob a RN-502 (AT-076) (44cb06a7f2)
+- **rn**: as oito refs do assistente de projeto, relidas pelo símbolo (02af33b479)
+- **i18n**: a RN-201 pt-BR volta a dizer que o colapso da sidebar é só do usuário (15b753e27b)
+- **rn**: refs da RN-581 acompanham parar_da_sessao e o teste novo (AT-204) (ca4ae2f81e)
+- contagem de ADRs e refs de linha deslocadas pela RN-603 (25de24b553)
+- **scripts**: a referência lista o e2e e o package.json ilegível reprova nomeado (4697ba4b99)
+- **regras**: a tradução pt-BR declara as RNs que só existem em inglês (ce24d2d67d)
+- **runbook**: a saída do rewrap-deks é a que o script imprime (837d2bb3dc)
+- README conta 450 RNs (o #661 e o #663 subiram para 449 ao mesmo tempo) (d007c59388)
+- o README conta as RNs depois do rebase sobre a dev (1504e938d6)
+- **runbook**: a tradução pt-BR volta a cobrir instalação, provas e rotações (6cf628dc22)
+- **scripts**: a referência gerada passa a listar runner, broker e docker-port (20e797c720)
+- **runbook**: o parágrafo da RN-540 conta o compose de instalação (b6337fb1e5)
+- **rn**: as RN-524 e RN-527 contam as cinco imagens, e o docs:check as confere (86fa7e5d9b)
+- **rn**: as 75 refs com símbolo que não batiam, relidas pelo símbolo (3d3a1d87b9)
+- o README conta as RNs depois do rebase sobre a dev (da71dc6690)
+- a contagem de RNs do README volta a bater (444) (cb9787aad4)
+- **runbook**: cinco trechos que envelheceram ou se contradiziam (AT-199) (d6572c0c76)
+- deriva do código as contagens em prosa e corrige as cinco erradas (AT-123) (41b04d48fb)
+- **i18n**: a tradução pt-BR cita a rota interna no smoke de gates (AT-109) (3392157d6e)
+- a mutação do restore e a última execução boa como artefato (AT-126) (e34a199d34)
+- a RN do broker ausente vira RN-591 no rebase, e o README conta 442 RNs (307568e93e)
+- a contagem de imagens publicadas e derivada de ALVOS (AT-123) (e71821ae3c)
+- a reprojeção do grafo no cluster, quarto alvo do propriedades.yml (AT-127) (73232dfcd9)
+- **docker**: traducao pt-BR do runbook para o volume de node_modules (AT-172) (9174a2cdf8)
+- **scripts**: documenta BRABO_ENV_FILE no alvo test-restore-compose (60bf3b5380)
+- **rn**: o link da RN-064 na RN-586 aponta para custo.md, onde a âncora mora (4b04349323)
+- **changelog**: separa as entradas da AT-100 e da AT-130 (e8b031e76a)
+- **llm**: ADR 0166 e RN-583 — o critério de roteamento no binding (46b80218d8)
+- **sessoes**: artifacts, superfície HTTP e CLAUDE.md acompanham a RN-581 (a3a23c9ead)
+- **sessoes**: RN-581 — a conversa em curso segura a sessão por até 8h, e a sessão encerrada recusa conversa (12debbcdb6)
+- RN-579, o canal da sessão no lugar do poll curto, e o ETag do corpo vazio (ad6115d2bf)
+- **workflow**: a distribuição da deriva das refs, medida (f61d59110e)
+- RN-582, a nota de revisão da RN-522/RN-541 e as contagens (4076c09fbd)
+- **docmap**: o mecanismo de documentação ganha regra própria (073ceceebe)
+- **glossary**: o turno responde ao aceitar (RN-578) (6b7699d679)
+- **rn**: refs com símbolo aferidas no docs:check, e a RN-547 relida pelo símbolo (15ff7630de)
+- RN-578, CHANGELOG e CLAUDE.md para o aceite imediato (1f433e8433)
+- **adr**: 0163 — o clique responde ao aceitar, e a recusa deixa de ser calada (f8d6559d1a)
+- **glossario**: reidratação no glossário pt-BR; ajuste de formatação da leitura interna (9f15c2ee4e)
+- **adr**: ADR 0165 — o repositório nasce no aceite do handoff ao Arquiteto (8b4e3fbcf8)
+- **runbook**: a quinta imagem na seção de deploy por release (479276b31e)
+- **instalador**: configuration, branching-policy e docmap acompanham a quinta imagem (91b79b7c0d)
+- **seguranca**: a inferência pelo naoObservado só vale com linha de pé (164c026bd8)
+- **seguranca**: o bit brokerConfigurado nas duas rotas que o expõem (ee0862e313)
+- **i18n**: a tradução pt-BR acompanha a separação das duas validações do registro (de54571b6f)
+- **changelog**: v6.1.0 (e68b0dd5de)
+
+### CI
+
+- teto do shard da api sobe de 8 para 15 minutos (da697591e7)
+- o propriedades.yml enfileira por ref, e a issue da prova fecha sozinha (AT-212) (6a032d74ff)
+- reexecuta o drift com a justificativa no corpo do PR (ae19f3fb43)
+- reexecuta o drift com a justificativa no corpo do PR (f14b7c6da6)
+- **golden-set**: remove o gatilho temporário de push do golden-set do QA (AT-149) (d47c87ad37)
+- **golden-set**: o golden-set do QA roda agendado, semanal (AT-149) (7d757ca6dd)
+- o ESLint da api passa a verificar apps/api/test (04e8cc659b)
+- o broker e o docker-port ganham o mesmo oxlint do runner (AT-207) (38c6d491c3)
+- reexecuta o drift com a justificativa no corpo do PR (2cbdd94615)
+- reexecuta o drift com a justificativa no corpo do PR (bb03d9028c)
+- **runner**: o runner ganha passo de lint no ci.yml (AT-103) (08b4576ff1)
+- reexecuta o drift com a justificativa no corpo do PR (1de50ac838)
+- **imagens**: o bake refaz o estágio runtime, e o apk upgrade deixa de vir de cache velho (AT-110) (0b4d1f9ec9)
+- **k8s**: bootstrap registra o que viu quando o seed-smoke não chega a Succeeded (d7fc53e3cf)
+- o passo da justificativa do bot avalia o edited do próprio Dependabot (AT-100) (1040aade71)
+- reexecuta o drift com a justificativa da política de branches no corpo do PR (73fd53e328)
+- reexecuta o drift com a justificativa da superfície HTTP no corpo do PR (9a121e2210)
+- **dependabot**: o bot justifica no corpo o PR que só troca pin de action (fd72fa953c)
+
+### Manutenção
+
+- manifesto da OpenAPI da integração da rodada 37 (0eca6eea0e)
+- contagens da integração da rodada 37 (197 ADRs, 526 RNs) (0a7d16e826)
+- **release**: oferta de fonte em todas as imagens e na Release do runner (AT-120) (cbd174252b)
+- contagens e referência da API da integração da rodada 36b (ADRs 194, RNs 524) (61a787c130)
+- referências geradas da integração da rodada 36b (6bb2c2537b)
+- contagens e referência da API da integração da rodada 36a (ADRs 191, RNs 520) (4e2b15b980)
+- **ci**: a imagem dos workflows vem do compose e o Dependabot de imagem é ligado (AT-246) (8841a17169)
+- contagens da integração da rodada 35a (ADRs 189, RNs 517) (e7f0b78b95)
+- contagens e referência da API da integração da rodada 35a (4af390e581)
+- **web**: tipos do OpenAPI com a rota de cancelar mensagem da fila (AT-267) (71a9e48339)
+- contagens da integração da rodada 35a (ADRs 186, RNs 512) (7a3fbeaa3c)
+- contagem de RNs da integração da rodada 34 (509) (f48816c6f3)
+- contagem de RNs da integração da rodada 34 (a5f7bb8f05)
+- **web**: tipos da api regenerados após a integração da rodada 32 (61df0d438b)
+- **agentes**: definições executor (esforço baixo) e analista (esforço médio) (15544b5c42)
+- **web**: regenera os tipos do OpenAPI para a rota do idioma detectado (AT-163) (a1260d1205)
+- **ci**: tag da imagem de terceiro dentro da referência, antes do digest (AT-139) (cc6cd4e5f7)
+- reroda o guardião da documentação com o docs-not-needed do corpo do PR (4b9147e469)
+- **deps**: bump anthropics/claude-code-action from 1.0.230 to 1.0.235 (13af288f89)
+- **runner**: tira o darwin-x64 da matriz do binário standalone (AT-065) (e12ff46f00)
+- **web**: tipos da OpenAPI regenerados com as rotas de remoção e de titularidade (AT-115) (2d6f7dd917)
+- **api**: zera o eslint de test/interfaces, domain e scripts (727210e12f)
+- **api**: zera o eslint de test/infrastructure, contract e support (315fd4e6a3)
+- **api**: zera o eslint de test/application (use-cases execution–sessions) (527080f4ab)
+- **api**: zera o eslint de test/application (projeções e use-cases A–C) (4819e73e82)
+- **docmap**: a política de branches vigia só os scripts que são a política (2a0c0b7739)
+- **docs**: o docmap exclui o teto-ocioso-nos-composes da política de branches (9369dd9fb8)
+- **docker**: o teto da conversa ociosa chega à instalação, e o k8s fica sem ele por decisão (f57aa65bd6)
+- **dev**: o reset-total diz que não toca volume, e o engine medido do zero (340a195a94)
+- **deps**: bump anthropics/claude-code-action from 1.0.226 to 1.0.230 (259974102b)
+- **ci**: reexecuta o drift com a justificativa no corpo do PR (e8168309ca)
+- **deps**: bump actions/cache from 4.3.0 to 6.1.0 (651c36c666)
+- **deps**: bump anthropics/claude-code-action from 1.0.221 to 1.0.226 (8b05c94e72)
+- **deps**: bump docker/setup-buildx-action from 3.12.0 to 4.4.1 (069bb023e3)
+- **deps**: bump docker/bake-action from 6.10.0 to 7.4.0 (d731cd4652)
+- **deps**: bump actions/upload-artifact from 4.6.2 to 7.0.1 (0fa7b17c8e)
+- **deps**: bump actions/setup-node from 4.4.0 to 7.0.0 (d4177427d6)
+- **deps**: Bump actions/checkout from 4.4.0 to 7.0.1 (4d8d956dda)
+- **deps**: Bump pnpm/action-setup from 4.3.0 to 6.1.0 (0bec3daeb6)
+- **deps**: Bump anthropics/claude-code-action from 1.0.210 to 1.0.221 (25f9e45561)
+- **deps**: Bump actions/cache/restore from 4.3.0 to 6.1.0 (af38bc1f0d)
 
 ## v6.1.0 — 2026-09-13
 
