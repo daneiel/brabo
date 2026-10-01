@@ -113,7 +113,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   cancelar. O turno do Dev Lead suspenso em aprovação continua recusando.
   A resposta de `POST …/agents/:agent/message` ganha `mensagemId`, `entrega`
   (`lida` | `enfileirada`) e `posicao`.
-
+- **api, engine, web**: **aprovar o plano do Dev Lead é o que ativa a execução**
+  (AT-263, [RN-677](docs/business-rules.md#rn-677),
+  [ADR 0194](docs/adr/0194-aprovar-o-plano-ativa-a-execucao.md)). Aceitar o
+  handoff ao Dev Lead deixou de encadear `POST .../execution/activate` (revisa
+  a RN-161): ele só entra para PLANEJAR. Aprovar (ou auto-aprovar) o
+  `propose_execution_plan` agora grava o módulo das tarefas e chama a MESMA
+  ativação do botão — o 409 sem repositório, o 409 de sessão consultiva e a
+  reativação na sessão de execução vigente continuam iguais. A ação termina
+  `executed` (com a sessão de execução) ou `failed` (com o motivo), e o Dev
+  Lead diz qual foi ao retomar. O botão "Ativar execução" do card e o da Visão
+  Geral continuam, como gesto explícito.
+- **api, engine**: **a tarefa pertence a um módulo, e só o dev dele a pega**
+  (AT-274, [RN-678](docs/business-rules.md#rn-678)). Coluna `tasks.module`
+  (migração `0068_modulo_da_tarefa`), atribuída pelo Dev Lead no plano
+  (`tarefas: [{ taskId, modulo }]`); o kickoff dele lista as tarefas pendentes
+  com o `task_id`. Tarefa sem módulo ou com módulo fora do `module_map` vigente
+  recusa o plano com 400 `plano_de_execucao_invalido`, nomeando a tarefa. O
+  claim passa a ser pelo módulo da TAREFA; tarefa sem módulo só é pegável
+  quando a história tem um módulo só.
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

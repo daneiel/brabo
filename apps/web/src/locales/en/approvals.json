@@ -110,7 +110,7 @@
       "modulesCount_one": "{{count}} module",
       "modulesCount_other": "{{count}} modules",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " You still decide when to activate execution."
+      "note": " and ACTIVATES execution: the dev agents start and begin spending."
     },
     "assessImplementability": {
       "verb": "assesses a story's implementability",

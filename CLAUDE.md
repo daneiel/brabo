@@ -194,6 +194,7 @@ estado lido do repositório e não da conversa.
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
 | O piloto automático: "Sempre permitir" não o desliga, e o escopo compara com a pasta real de execução (AT-259/255/258) | ADR 0189, RN-669, RN-670 |
 | "Sempre permitir" grava verbo + subcomando, um padrão por segmento (AT-257, fecha a AT-170) | ADR 0189, RN-675 |
+| Aprovar o plano do Dev Lead ativa a execução; a tarefa ganha o módulo que ele atribui (AT-263/AT-274) | ADR 0194, RN-677, RN-678 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -2096,6 +2097,22 @@ o RACIOCÍNIO da triagem, que continua valendo.
   — vira `agent.error` explicando a pendência, e 409 no clique. Sem tabela de estado própria: restart do engine
   durante a espera perde a inscrição no `Engine.Dev.Wake`, lacuna aceita e
   declarada (a decisão continua registrada em Aprovações).
+- A execução é ATIVADA pela APROVAÇÃO do plano do Dev Lead, nunca pelo
+  aceite do handoff a ele (RN-677, ADR 0194, revisa a RN-161): aceitar o Dev
+  Lead só o traz para PLANEJAR, e o web não encadeia mais
+  `execution/activate`. Aprovar (ou auto-aprovar) `propose_execution_plan`
+  roda `ExecuteExecutionPlanUseCase`, que grava o módulo das tarefas e chama o
+  MESMO `ActivateExecutionUseCase` do botão — não escreva uma segunda régua de
+  ativação: o 409 sem repositório, o 409 de sessão consultiva e
+  `findActiveExecutionSession` moram ali. O botão explícito "Ativar execução"
+  (card do Dev Lead e Visão Geral) continua como gesto próprio. A tarefa tem
+  MÓDULO (`tasks.module`, RN-678), atribuído pelo Dev Lead em
+  `tarefas: [{ taskId, modulo }]` e validado contra o `module_map` vigente na
+  proposta (400 `plano_de_execucao_invalido`) e de novo na aprovação; o claim é
+  pelo módulo da TAREFA (`daTarefaDoModulo`, o mesmo predicado na contagem),
+  e tarefa sem módulo só é pegável quando a história tem UM módulo — não
+  alargue essa ponte para "qualquer módulo da história", que é o defeito que a
+  regra fecha.
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e
