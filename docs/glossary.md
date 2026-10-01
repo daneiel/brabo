@@ -354,6 +354,17 @@ technical stacks derived from the `module_map`. Nothing outside the
 catalog has a write path ([RN-024](business-rules.md#rn-024)) — Anamnesis
 profiles technical competency, not the person.
 
+**Eligible subject** — who an Anamnesis round may profile: an EFFECTIVE
+project member (the project row, or else the workspace one), outside the
+opt-out, with their OWN interaction in the window. With nobody, the round
+makes no LLM call ([RN-680](business-rules.md#rn-680)).
+
+**Profile fact** (`FatoDoPerfil`) — a Psychologist hypothesis that the
+person the session belongs to ACCEPTED, projected into the graph from
+`psychologist.hypothesis_accepted` and handed to the agents that talk to
+that person as an ephemeral system message
+([RN-680](business-rules.md#rn-680)).
+
 **`instruction_patch`** — a versioned proposal to change an agent's
 instruction. Never auto-approvable ([RN-007](business-rules.md#rn-007));
 a denied one isn't re-proposed ([RN-026](business-rules.md#rn-026));
