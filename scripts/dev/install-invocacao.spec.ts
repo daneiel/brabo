@@ -28,6 +28,9 @@ const FORMA_CERTA =
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-install-invocacao-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
+// Caminho de arquivo NUNCA entra interpolado na string de um `-c`: vai como
+// argumento posicional (`'source "$1"…', 'bash', caminho`) — AT-346, CodeQL
+// `js/shell-command-injection-from-environment`.
 function rodar(
   comando: string,
   args: string[],
@@ -110,10 +113,12 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
   it('`hash_sha256` de um arquivo ausente recusa dizendo o quê — e o chamador para ali', () => {
     const r = rodar('bash', [
       '-c',
-      `source "${carregavel()}"
+      `source "$1"
        exigir_ferramenta_de_hash
        x="$(hash_sha256 /nao/existe/install.sh)"
        echo "SEGUIU:[$x]"`,
+      'bash',
+      carregavel(),
     ]);
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
@@ -127,9 +132,11 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
     // incidente — a acusação de adulteração da AT-091, por outro caminho.
     const r = rodar('bash', [
       '-c',
-      `source "${carregavel()}"
+      `source "$1"
        exigir_ferramenta_de_hash
        conferir_hash /nao/existe abc 'MOTIVO-DE-INCIDENTE: pare e investigue'`,
+      'bash',
+      carregavel(),
     ]);
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
@@ -147,7 +154,7 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     const corpo = fonte().replace(/\nmain\s+"\$@"\s*$/, '\n');
     const caminho = path.join(tmp, 'install-constante.sh');
     fs.writeFileSync(caminho, corpo);
-    const r = rodar('bash', ['-c', `source "${caminho}"; printf '%s' "$COMO_RODAR"`]);
+    const r = rodar('bash', ['-c', 'source "$1"; printf \'%s\' "$COMO_RODAR"', 'bash', caminho]);
     expect(r.stdout).toBe(FORMA_CERTA);
   });
 
@@ -157,6 +164,19 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     expect(i).toBeGreaterThan(0);
     const trecho = texto.slice(i, i + 300);
     expect(trecho).toContain('${COMO_RODAR}');
+  });
+
+  it('o painel do runner no web ensina a MESMA forma (ADR 0203, RN-687)', () => {
+    // Desde o ADR 0203 o `RunnerOnboardingPanel` manda para o instalador, e o
+    // comando que ele mostra é uma CÓPIA — TS não lê o `install.sh`. A cópia
+    // é conferida aqui, contra a constante do próprio instalador.
+    const painel = fs.readFileSync(
+      path.join(RAIZ, 'apps/web/src/components/RunnerOnboardingPanel.tsx'),
+      'utf8',
+    );
+    const m = /export const COMANDO_DO_INSTALADOR =\s*'([^']+)';/.exec(painel);
+    expect(m, 'não achei `COMANDO_DO_INSTALADOR` no painel — o extrator ficou cego').not.toBeNull();
+    expect(m![1]).toBe(FORMA_CERTA);
   });
 
   it('o runbook e o bootstrap ensinam a forma certa, e nenhum dos dois a antiga', () => {

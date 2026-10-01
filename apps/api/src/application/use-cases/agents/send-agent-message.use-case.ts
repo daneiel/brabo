@@ -5,6 +5,8 @@ import {
   ResolverIdiomaDaRespostaUseCase,
   type IdiomaDaRespostaDaPessoa,
 } from '../iam/resolver-idioma-da-resposta.use-case';
+import { QueryUserContextUseCase } from '../graph/query-user-context.use-case';
+import { textoDoPerfilDoAutor } from '../../../domain/graph/perfil-do-autor';
 
 /**
  * Mensagem do usuário para um agente ATIVO na sessão (Fase 3b). Grava o
@@ -22,6 +24,20 @@ import {
  * efêmera. Resolver é MELHOR ESFORÇO: a falha vira log e o turno segue sem
  * orientação — nunca derruba a mensagem. O chat humano sem agente fica fora
  * (AT-169 resposta 3).
+ *
+ * Desde a RN-673 (ADR 0191) a mensagem que chega com turno em curso não é mais
+ * 409 `turno_em_andamento`: o engine a põe na FILA do agente e a lê, com as
+ * outras que chegarem, no fim do turno. A resposta diz qual dos dois houve
+ * (`entrega: 'lida' | 'enfileirada'`) e devolve o `mensagemId` — o id do
+ * `chat.message` gravado aqui, que é o que cancela a mensagem pendente.
+ *
+ * Desde a RN-680 (ADR 0196) é também quem leva ao agente os FATOS do perfil
+ * deste autor neste projeto — hipóteses do Psicólogo que ele aceitou —, lidos
+ * pelo caminho de leitura do grafo que já existia (`QueryUserContextUseCase`,
+ * escopado ao projeto e com teto) e montados por `textoDoPerfilDoAutor`. Vão
+ * ao engine como `perfilDoAutor`, que os acrescenta como mensagem de sistema
+ * EFÊMERA nas chamadas do turno, como o idioma. Mesma régua de falha: grafo
+ * fora do ar (ou Neo4j não configurado) vira log, e o turno segue sem eles.
  */
 @Injectable()
 export class SendAgentMessageUseCase {
@@ -31,6 +47,7 @@ export class SendAgentMessageUseCase {
     private readonly engineClient: ApiToEngineClient,
     private readonly appendEvent: AppendSessionEventUseCase,
     private readonly idiomaDaResposta: ResolverIdiomaDaRespostaUseCase,
+    private readonly contextoDoUsuario: QueryUserContextUseCase,
   ) {}
 
   async execute(
@@ -40,29 +57,60 @@ export class SendAgentMessageUseCase {
     text: string,
     userId: string,
   ) {
-    const idioma = await this.resolverIdioma(userId, sessionId);
+    const [idioma, perfil] = await Promise.all([
+      this.resolverIdioma(userId, sessionId),
+      this.resolverPerfil(userId, projectId),
+    ]);
 
     // `idiomaAlvo`/`origem` no `chat.message` são para a MEDIÇÃO (AT-082): o
     // evento é imutável e diz, para sempre, o que foi pedido ao modelo
     // naquele turno. Ausentes quando a resolução falhou — é o mesmo "sem
     // orientação" que o engine recebe.
-    await this.appendEvent.execute(projectId, sessionId, {
+    const mensagem = await this.appendEvent.execute(projectId, sessionId, {
       type: 'chat.message',
       actor: { kind: 'user', id: userId },
-      payload: idioma
-        ? { text, idiomaAlvo: idioma.idioma, origem: idioma.origem }
-        : { text },
+      payload: {
+        text,
+        ...(idioma ? { idiomaAlvo: idioma.idioma, origem: idioma.origem } : {}),
+        // RN-680: QUANTOS fatos do perfil foram ao modelo neste turno — o
+        // texto não, que já mora no grafo e no aceite de cada hipótese.
+        ...(perfil ? { fatosDoPerfil: perfil.quantos } : {}),
+      },
     });
 
-    await this.engineClient.sendAgentMessage(
+    // RN-673: o id do `chat.message` vai junto — com turno em curso a
+    // mensagem entra na FILA do agente, e é por esse id que ela é marcada
+    // entregue ou cancelada no log.
+    const entrega = await this.engineClient.sendAgentMessage(
       projectId,
       sessionId,
       agent,
       text,
       idioma?.idioma ?? null,
+      mensagem.id,
+      perfil?.texto ?? null,
     );
 
-    return { ok: true as const };
+    return { ok: true as const, mensagemId: mensagem.id, ...entrega };
+  }
+
+  private async resolverPerfil(
+    userId: string,
+    projectId: string,
+  ): Promise<{ texto: string; quantos: number } | null> {
+    try {
+      const contexto = await this.contextoDoUsuario.execute({
+        userId,
+        projectId,
+      });
+      const texto = textoDoPerfilDoAutor(contexto.facts, contexto.factsTotal);
+      return texto ? { texto, quantos: contexto.facts.length } : null;
+    } catch (erro) {
+      this.logger.warn(
+        `fatos do perfil não lidos para o projeto ${projectId}: o turno segue sem eles (${erro instanceof Error ? erro.message : String(erro)})`,
+      );
+      return null;
+    }
   }
 
   private async resolverIdioma(

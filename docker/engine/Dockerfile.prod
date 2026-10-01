@@ -181,6 +181,13 @@ VOLUME ["/data/project-workspaces", "/data/git-repos"]
 #
 # Copiado ANTES do `USER`, como os diretórios de dados acima: o arquivo é do
 # root e legível por todos (0644), e não deve ser escrevível pelo processo.
+# A PASTA nasce antes, e por um `RUN`, não pelo `COPY`: o BuildKit aplica o
+# `--chmod` também às pastas que o `COPY` cria, e `/usr/share/doc/brabo` nascia
+# `0644` — sem o bit de execução, ninguém além do root a atravessa, e o `cat`
+# como o `USER` da imagem dava "Permission denied" (medido na AT-120, inclusive
+# na imagem do engine). Com a pasta já existente em `0755`, o `COPY` só cria o
+# arquivo.
+RUN install -d -m 0755 /usr/share/doc/brabo
 COPY --chown=root:root --chmod=0644 THIRD_PARTY_NOTICES.md \
      /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md
 

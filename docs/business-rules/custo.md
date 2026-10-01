@@ -148,6 +148,58 @@ cost.
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-681 — História e regra parecidas com uma existente geram AVISO por embedding, nunca recusa; o gasto da checagem é linha própria do metering {#rn-681}
+
+Depois de gravar uma história (`create_story`) ou uma regra de negócio
+(`emit_artifact` de `business_rule`), a api compara o TÍTULO dela com os das
+existentes do mesmo tipo no PROJETO, por cosseno entre vetores do modelo de
+embedding do RAG, e AVISA quando a mais próxima está a partir do limiar.
+
+1. **Aviso, nunca recusa.** O item já existe quando a checagem roda. O aviso
+   volta ao agente no resultado da ferramenta — a frase nomeia o parecido, o
+   id e o número — e fica no log como `backlog.semantic_duplicate_warned`. A
+   duplicata EXATA continua recusada antes, pela [RN-080](#rn-080) e pela
+   [RN-081](#rn-081), e por isso título normalizado igual sai da comparação.
+2. **O limiar é 0,80 e é PONTO DE PARTIDA, não calibrado** (ADR 0198, como os
+   pesos do [ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)):
+   os vetores reais do par do achado R e dos pares que não são duplicata não
+   puderam ser gravados no ambiente em que a regra nasceu. A prova roda sozinha
+   quando `vetores.json` for gravado; até lá ela é PULADA com aviso.
+3. **Sem provider de embedding a checagem é PULADA e DITA** — capability
+   ausente, daemon fora, timeout: `backlog.semantic_duplicate_check_skipped`
+   com o motivo no log e na frase ao agente. Nunca falha a emissão.
+4. **O gasto entra no metering como linha própria**: ator
+   `system`/`duplicata-semantica`, provider e modelo do RAG, saída zero, preço
+   do catálogo quando o modelo está nele. É a ÚNICA exceção ao corte do
+   [ADR 0075](../adr/0075-embeddings-no-contrato-de-llm-provider.md) — a
+   indexação e a busca do RAG seguem fora —, e cabe porque a emissão acontece
+   dentro de sessão.
+5. **Tetos:** as 100 existentes mais recentes (o resultado diz quantas de
+   quantas quando corta) e 10 s de relógio para a checagem inteira.
+
+- **Where:** `apps/api/src/domain/backlog/duplicata-semantica.ts:35` (`LIMIAR_DE_DUPLICATA_SEMANTICA`),
+  `:44` (`TETO_DE_COMPARACOES_DE_DUPLICATA`), `:53` (`TETO_DE_TEMPO_DA_CHECAGEM_MS`),
+  `:107` (`ehDuplicataSemantica`),
+  `apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts:111` (`VerificarDuplicataSemanticaUseCase`),
+  `:241` (`medir`), `:285` (`narrar`), `:349` (`fraseParaOAgente`),
+  `apps/api/src/application/use-cases/backlog/create-story.use-case.ts:193` (`semanticDuplicate`),
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:524` (`semanticDuplicateCheck`),
+  `apps/api/src/application/use-cases/rag/rag-embedding.service.ts:102` (`uso`),
+  `apps/engine/lib/engine/harness/tools/emit_artifact.ex` (`aviso_semantico`),
+  `apps/engine/lib/engine/harness/tools/create_story.ex` (`aviso_semantico`)
+- **Test:** `test/application/use-cases/backlog/verificar-duplicata-semantica.use-case.spec.ts`
+  (avisa acima do limiar; o gasto vira linha própria; abaixo não narra; sem
+  provider pula dizendo; teto de tempo; teto de comparações; regra pelos
+  eventos; metering e log que falham não derrubam),
+  `test/application/use-cases/backlog/create-story.use-case.spec.ts`
+  (`duplicata semântica (RN-681)`), `test/domain/backlog/duplicata-semantica.spec.ts`,
+  `test/domain/backlog/limiar-de-duplicata.calibracao.spec.ts` (o NÚMERO —
+  pulada até os vetores serem gravados),
+  `apps/engine/test/engine/harness/duplicata_semantica_test.exs`,
+  `apps/web/src/lib/activity.test.ts` (`duplicata semântica (RN-681)`)
+- **Origin:** [ADR 0198](../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md)
+  (AT-171, achado R)
+
 ### RN-666 — O metering grava quanto da entrada veio de cache e quanto da saída foi raciocínio {#rn-666}
 
 Cada linha de `token_usage` grava duas PARTES que o provider informa no
@@ -236,6 +288,55 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   credencial, o smoke manual `openrouter-provider.smoke.spec.ts`
 - **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
   (AT-270)
+
+### RN-679 — A curadoria recusa o alias de roteamento livre do OpenRouter {#rn-679}
+
+Decisão do dono (01/10): **o alias `~` não entra na curadoria** — só modelo
+com upstream fixo. O alias de roteamento livre do OpenRouter (o id que começa
+com `~`, como `~deepseek/deepseek-flash-latest`) "sempre redireciona para o
+último da família": o catálogo publica um preço de VITRINE (no uso real de
+29/09, o do endpoint mais barato da família), a lista de endpoints vem vazia,
+e quem cobra é o upstream que atendeu. Não há upstream contra o qual o preço
+congelado do [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+signifique alguma coisa. A alternativa — preçar por upstream — foi recusada.
+
+1. **A régua é do provider.** `ehAliasDeRoteamentoLivre` é `provider =
+   'openrouter'` E nome começando com `~`; o mesmo prefixo noutro provider não
+   é alias e não recusa.
+2. **Ativar recusa, com código.** `POST .../models/activate` com
+   `isActive: true` e algum alias no lote é **422** com
+   `code: "alias_de_roteamento_livre"`, os `modelIds` recusados e uma frase que
+   os nomeia. O lote INTEIRO é recusado, como o 404 do id inexistente
+   ([RN-043](#rn-043)): nem o modelo de upstream fixo do mesmo lote é ligado.
+   A tela de catálogo mostra a frase da api num toast de título próprio, e
+   casa pelo `code`, nunca pelo texto.
+3. **O sync NÃO filtra o alias.** Ele continua no catálogo — sumir dali faria
+   o sync marcar `unavailable` o que já estava curado, e a cascata pularia os
+   bindings dele em silêncio. A leitura da curadoria o MARCA:
+   `freeRoutingAlias`, derivado de provider e nome na leitura, nunca gravado.
+   A linha mostra o selo e o motivo em TEXTO antes de alguém tentar ativar.
+4. **O que já estava curado segue funcionando.** É mensurável (o nome com `~`
+   na linha do OpenRouter), e a saída escolhida é a menos surpreendente: o
+   alias ativo antes da regra **continua ativo** — os bindings dele seguem
+   resolvendo, o seletor segue mostrando —, sai marcado no catálogo, e pode
+   ser DESLIGADO. Desligado, não volta. Nada é apagado e nenhum binding é
+   reescrito. Binding NOVO para um alias ainda ativo não é recusado aqui: a
+   regra é da curadoria, e o binding segue a [RN-043](#rn-043).
+
+- **Where:** `apps/api/src/domain/llm/alias-de-roteamento-livre.ts:23` (`ehAliasDeRoteamentoLivre`),
+  `:41` (`AliasDeRoteamentoLivreError`),
+  `apps/api/src/application/use-cases/llm/set-models-active.use-case.ts:59` (`AliasDeRoteamentoLivreError`),
+  `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts:67` (`freeRoutingAlias`),
+  `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:60` (`code`),
+  `apps/web/src/components/ModelCatalogSection.tsx:557` (`recusaDeAliasLivre`)
+- **Test:** `test/application/use-cases/llm/set-models-active.use-case.spec.ts`
+  (lote recusado inteiro com código e ids; upstream fixo ativa; `~` fora do
+  OpenRouter ativa; alias curado antes da regra segue ativo, marcado, desliga
+  e não volta), `test/interfaces/http/shared/llm-binding-error.filter.spec.ts`,
+  `apps/web/src/components/ModelCatalogSection.test.tsx` (selo e motivo;
+  toast da recusa; toast genérico para outro erro)
+- **Origin:** AT-271 (item A25 da análise do uso real de 29/09); complementa a
+  [RN-665](#rn-665)
 
 ### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
 
@@ -1820,6 +1921,8 @@ A comparação normaliza caixa, acento e espaço redundante; pontuação fica.
 **Duplicata semântica continua passando, e isso é declarado, não esquecido:**
 "Saudação com nome" e "Quem chama pode se identificar" seguem sendo duas regras,
 porque separá-las é julgamento e não cabe num `if`.
+Desde a [RN-681](#rn-681) a duplicata semântica de TÍTULO é **avisada** por
+embedding depois de gravar — continua passando, nunca é recusada aqui.
 
 - **Onde:** `apps/engine/lib/engine/harness/artifact_dedupe.ex`,
   `apps/engine/lib/engine/harness/tools/emit_artifact.ex`,
@@ -1850,6 +1953,8 @@ tratar o conjunto vazio como subconjunto de tudo acusaria todas.
 responde saudação imediata" cobrem o mesmo endpoint com títulos e justificativas
 diferentes — nada mecânico os liga, e eles continuam passando. Há teste
 afirmando isso, para o limite ficar visível em vez de implícito.
+Desde a [RN-681](#rn-681) o par é AVISADO por embedding — continua passando,
+e o teste que afirma o limite DESTE mecanismo segue valendo.
 
 - **Onde:** `apps/api/src/domain/backlog/story-overlap.ts`,
   `apps/api/src/application/use-cases/backlog/create-story.use-case.ts`
@@ -2119,7 +2224,8 @@ que você leu ao decidir.
 ### RN-087 — O Dev Lead é o único endereço externo da execução {#rn-087}
 
 Existe um agente `dev-lead`, conversacional, que recebe o handoff do Arquiteto
-e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
+(desde a [RN-672](../business-rules.md#rn-672), da Infra, com o container do
+projeto `running`) e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
 escreve código — distribui trabalho e responde por ele.
 
 **Antes dele, a frase "quem decide é o lead" da [RN-083](#rn-083) não tinha
@@ -2824,8 +2930,10 @@ anterior a esta regra, em vez de mostrar branco.
 
 ### RN-116 — Falha ao CRIAR um handoff não derruba o agente {#rn-116}
 
-`confirm_readiness` (Criativo → PO) e `offer_infra_handoff`/`offer_dev_handoff`
-(Arquiteto → Infra/Dev Lead) chamam a api pra criar o handoff DEPOIS de o
+`confirm_readiness` (Criativo → PO) e `offer_infra_handoff` (Arquiteto → Infra;
+o `offer_dev_handoff`, Arquiteto → Dev Lead, saiu na
+[RN-672](../business-rules.md#rn-672), e o handoff ao Dev Lead que a Infra
+oferece segue a mesma régua) chamam a api pra criar o handoff DEPOIS de o
 turno já ter rodado — no caso do Criativo, depois de o `product_brief` já
 estar gravado no event log. Se essa chamada falhar (api fora, 5xx, etc.), o
 handoff não existe, mas isso NUNCA derruba o GenServer do agente: a falha vira
@@ -2859,13 +2967,15 @@ defeito era só nestes três handlers server-driven, que chamam
 - **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
   (`handle_call(:confirm_readiness, ...)`, `emit_falha_handoff/3`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex`
-  (`handle_call(:offer_infra_handoff, ...)`, `handle_call(:offer_dev_handoff, ...)`,
-  `emit_falha_handoff/3`)
+  (`handle_call(:offer_infra_handoff, ...)`, `emit_falha_handoff/3`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex`
+  (`emit_falha_do_handoff_ao_dev_lead/2`, RN-672)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
   ("prontidão: falha ao criar o handoff NÃO derruba o processo, e vira
   agent.error durável"); `apps/engine/test/engine/agents/arquiteto_server_test.exs`
-  (as quatro variantes de `offer_infra_handoff`/`offer_dev_handoff`, sucesso e
-  falha)
+  (`offer_infra_handoff`, sucesso e falha);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs` (o handoff ao Dev
+  Lead que a Infra oferece, recusado com 500)
 - **Origem:** relato de uso real no projeto `exp-001` (Criativo → PO); a
   mesma falha estrutural foi achada por leitura de código nos dois handoffs
   do Arquiteto, sem reprodução separada para eles

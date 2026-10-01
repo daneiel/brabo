@@ -752,13 +752,22 @@ Before RN-558 the command ran anyway, with the variables empty, and you saw a
 plain authentication failure. Now it is refused before executing, and nothing
 runs. The refusal never prints variable names or values, only the count.
 
-**What to do today:**
+**Since [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+([RN-676](business-rules.md#rn-676)) this refusal no longer happens on the
+common path:** the engine marks the authenticated `fetch` (`gitCredenciado`)
+and a current runner runs it on the **host** even with the container up — the
+same folder, mounted at `/work`. If you still see it, the connected
+`brabo-runner` is older than that change and does not read the mark.
 
-1. Stop the project's container (the `/containers` page, "Parar") and let the
-   worktree materialise — on the host path the credential is delivered
-   normally, and the initial `fetch` succeeds.
-2. Bring the container back up and carry on; the clone is idempotent and is not
-   repeated.
+**What to do:**
+
+1. Update the `brabo-runner` on the user's machine and restart it (or its
+   service). That is the fix.
+2. If you cannot update right now: stop the project's container (the
+   `/containers` page, "Parar") and let the worktree materialise — on the host
+   path the credential is delivered normally, and the initial `fetch`
+   succeeds. Then bring the container back up; the clone is idempotent and is
+   not repeated.
 
 A **local** repository (no token) is unaffected, and so are `container` and
 `mounted` projects — they never go through this path. So is
@@ -3848,9 +3857,13 @@ exposed in `docker-compose.yml`.
 > on the next boot regardless of the guard. The queue needs to be
 > **purged**, not just have the guard turned off.
 
-> **Turning the Anamnesis or the Psychologist back on: two variables, not
-> one.** They have been paused since 2026-08-10, and the pause is a product
-> decision, not a bug. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
+> **Turning the Anamnesis or the Psychologist on: two variables, not
+> one.** Both were paused on 2026-08-10 by product decision, not a bug. The
+> Psychologist still is; the Anamnesis was turned back on by the owner on
+> 2026-10-01 ([RN-680](business-rules.md#rn-680)) — `ANAMNESE_ENABLED`
+> defaults to `true` again in the code and the three composes, and a round
+> with no eligible subject makes no LLM call and says why in the engine log
+> (`sem_sujeito_elegivel`). Pausing it again is `ANAMNESE_ENABLED=false`. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
 > product flags (may a NEW round happen at all); `START_ANAMNESE` is the boot
 > key (is the periodic tick even scheduled). The periodic Anamnesis needs both
 > at `true`; the Psychologist has no boot key, because its automatic trigger
@@ -3861,7 +3874,7 @@ exposed in `docker-compose.yml`.
 > does not forward the host environment — so setting them in `.env` did
 > nothing at all, silently, while three places in the code promised the pause
 > was reversible. They are mapped now, with the code's own default (`false`
-> in both files: the pause itself is unchanged). The **install** compose
+> in both files at the time; `ANAMNESE_ENABLED` is `true` since RN-680). The **install** compose
 > (`docker/docker-compose.install.yml`) was the third file and was left out of
 > that fix; since AT-202 it maps the same flags with the same defaults, and
 > `scripts/ci/flags-do-engine-no-compose.spec.ts` checks all **three** files
@@ -3878,8 +3891,8 @@ exposed in `docker-compose.yml`.
 > was never woken. Neither key spends tokens with the product flags off: with
 > `ANAMNESE_ENABLED=false` the Anamnesis `kickoff/0` schedules no job at all,
 > and the drain only enqueues the Psychologist with `PSYCHOLOGIST_ENABLED=true`.
-> On an install, turning the Anamnesis back on is therefore just
-> `ANAMNESE_ENABLED=true`. On Kubernetes there was nothing to fix — a
+> On an install, the Anamnesis is therefore on or off by
+> `ANAMNESE_ENABLED` alone (default `true` since RN-680). On Kubernetes there was nothing to fix — a
 > Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
 > these variables. Both flags are read at boot: change them and
 > `docker compose up -d engine`.
@@ -4243,7 +4256,7 @@ binaries — macOS notarization and Windows Authenticode. Those need a paid
 signing identity and are a separate backlog item; the OS will still warn on
 first run.
 
-### The written offer of source, inside the engine image {#oferta-de-fonte-na-imagem}
+### The written offer of source, inside every published artifact {#oferta-de-fonte-na-imagem}
 
 Signing answers *"is this what the pipeline published?"*. A second question
 travels with the same image and has a different answer: **where is the source
@@ -4265,10 +4278,33 @@ docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:vX.Y.Z \
 ```
 
 It names every component, its exact version and its licence, which is what
-lets anyone reach the upstream release of each one. If that file is missing
-from an image, the image should not be distributed — `scripts/ci/oferta-de-fonte-na-imagem.spec.ts`
-keeps the `COPY` from being removed by accident, but only a real tag proves the
-published artifact.
+lets anyone reach the upstream release of each one.
+
+Since AT-120 the same file, in the same path and the same form (root-owned,
+`0644`, copied before the `USER`), ships inside **every** published image —
+`brabo-api`, `brabo-web`, `brabo-broker` and `brabo-backup` as well as
+`brabo-engine` — and next to the runner binaries as the
+`THIRD_PARTY_NOTICES.md` asset of the Release, covered by the same signed
+`checksums.txt` (RN-524). That was the maintainer's decision, and it is the
+conservative one: no artifact is declared exempt. Swap `brabo-engine` for any
+of the other four in the command above. Before AT-120 that command failed with
+"Permission denied" on the engine image: BuildKit applies `COPY --chmod=0644`
+to the directory the `COPY` creates too, so `/usr/share/doc/brabo` had no
+execute bit and the image's non-root user could not traverse it. Each
+Dockerfile now creates the directory `0755` first. For the runner:
+
+```bash
+gh release download vX.Y.Z --repo daneiel/brabo \
+  --pattern THIRD_PARTY_NOTICES.md --pattern checksums.txt
+sha256sum -c --ignore-missing checksums.txt
+```
+
+If that file is missing from an artifact, the artifact should not be
+distributed. `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps each `COPY`
+and the Release asset from being removed by accident, and the
+`A oferta de fonte está dentro das cinco imagens` step of `ci.yml` reads the
+file back out of each image it builds and compares it with the checkout — but
+only a real tag proves the published artifact.
 
 The file also records what is **not** settled: separating the scanners into
 their own sidecar, leaving the engine image free of copyleft, stays open as an
@@ -4278,11 +4314,14 @@ their own sidecar, leaving the engine image free of copyleft, stays open as an
 
 ## Bumping a third-party image {#subindo-imagem-de-terceiro}
 
-Every third-party image in `docker/`, `deploy/k8s/` and
-`.github/workflows/` is pinned **by digest**, with the tag it came from
-written **inside the reference**, before the digest
-([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md),
-[ADR 0178](adr/0178-tag-inline-na-imagem-de-terceiro.md)):
+Every third-party image in `docker/` and `deploy/k8s/` is pinned **by
+digest**, with the tag it came from written **inside the reference**, before
+the digest ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md),
+[ADR 0178](adr/0178-tag-inline-na-imagem-de-terceiro.md)). The workflows in
+`.github/workflows/` hold **no** image literal: their `services:` read the
+reference from the dev compose through `imagens-do-compose.yml`
+([ADR 0197](adr/0197-a-imagem-dos-workflows-vem-do-compose.md)), so bumping
+the compose bumps the CI too:
 
 ```yaml
 image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
@@ -4297,12 +4336,19 @@ arguments"*:
 FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
 ```
 
-That is a **freeze**, and the cost lands here: the image receives no security
-update until a person changes the digest. Dependabot's `docker` and
-`docker-compose` ecosystems are decided but **not enabled** (ADR 0178 says what
-blocks them), so nothing proposes the bump for you.
+That is a **freeze**. Since ADR 0197 Dependabot's `docker-compose` (the
+composes in `docker/`) and `docker` (the `FROM` lines in `docker/*/` and the
+manifests in `deploy/k8s/`) ecosystems propose the bump weekly, one grouped PR
+per ecosystem, into `dev`. Reviewing that PR is this procedure's steps 1 and 4.
+Two cases still come back here:
 
-To move one — say, `neo4j` from `5.26-community` to `5.27-community`:
+- **`neo4j` and `ollama` live in a compose AND in `deploy/k8s/base/`**, and the
+  two ecosystems never share a PR. When the registry re-publishes the SAME tag
+  with another digest, both PRs fail the lint ("same inline tag, two
+  digests"); bring the two bumps into one PR with step 3 below.
+- The two images no ecosystem reads (below).
+
+To move one by hand — say, `neo4j` from `5.26-community` to `5.27-community`:
 
 ```sh
 # 1. Confirm the tag resolves to an INDEX (a manifest list). If it does not,
@@ -4315,23 +4361,34 @@ docker manifest inspect neo4j:5.27-community | head -3
 docker buildx imagetools inspect neo4j:5.27-community --format '{{.Manifest.Digest}}'
 
 # 3. Write `neo4j:5.27-community@<digest>` EVERYWHERE the old reference appears.
-grep -rn 'neo4j:5.26-community@sha256' docker/ deploy/k8s/ .github/workflows/
+#    Not in .github/workflows/: the workflows read pgvector and ollama from the
+#    dev compose (ADR 0197), and the lint fails a literal there.
+grep -rn 'neo4j:5.26-community@sha256' docker/ deploy/k8s/
 
 # 4. The lint proves it.
 node scripts/ci/imagens-pinadas.ts
 ```
 
-Two images live outside those three trees and are bumped by this same
-procedure, by hand, whatever Dependabot ends up doing: the CloudNativePG
+Two images are bumped by this same procedure, by hand, whatever Dependabot
+does: the CloudNativePG
 `imageName` in `deploy/k8s/overlays/local/db/cluster.yaml` (no ecosystem
 reads that key) and the golden-set QA case image,
 `IMAGEM_DO_GOLDEN_SET_QA` in `apps/api/scripts/golden-set-qa-container.ts`
 (a TypeScript constant, read by `golden-set-qa.yml`).
 
 Step 3 is not optional bookkeeping: the check refuses **the same inline tag
-carrying two different digests**, because the dev compose and the CI service claiming
-the same version while running different bytes is how a green CI stops meaning
-anything.
+carrying two different digests**, because the dev compose and the cluster
+claiming the same version while running different bytes is how a green CI stops
+meaning anything. Between the dev compose and the CI there is nothing to align
+any more: the CI reads the compose.
+
+To give a NEW workflow a third-party service, never write the reference in the
+workflow: add the service image to `docker/docker-compose.yml`, a line to
+`IMAGENS_DOS_WORKFLOWS` in `scripts/ci/imagens-do-compose.ts`, the matching
+output to `.github/workflows/imagens-do-compose.yml` (its spec fails if the two
+diverge), and in the workflow a job `imagens:` with
+`uses: ./.github/workflows/imagens-do-compose.yml` plus
+`image: ${{ needs.imagens.outputs.<name> }}`.
 
 What the check does **not** cover, and why, is in
 [the CI supply chain](explanation/cadeia-de-suprimentos-do-ci.md#container-images-digest-with-the-tag-alongside):
@@ -4514,6 +4571,6 @@ workflow in **schedule** does not have the trigger the cell claims
 | Install | [Installing](#instalando) | `.github/workflows/install-e2e.yml` (clean machine) and `scripts/dev/install*.spec.ts`; the migration path end to end: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the specs) |
 | Turn the installation's broker on or off | [The container broker in an installation](#broker-na-instalacao) | at install: `scripts/dev/install-broker.spec.ts` and `.github/workflows/install-e2e.yml`; turning it on later by hand, and off: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the spec); manual (later, and off) |
 | Verify a published artifact | [Verifying a published artifact](#verificar-artefato-publicado) | the publishing workflows verify what they signed, in the same run: `.github/workflows/release.yml` (`cosign verify`) and `.github/workflows/build-runner-binaries.yml` (`cosign verify-blob`) | every tag `.github/workflows/release.yml` `.github/workflows/build-runner-binaries.yml` |
-| Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps the `COPY`; the published image carrying the file: none | every PR `.github/workflows/ci.yml` (the spec); manual (the published image) |
-| Bump a third-party image | [Bumping a third-party image](#subindo-imagem-de-terceiro) | `scripts/ci/imagens-pinadas.ts` and `scripts/ci/imagens-pinadas.spec.ts` | every PR `.github/workflows/ci.yml` |
+| Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps each `COPY` and the Release asset; the five images built from the PR, read back by `.github/workflows/ci.yml`; the published artifacts carrying the file: none | every PR `.github/workflows/ci.yml` (the spec and the built images); manual (the published artifacts) |
+| Bump a third-party image | [Bumping a third-party image](#subindo-imagem-de-terceiro) | `scripts/ci/imagens-pinadas.ts`, `scripts/ci/imagens-pinadas.spec.ts` and `scripts/ci/imagens-do-compose.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Add a compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) | steps 2–4: `apps/api/test/contract/llm-provider.contract.ts`, run by each provider's contract spec; step 6, with a real credential: none in CI — the smoke specs skip without a key | every PR `.github/workflows/ci.yml` (steps 2–4); manual (step 6) |

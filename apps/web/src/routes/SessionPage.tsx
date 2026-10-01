@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,10 +18,10 @@ import {
   transitionSession,
   reopenSession,
 } from '../lib/api-client';
-import { streamChatMessage } from '../lib/chat-stream';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
+import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -149,17 +149,6 @@ export function SessionPage({
   // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
   const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const [reabrindo, setReabrindo] = useState(false);
-  // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
-  // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
-  // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
-  // (ver `handleAcceptHandoff`) ou se o segundo clique em "Ativar execução"
-  // continua necessário. Quem só é `developer` não perde nada: continua
-  // podendo aceitar o handoff, só não ganha o atalho — ativar exige
-  // `maintainer`/`owner` de qualquer forma, então encadear para um
-  // `developer` só produziria uma chamada fadada a 403.
-  const podeFundirHandoffComExecucao =
-    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
-
   // AT-328: no móvel o painel nasce fechado e abre como gaveta sobre o fio.
   const movel = useLayoutMovel();
   const [asideOpen, setAsideOpen] = usePainelDeContexto(movel, !!highlightEvent);
@@ -171,8 +160,6 @@ export function SessionPage({
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
   // estado.
   const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  useEffect(() => () => abortRef.current?.abort(), []);
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   // RN-579: com o canal da sessão VIVO, os polls desta tela viram fallback
   // longo e quem diz quando buscar é o aviso do canal (`canal-vivo.ts`). A
@@ -223,6 +210,8 @@ export function SessionPage({
     setTurnoViaCanal,
     turnoAgentRef,
   } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
+  // RN-673: a mensagem que entra na fila do agente com turno em curso.
+  const enfileirar = useEnfileirarMensagem(projectId, sessionId, setDraft, acompanharTurnoPeloLog);
 
   // A promoção de histórias pelo fio (RN-126/RN-148) mora em
   // `../lib/session-promocao` desde o PR 8 do ADR 0176.
@@ -265,7 +254,6 @@ export function SessionPage({
     queryClient,
     showToast,
     t,
-    podeFundirHandoffComExecucao,
     iniciarTurnoDoAgente,
     turnoAgentRef,
     setTurnoViaCanal,
@@ -630,9 +618,9 @@ export function SessionPage({
 
   /**
    * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
-   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
-   * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
-   * pronta no fio, e os dois handoffs nascem em seguida. Desde o ADR 0163 a
+   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra — o
+   * Arquiteto narra a arquitetura pronta no fio, e o handoff nasce em seguida;
+   * o do Dev Lead sai da Infra, com o container `running` (RN-672). Desde o ADR 0163 a
    * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
    * canal e pelo log (`acompanharTurnoPeloLog`).
    */
@@ -654,10 +642,19 @@ export function SessionPage({
 
   async function handleSend() {
     const text = draft.trim();
-    if (!text || streaming || session?.status !== 'active') return;
+    if (!text || session?.status !== 'active') return;
+    // RN-673: com turno em curso a mensagem a um agente ENTRA NA FILA dele —
+    // sem armar um turno novo na tela (o em curso segue sendo o acompanhado).
+    if (streaming) {
+      if (destinatario && !precisaEscolherDestinatario) await enfileirar(text, destinatario);
+      return;
+    }
     // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
-    // O botão já está travado; isto cobre o Enter.
-    if (precisaEscolherDestinatario) return;
+    // RN-682 (AT-254): e nenhuma opção também não — a consultiva sem agente
+    // PEDE um agente, e a mensagem nunca mais vai ao modelo cru (o SSE de
+    // `POST .../chat`, sem histórico nem prompt de sistema). O botão já está
+    // travado nos dois casos; isto cobre o Enter.
+    if (!destinatario) return;
 
     setDraft('');
     setOptimisticUser(text);
@@ -696,69 +693,44 @@ export function SessionPage({
       }
     }
 
-    // Sessão com um agente ativo (Criativo, PO, Arquiteto, Dev Lead…): o
-    // turno roda no engine (harness); os deltas e o fim chegam pelo canal
-    // Phoenix. Senão (sessão consultiva), chat humano stateless via SSE.
-    if (agentParaEnviar) {
-      // A faixa de atividade (`turnoViaCanal`) liga AQUI, e não no `try` —
-      // `statusAgent` dá nome ao avatar da faixa mesmo antes de o primeiro
-      // `agent.status`/`agent.delta` do canal chegar (o mesmo argumento de
-      // `iniciarTurnoDoAgente`). `streaming`/`streamingText` já foram ligados
-      // acima, antes de `agentParaEnviar` ser conhecido — os dois também
-      // fazem parte do arme, mas religá-los aqui é reset pro mesmo valor,
-      // sem efeito observável.
-      iniciarTurnoDoAgente(agentParaEnviar);
-      try {
-        await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
-        // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
-        // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
-        // broadcast (join ainda não concluído, RN-108), pela leitura da cauda
-        // do log. Até o ADR 0163 esta chamada só resolvia com o turno pronto
-        // e era ela a rede de segurança: aqui havia `finalizarTurnoDoAgente()`.
-        acompanharTurnoPeloLog(agentParaEnviar);
-        // RN-624: a mensagem é evidência nova — a barra relê o idioma e a
-        // pergunta da detecção, se houver.
-        void queryClient.invalidateQueries({ queryKey: chaveDoIdiomaDaSessao(projectId, sessionId) });
-      } catch (erro) {
-        cancelarTurnoOtimista();
-        setOptimisticUser(null);
-        // AT-154: a sessão fechou por baixo — devolve o texto, que já saiu do
-        // campo, e diz por quê em vez do erro genérico.
-        if (avisarSessaoEncerrada(erro)) {
-          setDraft((atual) => atual || text);
-          return;
-        }
-        // 409 com o agente ainda no meio de um turno traz a frase do engine
-        // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
-        showToast({
-          title: t('toasts.erro'),
-          message: mensagemDaRecusaDoAgente(erro, t('toasts.erroEnviarMensagem')),
-          tone: 'danger',
-        });
-      }
-      return;
-    }
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+    // O turno roda no engine (harness); os deltas e o fim chegam pelo canal
+    // Phoenix. Não há outro caminho desde a RN-682: o chat stateless via SSE
+    // (`streamChatMessage`) deixou de ser chamado por esta tela.
+    // A faixa de atividade (`turnoViaCanal`) liga AQUI, e não no `try` —
+    // `statusAgent` dá nome ao avatar da faixa mesmo antes de o primeiro
+    // `agent.status`/`agent.delta` do canal chegar (o mesmo argumento de
+    // `iniciarTurnoDoAgente`). `streaming`/`streamingText` já foram ligados
+    // acima, antes de `agentParaEnviar` ser conhecido — os dois também
+    // fazem parte do arme, mas religá-los aqui é reset pro mesmo valor,
+    // sem efeito observável.
+    iniciarTurnoDoAgente(agentParaEnviar);
     try {
-      for await (const evt of streamChatMessage(projectId, sessionId, text, controller.signal)) {
-        if (evt.type === 'delta') {
-          setStreamingText((t) => t + evt.text);
-        } else if (evt.type === 'error') {
-          showToast({ title: t('toasts.erroNoChat'), message: evt.message, tone: 'danger' });
-        } else if (evt.type === 'metering_failed') {
-          showToast({ title: t('toasts.aviso'), message: evt.message, tone: 'warning' });
-        }
-      }
-    } finally {
-      setStreaming(false);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      setStreamingText('');
+      await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
+      // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
+      // broadcast (join ainda não concluído, RN-108), pela leitura da cauda
+      // do log. Até o ADR 0163 esta chamada só resolvia com o turno pronto
+      // e era ela a rede de segurança: aqui havia `finalizarTurnoDoAgente()`.
+      acompanharTurnoPeloLog(agentParaEnviar);
+      // RN-624: a mensagem é evidência nova — a barra relê o idioma e a
+      // pergunta da detecção, se houver.
+      void queryClient.invalidateQueries({ queryKey: chaveDoIdiomaDaSessao(projectId, sessionId) });
+    } catch (erro) {
+      cancelarTurnoOtimista();
       setOptimisticUser(null);
-      queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
+      // AT-154: a sessão fechou por baixo — devolve o texto, que já saiu do
+      // campo, e diz por quê em vez do erro genérico.
+      if (avisarSessaoEncerrada(erro)) {
+        setDraft((atual) => atual || text);
+        return;
+      }
+      // 409 com o agente ainda no meio de um turno traz a frase do engine
+      // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
+      showToast({
+        title: t('toasts.erro'),
+        message: mensagemDaRecusaDoAgente(erro, t('toasts.erroEnviarMensagem')),
+        tone: 'danger',
+      });
     }
   }
 
@@ -776,13 +748,9 @@ export function SessionPage({
     const agentAlvo =
       turnoAgentRef.current ?? streamingAgent ?? statusAgent ?? destinatario;
 
-    if (!agentAlvo) {
-      // Chat consultivo sem agente (SSE genérico da api) — cancelamento é
-      // client-side, pelo mesmo AbortController que `handleSend` já usa
-      // nesse caminho.
-      abortRef.current?.abort();
-      return;
-    }
+    // Sem agente não há turno: desde a RN-682 o envio exige destinatário, e o
+    // chat consultivo sem agente (SSE, cancelado por `AbortController`) saiu.
+    if (!agentAlvo) return;
 
     try {
       await cancelAgentTurn(projectId, sessionId, agentAlvo);
@@ -935,6 +903,7 @@ export function SessionPage({
             setDraft={setDraft}
             handleComposerKeyDown={handleComposerKeyDown}
             streaming={streaming}
+            podeEnfileirar={streaming && !!destinatario}
             handleSend={handleSend}
             handleCancel={handleCancel}
             criativoActive={criativoActive}

@@ -1,17 +1,30 @@
 defmodule Engine.Gates.QaEstrategiaAgent do
   @moduledoc """
   QA-estratégia — segundo MOMENTO do `qa-lead` (ADR 0090; `docs/fluxo.yml`,
-  papel `qa-estrategia`, status `active`): o mesmo processo, um entregável
-  SEPARADO do veredito de PR — o PLANO DE TESTE de uma story, ANTES do dev
-  agent escrever código (gate `implementavel`, `docs/gates.yml`).
+  papel `qa-estrategia`): o mesmo processo, um entregável SEPARADO do
+  veredito de PR — o PLANO DE TESTE da entrega de um dev agent.
+
+  ## Desde o ADR 0192 (RN-674), DEPOIS da entrega, não no design
+
+  O ADR 0090 pôs este agente PRE-DEV, disparado pelo `assess_implementability`
+  do Dev Lead, com contexto de story + `module_map` e o worktree inexistente.
+  O uso real de 29/09 mostrou o preço: duas rodadas de
+  `toolloop.limit_reached` 8/8 sem `emit_plano_de_teste`, o laço gasto lendo
+  docs, RAG vazio e pastas até concluir "o código ainda não existe". A
+  decisão do dono (01/10) foi a saída (b): o plano nasce do CÓDIGO ENTREGUE.
+
+  Quem chama agora é `Engine.Gates.QaLeadServer`, no começo do ciclo de
+  revisão (`run/2`, gate `qa-verificada`), ANTES das subespecialidades, com o
+  MESMO `dev_state`/`dev_context` que elas recebem: o `workspace_root` é o
+  worktree do dev, as regras de negócio entram pelas mesmas unidades, e a
+  lista de arquivos que a entrega tocou (`git diff dev...HEAD`, calculada pelo
+  Lead com `Engine.Gates.Diff`) vai na primeira mensagem — é ela que aponta
+  as 8 iterações para o que existe, em vez de uma busca às cegas.
 
   Módulo SEM ESTADO — não é `GenServer` —, mesma FORMA de
   `Engine.Gates.QaPerformanceSegurancaAgent`: registro de ferramentas SEM
   `Terminal` (raciocínio de LEITURA, nunca escrita), rodando o `ToolLoop`
-  genérico do harness. O CONTEXTO é que é outro: aqui não há
-  `dev_state`/`dev_context` — `Engine.Gates.QaEstrategiaContext.fetch/3`
-  monta o que basta (story + module_map vigente), e é
-  `Engine.Gates.QaLeadServer.run_design/3` quem chama este módulo.
+  genérico do harness.
 
   ## Por que nunca suspende
 
@@ -19,20 +32,18 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   `terminal` nem `write_file` — as DUAS únicas tools que
   `Engine.Harness.Hooks.ActionPipeline` intercepta para criar
   `proposed_action`. Nenhuma chamada deste agente passa pelo pipeline de
-  ações, então o `ToolLoop` dele nunca produz `:pending` —
-  `QaLeadServer.run_design/3` não precisa de nenhum mecanismo de
-  suspensão/retomada para este caminho, ao contrário do resto da área de QA.
+  ações, então o `ToolLoop` dele nunca produz `:pending`, e o Lead o roda
+  síncrono, sem mecanismo de suspensão/retomada.
 
-  ## Por que o teto de iterações fica em 8, não 60 (RN-085)
+  ## O teto de iterações CONTINUA em 8, e agora há orçamento por baixo
 
-  Este agente roda **sem** `token_budget_micros` — não há task nem budget de
-  task ainda, é PRE-DEV. O critério da RN-085 não é "quem trabalha muito", é
-  "o que segura o gasto além do teto de iterações": sem budget por baixo,
-  subir o teto multiplicaria o pior caso sem nada para conter — a MESMA
-  razão pela qual `infra-workflows` fica em 8 mesmo usando ferramenta
-  (`Engine.Harness.Iteracoes`). Por isso `"qa-estrategia"` NÃO ganhou
-  cláusula própria em `Iteracoes.tipo/1`: cair no default
-  (`:conversacional`, teto 8) é a decisão certa, não uma lacuna.
+  `"qa-estrategia"` NÃO ganhou cláusula própria em `Iteracoes.tipo/1` e cai no
+  default (`:conversacional`, teto 8) — o ADR 0192 não sobe o teto para o
+  plano passar: o que mudou foi o INSUMO (o código existe e a lista de
+  arquivos tocados vem pronta), não a folga. O que mudou do lado do gasto é
+  que existe task agora, então o agente passa a rodar sob o MESMO
+  `task_budget_micros` que as duas subespecialidades compartilham (RN-036) —
+  contenção que o ADR 0090 não tinha como dar.
   """
 
   alias Engine.Gates.Tools.EmitPlanoDeTeste
@@ -54,31 +65,46 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   def tools, do: @registry
 
   @doc """
-  Roda a avaliação de estratégia de QA para `story` (mapa vindo de
-  `EngineApiClient.list_backlog/1`) contra o `module_map` vigente (pode ser
-  `nil`). Em sucesso, EMITE `artifact.plano_de_teste` no event log de
-  `session_id` e devolve `{:ok, plano}`; em falha, emite `agent.error`
-  (durável, com origem — RN-059) e devolve `{:error, motivo}`.
+  Roda a QA-estratégia sobre a ENTREGA da task `task_id`: `dev_state` e
+  `dev_context` são os mesmos que o `QaLeadServer` passa às subespecialidades
+  (`Engine.Dev.ContextBuilder.fetch/3`), e `arquivos_alterados` é
+  `{:ok, [caminho]}` ou `{:error, motivo}` — o Lead calcula, este módulo só
+  descreve. Em sucesso, EMITE `artifact.plano_de_teste` (com `storyId` e
+  `taskId`) no event log de `session_id` e devolve `{:ok, plano}`; em falha,
+  emite `agent.error` (durável, com origem — RN-059) e devolve
+  `{:error, motivo}`.
   """
-  @spec run(String.t(), String.t(), map(), map() | nil) ::
+  @spec run(
+          String.t(),
+          String.t(),
+          String.t(),
+          map(),
+          map(),
+          {:ok, [String.t()]} | {:error, term()}
+        ) ::
           {:ok, map()} | {:error, String.t()}
-  def run(project_id, session_id, story, module_map) do
+  def run(project_id, session_id, task_id, dev_state, dev_context, arquivos_alterados) do
     project_id
-    |> build_ctx(session_id, story, module_map)
+    |> build_ctx(session_id, dev_state, dev_context, arquivos_alterados)
     |> ToolLoop.run()
-    |> handle_outcome(project_id, session_id, story)
+    |> handle_outcome(project_id, session_id, task_id, dev_context.story)
   end
 
-  defp build_ctx(project_id, session_id, story, module_map) do
+  defp build_ctx(project_id, session_id, dev_state, dev_context, arquivos_alterados) do
     %{
       project_id: project_id,
       session_id: session_id,
       agent: "qa-estrategia",
+      # O worktree do dev — é ali que a entrega mora (ADR 0192).
+      workspace_root: dev_state.worktree_path,
       tools: @registry,
       hooks: hooks(),
-      # Sem budget de propósito — ver o moduledoc sobre o teto de iterações.
-      token_budget_micros: nil,
-      messages: [initial_message(story, module_map)],
+      # O MESMO pool das subespecialidades (RN-036): o plano é trabalho da
+      # área de QA sobre esta task. O teto de iterações NÃO muda (moduledoc).
+      token_budget_micros: Map.get(dev_state, :task_budget_micros),
+      business_rules_units: Map.get(dev_context, :business_rules_units, []),
+      task_state_units: Map.get(dev_context, :task_state_units, []),
+      messages: [initial_message(dev_context.task, dev_context.story, arquivos_alterados)],
       context_window: 128_000
     }
   end
@@ -90,14 +116,15 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     |> Hooks.register(:post_tool_use, TerminationPlanoDeTeste)
   end
 
-  defp initial_message(story, module_map) do
+  defp initial_message(task, story, arquivos_alterados) do
     %{
       "role" => "user",
       "content" => """
       Você é a QA-estratégia (docs/fluxo.yml, segundo momento do qa-lead):
-      avalia a IMPLEMENTABILIDADE de uma story ANTES do dev agent escrever
-      código. Você NÃO escreve código nem roda testes — só lê o que já
-      existe e registra um PLANO DE TESTE.
+      o dev agent ENTREGOU a task "#{Map.get(task, "title", "")}" e você
+      escreve o PLANO DE TESTE dessa entrega, a partir do código que existe
+      no worktree. Você NÃO escreve código nem roda testes — só lê e registra
+      o plano, que a revisão de QA usa logo em seguida.
 
       STORY: #{Map.get(story, "title", "")}
       #{Map.get(story, "description", "")}
@@ -111,42 +138,55 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       Definition of done:
       #{lista(Map.get(story, "dod", []))}
 
-      MÓDULOS do projeto:
-      #{descrever_modulos(module_map)}
+      ARQUIVOS que a entrega tocou (git diff contra `dev`):
+      #{descrever_arquivos(arquivos_alterados)}
 
-      Use `read_file`/`search_workspace` para entender o que já existe
-      (padrões de teste do projeto, o módulo que a story toca), `rag_search`
-      para achar convenção/ADR já indexado sobre o assunto, e então
-      `emit_plano_de_teste` com:
-      - `planoDeTeste`: síntese do que precisa ser verificado;
+      Leia com `read_file` os arquivos acima que importam para a story (e os
+      testes que já existem ao lado deles) — comece por eles, não vasculhe o
+      repositório. Então chame `emit_plano_de_teste` com:
+      - `planoDeTeste`: síntese do que precisa ser verificado NESTA entrega;
       - `criteriosExecutaveis`: os critérios de aceite reescritos de forma
-        VERIFICÁVEL (ex.: "dado X, quando Y, então Z" em vez de prosa vaga);
+        VERIFICÁVEL contra o código entregue (ex.: "dado X, quando Y, então
+        Z" em vez de prosa vaga);
       - `estrategiaDeAutomacao`: GENÉRICA e curta — que NÍVEL de teste
         (unidade/integração/e2e) e ONDE, sem escolher framework específico.
 
-      Responda SEMPRE chamando `emit_plano_de_teste`.
+      Você tem poucas iterações: duas ou três leituras e então
+      `emit_plano_de_teste`. Responda SEMPRE chamando uma ferramenta.
       """,
       :pinned => true
     }
   end
 
-  defp lista([]), do: "(nenhum declarado)"
-  defp lista(itens), do: Enum.map_join(itens, "\n", &("- " <> to_string(&1)))
+  # Os arquivos são o que torna o teto de 8 suficiente (ADR 0192) — mas um
+  # diff que falhou não derruba o plano: o agente segue com a story e o
+  # worktree, e o texto diz POR QUE a lista não veio, nunca uma lista vazia
+  # que pareceria "a entrega não tocou nada".
+  @teto_de_arquivos 40
 
-  defp descrever_modulos(nil), do: "(sem module_map)"
+  defp descrever_arquivos({:ok, []}), do: "(o diff contra `dev` veio vazio)"
 
-  defp descrever_modulos(%{"modules" => mods}) when is_list(mods) and mods != [] do
-    Enum.map_join(mods, "\n", fn m ->
-      "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
-    end)
+  defp descrever_arquivos({:ok, arquivos}) do
+    {mostrados, resto} = Enum.split(arquivos, @teto_de_arquivos)
+    linhas = Enum.map_join(mostrados, "\n", &("- " <> &1))
+
+    case resto do
+      [] -> linhas
+      _ -> linhas <> "\n(e mais #{length(resto)} de #{length(arquivos)} no total)"
+    end
   end
 
-  defp descrever_modulos(_), do: "(sem module_map)"
+  defp descrever_arquivos({:error, motivo}),
+    do: "(não consegui listar: #{inspect(motivo)} — leia o worktree a partir da story)"
+
+  defp lista([]), do: "(nenhum declarado)"
+  defp lista(itens), do: Enum.map_join(itens, "\n", &("- " <> to_string(&1)))
 
   defp handle_outcome(
          {:halted, {"emit_plano_de_teste", plano}, _ctx},
          project_id,
          session_id,
+         task_id,
          story
        ) do
     # `ArtifactEmitter.emit/5`, não `append_event/3` cru: valida contra o
@@ -155,6 +195,9 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     # em vez de gravar um artefato que ninguém sabe ler.
     ArtifactEmitter.emit(project_id, session_id, "qa-estrategia", "plano_de_teste", %{
       storyId: Map.get(story, "id"),
+      # ADR 0192: o plano é da ENTREGA — é por `taskId` que o `QaLeadServer`
+      # o reencontra na rodada de correção seguinte em vez de pagar outro.
+      taskId: task_id,
       planoDeTeste: plano.plano_de_teste,
       criteriosExecutaveis: plano.criterios_executaveis,
       estrategiaDeAutomacao: plano.estrategia_de_automacao
@@ -163,7 +206,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     {:ok, plano}
   end
 
-  defp handle_outcome(outcome, project_id, session_id, story) do
+  defp handle_outcome(outcome, project_id, session_id, _task_id, story) do
     {origem, motivo} = falha(outcome)
     emit_falha(project_id, session_id, story, origem, motivo)
     {:error, motivo}

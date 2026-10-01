@@ -112,7 +112,8 @@ interface Rodada {
  */
 function rodar(comandos: string): Promise<Rodada> {
   return new Promise((resolver) => {
-    const processo = spawn('bash', ['-c', `source "${carregavel}"\n${comandos}`], {
+    // Caminho vai como argumento posicional, nunca interpolado no `-c` (AT-346).
+    const processo = spawn('bash', ['-c', 'source "$1"\n' + comandos, 'bash', carregavel], {
       env: { ...process.env, NO_COLOR: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

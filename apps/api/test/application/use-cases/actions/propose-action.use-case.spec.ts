@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import {
@@ -134,6 +138,7 @@ const proposeAction = new ProposeActionUseCase(
   appendSessionEvent,
   obterCicloDeVidaDoContainer,
   { configurado: () => true } as never, // brokerPort
+  undefined as never, // executeExecutionPlan — não exercitado aqui
 );
 
 let workspacesRoot: string;
@@ -218,6 +223,7 @@ describe('ProposeActionUseCase', () => {
       appendSessionEvent,
       obterCicloDeVidaDoContainer,
       { configurado: () => false } as never,
+      undefined as never, // executeExecutionPlan — não exercitado aqui
     );
 
     it.each(['container_start', 'container_stop', 'container_remove'])(
@@ -250,6 +256,69 @@ describe('ProposeActionUseCase', () => {
         payload: {},
       });
 
+      expect(action.status).toBe('pending');
+    });
+  });
+
+  // AT-274 (RN-678): o plano do Dev Lead com tarefa sem módulo é recusado na
+  // PROPOSTA — 400 nomeado, sem criar a ação, e o texto chega ao Dev Lead.
+  describe('plano de execução (RN-678)', () => {
+    function comPlano(recusa: string | null) {
+      return new ProposeActionUseCase(
+        unitOfWork,
+        sessionRepo,
+        projectRepo,
+        proposedActionRepo,
+        agentAutonomyRepo,
+        permissionsFileStore,
+        outboxRepo,
+        resolveEffectiveRole,
+        executeTerminalAction,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        appendSessionEvent,
+        obterCicloDeVidaDoContainer,
+        { configurado: () => true } as never,
+        { recusaNaProposta: () => Promise.resolve(recusa) } as never,
+      );
+    }
+
+    it('tarefa sem módulo: 400 `plano_de_execucao_invalido`, sem proposta', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const proposta = comPlano('A tarefa t1 está sem módulo').execute(
+        project.id,
+        session.id,
+        {
+          actionType: 'propose_execution_plan',
+          actor: { kind: 'agent', id: 'dev-lead' },
+          payload: { resumo: 'r', modulos: [], tarefas: [{ taskId: 't1' }] },
+        },
+      );
+      await expect(proposta).rejects.toBeInstanceOf(BadRequestException);
+      await expect(proposta).rejects.toMatchObject({
+        response: {
+          code: 'plano_de_execucao_invalido',
+          message: 'A tarefa t1 está sem módulo',
+        },
+      });
+      expect(
+        await proposedActionRepo.listByProjectAndType(
+          project.id,
+          'propose_execution_plan',
+        ),
+      ).toHaveLength(0);
+    });
+
+    it('plano válido nasce pending (aprovar é o que ativa)', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const action = await comPlano(null).execute(project.id, session.id, {
+        actionType: 'propose_execution_plan',
+        actor: { kind: 'agent', id: 'dev-lead' },
+        payload: { resumo: 'r', modulos: [], tarefas: [] },
+      });
       expect(action.status).toBe('pending');
     });
   });
@@ -881,6 +950,34 @@ describe('ProposeActionUseCase — o motivo da política no event log (RN-567)',
     });
   });
 
+  it('`git_push`/`pr_open` tipados nascem pendentes mesmo com autonomia curinga E específica — teto da RN-418 (RN-689)', async () => {
+    const { project, session } = await setupSession('maintainer');
+    // As duas fontes de autonomia que o dev agent pode ter: o curinga do
+    // piloto (RN-670) e a linha específica que a ativação semeava até a
+    // RN-689. Nenhuma promove a ação tipada.
+    await agentAutonomyRepo.upsert(project.id, 'dev-api', '*', 'auto_approve');
+    await agentAutonomyRepo.upsert(
+      project.id,
+      'dev-api',
+      'git_push',
+      'auto_approve',
+    );
+
+    for (const actionType of ['git_push', 'pr_open'] as const) {
+      const action = await proposeAction.execute(project.id, session.id, {
+        actionType,
+        actor: { kind: 'agent', id: 'dev-api' },
+        payload: { branch: 'dev-api/t1' },
+      });
+      expect(action.status).toBe('pending');
+      expect(await eventoCriado(session.id, action.id)).toMatchObject({
+        status: 'pending',
+        resolvedPolicy: 'require_approval',
+        reason: expect.stringContaining('RN-418') as unknown,
+      });
+    }
+  });
+
   it('deny carrega no evento o MESMO motivo que vira `rejectionReason`', async () => {
     const { project, session } = await setupSession('developer');
 
@@ -1101,5 +1198,79 @@ describe('ProposeActionUseCase — a raiz do escopo no event log (RN-609)', () =
     const payload = await eventoCriado(session.id, 'acao-antiga');
     expect(payload).not.toHaveProperty('scopeRoot');
     expect(payload.reason).toBe('default (sem regra aplicável)');
+  });
+});
+
+/**
+ * A raiz do escopo é a pasta REAL de execução (RN-669, ADR 0189, AT-258): com
+ * container `running` registrado, `container` E `mounted` comparam com `/work`
+ * + `/tmp` do container; sem ele, com a pasta do projeto no host. O PISO de
+ * auto-aprovação (RN-493) continua só do modo `container`.
+ */
+describe('ProposeActionUseCase — escopo na pasta real de execução (RN-669)', () => {
+  const baseOriginal = process.env.BRABO_PROJECTS_BASE;
+  afterEach(() => {
+    if (baseOriginal === undefined) delete process.env.BRABO_PROJECTS_BASE;
+    else process.env.BRABO_PROJECTS_BASE = baseOriginal;
+  });
+
+  async function projetoMontado() {
+    process.env.BRABO_PROJECTS_BASE = '/home/usuario/brabo';
+    const ctx = await setupSession();
+    const [project] = await db
+      .update(projects)
+      .set({
+        executionMode: 'mounted',
+        workspacePath: '/home/usuario/brabo/loja',
+      })
+      .where(eq(projects.id, ctx.project.id))
+      .returning();
+    await agentAutonomyRepo.upsert(
+      project.id,
+      'dev-api',
+      'terminal',
+      'auto_approve',
+    );
+    return { ...ctx, project };
+  }
+
+  function terminal(projectId: string, sessionId: string, command: string) {
+    return proposeAction.execute(projectId, sessionId, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command, cwd: '/home/usuario/brabo/loja/.worktrees/dev-api' },
+    });
+  }
+
+  it('mounted com container de pé: `/work` e `/tmp` estão dentro, para a regra específica', async () => {
+    const { project, session } = await projetoMontado();
+    await marcarContainerRunning(project.id);
+
+    for (const command of ['ls /work/src', 'npm test > /tmp/saida.txt']) {
+      const action = await terminal(project.id, session.id, command);
+      expect(action.resolvedPolicy).toBe('auto_approve');
+    }
+  });
+
+  it('mounted SEM container: `/tmp` e `/work` seguem fora (a raiz é a pasta do host)', async () => {
+    const { project, session } = await projetoMontado();
+
+    for (const command of ['ls /tmp', 'ls /work/src']) {
+      const action = await terminal(project.id, session.id, command);
+      expect(action.resolvedPolicy).toBe('require_approval');
+      expect(action.status).toBe('pending');
+    }
+  });
+
+  it('mounted com container de pé NÃO ganha o piso do modo container (RN-493)', async () => {
+    const { project, session } = await projetoMontado();
+    await marcarContainerRunning(project.id);
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'qa-automacao' },
+      payload: { command: 'npm test' },
+    });
+    expect(action.resolvedPolicy).toBe('require_approval');
   });
 });

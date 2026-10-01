@@ -300,6 +300,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-module-contracts",
+          label: "The contracts between modules, for a dev agent to read (RN-684)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-product-metrics",
           label: "The project's delivery funnel and partial DORA metrics, for the PO to read",
           className: "api-method get",
@@ -432,6 +438,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-module-contracts",
+          label: "Declares a new version of the contracts between modules",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-module-map",
           label: "Publishes a new version of the module_map",
           className: "api-method post",
@@ -465,6 +477,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/internal-sessions-controller-psychologist-context",
           label: "Assembles the context for a Psychologist round",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-semantic-duplicate-check",
+          label: "Warns when a just-written business rule looks like an existing one",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -1110,12 +1128,6 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
-          id: "docs/reference/api/runner-device-keys-controller-register-device-key",
-          label: "Registra a chave pública de um dispositivo do runner local",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
           id: "docs/reference/api/runner-device-keys-controller-revoke-device-key",
           label: "Revoga uma chave de dispositivo própria",
           className: "api-method delete",
@@ -1268,6 +1280,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/agents-controller-message",
           label: "Sends a message to the active agent",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agents-controller-cancel-queued",
+          label: "Cancels one message waiting in the agent's queue",
           className: "api-method post",
         },
         {

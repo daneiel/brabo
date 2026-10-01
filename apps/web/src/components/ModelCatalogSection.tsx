@@ -225,8 +225,21 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
         tone: 'success',
       });
     },
-    onError: () =>
-      showToast({ title: t('catalog.toasts.saveError'), tone: 'danger' }),
+    // A recusa do alias `~` (RN-679) tem título próprio e a frase da api, que
+    // nomeia os modelos recusados — "não foi possível salvar" esconderia o
+    // motivo e o lote inteiro parece ter falhado por acaso.
+    onError: (erro) => {
+      const recusa = recusaDeAliasLivre(erro);
+      showToast(
+        recusa
+          ? {
+              title: t('catalog.toasts.aliasRefused'),
+              message: recusa,
+              tone: 'danger',
+            }
+          : { title: t('catalog.toasts.saveError'), tone: 'danger' },
+      );
+    },
   });
 
   const marcarUsos = useMutation({
@@ -536,6 +549,18 @@ function RelatorioDoSync({ resultados }: { resultados: ResultadoDoSync[] }) {
   );
 }
 
+/**
+ * A frase da recusa do alias de roteamento livre (422
+ * `alias_de_roteamento_livre`, RN-679), ou `null` para qualquer outro erro.
+ * Casa pelo `code` do corpo, nunca pelo texto, que muda de idioma.
+ */
+function recusaDeAliasLivre(erro: unknown): string | null {
+  const body = (erro as { body?: { code?: unknown; message?: unknown } } | null)
+    ?.body;
+  if (body?.code !== 'alias_de_roteamento_livre') return null;
+  return typeof body.message === 'string' ? body.message : null;
+}
+
 function LinhaDoCatalogo({
   model,
   marcado,
@@ -559,12 +584,23 @@ function LinhaDoCatalogo({
       <span className={styles.nome}>
         {model.displayName}
         <span className={styles.slug}>{model.name}</span>
+        {/* O motivo em TEXTO, na linha: o alias `~` fica visível (inclusive o
+            curado antes da regra, que segue ativo) e a tela diz por que ele
+            não pode ser ativado antes de alguém tentar (RN-679). */}
+        {model.freeRoutingAlias && (
+          <span className={styles.motivoDoAlias}>
+            {t('catalog.freeRoutingAliasReason')}
+          </span>
+        )}
       </span>
       <span className={styles.selos}>
         <Badge tone={model.isActive ? 'success' : 'muted'}>
           {model.isActive ? t('badges.active') : t('badges.inactive')}
         </Badge>
         {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}
+        {model.freeRoutingAlias && (
+          <Badge tone="warning">{t('badges.freeRoutingAlias')}</Badge>
+        )}
         <Badge tone="muted">{formatarPreco(model)}</Badge>
         {janela && <Badge tone="muted">{janela}</Badge>}
         {model.supportsToolCalling && (

@@ -25,6 +25,11 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   `running`/`provisioning` — elegeria uma imagem que o container de pé, com a
   versão congelada, não usaria.
 
+  Desde o ADR 0190 (RN-671) o kickoff não depende desta tool: o servidor
+  elege e propõe a subida antes da primeira ida ao modelo, pelo mesmo
+  caminho, e a proposta nasce auto-aprovada pela autonomia que o aceite do
+  handoff semeia (`container_start: auto_approve`).
+
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado
   de verdade, porque o servidor intercepta antes.
@@ -39,8 +44,9 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
       description:
         "Propõe subir o container real do projeto, elegendo UMA das imagens candidatas " <>
           "que o Arquiteto roteou por módulo (`route_modules_to_infra`, ADR 0131) — nunca " <>
-          "inventando uma imagem fora dessa lista. Diferente de `propose_infra_pr`, esta " <>
-          "ação exige aprovação humana explícita, sempre.",
+          "inventando uma imagem fora dessa lista. No aceite do handoff o servidor já " <>
+          "propõe a subida sozinho; use esta para eleger de novo numa conversa. Nasce " <>
+          "auto-aprovada pela autonomia da Infra, a menos que o usuário a tenha desligado.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -56,7 +62,10 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
           },
           "resources" => %{
             "type" => "object",
-            "description" => "Teto de recursos: cpus, memoryMb, pidsLimit. Omitir usa o padrão.",
+            "description" =>
+              "Teto de recursos: cpus, memoryMb, pidsLimit. Omitir (o recomendado) sobe com o " <>
+                "MÍNIMO derivado do module_map — a soma do que o Arquiteto declarou por " <>
+                "módulo (RN-683). Abaixo desse mínimo a subida é recusada.",
             "properties" => %{
               "cpus" => %{"type" => "number"},
               "memoryMb" => %{"type" => "number"},

@@ -20,7 +20,7 @@ import type { Historia, Modulo, Tarefa } from './dados.ts';
 const lista = (itens: readonly string[]): string => (itens.length === 0 ? '(nenhum declarado)' : itens.map((i) => `- ${i}`).join('\n'));
 const listaOuNenhum = (itens: readonly string[]): string => (itens.length === 0 ? '(nenhum)' : itens.map((i) => `- ${i}`).join('\n'));
 
-/** `apps/engine/lib/engine/dev/dev_agent_server.ex:481` (`initial_message/2`). */
+/** `apps/engine/lib/engine/dev/dev_agent_server.ex:484` (`initial_message/2`). */
 export function kickoffDoDev(tarefa: Pick<Tarefa, 'title'>, historia: Pick<Historia, 'title'> | null): string {
   return (
     `Implemente a task "${tarefa.title}" da story "${historia?.title ?? ''}". ` +
@@ -30,7 +30,10 @@ export function kickoffDoDev(tarefa: Pick<Tarefa, 'title'>, historia: Pick<Histo
     'IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código ' +
     'nem JSON na sua resposta em texto, e não explique o que pretende fazer — ' +
     'chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. ' +
-    'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.'
+    'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.\n\n' +
+    'A interface de OUTRO módulo (o que ele expõe e de quais o seu depende) é o ' +
+    'contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, ' +
+    'nunca no worktree ou no código de outro dev agent.'
   );
 }
 
@@ -69,16 +72,37 @@ const descreverModulos = (mods: readonly Modulo[]): string =>
     : mods.map((m) => `- ${m.name} (${m.stack ?? '?'}): ${m.responsibility ?? ''}`).join('\n');
 
 /**
- * `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:93`. A história que o
- * gate avalia NÃO é recuperável do event log (o pedido chega por chamada
- * interna), então título/descrição/requisitos saem como o molde os mostraria
- * vazios; o mapa de módulos e o texto fixo são o que o log permite.
+ * `apps/engine/lib/engine/gates/qa_estrategia_agent.ex` (`initial_message`).
+ * Desde o ADR 0192 (AT-269, RN-674) a QA-estratégia roda DEPOIS da entrega do
+ * dev, sobre a task entregue e a lista de arquivos que ela tocou (`git diff
+ * dev...HEAD`, até 40 nomes) — não mais sobre o mapa de módulos, antes do
+ * código. O passo do log não guarda essa lista, então a porta recebe o motivo
+ * de não tê-la, e o molde o diz em texto, como o engine faz quando o diff falha.
  */
-export function kickoffDaQaEstrategia(historia: Historia | null, modulos: readonly Modulo[]): string {
+export type ArquivosDaEntrega = readonly string[] | { erro: string };
+
+const TETO_DE_ARQUIVOS = 40;
+
+function descreverArquivos(arquivos: ArquivosDaEntrega): string {
+  if (!Array.isArray(arquivos)) {
+    return `(não consegui listar: ${JSON.stringify((arquivos as { erro: string }).erro)} — leia o worktree a partir da story)`;
+  }
+  const lista = arquivos as readonly string[];
+  if (lista.length === 0) return '(o diff contra `dev` veio vazio)';
+  const mostrados = lista.slice(0, TETO_DE_ARQUIVOS).map((a) => `- ${a}`).join('\n');
+  return lista.length > TETO_DE_ARQUIVOS ? `${mostrados}\n(e mais ${lista.length - TETO_DE_ARQUIVOS} de ${lista.length} no total)` : mostrados;
+}
+
+export function kickoffDaQaEstrategia(
+  tarefa: Pick<Tarefa, 'title'> | null,
+  historia: Historia | null,
+  arquivos: ArquivosDaEntrega,
+): string {
   return `Você é a QA-estratégia (docs/fluxo.yml, segundo momento do qa-lead):
-avalia a IMPLEMENTABILIDADE de uma story ANTES do dev agent escrever
-código. Você NÃO escreve código nem roda testes — só lê o que já
-existe e registra um PLANO DE TESTE.
+o dev agent ENTREGOU a task "${tarefa?.title ?? ''}" e você
+escreve o PLANO DE TESTE dessa entrega, a partir do código que existe
+no worktree. Você NÃO escreve código nem roda testes — só lê e registra
+o plano, que a revisão de QA usa logo em seguida.
 
 STORY: ${historia?.title ?? '(story não recuperável do event log)'}
 ${historia?.description ?? ''}
@@ -92,20 +116,21 @@ ${lista(historia?.rnf ?? [])}
 Definition of done:
 ${lista(historia?.dod ?? [])}
 
-MÓDULOS do projeto:
-${descreverModulos(modulos)}
+ARQUIVOS que a entrega tocou (git diff contra \`dev\`):
+${descreverArquivos(arquivos)}
 
-Use \`read_file\`/\`search_workspace\` para entender o que já existe
-(padrões de teste do projeto, o módulo que a story toca), \`rag_search\`
-para achar convenção/ADR já indexado sobre o assunto, e então
-\`emit_plano_de_teste\` com:
-- \`planoDeTeste\`: síntese do que precisa ser verificado;
+Leia com \`read_file\` os arquivos acima que importam para a story (e os
+testes que já existem ao lado deles) — comece por eles, não vasculhe o
+repositório. Então chame \`emit_plano_de_teste\` com:
+- \`planoDeTeste\`: síntese do que precisa ser verificado NESTA entrega;
 - \`criteriosExecutaveis\`: os critérios de aceite reescritos de forma
-  VERIFICÁVEL (ex.: "dado X, quando Y, então Z" em vez de prosa vaga);
+  VERIFICÁVEL contra o código entregue (ex.: "dado X, quando Y, então
+  Z" em vez de prosa vaga);
 - \`estrategiaDeAutomacao\`: GENÉRICA e curta — que NÍVEL de teste
   (unidade/integração/e2e) e ONDE, sem escolher framework específico.
 
-Responda SEMPRE chamando \`emit_plano_de_teste\`.
+Você tem poucas iterações: duas ou três leituras e então
+\`emit_plano_de_teste\`. Responda SEMPRE chamando uma ferramenta.
 `;
 }
 

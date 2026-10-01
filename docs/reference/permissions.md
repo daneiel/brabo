@@ -121,7 +121,13 @@ containers page (`/containers`) proposes when someone clicks "Stop" or
 "Remove" on a project's row — always a human, never an agent. Both are
 `maintainer`, same as `container_start`: whoever is accountable for the
 project's infra decides. `container_stop` follows `container_start`'s
-calibration exactly — it CAN be configured `auto_approve` (never seeded).
+calibration — it CAN be configured `auto_approve` — except for the seed:
+`container_stop` is never seeded, while `container_start` is seeded
+`auto_approve` for the Infra agent when its handoff is accepted (ADR 0190,
+[RN-671](../business-rules.md#rn-671)). That seed is what lets the start the
+Infra Lead's SERVER proposes on that accept run without a second click; the
+`maintainer` minimum, the mode/state refusals and the no-broker 409 all still
+apply before it.
 `container_remove` cannot: it discards the container and forces a full
 reprovision, and is in the absolute-caps block below, same treatment as
 external-effect git/privileged commands.
@@ -155,6 +161,17 @@ ADR 0024) and the next step — and the lifecycle row is **not** marked
 `provisioning`: marking it and only then finding out you cannot write would
 leave `project_containers` asserting a state that never existed. None of
 this touches `decide()`, the caps, or who may approve.
+
+**And `container_start` resolves its resources there**
+([RN-683](../business-rules.md#rn-683),
+[ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)): a field
+the proposal OMITS — every field, in the server's start on handoff acceptance
+— becomes the MINIMUM derived from the current `module_map` (the sum of what
+each module declared, floored at today's default while any module declared
+nothing); a field BELOW that minimum is a named `failed`, recorded before any
+image decision or lifecycle transition; above it, the usual ceiling applies.
+Like the folder materialization, this is execution, not policy: `decide()`
+and who may approve do not change.
 
 ## How a pattern matches a command
 
@@ -289,7 +306,7 @@ flowchart TD
   G --> S{terminal touches path<br/>outside the project folder?}
   G2 --> S
   S -->|yes, and was auto_approve| I2[CAP: require_approval]
-  S -->|no| Z{terminal requests git push,<br/>PR, deploy, or sudo/doas?}
+  S -->|no| Z{git_push/pr_open, or terminal requests<br/>git push, PR, deploy, or sudo/doas?}
   Z -->|yes, and was auto_approve| I3[CAP: require_approval — RN-418]
   Z -->|no| H{merge into protected branch<br/>or instruction_patch?}
   H -->|yes, and was auto_approve| I[CAP: require_approval]
@@ -411,7 +428,10 @@ not loosened — see why right below.
 (`gh pr create`, `gh pr merge`, `glab mr create`/`merge`, releases and
 workflow dispatch), common deploy commands (`kubectl apply`, `helm
 upgrade`, `terraform apply`, `docker push`, `npm publish`, ...) and now
-also `sudo`/`doas` in a `terminal` command are an **ABSOLUTE CAP** — in the
+also `sudo`/`doas` in a `terminal` command are an **ABSOLUTE CAP** (and,
+since [RN-689](../business-rules.md#rn-689), so are the TYPED `git_push` and
+`pr_open` actions, which until then the `"*"` wildcard, a specific rule or
+`permissions.json` promoted to `auto_approve`) — in the
 same final block as the other three caps (see ["Caps"](#caps) below),
 applied after `agent_autonomy` and `permissions.json` have already given
 their opinion: if the verdict up to that point was `auto_approve`, it
@@ -423,7 +443,7 @@ back.
 The historical reason for the `deny` was concrete: "always allow" writes
 the pattern into `allow`, and a single click would be enough to reopen the
 door forever. That gap was closed AT THE SOURCE, not worked around:
-`ApproveAlwaysActionUseCase`/`patternForAction`
+`ApproveAlwaysActionUseCase`/`patternsForAction`
 (`apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`)
 REFUSE to write a pattern into `allow` for a terminal action with git
 external effect or a privileged command — the user still approves the
@@ -462,8 +482,9 @@ one above: it isn't a `terminal` command matched by token, it's its own
 for that type — no pattern is ever written, and the user approves the
 specific instance through the normal flow instead. `container_start` and
 `container_stop` are NOT refused this way: they can be configured
-`auto_approve` (never seeded), same calibre as `open_adr_pr`/
-`open_infra_pr`.
+`auto_approve`, same calibre as `open_adr_pr`/`open_infra_pr` —
+`container_stop` is never seeded, and `container_start` is seeded for the
+Infra agent on its handoff accept since ADR 0190.
 
 **Order of an "always allow" click ([RN-642](../business-rules.md#rn-642)).**
 The approval and the pattern are recorded in the SAME transaction: the
@@ -487,9 +508,28 @@ single list `TIPOS_SEM_SEMPRE_PERMITIR`
 `git_merge`, `container_remove`, `instruction_patch`, `parallelize` and
 `raise_max_parallel` — `400` with `reason: "teto_do_sempre_permitir"`. The
 approval card hides the button for the same list (a copy checked against
-this one by test). This does NOT change `decide()` nor what activating
-execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
-each `dev-<module>` (see "What activating execution seeds").
+this one by test). When it shipped, this did NOT change `decide()` nor what
+activating execution seeds; since [RN-689](../business-rules.md#rn-689) both
+changed: `git_push` and `pr_open` are inside the RN-418 cap in `decide()`
+(see ["Caps"](#caps)), and activating execution seeds only `git_commit` as
+`auto_approve` for each `dev-<module>`.
+
+**The unit of the recorded pattern: verb + subcommand, one per segment
+([RN-675](../business-rules.md#rn-675), owner decision 01/10).** "Always
+allow" no longer records the whole command byte by byte: each segment of
+the command (split on `&&`, `||`, `;`, `|`, `&`, as `decide()` splits it)
+becomes one pattern — the verb plus its subcommand when the second token is
+a word (`npm test`, `git status`, `mix test`, `npx vitest`), the verb alone
+when it is an argument that is not a word (`cat src/x.ts` → `Terminal(cat)`,
+`cd ../lib` → `Terminal(cd)`), and the EXACT segment when the second token is
+a flag (`ls -la src`) or when the unit would be a prefix of an RN-418 cap
+(`git remote -v`, `gh pr list` stay exact). A segment that is a cap prefix
+even when exact (`git` alone) records nothing. `cd src/app && npm test`
+records `Terminal(cd)` and `Terminal(npm test)`, and the next
+`cd lib/core && npm test -- --coverage` runs without asking. Matching is
+still by token prefix, the caps still run after the file in `decide()`, and
+the path scope still applies outside auto mode. A module dev agent's click
+still goes to `agent_autonomy`, not to a pattern ([RN-509](../business-rules.md#rn-509)).
 
 ## Path scope
 
@@ -582,6 +622,7 @@ Applied **last**, after everything else:
 | `instruction_patch` | `auto_approve` → `require_approval` | you need to see the diff before one agent changes another's behavior ([RN-007](../business-rules.md#rn-007)) |
 | `parallelize` and `raise_max_parallel` | `auto_approve` → `require_approval` | spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit ([RN-086](../business-rules/custo.md#rn-086)) |
 | `terminal` with external-effect git (push/PR/deploy) or `sudo`/`doas` | `auto_approve` → `require_approval` | external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on ([RN-418](../business-rules.md#rn-418), revises [RN-106](../business-rules/autenticacao.md#rn-106)) — see the dedicated section above |
+| typed `git_push` and `pr_open` | `auto_approve` → `require_approval` | the same RN-418 cap through the typed door: neither the auto-mode wildcard, nor a specific `agent_autonomy` rule, nor `permissions.json` promotes them ([RN-689](../business-rules.md#rn-689)). `git_merge` keeps its own cap (first row); `deploy` is not a `proposed_action` type |
 | `container_remove` | `auto_approve` → `require_approval` | discarding a container forces a full reprovision — the same caliber as merging into a protected branch, decided every time, never configured once ([RN-495](../business-rules.md#rn-495)) |
 
 A cap downgrades `auto_approve` to `require_approval`; it does **not**
@@ -664,7 +705,7 @@ event** in `session_events`, with the real actor
 |---|---|---|
 | `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied`; `payload.reason` says which rule of `decide()` produced it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | the **user** who clicked | only on manual approval (including `approve_always`) |
-| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.pattern`, or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
+| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.patterns` (the patterns recorded, one per segment, [RN-675](../business-rules.md#rn-675)) and `payload.pattern` (the same list joined by ", "), or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
 | `proposed_action.denied` | the **user** who refused | with `payload.reason` |
 | `action.executed` / `action.failed` | `system` | execution outcome |
 

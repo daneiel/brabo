@@ -110,7 +110,7 @@
       "modulesCount_one": "{{count}} module",
       "modulesCount_other": "{{count}} modules",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " You still decide when to activate execution."
+      "note": " and ACTIVATES execution: the dev agents start and begin spending."
     },
     "assessImplementability": {
       "verb": "assesses a story's implementability",
@@ -135,7 +135,7 @@
       "autoMode": "Auto mode"
     },
     "notes": {
-      "alwaysAllow": "Always allow: records the rule in the project's .brabo/permissions.json.",
+      "alwaysAllow": "Always allow: records, in the project's .brabo/permissions.json, one rule per command segment, by verb + subcommand (e.g. \"npm test\", \"git status\") — the next command with the same verb and subcommand runs without asking.",
       "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
       "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."

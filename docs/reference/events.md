@@ -55,7 +55,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 Once a session is `closed` or `closed_abnormally`, appending a conversation
 event is refused with **409** and `reason: "sessao_encerrada"`. Conversation is
 either a type that only exists as conversation (`chat.message`,
-`chat.structured_question`, `chat.structured_question_answered`,
+`chat.message_cancelled`, `chat.structured_question`, `chat.structured_question_answered`,
 `agent.status`, `agent.activated`, `handoff.offered`, `handoff.accepted`,
 `readiness.confirmed`, `necessity.validated`,
 `architecture.readiness_confirmed`) or any event whose actor is a
@@ -81,6 +81,9 @@ the session's `kind` does not change. A session that already has
 | type | when |
 |---|---|
 | `chat.message` | message in the session thread, from the user or the agent |
+| `chat.message_queued` | the message arrived while the agent was mid-turn and joined its QUEUE instead of being refused ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). Actor: the agent. Payload: `mensagemId` (the `chat.message` id), `texto`, `idioma` and `posicao`. The text travels here because it is what the queue re-reads after an engine restart. A queued message is PENDING until a `chat.message_delivered` or `chat.message_cancelled` names it; at most 10 per agent and session |
+| `chat.message_delivered` | the turn that reads the queue started: the pending messages are read TOGETHER, in order, in one turn. Actor: the agent. Payload: `mensagemIds` |
+| `chat.message_cancelled` | the person who SENT a pending message cancelled it — no agent ever read it. Actor: that user. Payload: `mensagemId`, `agente`. Recorded by the engine; refused in a closed session ([RN-581](../business-rules.md#rn-581)) |
 | `chat.structured_question` | the Creative agent asked for SEVERAL answers at once, via a form — `ask_structured_questions` tool (RN-162). Each question carries `id`, `label`, `type`, `options` and `allowOther` — the latter is the `select`'s free-text output, and defaults to `true` when the model declares nothing ([RN-171](../business-rules/autenticacao.md#rn-171)) |
 | `chat.structured_question_answered` | the user answered the form; the answers also come back as `chat.message` for the agent to read |
 | `agent.activated` | an agent took on work in the session |
@@ -102,7 +105,10 @@ has a conversation, `Engine.Agents.Reidratacao` rebuilds its history from the
 and its OWN `tool.call`/`tool.result` (as a text note — the events carry no call
 id, so they are never replayed as `role: tool`). `chat.structured_question_answered`
 is deliberately skipped: the api records the same answers as a `chat.message`
-right after it, and that is what the agent read live. Since [RN-589](../business-rules.md#rn-589) all seven record `tool.result`
+right after it, and that is what the agent read live. A `chat.message` that was
+cancelled in the queue, or that is still pending for this agent, is skipped too
+([RN-673](../business-rules.md#rn-673)): the first was never said, the second
+arrives through the turn that reads the queue. Since [RN-589](../business-rules.md#rn-589) all seven record `tool.result`
 with the text the tool returned (`resultado`, cut at 2,000 characters, with
 `resultadoTotal` giving the real length when it cuts); a call from a session
 recorded before that has no `tool.result` and the note says the log has no outcome.
@@ -132,6 +138,8 @@ compaction summary, and the opening messages.
 | `backlog.story_promotion_returned` | the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev ([RN-048](../business-rules/custo.md#rn-048)) |
 | `backlog.story_demoted` | a module disappeared from `module_map`; the story went back to `draft` ([RN-012](../business-rules.md#rn-012)) |
 | `backlog.story_overlap_warned` | the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap ([RN-081](../business-rules/custo.md#rn-081)) |
+| `backlog.semantic_duplicate_warned` | a story or business rule was written whose TITLE is, by embedding, at or above the threshold of an existing one of the same kind in the project — a warning, never a refusal; the payload names the similar item and the cosine. Actor `system`/`duplicata-semantica` ([RN-681](../business-rules/custo.md#rn-681)) |
+| `backlog.semantic_duplicate_check_skipped` | the semantic duplicate check could NOT run — no embedding provider, daemon down, the 10 s ceiling — and the `reason` says which; the item was written anyway ([RN-681](../business-rules/custo.md#rn-681)) |
 | `backlog.story_modules_assigned` | story ↔ module link |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | a dev agent claimed the task |
@@ -147,6 +155,8 @@ compaction summary, and the opening messages.
 | `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
 | `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
 | `execution.parallelization_suggested` | the system proposed parallelizing — emitted at activation only when the project has a registered `running` container (otherwise the dev agents are blocked, `dev.blocked_by_container`, and more agents would only multiply the blocked ones; AT-104) |
+| `execution.plan_applied` | the human APPROVED the Dev Lead's `propose_execution_plan` (or it was auto-approved) and that approval ACTIVATED execution: each task in the plan got its module and `ActivateExecutionUseCase` ran ([RN-677](../business-rules.md#rn-677), [RN-678](../business-rules.md#rn-678)). Payload: `actionId`, `sessaoDeExecucao`, `modulos`, `tarefasAtribuidas`. Recorded on the Dev Lead's session, actor `system`/`action-executor` |
+| `execution.plan_failed` | the approved plan did NOT activate execution — the plan no longer matches the current `module_map`, or the activation refused (e.g. 409 without a repository). Payload: the same fields plus `motivo`, the api's own sentence. The human's decision stays recorded; nothing was written to the tasks when the plan itself was refused |
 | `execution.parallelization_accepted` | accepted — the subagent inherits the base agent's cap |
 | `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
 | `dev.working` | claimed a task and set up the worktree |
@@ -197,11 +207,12 @@ have to learn a second name just because the conversational agent doesn't use
 | `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules.md#rn-505)) |
 | `artifact.module_map` | the Architect's module map |
 | `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
+| `artifact.module_contracts` | the Architect's contract between modules: per module, what it EXPOSES (`modulo`, `expoe: [{tipo, assinatura, descricao}]`), with `version` — the whole list each time, the current one replaces the previous; what a module consumes is the `module_map`'s `dependsOn` ([RN-684](../business-rules.md#rn-684), [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) |
 | `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (who decided is the actor: `arquiteto` or `infra-lead`) — the project's container image, emitted by the api (`DecidirImagemDoProjetoUseCase`) when the Architect decides it or the Infra Lead elects a candidate ([RN-491](../business-rules.md#rn-491)); versioned, no table. The engine only READS whether one exists, to refuse `container_start_via_runner` locally without it ([RN-610](../business-rules.md#rn-610)) |
 | `artifact.insight` | — |
 | `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validated in `Engine.Agents.StaffTools`, not by `ArtifactSchemas` — same case as `artifact.insight`): `problema`, `opcoes` (list of `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call |
-| `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), PRE-DEV |
+| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), written AFTER the dev's delivery and consumed by the `qa-verificada` cycle since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules.md#rn-674)) |
 | `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — SecOps' "second moment" over a story's DESIGN ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
 The schemas are closed: a missing field rejects the emission
@@ -394,7 +405,7 @@ makes a new identifier show up here even if nobody wrote about it.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Extracted from the emission points: **94 identifiers**, of which **2** are not described above.
+Extracted from the emission points: **99 identifiers**, of which **2** are not described above.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -413,7 +424,7 @@ Extracted from the emission points: **94 identifiers**, of which **2** are not d
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
-- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
@@ -421,6 +432,8 @@ Extracted from the emission points: **94 identifiers**, of which **2** are not d
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
+- `backlog.semantic_duplicate_check_skipped` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
+- `backlog.semantic_duplicate_warned` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
@@ -444,6 +457,9 @@ Extracted from the emission points: **94 identifiers**, of which **2** are not d
 - `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
+- `chat.message_cancelled` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_delivered` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_queued` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
 - `chat.structured_question` <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
 - `chat.structured_question_answered` <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>

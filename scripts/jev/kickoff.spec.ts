@@ -24,6 +24,8 @@ describe('a porta dos moldes do engine (texto fixo)', () => {
       'Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com',
       'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.',
       '`report_blocked` com o diagnóstico do que foi tentado e por que falhou.',
+      // RN-684: o kickoff diz onde ler a interface de outro módulo.
+      'contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, ',
     ]) {
       expect(src).toContain(trecho);
       expect(k.replace(/\n/g, ' ')).toContain(trecho.trim());
@@ -40,15 +42,25 @@ describe('a porta dos moldes do engine (texto fixo)', () => {
     }
   });
 
-  it('qa_estrategia_agent.ex: initial_message/2, com o mapa de módulos', () => {
+  it('qa_estrategia_agent.ex: initial_message, com os arquivos da entrega (ADR 0192)', () => {
     const src = fonte('gates/qa_estrategia_agent.ex');
-    const k = kickoffDaQaEstrategia(historia, modulos);
-    expect(k).toContain('- persistence (TypeScript): Guarda o recorde');
+    const k = kickoffDaQaEstrategia({ title: 'Persistir' }, historia, ['src/recorde.ts', 'src/recorde.test.ts']);
+    expect(k).toContain('o dev agent ENTREGOU a task "Persistir"');
     expect(k).toContain('- RF um\n- RF dois');
-    for (const trecho of ['avalia a IMPLEMENTABILIDADE de uma story ANTES do dev agent escrever', 'Responda SEMPRE chamando `emit_plano_de_teste`.']) {
+    expect(k).toContain('- src/recorde.ts\n- src/recorde.test.ts');
+    for (const trecho of ['escreve o PLANO DE TESTE dessa entrega, a partir do código que existe', 'ARQUIVOS que a entrega tocou (git diff contra `dev`):', '`emit_plano_de_teste`. Responda SEMPRE chamando uma ferramenta.']) {
       expect(src).toContain(trecho);
       expect(k).toContain(trecho);
     }
+  });
+
+  it('qa_estrategia_agent.ex: a lista que não veio é dita, e a longa diz o total', () => {
+    const src = fonte('gates/qa_estrategia_agent.ex');
+    expect(src).toContain('(o diff contra `dev` veio vazio)');
+    expect(kickoffDaQaEstrategia(null, historia, [])).toContain('(o diff contra `dev` veio vazio)');
+    expect(kickoffDaQaEstrategia(null, historia, { erro: 'sem log' })).toContain('(não consegui listar: "sem log" — leia o worktree a partir da story)');
+    const muitos = Array.from({ length: 45 }, (_, i) => `a${i}.ts`);
+    expect(kickoffDaQaEstrategia(null, historia, muitos)).toContain('(e mais 5 de 45 no total)');
   });
 
   it('appsec_agent.ex: initial_message/2', () => {
@@ -63,8 +75,7 @@ describe('a porta dos moldes do engine (texto fixo)', () => {
 
 describe('o que o log NÃO tem é dito, nunca inventado', () => {
   it('sem a história, o gate anterior ao código diz que ela não é recuperável', () => {
-    expect(kickoffDaQaEstrategia(null, [])).toContain('(story não recuperável do event log)');
-    expect(kickoffDaQaEstrategia(null, [])).toContain('(sem module_map)');
+    expect(kickoffDaQaEstrategia(null, null, { erro: 'x' })).toContain('(story não recuperável do event log)');
     expect(kickoffDoAppsec(null, modulos)).toContain('(story não recuperável do event log)');
   });
 });

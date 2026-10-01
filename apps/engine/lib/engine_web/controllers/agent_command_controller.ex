@@ -33,6 +33,7 @@ defmodule EngineWeb.AgentCommandController do
     StaffServer
   }
 
+  alias Engine.Agents.{FilaDeMensagens, TurnoAssincrono}
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
   alias Engine.Sessions.EngineApiClient
 
@@ -129,7 +130,10 @@ defmodule EngineWeb.AgentCommandController do
     # RN-578): `:ok` é 202, e a recusa ANTES de subir o turno (turno já em
     # curso) é 409 — ver `responder_ao_aceite/2`. O desfecho do turno segue
     # pelo canal e, quando é falha, pelo `agent.error` durável.
-    responder_ao_aceite(conn, PoServer.user_message(session_id, text, idioma_da_resposta(params)))
+    responder_ao_aceite(
+      conn,
+      PoServer.user_message(session_id, text, autor_do_turno(params), mensagem_id(params))
+    )
   end
 
   def message(
@@ -145,7 +149,12 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      DevLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+      DevLeadServer.user_message(
+        session_id,
+        text,
+        autor_do_turno(params),
+        mensagem_id(params)
+      )
     )
   end
 
@@ -162,7 +171,12 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      ArquitetoServer.user_message(session_id, text, idioma_da_resposta(params))
+      ArquitetoServer.user_message(
+        session_id,
+        text,
+        autor_do_turno(params),
+        mensagem_id(params)
+      )
     )
   end
 
@@ -179,7 +193,12 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      UxDesignerServer.user_message(session_id, text, idioma_da_resposta(params))
+      UxDesignerServer.user_message(
+        session_id,
+        text,
+        autor_do_turno(params),
+        mensagem_id(params)
+      )
     )
   end
 
@@ -196,7 +215,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      StaffServer.user_message(session_id, text, idioma_da_resposta(params))
+      StaffServer.user_message(session_id, text, autor_do_turno(params), mensagem_id(params))
     )
   end
 
@@ -217,7 +236,12 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      CriativoServer.user_message(session_id, text, idioma_da_resposta(params))
+      CriativoServer.user_message(
+        session_id,
+        text,
+        autor_do_turno(params),
+        mensagem_id(params)
+      )
     )
   end
 
@@ -242,7 +266,12 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      InfraLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+      InfraLeadServer.user_message(
+        session_id,
+        text,
+        autor_do_turno(params),
+        mensagem_id(params)
+      )
     )
   end
 
@@ -322,11 +351,6 @@ defmodule EngineWeb.AgentCommandController do
     responder_ao_aceite(conn, ArquitetoServer.offer_infra_handoff(session_id))
   end
 
-  def offer_dev_handoff(conn, %{"sessionId" => session_id}) do
-    :ok = ArquitetoServer.offer_dev_handoff(session_id)
-    send_resp(conn, 202, "")
-  end
-
   @doc """
   Cancela o turno em curso do agente conversacional ativo na sessão
   (RN-122) — o botão "Parar" do composer. Idempotente por natureza:
@@ -358,6 +382,70 @@ defmodule EngineWeb.AgentCommandController do
     )
   end
 
+  @doc """
+  Cancela UMA mensagem que espera na fila do agente (RN-673) — o botão
+  "cancelar" da mensagem "na fila". A api já conferiu que quem pede é quem a
+  enviou. Com o agente de pé, quem decide é o processo dele (serializa a
+  corrida com a entrega): 204, ou 409 `mensagem_fora_da_fila` quando ela já foi
+  lida ou cancelada. Com o agente FORA do ar não há fila em memória — a fila é
+  o log —, e o cancelamento é gravado direto; a subida seguinte já não a vê.
+  """
+  def cancel_queued_message(conn, %{
+        "sessionId" => session_id,
+        "projectId" => project_id,
+        "agent" => agent,
+        "mensagemId" => mensagem_id,
+        "userId" => user_id
+      })
+      when is_binary(mensagem_id) and is_binary(user_id) do
+    case via_for(agent, session_id) do
+      {:ok, via} ->
+        if GenServer.whereis(via) do
+          case GenServer.call(via, {:cancelar_mensagem, mensagem_id, user_id}, 15_000) do
+            :ok -> send_resp(conn, 204, "")
+            {:error, :mensagem_fora_da_fila} -> recusar_fora_da_fila(conn)
+          end
+        else
+          TurnoAssincrono.registrar_cancelamento(
+            project_id,
+            session_id,
+            agent,
+            mensagem_id,
+            user_id
+          )
+
+          send_resp(conn, 204, "")
+        end
+
+      :error ->
+        recusar(
+          conn,
+          422,
+          "agente_sem_conversa",
+          "O agente \"#{agent}\" não recebe mensagem de chat — não há fila para cancelar."
+        )
+    end
+  end
+
+  def cancel_queued_message(conn, _params) do
+    recusar(
+      conn,
+      422,
+      "cancelamento_incompleto",
+      "O pedido de cancelar chegou sem dizer qual mensagem, de qual agente ou de quem."
+    )
+  end
+
+  defp recusar_fora_da_fila(conn) do
+    recusar(
+      conn,
+      409,
+      "mensagem_fora_da_fila",
+      "Esta mensagem não está mais na fila — ela já foi lida pelo agente ou já " <>
+        "tinha sido cancelada."
+    )
+  end
+
   # O `handle_call` de todo conversacional responde AO ACEITAR desde o ADR
   # 0163 (RN-578) — o turno segue numa Task e o desfecho vai pelo canal. Esta
   # resposta é, portanto, o único sinal síncrono que o clique recebe, e ela
@@ -367,13 +455,36 @@ defmodule EngineWeb.AgentCommandController do
   # recusa é a mesma do `agent.error` que o agente já gravou.
   defp responder_ao_aceite(conn, :ok), do: send_resp(conn, 202, "")
 
+  # RN-673 (ADR 0191): a mensagem que chegou com turno em curso ENTROU NA FILA
+  # — 202 também, porque foi aceita; o corpo diz que ela espera, e em que
+  # posição. A tela mostra "na fila" pelo `chat.message_queued` do log.
+  defp responder_ao_aceite(conn, {:ok, :enfileirada, posicao}) do
+    conn
+    |> put_status(202)
+    |> json(%{entrega: "enfileirada", posicao: posicao})
+  end
+
+  # Desde a RN-673 a MENSAGEM não recebe mais esta recusa (ela entra na fila);
+  # quem a recebe são os comandos que não são fala — revisão do PO, prontidão
+  # do Criativo, oferta de handoff do Arquiteto.
   defp responder_ao_aceite(conn, {:error, :turno_em_andamento}) do
     recusar(
       conn,
       409,
       "turno_em_andamento",
-      "O agente ainda está no meio de um turno — a mensagem ficou registrada, " <>
-        "mas não foi lida. Mande de novo quando ele terminar, ou pare o turno atual."
+      "O agente ainda está no meio de um turno — o pedido não foi atendido. " <>
+        "Tente de novo quando ele terminar, ou pare o turno atual."
+    )
+  end
+
+  defp responder_ao_aceite(conn, {:error, :fila_de_mensagens_cheia}) do
+    recusar(
+      conn,
+      409,
+      "fila_de_mensagens_cheia",
+      "Já há #{FilaDeMensagens.teto()} mensagens esperando o fim do turno deste " <>
+        "agente — esta ficou registrada, mas não entrou na fila e não será lida. " <>
+        "Cancele uma das pendentes ou espere o turno terminar."
     )
   end
 
@@ -406,6 +517,23 @@ defmodule EngineWeb.AgentCommandController do
        do: idioma
 
   defp idioma_da_resposta(_params), do: nil
+
+  # RN-673: o id do `chat.message` que a api gravou — é por ele que a mensagem
+  # que entrou na fila pode ser cancelada. Opcional: api antiga não o manda, e
+  # a mensagem sem id ainda é enfileirada (só não pode ser cancelada).
+  defp mensagem_id(%{"mensagemId" => id}) when is_binary(id) and id != "", do: id
+  defp mensagem_id(_params), do: nil
+
+  # RN-680 (ADR 0196): os fatos do perfil do AUTOR, já em texto e com teto,
+  # resolvidos pela api (`perfilDoAutor`, OPCIONAL como o idioma). Com eles, o
+  # valor que o servidor repassa a `IdiomaDaResposta.com_idioma_do_autor/2` é
+  # `%{idioma: _, perfil: _}`; sem eles, é só o idioma, como sempre — nenhum
+  # servidor de agente muda por causa disso.
+  defp autor_do_turno(%{"perfilDoAutor" => perfil} = params)
+       when is_binary(perfil) and perfil != "",
+       do: %{idioma: idioma_da_resposta(params), perfil: perfil}
+
+  defp autor_do_turno(params), do: idioma_da_resposta(params)
 
   # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
   # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o

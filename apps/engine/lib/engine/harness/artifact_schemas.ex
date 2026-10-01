@@ -48,12 +48,15 @@ defmodule Engine.Harness.ArtifactSchemas do
     # que também é validável aqui sem ser tool-emittable por `emit_artifact`.
     "prototipo_navegavel" => ["personas", "jornadas", "prototipo", "resumo"],
     # ADR 0090 — o entregável da QA-estratégia (segundo MOMENTO do qa-lead,
-    # docs/fluxo.yml): o plano de teste de UMA story, ANTES do dev agent
-    # escrever código. Server-emitted, como `qa_verdict`: emitido por
+    # docs/fluxo.yml). Desde o ADR 0192 (RN-674) é o plano de teste da
+    # ENTREGA de uma task, DEPOIS do código existir — por isso `taskId` é
+    # obrigatório: é por ele que o `QaLeadServer` reencontra o plano na
+    # rodada de correção. Server-emitted, como `qa_verdict`: emitido por
     # `Engine.Gates.QaEstrategiaAgent` depois que `emit_plano_de_teste`
     # termina o laço, nunca por tool call direto de fora do harness.
     "plano_de_teste" => [
       "storyId",
+      "taskId",
       "planoDeTeste",
       "criteriosExecutaveis",
       "estrategiaDeAutomacao"

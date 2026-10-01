@@ -501,6 +501,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/module-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The contracts between modules, for a dev agent to read (RN-684)
+         * @description One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.
+         */
+        get: operations["InternalProjectsController_moduleContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/product-metrics": {
         parameters: {
             query?: never;
@@ -922,6 +942,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/module-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declares a new version of the contracts between modules
+         * @description The artifact IS the `artifact.module_contracts` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Each call carries the WHOLE list and replaces the previous version. What a module consumes is not written here: it is the current module_map's `dependsOn`.
+         */
+        post: operations["InternalSessionsController_moduleContracts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/module-map": {
         parameters: {
             query?: never;
@@ -1042,6 +1082,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/semantic-duplicate-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Warns when a just-written business rule looks like an existing one
+         * @description Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).
+         */
+        post: operations["InternalSessionsController_semanticDuplicateCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/stories": {
         parameters: {
             query?: never;
@@ -1053,7 +1113,7 @@ export interface paths {
         put?: never;
         /**
          * Creates a story with functional/non-functional requirements, DoD, DoR, and covered rules
-         * @description `businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id.
+         * @description `businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id. The response also carries `semanticDuplicate` (RN-681): an embedding-based WARNING against the project stories, never a refusal.
          */
         post: operations["InternalSessionsController_story"];
         delete?: never;
@@ -2344,7 +2404,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga um Personal Access Token próprio
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.
          */
         delete: operations["PersonalAccessTokensController_revokePat"];
         options?: never;
@@ -2364,7 +2424,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga o Personal Access Token de QUALQUER usuário no projeto
-         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.
+         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.
          */
         delete: operations["PersonalAccessTokensController_revokePatAsMaintainer"];
         options?: never;
@@ -2605,11 +2665,7 @@ export interface paths {
          */
         get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
-        /**
-         * Registra a chave pública de um dispositivo do runner local
-         * @description A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.
-         */
-        post: operations["RunnerDeviceKeysController_registerDeviceKey"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2628,7 +2684,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -2816,9 +2872,29 @@ export interface paths {
         put?: never;
         /**
          * Sends a message to the active agent
-         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.
+         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call. If the agent is mid-turn, the message is NOT refused: it joins the agent's queue (`entrega: "enfileirada"`) and is read, with any others queued, in one turn when the current one ends; it can be cancelled while it waits (RN-673, ADR 0191).
          */
         post: operations["AgentsController_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/messages/{messageId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels one message waiting in the agent's queue
+         * @description A message sent while the agent is mid-turn waits in a queue and is read when the turn ends (RN-673). While it waits, the person who SENT it can cancel it: the engine removes it from the queue and records `chat.message_cancelled`; it is never shown to the model. Someone else's message is 403.
+         */
+        post: operations["AgentsController_cancelQueued"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2960,7 +3036,7 @@ export interface paths {
         put?: never;
         /**
          * Talks to the session's model, with the response streamed
-         * @description Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`.
+         * @description Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`. This route carries NO agent: it sends the text alone to the bound model, with no history and no system prompt. In a `consultiva` session where no agent was ever activated it is refused before any effect (RN-682) — talk to an agent through `.../agents/:agent/message` instead.
          */
         post: operations["ChatController_chat"];
         delete?: never;
@@ -3353,7 +3429,7 @@ export interface paths {
         };
         /**
          * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
+         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
         put?: never;
@@ -3500,7 +3576,7 @@ export interface paths {
         post?: never;
         /**
          * Revokes one of the authenticated user’s own MACHINE device keys
-         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
+         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the LIVE connections opened with this key, in EVERY project (RN-520/RN-543). Since RN-685 (ADR 0201) the target is the KEY: another runner of the same user, connected with a PAT or with another key, stays up. The key’s still-unused tickets are voided. With no project yet there is no connection to drop. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
          */
         delete: operations["MachineDeviceKeysController_revokeMachineDeviceKey"];
         options?: never;
@@ -4304,7 +4380,7 @@ export interface components {
              * @example infra
              * @enum {string}
              */
-            toAgent: "infra" | "dev-lead";
+            toAgent: "infra";
             /** @enum {string} */
             motivo: "oferta_pendente" | "agente_ativo";
         };
@@ -5208,7 +5284,7 @@ export interface components {
              */
             ok: true;
             /**
-             * @description `confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab).
+             * @description `confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672).
              * @enum {string}
              */
             desfecho: "confirmado" | "ja_oferecido";
@@ -5374,6 +5450,55 @@ export interface components {
              */
             imagemVersao: number;
         };
+        ContratoDeModuloInternalDto: {
+            /**
+             * @description Module name — must exist in the current module_map.
+             * @example board-engine
+             */
+            modulo: string;
+            /** @description What the module exposes to whoever depends on it. 1 to 40. */
+            expoe: components["schemas"]["ItemDeContratoInternalDto"][];
+        };
+        ContratoDeModuloResponseDto: {
+            /** @example board-engine */
+            modulo: string;
+            expoe: components["schemas"]["ItemDeContratoResponseDto"][];
+        };
+        ContratoLidoDeModuloResponseDto: {
+            /** @example game-session */
+            modulo: string;
+            /**
+             * @description The current module_map's `dependsOn`: what this module CONSUMES.
+             * @example [
+             *       "board-engine",
+             *       "scoring"
+             *     ]
+             */
+            dependeDe: string[];
+            /** @description What it exposes. `null` = the Architect declared no contract for this module (different from exposing nothing). */
+            expoe: components["schemas"]["ItemDeContratoResponseDto"][] | null;
+        };
+        ContratosDeclaradosResponseDto: {
+            contratos: components["schemas"]["ContratoDeModuloResponseDto"][];
+            /** @example 1 */
+            version: number;
+        };
+        ContratosDoProjetoResponseDto: {
+            /** @enum {string} */
+            status: "sem_contratos" | "declarados";
+            /**
+             * @description 0 when there is no contract.
+             * @example 2
+             */
+            version: number;
+            /** @description One per module of the CURRENT module_map, in map order. */
+            modulos: components["schemas"]["ContratoLidoDeModuloResponseDto"][];
+            /**
+             * @description Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.
+             * @example []
+             */
+            contratosForaDoMapa: string[];
+        };
         ConvertExecutionModeDto: {
             /**
              * @description O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.
@@ -5430,6 +5555,93 @@ export interface components {
             /** @description External actors of the Context level (Simon Brown). The Container level's containers do NOT go here: they come from the project's current module_map. */
             actors?: components["schemas"]["C4AtorInternalDto"][];
         };
+        CreatedStoryResponseDto: {
+            /** @example 01JC4Z0000HISTORIA000000001 */
+            id: string;
+            /** @example 01JC4Z0000EPICO000000000001 */
+            epicId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example Add item to cart */
+            title: string;
+            /** @example As a buyer, I want to gather items before paying. */
+            description: string;
+            /**
+             * @description Functional requirements.
+             * @example [
+             *       "The cart accepts up to 50 items"
+             *     ]
+             */
+            rf: string[];
+            /**
+             * @description Non-functional requirements.
+             * @example [
+             *       "The response stays under 200 ms at p95"
+             *     ]
+             */
+            rnf: string[];
+            /**
+             * @description Business rules covered. This is where rule→story coverage is computed in `GET /projects/:id/coverage`.
+             * @example [
+             *       "RN-014"
+             *     ]
+             */
+            businessRuleIds: string[];
+            /**
+             * @description Definition of done.
+             * @example [
+             *       "Unit tests green"
+             *     ]
+             */
+            dod: string[];
+            /**
+             * @description Definition of ready.
+             * @example [
+             *       "Module defined"
+             *     ]
+             */
+            dor: string[];
+            /**
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @example [
+             *       "api"
+             *     ]
+             */
+            moduleIds: string[];
+            /**
+             * @example ready
+             * @enum {string}
+             */
+            status: "draft" | "ready" | "in_progress" | "done";
+            /**
+             * @description The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: "draft"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.
+             * @example true
+             */
+            proposedReady: boolean;
+            /**
+             * @description Why the user returned the story to the PO. `null` when it was never returned.
+             * @example DoD too generic — spell out the acceptance criteria.
+             */
+            returnedReason: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-08-02T14:00:00.000Z
+             */
+            returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-25T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-25T09:40:00.000Z
+             */
+            updatedAt: string;
+            semanticDuplicate: components["schemas"]["SemanticDuplicateCheckResponseDto"];
+        };
         CreateEpicInternalDto: {
             /**
              * Format: uuid
@@ -5469,7 +5681,7 @@ export interface components {
              */
             projectId: string;
             /**
-             * @description Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level.
+             * @description Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level. Each module may declare `resources` (cpus, memoryMb, pidsLimit — all three or none); a partial declaration, a value above the container ceiling, or a SUM over modules above it is also 400 (RN-683).
              * @example [
              *       {
              *         "name": "api",
@@ -5477,7 +5689,12 @@ export interface components {
              *         "responsibility": "Rules and HTTP",
              *         "dependsOn": [
              *           "db"
-             *         ]
+             *         ],
+             *         "resources": {
+             *           "cpus": 1,
+             *           "memoryMb": 1024,
+             *           "pidsLimit": 256
+             *         }
              *       }
              *     ]
              */
@@ -5764,6 +5981,12 @@ export interface components {
              */
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
+        DeclareModuleContractsInternalDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** @description The WHOLE contract list: each call is a new version that replaces the previous one. What a module CONSUMES is not here — it is derived from the current module_map's `dependsOn` when read. */
+            contratos: components["schemas"]["ContratoDeModuloInternalDto"][];
         };
         DelegationResponseDto: {
             /**
@@ -6529,6 +6752,32 @@ export interface components {
              */
             token: string;
         };
+        ItemDeContratoInternalDto: {
+            /**
+             * @description How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.
+             * @example funcao
+             * @enum {string}
+             */
+            tipo: "funcao" | "rota" | "evento" | "dado";
+            /**
+             * @description How another module uses it. Up to 300 characters.
+             * @example placePiece(board: Board, piece: Piece, pos: Pos): Board
+             */
+            assinatura: string;
+            /** @example Returns a new board; never mutates the one passed in. */
+            descricao?: string;
+        };
+        ItemDeContratoResponseDto: {
+            /**
+             * @example funcao
+             * @enum {string}
+             */
+            tipo: "funcao" | "rota" | "evento" | "dado";
+            /** @example placePiece(board: Board, piece: Piece, pos: Pos): Board */
+            assinatura: string;
+            /** @example Returns a new board; never mutates the one passed in. */
+            descricao: string;
+        };
         JwksResponseDto: {
             /** @description Active public Ed25519 keys. Two during a rotation. */
             keys: Record<string, never>[];
@@ -6702,6 +6951,29 @@ export interface components {
              */
             status: "todo" | "in_progress" | "in_review" | "done";
         };
+        MensagemAoAgenteResponseDto: {
+            /**
+             * @description Always `true`; failure becomes an HTTP error.
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description Id of the `chat.message` event recorded for this message — the id that cancels it while it waits in the queue.
+             * @example 01JC4Z0000EVENTO000000000001
+             */
+            mensagemId: string;
+            /**
+             * @description `lida`: the agent started a turn with it right away. `enfileirada`: the agent was mid-turn, so the message joined its queue and will be read, together with any others queued, in ONE turn when the current one ends (RN-673). The session log carries `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`.
+             * @example enfileirada
+             * @enum {string}
+             */
+            entrega: "lida" | "enfileirada";
+            /**
+             * @description Position in the queue (1 = next). Present only when `entrega` is `enfileirada`.
+             * @example 2
+             */
+            posicao?: number;
+        };
         MirrorSyncResultInternalDto: {
             /**
              * @description The REAL outcome of the copy, reported by the local agent after it finished — never an optimistic "ok" before the round ends.
@@ -6869,6 +7141,11 @@ export interface components {
              *     ]
              */
             uses: ("codigo" | "documentacao" | "analise" | "imagem" | "conversa")[];
+            /**
+             * @description OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.
+             * @example false
+             */
+            freeRoutingAlias: boolean;
         };
         ModelPriceChangeResponseDto: {
             /** @example 01JC4Z0000PRECO000000000001 */
@@ -7061,6 +7338,8 @@ export interface components {
              *     ]
              */
             dependsOn: string[];
+            /** @description What THIS module needs alone inside the project container (RN-683, ADR 0199). Absent when the Architect did not declare it. The Infra starts the container with the SUM over modules, floored at the default while any module is undeclared. */
+            resources?: components["schemas"]["RecursosDoContainerResponseDto"];
         };
         MySpendResponseDto: {
             /**
@@ -8496,18 +8775,6 @@ export interface components {
              */
             token: string;
         };
-        RegisterRunnerDeviceKeyRequestDto: {
-            /**
-             * @description Nome pra você reconhecer este dispositivo depois — não é único.
-             * @example laptop
-             */
-            name: string;
-            /**
-             * @description JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador.
-             * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
-             */
-            publicKeyJwk: string;
-        };
         RegistroDeContainerResponseDto: {
             /**
              * @description What was RECORDED (project_containers.status).
@@ -8863,17 +9130,6 @@ export interface components {
              */
             lastUsedAt: Record<string, never> | null;
         };
-        RunnerDeviceKeyResponseDto: {
-            /** @example 01JC4Z0000CHAVE000000000001 */
-            id: string;
-            /** @example laptop */
-            name: string;
-            /**
-             * Format: date-time
-             * @example 2026-08-27T12:00:00.000Z
-             */
-            createdAt: string;
-        };
         RunnerProjectResponseDto: {
             /** @example 01JC4Z0000PROJETO000000001 */
             projectId: string;
@@ -8903,6 +9159,61 @@ export interface components {
              * @example ws://localhost:4000/runner
              */
             engineWsUrl: string;
+        };
+        SemanticDuplicateCheckInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * @example business_rule
+             * @enum {string}
+             */
+            kind: "business_rule";
+            /**
+             * @description Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.
+             * @example Greeting with the caller name
+             */
+            title: string;
+        };
+        SemanticDuplicateCheckResponseDto: {
+            /**
+             * @description `warned` NEVER blocks: the item was already written. `skipped` carries the reason — no embedding provider, daemon down, the 10 s ceiling — and is also narrated in the event log.
+             * @enum {string}
+             */
+            status: "warned" | "clean" | "skipped" | "nothing_to_compare";
+            similarTo?: components["schemas"]["SemanticDuplicateSimilarDto"];
+            closest?: components["schemas"]["SemanticDuplicateSimilarDto"] | null;
+            /** @example 0.83 */
+            similarity?: number;
+            /**
+             * @description Cosine threshold — a STARTING POINT, not calibrated (ADR 0198).
+             * @example 0.8
+             */
+            threshold?: number;
+            /**
+             * @description How many existing items were compared (the most recent, up to 100).
+             * @example 12
+             */
+            compared?: number;
+            /**
+             * @description How many exist in the project.
+             * @example 12
+             */
+            total?: number;
+            /** @example provider "ollama" did not answer */
+            reason?: string;
+            /** @description The sentence the agent reads in the tool result; `null` when there is nothing to say. */
+            message: string | null;
+        };
+        SemanticDuplicateSimilarDto: {
+            /** @example 01JC4Z0000HISTORIA000000001 */
+            id: string;
+            /** @example Deterministic public greeting endpoint */
+            title: string;
+            /** @example 0.83 */
+            similarity?: number;
         };
         SendAgentMessageDto: {
             /**
@@ -9577,6 +9888,11 @@ export interface components {
              * @example 0
              */
             gateCorrectionCount: number;
+            /**
+             * @description The module the task belongs to, assigned by the Dev Lead in the approved execution plan (RN-678). Only the dev agent of that module claims it. `null` while no plan assigned one — such a task is claimable only when its story has exactly one module.
+             * @example api
+             */
+            module: Record<string, never> | null;
             /**
              * Format: date-time
              * @example 2026-07-25T10:00:00.000Z
@@ -10785,6 +11101,34 @@ export interface operations {
             };
         };
     };
+    InternalProjectsController_moduleContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContratosDoProjetoResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalProjectsController_productMetrics: {
         parameters: {
             query?: never;
@@ -11775,6 +12119,52 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_moduleContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclareModuleContractsInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContratosDeclaradosResponseDto"];
+                };
+            };
+            /** @description Empty list, repeated module, module outside the current module_map (or no module_map), a module with an empty or oversized `expoe`, an item with an unknown `tipo`, or a missing/oversized `assinatura`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_moduleMap: {
         parameters: {
             query?: never;
@@ -12045,6 +12435,52 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_semanticDuplicateCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemanticDuplicateCheckInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticDuplicateCheckResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_story: {
         parameters: {
             query?: never;
@@ -12065,7 +12501,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StoryResponseDto"];
+                    "application/json": components["schemas"]["CreatedStoryResponseDto"];
                 };
             };
             /** @description Invalid body. */
@@ -16763,66 +17199,6 @@ export interface operations {
             };
         };
     };
-    RunnerDeviceKeysController_registerDeviceKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterRunnerDeviceKeyRequestDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunnerDeviceKeyResponseDto"];
-                };
-            };
-            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No token, expired token, or invalid signature. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Papel insuficiente no projeto. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Projeto não encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rate limit per user or per IP. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     RunnerDeviceKeysController_revokeDeviceKey: {
         parameters: {
             query?: never;
@@ -17526,7 +17902,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OkResponseDto"];
+                    "application/json": components["schemas"]["MensagemAoAgenteResponseDto"];
                 };
             };
             /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
@@ -17557,7 +17933,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163). */
+            /** @description The agent is not active in this session; or it is waiting on an execution-plan decision; or its queue already holds 10 messages (`fila_de_mensagens_cheia`) — the message was recorded but NOT read by the agent (ADR 0163, RN-673). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -17566,6 +17942,67 @@ export interface operations {
             };
             /** @description The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentsController_cancelQueued: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+                /** @description Slug of the agent whose queue holds the message. */
+                agent: string;
+                /** @description Id of the `chat.message` event (the `mensagemId` the message route returned). */
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project, session, or handoff not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The message is no longer queued — the agent already read it, or it was already cancelled; or the session is closed (RN-581). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18033,6 +18470,13 @@ export interface operations {
             };
             /** @description Project or session not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20773,6 +21217,13 @@ export interface operations {
             };
             /** @description Some id in the batch doesn't exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activating an OpenRouter free-routing alias (`~…`) — `code: "alias_de_roteamento_livre"`, with the `modelIds` refused. The whole batch is refused. Deactivating one is always allowed (AT-271, RN-679). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

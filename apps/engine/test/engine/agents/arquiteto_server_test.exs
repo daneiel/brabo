@@ -252,64 +252,18 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:handoff_created, _, ^session_id, "arquiteto", "infra", nil}
   end
 
-  test "offer_dev_handoff: oferece o handoff ao dev-lead sem rodar turno de LLM", %{
-    state: state,
-    session_id: session_id
+  # RN-672 (AT-262, ADR 0190): a confirmação de arquitetura pronta oferece SÓ
+  # à Infra. O handoff ao Dev Lead sai da Infra, com o container `running`.
+  test "offer_infra_handoff NÃO oferece ao dev-lead, e a chamada antiga deixou de existir", %{
+    state: state
   } do
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
 
-    assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
-  end
+    assert {:reply, :ok, final} = sync_call(ArquitetoServer, :offer_infra_handoff, state)
 
-  # ADR 0163 (RN-578): o aceite do `offer_infra_handoff` volta antes do turno
-  # de fechamento acabar, e a api chama `offer_dev_handoff` logo em seguida.
-  # Sem o adiamento, o handoff ao Dev Lead nasceria ANTES do de Infra.
-  describe "offer_dev_handoff com o turno de fechamento em curso" do
-    test "fica pendente e nasce DEPOIS do handoff ao infra", %{
-      state: state,
-      session_id: session_id
-    } do
-      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Arquitetura fechada.")])
-      from = {self(), make_ref()}
-
-      assert {:reply, :ok, em_curso} =
-               ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
-
-      assert {:reply, :ok, pendente} =
-               ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
-
-      assert pendente.handoff_dev_pendente
-      refute_received {:handoff_created, _, _, "arquiteto", "dev-lead", _}
-
-      %{task: %Task{ref: ref}} = pendente.turno_assincrono
-      assert_receive {^ref, resultado}, 5_000
-      assert {:noreply, final} = ArquitetoServer.handle_info({ref, resultado}, pendente)
-
-      refute final.handoff_dev_pendente
-
-      # A ORDEM é o que se prova: infra primeiro, dev-lead depois.
-      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_1, nil}
-      assert_received {:handoff_created, _, ^session_id, "arquiteto", destino_2, nil}
-      assert [destino_1, destino_2] == ["infra", "dev-lead"]
-    end
-
-    test "cancelar o turno de fechamento ainda oferece o handoff ao dev-lead", %{
-      state: state,
-      session_id: session_id
-    } do
-      Process.put(:fake_llm_turn_stream_hang, true)
-      from = {self(), make_ref()}
-
-      {:reply, :ok, em_curso} = ArquitetoServer.handle_call(:offer_infra_handoff, from, state)
-      assert_receive :turno_pendurado, 1_000
-      {:reply, :ok, pendente} = ArquitetoServer.handle_call(:offer_dev_handoff, from, em_curso)
-
-      assert {:noreply, depois} = ArquitetoServer.handle_cast(:cancel, pendente)
-
-      refute depois.handoff_dev_pendente
-      refute_received {:handoff_created, _, _, "arquiteto", "infra", _}
-      assert_received {:handoff_created, _, ^session_id, "arquiteto", "dev-lead", nil}
-    end
+    refute_received {:handoff_created, _, _, "arquiteto", "dev-lead", _}
+    refute Map.has_key?(final, :handoff_dev_pendente)
+    refute function_exported?(ArquitetoServer, :offer_dev_handoff, 1)
   end
 
   # RN-116: mesmo achado do Criativo → PO (`criativo_server_test.exs`), aqui
@@ -326,20 +280,6 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
     assert payload.origem == "infra"
     assert payload.mensagem =~ "Não consegui oferecer o handoff ao infra"
-
-    assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
-  end
-
-  test "offer_dev_handoff: falha ao criar o handoff NÃO derruba o processo, e vira agent.error",
-       %{state: state, session_id: session_id} do
-    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
-    Process.put(:fake_handoff_error, {500, %{"message" => "erro interno"}})
-
-    assert {:reply, :ok, _} = ArquitetoServer.handle_call(:offer_dev_handoff, self(), state)
-
-    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
-    assert payload.origem == "infra"
-    assert payload.mensagem =~ "Não consegui oferecer o handoff ao dev-lead"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
   end

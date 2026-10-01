@@ -38,7 +38,6 @@ onde a dependência **vai**, não sobre o que ela fala.
 | CSRF + origem cruzada (`:8088` → `:3000`) | não há origem de verdade nem preflight — o `main.ts` da api registra: "teste não faz preflight" |
 | sessão que sobrevive ao reload | é o único jeito de provar que o access em memória foi RECONSTRUÍDO do cookie, e não que nunca sumiu |
 | ticket de uso único do socket (RN-108) | exige handshake de WebSocket real contra o engine, numa TERCEIRA origem |
-| o `kid` da chave de dispositivo (RN-475) | `crypto.subtle.generateKey({name:'Ed25519'})` **não existe em jsdom** — `runner-bootstrap.test.ts` dubla `crypto.subtle` inteiro, então a suite do web nunca gerou uma chave nem exportou uma JWK de verdade. Aqui o par é real, e quem diz se ele serve é o `PatAuthGuard` respondendo 201 em `runner-ticket` |
 | o CICLO do turno pelo canal (`turno-pelo-canal.spec.ts`, AT-338) | o `agent.status` (`working`, depois `idle`) e o `agent.error` só existem como frames do WebSocket real que a página abriu com o ticket de uso único, contra o engine numa TERCEIRA origem; a suite do web dubla o canal. O spec lê os FRAMES (`framereceived`) do tópico `session:<id>`, na ordem, e a bolha de falha pelo seletor estrutural `data-testid="falha-de-turno"` com `data-origem` |
 | a aprovação INLINE (`aprovacao-inline.spec.ts`, AT-068) | a decisão sai do `ApprovalCard` do chat da sessão como POST cruzado `:8088` → `:3000`, com o `Authorization` do access que a página reconstruiu do cookie httpOnly pelo double-submit; jsdom não tem preflight nem origem, e a suite do web testa o card com a api dublada. O spec asserta a REQUISIÇÃO observada (origem, Bearer, 201 com `denied`, refresh fora dela) e a FILA pela api — nunca o card sumindo |
 
@@ -70,7 +69,8 @@ seguintes, que passam a cair no login.
 A punição é enganosa, como a do lockout: o spec vermelho é o **próximo** da
 ordem alfabética, e ele acusa o mecanismo dele (um socket que não subiu),
 nunca o cookie. Foi assim que apareceu, ao acrescentar
-`chave-de-dispositivo.spec.ts`.
+`chave-de-dispositivo.spec.ts` — o spec da chave gerada no NAVEGADOR, que saiu
+junto com aquele fluxo no ADR 0203 (ver abaixo).
 
 Regra prática: quem precisa de sessão de NAVEGADOR fica com o estado
 (`socket-da-sessao.spec.ts`); quem só precisa da ORIGEM `:8088` e fala com a
@@ -205,17 +205,12 @@ texto seria outro (`Nenhum modelo vinculado`), e o workspace do seed vincula o
 `ollama`, que não pede credencial e cairia em `infra`. As saídas 1 e 2 seguem
 de pé para o delta, com o mesmo custo.
 
-E, no spec da chave de dispositivo, uma metade nomeada: **a INTERFACE do
-onboarding do runner**. `configurarPastaAutomaticamente` começa por
-`showDirectoryPicker` (File System Access API), e o Playwright não tem como
-conceder esse handle — então o fluxo não é dirigido pelo
-`RunnerOnboardingPanel`, e o código de `apps/web/src/lib/runner-bootstrap.ts`
-**não é o código que roda ali**: os passos são reproduzidos na página, na
-mesma ordem e com as mesmas chamadas de Web Crypto.
-
-A divisão fica assim, e é de propósito: este spec prova que a CADEIA
-(navegador → registro → `kid` → JWT → `PatAuthGuard`) aceita uma chave feita
-assim; `runner-bootstrap.test.ts`, com o dublê, prova que o MÓDULO a faz
-assim. Nenhuma das duas cobre sozinha o que as duas cobrem juntas. Fora
-também, pelo mesmo motivo, a gravação dos três arquivos em disco (RN-466):
-sem handle de pasta não há disco onde escrever.
+Houve outro spec, `chave-de-dispositivo.spec.ts`, que gerava num Chromium
+de verdade o par Ed25519 do fluxo do navegador (ADR 0118) e provava o `kid` da
+RN-475 contra o `PatAuthGuard`. Ele saiu no ADR 0203 (RN-687), junto com o
+fluxo e com a rota `POST .../runner-device-keys` de que dependia: a chave nasce
+agora NA MÁQUINA (`brabo-runner device-key create`, RN-551), em Node, onde
+`crypto` gera Ed25519 sem dublê — e a cadeia `kid` → JWT → `PatAuthGuard`, com
+chave real, é coberta por `apps/api/test/interfaces/pat-auth.guard.spec.ts` e
+`apps/runner/src/criar-chave-de-dispositivo.spec.ts`. Nada do que restou é
+mecanismo de NAVEGADOR, que é a única pergunta desta camada.

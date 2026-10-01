@@ -90,14 +90,17 @@ defmodule Engine.Outbox.Drain do
               # ADR 0052: solta o dev agent que parou esperando a decisão de
               # uma ação. Sem esta linha o evento é emitido, fica no outbox e
               # nunca vira job — o agente espera para sempre.
-              "task.action_settled",
-              # RN-502/ADR 0143: o container do projeto chegou em `running`, e
-              # com ele a pré-condição de claim. Agregado `container` (e não
-              # `task`) porque o evento não é sobre task nenhuma — é o único
-              # motivo de a query acima drenar um terceiro `aggregate_type`.
-              "container.running"
+              "task.action_settled"
             ],
        do: [Engine.Workers.DevAgentWakeWorker]
+
+  # RN-502/ADR 0143: o container do projeto chegou em `running`, e com ele a
+  # pré-condição de claim. Agregado `container` (e não `task`) porque o evento
+  # não é sobre task nenhuma — é o único motivo de a query acima drenar um
+  # terceiro `aggregate_type`. Desde a RN-672 (ADR 0190) ele tem um SEGUNDO
+  # consumidor: é o momento em que a Infra oferece o handoff ao Dev Lead.
+  defp handlers_for("container.running"),
+    do: [Engine.Workers.DevAgentWakeWorker, Engine.Workers.InfraOfereceDevLeadWorker]
 
   defp handlers_for(_), do: [Engine.Workers.SessionLifecycleWorker]
 end

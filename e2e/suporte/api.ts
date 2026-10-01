@@ -325,59 +325,6 @@ export async function semearSessao(
 }
 
 /**
- * Cria workspace → projeto no modo `runner`.
- *
- * Modo `runner` e não o `container` de `semearSessao` porque é ele — e só ele
- * — que `POST /projects/:projectId/runner-ticket` atende: a rota recusa com
- * 400 em qualquer outro modo (`RequestRunnerTicketUseCase`, RN-421/ADR 0104).
- * E é essa rota que prova, do lado do SERVIDOR, que a chave de dispositivo
- * gerada e registrada pelo navegador autentica de verdade.
- *
- * O caminho é só um LÉXICO válido, e isso basta: desde a RN-423/RN-501 a
- * criação em modo `runner` não toca disco nenhum — quem confirma a pasta é o
- * `brabo-runner` conectando, e nenhum runner conecta nesta suite. `/home/…`
- * de propósito: fora das raízes de sistema que `caminhoDeWorkspaceLocalValido`
- * recusa, e fora do `cwd` da api (o checkout do Brabo, recusado nos DOIS
- * sentidos).
- */
-export async function semearProjetoRunner(token: string): Promise<{
-  workspaceId: string;
-  projectId: string;
-}> {
-  const cabecalhos = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-  const sufixo = `${Date.now()}`;
-
-  const workspace = await json(
-    await fetch(`${API}/workspaces`, {
-      method: 'POST',
-      headers: cabecalhos,
-      body: JSON.stringify({ name: `E2E chave ${sufixo}`, slug: `e2e-chave-${sufixo}` }),
-    }),
-    'POST /workspaces',
-  );
-  const workspaceId = exigirId(workspace, 'workspace');
-
-  const projeto = await json(
-    await fetch(`${API}/workspaces/${workspaceId}/projects`, {
-      method: 'POST',
-      headers: cabecalhos,
-      body: JSON.stringify({
-        name: `E2E chave ${sufixo}`,
-        slug: `e2e-chave-${sufixo}`,
-        executionMode: 'runner',
-        workspacePath: `/home/e2e-runner/${sufixo}`,
-      }),
-    }),
-    'POST /workspaces/:id/projects (runner)',
-  );
-
-  return { workspaceId, projectId: exigirId(projeto, 'projeto') };
-}
-
-/**
  * Um login PRÓPRIO, com os cookies (`brabo_refresh` httpOnly e `brabo_csrf`)
  * para um contexto de navegador — fora da memoização de `autenticar()`.
  *

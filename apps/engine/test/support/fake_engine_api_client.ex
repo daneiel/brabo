@@ -190,6 +190,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # RN-681: a duplicata semântica de regra. Scriptável por
+  # `:fake_semantic_duplicate` (o corpo de `{:ok, corpo}` ou `{:error, motivo}`);
+  # sem script, "nada a comparar", que é o que a api responde a projeto vazio.
+  @impl true
+  def check_semantic_duplicate(_project_id, _session_id, fields) do
+    notify({:semantic_duplicate_checked, fields})
+    reply(:fake_semantic_duplicate, %{"status" => "nothing_to_compare", "message" => nil})
+  end
+
   @impl true
   def create_task(_project_id, _session_id, fields) do
     notify({:task_created, fields})
@@ -332,6 +341,33 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       reason ->
         {:error, reason}
     end
+  end
+
+  # RN-684: o fake devolve a lista que recebeu, versão 1 — ou o erro posto em
+  # `:fake_module_contracts`, pelo `reply/2` de sempre.
+  @impl true
+  def declare_module_contracts(_project_id, _session_id, contratos) do
+    notify({:module_contracts_declared, contratos})
+
+    reply(:fake_module_contracts, %{
+      "version" => 1,
+      "contratos" =>
+        Enum.map(contratos, fn c ->
+          %{"modulo" => Map.get(c, :modulo), "expoe" => Map.get(c, :expoe, [])}
+        end)
+    })
+  end
+
+  @impl true
+  def list_module_contracts(project_id) do
+    notify({:module_contracts_listed, project_id})
+
+    reply(:fake_module_contracts_lidos, %{
+      "status" => "sem_contratos",
+      "version" => 0,
+      "modulos" => [],
+      "contratosForaDoMapa" => []
+    })
   end
 
   @impl true
@@ -719,6 +755,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       # parou sozinho" pra quem consome o desfecho.
       reason = Process.get(:fake_llm_turn_error) ->
         {:error, reason}
+
+      # `:fake_llm_turns_por_agente` — `%{agente => [resp, ...]}`: uma fila
+      # PRÓPRIA para um agente, consumida antes de `:fake_llm_always` e da
+      # fila única. Existe desde o ADR 0192 (RN-674): o `QaLeadServer` roda a
+      # QA-estratégia ANTES das subespecialidades no MESMO processo, e sem
+      # fila própria o plano comeria os turnos que cada teste escreveu para a
+      # Automação. Fila declarada e vazia devolve a resposta final — nunca
+      # cai na fila única de outro agente.
+      Map.has_key?(Process.get(:fake_llm_turns_por_agente, %{}), agent) ->
+        filas = Process.get(:fake_llm_turns_por_agente)
+
+        case Map.fetch!(filas, agent) do
+          [resp | rest] ->
+            Process.put(:fake_llm_turns_por_agente, Map.put(filas, agent, rest))
+            {:ok, resp}
+
+          [] ->
+            {:ok, final_response()}
+        end
 
       resp = Process.get(:fake_llm_always) ->
         {:ok, resp}

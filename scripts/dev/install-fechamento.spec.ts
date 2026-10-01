@@ -103,7 +103,8 @@ function rodar(
       fs.writeFileSync(arquivo, opcoes.entrada);
       entrada = fs.openSync(arquivo, 'r');
     }
-    const processo = spawn('bash', ['-c', `source "${carregavelAgora}"\n${comandos}`], {
+    // Caminho vai como argumento posicional, nunca interpolado no `-c` (AT-346).
+    const processo = spawn('bash', ['-c', 'source "$1"\n' + comandos, 'bash', carregavelAgora], {
       env: { ...process.env, NO_COLOR: '1', ...opcoes.env },
       stdio: [entrada, 'pipe', 'pipe'],
     });

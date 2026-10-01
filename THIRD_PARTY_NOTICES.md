@@ -87,6 +87,17 @@ docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:<tag> \
   -c 'cat /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md'
 ```
 
+**Desde a AT-120, o mesmo arquivo viaja em TODO artefato publicado**, por
+decisão do mantenedor: dentro das imagens `brabo-api`, `brabo-web`,
+`brabo-broker` e `brabo-backup`, no mesmo caminho e na mesma forma da do engine
+(troque o nome da imagem no comando acima), e junto dos binários do runner como
+o asset `THIRD_PARTY_NOTICES.md` da Release, coberto pelo mesmo `checksums.txt`
+assinado (RN-524). A decisão é conservadora: este repositório não afirma que
+algum desses artefatos dispensa a oferta. Até a AT-120 o comando acima dava
+"Permission denied" na imagem do engine: a pasta nascia sem permissão de
+travessia para o usuário não-root da imagem, e agora nasce `0755` antes da
+cópia.
+
 > **TODO(humano):** o caminho 1 cobre a obrigação com o desenho atual, e é o
 > que está no ar. O **caminho 3** (separar os scanners num sidecar, deixando a
 > imagem do engine livre de copyleft) continua aberto como escolha de

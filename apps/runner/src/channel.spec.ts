@@ -203,6 +203,47 @@ describe('conectarCanal', () => {
     });
   });
 
+  // ADR 0193/RN-676 — a marca de git credenciado chega ao handler SÓ como
+  // `true` literal; qualquer outro valor é ausência (a chave nem aparece).
+  it('exec com a marca `gitCredenciado: true` (ADR 0193): repassa a marca pro handler', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onExec = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onExec },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('exec', {
+      ref: 'r1',
+      command: 'git fetch origin',
+      cwd: '/projeto',
+      env: { BRABO_GIT_TOKEN: 'segredo' },
+      gitCredenciado: true,
+    });
+    canal.simularRecebimento('exec', {
+      ref: 'r2',
+      command: 'git fetch origin',
+      cwd: '/projeto',
+      env: { BRABO_GIT_TOKEN: 'segredo' },
+      gitCredenciado: 'true',
+    });
+
+    expect(onExec).toHaveBeenNthCalledWith(1, {
+      ref: 'r1',
+      command: 'git fetch origin',
+      cwd: '/projeto',
+      env: { BRABO_GIT_TOKEN: 'segredo' },
+      gitCredenciado: true,
+    });
+    // CASO DE FALHA — string "true" não é a marca: a chave some.
+    const segundo = onExec.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(segundo).not.toHaveProperty('gitCredenciado');
+  });
+
   it('exec com env malformado (não é objeto string->string): ignora o campo, nunca repassa', async () => {
     const canal = new CanalFalso({ status: 'ok' });
     const onExec = vi.fn();

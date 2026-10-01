@@ -261,6 +261,30 @@ defmodule Engine.Outbox.DrainTest do
     end
   end
 
+  # RN-672 (AT-262, ADR 0190): `container.running` tem DOIS consumidores — o
+  # wake dos dev agents (RN-502) e o aviso à Infra para oferecer o Dev Lead.
+  test "container.running enfileira o DevAgentWakeWorker E o InfraOfereceDevLeadWorker" do
+    project_id = Ecto.UUID.generate()
+
+    insert_outbox_event!(%{
+      aggregate_type: "container",
+      aggregate_id: project_id,
+      event_type: "container.running",
+      payload: %{"projectId" => project_id}
+    })
+
+    Drain.run_once()
+
+    for worker <- [Engine.Workers.DevAgentWakeWorker, Engine.Workers.InfraOfereceDevLeadWorker] do
+      assert_enqueued(
+        worker: worker,
+        args: %{"event_type" => "container.running", "payload" => %{"projectId" => project_id}}
+      )
+    end
+
+    refute_enqueued(worker: Engine.Workers.SessionLifecycleWorker)
+  end
+
   # A correlação do trabalho assíncrono (ADR 0035).
   #
   # Estava quebrada em silêncio desde a Fase 5: o schema `Engine.Outbox.Event`

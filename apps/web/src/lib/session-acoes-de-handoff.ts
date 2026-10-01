@@ -34,7 +34,6 @@ export function useAcoesDeHandoff({
   queryClient,
   showToast,
   t,
-  podeFundirHandoffComExecucao,
   iniciarTurnoDoAgente,
   turnoAgentRef,
   setTurnoViaCanal,
@@ -45,7 +44,6 @@ export function useAcoesDeHandoff({
   queryClient: QueryClient;
   showToast: ReturnType<typeof useToast>['showToast'];
   t: TFunction<'sessionPage'>;
-  podeFundirHandoffComExecucao: boolean;
   iniciarTurnoDoAgente: Turno['iniciarTurnoDoAgente'];
   turnoAgentRef: Turno['turnoAgentRef'];
   setTurnoViaCanal: Turno['setTurnoViaCanal'];
@@ -103,19 +101,13 @@ export function useAcoesDeHandoff({
       // repositório (RN-582) — as telas que perguntam por ele precisam saber.
       queryClient.invalidateQueries({ queryKey: ['repository', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      // RN-161: fusão condicional por papel EFETIVO. `maintainer`/`owner` já
-      // pode ativar a execução (mesma exigência do backend em
-      // `POST .../execution/activate`) — encadear aqui poupa o segundo
-      // clique em "Ativar execução". `handleActivateExecution` trata o
-      // próprio erro (toast + `mensagemDaApi`) e não relança, então um
-      // 403/409 dela nunca cai neste `catch` como "não foi possível aceitar
-      // o handoff", que seria a frase ERRADA (o aceite já tinha funcionado).
-      // Quem só é `developer` mantém o fluxo de hoje: aceitar sem encadear,
-      // com "Ativar execução" continuando disponível como segundo botão
-      // enquanto o card seguir na tela.
-      if (toAgent === 'dev-lead' && podeFundirHandoffComExecucao) {
-        await handleActivateExecution();
-      }
+      // RN-677 (AT-263, ADR 0194) — revisa a RN-161: aceitar o handoff ao
+      // Dev Lead só o traz para PLANEJAR. Aqui encadeávamos
+      // `POST .../execution/activate` para `maintainer`/`owner`, e a execução
+      // subia antes de o plano existir (uso real de 29/09: ativada às
+      // 06:45:01, plano proposto às 06:47:47 e nunca usado). Quem ativa agora
+      // é a APROVAÇÃO do `propose_execution_plan`, na api — nenhum clique a
+      // mais aqui.
       return true;
     } catch {
       turnoAgentRef.current = null;

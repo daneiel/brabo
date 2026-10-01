@@ -6,7 +6,10 @@ import {
   ConflictException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { HttpApiToEngineClient } from '../../../src/infrastructure/http-clients/api-to-engine-client';
+import {
+  HttpApiToEngineClient,
+  entregaDaResposta,
+} from '../../../src/infrastructure/http-clients/api-to-engine-client';
 import {
   RunnerNaoConectadoError,
   RunnerRecusouContainerError,
@@ -460,6 +463,116 @@ describe('HttpApiToEngineClient — a revogação derruba a conexão viva (RN-52
 
     await servidor.fechar();
   });
+
+  describe('o alvo é a CREDENCIAL (ADR 0201, RN-685)', () => {
+    it('requestRunnerTicket leva a credencial no corpo — os dois campos juntos', async () => {
+      const servidor = await servidorQueResponde({
+        ticket: 't',
+        expiresAt: new Date().toISOString(),
+      });
+      const client = new HttpApiToEngineClient();
+
+      await client.requestRunnerTicket(PROJETO, 'user-1', 'runner', {
+        tipo: 'device_key',
+        id: 'kid-1',
+      });
+
+      expect(JSON.parse(servidor.recebido.body ?? '{}')).toEqual({
+        userId: 'user-1',
+        kind: 'runner',
+        credentialKind: 'device_key',
+        credentialId: 'kid-1',
+      });
+
+      await servidor.fechar();
+    });
+
+    it('requestRunnerTicket sem credencial manda o corpo de sempre', async () => {
+      const servidor = await servidorQueResponde({
+        ticket: 't',
+        expiresAt: new Date().toISOString(),
+      });
+      const client = new HttpApiToEngineClient();
+
+      await client.requestRunnerTicket(PROJETO, 'user-1', 'terminal', null);
+
+      expect(JSON.parse(servidor.recebido.body ?? '{}')).toEqual({
+        userId: 'user-1',
+        kind: 'terminal',
+      });
+
+      await servidor.fechar();
+    });
+
+    it('disconnectRunnerCredential: caminho feliz — rota sem projeto, credencial e alcance legado no corpo, balanço de volta', async () => {
+      const servidor = await servidorQueResponde({
+        derrubados: 2,
+        legados: 1,
+        intocados: 3,
+        semResposta: 0,
+        ticketsAnulados: 1,
+      });
+      const client = new HttpApiToEngineClient();
+
+      const balanco = await client.disconnectRunnerCredential(
+        { tipo: 'device_key', id: 'kid-1' },
+        { userId: 'user-1', projectIds: [PROJETO] },
+      );
+
+      expect(balanco).toEqual({
+        derrubados: 2,
+        legados: 1,
+        intocados: 3,
+        semResposta: 0,
+        ticketsAnulados: 1,
+      });
+      expect(servidor.recebido.url).toBe(
+        '/internal/runner/disconnect-credential',
+      );
+      expect(JSON.parse(servidor.recebido.body ?? '{}')).toEqual({
+        credentialKind: 'device_key',
+        credentialId: 'kid-1',
+        userId: 'user-1',
+        projectIds: [PROJETO],
+      });
+
+      await servidor.fechar();
+    });
+
+    it('disconnectRunnerCredential sem alcance legado manda userId nulo e lista vazia; campo estranho vira 0', async () => {
+      const servidor = await servidorQueResponde({ derrubados: 'muitos' });
+      const client = new HttpApiToEngineClient();
+
+      const balanco = await client.disconnectRunnerCredential(
+        { tipo: 'pat', id: 'pat-1' },
+        null,
+      );
+
+      expect(balanco.derrubados).toBe(0);
+      expect(JSON.parse(servidor.recebido.body ?? '{}')).toEqual({
+        credentialKind: 'pat',
+        credentialId: 'pat-1',
+        userId: null,
+        projectIds: [],
+      });
+
+      await servidor.fechar();
+    });
+
+    it('CASO DE FALHA: engine anterior à rota (404) LANÇA — é o sinal para o caso de uso cair no plano B', async () => {
+      const servidor = await servidorQueResponde({ errors: 'Not Found' }, 404);
+      const client = new HttpApiToEngineClient();
+
+      await expect(
+        client.disconnectRunnerCredential(
+          { tipo: 'device_key', id: 'kid-1' },
+          null,
+        ),
+      ).rejects.toThrow(/Falha ao pedir a desconexão da credencial.*404/);
+
+      await servidor.fechar();
+    });
+  });
 });
 
 /**
@@ -511,14 +624,68 @@ describe('HttpApiToEngineClient — comando de turno: aceite e recusa (ADR 0163)
     };
   }
 
-  it('202 é o aceite: resolve sem corpo', async () => {
+  it('202 sem corpo é o aceite de sempre: a mensagem foi lida', async () => {
     const engine = await engineQueResponde(202);
     const client = new HttpApiToEngineClient();
 
     await expect(
       client.sendAgentMessage(PROJETO, SESSAO, 'po', 'oi'),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ entrega: 'lida' });
     expect(engine.urls).toEqual([`/internal/sessions/${SESSAO}/agent/message`]);
+
+    await engine.fechar();
+  });
+
+  // RN-673 (ADR 0191): com turno em curso o engine responde 202 COM corpo — a
+  // mensagem entrou na fila. O id do chat.message vai no pedido.
+  it('202 com corpo de fila: enfileirada, na posição dada; o mensagemId vai no pedido', async () => {
+    const engine = await engineQueResponde(202, {
+      entrega: 'enfileirada',
+      posicao: 3,
+    });
+    const client = new HttpApiToEngineClient();
+
+    await expect(
+      client.sendAgentMessage(PROJETO, SESSAO, 'po', 'Continue', null, 'evt-9'),
+    ).resolves.toEqual({ entrega: 'enfileirada', posicao: 3 });
+    expect(JSON.parse(engine.corpos[0])).toMatchObject({ mensagemId: 'evt-9' });
+
+    await engine.fechar();
+  });
+
+  it('corpo que não se lê como fila (engine antigo, JSON estranho) é o aceite de sempre', () => {
+    expect(entregaDaResposta('')).toEqual({ entrega: 'lida' });
+    expect(entregaDaResposta('não é json')).toEqual({ entrega: 'lida' });
+    expect(entregaDaResposta('{"entrega":"enfileirada"}')).toEqual({
+      entrega: 'lida',
+    });
+  });
+
+  it('cancelar mensagem da fila: 409 do engine (já lida) vira ConflictException com a frase dele', async () => {
+    const engine = await engineQueResponde(409, {
+      error:
+        'Esta mensagem não está mais na fila — ela já foi lida pelo agente.',
+      motivo: 'mensagem_fora_da_fila',
+    });
+    const client = new HttpApiToEngineClient();
+
+    const erro = await client
+      .cancelQueuedMessage(PROJETO, SESSAO, 'po', 'evt-9', 'u-1')
+      .catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(ConflictException);
+    expect((erro as ConflictException).message).toMatch(
+      /não está mais na fila/,
+    );
+    expect(engine.urls).toEqual([
+      `/internal/sessions/${SESSAO}/agent/queued-message/cancel`,
+    ]);
+    expect(JSON.parse(engine.corpos[0])).toEqual({
+      projectId: PROJETO,
+      agent: 'po',
+      mensagemId: 'evt-9',
+      userId: 'u-1',
+    });
 
     await engine.fechar();
   });
@@ -539,6 +706,41 @@ describe('HttpApiToEngineClient — comando de turno: aceite e recusa (ADR 0163)
       idiomaDaResposta: 'pt-BR',
     });
     expect(JSON.parse(engine.corpos[1])).not.toHaveProperty('idiomaDaResposta');
+
+    await engine.fechar();
+  });
+
+  // RN-680: os fatos do perfil do autor seguem a MESMA regra do idioma.
+  it('perfilDoAutor vai no corpo quando há fatos, e fica de fora quando null', async () => {
+    const engine = await engineQueResponde(202);
+    const client = new HttpApiToEngineClient();
+
+    await client.sendAgentMessage(
+      PROJETO,
+      SESSAO,
+      'po',
+      'oi',
+      null,
+      null,
+      'Fatos…',
+    );
+    await client.sendAgentMessage(
+      PROJETO,
+      SESSAO,
+      'po',
+      'oi',
+      'pt-BR',
+      null,
+      null,
+    );
+
+    expect(JSON.parse(engine.corpos[0])).toEqual({
+      projectId: PROJETO,
+      agent: 'po',
+      text: 'oi',
+      perfilDoAutor: 'Fatos…',
+    });
+    expect(JSON.parse(engine.corpos[1])).not.toHaveProperty('perfilDoAutor');
 
     await engine.fechar();
   });

@@ -85,7 +85,6 @@ import type {
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
-  RunnerDeviceKeySummary,
   RunnerDeviceKeyListItem,
   Workspace,
   WorkspaceSummary,
@@ -421,19 +420,6 @@ export const revokePersonalAccessTokenAsMaintainer = (
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
 
 /**
- * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
- * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
- * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
- */
-export const registerRunnerDeviceKey = (
-  projectId: string,
-  input: { name: string; publicKeyJwk: string },
-) =>
-  post<RunnerDeviceKeySummary>(
-    `/projects/${projectId}/runner-device-keys`,
-    input,
-  );
-/**
  * As chaves de dispositivo PRÓPRIAS que servem este projeto (RN-519) —
  * inclusive as de MÁQUINA (`especie: 'maquina'`), que servem todo projeto do
  * dono sem pertencer a nenhum (ADR 0154, RN-543).
@@ -696,9 +682,24 @@ export const sendAgentMessage = (
   agent: string,
   text: string,
 ) =>
+  post<{
+    ok: true;
+    mensagemId: string;
+    // RN-673: `enfileirada` — o agente estava no meio de um turno e a
+    // mensagem entrou na fila dele, para ser lida no fim (junto com as outras).
+    entrega: 'lida' | 'enfileirada';
+    posicao?: number;
+  }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, { text });
+// RN-673: cancela UMA mensagem que espera na fila do agente — só quem a
+// enviou; já lida ou já cancelada volta 409 com a frase do engine.
+export const cancelQueuedAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  messageId: string,
+) =>
   post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
-    { text },
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/messages/${messageId}/cancel`,
   );
 // RN-122: o botão "Parar" do composer — mata a chamada ao LLM em curso no
 // engine (Task.shutdown, brutal_kill), cortando a conexão no meio pra

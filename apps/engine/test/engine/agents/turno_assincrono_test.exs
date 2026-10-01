@@ -224,7 +224,11 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     end
   end
 
-  describe "uma segunda mensagem enquanto o turno está em curso" do
+  # Desde a RN-673 (ADR 0191) a MENSAGEM não passa mais por esta recusa — ela
+  # entra na fila (`fila_de_mensagens_test.exs`). A recusa segue valendo para o
+  # comando que NÃO é fala (revisão do PO, prontidão do Criativo, oferta de
+  # handoff do Arquiteto), que chama `iniciar/3` com `from`.
+  describe "um segundo comando enquanto o turno está em curso" do
     test "responde {:error, :turno_em_andamento} e NÃO sobe uma segunda task", %{state: state} do
       {state_with_task, _from} = turno_pendurado(state)
 
@@ -233,11 +237,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       segunda_from = {self(), make_ref()}
 
       assert {:reply, {:error, :turno_em_andamento}, ^state_with_task} =
-               CriativoServer.handle_call(
-                 {:user_message, "outra coisa"},
-                 segunda_from,
-                 state_with_task
-               )
+               TurnoAssincrono.iniciar(state_with_task, segunda_from, fn -> state_with_task end)
 
       # ADR 0163 (RN-578): a recusa deixou de ser calada. Até lá o controller
       # descartava este retorno e o clique recebia 202 — a mensagem ficava no
@@ -246,7 +246,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
                        %{type: "agent.error", payload: %{reason: "turno_em_andamento"} = payload}}
 
       assert payload.origem == "politica"
-      assert payload.mensagem =~ "não a li"
+      assert payload.mensagem =~ "não foi atendido"
       assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
 
       # E NÃO fecha o turno em curso: `agent.done`/`idle` diriam à tela que
@@ -298,8 +298,7 @@ defmodule Engine.Agents.TurnoAssincronoTest do
     } do
       {_pid, tag} = from = {self(), make_ref()}
 
-      {:reply, :ok, state_with_task} =
-        TurnoAssincrono.iniciar(state, from, fn -> {state, ""} end)
+      {:reply, :ok, state_with_task} = TurnoAssincrono.iniciar(state, from, fn -> {state, ""} end)
 
       %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
       assert_receive {^ref, resultado}, 1_000

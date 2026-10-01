@@ -14,6 +14,7 @@
     "choose_project_image": "Escolhendo a imagem do projeto",
     "create_c4_diagram": "Desenhando o diagrama C4",
     "route_modules_to_infra": "Roteando módulos para imagens candidatas",
+    "declare_module_contracts": "Declarando os contratos entre módulos",
     "propose_adr": "Redigindo um ADR",
     "emit_insight": "Registrando um insight",
     "propose_execution_plan": "Montando o plano de execução",

@@ -114,6 +114,25 @@ describe('frases derivadas do payload', () => {
     );
   });
 
+  // RN-677 (AT-263): aprovar o plano ATIVA a execução — a frase diz antes do clique.
+  it('a frase do plano do Dev Lead diz que aprovar ATIVA a execução, e conta as tarefas', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      totalAgentes: 2,
+      modulos: [{ modulo: 'api' }, { modulo: 'web' }],
+      tarefas: [{ taskId: 't1', modulo: 'api' }, { taskId: 't2', modulo: 'web' }],
+      resumo: 'um por módulo',
+    })!;
+    expect(frase).toContain('ATIVA a execução');
+    expect(frase).toContain('2 tarefas');
+    expect(frase).not.toContain('ainda decide');
+  });
+
+  it('plano sem `tarefas` (payload antigo) não inventa contagem', () => {
+    const frase = fraseDaAcao('propose_execution_plan', { totalAgentes: 1, modulos: [{}] })!;
+    expect(frase).toContain('ATIVA a execução');
+    expect(frase).not.toContain('tarefa');
+  });
+
   it('comando muito longo é cortado — a frase é resumo, o corpo é que é o dado', () => {
     const frase = fraseDaAcao('terminal', { command: 'x'.repeat(500) })!;
     expect(frase.length).toBeLessThan(200);

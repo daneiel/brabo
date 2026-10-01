@@ -1,0 +1,22 @@
+/* RN-670 (ADR 0189): o que o piloto automático libera e o que não libera —
+   a mesma lista nos três lugares onde o modo automático é ligado. */
+.caixa {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.caixa summary {
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.listas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.listas ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}

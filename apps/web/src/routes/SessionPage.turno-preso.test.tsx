@@ -207,7 +207,7 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(4000);
     });
-    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Parar' })).not.toBeNull();
 
     // O canal registrou os handlers, mas o teste NUNCA chama onAgentDone —
     // simula o broadcast perdido (join tardio, ticket expirado, etc.).
@@ -244,7 +244,10 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     });
 
     // `streaming` volta a `false` pela leitura do log.
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
 
     // Sem duplicata: a bolha otimista saiu quando o persistido chegou.
     expect(
@@ -272,7 +275,7 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     fireEvent.keyDown(campo, { key: 'Enter' });
 
     expect(await screen.findByText(/mas não foi lida/)).toBeInTheDocument();
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('CASO DE FALHA: erro no envio limpa o estado otimista e avisa o usuário', async () => {
@@ -286,7 +289,7 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     fireEvent.change(campo, { target: { value: 'oi' } });
     fireEvent.keyDown(campo, { key: 'Enter' });
 
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
     expect(screen.queryByText('oi')).toBeNull();
   });
 });

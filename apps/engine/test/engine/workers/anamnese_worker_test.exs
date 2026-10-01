@@ -41,6 +41,26 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     %Oban.Job{args: %{"project_id" => project_id, "session_id" => session_id}}
   end
 
+  defp job_manual(project_id, session_id) do
+    %Oban.Job{
+      args: %{"project_id" => project_id, "session_id" => session_id, "origem" => "manual"}
+    }
+  end
+
+  # RN-680: sem interação PRÓPRIA na janela, o membro não é sujeito e a
+  # rodada nem chega ao LLM. O banco de teste não tem eventos na janela, então
+  # o contexto padrão traz UMA decisão do `user-1` — é o que o faz sujeito.
+  # Testes que sobrescrevem `"decisions"` mantêm o `user-1` como quem decidiu.
+  defp decisao_do_sujeito do
+    %{
+      "actionType" => "terminal",
+      "status" => "approved",
+      "rejectionReason" => nil,
+      "decidedBy" => "user-1",
+      "decidedAt" => "2026-07-19T10:00:00Z"
+    }
+  end
+
   defp context(overrides \\ %{}) do
     Map.merge(
       %{
@@ -51,6 +71,7 @@ defmodule Engine.Workers.AnamneseWorkerTest do
         "queuedHypotheses" => [],
         "currentProfiles" => [],
         "instructions" => [],
+        "decisions" => [decisao_do_sujeito()],
         "windowFrom" => nil
       },
       overrides
@@ -91,7 +112,7 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     refute_received {:proficiency_recorded, _}
   end
 
-  test "hipótese aceita na fila FORÇA a rodada mesmo com janela vazia", %{
+  test "hipótese aceita na fila FORÇA a rodada mesmo com janela quase vazia", %{
     project_id: project_id,
     session_id: session_id
   } do
@@ -269,6 +290,102 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     # E NÃO narra falha: uma rodada que fez a coisa certa não pode aparecer
     # como falha, senão quem lê o log aprende a ignorar o evento de falha.
     refute_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
+  end
+
+  describe "sujeito elegível (RN-680)" do
+    @hipotese_na_fila %{
+      "queueId" => "queue-1",
+      "hypothesisId" => "hyp-7",
+      "agenteAlvo" => "dev-api",
+      "hipotese" => "o dev explica demais o básico",
+      "sugestao" => "encurtar as explicações",
+      "confiancaPercent" => 80
+    }
+
+    test "sem membro elegível: nenhuma chamada ao LLM, nem com hipótese na fila", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # O caso do uso real de 29/09: seis rodadas pagas para o modelo
+      # concluir "nenhum membro elegível".
+      Process.put(
+        :fake_anamnese_context,
+        context(%{"members" => [], "queuedHypotheses" => [@hipotese_na_fila]})
+      )
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      refute_received {:llm_turn, _agent, _messages, _tools}
+      refute_received {:rag_search, _, _, _}
+      # Pelo tick é só log: nenhum evento na timeline.
+      refute_received {:event_appended, ^project_id, ^session_id, _}
+    end
+
+    test "membro sem interação PRÓPRIA na janela não é sujeito", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+
+      Process.put(
+        :fake_anamnese_context,
+        context(%{
+          "decisions" => [Map.put(decisao_do_sujeito(), "decidedBy", "outra-pessoa")],
+          "queuedHypotheses" => [@hipotese_na_fila]
+        })
+      )
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      refute_received {:llm_turn, _agent, _messages, _tools}
+    end
+
+    test "rodada pedida à MÃO sem sujeito narra run_skipped com a causa", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_anamnese_context, context(%{"members" => []}))
+
+      assert :ok = AnamneseWorker.perform(job_manual(project_id, session_id))
+
+      refute_received {:llm_turn, _agent, _messages, _tools}
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{
+                         type: "anamnese.run_skipped",
+                         payload: %{causa: "sem_sujeito_elegivel", detalhe: "nenhum_membro"}
+                       }}
+    end
+
+    test "o prompt lista só os SUJEITOS, não todo membro", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+
+      Process.put(
+        :fake_anamnese_context,
+        context(%{
+          "members" => [
+            %{"userId" => "user-1", "name" => "Dani", "email" => "d@x.dev", "role" => "owner"},
+            %{"userId" => "user-2", "name" => "Calada", "email" => "c@x.dev", "role" => "viewer"}
+          ]
+        })
+      )
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      content = Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
+      assert content =~ "Dani"
+      refute content =~ "Calada"
+    end
   end
 
   test "sem sessão no projeto: não roda (não há onde narrar)", %{

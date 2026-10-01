@@ -1,7 +1,7 @@
 ---
 id: medicao-do-jev
 title: Measuring the Jev tool router
-description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see.
+description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see; and the live with-and-without comparison of AT-239 — instrument, protocol, decision rule and cost estimate written before any run, and the run of 2026-10-01 (40 executions, US$ 0.52) — restrict, the router paid off on Haiku and lost on DeepSeek, whose prompt cache it breaks.
 ---
 
 # Measuring the Jev tool router
@@ -320,12 +320,12 @@ Where each new field comes from in the engine (`apps/engine/lib/engine/…`):
 
 | field | source |
 |---|---|
-| `pedido` (dev) | `initial_message/2`, `dev/dev_agent_server.ex:481`; task and story titles from `tasks`/`stories` |
+| `pedido` (dev) | `initial_message/2`, `dev/dev_agent_server.ex:484`; task and story titles from `tasks`/`stories` |
 | `pedido` (`qa-automacao`) | `initial_message/2`, `gates/qa_automacao_agent.ex:108`; task from the last `dev.awaiting_gate`, requirements from the story |
 | `pedido` (`qa-estrategia`, `appsec`) | `gates/qa_estrategia_agent.ex:93`, `gates/appsec_agent.ex:79`; **the story is not recoverable from the log**, so the message says so and carries the module map |
 | recent steps by run | `ToolLoop.Default.init/1` and `loop/1` (`harness/tool_loop.ex`): `messages` is built per `run` |
 | complete results, `texto` | the `tool` and `assistant` messages `loop/1` appends (`concluir_despacho/5`, `append(ctx, message)`); the log cuts results at 2 000 |
-| approved-command results (`acoes`) | `texto_do_desfecho/1`, `dev/dev_agent_server.ex:457`; the log has no `tool.result` for them, only `proposed_actions.execution_result` |
+| approved-command results (`acoes`) | `texto_do_desfecho/1`, `dev/dev_agent_server.ex:460`; the log has no `tool.result` for them, only `proposed_actions.execution_result` |
 | `progresso`, `trilha` | counts over the run's earlier calls in the same `messages` |
 
 Not ported, and said so in `kickoff.ts`: the Anamnese (its message is built
@@ -702,6 +702,254 @@ One call, for the 36 new steps: **US$ 0.001275** by `usage.cost` (task ceiling
 US$ 0.30). The policies are offline over the answers already on disk. The
 accumulated spend of the output directory went from US$ 0.4136 to US$ 0.4149.
 
+## Live comparison (AT-239, 2026-10-01): restrict, on for Haiku and off for DeepSeek
+
+> AT-239 (EP-029, HS-063) asks the question every earlier section left open:
+> **with the router on, do turns get shorter, faster or cheaper, and does the
+> work still come out?** The same tasks, on the same OpenRouter model, with the
+> routing of [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)
+> on and off, on two chat models of different speeds.
+>
+> **Status on 2026-10-01: measured on the third attempt** (below). **First
+> attempt: not measured.** The session that built the instrument
+> (branch `test/jev-com-e-sem`, from `dev` at `d070b000d7`) had a paid key and a
+> US$ 5.00 ceiling, but its egress proxy denied the `CONNECT` to
+> `openrouter.ai:443` by organization policy, and also to `repo.hex.pm` and
+> `builds.hex.pm`, so the engine could not be compiled either. No chat call and
+> no Jev call left the machine: **spend US$ 0.00**. What follows is the
+> instrument, the protocol and the decision rule, all written **before** any
+> run, the numbers that could be measured without the network, and then the
+> live table of the third attempt.
+>
+> **Second attempt, same day: still not measured, for a different reason.** The
+> owner allowed `openrouter.ai` on the session's egress (a `GET` answered 200),
+> and both protocol models were listed with tool support
+> (`deepseek/deepseek-v4.1-flash` at US$ 0.03/0.50 per million input/output,
+> `anthropic/claude-haiku-4.5` at US$ 1.00/5.00). The first chat call came back
+> `HTTP 403 Key limit exceeded (total limit)`: the test key has a US$ 10.00
+> limit, US$ 10.05 already used and no reset (`GET /api/v1/key`). A one-task
+> smoke, outside the protocol and in its own folder, spent **US$ 0.00**; no
+> protocol execution was recorded. Running it needs the owner to raise the
+> key's limit (or hand over another key) — about US$ 1.28 by the estimate below,
+> less at DeepSeek's current price. The smoke also found two things the fake
+> network never could, both fixed or documented in the instrument:
+>
+> - **An account or network failure was recorded as a measured execution.**
+>   Both smoke executions ended `erro` at step 0 with `HTTP 403`, were written
+>   to the output as "the task did not come out", and the resume would never
+>   have repeated them: with a dead key, all 40 executions would have entered
+>   the table. `falhaDeInfra` (`resumo.ts`) now classifies a chat error of HTTP
+>   401/402/403/407/429 or transport as the measurement not happening; `vivo.ts`
+>   does not record that execution, stops the run with the reason, and the
+>   resume repeats it. A provider error in a 200 body, a 5xx, and a Jev
+>   fallback stay outcomes of the arm, as in the engine.
+> - **Node's `fetch` ignores `HTTPS_PROXY`.** Behind a proxy, run with
+>   `NODE_USE_ENV_PROXY=1` (Node ≥ 22.21); without it the calls went direct and
+>   the egress answered 403 with a non-JSON body.
+>
+> **Third attempt, same day: measured.** The owner raised the key's limit to
+> US$ 20.00 (US$ 9.95 left before the run) and allowed a US$ 4.50 ceiling. The
+> protocol below ran exactly as written — both models, five tasks, two rounds,
+> 40 executions, the defaults of `jev:vivo` — at commit `0eab0cb0e9`, with no
+> account or network failure and no interrupted execution. **Spend: US$ 0.5195**
+> by the sum of `usage.cost` in the output (US$ 0.0424 DeepSeek, US$ 0.4771
+> Haiku); the key's `usage` moved by the same US$ 0.5195 (US$ 10.0545 →
+> US$ 10.5739, read about ten minutes after the run — a read right after it
+> still showed US$ 0.4597, the bill lags the responses). The table and
+> the verdict are in "The live table" and "Recommendation" below; the protocol,
+> the rule and the estimate were not touched after the numbers came in.
+
+### What the instrument runs, and what is a port
+
+`pnpm --filter @brabo/scripts jev:vivo` (files in `scripts/jev/vivo/`) runs a
+dev agent's loop on five small tasks, once with the router on and once off, and
+calls OpenRouter directly — the api, the engine and the database are not
+involved, like the paid language validation of AT-167.
+
+| file | role | product or port |
+|---|---|---|
+| `roteador.ts` | `recortarEstado`, `montarPedidoAoJev`, `lerRespostaDoJev`, `menuP3`, the `state` ceiling | **the product's code**, re-exported from `apps/api/src/domain/llm/tool-router.ts` |
+| `laco.ts` | the loop: iteration ceiling, recovery of tool calls written as text, stop on an accepted `report_done`/`report_blocked`, the single retry with the whole catalog when a restricted menu got an answer with no tool | port of `ToolLoop`, `EngineApiClient.llm_turn/5` and `DecidirFerramentaDoPassoUseCase` |
+| `recuperacao.ts` | which steps went through `tool_call_recovery.ex` | port; its spec runs the cases of `tool_call_recovery_test.exs` and pins anchor lines of the `.ex` |
+| `rede.ts` | the chat call (messages on the wire as the api writes them) and the Jev call (2 000 ms ceiling, the same named fallbacks) | port of `toWireMessage`/`toWireTool` and of `JevToolRouter`; anchor lines pinned |
+| `ferramentas-dev.exs` → `ferramentas-dev.json` | the **complete** `spec/0` of the nine tools of `Engine.Dev.Tools.registry/0` (name, description, parameter schema) | read from the engine source with plain `elixir`, no compiled engine; a spec fails when the registry or a description drifts |
+| `tarefas.ts` | five tasks on a dependency-free Node project, each with a check run **after** the loop (original tests restored, hidden tests added): "the task came out" | the instrument's own |
+| `executor.ts` | the tools in a temporary sandbox, returning the engine's texts where they are fixed in code | the instrument's own |
+| `resumo.ts`, `vivo.ts` | the table, the decision rule, the cost estimate, the CLI | the instrument's own |
+
+Out of the instrument, the same in both arms and declared: the approval
+pipeline (`terminal` and `write_file` run directly, as in auto mode), context
+compaction, the language orientation and the author profile appended at the
+end of each call, the RAG (empty index), the module contracts (none declared),
+and the rest of the real system prompt (instruction files, business rules, task
+state). The system prompt is the engine's dev identity plus two lines of project
+context; the first user message is the engine's own kickoff
+(`scripts/jev/kickoff.ts`). The cost of each call is the `usage.cost` of the
+response, the number RN-665 ([ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md))
+puts in the metering; the product's `token_usage` is not involved.
+
+### Protocol (written before any run)
+
+- **Models**: `deepseek/deepseek-v4.1-flash` (slower, reasoning) and
+  `anthropic/claude-haiku-4.5` (faster), the two the AT-167 validation already
+  reached with tool definitions on this key.
+- **Tasks**: `T1-media` (implement a function), `T2-moeda` (fix a formatting
+  bug), `T3-limite` (the cause is in another file: `config/`), `T4-slug`
+  (create a module and its tests; hidden tests check it), `T5-renomear` (rename
+  across two files; no rest of the old name may stay in `src/`). Each task's
+  starting state fails its check and a reference solution passes it (spec).
+- **Sample**: 2 rounds → 10 executions per arm per model, 40 in all. Arm order
+  alternates by task and round, so neither arm always gets the provider's
+  slower minute. Iteration ceiling 30 (the product's dev ceiling is 60; here it
+  bounds spend).
+- **Per execution**: steps; steps whose calls came as **text** and went through
+  the recovery; steps where the router was consulted, applied a smaller menu,
+  left the catalog whole without a fallback (no previous tool, or the Jev said
+  `responder_sem_ferramenta`), or **fell back** (with the reason and the RN-059
+  origin); retries with the whole catalog; calls outside the step's menu;
+  wall-clock latency of the whole execution (Jev + chat + tools) and of the LLM
+  part; cost of chat and of Jev; how it ended; whether the task came out.
+- **Decision rule** (`comparar` in `resumo.ts`), per model, on with off:
+  quality — the "task came out" rate of *on* no more than **10 points** below
+  *off*; cost — the mean cost per task that came out (chat + Jev) of *on* not
+  above *off*; latency — the median execution of *on* not above **1.2×** *off*.
+  **Keep on by default** if all three hold on every model; **turn off** if
+  quality fails on every model or no model passes the three; **restrict** to the
+  models that pass otherwise. Fewer than 10 executions per arm is
+  `amostra_insuficiente`, never a verdict.
+
+### Cost estimate (no network)
+
+`--estimar` with the prices that were measurable from earlier records: DeepSeek
+input US$ 0.30 per million and Haiku US$ 1.00 (both derived from the paired
+input cost reported in
+[Measuring the language heuristic](medicao-do-idioma.md#incremental-cost-of-the-orientation));
+output US$ 1.20 for DeepSeek is an **assumption** (not recorded anywhere) and
+US$ 5.00 for Haiku the list price. Assumed 12 steps per execution, 400 tokens of
+history added per step, 150 output tokens, no cache:
+
+| model | per execution | both arms, 2 rounds |
+|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | ~US$ 0.015 | ~US$ 0.29 |
+| `anthropic/claude-haiku-4.5` | ~US$ 0.049 | ~US$ 0.99 |
+| **total** | | **~US$ 1.28** |
+
+The run stops before any call once the accumulated `usage.cost` of the output
+folder reaches `--teto-usd` (default 4.50) and does not start an execution with
+less than `--reserva-usd` (0.10) left.
+
+### What could be measured offline (2026-10-01)
+
+The dev catalog grew since the replay: `listar_contratos_de_modulos`
+(RN-684) is the ninth tool, and `catalogo.json` (eight) is stale for it — the
+replay's 746 → 138 tokens no longer describes the current catalog. On the wire
+(`toWireTool` form, `ferramentas-dev.json`):
+
+| | characters | ≈ tokens (÷ 4) |
+|---|---|---|
+| whole dev catalog, 9 tools | 3 816 | 954 |
+| a 2-tool menu, median over all pairs (min 501, max 1 464) | 850 | 213 |
+| saving per call where P3 restricts the menu | | **≈ 741** |
+
+The Jev costs US$ 0.0000727 per step (AT-237), so the definition saving pays for
+it on a chat model whose input costs more than **US$ 0.098 per million tokens**
+(0.0000727 ÷ 741) — both models of the protocol, at list price. The catch is
+the same one written in "Savings in tool definitions": tool definitions are the
+start of the cached prefix, a menu that changes from step to step breaks the
+cache, and DeepSeek served most of its input from cache in AT-167. Whether the
+saving survives that, and what the extra call in series costs in latency inside
+the loop (p50 306 ms per step, measured outside it), is exactly what the live
+table would answer.
+
+### The live table (2026-10-01, commit `0eab0cb0e9`)
+
+Generated by `jev:vivo --relatorio` over the 40 executions of the protocol run
+(all dated 2026-10-01, all at `0eab0cb0e9`). Brackets are the 95% interval of
+the "task came out" rate.
+
+| model | Jev | executions | task came out | steps (median · mean) | steps via `tool_call_recovery` | execution p50 · p95 | LLM (chat + Jev) p50 | cost/execution (chat + Jev) | of which Jev | cost per task out | Jev: applied · unrestricted · fallback | retries with whole catalog | outside the menu |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | on | 10 | 10/10 = 100% (72%–100%) | 5 · 6.5 | 0/65 | 4.8 s · 16.3 s | 4.4 s | US$ 0.0029 | US$ 0.0004 | US$ 0.0029 | 55/65 · 10 · 0 | 0 | 3 |
+| `deepseek/deepseek-v4.1-flash` | off | 10 | 10/10 = 100% (72%–100%) | 6 · 6.1 | 0/61 | 3.3 s · 25.4 s | 2.9 s | US$ 0.0013 | — | US$ 0.0013 | — | — | — |
+| `anthropic/claude-haiku-4.5` | on | 10 | 10/10 = 100% (72%–100%) | 6 · 6.4 | 0/64 | 12.7 s · 20.2 s | 12.2 s | US$ 0.0194 | US$ 0.0004 | US$ 0.0194 | 54/64 · 10 · 0 | 0 | 4 |
+| `anthropic/claude-haiku-4.5` | off | 10 | 9/10 = 90% (60%–98%) | 7 · 7.1 | 0/71 | 13.3 s · 21.6 s | 12.9 s | US$ 0.0283 | — | US$ 0.0314 | — | — | — |
+
+Every execution ended with an accepted `report_done`; the one task that did not
+come out (Haiku, off, `T4-slug` round 0) reported done after 12 steps with the
+hidden tests failing. No step in any arm needed `tool_call_recovery`, the Jev
+never fell back (no timeout, no HTTP error, no invalid answer in 129 calls), and
+no restricted menu got an answer with no tool. The 10 "unrestricted" steps per
+arm are the first step of each execution, where there is no previous tool.
+
+The rule (`comparar`), per model, on against off:
+
+| model | quality: Δ "came out" | cost per task out, on ÷ off | median execution, on ÷ off | passes |
+|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | 0 points (within 10) | **×2.21** (above 1) | **×1.45** (above 1.2) | no |
+| `anthropic/claude-haiku-4.5` | 10 points in favour of on (within 10) | ×0.62 | ×0.95 | yes |
+
+**Verdict of the rule: restrict** — Haiku passes the three conditions, DeepSeek
+fails cost and latency. Quality did not fail on either model.
+
+Why the two models split, from the per-step records of the same output (prompt
+tokens and the cached tokens the provider reported):
+
+| model | Jev | prompt tokens (all steps) | of which served from cache | chat cost | Jev cost |
+|---|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | off | 131 983 | 111 104 (84%) | US$ 0.0132 | — |
+| `deepseek/deepseek-v4.1-flash` | on | 97 070 | 43 520 (45%) | US$ 0.0248 | US$ 0.0044 |
+| `anthropic/claude-haiku-4.5` | off | 228 886 | 0 | US$ 0.2827 | — |
+| `anthropic/claude-haiku-4.5` | on | 137 059 | 0 | US$ 0.1901 | US$ 0.0043 |
+
+- **The cache caveat written before the run is what happened on DeepSeek.** The
+  menu cuts the prompt (−26% of tokens) but changes from step to step, so the
+  cached prefix breaks: the share served from cache fell from 84% to 45%, and
+  the chat bill went *up* ×1.9 with fewer tokens sent. On top of it the Jev
+  (US$ 0.0004 per execution) is a third of what a whole execution off costs.
+- **On Haiku there was no cache in either arm** (the instrument sends no
+  `cache_control`, and neither does the product's wire form it ports), so the
+  −40% of prompt tokens went straight to the bill: −31% per execution, and the
+  Jev is 2% of it.
+- **Latency follows the chat's speed, as AT-239 expected.** The Jev call is in
+  series (p50 232 ms / p95 358 ms per call on the DeepSeek runs, 217 / 319 ms
+  on the Haiku runs): on a 13 s Haiku execution it is absorbed by one step
+  fewer; on a 3 s DeepSeek execution it adds 1.5 s to the median.
+- **Quality**: one execution of difference on Haiku, intervals overlapping
+  (60%–98% against 72%–100%) — no evidence the router helps quality, and none
+  that it hurts it, on these five small tasks.
+
+### Recommendation (measured — the owner decides)
+
+**Restrict**, by the rule written before the run: keep the router on where the
+chat model has no prompt cache in effect and is slow enough that one extra call
+in series is small (Haiku-class, US$ 1.00/5.00 per million), and off where the
+provider serves most of the input from cache and the chat is fast
+(DeepSeek-class). The numbers that justify it are the rule's rows above: Haiku
+×0.62 cost and ×0.95 latency with no quality loss; DeepSeek ×2.21 cost and
+×1.45 latency with no quality gain.
+
+What this does **not** cover, and what restricting would need:
+
+- **Only dev agents (the `ToolLoop`) were measured.** The earlier reading — no
+  evidence for the seven conversational agents — still holds; nothing here
+  extends to them.
+- **The split is by model, and the product's switch is by workspace**
+  (`PUT workspaces/:workspaceId/tool-router`). A per-model (or "cache in
+  effect") restriction does not exist; making it is a new decision and a new
+  change, not done here. Until then the measured choice per workspace is: on
+  if its agents run on a Haiku-class model without cache, off if on a
+  DeepSeek-class model with cache.
+- **Sample and tasks are small** (10 executions per arm, five tasks of 4 to 16
+  steps). The cost and latency ratios are wide enough to read; a quality
+  difference of one execution is not.
+- **The cache effect depends on the provider's caching**, not on speed alone:
+  a Haiku workspace with prompt caching turned on would likely move towards
+  the DeepSeek row. Not measured.
+
+The provisional recommendation that stood here before the run (restrict: on
+for dev agents, off for conversational agents) is superseded by the rule's
+verdict above, as that paragraph said it would be.
+
 ## Reproducing
 
 ```bash
@@ -764,4 +1012,24 @@ pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-
 # --dados-base is the snapshot that fixed the split; what it did not know is "new"
 pnpm --filter @brabo/scripts jev:menu -- --dados-cache ~/.cache/brabo/replay-jev/dados-d.json \
   --dados-base ~/.cache/brabo/replay-jev/dados-c.json --sensibilidade
+```
+
+The live comparison of AT-239 (needs `openrouter.ai` reachable; the output
+folder, `$XDG_CACHE_HOME/brabo/jev-vivo/` by default, stays out of the checkout
+and the script refuses one inside it):
+
+```bash
+# the dev tool definitions, when a dev tool changed (plain elixir, no compiled engine)
+elixir scripts/jev/vivo/ferramentas-dev.exs > scripts/jev/vivo/ferramentas-dev.json
+
+# the estimate, without the network
+pnpm --filter @brabo/scripts jev:vivo -- --estimar \
+  --preco deepseek/deepseek-v4.1-flash=0.3/1.2 --preco anthropic/claude-haiku-4.5=1/5
+
+# the run (resumes; stops before any call at the ceiling, and on an account or
+# network failure without recording it), then the table and the verdict;
+# behind a proxy, prefix NODE_USE_ENV_PROXY=1 (Node's fetch ignores HTTPS_PROXY)
+pnpm --filter @brabo/scripts jev:vivo -- --rodadas 2 --teto-usd 4.5 \
+  --arquivo-de-chave ~/.config/brabo/openrouter-test.env
+pnpm --filter @brabo/scripts jev:vivo -- --relatorio
 ```

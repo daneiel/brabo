@@ -107,4 +107,63 @@ defmodule Engine.Runners.SocketTicketTest do
              "esperava exatamente 1 sucesso, teve #{sucessos}: #{inspect(resultados)}"
     end
   end
+
+  describe "a credencial que emitiu o ticket (ADR 0201, RN-685)" do
+    test "emitir/4 grava a credencial, e validar/1 e consumir/2 a devolvem" do
+      project_id = Ecto.UUID.generate()
+      chave = Ecto.UUID.generate()
+      credencial = SocketTicket.credencial("device_key", chave)
+
+      {:ok, %{ticket: bruto}} =
+        SocketTicket.emitir(project_id, Ecto.UUID.generate(), "runner", credencial)
+
+      assert {:ok, %{credencial: %{kind: "device_key", id: ^chave}}} = SocketTicket.validar(bruto)
+
+      assert {:ok, %{credencial: %{kind: "device_key", id: ^chave}}} =
+               SocketTicket.consumir(bruto, project_id)
+    end
+
+    test "sem credencial (terminal, ou api anterior no rollout) o ticket vale, com credencial nil" do
+      project_id = Ecto.UUID.generate()
+      {:ok, %{ticket: bruto}} = SocketTicket.emitir(project_id, Ecto.UUID.generate(), "runner")
+
+      assert {:ok, %{credencial: nil}} = SocketTicket.validar(bruto)
+    end
+
+    test "CASO DE FALHA: espécie desconhecida ou id vazio viram nil — nunca uma credencial inventada" do
+      assert SocketTicket.credencial("jwt_de_sessao", "x") == nil
+      assert SocketTicket.credencial("pat", "") == nil
+      assert SocketTicket.credencial("device_key", nil) == nil
+      assert SocketTicket.credencial(nil, nil) == nil
+      assert %{kind: "pat", id: "p1"} = SocketTicket.credencial("pat", "p1")
+    end
+
+    test "anular_pendentes_da_credencial/1 queima SÓ os tickets pendentes daquela credencial" do
+      project_id = Ecto.UUID.generate()
+      revogada = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      outra = SocketTicket.credencial("pat", Ecto.UUID.generate())
+      user_id = Ecto.UUID.generate()
+
+      {:ok, %{ticket: da_revogada}} = SocketTicket.emitir(project_id, user_id, "runner", revogada)
+      {:ok, %{ticket: da_outra}} = SocketTicket.emitir(project_id, user_id, "runner", outra)
+      {:ok, %{ticket: sem}} = SocketTicket.emitir(project_id, user_id, "runner")
+
+      assert SocketTicket.anular_pendentes_da_credencial(revogada) == 1
+
+      # O pedido de segundos antes da revogação já não entra...
+      assert {:error, :invalid} = SocketTicket.validar(da_revogada)
+      assert {:error, :invalid} = SocketTicket.consumir(da_revogada, project_id)
+      # ...e o das outras credenciais, do MESMO usuário, segue valendo.
+      assert {:ok, _} = SocketTicket.validar(da_outra)
+      assert {:ok, _} = SocketTicket.validar(sem)
+    end
+
+    test "anular_pendentes_da_credencial(nil) não anula nada" do
+      {:ok, %{ticket: bruto}} =
+        SocketTicket.emitir(Ecto.UUID.generate(), Ecto.UUID.generate(), "runner")
+
+      assert SocketTicket.anular_pendentes_da_credencial(nil) == 0
+      assert {:ok, _} = SocketTicket.validar(bruto)
+    end
+  end
 end

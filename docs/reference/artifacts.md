@@ -213,17 +213,23 @@ reasoning as `propose_execution_plan`/`propose_infra_pr`) — no
 | field | required |
 |---|---|
 | `storyId` | ✅ |
+| `taskId` | ✅ — since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) |
 | `planoDeTeste` | ✅ |
 | `criteriosExecutaveis` | ✅ — **non-empty** list |
 | `estrategiaDeAutomacao` | ✅ |
 
 The deliverable of QA-strategy (ADR 0090; `docs/fluxo.yml`, role
-`qa-estrategia`, the `qa-lead`'s second moment): the test plan for ONE story,
-emitted BEFORE the dev agent writes any code — the `implementavel` gate
-(`docs/gates.yml`) consumes it. It is born from `emit_plano_de_teste`, but the
-model doesn't emit the artifact directly — `Engine.Gates.QaEstrategiaAgent`
-extracts the result from the tool call and calls `ArtifactEmitter.emit/5`, the
-same pattern as `qa_verdict`/`task_blocked`.
+`qa-estrategia`, the `qa-lead`'s second moment). Since
+[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
+([RN-674](../business-rules.md#rn-674)) it is the test plan for ONE task's
+DELIVERY, written AFTER the dev agent delivered, over the dev's worktree and
+the files the delivery touched: it is the first step of the `qa-verificada`
+cycle (`QaLeadServer.run_area/3`), consumed as INPUT by the Automation
+subspecialty, and found again by `taskId` on the correction round. Until ADR
+0192 it was emitted PRE-DEV and fed the `implementavel` gate. It is born from
+`emit_plano_de_teste`, but the model doesn't emit the artifact directly —
+`Engine.Gates.QaEstrategiaAgent` extracts the result from the tool call and
+calls `ArtifactEmitter.emit/5`, the same pattern as `qa_verdict`/`task_blocked`.
 
 An empty `criteriosExecutaveis` fails for the same reason as
 `infra_delegation_files`: a plan with no criteria at all isn't a plan.
@@ -256,15 +262,16 @@ offer of its own — the first offer, still pending, is not replaced
 
 ## Artifacts that don't go through here
 
-Two `artifact.*` event types exist in the log without being in this registry,
+Some `artifact.*` event types exist in the log without being in this registry,
 because they are emitted by the **api**, not by the engine:
 
 | event | origin |
 |---|---|
-| `artifact.module_map` | the Architect, via a use case in the api |
+| `artifact.module_map` | the Architect, via a use case in the api — each module may carry `resources` (cpus, memoryMb, pidsLimit), and the Infra starts the container with their SUM ([ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md), [RN-683](../business-rules.md#rn-683)) |
 | `artifact.insight` | analysis, via a use case in the api |
 | `artifact.project_image` | the Architect, via a use case in the api ([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md), [RN-105](../business-rules/autenticacao.md#rn-105)) |
 | `artifact.module_routing` | the Architect, via a use case in the api — one candidate image per module of the current `module_map`; the Architect CANDIDATES, Infra ELECTS in a later step ([ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md), [RN-487](../business-rules.md#rn-487)) |
+| `artifact.module_contracts` | the Architect, via a use case in the api — per module of the current `module_map`, what it EXPOSES; read by dev agents through `listar_contratos_de_modulos` instead of another module's worktree ([ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md), [RN-684](../business-rules.md#rn-684)) |
 
 They have their own validations in the api's domain. The asymmetry is
 historical, and is noted as

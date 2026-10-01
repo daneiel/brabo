@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   agentesEmConversa,
+  agentesParaChamar,
   ativadosSemJanela,
   resolverDestinatario,
 } from './session-destinatario';
@@ -86,5 +87,27 @@ describe('ativadosSemJanela (RN-631, revisão do PR #759)', () => {
     const oferecido = { ...aceito('ux-designer'), fromAgent: 'po', status: 'offered' as const };
     expect(ativadosSemJanela({ handoffs: [oferecido] })).not.toContain('ux-designer');
     expect(ativadosSemJanela({ handoffs: [] })).toEqual([]);
+  });
+});
+
+describe('agentesParaChamar (RN-682)', () => {
+  it('lista os agentes que conversam, sem o Criativo', () => {
+    expect(agentesParaChamar(() => false)).toEqual([
+      'po',
+      'arquiteto',
+      'dev-lead',
+      'ux-designer',
+      'staff',
+      'infra',
+    ]);
+  });
+
+  it('CASO DE FALHA: quem já entrou na sessão não é oferecido de novo', () => {
+    expect(agentesParaChamar((a) => a === 'staff' || a === 'po')).toEqual([
+      'arquiteto',
+      'dev-lead',
+      'ux-designer',
+      'infra',
+    ]);
   });
 });

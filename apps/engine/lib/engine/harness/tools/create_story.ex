@@ -52,7 +52,7 @@ defmodule Engine.Harness.Tools.CreateStory do
 
     case EngineApiClient.create_story(ctx.project_id, ctx.session_id, fields) do
       {:ok, %{"id" => id} = story} ->
-        {:ok, "história criada: id=#{id}, #{desfecho(story)}"}
+        {:ok, "história criada: id=#{id}, #{desfecho(story)}" <> aviso_semantico(story)}
 
       {:error, reason} ->
         {:error, "falha ao criar história: #{inspect(reason)}"}
@@ -76,6 +76,16 @@ defmodule Engine.Harness.Tools.CreateStory do
 
   defp desfecho(%{"status" => status}),
     do: "status=#{status} — faltam RF, DoD, DoR ou business_rule_ids para ficar completa."
+
+  # RN-681 (ADR 0198): a api checou a duplicata SEMÂNTICA dentro da criação e
+  # devolveu a frase pronta. Aviso, não recusa — a história já existe —, e a
+  # checagem PULADA também é dita, para o modelo não ler silêncio como "não é
+  # duplicata". Corpo sem o campo (api anterior) não diz nada.
+  defp aviso_semantico(%{"semanticDuplicate" => %{"message" => mensagem}})
+       when is_binary(mensagem) and mensagem != "",
+       do: "\n" <> mensagem
+
+  defp aviso_semantico(_story), do: ""
 
   defp list(args, key) do
     case Map.get(args, key) do

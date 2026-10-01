@@ -10,9 +10,12 @@ import { injectTraceHeaders } from '../observability/trace-context';
 import { Traced } from '../observability/traced.decorator';
 import {
   ApiToEngineClient,
+  type EntregaDaMensagem,
   RunnerNaoConectadoError,
   RunnerRecusouContainerError,
   type ContainerIniciadoViaRunner,
+  type BalancoDeRevogacaoDeCredencial,
+  type CredencialDeDispositivo,
   type DesfechoDeDesconexaoDeRunner,
   type EspecificacaoDeContainerParaRunner,
 } from '../../application/ports/api-to-engine-client.port';
@@ -55,6 +58,25 @@ function garantirSegmentoDeUrlInterna(valor: string, nome: string): string {
  * fora dessa forma não vira mensagem inventada: cai numa frase genérica que
  * diz que houve recusa, e o texto cru fica fora da resposta ao usuário.
  */
+/**
+ * O aceite da mensagem (RN-673): 202 sem corpo é "lida" (o turno subiu); 202
+ * com `{entrega: "enfileirada", posicao}` é "esperando na fila". Corpo que não
+ * se lê como fila vira "lida" — é o que o engine anterior à fila sempre quis
+ * dizer com 202.
+ */
+export function entregaDaResposta(corpo: string): EntregaDaMensagem {
+  if (!corpo) return { entrega: 'lida' };
+  try {
+    const lido = JSON.parse(corpo) as { entrega?: unknown; posicao?: unknown };
+    if (lido.entrega === 'enfileirada' && typeof lido.posicao === 'number') {
+      return { entrega: 'enfileirada', posicao: lido.posicao };
+    }
+  } catch {
+    // corpo não-JSON: o aceite de sempre
+  }
+  return { entrega: 'lida' };
+}
+
 function mensagemDaRecusaDoEngine(texto: string): string {
   try {
     const corpo = JSON.parse(texto) as { error?: unknown };
@@ -181,12 +203,34 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
     agent: string,
     text: string,
     idiomaDaResposta: string | null = null,
+    mensagemId: string | null = null,
+    perfilDoAutor: string | null = null,
+  ): Promise<EntregaDaMensagem> {
+    const corpo = await this.postComandoDeTurno(
+      `/internal/sessions/${sessionId}/agent/message`,
+      {
+        projectId,
+        agent,
+        text,
+        ...(idiomaDaResposta ? { idiomaDaResposta } : {}),
+        ...(mensagemId ? { mensagemId } : {}),
+        ...(perfilDoAutor ? { perfilDoAutor } : {}),
+      },
+      [['sessionId', sessionId]],
+    );
+    return entregaDaResposta(corpo);
+  }
+
+  async cancelQueuedMessage(
+    projectId: string,
+    sessionId: string,
+    agent: string,
+    mensagemId: string,
+    userId: string,
   ): Promise<void> {
     await this.postComandoDeTurno(
-      `/internal/sessions/${sessionId}/agent/message`,
-      idiomaDaResposta
-        ? { projectId, agent, text, idiomaDaResposta }
-        : { projectId, agent, text },
+      `/internal/sessions/${sessionId}/agent/queued-message/cancel`,
+      { projectId, agent, mensagemId, userId },
       [['sessionId', sessionId]],
     );
   }
@@ -214,14 +258,6 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
   async offerInfraHandoff(projectId: string, sessionId: string): Promise<void> {
     await this.postComandoDeTurno(
       `/internal/sessions/${sessionId}/agent/offer-infra-handoff`,
-      { projectId },
-      [['sessionId', sessionId]],
-    );
-  }
-
-  async offerDevHandoff(projectId: string, sessionId: string): Promise<void> {
-    await this.postCommand(
-      `/internal/sessions/${sessionId}/agent/offer-dev-handoff`,
       { projectId },
       [['sessionId', sessionId]],
     );
@@ -333,16 +369,28 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
     projectId: string,
     userId: string,
     kind: 'runner' | 'terminal',
+    credencial?: CredencialDeDispositivo | null,
   ): Promise<{ ticket: string; expiresAt: Date }> {
     projectId = garantirSegmentoDeUrlInterna(projectId, 'projectId');
     const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    // ADR 0201: os dois campos só viajam juntos. Um engine anterior a esta
+    // mudança ignora o que não conhece, e o ticket sai como sempre saiu.
+    const pedido = credencial
+      ? {
+          userId,
+          kind,
+          credentialKind: credencial.tipo,
+          credentialId: credencial.id,
+        }
+      : { userId, kind };
 
     const res = await fetch(
       `${engineUrl}/internal/projects/${projectId}/runner-tickets`,
       {
         method: 'POST',
         headers: this.buildHeaders(),
-        body: JSON.stringify({ userId, kind }),
+        body: JSON.stringify(pedido),
       },
     );
 
@@ -549,6 +597,47 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
       : 'timeout';
   }
 
+  @Traced('infrastructure')
+  async disconnectRunnerCredential(
+    credencial: CredencialDeDispositivo,
+    alcanceLegado: { userId: string; projectIds: string[] } | null,
+  ): Promise<BalancoDeRevogacaoDeCredencial> {
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/runner/disconnect-credential`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({
+          credentialKind: credencial.tipo,
+          credentialId: credencial.id,
+          userId: alcanceLegado?.userId ?? null,
+          projectIds: alcanceLegado?.projectIds ?? [],
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha ao pedir a desconexão da credencial ao engine: ${res.status} ${await res.text()}`,
+      );
+    }
+
+    const corpo = (await res.json()) as Partial<
+      Record<keyof BalancoDeRevogacaoDeCredencial, unknown>
+    >;
+    const numero = (valor: unknown): number =>
+      typeof valor === 'number' && Number.isFinite(valor) ? valor : 0;
+    return {
+      derrubados: numero(corpo.derrubados),
+      legados: numero(corpo.legados),
+      intocados: numero(corpo.intocados),
+      semResposta: numero(corpo.semResposta),
+      ticketsAnulados: numero(corpo.ticketsAnulados),
+    };
+  }
+
   private async pedirOperacaoDeContainerAoRunner(
     projectId: string,
     operacao: 'stop' | 'remove',
@@ -595,7 +684,7 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
     path: string,
     body: Record<string, unknown>,
     segmentosDeUrl: ReadonlyArray<readonly [string, string]>,
-  ): Promise<void> {
+  ): Promise<string> {
     for (const [nome, valor] of segmentosDeUrl) {
       garantirSegmentoDeUrlInterna(valor, nome);
     }
@@ -608,7 +697,9 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
       body: JSON.stringify(body),
     });
 
-    if (res.ok) return;
+    // O corpo do aceite volta para quem precisa dele (RN-673: a mensagem que
+    // entrou na fila responde 202 COM corpo); os outros comandos o ignoram.
+    if (res.ok) return await res.text();
 
     const texto = await res.text();
 

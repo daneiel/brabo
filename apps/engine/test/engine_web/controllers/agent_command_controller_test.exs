@@ -64,7 +64,10 @@ defmodule EngineWeb.AgentCommandControllerTest do
       _ = :sys.get_state(pid)
     end
 
-    test "turno já em curso: 409 nomeado, não 202", %{
+    # RN-673 (ADR 0191): até aqui a segunda mensagem era 409
+    # `turno_em_andamento` e ficava gravada sem ser lida. Agora ela ENTRA NA
+    # FILA: 202 também, com o corpo dizendo que espera e em que posição.
+    test "turno já em curso: a mensagem entra na fila — 202 com entrega enfileirada", %{
       conn: conn,
       project_id: project_id,
       session_id: session_id
@@ -93,13 +96,38 @@ defmodule EngineWeb.AgentCommandControllerTest do
           "sessionId" => session_id,
           "projectId" => project_id,
           "agent" => "po",
-          "text" => "Continue"
+          "text" => "Continue",
+          "mensagemId" => "evt-continue"
         })
 
-      assert %{"motivo" => "turno_em_andamento", "error" => mensagem} =
-               json_response(segunda, 409)
+      assert %{"entrega" => "enfileirada", "posicao" => 1} = json_response(segunda, 202)
 
-      assert mensagem =~ "não foi lida"
+      assert [%{id: "evt-continue", texto: "Continue"}] = :sys.get_state(pid).fila_de_mensagens
+
+      # Cancelar pela rota: o processo do agente decide (204), e a segunda vez
+      # é 409 nomeado — ela já não está na fila.
+      cancelada =
+        AgentCommandController.cancel_queued_message(build_conn(), %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "mensagemId" => "evt-continue",
+          "userId" => "u-1"
+        })
+
+      assert cancelada.status == 204
+      assert :sys.get_state(pid).fila_de_mensagens == []
+
+      de_novo =
+        AgentCommandController.cancel_queued_message(build_conn(), %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "mensagemId" => "evt-continue",
+          "userId" => "u-1"
+        })
+
+      assert %{"motivo" => "mensagem_fora_da_fila"} = json_response(de_novo, 409)
 
       GenServer.cast(pid, :cancel)
       _ = :sys.get_state(pid)
@@ -264,10 +292,21 @@ defmodule EngineWeb.AgentCommandControllerTest do
           "sessionId" => session_id,
           "projectId" => project_id,
           "agent" => "infra",
-          "text" => "Continue"
+          "text" => "Continue",
+          "mensagemId" => "evt-infra"
         })
 
-      assert %{"motivo" => "turno_em_andamento"} = json_response(segunda, 409)
+      # RN-673: entra na fila do Infra Lead, como na dos outros seis. Cancelada
+      # aqui para o "Parar" abaixo não entregá-la num turno novo.
+      assert %{"entrega" => "enfileirada"} = json_response(segunda, 202)
+
+      assert AgentCommandController.cancel_queued_message(build_conn(), %{
+               "sessionId" => session_id,
+               "projectId" => project_id,
+               "agent" => "infra",
+               "mensagemId" => "evt-infra",
+               "userId" => "u-1"
+             }).status == 204
 
       # "Parar" alcança o Infra Lead (`via_for/2`) e mata o turno.
       parar =
@@ -314,8 +353,7 @@ defmodule EngineWeb.AgentCommandControllerTest do
       project_id: project_id,
       session_id: session_id
     } do
-      das_areas =
-        Enum.flat_map(Areas.all(), fn area -> [area.lead | area.members] end)
+      das_areas = Enum.flat_map(Areas.all(), fn area -> [area.lead | area.members] end)
 
       fora_de_conversa =
         (das_areas ++ ~w(secops psicologo anamnese dev-backend agente-que-nao-existe))
@@ -421,6 +459,43 @@ defmodule EngineWeb.AgentCommandControllerTest do
       assert conn.status == 202
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
       assert %{"role" => "user"} = List.last(enviado)
+    end
+
+    # RN-680 (ADR 0196): os fatos do perfil do autor viajam no mesmo comando e
+    # entram como mensagem de sistema ANTES da orientação de idioma.
+    test "perfilDoAutor chega ao modelo antes do idioma", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        mandar_ao_criativo(conn, project_id, session_id, %{
+          "idiomaDaResposta" => "en",
+          "perfilDoAutor" => "Fatos do perfil: prefere uma pergunta por vez"
+        })
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
+
+      assert %{"role" => "system", "content" => "Fatos do perfil" <> _} = Enum.at(enviado, -2)
+    end
+
+    test "perfilDoAutor que não é texto: a mensagem é aceita, sem perfil", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        mandar_ao_criativo(conn, project_id, session_id, %{
+          "idiomaDaResposta" => "en",
+          "perfilDoAutor" => 42
+        })
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
+      assert %{"role" => "user"} = Enum.at(enviado, -2)
     end
   end
 

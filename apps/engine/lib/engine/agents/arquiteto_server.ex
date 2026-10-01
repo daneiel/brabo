@@ -30,12 +30,12 @@ defmodule Engine.Agents.ArquitetoServer do
     ChooseProjectImage,
     CreateC4Diagram,
     RouteModulesToInfra,
+    DeclareModuleContracts,
     ProposeAdr,
     EmitInsight,
     EmitArtifact
   }
 
-  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "arquiteto"
@@ -64,22 +64,20 @@ defmodule Engine.Agents.ArquitetoServer do
 
   # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
   # (RN-622); `nil` = sem orientação neste turno.
-  def user_message(session_id, text, idioma \\ nil),
-    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
 
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
+
+  # A confirmação de arquitetura pronta oferece SÓ à Infra desde a RN-672
+  # (AT-262, ADR 0190): o handoff ao Dev Lead deixou de sair daqui e passou a
+  # sair da Infra, quando o container do projeto está `running`
+  # (`Engine.Infra.InfraLeadServer`). Antes eram dois handoffs da mesma
+  # confirmação (FASE 14d), e o Dev Lead podia ser aceito sem container.
   def offer_infra_handoff(session_id),
     do: GenServer.call(via(session_id), :offer_infra_handoff, 180_000)
-
-  @doc """
-  Oferece o handoff ao Dev Lead (FASE 14d — ADR 0053).
-
-  SEPARADO do de Infra de propósito, e não porque sejam dois momentos: os dois
-  saem da mesma confirmação de arquitetura pronta. É que são duas áreas
-  diferentes, com desfechos diferentes — juntá-los numa chamada só faria a
-  falha de uma derrubar a outra.
-  """
-  def offer_dev_handoff(session_id),
-    do: GenServer.call(via(session_id), :offer_dev_handoff, 180_000)
 
   # --- Callbacks ---
 
@@ -111,6 +109,7 @@ defmodule Engine.Agents.ArquitetoServer do
          ChooseProjectImage.spec(),
          CreateC4Diagram.spec(),
          RouteModulesToInfra.spec(),
+         DeclareModuleContracts.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec(),
          # Frente 3 do plano de decision_record — mesma ferramenta do
@@ -120,11 +119,12 @@ defmodule Engine.Agents.ArquitetoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
-       turno_assincrono: nil,
-       # `:offer_dev_handoff` que chegou com o turno de fechamento ainda em
-       # curso (ADR 0163): fica guardado e roda quando o turno fechar, para o
-       # handoff ao Dev Lead continuar nascendo DEPOIS do de Infra.
-       handoff_dev_pendente: false
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
+       turno_assincrono: nil
      }}
   end
 
@@ -139,7 +139,7 @@ defmodule Engine.Agents.ArquitetoServer do
 
   @impl true
   def handle_cast(:cancel, state) do
-    {:noreply, state |> TurnoAssincrono.cancelar() |> drenar_handoff_dev_pendente()}
+    {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
   # RN-581: a sessão fechou e `Engine.Agents.Conversacionais` está parando
@@ -153,18 +153,30 @@ defmodule Engine.Agents.ArquitetoServer do
   # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
   # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
   # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
   @impl true
-  def handle_call({:user_message, text, idioma}, from, state) do
-    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
-      handle_call({:user_message, text}, from, state)
-    end)
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
   end
 
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
   @impl true
-  def handle_call({:user_message, text}, from, state) do
-    work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
-  end
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
 
   # O usuário confirmou que a arquitetura está pronta (Fase 4a — fechamento):
   # roda um turno de fechamento (sem ferramenta nova esperada) e OFERECE o
@@ -175,70 +187,19 @@ defmodule Engine.Agents.ArquitetoServer do
     TurnoAssincrono.iniciar(state, from, fn -> executar_offer_infra_handoff(state) end)
   end
 
-  # Sem turno de LLM: o Arquiteto já falou no `offer_infra_handoff`, que sai
-  # da MESMA confirmação. Continua síncrono — é só uma chamada HTTP rápida
-  # de criação de handoff, não uma chamada ao LLM, então não precisa da
-  # Task/cancelamento de `TurnoAssincrono`.
-  #
-  # ADIADO quando há turno em curso (ADR 0163, RN-578). A api chama
-  # `offer_infra_handoff` e, na sequência, este — e até o ADR 0163 a
-  # sequência só acontecia depois de o turno de fechamento TERMINAR, porque o
-  # primeiro `GenServer.call` segurava a resposta até lá. Com o aceite
-  # imediato, este chegaria no meio do turno e o handoff ao Dev Lead nasceria
-  # ANTES do de Infra (que é criado no fim da Task). Guardar e rodar no fecho
-  # preserva a ordem, e o fecho cobre os mesmos quatro desfechos em que o
-  # handoff era oferecido antes: sucesso, falha narrada, crash e cancelamento.
-  @impl true
-  def handle_call(:offer_dev_handoff, _from, %{turno_assincrono: %{}} = state) do
-    {:reply, :ok, Map.put(state, :handoff_dev_pendente, true)}
-  end
-
-  @impl true
-  def handle_call(:offer_dev_handoff, _from, state) do
-    {:reply, :ok, oferecer_handoff_dev(state)}
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
+    work = state |> append(user_msg(text)) |> compact()
+    fn -> run_turn(work, @max_iterations) end
   end
 
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
-      # A marca vem do state ANTERIOR à mensagem: o `novo_state` é o que a
-      # Task devolveu, e ela capturou o state do INÍCIO do turno — antes de o
-      # `:offer_dev_handoff` chegar e marcar a pendência.
-      {:ok, novo_state} ->
-        pendente = Map.get(state, :handoff_dev_pendente, false)
-
-        {:noreply,
-         novo_state
-         |> Map.put(:handoff_dev_pendente, pendente)
-         |> drenar_handoff_dev_pendente()}
-
-      :ignorado ->
-        {:noreply, state}
-    end
-  end
-
-  defp oferecer_handoff_dev(state) do
-    case EngineApiClient.create_handoff(
-           state.project_id,
-           state.session_id,
-           @agent,
-           "dev-lead",
-           nil
-         ) do
-      {:ok, _handoff} -> state
-      {:error, reason} -> emit_falha_handoff(state, "dev-lead", reason)
-    end
-  end
-
-  # `Map.get/3` com default: um state reidratado por um caminho antigo não
-  # carrega a chave, e a ausência vale "nada pendente".
-  defp drenar_handoff_dev_pendente(state) do
-    if Map.get(state, :handoff_dev_pendente, false) do
-      state
-      |> Map.put(:handoff_dev_pendente, false)
-      |> oferecer_handoff_dev()
-    else
-      state
+      {:ok, novo_state} -> {:noreply, novo_state}
+      :ignorado -> {:noreply, state}
     end
   end
 
@@ -370,6 +331,10 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("create_c4_diagram", args, state), do: CreateC4Diagram.run(args, state)
   defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
+
+  defp run_tool("declare_module_contracts", args, state),
+    do: DeclareModuleContracts.run(args, state)
+
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
@@ -431,13 +396,17 @@ defmodule Engine.Agents.ArquitetoServer do
     4. route_modules_to_infra: depois do module_map, roteie CADA módulo para uma imagem de
        container CANDIDATA, com o porquê — um item por módulo. Você candidata; a Infra
        elege entre as candidatas depois.
-    5. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    5. declare_module_contracts: para cada módulo que OUTRO usa, declare o que ele expõe
+       (função, rota, evento ou forma de dado, com a assinatura exata). É o que os dev
+       agents leem para integrar sem abrir o código um do outro; mudar a interface depois
+       é declarar de novo, com a lista inteira.
+    6. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    6. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
+    7. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
        depois do module_map, porque o Container level é derivado dele. Descreva só o nome
        do sistema e os atores externos (ex.: o usuário, um provedor de Git); os módulos e
        as dependências entram sozinhos.
-    7. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    8. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:

@@ -64,10 +64,11 @@ binary from GitHub Releases so the browser never talks to GitHub
 directly. Public for the same reason as `/metrics`/JWKS: the binary
 itself is not a secret, and requiring a session to download the very
 tool that lets someone authenticate would be backwards. `platform` is a
-closed allowlist (`linux-x64`/`linux-arm64`/`darwin-arm64`/`win32-x64` —
-the four targets the release matrix builds; `darwin-x64` left in
-[ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) and is refused with its
-own message pointing at the npm package), never interpolated raw into the GitHub URL — closing the
+closed allowlist (`linux-x64`/`linux-arm64`/`darwin-arm64` —
+the three targets the release matrix builds; `darwin-x64` left in
+[ADR 0174](adr/0174-runner-sem-binario-darwin-x64.md) and `win32-x64` in
+[ADR 0187](adr/0187-runner-sem-binario-win32-x64.md), and both are refused with
+their own message pointing at the npm package), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
 asset URL (never the binary's bytes) is cached in memory for a few
 minutes, purely to stay under GitHub's unauthenticated rate limit under
@@ -408,8 +409,16 @@ reason in the URL.
   active) before executing anything, and the engine classifies the refusal with
   origin `politica` rather than `codigo`. The refusal text names neither the
   variables nor their values, only how many there were. The credential still
-  does not cross, and that half is declared open: authenticated clone/fetch in
-  `runner` mode requires the container stopped.
+  does not cross the container boundary, and since
+  [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+  ([RN-676](business-rules.md#rn-676)) it does not need to: the engine marks
+  the authenticated `fetch` (`gitCredenciado: true`, set from one place,
+  `RunnerRouter.exec_git_credenciado/5`) and the runner runs THAT command on
+  the host, where the `env` reaches the child process; the dev agent's
+  commands still go to `docker exec`. The trust boundary is the mark, not the
+  `env`: a command carrying `env` WITHOUT the mark is still refused while a
+  container is active, so the credential field never becomes a way out of the
+  container. No ADR 0130 port changed.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
@@ -420,6 +429,13 @@ reason in the URL.
   scope is closed to the project by the path, and the cost per call is
   constant (three reads in the backlog, two in the rules, one query against
   `proposed_actions` filtered by index in the product metrics).
+- **The dev agent's contract read** — `GET /internal/projects/:projectId/module-contracts`
+  ([RN-684](business-rules.md#rn-684), [ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md))
+  — follows the same rule: no secret, nothing beyond the project id, one
+  entry per module of the current `module_map`. Its writing twin,
+  `POST /internal/sessions/:sessionId/module-contracts`, takes only the
+  Architect's declaration (what each module exposes) and validates every name
+  against the current `module_map`; neither route touches a worktree.
 - **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
   ADR 0104) is called only by the engine, after a runner connects and sends
   `workspace_confirm` over the channel — never directly by the runner,
@@ -629,26 +645,28 @@ reason in the URL.
   with a fresh ticket each attempt; the option is now REQUIRED by the type
   (`OpcoesDoSocket`) and asserted by a test over the option passed to the
   constructor, since a test that only checks "it connects" passed throughout.
-- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
-  session JWT**, unlike `runner-ticket` above — the browser, already
-  logged in, registers the Ed25519 public key it just generated (the
-  private half never leaves it) before offering the runner binary for
-  download. Since [RN-551](business-rules.md#rn-551) the browser is no longer
-  the only generator: `brabo-runner device-key create` generates the pair on
-  the MACHINE and writes the private half to disk, mode 600, under
-  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`). What that changes for
-  this page is the shape of the secret, not its travel: the private half still
-  never crosses the wire, and only the public JWK and the registration `id`
-  ever do. What that CLI deliberately does not have is a credential to
-  register with — the registration stays with whoever holds the service token
-  (the installer, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
-  point 1), so each side holds exactly one secret and neither sees the other's.
-  The file the runner reads never exists without its `kid`: `create` writes a
+- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+  session JWT**, unlike `runner-ticket` above — the caller is a screen (the
+  device-keys section of Settings, and the `RunnerOnboardingPanel` recognizing
+  an already-paired machine). Until [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+  ([RN-687](business-rules.md#rn-687)) there was a third, a `POST` through
+  which the browser registered the Ed25519 public key it had just generated
+  (ADR 0118). That flow was retired and the route went with it, because it had
+  no other caller: keys are now born on the machine — `brabo-runner
+  device-key create` ([RN-551](business-rules.md#rn-551)) generates the pair
+  and writes the private half to disk, mode 600, under
+  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`) — and registered by the
+  installer through the internal route below. The private half still never
+  crosses the wire; only the public JWK and the registration `id` ever do.
+  What that CLI deliberately does not have is a credential to register with —
+  the registration stays with whoever holds the service token (the installer,
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 1), so
+  each side holds exactly one secret and neither sees the other's. The file
+  the runner reads never exists without its `kid`: `create` writes a
   `.parcial` name the reader ignores, and `finish --id <id>` stamps and
-  renames. `POST` persists the public key only — there's no "raw secret"
-  to hand back the way `IssuePersonalAccessTokenUseCase` does, because
-  the client already holds the only secret involved (the private key) and
-  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  renames. Project keys registered by the browser BEFORE ADR 0203 keep
+  working: `PatAuthGuard` still accepts them, `GET` lists them and `DELETE`
+  revokes them. `GET` lists the caller's own keys, revoked ones
   included ([RN-519](business-rules.md#rn-519)) — it is what makes
   revocation reachable at all, and until it existed an orphan key (tab
   closed midway through the automatic-setup flow) was invisible and
@@ -665,9 +683,8 @@ reason in the URL.
   which is which (`especie`): a MACHINE key (`projectId: null`) serves every
   project of its owner, so it shows up in every project's listing — without
   that it would be invisible and permanent in every screen, the very defect
-  RN-519 closed, reborn in the new species. This `POST` still creates only
-  project-bound keys; the one that creates MACHINE keys is
-  `POST /internal/machine-device-keys`, below
+  RN-519 closed, reborn in the new species. The route that creates MACHINE
+  keys is `POST /internal/machine-device-keys`, below
   ([RN-552](business-rules.md#rn-552)) — a different route, a different
   credential and a different caller. The KEY MATERIAL it registers is produced
   on the machine: `brabo-runner device-key create`
@@ -692,8 +709,9 @@ reason in the URL.
   `userId` comes from the session JWT and goes into the `WHERE`; no parameter
   names another user, and the `maintainer` view stays out, as RN-519 decided).
   The `DELETE` is the same revocation as the per-project route, delegated to
-  the same use case: it drops the live runner in each runner-mode project the
-  owner reaches, target `{project, user}` unchanged; with no project yet it
+  the same use case: it drops the live connections opened WITH that key, in
+  every project (since [RN-685](business-rules.md#rn-685) the target is the
+  key, not `{project, user}`); with no project yet it
   only records the revocation, which is all there is to stop — the waiting
   machine agent (RN-550) has no connection, and its next ticket is refused.
 - **Revoking a device key now reaches the LIVE connection, and the target
@@ -718,6 +736,17 @@ reason in the URL.
   timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
   the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
   `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  **Revised by [RN-685](business-rules.md#rn-685)
+  ([ADR 0201](adr/0201-revogacao-por-chave.md)): the target is now the KEY.**
+  The ticket records which credential asked for it (the `kid`, or the PAT's
+  id), and the revocation asks the engine
+  (`POST /internal/runner/disconnect-credential`) to void the credential's
+  pending tickets and drop only the runners born from it — the declared cost
+  above is gone: a runner of the same user on a PAT or another key stays up.
+  PAT revocation (own, or as `maintainer`) now drops its connections too. A
+  connection opened with a pre-deploy ticket (no credential) still falls by
+  the pair, and an engine that does not know the route makes the api fall back
+  to `runner/disconnect`; the pair route also stays as member removal's target.
   The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
   stays OUT for device keys — now by decision, not omission: that pair was
   born of incident response to a SHARED secret circulating, and a device
@@ -1223,6 +1252,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-routing` | engine-service |
+| POST | `/internal/sessions/:sessionId/module-contracts` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
@@ -1235,6 +1265,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| GET | `/internal/projects/:projectId/module-contracts` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
 | POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
@@ -1243,6 +1274,7 @@ reason in the URL.
 | POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
+| POST | `/internal/sessions/:sessionId/semantic-duplicate-check` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/:taskId/block` | engine-service |
@@ -1337,7 +1369,6 @@ reason in the URL.
 | GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
-| POST | `/projects/:projectId/runner-device-keys` | role:developer |
 | GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
@@ -1358,6 +1389,7 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/messages/:messageId/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |

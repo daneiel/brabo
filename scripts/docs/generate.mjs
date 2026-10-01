@@ -21,10 +21,11 @@ import { createHash } from 'node:crypto';
 import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
-import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
+import { aferir as aferirRefsComSimbolo, JANELA, veredito as vereditoDasRefs } from './refs-com-simbolo.mjs';
 import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
+import { conferirTemas, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
   DESTINO as DESTINO_DO_INVENTARIO,
@@ -590,6 +591,35 @@ function verificarIndiceAdr() {
 }
 
 /**
+ * O tema de cada ADR (ADR 0202, AT-137): irmão de `verificarIndiceAdr`. Aquele
+ * pergunta se o ADR está no índice; este, se está no tema CERTO — o de
+ * `docs/adr/temas.yml`, que mora fora do ADR porque ADR aceito não é editado.
+ * A regra inteira está em `temas-de-adr.mjs`. Reprova; `CEGO` também.
+ */
+function verificarTemasDeAdr() {
+  const r = conferirTemas({
+    temasYml: ler(TEMAS_DE_ADR),
+    arquivosAdr: arquivos('docs/adr/[0-9]*.md').map((f) => f.replace('docs/adr/', '')),
+    indice: ler(INDICE_DE_ADR),
+  });
+
+  if (r.cego) {
+    pendencias.push('temas de ADR');
+    console.log(
+      `  CEGO      ${TEMAS_DE_ADR} — ${r.cego}.\n` +
+        '            Ajuste o arquivo, o índice ou scripts/docs/temas-de-adr.mjs.',
+    );
+    return;
+  }
+  if (r.problemas.length === 0) {
+    console.log(`  ok        temas de ADR (${r.adrs} ADRs em ${r.temas} temas, índice agrupado por eles)`);
+    return;
+  }
+  pendencias.push('temas de ADR');
+  for (const p of r.problemas) console.log(`  TEMA      [${p.regra}] ${p.motivo}`);
+}
+
+/**
  * Palavras que os números em prosa usam quando estão por extenso. Só até
  * vinte: acima disso a prosa do repositório escreve algarismo, e um mapa
  * grande seria inventar caso que não existe.
@@ -992,23 +1022,29 @@ function verificarContagensDerivadasDoCodigo() {
  * As refs `caminho:linha` das RNs que nomeiam o SÍMBOLO daquela linha (AT-096).
  * O padrão, a janela e o que fica de fora estão em `refs-com-simbolo.mjs`.
  *
- * Em `warn`: RELATA e não reprova. A primeira medição (18/09) achou 187 refs
- * que casam o padrão e 71 que não batiam — deriva acumulada de meses, que não
- * se corrige num PR só e que, em `block`, travaria todo PR que toca um arquivo
- * de RN por dívida alheia. O critério para promover a `block` está em
- * docs/explanation/documentation-workflow.md ("Line references with a symbol").
+ * Em `block` desde a AT-122 (01/10, decisão do dono): ref que não bate, ou que
+ * não resolve a um arquivo só, REPROVA. Nasceu em `warn` (18/09: 71 erradas
+ * de 187), a lista zerou em 26/09 (#653) e voltou a 140 em cinco dias — o
+ * `warn` não segurou a deriva, e as 140 foram relidas pelo símbolo no mesmo PR
+ * que promoveu. O histórico está em docs/explanation/documentation-workflow.md
+ * ("Line references with a symbol"). A régua do veredito é `veredito` em
+ * `refs-com-simbolo.mjs`, provada por mutação no spec ao lado.
  *
- * UMA exceção reprova já, pela régua da casa: extrair ZERO refs é o padrão
- * cego (a sintaxe das RNs mudou, ou o extrator quebrou), e um check cego fica
- * verde para sempre dizendo que conferiu o que não olhou.
+ * Extrair ZERO refs continua `CEGO` e reprova: a sintaxe das RNs mudou, ou o
+ * extrator quebrou, e um check cego fica verde para sempre dizendo que conferiu
+ * o que não olhou. NÃO alargue a janela para o vermelho sumir: corrija a ref
+ * pelo SÍMBOLO (a saída diz onde ele aparece mais perto, que é pista e não
+ * conserto — pode ser uma chamada e não a definição).
  */
 function verificarRefsComSimbolo() {
   const versionados = execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
     .split('\n')
     .filter(Boolean);
-  const { total, batem, naoBatem, naoResolvidas } = aferirRefsComSimbolo(RAIZ, versionados);
+  const resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  const { total, batem, naoBatem, naoResolvidas } = resultado;
+  const estado = vereditoDasRefs(resultado);
 
-  if (total === 0) {
+  if (estado === 'CEGO') {
     pendencias.push('refs com símbolo');
     console.log(
       '  CEGO      refs com símbolo — nenhuma ref `caminho:N` (`símbolo`) nas RNs.\n' +
@@ -1018,12 +1054,13 @@ function verificarRefsComSimbolo() {
   }
 
   const resumo = `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})`;
-  if (naoBatem.length === 0 && naoResolvidas.length === 0) {
+  if (estado === 'ok') {
     console.log(`  ok        refs com símbolo (${resumo})`);
     return;
   }
 
-  console.log(`  aviso     refs com símbolo — ${resumo}. Não reprova (warn):`);
+  pendencias.push('refs com símbolo');
+  console.log(`  REPROVA   refs com símbolo — ${resumo}. Corrija cada uma pelo SÍMBOLO:`);
   for (const r of naoBatem) {
     const onde = r.achadoEm === null ? 'não aparece no arquivo' : `mais perto em :${r.achadoEm}`;
     console.log(`            ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}:${r.linha} (\`${r.simbolo}\`) — ${onde}`);
@@ -1190,6 +1227,7 @@ gerarOpenapi();
 gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
+verificarTemasDeAdr();
 verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
 verificarContagensDerivadasDoCodigo();

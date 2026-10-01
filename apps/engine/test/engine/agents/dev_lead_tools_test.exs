@@ -9,9 +9,9 @@ defmodule Engine.Agents.DevLeadToolsTest do
 
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
-    # ADR 0090: `assess_implementability` dispara `Dispatcher.run_qa_estrategia/3`
-    # quando não há plano ainda — o fake evita subir um `QaLeadServer` real
-    # (mesmo motivo do `qa_lead_server_test.exs`).
+    # `assess_implementability` dispara `Dispatcher.run_appsec_design/2`
+    # (RN-539) — o fake evita subir um `SecOpsAgentServer` real (mesmo motivo
+    # do `qa_lead_server_test.exs`).
     Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
     Application.put_env(:engine, :test_pid, self())
 
@@ -35,8 +35,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
   describe "propose_execution_plan" do
     test "propõe o plano como proposed_action, com o total somado (status auto_approved do fake)",
          %{ctx: ctx} do
-      assert {:ok, msg} =
-               DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
 
       assert msg =~ "3 agente(s)"
       assert msg =~ "2 módulo(s)"
@@ -107,13 +106,56 @@ defmodule Engine.Agents.DevLeadToolsTest do
       refute_received {:propose_action, _, _, _}
     end
 
+    # AT-274 (RN-678): o Dev Lead atribui o módulo de cada tarefa no plano.
+    test "`tarefas` viaja no payload como o modelo a escreveu", %{ctx: ctx} do
+      tarefas = [%{"taskId" => "t-1", "modulo" => "api"}]
+      DevLeadTools.run(Map.put(plano([modulo("api", 1)]), "tarefas", tarefas), ctx)
+
+      assert_received {:propose_action, "propose_execution_plan", _actor, payload}
+      assert payload.tarefas == tarefas
+    end
+
+    test "a recusa NOMEADA da api (tarefa sem módulo) volta ao modelo como está", %{ctx: ctx} do
+      Process.put(
+        :fake_propose_action_erro,
+        {400,
+         %{
+           "code" => "plano_de_execucao_invalido",
+           "message" => "A tarefa t-1 está sem módulo."
+         }}
+      )
+
+      assert {:error, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "plano recusado: A tarefa t-1 está sem módulo."
+      assert msg =~ "proponha o plano de novo"
+    end
+
+    # AT-263 (RN-677): auto-aprovado, a api já ativou (ou falhou ao ativar).
+    test "status executed diz que a execução foi ATIVADA", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{"id" => "pa-10", "status" => "executed"})
+
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "execução ATIVADA"
+    end
+
+    test "status failed vira {:error, _} com o motivo da ativação", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{
+        "id" => "pa-11",
+        "status" => "failed",
+        "executionResult" => %{"motivo" => "Projeto sem repositório"}
+      })
+
+      assert {:error, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "a ativação da execução falhou: Projeto sem repositório"
+    end
+
     test "sem os campos obrigatorios: erro que diz quais", %{ctx: ctx} do
       assert {:error, msg} = DevLeadTools.run(%{"resumo" => "só o resumo"}, ctx)
       assert msg =~ "modulos"
     end
   end
 
-  describe "assess_implementability (ADR 0090)" do
+  describe "assess_implementability (ADR 0090, insumo do ADR 0192)" do
     defp assessment(story_id \\ "st-1") do
       %{
         "storyId" => story_id,
@@ -122,11 +164,14 @@ defmodule Engine.Agents.DevLeadToolsTest do
       }
     end
 
+    # Um plano de teste de ENTREGA (ADR 0192) que por acaso esteja na sessão
+    # — de outra rodada, de outra task. Ele não é mais insumo do parecer.
     defp plano_de_teste_event(story_id) do
       %{
         "type" => "artifact.plano_de_teste",
         "payload" => %{
           "storyId" => story_id,
+          "taskId" => "task-1",
           "planoDeTeste" => "cobrir X",
           "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
           "estrategiaDeAutomacao" => "integração"
@@ -146,36 +191,11 @@ defmodule Engine.Agents.DevLeadToolsTest do
       }
     end
 
-    test "sem plano de teste: dispara a avaliação de QA-estratégia e devolve erro pedindo retentativa",
-         %{ctx: ctx} do
+    # O sintoma do uso real de 29/09: sem plano, a ferramenta disparava a
+    # QA-estratégia PRE-DEV e devolvia erro pedindo retentativa — e o plano
+    # nunca chegava. Desde o ADR 0192 o parecer sai na PRIMEIRA chamada.
+    test "sem plano de teste na sessão: propõe o parecer na PRIMEIRA chamada", %{ctx: ctx} do
       Process.put(:fake_events, [])
-
-      assert {:error, msg} = DevLeadTools.run_assessment(assessment(), ctx)
-      assert msg =~ "ainda não há plano de teste"
-      assert msg =~ "instantes"
-
-      assert_received {:qa_estrategia_dispatch, "proj-1", "sess-1", "st-1"}
-      refute_received {:propose_action, "assess_implementability", _actor, _payload}
-    end
-
-    test "sessão com mais de 200 eventos: lê a CAUDA e acha o plano emitido depois do 200º",
-         %{ctx: ctx} do
-      ruido = Enum.map(1..250, &%{"type" => "chat.message", "payload" => %{"text" => "m#{&1}"}})
-      Process.put(:fake_events, ruido ++ [plano_de_teste_event("st-1")])
-      Process.put(:fake_list_events_calls, [])
-
-      assert {:ok, msg} = DevLeadTools.run_assessment(assessment(), ctx)
-      assert msg =~ "st-1"
-      assert_received {:propose_action, "assess_implementability", _actor, _payload}
-      refute_received {:qa_estrategia_dispatch, _, _, _}
-
-      assert [opts] = Process.get(:fake_list_events_calls)
-      assert opts[:latest] == true
-      assert opts[:limit] == 200
-    end
-
-    test "com plano de teste: propõe o parecer com o plano embutido no payload", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
 
       assert {:ok, msg} = DevLeadTools.run_assessment(assessment(), ctx)
       assert msg =~ "implementavel"
@@ -186,37 +206,38 @@ defmodule Engine.Agents.DevLeadToolsTest do
       assert payload.storyId == "st-1"
       assert payload.parecer == "implementavel"
       assert payload.justificativa == "critérios claros"
-      assert payload.planoDeTeste == "cobrir X"
-      assert payload.criteriosExecutaveis == ["dado X, quando Y, então Z"]
     end
 
-    test "usa o plano MAIS RECENTE quando a story foi reavaliada", %{ctx: ctx} do
-      antigo = plano_de_teste_event("st-1")
-      novo = put_in(plano_de_teste_event("st-1")["payload"]["planoDeTeste"], "versão nova")
-      Process.put(:fake_events, [antigo, novo])
+    test "o payload NÃO carrega plano de teste, mesmo com um na sessão", %{ctx: ctx} do
+      Process.put(:fake_events, [plano_de_teste_event("st-1")])
 
       assert {:ok, _msg} = DevLeadTools.run_assessment(assessment(), ctx)
 
       assert_received {:propose_action, "assess_implementability", _actor, payload}
-      assert payload.planoDeTeste == "versão nova"
+      assert payload |> Map.keys() |> Enum.sort() == [:justificativa, :parecer, :storyId]
     end
 
-    test "plano de OUTRA story não conta", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-outra")])
+    test "sessão com mais de 200 eventos: UMA leitura, da CAUDA", %{ctx: ctx} do
+      ruido = Enum.map(1..250, &%{"type" => "chat.message", "payload" => %{"text" => "m#{&1}"}})
+      Process.put(:fake_events, ruido)
+      Process.put(:fake_list_events_calls, [])
 
-      assert {:error, msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
-      assert msg =~ "ainda não há plano de teste"
+      assert {:ok, _msg} = DevLeadTools.run_assessment(assessment(), ctx)
+
+      assert [opts] = Process.get(:fake_list_events_calls)
+      assert opts[:latest] == true
+      assert opts[:limit] == 200
     end
 
     test "status pending devolve {:pending, action_id}", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_events, [])
       Process.put(:fake_propose_action, %{"id" => "pa-imp-1", "status" => "pending"})
 
       assert {:pending, "pa-imp-1"} = DevLeadTools.run_assessment(assessment(), ctx)
     end
 
     test "status denied vira {:error, _}", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_events, [])
       Process.put(:fake_propose_action, %{"id" => "pa-imp-2", "status" => "denied"})
 
       assert {:error, msg} = DevLeadTools.run_assessment(assessment(), ctx)
@@ -233,6 +254,12 @@ defmodule Engine.Agents.DevLeadToolsTest do
       args = %{"storyId" => "st-1", "parecer" => "talvez", "justificativa" => "x"}
       assert {:error, _msg} = DevLeadTools.run_assessment(args, ctx)
     end
+
+    test "a descrição da ferramenta não pede retentativa à espera de plano" do
+      descricao = DevLeadTools.spec_assess_implementability().description
+      assert descricao =~ "module_map"
+      refute descricao =~ "tentar de novo"
+    end
   end
 
   # RN-539: o gatilho do appsec (`SecOpsAgentServer.run_design/2`), que até
@@ -240,7 +267,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
   # entra no caminho do parecer — os testes abaixo provam as duas metades.
   describe "assess_implementability dispara o appsec (RN-539)" do
     test "story SEM threat model: pede o threat model de design", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_events, [])
 
       assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
 
@@ -248,10 +275,10 @@ defmodule Engine.Agents.DevLeadToolsTest do
     end
 
     test "story COM threat model: NÃO pede de novo (idempotência)", %{ctx: ctx} do
-      # O desfecho `:sem_plano` pede ao modelo que chame de novo — sem esta
-      # guarda, cada rechamada custaria outra rodada de LLM do appsec e mais
-      # três handoffs (RN-361) sobre a MESMA story.
-      Process.put(:fake_events, [plano_de_teste_event("st-1"), threat_model_event("st-1")])
+      # O modelo pode reavaliar a mesma story — sem esta guarda, cada
+      # rechamada custaria outra rodada de LLM do appsec e mais três handoffs
+      # (RN-361) sobre a MESMA story.
+      Process.put(:fake_events, [threat_model_event("st-1")])
 
       assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
 
@@ -259,41 +286,22 @@ defmodule Engine.Agents.DevLeadToolsTest do
     end
 
     test "threat model de OUTRA story não conta como guarda", %{ctx: ctx} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1"), threat_model_event("st-outra")])
+      Process.put(:fake_events, [threat_model_event("st-outra")])
 
       assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
 
       assert_received {:appsec_dispatch, "proj-1", "st-1"}
     end
 
-    test "sem plano de teste: dispara os DOIS, e o desfecho segue sendo o de `:sem_plano`", %{
-      ctx: ctx
-    } do
-      # Não-regressão do requisito (a): o appsec corre em paralelo e o
-      # parecer NÃO passa a depender dele — a mensagem devolvida é byte a
-      # byte a de antes do gatilho existir.
-      Process.put(:fake_events, [])
-
-      assert {:error, msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
-      assert msg =~ "ainda não há plano de teste"
-      assert msg =~ "instantes"
-      refute msg =~ "threat model"
-
-      assert_received {:appsec_dispatch, "proj-1", "st-1"}
-      assert_received {:qa_estrategia_dispatch, "proj-1", "sess-1", "st-1"}
-      refute_received {:propose_action, "assess_implementability", _actor, _payload}
-    end
-
-    test "com plano de teste: o parecer é proposto normalmente ao lado do disparo", %{ctx: ctx} do
+    test "o parecer é proposto normalmente ao lado do disparo", %{ctx: ctx} do
       # Não-regressão: o disparo do appsec não desvia nem atrasa a proposta.
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_events, [])
 
       assert {:ok, _msg} = DevLeadTools.run_assessment(assessment("st-1"), ctx)
 
       assert_received {:appsec_dispatch, "proj-1", "st-1"}
       assert_received {:propose_action, "assess_implementability", _actor, payload}
       assert payload.storyId == "st-1"
-      assert payload.planoDeTeste == "cobrir X"
     end
 
     test "args inválidos NÃO disparam o appsec", %{ctx: ctx} do
@@ -313,6 +321,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
       assert msg =~ "não consegui ler o histórico"
 
       refute_received {:appsec_dispatch, _project_id, _story_id}
+      refute_received {:propose_action, "assess_implementability", _actor, _payload}
     end
   end
 end

@@ -6,6 +6,7 @@ import type { Handoff } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { agentesParaChamar } from '../lib/session-destinatario';
 import styles from './SessionPage.module.css';
 
 /**
@@ -40,6 +41,12 @@ export interface SessionComposerProps {
   setDraft: Dispatch<SetStateAction<string>>;
   handleComposerKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   streaming: boolean;
+  /**
+   * RN-673: com turno em curso, a mensagem a um agente entra na FILA dele — o
+   * campo e o botão seguem abertos (o botão vira "Pôr na fila"). Falso no chat
+   * sem agente, onde não há fila: lá o turno em curso continua travando.
+   */
+  podeEnfileirar: boolean;
   handleSend: () => Promise<void>;
   handleCancel: () => Promise<void>;
   criativoActive: boolean;
@@ -80,6 +87,7 @@ export function SessionComposer({
   setDraft,
   handleComposerKeyDown,
   streaming,
+  podeEnfileirar,
   handleSend,
   handleCancel,
   criativoActive,
@@ -117,10 +125,14 @@ export function SessionComposer({
            o evento estiver visível é um botão que some sozinho.
 
         O que o texto tem de dizer é a CONSEQUÊNCIA do clique, porque
-        ela não é óbvia: o Infra Lead assume e vai PROPOR a subida do
-        container — proposta que ainda passa pelo pipeline de aprovação
-        de sempre (`container_start`, `maintainer`, RN-491). Aceitar não
-        sobe container nenhum.
+        ela não é óbvia. Desde a RN-671 (ADR 0190) o aceite SEMEIA
+        `container_start: auto_approve` e o servidor do Infra Lead propõe
+        a subida no kickoff (projeto `container`/`mounted` com roteamento
+        do Arquiteto) — ela executa sem passar por Aprovações. Seguem com
+        o humano: `container_start_via_runner` (modo `runner`) e o merge
+        da PR de infra (branch protegida). O texto antigo prometia que a
+        subida "ainda passa por você em Aprovações" (AT-348) — não volte
+        a ele.
       */}
       {isActive && handoffDaInfraOferecido && (
         <div className={styles.infraHandoffRow}>
@@ -194,8 +206,15 @@ export function SessionComposer({
         `activeFor` (não `AGENTES_DE_CHAT`) filtra quem já entrou nesta
         sessão alguma vez, pro mesmo agente não ser oferecido duas
         vezes.
+
+        Sem agente nenhum a quem a mensagem possa ir (a consultiva que
+        ainda não chamou ninguém, RN-682) este seletor MUDA de lugar: vai
+        para dentro da linha do destinatário, logo abaixo, porque ali ele
+        deixa de ser redirecionamento e passa a ser a ÚNICA forma de a
+        mensagem ter destinatário. Dois seletores iguais na mesma tela
+        seria a mesma escolha em dois lugares.
       */}
-      {isActive && (
+      {isActive && opcoesDeDestinatario.length > 0 && (
         <div className={styles.manualHandoffRow}>
           <Select
             aria-label={t('handoff.manualLabel')}
@@ -236,7 +255,44 @@ export function SessionComposer({
         */}
         <div className={styles.destinatarioRow} data-testid="destinatario-do-chat">
           {opcoesDeDestinatario.length === 0 ? (
-            <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+            /*
+              RN-682 (AT-254): sem agente, a mensagem NÃO vai a lugar
+              nenhum. Até aqui ela ia ao modelo cru (o SSE de
+              `POST .../chat`), sem histórico nem prompt de sistema, e a
+              resposta saía assinada pelo nome do modelo. Agora a linha
+              PEDE um agente e mostra quem pode ser chamado — os agentes
+              que conversam (`AGENTES_DE_CHAT`) e ainda não estão na
+              sessão —, e o envio fica travado. Chamar é o MESMO handoff
+              manual de sempre (ADR 0109/RN-440): a oferta aparece no fio,
+              e aceitá-la faz do agente o destinatário (RN-631).
+            */
+            <>
+              <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
+                {t('composer.destinatarioLabel')}
+              </label>
+              <Select
+                id="destinatario-do-chat"
+                value={manualHandoffTarget}
+                disabled={enviandoHandoffManual || !isActive}
+                onChange={(e) => setManualHandoffTarget(e.target.value)}
+              >
+                <option value="">{t('composer.destinatarioPlaceholder')}</option>
+                {agentesParaChamar(activeFor).map((agente) => (
+                  <option key={agente} value={agente}>
+                    {nomeDoAgente(agente)}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="secondary"
+                loading={enviandoHandoffManual}
+                disabled={!manualHandoffTarget}
+                onClick={handleRequestManualHandoff}
+              >
+                {t('composer.chamarAgente')}
+              </Button>
+              <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+            </>
           ) : (
             <>
               <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
@@ -276,13 +332,15 @@ export function SessionComposer({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleComposerKeyDown}
             placeholder={t('composer.placeholder')}
-            disabled={streaming}
+            disabled={streaming && !podeEnfileirar}
           />
           <Button
             onClick={handleSend}
-            disabled={streaming || !draft.trim() || precisaEscolherDestinatario}
+            disabled={
+              (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null
+            }
           >
-            {t('composer.enviar')}
+            {streaming ? t('composer.enfileirar') : t('composer.enviar')}
           </Button>
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}

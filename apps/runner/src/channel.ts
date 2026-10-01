@@ -60,6 +60,15 @@ export interface ExecMessage {
    * `index.ts`) em vez de executar e falhar como se fosse erro de autenticação.
    */
   env?: Record<string, string>;
+  /**
+   * ADR 0193 (RN-676) — a marca de "operação de git credenciada", posta SÓ
+   * pelo engine (`Engine.Runners.RunnerRouter.exec_git_credenciado/5`, chamada
+   * só por `RunnerGit`). Junto de um `env` não vazio, faz `tratarExec` rodar o
+   * comando no HOST mesmo com container ativo. Sozinha (sem `env`) não muda
+   * nada, e `env` sem ela nunca ganha o host: com container ativo, cai na
+   * recusa da RN-558.
+   */
+  gitCredenciado?: boolean;
 }
 
 export interface ExecResultMessage {
@@ -613,7 +622,10 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       // verdade — nunca repassado cru: um payload malformado não deveria
       // virar env arbitrário do processo filho.
       const env = envValido(msg.env) ? msg.env : undefined;
-      handlers.onExec({ ref: msg.ref, command: msg.command, cwd: msg.cwd, env });
+      // Só `true` literal vale como marca (ADR 0193) — qualquer outro valor é
+      // ausência, e a chave nem aparece no objeto entregue ao handler.
+      const marca = msg.gitCredenciado === true ? { gitCredenciado: true } : {};
+      handlers.onExec({ ref: msg.ref, command: msg.command, cwd: msg.cwd, env, ...marca });
     }
   });
 

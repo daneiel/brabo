@@ -193,10 +193,13 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
       expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull(),
     );
 
-    const campo = screen.getByPlaceholderText(
+    screen.getByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
-    expect(campo).not.toBeDisabled();
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
 
     // A promessa original também pode resolver depois (o engine responde
     // 202 ao `sendAgentMessage` assim que o `GenServer.call` desbloqueia) —
@@ -219,9 +222,8 @@ describe('SessionPage — botão "Parar" (RN-122)', () => {
     // Continua streaming: o botão "Parar" segue disponível — cancelar
     // falhou, o turno real no engine não foi interrompido.
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)'),
-    ).toBeDisabled();
+    // RN-673: com o turno em curso o composer segue em modo "Pôr na fila".
+    expect(screen.getByRole('button', { name: 'Pôr na fila' })).toBeInTheDocument();
   });
 
   it('canal entrega onAgentDone primeiro: some mesmo sem a rota de cancelar', async () => {

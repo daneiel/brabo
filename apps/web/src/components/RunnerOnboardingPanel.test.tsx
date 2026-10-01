@@ -6,14 +6,12 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import terminalPtBR from '../locales/pt-BR/terminal.json';
-import { RunnerOnboardingPanel } from './RunnerOnboardingPanel';
+import { COMANDO_DO_INSTALADOR, RunnerOnboardingPanel } from './RunnerOnboardingPanel';
 
 /**
- * Onboarding do runner sem PAT (ver `lib/runner-bootstrap.ts`) — o módulo é
- * substituído por um dublê, porque o que este componente decide é a
- * ORQUESTRAÇÃO visual (qual botão aparece, o estado de loading/erro/sucesso),
- * não o protocolo de Web Crypto/File System Access em si (coberto em
- * `runner-bootstrap.test.ts`). Mesmo padrão de i18n isolado de
+ * Onboarding do runner — desde o ADR 0203 (RN-687) ele manda para o
+ * `install.sh`, e o fluxo do navegador do ADR 0118 (Web Crypto, download,
+ * File System Access) não existe mais. Mesmo padrão de i18n isolado de
  * `FolderBrowserModal.test.tsx`/`TerminalPanel.test.tsx` irmãos.
  */
 
@@ -49,28 +47,9 @@ function renderComI18n(ui: ReactElement) {
   );
 }
 
-const {
-  suportaEscritaDeArquivosMock,
-  detectarPlataformaMock,
-  configurarPastaAutomaticamenteMock,
-  baixarKitManualMock,
-  listWorkspacesMock,
-  listRunnerDeviceKeysMock,
-} = vi.hoisted(() => ({
-  suportaEscritaDeArquivosMock: vi.fn(),
-  detectarPlataformaMock: vi.fn(),
-  configurarPastaAutomaticamenteMock: vi.fn(),
-  baixarKitManualMock: vi.fn(),
+const { listWorkspacesMock, listRunnerDeviceKeysMock } = vi.hoisted(() => ({
   listWorkspacesMock: vi.fn(),
   listRunnerDeviceKeysMock: vi.fn(),
-}));
-
-vi.mock('../lib/runner-bootstrap', () => ({
-  suportaEscritaDeArquivos: suportaEscritaDeArquivosMock,
-  detectarPlataforma: detectarPlataformaMock,
-  configurarPastaAutomaticamente: configurarPastaAutomaticamenteMock,
-  baixarKitManual: baixarKitManualMock,
-  plataformasSuportadas: () => ['linux-x64', 'linux-arm64', 'darwin-x64', 'darwin-arm64', 'win32-x64'],
 }));
 
 vi.mock('../lib/api-client', () => ({
@@ -97,10 +76,6 @@ vi.mock('../lib/api-client', () => ({
 }));
 
 beforeEach(() => {
-  suportaEscritaDeArquivosMock.mockReset();
-  detectarPlataformaMock.mockReset();
-  configurarPastaAutomaticamenteMock.mockReset();
-  baixarKitManualMock.mockReset();
   listWorkspacesMock.mockReset();
   listRunnerDeviceKeysMock.mockReset();
   listWorkspacesMock.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]);
@@ -108,76 +83,13 @@ beforeEach(() => {
 });
 
 /**
- * O aviso do passo de terminal, dito ANTES do clique (RN-473, revisada).
- *
- * A frase `passoHumano` já existia, mas só era renderizada no estado de
- * SUCESSO — depois de a pessoa escolher a pasta, esperar o registro da chave e
- * o download do binário. Quem clica num botão chamado "Configurar pasta
- * automaticamente" e só então descobre que ainda precisa abrir um terminal foi
- * surpreendido, mesmo sem nenhuma frase ter mentido.
+ * O caminho é o instalador (ADR 0203, RN-687). O que o painel decide é O QUE
+ * oferece: o comando do `install.sh`, copiável, e o comando manual de sempre
+ * no `<details>` — e nunca mais o fluxo do navegador do ADR 0118.
  */
-describe('RunnerOnboardingPanel — o passo humano é anunciado antes', () => {
-  it('mostra o aviso de terminal já no estado inicial, junto do botão', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-
-    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
-
-    const aviso = await screen.findByText(/isto termina no seu terminal/i);
-    expect(aviso).toBeTruthy();
-    // E ele está lá ao lado do botão que ainda não foi clicado — não depois.
-    expect(
-      screen.getByRole('button', { name: /Configurar pasta automaticamente/i }),
-    ).toBeTruthy();
-  });
-
-  it('sem projeto não há o que avisar — o fluxo nem começa aqui', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-
-    renderComI18n(<RunnerOnboardingPanel projectId={null} />);
-
-    await waitFor(() =>
-      expect(screen.queryByText(/isto termina no seu terminal/i)).toBeNull(),
-    );
-  });
-
-  it('depois de configurar, o aviso inicial sai e a explicação do fim entra', async () => {
+describe('RunnerOnboardingPanel — o caminho é o instalador (ADR 0203)', () => {
+  it('sem chave pareada: mostra o comando do instalador, que copia, e a espera do runner', async () => {
     const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    configurarPastaAutomaticamenteMock.mockResolvedValue({
-      pasta: 'exp001',
-      instrucaoFinal: 'cd /home/alguem/dev/exp001 && ./brabo-runner',
-      falhaDoBinario: null,
-    });
-
-    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
-    await user.click(
-      await screen.findByRole('button', { name: /Configurar pasta automaticamente/i }),
-    );
-
-    // A frase do FIM explica POR QUE o passo existe; a do início avisava que
-    // ele VIRIA. Duas perguntas diferentes, e a segunda já foi respondida.
-    expect(
-      await screen.findByText(/o navegador não executa programas na sua máquina/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/isto termina no seu terminal/i)).toBeNull();
-    // E o comando agora diz em que pasta rodar.
-    expect(screen.getByText('cd /home/alguem/dev/exp001 && ./brabo-runner')).toBeTruthy();
-  });
-});
-
-describe('RunnerOnboardingPanel', () => {
-  it('Chromium com plataforma detectada: caminho feliz da configuração automática', async () => {
-    const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    configurarPastaAutomaticamenteMock.mockResolvedValue({
-      instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
-      pasta: 'minha-pasta',
-      falhaDoBinario: null,
-    });
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -186,151 +98,89 @@ describe('RunnerOnboardingPanel', () => {
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
-    const botao = await screen.findByRole('button', { name: 'Configurar pasta automaticamente' });
-    await user.click(botao);
-
+    expect(await screen.findByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
+    expect(COMANDO_DO_INSTALADOR).toMatch(/^curl -fsSLO .+\/install\.sh && bash install\.sh$/);
+    expect(screen.getByText(/instalador do Brabo/i)).toBeInTheDocument();
+    // O passo humano é dito ao lado do comando, não escondido.
     expect(
-      await screen.findByText('chmod +x ./brabo-runner && ./brabo-runner'),
+      screen.getByText(/o navegador não executa programas na sua máquina/i),
     ).toBeInTheDocument();
-    expect(configurarPastaAutomaticamenteMock).toHaveBeenCalledWith({
-      projectId: 'proj-1',
-      apiUrl: 'https://api.brabo.example',
-      platform: 'linux-x64',
-    });
 
     await user.click(screen.getByRole('button', { name: 'Copiar' }));
-    expect(writeText).toHaveBeenCalledWith('chmod +x ./brabo-runner && ./brabo-runner');
+    expect(writeText).toHaveBeenCalledWith(COMANDO_DO_INSTALADOR);
     expect(await screen.findByRole('button', { name: 'Copiado!' })).toBeInTheDocument();
+
+    // Depois do instalador, o que falta é o agente CONECTAR — a espera é UMA.
+    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
 
     cleanup();
   });
 
-  it('binário indisponível: a pasta configurada é ANUNCIADA mesmo assim, com o motivo e o comando alternativo (RN-473)', async () => {
+  it('o fluxo do navegador SAIU: nenhum botão de configurar pasta nem de baixar arquivos, e nenhum chmod', async () => {
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    await screen.findByText(COMANDO_DO_INSTALADOR);
+    expect(
+      screen.queryByRole('button', { name: /configurar pasta automaticamente/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /baixar arquivos/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/chmod \+x/)).not.toBeInTheDocument();
+    // O único botão além do de copiar é nenhum: o painel não tem ação de rede.
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Copiar']);
+
+    cleanup();
+  });
+
+  it('CASO DE FALHA: clipboard recusado não quebra a tela — o comando segue lá, à mão', async () => {
     const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    configurarPastaAutomaticamenteMock.mockResolvedValue({
-      instrucaoFinal: 'npm install -g @brabo/runner && brabo-runner',
-      pasta: 'meu-projeto',
-      falhaDoBinario:
-        'Não foi possível baixar o binário do runner para "linux-x64" (HTTP 502).',
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('negado')) },
+      configurable: true,
     });
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Configurar pasta automaticamente' }),
-    );
-
-    // A escolha da pasta NÃO foi descartada — é o coração do pedido.
-    expect(await screen.findByText(/Pasta "meu-projeto" configurada/)).toBeInTheDocument();
-    // O motivo aparece, e a saída também.
-    expect(screen.getByText(/HTTP 502/)).toBeInTheDocument();
-    expect(
-      screen.getByText('npm install -g @brabo/runner && brabo-runner'),
-    ).toBeInTheDocument();
-    // E a espera já está rodando, sem a pessoa clicar em nada.
-    expect(screen.getByText('Procurando o runner…')).toBeInTheDocument();
-
-    cleanup();
-  });
-
-  it('cancelar o seletor de pasta volta ao estado inicial, sem alerta de erro', async () => {
-    const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    const cancelamento = new Error('The user aborted a request.');
-    cancelamento.name = 'AbortError';
-    configurarPastaAutomaticamenteMock.mockRejectedValue(cancelamento);
-
-    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
-
-    const botao = await screen.findByRole('button', { name: 'Configurar pasta automaticamente' });
-    await user.click(botao);
-
-    await waitFor(() => expect(configurarPastaAutomaticamenteMock).toHaveBeenCalled());
+    await user.click(await screen.findByRole('button', { name: 'Copiar' }));
+    expect(screen.getByRole('button', { name: 'Copiar' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(
-      await screen.findByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).toBeInTheDocument();
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
     cleanup();
   });
 
-  it('falha da configuração automática mostra o erro sem quebrar a tela, e o comando manual continua acessível', async () => {
-    const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    configurarPastaAutomaticamenteMock.mockRejectedValue(
-      new Error('usuário cancelou o seletor de pasta'),
-    );
-
+  it('o comando manual (PAT) segue no `<details>`, nomeado como o caminho da OUTRA máquina', async () => {
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
-    const botao = await screen.findByRole('button', { name: 'Configurar pasta automaticamente' });
-    await user.click(botao);
-
-    expect(await screen.findByText('usuário cancelou o seletor de pasta')).toBeInTheDocument();
-    // A tela não quebrou: o comando manual (colapsado) continua no DOM.
+    expect(await screen.findByText(/outra máquina, ou rodar manualmente/i)).toBeInTheDocument();
     expect(screen.getByText(/brabo-runner --project proj-1/)).toBeInTheDocument();
     expect(screen.getByText(/--token/)).toBeInTheDocument();
 
     cleanup();
   });
 
-  it('fora do Chromium (sem suporte a escrita de arquivos): mostra "Baixar arquivos" em vez do botão automático', async () => {
-    const user = userEvent.setup();
-    suportaEscritaDeArquivosMock.mockReturnValue(false);
-    detectarPlataformaMock.mockResolvedValue('darwin-arm64');
-    baixarKitManualMock.mockResolvedValue({
-      instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
-      falhaDoBinario: null,
-    });
-
-    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+  it('sem projectId (projeto ainda não existe): instalador e comando manual com placeholder, sem espera', async () => {
+    renderComI18n(<RunnerOnboardingPanel projectId={null} />);
 
     expect(
-      screen.queryByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).not.toBeInTheDocument();
-    const botao = await screen.findByRole('button', { name: 'Baixar arquivos' });
-    await user.click(botao);
-
-    await waitFor(() =>
-      expect(baixarKitManualMock).toHaveBeenCalledWith({
-        projectId: 'proj-1',
-        apiUrl: 'https://api.brabo.example',
-        platform: 'darwin-arm64',
-      }),
-    );
-    expect(
-      await screen.findByText(/downloads iniciados/i),
+      screen.getByText(/depois de criar o projeto, você pode configurar o runner aqui/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
+    expect(screen.getByText(/<id do projeto>/)).toBeInTheDocument();
+    expect(screen.queryByText(/procurando o runner/i)).not.toBeInTheDocument();
 
     cleanup();
   });
 
-  it('sem projectId (projeto ainda não existe): nenhuma ação automática, só o comando manual com placeholder', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
+  it('`mostrarEspera={false}` (quem montou já espera): o instalador aparece sem segunda espera', async () => {
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" mostrarEspera={false} />);
 
-    renderComI18n(<RunnerOnboardingPanel projectId={null} />);
-
-    expect(
-      screen.queryByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Baixar arquivos' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/depois de criar o projeto, você pode configurar o runner aqui/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/<id do projeto>/)).toBeInTheDocument();
+    expect(await screen.findByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
+    expect(screen.queryByText(/procurando o runner/i)).not.toBeInTheDocument();
 
     cleanup();
   });
 
   it('`mensagem` explícita sobrepõe o texto default (uso de `TerminalPanel`/`FolderBrowserModal`)', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-
     renderComI18n(
       <RunnerOnboardingPanel projectId="proj-1" mensagem="nenhum runner conectado a este projeto" />,
     );
@@ -358,9 +208,7 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
     lastUsedAt: '2026-09-10T08:00:00.000Z',
   };
 
-  it('com chave de máquina ativa: anuncia o pareamento, o gesto é o SERVIÇO, e parear vira o segundo caminho', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
+  it('com chave de máquina ativa: anuncia o pareamento, o gesto é o SERVIÇO, e o instalador sai', async () => {
     listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
@@ -375,21 +223,16 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
     expect(screen.getByText('brabo-runner service status --machine')).toBeInTheDocument();
     expect(screen.queryByText(/service status --project/)).not.toBeInTheDocument();
 
-    // O caminho do ADR 0118 NÃO é removido: ele fica atrás de um rótulo que
-    // nomeia o caso em que ainda é a resposta (BRB-031 é decisão à parte).
-    expect(
-      screen.getByText(/estou em outra máquina — parear esta também/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).toBeInTheDocument();
+    // Reconhecida a máquina, mandar instalar de novo seria responder à
+    // pergunta errada: o instalador sai, e quem está em OUTRA máquina tem o
+    // comando manual no `<details>` (ADR 0203).
+    expect(screen.queryByText(COMANDO_DO_INSTALADOR)).not.toBeInTheDocument();
+    expect(screen.getByText(/outra máquina, ou rodar manualmente/i)).toBeInTheDocument();
 
     cleanup();
   });
 
   it('reconhecer NÃO é dizer que o agente está de pé, nem que ESTA máquina é a pareada', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
@@ -410,32 +253,7 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
     cleanup();
   });
 
-  it('configurar mesmo assim pelo `<details>`: a espera continua sendo UMA, a do sucesso', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
-    listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
-    configurarPastaAutomaticamenteMock.mockResolvedValue({
-      instrucaoFinal: 'cd /home/user/proj && ./brabo-runner',
-      pasta: 'proj',
-      falhaDoBinario: null,
-    });
-
-    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
-
-    await screen.findByText(/sua conta já tem máquina pareada/i);
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
-    );
-
-    expect(await screen.findByText(/configurada/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
-
-    cleanup();
-  });
-
-  it('chave de máquina REVOGADA não vira pareamento: o painel volta a mandar parear', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
+  it('chave de máquina REVOGADA não vira pareamento: o painel volta a mandar para o instalador', async () => {
     listRunnerDeviceKeysMock.mockResolvedValue([
       { ...chaveDeMaquina, revokedAt: '2026-09-11T00:00:00.000Z' },
     ]);
@@ -443,36 +261,25 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
     expect(await screen.findByText(/está revogada/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/estou em outra máquina — parear esta também/i),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).toBeInTheDocument();
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
     cleanup();
   });
 
   it('consulta falhada diz que NÃO SABE — nunca que não há máquina pareada', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listRunnerDeviceKeysMock.mockRejectedValue(new Error('boom'));
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
     expect(await screen.findByText(/quer dizer que não sei/i)).toBeInTheDocument();
     expect(screen.queryByText(/sua conta já tem máquina pareada/i)).not.toBeInTheDocument();
-    // E o painel de sempre segue de pé: ignorância não tranca o pareamento.
-    expect(
-      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).toBeInTheDocument();
+    // E o painel de sempre segue de pé: ignorância não tranca o instalador.
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
     cleanup();
   });
 
   it('papel abaixo de developer: a tela não pergunta, e diz por quê UMA vez, em texto', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listWorkspacesMock.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'viewer' }]);
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
@@ -486,8 +293,6 @@ describe('RunnerOnboardingPanel — reconhece máquina já pareada (RN-548)', ()
   });
 
   it('sem projectId (wizard antes da criação antecipada) não há a quem perguntar', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listRunnerDeviceKeysMock.mockResolvedValue([chaveDeMaquina]);
 
     renderComI18n(<RunnerOnboardingPanel projectId={null} />);
@@ -510,9 +315,7 @@ describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-1
     lastUsedAt: '2026-09-10T08:00:00.000Z',
   };
 
-  it('chave de projeto ativa: anuncia, custo da espécie é ESTE projeto, parear vira segundo caminho', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
+  it('chave de projeto ativa (registrada pelo navegador ANTES do ADR 0203): segue reconhecida, e o instalador sai', async () => {
     listRunnerDeviceKeysMock.mockResolvedValue([chaveDeProjeto]);
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
@@ -527,15 +330,13 @@ describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-1
     // por projeto, e o `--machine` não aparece (AT-106).
     expect(screen.getByText('brabo-runner service status --project proj-1')).toBeInTheDocument();
     expect(screen.queryByText(/service status --machine/)).not.toBeInTheDocument();
-    expect(screen.getByText(/estou em outra máquina — parear esta também/i)).toBeInTheDocument();
+    expect(screen.queryByText(COMANDO_DO_INSTALADOR)).not.toBeInTheDocument();
     expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
 
     cleanup();
   });
 
   it('as DUAS espécies ativas: cada bloco oferece o comando da SUA unit, e a espera segue UMA', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listRunnerDeviceKeysMock.mockResolvedValue([
       chaveDeProjeto,
       {
@@ -557,9 +358,7 @@ describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-1
     cleanup();
   });
 
-  it('chave de projeto REVOGADA: avisa e o painel volta a mandar parear', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
+  it('chave de projeto REVOGADA: avisa e o painel volta a mandar para o instalador', async () => {
     listRunnerDeviceKeysMock.mockResolvedValue([
       { ...chaveDeProjeto, revokedAt: '2026-09-11T00:00:00.000Z' },
     ]);
@@ -568,25 +367,19 @@ describe('RunnerOnboardingPanel — reconhece chave de PROJETO já pareada (AT-1
 
     expect(await screen.findByText(/está revogada/i)).toBeInTheDocument();
     expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/estou em outra máquina — parear esta também/i),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
     cleanup();
   });
 
   it('chave ativa de OUTRO projeto não reconhece este', async () => {
-    suportaEscritaDeArquivosMock.mockReturnValue(true);
-    detectarPlataformaMock.mockResolvedValue('linux-x64');
     listRunnerDeviceKeysMock.mockResolvedValue([{ ...chaveDeProjeto, projectId: 'proj-2' }]);
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
     await waitFor(() => expect(listRunnerDeviceKeysMock).toHaveBeenCalled());
     expect(screen.queryByText(/já está pareado/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Configurar pasta automaticamente' }),
-    ).toBeInTheDocument();
+    expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
     cleanup();
   });

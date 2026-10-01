@@ -165,13 +165,14 @@ Source: each package's `package.json` and the root `Makefile`.
 | command | runs |
 |---|---|
 | `pnpm --filter scripts test` | `vitest run` |
-| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma && tsc --noEmit -p jev/vivo` |
 | `pnpm --filter scripts idioma:medir` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts` |
 | `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
 | `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
 | `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
 | `pnpm --filter scripts jev:analise` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts` |
 | `pnpm --filter scripts jev:menu` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts` |
+| `pnpm --filter scripts jev:vivo` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/vivo/vivo.ts` |
 | `pnpm --filter scripts idioma:validar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts` |
 | `pnpm --filter scripts idioma:diagnosticar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/diagnostico-haiku.ts` |
 | `pnpm --filter scripts idioma:revisar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/revisao.ts` |
@@ -200,4 +201,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-135 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+136 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

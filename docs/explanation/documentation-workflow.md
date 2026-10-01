@@ -202,13 +202,14 @@ are too many to fix one by one inside this change, and the nearest
 occurrence is not always the definition. The list is what `pnpm
 docs:check` prints.
 
-**Severity: `warn`.** It reports and doesn't fail, because a `block`
-would stop every PR that touches an RN file over debt someone else left.
-There is one exception, the house rule: if the check extracts **zero**
-references, that is `CEGO` and **fails**. Zero means the RN syntax
-changed or the extractor broke, and a blind check stays green forever.
+**Severity at birth: `warn`.** It reported and didn't fail, because a
+`block` would have stopped every PR that touched an RN file over debt
+someone else left. There was one exception, the house rule: if the check
+extracts **zero** references, that is `CEGO` and **fails**. Zero means
+the RN syntax changed or the extractor broke, and a blind check stays
+green forever.
 
-**When to promote it to `block`:** once the list is **empty**, and
+**The original criterion for `block`** (PR #593): once the list is **empty**, and
 after **four consecutive weeks** of `docs:check` on `dev` with no new
 wrong references in RNs touched during those weeks. At that point every
 new wrong reference is the current PR's fault, and the PR can fix it.
@@ -229,8 +230,53 @@ Those two now point at the body line. The window stayed at ±3. The
 bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
 their unchecked neighbouring references re-read in the same pass. After
 that, **273 references match the pattern, 273 are correct, and 0 are
-wrong**. The four weeks start when that change reaches `dev`. The
-severity stays `warn` until then.
+wrong**. The four weeks were to start when that change reached `dev`.
+
+**Promoted to `block` on 2026-10-01** (AT-122), by the maintainer's
+decision, without waiting out the four weeks. Five days after the list
+went empty, `dev` had **140** wrong references again, out of 896 that
+match the pattern: the `warn` didn't hold the drift back, because a
+warning nobody has to act on is a warning nobody reads. The 140 were
+re-read by symbol in the same change that promoted the check, never by
+adding a delta, and the window stayed at ±3. None was a false positive
+of the pattern, and no symbol was missing from its file. What the pass
+found besides line drift:
+
+- **Merge leftovers.** Three bullets had been duplicated by conflict
+  resolution, one copy with older numbers next to one with newer ones
+  (RN-120's `Where`, RN-547's `Código` and RN-626's `SessionPage.tsx`
+  line). The stale copy was removed, which is why the total went from 896
+  to **883**.
+- **One reference whose subject changed (state drift, not line drift).**
+  RN-587 cited the test for an `infra` message; since RN-617 the Infra
+  Lead converses, and the test now uses `qa` as the roster agent without
+  a conversation. The reference now says so. The RN's rule did not
+  change.
+- Unchecked neighbours in the bullets with the worst drift (RN-547,
+  RN-567, RN-587, RN-609, RN-663, RN-566) were re-read in the same pass
+  where the test or clause they name could be identified.
+
+After that, **883 references match the pattern, 883 are correct, and 0
+are wrong**.
+
+**Severity now: `block`.** A reference that doesn't match, **or** whose
+path no longer resolves to a single tracked file, fails `docs:check`.
+Both are the same drift: the RN points where the code isn't. Zero
+references is still `CEGO` and still fails. The verdict is `veredito` in
+`refs-com-simbolo.mjs`, proved by mutation in the spec next to it: a
+reference moved out of the window fails, a symbol that left the file
+fails, a path that no longer resolves fails, and text rewritten until
+extraction yields zero is `CEGO`, never `ok`. When it fails, fix the
+reference **by the symbol** (the output names the nearest line where it
+appears, which is a hint, not a fix). Don't widen the window, and don't
+narrow the pattern to make a real reference disappear; narrow it only
+for a real false positive, with the case in the spec.
+
+The pt-BR translations of the three RN files under `website/i18n/` are
+**not** checked. They carry few references (23 match the pattern, 15 of
+them wrong on 2026-10-01), and the translation is behind the English
+source anyway; checking a copy nobody keeps in step would fail every PR
+over the translation's lag.
 
 ### Every RN heading carries its anchor
 
@@ -319,6 +365,39 @@ and its headings do not carry the ten explicit ids this table added to the
 English page. A
 second, unchecked copy of the table there would be exactly the copy the table
 exists to replace.
+
+### The ADR index is grouped by theme {#the-adr-index-is-grouped-by-theme}
+
+The ADR index used to be grouped by phase. Once the phases ended, the last
+section became the index: measured on 2026-10-01, 148 of its 191 rows lived
+under `## Phase 12`. [ADR 0202](../adr/0202-o-indice-de-adr-por-tema.md)
+groups it by **theme** instead, and puts the theme **outside** the ADR — an
+accepted ADR is never edited, not even to gain a `tema:` frontmatter key.
+
+The theme lives in `docs/adr/temas.yml`, next to the index: `temas:` is the
+closed, ordered list (`id`, `titulo`, `descricao`) and `adrs:` maps each ADR
+number to ONE theme. The index is **checked, not generated** — its one-line
+descriptions are curated and no script writes them, the same reason
+`verificarIndiceAdr` gives — and each theme is a section
+`## <titulo> {#tema-<id>}`, in the list's order, with its rows in numeric
+order.
+
+`generate.mjs` checks it (`verificarTemasDeAdr`, right after
+`verificarIndiceAdr`; logic in `scripts/docs/temas-de-adr.mjs`, proven by
+mutation in `temas-de-adr.spec.ts`). It fails an ADR file with no theme, a
+theme in the map that is not in the list, a map entry for an ADR that does not
+exist, a listed theme with no ADR, a repeated or malformed theme id or title,
+and, in the index, a missing, repeated, misnamed, out-of-order or unknown
+theme section, or an ADR row under another theme's section, outside any theme
+section, repeated or out of numeric order. Unreadable YAML, an empty list or
+map, or an index with no theme section at all (the old by-phase index) is
+`CEGO` and fails.
+
+**Severity: `block`**, like the runbook table: it was born with every ADR
+classified, so whatever breaks it later is a new ADR whose PR forgot its line
+in `temas.yml` — the PR that can fix it. The pt-BR translation of the index is
+still by phase and behind the English one; the `traducao-pt-br` rule warns, as
+always.
 
 ## The pieces
 

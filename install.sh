@@ -1671,7 +1671,7 @@ main() {
 
   case "$plataforma" in
     windows)
-      recusar "Windows está fora de escopo por decisão declarada (ADR 0150), como já é para o serviço do runner (RN-518). Não é uma falha genérica: o mecanismo de instalação ali é outro, e prometê-lo aqui seria pior que recusá-lo."
+      recusar "Windows está fora de escopo por decisão declarada (ADR 0150), como já é para o serviço do runner (RN-518). Não é uma falha genérica: o mecanismo de instalação ali é outro, e prometê-lo aqui seria pior que recusá-lo. O agente local no Windows também não tem binário (ADR 0187): instale pelo npm, que roda sob Node — npm install -g @brabo/runner"
       ;;
     nao-suportado:*)
       recusar "plataforma não suportada: ${plataforma#nao-suportado:}. Suportados: linux e macOS, em amd64 e arm64."

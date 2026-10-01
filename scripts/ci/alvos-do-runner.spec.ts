@@ -1,18 +1,20 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Os alvos do binário standalone do runner moram em QUATRO lugares, em três
+ * Os alvos do binário standalone do runner moram em TRÊS lugares, em três
  * linguagens, e nenhum deles pode derivar do outro em tempo de execução:
  *
  * - a matriz de `build-runner-binaries.yml` (o que se CONSTRÓI);
  * - `PLATAFORMAS` do proxy `GET /runner-releases/binary` (o que a api ACEITA);
- * - o `case` de `instalar_o_runner` no `install.sh` (o que o instalador BAIXA);
- * - `PLATAFORMAS` e `SEM_BINARIO_PUBLICADO` em `apps/web/src/lib/runner-bootstrap.ts`
- *   (o que o navegador DETECTA, e para qual delas ele nem pede o download).
+ * - o `case` de `instalar_o_runner` no `install.sh` (o que o instalador BAIXA).
+ *
+ * Eram QUATRO até o ADR 0203 (RN-687): a quarta era a lista do navegador em
+ * `apps/web/src/lib/runner-bootstrap.ts`, que saiu junto com o fluxo do ADR
+ * 0118. O último teste abaixo trava que ela não volte calada.
  *
  * O ADR 0174 tirou `darwin-x64` (Mac Intel) da matriz: sem runner Intel
  * utilizável no Actions, e o Bun quebrando o `onData` do node-pty no
@@ -20,6 +22,11 @@ import { describe, expect, it } from 'vitest';
  * produz o defeito silencioso que este arquivo existe para impedir — a api
  * aceitando uma plataforma que nunca publica, ou o instalador baixando um
  * asset que dá 404 com cara de rede fora.
+ *
+ * O ADR 0187 tirou `win32-x64` pelo mesmo molde: o binário carrega o
+ * node-pty, mas sob o Bun o pipe nomeado de saída do ConPTY fecha depois do
+ * primeiro pedaço. O `install.sh` já recusava Windows inteiro (ADR 0150),
+ * então nunca teve `win32-x64` no `case`; os outros lugares mudam.
  */
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -38,18 +45,20 @@ function listaDoTs(fonte: string, nome: string): string[] {
   return [...(m[1] ?? '').matchAll(/'([^']+)'/g)].map((x) => x[1] ?? '').sort();
 }
 
-describe('os alvos do binário do runner (ADR 0174)', () => {
-  it('a matriz tem QUATRO alvos e nenhum deles é o Mac Intel', () => {
-    expect(daMatriz).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+describe('os alvos do binário do runner (ADR 0174, ADR 0187)', () => {
+  it('a matriz tem TRÊS alvos: nem o Mac Intel nem o Windows', () => {
+    expect(daMatriz).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64']);
     expect(matriz.map((i) => i.os)).not.toContain('macos-13');
     expect(matriz.map((i) => i.os)).not.toContain('macos-15-intel');
+    expect(matriz.map((i) => i.os)).not.toContain('windows-latest');
   });
 
   it('a api aceita exatamente o que a matriz constrói', () => {
     const fonte = ler('apps/api/src/interfaces/http/runner/runner-releases.controller.ts');
     expect(listaDoTs(fonte, 'PLATAFORMAS')).toEqual(daMatriz);
-    // E o Mac Intel tem recusa PRÓPRIA, que aponta o npm.
-    expect(fonte).toMatch(/SEM_BINARIO_POR_DECISAO = 'darwin-x64'/);
+    // E o Mac Intel e o Windows têm recusa PRÓPRIA, que aponta o npm e o ADR.
+    expect(fonte).toMatch(/'darwin-x64': \{ nome: 'Mac Intel', adr: 'ADR 0174' \}/);
+    expect(fonte).toMatch(/'win32-x64': \{ nome: 'Windows', adr: 'ADR 0187' \}/);
     expect(fonte).toContain('npm install -g @brabo/runner');
   });
 
@@ -63,14 +72,11 @@ describe('os alvos do binário do runner (ADR 0174)', () => {
     expect(baixados.length).toBeGreaterThan(0);
     for (const alvo of baixados) expect(daMatriz).toContain(alvo);
     expect(corpo).toMatch(/darwin-amd64\)\s*\n[\s\S]*?npm install -g @brabo\/runner[\s\S]*?return 0/);
+    // Windows nem chega aqui: a instalação inteira é recusada antes (ADR 0150).
+    expect(fonte).toMatch(/windows\)\s*\n\s*recusar "Windows está fora de escopo/);
   });
 
-  it('o navegador detecta mais do que baixa, e a diferença é só o que não tem binário', () => {
-    const fonte = ler('apps/web/src/lib/runner-bootstrap.ts');
-    const detectaveis = listaDoTs(fonte, 'PLATAFORMAS');
-    const semBinario = listaDoTs(fonte, 'SEM_BINARIO_PUBLICADO');
-    expect(semBinario).toEqual(['darwin-x64']);
-    for (const alvo of semBinario) expect(daMatriz).not.toContain(alvo);
-    expect([...daMatriz, ...semBinario].sort()).toEqual(detectaveis);
+  it('o navegador não enumera mais alvo nenhum: o fluxo do ADR 0118 saiu (ADR 0203)', () => {
+    expect(existsSync(path.join(RAIZ, 'apps/web/src/lib/runner-bootstrap.ts'))).toBe(false);
   });
 });

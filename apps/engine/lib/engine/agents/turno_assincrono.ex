@@ -51,11 +51,25 @@ defmodule Engine.Agents.TurnoAssincrono do
   `agent.done`. O turno NÃO terminou — está esperando
   `{:action_settled, ...}` (a mesma entrega da `Engine.Dev.Wake`/outbox que
   o dev agent já consome desde o ADR 0052) para retomar de onde parou.
+
+  ## A fila de mensagens (RN-673, ADR 0191)
+
+  Mensagem do usuário que chega com turno em curso NÃO é mais recusada: entra
+  na fila do agente (`receber_mensagem/4`), é gravada como
+  `chat.message_queued` e respondida `{:ok, :enfileirada, posicao}` (202). No
+  fim do turno — `finalizar/1`, nunca `suspender/1` — a fila inteira vira UM
+  turno (`Engine.Agents.FilaDeMensagens.texto_do_turno/1`) e é marcada
+  `chat.message_delivered`. Quem monta o turno de uma mensagem é o SERVIDOR
+  (`:montar_turno_de_mensagem` no state, a mesma função do `handle_call` de
+  sempre); este módulo só decide QUANDO. A recusa `turno_em_andamento` de
+  `iniciar/3` continua valendo para o que NÃO é mensagem (revisão do PO,
+  prontidão do Criativo, handoff do Arquiteto).
   """
 
   require Logger
 
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{FalhaDeTurno, FilaDeMensagens}
+  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @typedoc "O que fica guardado no state do agente enquanto o turno roda."
@@ -95,6 +109,11 @@ defmodule Engine.Agents.TurnoAssincrono do
   "Continue" digitado durante o kickoff do Arquiteto). Sem `from` (era o
   `:kickoff`, que só deveria disparar uma vez por sessão), ignora e loga — é
   defensivo, não um caminho esperado.
+
+  Desde a RN-673 (ADR 0191) a MENSAGEM do usuário não passa mais por esta
+  recusa: ela entra em `receber_mensagem/4`, que enfileira. O que segue
+  recusado aqui são os comandos que não são fala — a revisão de história do
+  PO, a prontidão do Criativo, a oferta de handoff do Arquiteto.
   """
   @spec iniciar(map(), GenServer.from() | nil, (-> map())) ::
           {:noreply, map()} | {:reply, :ok | {:error, :turno_em_andamento}, map()}
@@ -152,12 +171,19 @@ defmodule Engine.Agents.TurnoAssincrono do
   @spec tratar_resultado(term(), map()) :: {:ok, map()} | :ignorado
   def tratar_resultado(
         {ref, resultado},
-        %{turno_assincrono: %{task: %Task{ref: ref}}} = _state
+        %{turno_assincrono: %{task: %Task{ref: ref}}} = state
       )
       when is_reference(ref) and is_map(resultado) do
     Process.demonitor(ref, [:flush])
 
-    novo_state = Map.put(resultado, :turno_assincrono, nil)
+    # A fila vem do state ATUAL, nunca do `resultado`: a Task capturou o state
+    # do INÍCIO do turno, antes de as mensagens que chegaram no meio dele
+    # entrarem na fila (RN-673) — o mesmo raciocínio das `correcoes_pendentes`
+    # do Infra Lead.
+    novo_state =
+      resultado
+      |> Map.put(:turno_assincrono, nil)
+      |> Map.put(:fila_de_mensagens, Map.get(state, :fila_de_mensagens, []))
 
     # `Map.get/2` (valor), não `Map.has_key?/2` (chave): o Dev Lead carrega
     # `aguardando_aprovacao: nil` no state DESDE O INÍCIO (é o default do
@@ -167,7 +193,7 @@ defmodule Engine.Agents.TurnoAssincrono do
     if Map.get(novo_state, :aguardando_aprovacao) do
       {:ok, suspender(novo_state)}
     else
-      {:ok, finalizar(novo_state)}
+      {:ok, novo_state |> finalizar() |> agendar_entrega()}
     end
   end
 
@@ -196,7 +222,7 @@ defmodule Engine.Agents.TurnoAssincrono do
       |> Map.put(:turno_assincrono, nil)
       |> emitir_falha_de_formato(resultado)
 
-    {:ok, finalizar(novo_state)}
+    {:ok, novo_state |> finalizar() |> agendar_entrega()}
   end
 
   def tratar_resultado(
@@ -208,7 +234,16 @@ defmodule Engine.Agents.TurnoAssincrono do
       |> Map.put(:turno_assincrono, nil)
       |> emitir_falha_crash(reason)
 
-    {:ok, finalizar(novo_state)}
+    {:ok, novo_state |> finalizar() |> agendar_entrega()}
+  end
+
+  # A entrega da fila (RN-673) é uma MENSAGEM a si mesmo, nunca uma chamada
+  # dentro de `finalizar/1`: o servidor ainda tem o próprio fecho a fazer no
+  # mesmo `handle_info` (o Infra Lead drena a correção de gate pendente, o
+  # Arquiteto o handoff ao Dev Lead) e não pode encontrar um turno da fila já
+  # de pé. Se um deles subiu um turno, a fila espera o fim dele.
+  def tratar_resultado(:entregar_fila_de_mensagens, state) do
+    {:ok, entregar_fila(state)}
   end
 
   def tratar_resultado(_msg, _state), do: :ignorado
@@ -237,9 +272,128 @@ defmodule Engine.Agents.TurnoAssincrono do
     |> Map.put(:turno_assincrono, nil)
     |> emitir_cancelamento()
     |> finalizar()
+    |> agendar_entrega()
   end
 
   def cancelar(state), do: Map.put(state, :turno_assincrono, nil)
+
+  @doc """
+  A mensagem do usuário (RN-673). `mensagem` é `%{texto, idioma, id}` — `id`
+  é o do `chat.message` que a api já gravou (`nil` para chamador antigo, que
+  então não pode cancelá-la). `montar` é a função do SERVIDOR que transforma
+  `(state, texto)` no turno (a aridade zero de `iniciar/3`); fica guardada no
+  state para a fila poder montar o turno depois.
+
+    * sem turno e sem fila — sobe o turno na hora, como sempre (`:ok`);
+    * sem turno mas com fila (a janela entre o fim de um turno e a entrega) —
+      entra no FIM da fila e a fila inteira é entregue já, para a mais nova
+      nunca passar na frente das que esperavam (`:ok`);
+    * com turno e fila abaixo do teto — enfileira, grava `chat.message_queued`
+      e responde `{:ok, :enfileirada, posicao}`;
+    * com a fila no teto — recusa NOMEADA `{:error, :fila_de_mensagens_cheia}`,
+      com `agent.error` durável (a mensagem está gravada e não será lida).
+
+  Turno SUSPENSO em aprovação (Dev Lead, RN-284) não chega aqui: o servidor
+  recusa antes, com `aguardando_aprovacao`.
+  """
+  @spec receber_mensagem(map(), GenServer.from(), map(), (map(), String.t() -> (-> map()))) ::
+          {:reply, :ok | {:ok, :enfileirada, pos_integer()} | {:error, atom()}, map()}
+  def receber_mensagem(state, from, %{texto: _} = mensagem, montar) when is_function(montar, 2) do
+    state = Map.put(state, :montar_turno_de_mensagem, montar)
+    fila = Map.get(state, :fila_de_mensagens, [])
+    mensagem = Map.merge(%{id: nil, idioma: nil}, mensagem)
+
+    cond do
+      is_nil(Map.get(state, :turno_assincrono)) and fila == [] ->
+        IdiomaDaResposta.com_idioma_do_autor(mensagem.idioma, fn ->
+          iniciar(state, from, montar.(state, mensagem.texto))
+        end)
+
+      is_nil(Map.get(state, :turno_assincrono)) ->
+        novo_state = state |> Map.put(:fila_de_mensagens, fila ++ [mensagem]) |> entregar_fila()
+        {:reply, :ok, novo_state}
+
+      length(fila) >= FilaDeMensagens.teto() ->
+        emitir_recusa_por_fila_cheia(state)
+        {:reply, {:error, :fila_de_mensagens_cheia}, state}
+
+      true ->
+        posicao = length(fila) + 1
+
+        emit(state, FilaDeMensagens.tipo_enfileirada(), %{
+          mensagemId: mensagem.id,
+          texto: mensagem.texto,
+          idioma: mensagem.idioma,
+          posicao: posicao
+        })
+
+        broadcast(state, "chat.message_queued", %{mensagemId: mensagem.id, posicao: posicao})
+
+        {:reply, {:ok, :enfileirada, posicao},
+         Map.put(state, :fila_de_mensagens, fila ++ [mensagem])}
+    end
+  end
+
+  @doc """
+  Cancela UMA mensagem pendente (RN-673), em nome de `user_id` — quem a enviou;
+  a api confere a autoria antes. Some da fila e grava `chat.message_cancelled`.
+  Mensagem que não está na fila (já entregue, já cancelada, nunca enfileirada)
+  é `{:error, :mensagem_fora_da_fila}` — o processo do agente serializa a
+  corrida com a entrega, então "cancelada" nunca é dito sobre uma já lida.
+  """
+  @spec cancelar_mensagem(map(), String.t(), String.t()) ::
+          {:reply, :ok | {:error, :mensagem_fora_da_fila}, map()}
+  def cancelar_mensagem(state, mensagem_id, user_id) do
+    fila = Map.get(state, :fila_de_mensagens, [])
+
+    case Enum.split_with(fila, &(&1.id == mensagem_id)) do
+      {[], _} ->
+        {:reply, {:error, :mensagem_fora_da_fila}, state}
+
+      {_, resto} ->
+        registrar_cancelamento(
+          state.project_id,
+          state.session_id,
+          state.agent,
+          mensagem_id,
+          user_id
+        )
+
+        {:reply, :ok, Map.put(state, :fila_de_mensagens, resto)}
+    end
+  end
+
+  @doc """
+  Grava `chat.message_cancelled` (ator `user`) e avisa o canal. Público porque
+  o controller o usa quando o agente não está de pé: aí não há fila em memória
+  para disputar, e o log é a fila inteira.
+  """
+  def registrar_cancelamento(project_id, session_id, agent, mensagem_id, user_id) do
+    EngineApiClient.append_event(project_id, session_id, %{
+      type: FilaDeMensagens.tipo_cancelada(),
+      actorKind: "user",
+      actorId: user_id,
+      payload: %{mensagemId: mensagem_id, agente: agent}
+    })
+
+    EngineWeb.Endpoint.broadcast("session:" <> session_id, "chat.message_cancelled", %{
+      mensagemId: mensagem_id,
+      agente: agent
+    })
+  end
+
+  @doc """
+  A fila reconstruída do log no `init/1` do servidor (RN-673). Com pendentes,
+  agenda a entrega para logo depois da subida — a mensagem que esperava por um
+  turno que o reinício matou é lida, e só ela (o turno interrompido NUNCA é
+  refeito, RN-586).
+  """
+  @spec fila_ao_subir(String.t(), String.t(), String.t()) :: [FilaDeMensagens.mensagem()]
+  def fila_ao_subir(project_id, session_id, agent) do
+    fila = FilaDeMensagens.ler_ao_subir(project_id, session_id, agent)
+    if fila != [], do: send(self(), :entregar_fila_de_mensagens)
+    fila
+  end
 
   @doc """
   Abandona o turno em curso porque a SESSÃO fechou (RN-581): mata a task como
@@ -293,6 +447,71 @@ defmodule Engine.Agents.TurnoAssincrono do
     state
   end
 
+  defp agendar_entrega(state) do
+    if Map.get(state, :fila_de_mensagens, []) != [],
+      do: send(self(), :entregar_fila_de_mensagens)
+
+    state
+  end
+
+  # Entrega a fila inteira num turno só (N mensagens = 1 turno). No-op quando
+  # há turno de pé (a entrega volta no fim dele), quando o turno está suspenso
+  # em aprovação (RN-284: a fila espera a retomada terminar), quando a fila
+  # está vazia ou quando o servidor ainda não disse como monta um turno.
+  defp entregar_fila(state) do
+    fila = Map.get(state, :fila_de_mensagens, [])
+    montar = Map.get(state, :montar_turno_de_mensagem)
+
+    cond do
+      fila == [] or not is_function(montar, 2) -> state
+      not is_nil(Map.get(state, :turno_assincrono)) -> state
+      Map.get(state, :aguardando_aprovacao) -> state
+      true -> subir_turno_da_fila(state, fila, montar)
+    end
+  end
+
+  defp subir_turno_da_fila(state, fila, montar) do
+    ids = for %{id: id} <- fila, is_binary(id), do: id
+
+    if ids != [] do
+      emit(state, FilaDeMensagens.tipo_entregue(), %{mensagemIds: ids})
+      broadcast(state, "chat.message_delivered", %{mensagemIds: ids})
+    end
+
+    limpo = Map.put(state, :fila_de_mensagens, [])
+    # O idioma do turno é o do AUTOR da mensagem MAIS RECENTE (RN-622): é a
+    # última fala que pediu resposta.
+    idioma = fila |> List.last() |> Map.get(:idioma)
+
+    {:noreply, novo_state} =
+      IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
+        iniciar(limpo, nil, montar.(limpo, FilaDeMensagens.texto_do_turno(fila)))
+      end)
+
+    novo_state
+  end
+
+  # O teto da fila (RN-673). A mensagem está no log como `chat.message` e não
+  # será lida — então a recusa é durável no fio, como a de `turno_em_andamento`
+  # era, e não só o 409. Origem `politica`: é a regra do teto, não uma falha.
+  defp emitir_recusa_por_fila_cheia(state) do
+    origem = "politica"
+
+    mensagem =
+      "Já há #{FilaDeMensagens.teto()} mensagens esperando o fim do meu turno — " <>
+        "esta ficou registrada, mas não entrou na fila e eu não vou lê-la. " <>
+        "Cancele uma das pendentes ou espere eu terminar."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "fila_de_mensagens_cheia"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
+
   # O turno NÃO terminou — só está suspenso esperando a decisão de uma
   # `proposed_action` (ADR 0086, RN-284). Sem `agent.done` e sem
   # `agent.status: idle`: os dois diriam ao painel que o agente está livre
@@ -305,7 +524,9 @@ defmodule Engine.Agents.TurnoAssincrono do
     state
   end
 
-  # A recusa de uma SEGUNDA mensagem com turno em curso (ADR 0163, RN-578).
+  # A recusa de um SEGUNDO comando com turno em curso (ADR 0163, RN-578). Desde
+  # a RN-673 a mensagem do usuário não chega aqui (ela entra na fila); o que
+  # chega é o comando que não é fala — revisão, prontidão, oferta de handoff.
   # Até lá o `{:error, :turno_em_andamento}` era descartado pelo controller e
   # o HTTP dizia 202: a mensagem estava gravada no log como `chat.message`
   # (quem grava é a api, ANTES de falar com o engine) e nunca chegava ao
@@ -317,8 +538,8 @@ defmodule Engine.Agents.TurnoAssincrono do
     origem = "politica"
 
     mensagem =
-      "Ainda estou no meio de um turno — esta mensagem ficou registrada, mas eu " <>
-        "não a li. Mande de novo quando eu terminar, ou pare o turno atual."
+      "Ainda estou no meio de um turno — este pedido não foi atendido. Tente de " <>
+        "novo quando eu terminar, ou pare o turno atual."
 
     emit(state, "agent.error", %{
       origem: origem,

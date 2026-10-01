@@ -596,6 +596,7 @@ rules:
     watch:
       - "scripts/ci/actions-pinadas.ts"
       - "scripts/ci/imagens-pinadas.ts"
+      - "scripts/ci/imagens-do-compose.ts"
     docs:
       - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: block

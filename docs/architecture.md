@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 184 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 199 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -109,13 +109,15 @@ BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
-behaviour with six callbacks (PR QA and SecOps, QA-strategy, the two
-deterministic infra gates, and design AppSec) whose only job is to start the
+behaviour with five callbacks (PR QA and SecOps, the two deterministic infra
+gates, and design AppSec — the QA-strategy one left with
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md), when the test plan
+became the first step of PR QA itself) whose only job is to start the
 per-project GenServer if needed and cast into it. The indirection exists for
 the callers' tests: `Engine.Agents.DevLeadTools` is exercised by a LIGHT test
 with no Ecto sandbox, and starting a real GenServer there just to prove a gate
 was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
-six, `run_appsec_design/2`, closed the last gate that was actionable with no
+five, `run_appsec_design/2`, closed the last gate that was actionable with no
 production caller: `assess_implementability` now asks for the story's design
 threat model IN PARALLEL — the verdict never waits for it, and the ask happens
 only once per story ([RN-539](business-rules.md#rn-539),
@@ -331,10 +333,14 @@ from a status, so a network error says "I don't know" instead of spinning in
 "checking…" forever. A registered key is NOT a running agent — the same
 discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
 ACCOUNT, not to this browser, so the strongest sentence available is "your
-account has a paired machine". Both limits are stated on screen, and they are
-why the [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) flow is
-not removed: it moves into a `<details>` whose label names the case it still
-answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
+account has a paired machine". Both limits are stated on screen. The
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+browser flow (generate the key, download the binary, write the folder) was
+retired in [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+([RN-687](business-rules.md#rn-687)): the panel now shows the `install.sh`
+command, which leaves once a key serving the project is recognised, and the
+manual PAT command stays in a `<details>` named for the case it answers
+(another machine). The read's minimum comes from `roleAtLeast`
 against the ENDPOINT's `developer`, and a real 403 lands in the same state —
 the workspace role is a proxy, the api is the authority.
 
