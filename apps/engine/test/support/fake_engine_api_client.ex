@@ -190,6 +190,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # RN-681: a duplicata semântica de regra. Scriptável por
+  # `:fake_semantic_duplicate` (o corpo de `{:ok, corpo}` ou `{:error, motivo}`);
+  # sem script, "nada a comparar", que é o que a api responde a projeto vazio.
+  @impl true
+  def check_semantic_duplicate(_project_id, _session_id, fields) do
+    notify({:semantic_duplicate_checked, fields})
+    reply(:fake_semantic_duplicate, %{"status" => "nothing_to_compare", "message" => nil})
+  end
+
   @impl true
   def create_task(_project_id, _session_id, fields) do
     notify({:task_created, fields})

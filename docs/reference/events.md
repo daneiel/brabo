@@ -138,6 +138,8 @@ compaction summary, and the opening messages.
 | `backlog.story_promotion_returned` | the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev ([RN-048](../business-rules/custo.md#rn-048)) |
 | `backlog.story_demoted` | a module disappeared from `module_map`; the story went back to `draft` ([RN-012](../business-rules.md#rn-012)) |
 | `backlog.story_overlap_warned` | the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap ([RN-081](../business-rules/custo.md#rn-081)) |
+| `backlog.semantic_duplicate_warned` | a story or business rule was written whose TITLE is, by embedding, at or above the threshold of an existing one of the same kind in the project — a warning, never a refusal; the payload names the similar item and the cosine. Actor `system`/`duplicata-semantica` ([RN-681](../business-rules/custo.md#rn-681)) |
+| `backlog.semantic_duplicate_check_skipped` | the semantic duplicate check could NOT run — no embedding provider, daemon down, the 10 s ceiling — and the `reason` says which; the item was written anyway ([RN-681](../business-rules/custo.md#rn-681)) |
 | `backlog.story_modules_assigned` | story ↔ module link |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | a dev agent claimed the task |
@@ -429,6 +431,8 @@ Extracted from the emission points: **97 identifiers**, of which **2** are not d
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
+- `backlog.semantic_duplicate_check_skipped` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `backlog.semantic_duplicate_warned` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>

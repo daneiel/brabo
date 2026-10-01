@@ -238,6 +238,7 @@ estado lido do repositório e não da conversa.
 | O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
 | A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
+| A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 
 ## Estado atual e aberto
 
@@ -672,7 +673,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Gasto de embedding fora do metering (corte declarado do ADR 0075)
+- Gasto de embedding fora do metering (corte declarado do ADR 0075), salvo a
+  checagem de duplicata semântica (ADR 0198, RN-681), que é linha própria
+- O limiar da duplicata semântica (0,80, RN-681) é PONTO DE PARTIDA NÃO
+  calibrado: os vetores reais dos pares de calibração não puderam ser gravados
+  (registry do Ollama e Hugging Face bloqueados no ambiente). Gravar é
+  `apps/api/scripts/gravar-vetores-de-duplicata.ts` com o Ollama de pé; a prova
+  (`limiar-de-duplicata.calibracao.spec.ts`) PULA até lá. Não mexa no número
+  sem gravar, e se a gravação não separar os pares, reveja os pares ou o texto
+  comparado — nunca afrouxe o teste
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
   fecharam depois)
@@ -2323,7 +2332,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   outros oito degradam com `false` (RN-191), e virar essa flag exige smoke com
   credencial, nunca leitura de doc. O gasto de embedding NÃO passa pelo
   metering ainda — corte declarado do ADR 0075, porque `token_usage.session_id`
-  é `NOT NULL` e indexar repositório não acontece dentro de sessão.
+  é `NOT NULL` e indexar repositório não acontece dentro de sessão. A ÚNICA
+  exceção é a checagem de duplicata semântica (ADR 0198, RN-681), que roda na
+  emissão de história/regra, dentro de sessão, e grava linha própria (ator
+  `system`/`duplicata-semantica`); o `uso` que `RagEmbeddingService` devolve é
+  ignorado pela indexação e pela busca de propósito — não o "aproveite" lá.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
   medido por teste sobre os tokens e layout é verificado no navegador
