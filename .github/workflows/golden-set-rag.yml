@@ -29,7 +29,12 @@ env:
   OTP_VERSION: '27.1.2'
 
 jobs:
+  # pgvector e ollama vêm do compose de dev, não de um literal aqui (ADR 0197).
+  imagens:
+    uses: ./.github/workflows/imagens-do-compose.yml
+
   golden-set-rag:
+    needs: imagens
     name: Golden-set do RAG (ExUnit, contra Ollama real)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -38,7 +43,7 @@ jobs:
         # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
         # ci.yml: as migrations criam a extensão e o corpus indexado depende
         # dela pra busca vetorial.
-        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+        image: ${{ needs.imagens.outputs.pgvector }}
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -51,10 +56,12 @@ jobs:
           --health-timeout 5s
           --health-retries 20
       ollama:
-        # MESMA versão pinada de docker/docker-compose.yml — paridade de
-        # embedding com o que roda em dev é o que faz `floor.json` (chaveado
-        # por MODELO, não por ambiente) continuar válido aqui.
-        image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
+        # A MESMA imagem de docker/docker-compose.yml — paridade de embedding
+        # com o que roda em dev é o que faz `floor.json` (chaveado por MODELO,
+        # não por ambiente) continuar válido aqui. Até o ADR 0197 isso era uma
+        # PROMESSA, guardada por um literal igual ao do compose; agora é
+        # CONSTRUÇÃO: a referência é lida do serviço `ollama` do compose.
+        image: ${{ needs.imagens.outputs.ollama }}
         ports:
           - 11434:11434
         # `ollama list` como health-cmd, não `curl` — `curl` roda DENTRO do
