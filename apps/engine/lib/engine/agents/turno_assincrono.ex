@@ -115,7 +115,7 @@ defmodule Engine.Agents.TurnoAssincrono do
   recusado aqui são os comandos que não são fala — a revisão de história do
   PO, a prontidão do Criativo, a oferta de handoff do Arquiteto.
   """
-  @spec iniciar(map(), GenServer.from() | nil, (() -> map())) ::
+  @spec iniciar(map(), GenServer.from() | nil, (-> map())) ::
           {:noreply, map()} | {:reply, :ok | {:error, :turno_em_andamento}, map()}
   def iniciar(state, from, fun) do
     case Map.get(state, :turno_assincrono) do
@@ -296,7 +296,7 @@ defmodule Engine.Agents.TurnoAssincrono do
   Turno SUSPENSO em aprovação (Dev Lead, RN-284) não chega aqui: o servidor
   recusa antes, com `aguardando_aprovacao`.
   """
-  @spec receber_mensagem(map(), GenServer.from(), map(), (map(), String.t() -> (() -> map()))) ::
+  @spec receber_mensagem(map(), GenServer.from(), map(), (map(), String.t() -> (-> map()))) ::
           {:reply, :ok | {:ok, :enfileirada, pos_integer()} | {:error, atom()}, map()}
   def receber_mensagem(state, from, %{texto: _} = mensagem, montar) when is_function(montar, 2) do
     state = Map.put(state, :montar_turno_de_mensagem, montar)
