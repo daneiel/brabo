@@ -61,7 +61,8 @@
     "destinatarioLabel": "Para",
     "destinatarioPlaceholder": "Escolha o agente…",
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
-    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente."
+    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente.",
+    "enfileirar": "Pôr na fila"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -241,5 +242,13 @@
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     }
+  },
+  "fila": {
+    "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",
+    "cancelar": "Cancelar",
+    "cancelada": "cancelada na fila — nenhum agente a leu",
+    "cancelarSoAutor": "Só quem enviou a mensagem pode cancelá-la.",
+    "erroCancelar": "Não foi possível cancelar a mensagem.",
+    "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."
   }
 }

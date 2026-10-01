@@ -1366,6 +1366,7 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/messages/:messageId/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |

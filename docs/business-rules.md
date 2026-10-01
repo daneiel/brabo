@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1100` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -308,7 +308,7 @@ stay as they were.
   `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:280` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:283` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -14453,6 +14453,12 @@ perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
 `AgentCommandController.message/2` — pré-existente, medido aqui e fechado
 depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
 
+**Revisada para a MENSAGEM pela [RN-673](#rn-673)** (ADR 0191): a mensagem do
+usuário que chega com turno em curso não recebe mais `turno_em_andamento` —
+entra na fila do agente e é lida no fim do turno. A recusa do item 2 segue
+valendo para os comandos que não são fala (revisão, prontidão, oferta de
+handoff).
+
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
   aceite), `:130` e `:314` (a recusa durável);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
@@ -14762,7 +14768,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -15093,8 +15099,8 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
 - **Código:**
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:42`
   (`@agentes_de_conversa`), `:177` (a cláusula do Criativo), `:192` (a recusa
-  do `infra`), `:254` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
-  `:283` (`agente_ausente`), `:310` (o "Parar" sem agente);
+  do `infra`), `:283` (`mensagem_sem_texto`), `:249` (`agente_sem_conversa`),
+  `:312` (`agente_ausente`), `:310` (o "Parar" sem agente);
   `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
   (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:37`
   (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
@@ -15141,7 +15147,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:442` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15551,8 +15557,8 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:308`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:661`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:983`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -16779,13 +16785,13 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
   (`idioma_da_resposta`);
-  `apps/engine/lib/engine/agents/criativo_server.ex:123` (`handle_call`, e a
+  `apps/engine/lib/engine/agents/criativo_server.ex:136` (`handle_call`, e a
   MESMA cláusula nos outros seis);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:115`
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:68`
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:78`
   (`resolverIdioma`), `:53` (`idiomaAlvo`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:183`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
@@ -17237,7 +17243,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
 
-  `apps/web/src/routes/SessionPage.tsx:144` (`podeDecidir`), `:284`
+  `apps/web/src/routes/SessionPage.tsx:145` (`podeDecidir`), `:287`
   (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
@@ -17589,8 +17595,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:497`
-  (`handoffIdDoEvento`), `:505` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
+  (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18410,7 +18416,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1111`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1126`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18555,7 +18561,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:134` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19061,7 +19067,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:915` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:933` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:572`
   (`merge_ja_proposto`), `:595` (`pr_ja_mergeado` — caso de falha), `:627`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19305,3 +19311,85 @@ recusa nomeada.
   Os testes ExUnit não rodaram no ambiente desta entrega (`repo.hex.pm` 403); o
   CI os prova.
 - **Origem:** AT-116 (prova: AT-111), decisão do dono de 01/10
+
+### RN-673 — A mensagem que chega com turno em curso entra numa fila persistida no log e é lida no fim do turno, N mensagens num turno só {#rn-673}
+
+Até aqui a mensagem que chegava a um agente conversacional no meio de um turno
+era 409 `turno_em_andamento` ([RN-578](#rn-578)): gravada como `chat.message`
+(a api grava antes de falar com o engine) e nunca lida. O uso real de 29/09
+mediu três numa sessão só — PO, Infra Lead e Dev Lead. Decisão do dono (01/10),
+para os SETE conversacionais pelo mesmo caminho:
+
+1. **Fila, não recusa.** Com turno em curso, a mensagem entra na fila do agente
+   (`TurnoAssincrono.receber_mensagem/4`), o agente grava `chat.message_queued`
+   (`mensagemId`, `texto`, `idioma`, `posicao`) e o clique recebe 202 com
+   `{entrega: "enfileirada", posicao}`. Sem turno, o turno sobe na hora, como
+   sempre (`entrega: "lida"`). A rota da api devolve também o `mensagemId` — o
+   id do `chat.message`.
+2. **N mensagens = 1 turno.** No FIM do turno (`finalizar/1`, nunca
+   `suspender/1`) as pendentes viram UM turno, na ordem de chegada, num texto só
+   (`FilaDeMensagens.texto_do_turno/1`: uma é ela mesma; várias, numeradas), e o
+   agente grava `chat.message_delivered` com os ids. A entrega é uma mensagem a
+   si mesmo, depois do fecho do servidor (a correção de gate do Infra Lead e o
+   handoff do Arquiteto vêm primeiro). A mensagem que chega entre o fim do turno
+   e a entrega entra no FIM da fila, e a fila é entregue na hora.
+3. **Teto de 10** pendentes por agente e sessão. A 11ª é 409
+   `fila_de_mensagens_cheia`, com `agent.error` durável de origem `politica` —
+   ela está gravada e não será lida.
+4. **Cancelar.** `POST …/agents/:agent/messages/:messageId/cancel`
+   (`developer`, o mínimo da rota de mensagem): só quem ENVIOU (403
+   `mensagem_de_outra_pessoa`), só em sessão que aceita conversa
+   ([RN-581](#rn-581)). Quem decide se ela ainda está na fila é o processo do
+   agente, que serializa a corrida com a entrega: 409 `mensagem_fora_da_fila`
+   quando já foi lida ou cancelada. O engine grava `chat.message_cancelled` em
+   nome de quem cancelou; com o agente fora do ar, grava direto (a fila é o log).
+5. **Persistida no log, nunca em tabela.** Pendente = enfileirada e nem
+   entregue nem cancelada — a mesma derivação no engine e na tela. O `init/1`
+   dos sete reconstrói a fila e agenda a entrega; a [RN-580](#rn-580) tira do
+   histórico a cancelada e a pendente do próprio agente; no boot, depois de
+   fechar o turno órfão ([RN-586](#rn-586)), o agente com fila pendente é
+   acordado. O turno interrompido continua nunca refeito.
+6. **Turno suspenso em aprovação** (Dev Lead, RN-284) segue recusando com
+   `aguardando_aprovacao` — sem fim previsto, enfileirar prometeria leitura sem
+   data. A fila que já existia espera a retomada terminar.
+7. **A tela.** Com turno em curso o composer não trava mais para mensagem a
+   agente: o botão vira "Pôr na fila" e a mensagem não arma turno novo. No fio,
+   "na fila de <agente>" com Cancelar para o autor, e "cancelada" riscada. O
+   chat sem agente segue travando.
+
+A recusa `turno_em_andamento` continua para o que não é fala: revisão de
+história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:301`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:461` (`entregar_fila`),
+  `:346` (`cancelar_mensagem`), `:392` (`fila_ao_subir`), `:497`
+  (`emitir_recusa_por_fila_cheia`);
+  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
+  (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
+  (`acordar_pendentes`);
+  `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:240` (`_mensagem_id`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:398`
+  (`cancel_queued_message`), `:466` (`responder_ao_aceite`);
+  `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
+  (`CancelQueuedAgentMessageUseCase`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:65`
+  (`entregaDaResposta`);
+  `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
+  `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
+  `apps/web/src/lib/enfileirar-mensagem.ts:25` (`useEnfileirarMensagem`);
+  `apps/web/src/routes/SeloDaFila.tsx:22` (`SeloDaFila`)
+- **Teste:** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
+  (entra na fila — caminho feliz), `:181` (N mensagens = 1 turno), `:223` (a
+  que chega na janela vai ao fim), `:246` (teto de 10 — caso de falha), `:276`
+  e `:306` (cancelar e cancelar fora da fila), `:322` (restart), `:349` (Dev
+  Lead suspenso), `:78`/`:120` (derivação e reidratação);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:70`;
+  `apps/api/test/application/use-cases/agents/cancel-queued-agent-message.use-case.spec.ts:40`,
+  `:61` (outra pessoa — caso de falha), `:95`, `:106`;
+  `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:74`;
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:531`;
+  `apps/web/src/routes/SessionPage.fila-de-mensagens.test.tsx:163`, `:189`
+  (fila cheia), `:207`, `:233`; `apps/web/src/lib/fila-de-mensagens.test.ts:17`
+- **Origem:** AT-267 (item A21 da análise do uso real de 2026-09-29), decisão do
+  dono de 01/10; [ADR 0191](adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)
