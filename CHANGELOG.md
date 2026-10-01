@@ -661,7 +661,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   do ambiente recusou `openrouter.ai` por política, gasto US$ 0,00; estimativa
   da rodada: ~US$ 1,28. Nada no produto muda. Protocolo, recomendação
   provisória e o que foi medido sem rede em
-  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#live-comparison-at-239-2026-10-01-the-instrument-is-ready-the-run-did-not-happen).
+  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#live-comparison-at-239-2026-10-01-restrict-on-for-haiku-and-off-for-deepseek).
   Segunda tentativa no mesmo dia, com `openrouter.ai` liberado: a chave de
   teste estava no limite (US$ 10,00, sem reset) e o chat respondeu `HTTP 403`,
   gasto US$ 0,00. O ensaio achou um defeito do instrumento — falha de CONTA ou
@@ -669,6 +669,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   execução medida ("a task não saiu") e a retomada nunca a repetiria; agora
   `falhaDeInfra` a classifica, o `jev:vivo` NÃO a grava e para nomeando o
   motivo. Atrás de proxy, rode com `NODE_USE_ENV_PROXY=1`.
+  Terceira tentativa, com o limite da chave elevado: **medido**. O protocolo
+  rodou como escrito (40 execuções, commit `0eab0cb0e9`), gasto US$ 0,5195 pela
+  soma de `usage.cost`. Pela regra escrita antes, o veredito é **restringir**:
+  no `anthropic/claude-haiku-4.5` o roteamento passa nas três condições (custo
+  por task que saiu ×0,62, latência mediana ×0,95, 10/10 contra 9/10); no
+  `deepseek/deepseek-v4.1-flash` reprova em custo (×2,21) e latência (×1,45),
+  porque o cardápio que muda a cada passo quebra o cache de prompt (84% → 45%
+  da entrada servida do cache). É RECOMENDAÇÃO medida — a decisão é do dono, e
+  o interruptor do produto é por workspace, não por modelo. Nada no produto
+  muda.
 
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
