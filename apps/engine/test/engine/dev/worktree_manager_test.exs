@@ -205,7 +205,7 @@ defmodule Engine.Dev.WorktreeManagerTest do
 
     defp fake_runner_loop(parent, responder) do
       receive do
-        {:dispatch_exec, ref, command, cwd, _env, from, _timeout_ms} ->
+        {:dispatch_exec, ref, command, cwd, _env, _git_credenciado, from, _timeout_ms} ->
           send(parent, {:comando, command})
           {exit_code, output} = responder.(command, cwd)
 

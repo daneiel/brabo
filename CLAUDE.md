@@ -190,6 +190,7 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
+| O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -595,43 +596,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   ressalvas que o fluxo do ADR 0118 NÃO foi removido: ele muda de LUGAR (um
   `<details>` com o rótulo do caso que resolve), e aposentá-lo segue sendo o
   BRB-031
-- **A credencial de git NÃO atravessa o container do runner, e o caminho
-  COMUM é justamente esse — mas desde a RN-558 ele FALHA DIZENDO ISSO.** A
-  geometria não mudou e não muda de passagem: `RunnerReadiness` (RN-507)
-  exige container `running` REGISTRADO antes de QUALQUER operação de
-  `RunnerGit` — inclusive o `git fetch` autenticado inicial —, a ÚNICA
-  forma de esse registro existir num projeto `runner` é o MESMO runner ter
-  subido o próprio container, e é esse mesmo sucesso que marca
-  `estado.containerAtivo` nele; `tratarExec` roteia pra dentro do container
-  (sem campo de `env`, ADR 0130: sem `-e` livre) sempre que `containerAtivo`
-  está setado, e só usa o caminho HOST (que carrega a credencial) quando
-  está `null`. O que a RN-558 fechou foi a METADE do SILÊNCIO: esse par
-  (`env` presente + container ativo) deixou de EXECUTAR — rodava com o
-  helper instalado e as variáveis vazias, e a falha chegava como token
-  inválido ou rede fora — e passou a ser RECUSADO com desfecho nomeado
-  (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` em `index.ts`, reconhecida por
-  `Engine.Runners.CredencialDeGit` no engine), origem `politica` e não
-  `codigo`, e evento durável. Quem recusa é o RUNNER, e SÓ ele pode:
-  `containerAtivo` nasce `null` a cada execução e um container `running`
-  REGISTRADO no banco NÃO implica container ativo naquele processo (runner
-  reiniciado com o container de pé roteia pro HOST, e ali a credencial
-  chega) — não suba essa checagem para `RunnerReadiness`, que fica byte a
-  byte como está. A marca é constante de PROTOCOLO partida entre duas
-  linguagens, com guarda em
-  `scripts/ci/marca-de-credencial-do-runner.spec.ts`. **A METADE que segue
-  ABERTA:** a credencial continua sem atravessar o `docker exec`, então
-  clone/fetch de repositório REMOTO AUTENTICADO em modo `runner` só funciona
-  com o container parado. Fechar exige decidir COMO uma operação credenciada
-  fala com um `docker exec` sem campo de `env`, e toda opção conhecida mexe
-  na porta de contenção do ADR 0130 — é ADR, nunca correção de passagem.
-  A adjacência que ficava aqui FECHOU (AT-112): a recusa acontecia depois de
-  `init_from_bare!` já ter feito `git init`, e o `git_dir?` de `ensure!`
-  marcava o workspace pronto na tentativa seguinte, que falhava adiante no
-  `worktree add`. Agora a inicialização que falha — qualquer passo, não só a
-  recusa — DESFAZ o `.git` que criou (`inicializar_ou_desfazer!`, nos dois
-  `ensure!`) e a segunda tentativa repete a MESMA causa; o ramo de workspace
-  de antes da marca não é tocado. Repositório `local` (sem credencial), os modos `container`/`mounted` e o
-  `workspace_create` (roda no HOST) não são afetados
 - **O instalador sobe de uma pasta vazia desde a RN-570 (ADR 0160), mas só a
   partir da PRÓXIMA tag final.** O compose de instalação e os três arquivos que
   a instalação usa por caminho relativo viajam como assets `brabo-install-*` no
@@ -1035,11 +999,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   no ambiente do processo filho que `apps/runner/src/exec.ts` spawna no
   HOST do usuário: mesclado sobre `process.env` (nunca substitui —
   perderia PATH), nunca repassado ao `docker exec` (a porta de Docker não
-  ganhou campo de `env`, de propósito) e nunca logado. Desde a RN-558,
-  "nunca repassado ao `docker exec`" deixou de significar "roda sem a
-  credencial": com container ativo, um `exec` que carrega `env` é RECUSADO
-  com desfecho nomeado — ver a lacuna em "Estado atual e aberto", cuja
-  metade do `env` segue aberta
+  ganhou campo de `env`, de propósito) e nunca logado. Desde o ADR 0193
+  (RN-676, decisão do dono) o git CREDENCIADO roda no HOST e o código no
+  container: o engine marca o `git fetch` autenticado de `RunnerGit` com
+  `gitCredenciado: true` — por UM ponto, `RunnerRouter.exec_git_credenciado/5`
+  — e o runner, com a marca E `env` não vazio, roda o comando no host mesmo
+  com container ativo (a mesma pasta: `estado.dir` é o bind-mount de `/work`).
+  O discriminador é a MARCA, nunca o `env`: `env` sem a marca, com container
+  ativo, segue RECUSADO pela RN-558 (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE`, par
+  de protocolo com `Engine.Runners.CredencialDeGit`, guarda em
+  `scripts/ci/marca-de-credencial-do-runner.spec.ts`) — senão o `env` viraria
+  a porta de saída do container. Na prática essa recusa só aparece com runner
+  ANTERIOR ao ADR 0193. Quem decide host×container continua sendo o RUNNER
+  (`containerAtivo` nasce `null` a cada execução): não suba isso para
+  `RunnerReadiness`, que fica byte a byte, e não dê `env` à `DockerPort`
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem

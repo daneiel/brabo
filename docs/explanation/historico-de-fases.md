@@ -3194,3 +3194,25 @@ sem `from` a descartaria. A etapa 2 deu ao `infra` a cláusula de `message/2`
 o card do fio o exclui por nome. `SOLO_CONVERSATIONAL_AGENTS` não mudou: o Infra
 Lead é lead de área. Declarado: ele não ganhou perguntas estruturadas nem
 leitura de backlog.
+
+### O git credenciado roda no host do runner, o código no container (AT-116, ADR 0193, RN-676)
+
+2026-10-01, rodada 36. A RN-558 tinha fechado a metade do SILÊNCIO — o `git
+fetch` autenticado em modo `runner`, com o container de pé, deixou de rodar com
+as variáveis vazias e passou a ser recusado com a marca
+`credencial-nao-atravessa-o-container` — e declarado a outra metade como ADR
+pendente, porque toda opção conhecida mexia na porta de contenção do ADR 0130.
+A decisão do dono (01/10) escolheu a que não mexe: operação de git credenciada
+no HOST, código no container. Medido antes: o único `exec` do engine com `env`
+era o fetch de `RunnerGit.fetch!/3`; não havia `push` nem `clone` credenciado
+por `exec` (o clone da criação de pasta já rodava no host, RN-532); e a pasta é
+a mesma dos dois lados (`estado.dir` montada em `/work`). O discriminador
+escolhido foi uma MARCA explícita do engine (`gitCredenciado: true`, posta só
+por `RunnerRouter.exec_git_credenciado/5`), e não o `env` que já existia —
+com o `env` como chave, qualquer comando com `env` escaparia do container. A
+recusa da RN-558 sobreviveu encolhida, para `env` sem a marca, e na prática
+passou a significar "runner anterior ao ADR 0193". A prova é a AT-111, dos dois
+lados: no runner, um `git credential fill` e um `git fetch origin` reais com o
+helper do `GitAuth` sucedem no host com container ativo; no engine, a corrente
+pelo `TerminalChannel` real termina em `{:ok, _}`. Os ExUnit não rodaram no
+ambiente da entrega (`repo.hex.pm` 403) e ficaram para o CI.

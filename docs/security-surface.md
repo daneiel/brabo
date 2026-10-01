@@ -408,8 +408,16 @@ reason in the URL.
   active) before executing anything, and the engine classifies the refusal with
   origin `politica` rather than `codigo`. The refusal text names neither the
   variables nor their values, only how many there were. The credential still
-  does not cross, and that half is declared open: authenticated clone/fetch in
-  `runner` mode requires the container stopped.
+  does not cross the container boundary, and since
+  [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+  ([RN-676](business-rules.md#rn-676)) it does not need to: the engine marks
+  the authenticated `fetch` (`gitCredenciado: true`, set from one place,
+  `RunnerRouter.exec_git_credenciado/5`) and the runner runs THAT command on
+  the host, where the `env` reaches the child process; the dev agent's
+  commands still go to `docker exec`. The trust boundary is the mark, not the
+  `env`: a command carrying `env` WITHOUT the mark is still refused while a
+  container is active, so the credential field never becomes a way out of the
+  container. No ADR 0130 port changed.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —

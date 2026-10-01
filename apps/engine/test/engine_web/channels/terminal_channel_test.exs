@@ -496,7 +496,10 @@ defmodule EngineWeb.TerminalChannelTest do
           "capacidades" => ["pty"]
         })
 
-      send(joined.channel_pid, {:dispatch_exec, "ref-x", "echo oi", "/proj", nil, self(), 5_000})
+      send(
+        joined.channel_pid,
+        {:dispatch_exec, "ref-x", "echo oi", "/proj", nil, false, self(), 5_000}
+      )
 
       # O `from` (RunnerRouter, no caminho real) recebe o MESMO formato de
       # `exec_result` — com a causa, em vez de esperar até o timeout dele.
