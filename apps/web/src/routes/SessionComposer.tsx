@@ -125,10 +125,14 @@ export function SessionComposer({
            o evento estiver visível é um botão que some sozinho.
 
         O que o texto tem de dizer é a CONSEQUÊNCIA do clique, porque
-        ela não é óbvia: o Infra Lead assume e vai PROPOR a subida do
-        container — proposta que ainda passa pelo pipeline de aprovação
-        de sempre (`container_start`, `maintainer`, RN-491). Aceitar não
-        sobe container nenhum.
+        ela não é óbvia. Desde a RN-671 (ADR 0190) o aceite SEMEIA
+        `container_start: auto_approve` e o servidor do Infra Lead propõe
+        a subida no kickoff (projeto `container`/`mounted` com roteamento
+        do Arquiteto) — ela executa sem passar por Aprovações. Seguem com
+        o humano: `container_start_via_runner` (modo `runner`) e o merge
+        da PR de infra (branch protegida). O texto antigo prometia que a
+        subida "ainda passa por você em Aprovações" (AT-348) — não volte
+        a ele.
       */}
       {isActive && handoffDaInfraOferecido && (
         <div className={styles.infraHandoffRow}>

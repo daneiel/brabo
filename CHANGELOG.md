@@ -898,7 +898,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ARGUMENTO posicional (`source "$1"`) em vez de interpolá-lo na string do
   comando (`js/shell-command-injection-from-environment`): os quatro specs
   acusados e outros sete com o mesmo molde.
-
+- **web**: o card do handoff da Infra na sessão deixa de prometer que a subida
+  do container "ainda passa por você em Aprovações" (AT-348). Desde a
+  [RN-671](docs/business-rules.md#rn-671) o aceite semeia `container_start`
+  auto-aprovado e o servidor do Infra Lead elege a imagem e sobe o container
+  sozinho (projeto Container ou Pasta montada com o roteamento do Arquiteto
+  pronto). O texto, nos dois idiomas, diz agora o que acontece sem clique e o
+  que segue pedindo decisão: a subida num projeto Runner local e o merge da PR
+  de infra.
 - **web/api**: a sessão consultiva sem agente deixa de mandar a mensagem ao
   modelo cru (AT-254, [RN-682](docs/business-rules.md#rn-682)). Até aqui o
   envio sem destinatário ia ao SSE de `POST .../chat`, que manda só o texto
