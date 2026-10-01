@@ -899,6 +899,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **Os dois últimos alertas novos do CodeQL da promoção.** Os scripts de medição do Jev (`scripts/jev/dados.ts`, `scripts/jev/replay.ts`) não montam mais SQL com o `--projeto` escapado à mão: o slug vai como variável do psql (`-v slug=…`, citado por `:'slug'`) e o SQL pelo stdin, com `scripts/jev/consultas.spec.ts` provando que um slug com `'` não entra no texto. E `scripts/dev/install-invocacao.spec.ts` roda o instalador copiado para a pasta temporária pelo nome relativo (`bash install.sh`, a forma documentada), sem caminho absoluto no argv do shell.
+
 - **Os specs de shell de `scripts/` passam caminho e conteúdo pelo AMBIENTE, e não mais pelo argv do `bash -c` (AT-346 reaberta).** O CodeQL do PR #782 continuou acusando `js/shell-command-injection-from-environment` depois da AT-346, porque trata o argv INTEIRO do `bash -c` (posicionais inclusive) como comando. `rollout-evidencia`, `alarmar-prova`, `smoke-gates`, `install-invocacao` e, pelo mesmo molde, `install-broker`, `install-env`, `install-fechamento`, `install-arquivos-da-instalacao`, `prova-de-restauracao-env` e `backup-lib` leem o caminho de uma variável (`source "$BRABO_ALVO"`); os casos de `bash -c "$(curl …)"` do `install-invocacao` rodam o conteúdo por `eval "$BRABO_FONTE"`, que mantém o `$0` como o nome do shell e a mesma recusa. E `vivo.spec.ts` escapa `\` antes de `"` (`js/incomplete-sanitization`). Só testes mudam.
 
 - **api (segurança)**: o teto de efeito externo da RN-418 passa a valer também

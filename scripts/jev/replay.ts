@@ -46,7 +46,9 @@ const INSTANTE = `to_char(%s AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
 const em = (col: string) => INSTANTE.replace('%s', col);
 
 export function consultas(projeto?: string): { eventos: string; usos: string; instrucoes: string } {
-  const filtro = projeto ? `AND p.slug = '${projeto.replace(/'/g, "''")}'` : '';
+  // O slug NUNCA entra no texto do SQL: é a variável `slug` do psql
+  // (`-v slug=…` em `comandoPsql`), que `:'slug'` cita com segurança.
+  const filtro = projeto ? `AND p.slug = :'slug'` : '';
   return {
     eventos: `SELECT json_build_object('sessao', e.session_id, 'seq', e.seq, 'tipo', e.type,
   'atorTipo', e.actor_kind, 'ator', e.actor_id, 'em', ${em('e.created_at')},
@@ -128,8 +130,12 @@ export function lerOpcoes(argv: readonly string[], env: NodeJS.ProcessEnv = proc
   return o;
 }
 
-export function comandoPsql(o: Opcoes, sql: string): [string, string[]] {
-  const psql = ['-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-c', sql];
+/**
+ * O SQL vai pelo STDIN (`-f -`), porque o psql não interpola variáveis em `-c`;
+ * o projeto vai como variável (`-v slug=…`), nunca montado no texto.
+ */
+export function comandoPsql(o: Opcoes): [string, string[]] {
+  const psql = ['-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1', ...(o.projeto ? ['-v', `slug=${o.projeto}`] : []), '-f', '-'];
   if (o.container) return ['docker', ['exec', '-i', o.container, 'psql', '-U', o.usuario, '-d', o.banco, ...psql]];
   return ['psql', [o.databaseUrl!, ...psql]];
 }
@@ -154,8 +160,8 @@ export function estimarTokens(corpo: unknown): number {
 }
 
 function linhas<T>(o: Opcoes, sql: string): T[] {
-  const [bin, args] = comandoPsql(o, sql);
-  return execFileSync(bin, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
+  const [bin, args] = comandoPsql(o);
+  return execFileSync(bin, args, { input: sql, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
     .split('\n')
     .filter((l) => l.trim() !== '')
     .map((l) => JSON.parse(l) as T);
