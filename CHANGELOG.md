@@ -645,6 +645,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   0,0013. Tabelas em
   [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#menu-of-2-options-2026-09-29-restrict-instead-of-pick).
 
+- **scripts**: o teste AO VIVO do roteamento do Jev com e sem (AT-239) —
+  `pnpm --filter @brabo/scripts jev:vivo` roda o laço de um dev agent em cinco
+  tasks pequenas, com o roteamento ligado e desligado, em dois modelos do
+  OpenRouter, e mede passos, passos que passaram pela recuperação de chamada em
+  texto (porta de `tool_call_recovery.ex`), latência da execução inteira,
+  custo de chat e de Jev pelo `usage.cost`, quedas para o catálogo inteiro e se
+  a task SAIU (verificação depois do laço, com os testes originais repostos).
+  A política do roteador é a do produto, reexportada de
+  `apps/api/src/domain/llm/tool-router.ts`; o laço e as chamadas são portas
+  com trechos-âncora conferidos em teste; as definições das nove ferramentas do
+  dev vêm do código do engine por `ferramentas-dev.exs`, sem engine compilado.
+  A regra de decisão (manter / restringir / desligar) foi escrita antes de
+  qualquer rodada. **A rodada não aconteceu**: em 2026-10-01 o proxy de saída
+  do ambiente recusou `openrouter.ai` por política, gasto US$ 0,00; estimativa
+  da rodada: ~US$ 1,28. Nada no produto muda. Protocolo, recomendação
+  provisória e o que foi medido sem rede em
+  [Measuring the Jev tool router](docs/explanation/medicao-do-jev.md#live-comparison-at-239-2026-10-01-the-instrument-is-ready-the-run-did-not-happen).
+
 - **engine/web**: o Infra Lead passa a CONVERSAR pelo composer e vira o sétimo
   agente conversacional (AT-141, [RN-617](docs/business-rules.md#rn-617),
   [ADR 0175](docs/adr/0175-infra-lead-conversa-pelo-composer.md)). Primeiro o
