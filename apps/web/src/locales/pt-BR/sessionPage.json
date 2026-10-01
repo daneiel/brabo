@@ -45,7 +45,7 @@
     },
     "consultiva": {
       "titulo": "Sessão consultiva",
-      "texto": "Aqui é conversa com o modelo: pergunte, peça contexto, tire dúvidas. <b>Nenhum agente é ativado</b>, o Criativo não entra e esta sessão não vai para execução.",
+      "texto": "Aqui a conversa é com um agente que você escolhe: pergunte, peça contexto, tire dúvidas. <b>Nenhum agente entra sozinho</b> — escolha quem responde no campo abaixo da conversa. O Criativo não entra e esta sessão não vai para execução.",
       "rodape": "Quando for para <b>produzir</b>, abra uma sessão <b>criativa</b> na aba Sessões do projeto — o tipo é escolhido na criação e não muda depois."
     }
   },
@@ -61,7 +61,8 @@
     "destinatarioLabel": "Para",
     "destinatarioPlaceholder": "Escolha o agente…",
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
-    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente.",
+    "semAgente": "Esta sessão ainda não tem agente: escolha um e clique em Chamar. A oferta aparece na conversa, e a mensagem só pode ser enviada depois que você aceitá-la.",
+    "chamarAgente": "Chamar",
     "enfileirar": "Pôr na fila"
   },
   "ativacao": {

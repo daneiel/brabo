@@ -148,6 +148,58 @@ cost.
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
+### RN-681 — História e regra parecidas com uma existente geram AVISO por embedding, nunca recusa; o gasto da checagem é linha própria do metering {#rn-681}
+
+Depois de gravar uma história (`create_story`) ou uma regra de negócio
+(`emit_artifact` de `business_rule`), a api compara o TÍTULO dela com os das
+existentes do mesmo tipo no PROJETO, por cosseno entre vetores do modelo de
+embedding do RAG, e AVISA quando a mais próxima está a partir do limiar.
+
+1. **Aviso, nunca recusa.** O item já existe quando a checagem roda. O aviso
+   volta ao agente no resultado da ferramenta — a frase nomeia o parecido, o
+   id e o número — e fica no log como `backlog.semantic_duplicate_warned`. A
+   duplicata EXATA continua recusada antes, pela [RN-080](#rn-080) e pela
+   [RN-081](#rn-081), e por isso título normalizado igual sai da comparação.
+2. **O limiar é 0,80 e é PONTO DE PARTIDA, não calibrado** (ADR 0198, como os
+   pesos do [ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)):
+   os vetores reais do par do achado R e dos pares que não são duplicata não
+   puderam ser gravados no ambiente em que a regra nasceu. A prova roda sozinha
+   quando `vetores.json` for gravado; até lá ela é PULADA com aviso.
+3. **Sem provider de embedding a checagem é PULADA e DITA** — capability
+   ausente, daemon fora, timeout: `backlog.semantic_duplicate_check_skipped`
+   com o motivo no log e na frase ao agente. Nunca falha a emissão.
+4. **O gasto entra no metering como linha própria**: ator
+   `system`/`duplicata-semantica`, provider e modelo do RAG, saída zero, preço
+   do catálogo quando o modelo está nele. É a ÚNICA exceção ao corte do
+   [ADR 0075](../adr/0075-embeddings-no-contrato-de-llm-provider.md) — a
+   indexação e a busca do RAG seguem fora —, e cabe porque a emissão acontece
+   dentro de sessão.
+5. **Tetos:** as 100 existentes mais recentes (o resultado diz quantas de
+   quantas quando corta) e 10 s de relógio para a checagem inteira.
+
+- **Where:** `apps/api/src/domain/backlog/duplicata-semantica.ts:35` (`LIMIAR_DE_DUPLICATA_SEMANTICA`),
+  `:44` (`TETO_DE_COMPARACOES_DE_DUPLICATA`), `:53` (`TETO_DE_TEMPO_DA_CHECAGEM_MS`),
+  `:107` (`ehDuplicataSemantica`),
+  `apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts:111` (`VerificarDuplicataSemanticaUseCase`),
+  `:241` (`medir`), `:285` (`narrar`), `:349` (`fraseParaOAgente`),
+  `apps/api/src/application/use-cases/backlog/create-story.use-case.ts:193` (`semanticDuplicate`),
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:520` (`semanticDuplicateCheck`),
+  `apps/api/src/application/use-cases/rag/rag-embedding.service.ts:102` (`uso`),
+  `apps/engine/lib/engine/harness/tools/emit_artifact.ex` (`aviso_semantico`),
+  `apps/engine/lib/engine/harness/tools/create_story.ex` (`aviso_semantico`)
+- **Test:** `test/application/use-cases/backlog/verificar-duplicata-semantica.use-case.spec.ts`
+  (avisa acima do limiar; o gasto vira linha própria; abaixo não narra; sem
+  provider pula dizendo; teto de tempo; teto de comparações; regra pelos
+  eventos; metering e log que falham não derrubam),
+  `test/application/use-cases/backlog/create-story.use-case.spec.ts`
+  (`duplicata semântica (RN-681)`), `test/domain/backlog/duplicata-semantica.spec.ts`,
+  `test/domain/backlog/limiar-de-duplicata.calibracao.spec.ts` (o NÚMERO —
+  pulada até os vetores serem gravados),
+  `apps/engine/test/engine/harness/duplicata_semantica_test.exs`,
+  `apps/web/src/lib/activity.test.ts` (`duplicata semântica (RN-681)`)
+- **Origin:** [ADR 0198](../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md)
+  (AT-171, achado R)
+
 ### RN-666 — O metering grava quanto da entrada veio de cache e quanto da saída foi raciocínio {#rn-666}
 
 Cada linha de `token_usage` grava duas PARTES que o provider informa no
@@ -1869,6 +1921,8 @@ A comparação normaliza caixa, acento e espaço redundante; pontuação fica.
 **Duplicata semântica continua passando, e isso é declarado, não esquecido:**
 "Saudação com nome" e "Quem chama pode se identificar" seguem sendo duas regras,
 porque separá-las é julgamento e não cabe num `if`.
+Desde a [RN-681](#rn-681) a duplicata semântica de TÍTULO é **avisada** por
+embedding depois de gravar — continua passando, nunca é recusada aqui.
 
 - **Onde:** `apps/engine/lib/engine/harness/artifact_dedupe.ex`,
   `apps/engine/lib/engine/harness/tools/emit_artifact.ex`,
@@ -1899,6 +1953,8 @@ tratar o conjunto vazio como subconjunto de tudo acusaria todas.
 responde saudação imediata" cobrem o mesmo endpoint com títulos e justificativas
 diferentes — nada mecânico os liga, e eles continuam passando. Há teste
 afirmando isso, para o limite ficar visível em vez de implícito.
+Desde a [RN-681](#rn-681) o par é AVISADO por embedding — continua passando,
+e o teste que afirma o limite DESTE mecanismo segue valendo.
 
 - **Onde:** `apps/api/src/domain/backlog/story-overlap.ts`,
   `apps/api/src/application/use-cases/backlog/create-story.use-case.ts`

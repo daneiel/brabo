@@ -30,6 +30,7 @@ defmodule Engine.Agents.ArquitetoServer do
     ChooseProjectImage,
     CreateC4Diagram,
     RouteModulesToInfra,
+    DeclareModuleContracts,
     ProposeAdr,
     EmitInsight,
     EmitArtifact
@@ -108,6 +109,7 @@ defmodule Engine.Agents.ArquitetoServer do
          ChooseProjectImage.spec(),
          CreateC4Diagram.spec(),
          RouteModulesToInfra.spec(),
+         DeclareModuleContracts.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec(),
          # Frente 3 do plano de decision_record — mesma ferramenta do
@@ -329,6 +331,10 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("create_c4_diagram", args, state), do: CreateC4Diagram.run(args, state)
   defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
+
+  defp run_tool("declare_module_contracts", args, state),
+    do: DeclareModuleContracts.run(args, state)
+
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
@@ -390,13 +396,17 @@ defmodule Engine.Agents.ArquitetoServer do
     4. route_modules_to_infra: depois do module_map, roteie CADA módulo para uma imagem de
        container CANDIDATA, com o porquê — um item por módulo. Você candidata; a Infra
        elege entre as candidatas depois.
-    5. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    5. declare_module_contracts: para cada módulo que OUTRO usa, declare o que ele expõe
+       (função, rota, evento ou forma de dado, com a assinatura exata). É o que os dev
+       agents leem para integrar sem abrir o código um do outro; mudar a interface depois
+       é declarar de novo, com a lista inteira.
+    6. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    6. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
+    7. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
        depois do module_map, porque o Container level é derivado dele. Descreva só o nome
        do sistema e os atores externos (ex.: o usuário, um provedor de Git); os módulos e
        as dependências entram sozinhos.
-    7. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    8. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:

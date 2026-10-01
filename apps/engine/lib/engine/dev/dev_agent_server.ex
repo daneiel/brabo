@@ -429,6 +429,9 @@ defmodule Engine.Dev.DevAgentServer do
       project_id: state.project_id,
       session_id: state.session_id,
       agent: state.agent_id,
+      # RN-684: o módulo deste dev, para `listar_contratos_de_modulos` mostrar
+      # por inteiro só o dele e o que ele consome.
+      module: state.module,
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),
@@ -493,7 +496,10 @@ defmodule Engine.Dev.DevAgentServer do
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
           "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
           "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>
-          "Toda resposta sua deve conter pelo menos uma chamada de ferramenta.",
+          "Toda resposta sua deve conter pelo menos uma chamada de ferramenta.\n\n" <>
+          "A interface de OUTRO módulo (o que ele expõe e de quais o seu depende) é o " <>
+          "contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, " <>
+          "nunca no worktree ou no código de outro dev agent.",
       :pinned => true
     }
   end
@@ -514,6 +520,9 @@ defmodule Engine.Dev.DevAgentServer do
       project_id: state.project_id,
       session_id: state.session_id,
       agent: state.agent_id,
+      # RN-684: o módulo deste dev, para `listar_contratos_de_modulos` mostrar
+      # por inteiro só o dele e o que ele consome.
+      module: state.module,
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),

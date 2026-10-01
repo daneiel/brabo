@@ -306,10 +306,13 @@ config :engine,
   # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
   #
   # `anamnese_enabled?` é decisão de PRODUTO, não teto de custo: pausa rodada
-  # NOVA (periódica e sob demanda) sem apagar nada do que já existe. Default
-  # DESLIGADO a partir de agora — decisão do usuário em 2026-08-10 ("hoje ele
-  # não está trazendo dados de muito valor"), ver docs/explanation/backlog.md.
-  anamnese_enabled?: System.get_env("ANAMNESE_ENABLED", "false") == "true",
+  # NOVA (periódica e sob demanda) sem apagar nada do que já existe. Esteve
+  # DESLIGADO de 2026-08-10 (decisão do usuário: "hoje ele não está trazendo
+  # dados de muito valor") até 2026-10-01, quando o dono decidiu RELIGAR com
+  # correções (RN-680, ADR 0196): a rodada não roda sem sujeito elegível
+  # (`Engine.Anamnese.Elegibilidade`) e a hipótese aceita vira fato do perfil
+  # no grafo. Default LIGADO de novo; `ANAMNESE_ENABLED=false` pausa.
+  anamnese_enabled?: System.get_env("ANAMNESE_ENABLED", "true") == "true",
   anamnese_interval_seconds:
     String.to_integer(System.get_env("ANAMNESE_INTERVAL_SECONDS", "900")),
   anamnese_initial_window_days:

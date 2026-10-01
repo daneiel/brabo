@@ -998,6 +998,46 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/module-contracts": {
+      "get": {
+        "description": "One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.",
+        "operationId": "InternalProjectsController_moduleContracts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContratosDoProjetoResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "The contracts between modules, for a dev agent to read (RN-684)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/product-metrics": {
       "get": {
         "description": "The SAME report as the `analise:funil` script (ADR 0089) — session → commit → PR → merge funnel, real lead time and real deployment frequency — through the same pure functions and the same query (`apps/api/src/application/services/funil-metrics.ts`), so the two never diverge from the same fact. Closes `docs/fluxo.yml` (role `po`, input `metricas-de-produto`, previously `status: lacuna`) (RN-407).",
@@ -2217,6 +2257,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/module-contracts": {
+      "post": {
+        "description": "The artifact IS the `artifact.module_contracts` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Each call carries the WHOLE list and replaces the previous version. What a module consumes is not written here: it is the current module_map's `dependsOn`.",
+        "operationId": "InternalSessionsController_moduleContracts",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclareModuleContractsInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContratosDeclaradosResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty list, repeated module, module outside the current module_map (or no module_map), a module with an empty or oversized `expoe`, an item with an unknown `tipo`, or a missing/oversized `assinatura`."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Declares a new version of the contracts between modules",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/module-map": {
       "post": {
         "description": "The history is immutable: each publication is one more version, and the current one is the one with the highest `version`. A dependency CYCLE between modules gets the map REJECTED with 400 — the graph needs to be acyclic.",
@@ -2541,9 +2637,65 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/semantic-duplicate-check": {
+      "post": {
+        "description": "Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).",
+        "operationId": "InternalSessionsController_semanticDuplicateCheck",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticDuplicateCheckInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticDuplicateCheckResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Warns when a just-written business rule looks like an existing one",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/stories": {
       "post": {
-        "description": "`businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id.",
+        "description": "`businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id. The response also carries `semanticDuplicate` (RN-681): an embedding-based WARNING against the project stories, never a refusal.",
         "operationId": "InternalSessionsController_story",
         "parameters": [
           {
@@ -2571,7 +2723,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoryResponseDto"
+                  "$ref": "#/components/schemas/CreatedStoryResponseDto"
                 }
               }
             }
@@ -6851,7 +7003,7 @@
     },
     "/projects/{projectId}/personal-access-tokens/{tokenId}": {
       "delete": {
-        "description": "Idempotente — revogar de novo não é erro.",
+        "description": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.",
         "operationId": "PersonalAccessTokensController_revokePat",
         "parameters": [
           {
@@ -6901,7 +7053,7 @@
     },
     "/projects/{projectId}/personal-access-tokens/{tokenId}/admin": {
       "delete": {
-        "description": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.",
+        "description": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.",
         "operationId": "PersonalAccessTokensController_revokePatAsMaintainer",
         "parameters": [
           {
@@ -7581,7 +7733,7 @@
     },
     "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
       "delete": {
-        "description": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
+        "description": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
         "operationId": "RunnerDeviceKeysController_revokeDeviceKey",
         "parameters": [
           {
@@ -8989,7 +9141,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/chat": {
       "post": {
-        "description": "Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`.",
+        "description": "Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`. This route carries NO agent: it sends the text alone to the bound model, with no history and no system prompt. In a `consultiva` session where no agent was ever activated it is refused before any effect (RN-682) — talk to an agent through `.../agents/:agent/message` instead.",
         "operationId": "ChatController_chat",
         "parameters": [
           {
@@ -9041,6 +9193,9 @@
           },
           "404": {
             "description": "Project or session not found."
+          },
+          "422": {
+            "description": "`destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682)."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -10497,7 +10652,7 @@
     },
     "/runner-releases/binary": {
       "get": {
-        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
+        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
         "operationId": "RunnerReleasesController_binary",
         "parameters": [],
         "responses": {
@@ -10821,7 +10976,7 @@
     },
     "/users/me/machine-device-keys/{deviceKeyId}": {
       "delete": {
-        "description": "Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.",
+        "description": "Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the LIVE connections opened with this key, in EVERY project (RN-520/RN-543). Since RN-685 (ADR 0201) the target is the KEY: another runner of the same user, connected with a PAT or with another key, stays up. The key’s still-unused tickets are voided. With no project yet there is no connection to drop. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.",
         "operationId": "MachineDeviceKeysController_revokeMachineDeviceKey",
         "parameters": [
           {
@@ -15314,6 +15469,136 @@
           "imagemVersao"
         ]
       },
+      "ContratoDeModuloInternalDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "board-engine",
+            "description": "Module name — must exist in the current module_map."
+          },
+          "expoe": {
+            "description": "What the module exposes to whoever depends on it. 1 to 40.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoInternalDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "expoe"
+        ]
+      },
+      "ContratoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "board-engine"
+          },
+          "expoe": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "expoe"
+        ]
+      },
+      "ContratoLidoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "game-session"
+          },
+          "dependeDe": {
+            "example": [
+              "board-engine",
+              "scoring"
+            ],
+            "description": "The current module_map's `dependsOn`: what this module CONSUMES.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expoe": {
+            "nullable": true,
+            "description": "What it exposes. `null` = the Architect declared no contract for this module (different from exposing nothing).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "dependeDe",
+          "expoe"
+        ]
+      },
+      "ContratosDeclaradosResponseDto": {
+        "type": "object",
+        "properties": {
+          "contratos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "contratos",
+          "version"
+        ]
+      },
+      "ContratosDoProjetoResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_contratos",
+              "declarados"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 2,
+            "description": "0 when there is no contract."
+          },
+          "modulos": {
+            "description": "One per module of the CURRENT module_map, in map order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoLidoDeModuloResponseDto"
+            }
+          },
+          "contratosForaDoMapa": {
+            "example": [],
+            "description": "Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "modulos",
+          "contratosForaDoMapa"
+        ]
+      },
       "ConvertExecutionModeDto": {
         "type": "object",
         "properties": {
@@ -15444,6 +15729,156 @@
           "systemName"
         ]
       },
+      "CreatedStoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "epicId": {
+            "type": "string",
+            "example": "01JC4Z0000EPICO000000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "title": {
+            "type": "string",
+            "example": "Add item to cart"
+          },
+          "description": {
+            "type": "string",
+            "example": "As a buyer, I want to gather items before paying."
+          },
+          "rf": {
+            "example": [
+              "The cart accepts up to 50 items"
+            ],
+            "description": "Functional requirements.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rnf": {
+            "example": [
+              "The response stays under 200 ms at p95"
+            ],
+            "description": "Non-functional requirements.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "businessRuleIds": {
+            "example": [
+              "RN-014"
+            ],
+            "description": "Business rules covered. This is where rule→story coverage is computed in `GET /projects/:id/coverage`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dod": {
+            "example": [
+              "Unit tests green"
+            ],
+            "description": "Definition of done.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dor": {
+            "example": [
+              "Module defined"
+            ],
+            "description": "Definition of ready.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "moduleIds": {
+            "example": [
+              "api"
+            ],
+            "description": "Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "ready",
+              "in_progress",
+              "done"
+            ],
+            "example": "ready"
+          },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD too generic — spell out the acceptance criteria.",
+            "nullable": true,
+            "description": "Why the user returned the story to the PO. `null` when it was never returned."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-25T09:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-25T09:40:00.000Z",
+            "format": "date-time"
+          },
+          "semanticDuplicate": {
+            "$ref": "#/components/schemas/SemanticDuplicateCheckResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "epicId",
+          "projectId",
+          "sessionId",
+          "title",
+          "description",
+          "rf",
+          "rnf",
+          "businessRuleIds",
+          "dod",
+          "dor",
+          "moduleIds",
+          "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
+          "createdAt",
+          "updatedAt",
+          "semanticDuplicate"
+        ]
+      },
       "CreateEpicInternalDto": {
         "type": "object",
         "properties": {
@@ -15520,10 +15955,15 @@
                 "responsibility": "Rules and HTTP",
                 "dependsOn": [
                   "db"
-                ]
+                ],
+                "resources": {
+                  "cpus": 1,
+                  "memoryMb": 1024,
+                  "pidsLimit": 256
+                }
               }
             ],
-            "description": "Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level."
+            "description": "Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level. Each module may declare `resources` (cpus, memoryMb, pidsLimit — all three or none); a partial declaration, a value above the container ceiling, or a SUM over modules above it is also 400 (RN-683)."
           }
         },
         "required": [
@@ -16025,6 +16465,26 @@
           "rationale",
           "network",
           "resources"
+        ]
+      },
+      "DeclareModuleContractsInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contratos": {
+            "description": "The WHOLE contract list: each call is a new version that replaces the previous one. What a module CONSUMES is not here — it is derived from the current module_map's `dependsOn` when read.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoDeModuloInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "contratos"
         ]
       },
       "DelegationResponseDto": {
@@ -17651,6 +18111,63 @@
           "token"
         ]
       },
+      "ItemDeContratoInternalDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "funcao",
+              "rota",
+              "evento",
+              "dado"
+            ],
+            "example": "funcao",
+            "description": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape."
+          },
+          "assinatura": {
+            "type": "string",
+            "example": "placePiece(board: Board, piece: Piece, pos: Pos): Board",
+            "description": "How another module uses it. Up to 300 characters."
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Returns a new board; never mutates the one passed in."
+          }
+        },
+        "required": [
+          "tipo",
+          "assinatura"
+        ]
+      },
+      "ItemDeContratoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "funcao",
+              "rota",
+              "evento",
+              "dado"
+            ],
+            "example": "funcao"
+          },
+          "assinatura": {
+            "type": "string",
+            "example": "placePiece(board: Board, piece: Piece, pos: Pos): Board"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Returns a new board; never mutates the one passed in."
+          }
+        },
+        "required": [
+          "tipo",
+          "assinatura",
+          "descricao"
+        ]
+      },
       "JwksResponseDto": {
         "type": "object",
         "properties": {
@@ -18606,6 +19123,14 @@
             "items": {
               "type": "string"
             }
+          },
+          "resources": {
+            "description": "What THIS module needs alone inside the project container (RN-683, ADR 0199). Absent when the Architect did not declare it. The Infra starts the container with the SUM over modules, floored at the default while any module is undeclared.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+              }
+            ]
           }
         },
         "required": [
@@ -22241,6 +22766,113 @@
           "ticket",
           "expiresAt",
           "engineWsUrl"
+        ]
+      },
+      "SemanticDuplicateCheckInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "business_rule"
+            ],
+            "example": "business_rule"
+          },
+          "title": {
+            "type": "string",
+            "example": "Greeting with the caller name",
+            "description": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison."
+          }
+        },
+        "required": [
+          "projectId",
+          "kind",
+          "title"
+        ]
+      },
+      "SemanticDuplicateCheckResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "warned",
+              "clean",
+              "skipped",
+              "nothing_to_compare"
+            ],
+            "description": "`warned` NEVER blocks: the item was already written. `skipped` carries the reason — no embedding provider, daemon down, the 10 s ceiling — and is also narrated in the event log."
+          },
+          "similarTo": {
+            "$ref": "#/components/schemas/SemanticDuplicateSimilarDto"
+          },
+          "closest": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SemanticDuplicateSimilarDto"
+              }
+            ]
+          },
+          "similarity": {
+            "type": "number",
+            "example": 0.83
+          },
+          "threshold": {
+            "type": "number",
+            "example": 0.8,
+            "description": "Cosine threshold — a STARTING POINT, not calibrated (ADR 0198)."
+          },
+          "compared": {
+            "type": "number",
+            "example": 12,
+            "description": "How many existing items were compared (the most recent, up to 100)."
+          },
+          "total": {
+            "type": "number",
+            "example": 12,
+            "description": "How many exist in the project."
+          },
+          "reason": {
+            "type": "string",
+            "example": "provider \"ollama\" did not answer"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "description": "The sentence the agent reads in the tool result; `null` when there is nothing to say."
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ]
+      },
+      "SemanticDuplicateSimilarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Deterministic public greeting endpoint"
+          },
+          "similarity": {
+            "type": "number",
+            "example": 0.83
+          }
+        },
+        "required": [
+          "id",
+          "title"
         ]
       },
       "SendAgentMessageDto": {

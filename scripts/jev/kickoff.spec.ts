@@ -24,6 +24,8 @@ describe('a porta dos moldes do engine (texto fixo)', () => {
       'Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com',
       'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.',
       '`report_blocked` com o diagnóstico do que foi tentado e por que falhou.',
+      // RN-684: o kickoff diz onde ler a interface de outro módulo.
+      'contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, ',
     ]) {
       expect(src).toContain(trecho);
       expect(k.replace(/\n/g, ' ')).toContain(trecho.trim());

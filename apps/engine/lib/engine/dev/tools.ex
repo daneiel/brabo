@@ -13,7 +13,8 @@ defmodule Engine.Dev.Tools do
     WriteFile,
     Terminal,
     RagSearch,
-    RagFeedback
+    RagFeedback,
+    ListarContratosDeModulos
   }
 
   alias Engine.Dev.Tools.{ReportDone, ReportBlocked}
@@ -21,6 +22,10 @@ defmodule Engine.Dev.Tools do
   # `RagFeedback` anda sempre junto de `RagSearch` (RN-480): buscar sem poder
   # dizer se o resultado serviu deixa a calibração dos pesos sem sinal de
   # verdade nenhum. É `:direct` como a busca — votar não é efeito externo.
+  #
+  # `ListarContratosDeModulos` (RN-684, ADR 0200): a interface de OUTRO módulo
+  # vem do contrato que o Arquiteto declarou, nunca do worktree de outro dev.
+  # LEITURA, `:direct`, sem parâmetro — o módulo do dev vem de `ctx.module`.
   @registry [
     ReadFile,
     SearchWorkspace,
@@ -28,6 +33,7 @@ defmodule Engine.Dev.Tools do
     Terminal,
     RagSearch,
     RagFeedback,
+    ListarContratosDeModulos,
     ReportDone,
     ReportBlocked
   ]

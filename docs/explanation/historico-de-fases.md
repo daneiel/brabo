@@ -3216,3 +3216,45 @@ lados: no runner, um `git credential fill` e um `git fetch origin` reais com o
 helper do `GitAuth` sucedem no host com container ativo; no engine, a corrente
 pelo `TerminalChannel` real termina em `{:ok, _}`. Os ExUnit não rodaram no
 ambiente da entrega (`repo.hex.pm` 403) e ficaram para o CI.
+
+### A consultiva sem agente pede um agente (AT-254, RN-682)
+
+2026-10-01, rodada 36. No uso real de 29/09 uma sessão consultiva sem agente
+respondeu "não tenho acesso a conversas anteriores": a mensagem sem
+destinatário ia ao SSE de `POST .../chat`, que manda ao modelo vinculado só o
+texto atual — sem histórico, sem prompt de sistema — e grava a resposta com o
+nome do modelo como ator. A decisão do dono (01/10) foi pedir um agente em vez
+de dar histórico ao chat livre. Medido antes: a tela era o único cliente da
+rota (o `curl` impresso pelo seed é dica de desenvolvimento, numa sessão
+criativa), e o caso de uso `SendChatMessageUseCase` tinha um segundo consumidor
+legítimo, os smokes de provider, que o usam como instrumento de ponta a ponta
+numa sessão sem agente. Por isso a recusa da api mora na ROTA, numa guarda
+própria, e o caso de uso ficou intacto. Na tela, a linha do destinatário passou
+a carregar o próprio seletor do handoff manual quando não há agente — o mesmo
+gesto de sempre, agora no lugar onde ele é a única forma de a mensagem ter
+destino —, e o Criativo ficou fora da lista porque a consultiva promete que ele
+não entra.
+
+### A revogação mira a chave, e não o par `{projeto, usuário}` (AT-013, ADR 0201, RN-685)
+
+2026-10-01, rodada 36. A RN-520 tinha feito a revogação alcançar a conexão
+viva, com o alvo `{projeto, usuário}` porque a identidade da credencial morria
+no `PatAuthGuard`; o ADR 0154 pôs *"revogação por chave"* entre o que não
+fazia, e o PR #534 deu à chave de máquina o mesmo par aplicado projeto a
+projeto. A AT-013 ficou bloqueada por recorte e por decisão até o dono
+escolher (01/10): por CHAVE, com ADR, mexendo no engine. Medido antes: o
+ticket nascia de `{userId, kind}`, o socket guardava só projeto/usuário/kind,
+e o canal comparava o usuário — o runner do mesmo usuário com PAT ou outra
+chave caía junto; a conexão da chave de máquina num projeto fora da lista da
+api ficava de pé; o ticket emitido antes da revogação entrava depois dela; e
+revogar PAT não derrubava nada. Entregou-se: duas colunas nuláveis no ticket
+(migration Ecto, a tabela é do engine — o diário do Drizzle ficou na `0068`),
+o guard anotando a credencial depois de autorizar, o id do socket ganhando
+espécie e id da credencial, e uma rota `runner/disconnect-credential` que anula
+os tickets pendentes e pergunta a todo runner do cluster se nasceu dela. A
+proibição da AT-013 (não deixar de derrubar o que caía) virou duas peças de
+transição: a conexão legada cai pelo par nos projetos da linha, e um engine
+sem a rota faz a api voltar ao par. O par ficou como alvo da remoção de
+membro. A tela trocou só o texto da confirmação (RN-561). O runner não mudou.
+Os ExUnit não rodaram no ambiente da entrega (`repo.hex.pm` 403) e ficaram
+para o CI.

@@ -526,6 +526,30 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       text: `história "${payloadField(payload, 'title') ?? 'nova'}" não acrescenta cobertura sobre "${payloadField(payload, 'sobrepoeTitulo') ?? 'outra'}"`,
     };
   }
+  // RN-681 (ADR 0198): a duplicata SEMÂNTICA, por embedding. Também é AVISO:
+  // o item existe, e o texto nomeia o parecido e o número para quem lê julgar.
+  if (type === 'backlog.semantic_duplicate_warned') {
+    const oQue =
+      payloadField(payload, 'kind') === 'story' ? 'história' : 'regra';
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--warning)',
+      bad: false,
+      text: `${oQue} "${payloadField(payload, 'title') ?? 'nova'}" parece duplicar "${payloadField(payload, 'similarToTitle') ?? 'outra'}" (similaridade ${payloadField(payload, 'similarity') ?? '?'})`,
+    };
+  }
+  // A checagem que não rodou DIZ por quê — sem isto, "nenhum aviso" se leria
+  // como "não é duplicata".
+  if (type === 'backlog.semantic_duplicate_check_skipped') {
+    return {
+      kind: 'generic',
+      icon: StackIcon,
+      color: 'var(--text-secondary)',
+      bad: false,
+      text: `checagem de duplicata semântica pulada: ${payloadField(payload, 'reason') ?? 'motivo não informado'}`,
+    };
+  }
   if (type.startsWith('adr.')) {
     return {
       kind: 'pr',

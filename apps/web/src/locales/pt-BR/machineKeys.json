@@ -26,8 +26,8 @@
   "modal": {
     "title": "Revogar chave de máquina",
     "body": "Revogar “{{name}}” é definitivo: ela para de autenticar o agente local daquela máquina, e ter outra exige instalar o agente de novo.",
-    "alcance": "Isto derruba o agente local em TODOS os seus projetos em modo runner, não só em um. Sem projeto nenhum ainda, só impede a chave de ser usada de novo.",
-    "colateral": "Derrubar alcança {projeto, usuário} e nunca uma chave em particular: outro runner seu nesses projetos também cai, mesmo autenticado por outra credencial — e reconecta sozinho se a credencial dele ainda valer.",
+    "alcance": "Isto derruba o agente local em TODOS os seus projetos em modo runner em que ele se conectou com esta chave, não só em um. Sem projeto nenhum ainda, só impede a chave de ser usada de novo.",
+    "precisao": "Só cai o que se conectou com ESTA chave: outro runner seu nesses projetos, autenticado por outra chave ou por um token, continua conectado.",
     "cancel": "Cancelar",
     "confirm": "Revogar"
   }

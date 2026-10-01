@@ -30,8 +30,11 @@ defmodule EngineWeb.AnamneseCommandController do
           send_resp(conn, 409, "")
 
         session_id ->
+          # `origem: "manual"` (RN-680): a rodada pedida à mão que não
+          # roda por falta de sujeito narra o motivo no event log; a do
+          # tick fica só no log do engine.
           {:ok, _job} =
-            %{project_id: project_id, session_id: session_id}
+            %{project_id: project_id, session_id: session_id, origem: "manual"}
             |> Engine.Workers.AnamneseWorker.new()
             |> Oban.insert()
 

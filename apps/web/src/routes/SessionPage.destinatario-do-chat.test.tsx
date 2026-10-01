@@ -23,6 +23,8 @@ import i18n from '../lib/i18n';
  */
 
 const sendAgentMessage = vi.fn();
+const requestManualHandoff = vi.fn();
+const streamChatMessage = vi.fn();
 const acceptHandoff = vi.fn();
 const getSession = vi.fn();
 const getProjectsSummary = vi.fn();
@@ -50,7 +52,9 @@ vi.mock('../lib/hooks', () => ({
   useBacklog: () => ({ data: [] }),
 }));
 
-vi.mock('../lib/chat-stream', () => ({ streamChatMessage: vi.fn() }));
+vi.mock('../lib/chat-stream', () => ({
+  streamChatMessage: (...args: unknown[]) => streamChatMessage(...args),
+}));
 vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
@@ -74,6 +78,7 @@ vi.mock('../lib/api-client', () => ({
   confirmReadiness: vi.fn(),
   denyAction: vi.fn(),
   sendAgentMessage: (...args: unknown[]) => sendAgentMessage(...args),
+  requestManualHandoff: (...args: unknown[]) => requestManualHandoff(...args),
   setSessionModelBinding: vi.fn(),
   startAgent: vi.fn(),
   transitionSession: vi.fn(),
@@ -163,6 +168,7 @@ beforeEach(async () => {
   getSession.mockResolvedValue(sessao());
   sendAgentMessage.mockResolvedValue({ ok: true });
   acceptHandoff.mockResolvedValue({ ok: true });
+  requestManualHandoff.mockResolvedValue({ id: 'h-novo' });
   handoffsMock.mockReturnValue([]);
   eventos.mockReturnValue({ items: [] });
   workspaceMock.mockReturnValue(undefined);
@@ -449,13 +455,32 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
     expect((await seletor()).value).toBe('infra');
   });
 
-  it('sem agente nenhum (sessão consultiva), a tela diz que a mensagem vai ao modelo', async () => {
+  it('RN-682 — CASO DE FALHA: consultiva sem agente não envia, nem ao agente nem ao modelo cru', async () => {
     montar();
     expect(
-      await screen.findByText(
-        'Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente.',
-      ),
+      await screen.findByText(/Esta sessão ainda não tem agente: escolha um e clique em Chamar/),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText('Para')).not.toBeInTheDocument();
+
+    await mandarMensagem('oi');
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(streamChatMessage).not.toHaveBeenCalled();
+    expect(sendAgentMessage).not.toHaveBeenCalled();
+  });
+
+  it('RN-682 — caminho feliz: a linha do destinatário lista quem pode ser chamado, e Chamar é o handoff manual', async () => {
+    montar();
+    const lista = await seletor();
+    const opcoes = [...lista.options].map((o) => o.value).filter(Boolean);
+    // Os que conversam, sem o Criativo — a consultiva não abre a ideação.
+    expect(opcoes).toEqual(['po', 'arquiteto', 'dev-lead', 'ux-designer', 'staff', 'infra']);
+    // O seletor do handoff manual de cima não aparece duplicado.
+    expect(screen.queryByLabelText('Endereçar handoff a outro agente')).not.toBeInTheDocument();
+
+    fireEvent.change(lista, { target: { value: 'staff' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Chamar' }));
+    await waitFor(() =>
+      expect(requestManualHandoff).toHaveBeenCalledWith('proj-1', ID, 'staff'),
+    );
   });
 });

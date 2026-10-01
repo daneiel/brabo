@@ -6,6 +6,7 @@ import type { Handoff } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { agentesParaChamar } from '../lib/session-destinatario';
 import styles from './SessionPage.module.css';
 
 /**
@@ -201,8 +202,15 @@ export function SessionComposer({
         `activeFor` (não `AGENTES_DE_CHAT`) filtra quem já entrou nesta
         sessão alguma vez, pro mesmo agente não ser oferecido duas
         vezes.
+
+        Sem agente nenhum a quem a mensagem possa ir (a consultiva que
+        ainda não chamou ninguém, RN-682) este seletor MUDA de lugar: vai
+        para dentro da linha do destinatário, logo abaixo, porque ali ele
+        deixa de ser redirecionamento e passa a ser a ÚNICA forma de a
+        mensagem ter destinatário. Dois seletores iguais na mesma tela
+        seria a mesma escolha em dois lugares.
       */}
-      {isActive && (
+      {isActive && opcoesDeDestinatario.length > 0 && (
         <div className={styles.manualHandoffRow}>
           <Select
             aria-label={t('handoff.manualLabel')}
@@ -243,7 +251,44 @@ export function SessionComposer({
         */}
         <div className={styles.destinatarioRow} data-testid="destinatario-do-chat">
           {opcoesDeDestinatario.length === 0 ? (
-            <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+            /*
+              RN-682 (AT-254): sem agente, a mensagem NÃO vai a lugar
+              nenhum. Até aqui ela ia ao modelo cru (o SSE de
+              `POST .../chat`), sem histórico nem prompt de sistema, e a
+              resposta saía assinada pelo nome do modelo. Agora a linha
+              PEDE um agente e mostra quem pode ser chamado — os agentes
+              que conversam (`AGENTES_DE_CHAT`) e ainda não estão na
+              sessão —, e o envio fica travado. Chamar é o MESMO handoff
+              manual de sempre (ADR 0109/RN-440): a oferta aparece no fio,
+              e aceitá-la faz do agente o destinatário (RN-631).
+            */
+            <>
+              <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
+                {t('composer.destinatarioLabel')}
+              </label>
+              <Select
+                id="destinatario-do-chat"
+                value={manualHandoffTarget}
+                disabled={enviandoHandoffManual || !isActive}
+                onChange={(e) => setManualHandoffTarget(e.target.value)}
+              >
+                <option value="">{t('composer.destinatarioPlaceholder')}</option>
+                {agentesParaChamar(activeFor).map((agente) => (
+                  <option key={agente} value={agente}>
+                    {nomeDoAgente(agente)}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="secondary"
+                loading={enviandoHandoffManual}
+                disabled={!manualHandoffTarget}
+                onClick={handleRequestManualHandoff}
+              >
+                {t('composer.chamarAgente')}
+              </Button>
+              <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+            </>
           ) : (
             <>
               <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
@@ -288,7 +333,7 @@ export function SessionComposer({
           <Button
             onClick={handleSend}
             disabled={
-              (streaming && !podeEnfileirar) || !draft.trim() || precisaEscolherDestinatario
+              (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null
             }
           >
             {streaming ? t('composer.enfileirar') : t('composer.enviar')}
