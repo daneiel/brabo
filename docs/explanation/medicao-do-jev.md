@@ -753,8 +753,9 @@ accumulated spend of the output directory went from US$ 0.4136 to US$ 0.4149.
 > 40 executions, the defaults of `jev:vivo` — at commit `0eab0cb0e9`, with no
 > account or network failure and no interrupted execution. **Spend: US$ 0.5195**
 > by the sum of `usage.cost` in the output (US$ 0.0424 DeepSeek, US$ 0.4771
-> Haiku); the key's `usage` moved by US$ 0.4597 in the minutes after the run
-> (US$ 10.0545 → US$ 10.5142), lower than the per-response sum. The table and
+> Haiku); the key's `usage` moved by the same US$ 0.5195 (US$ 10.0545 →
+> US$ 10.5739, read about ten minutes after the run — a read right after it
+> still showed US$ 0.4597, the bill lags the responses). The table and
 > the verdict are in "The live table" and "Recommendation" below; the protocol,
 > the rule and the estimate were not touched after the numbers came in.
 
