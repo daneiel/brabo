@@ -499,6 +499,15 @@ describe('install.sh — invariantes do arquivo', () => {
     expect(texto).toMatch(/Windows está fora de escopo por decisão declarada/);
   });
 
+  // ADR 0187: o binário de Windows saiu da matriz. A recusa diz, sem baixar
+  // nada, qual é o caminho do agente local ali — o pacote npm, sob Node.
+  it('a recusa de Windows aponta o npm para o agente local, nomeando o ADR 0187', () => {
+    const recusa = /windows\)\s*\n\s*recusar "([^"]+)"/.exec(fonte())?.[1] ?? '';
+    expect(recusa).toMatch(/ADR 0187/);
+    expect(recusa).toContain('npm install -g @brabo/runner');
+    expect(recusa).not.toMatch(/curl|download/i);
+  });
+
   // O próprio uso que o script documenta é baixar e rodar um arquivo
   // (`curl -fsSLO … && bash install.sh`) — até a AT-083 era `sh -c "$(curl …)"`,
   // que nunca funcionou (a autoverificação calcula o hash de `$0`). Se algum dia

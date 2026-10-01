@@ -79,14 +79,22 @@ export function plataformasSuportadas(): readonly RunnerPlatform[] {
  * igual) mas para a qual a Release NÃO publica binário, por decisão: o Mac
  * Intel saiu da matriz no ADR 0174 — sem runner Intel utilizável no Actions,
  * e o Bun quebrando o `onData` do node-pty no `macos-15-intel`
- * (oven-sh/bun#25822). O caminho dele é o pacote npm, sob Node.
+ * (oven-sh/bun#25822). O Windows saiu no ADR 0187 — sob o Bun o pipe de
+ * saída do ConPTY fecha depois do primeiro pedaço. O caminho dos dois é o
+ * pacote npm, sob Node.
  *
- * Por isso `darwin-x64` continua em `PLATAFORMAS`: detectar Mac Intel é
- * verdade, e é o que permite dizer o caminho certo em vez de mandar a pessoa
+ * Por isso `darwin-x64` e `win32-x64` continuam em `PLATAFORMAS`: detectar a
+ * plataforma é verdade, e é o que permite dizer o caminho certo em vez de mandar a pessoa
  * escolher outra plataforma. O que muda é que o passo do binário nem chega a
  * pedir o download — a api recusaria com 400 de qualquer jeito.
  */
-const SEM_BINARIO_PUBLICADO: readonly RunnerPlatform[] = ['darwin-x64'];
+const SEM_BINARIO_PUBLICADO: readonly RunnerPlatform[] = ['darwin-x64', 'win32-x64'];
+
+/** O nome legível e o ADR de cada plataforma sem binário, para a mensagem. */
+const MOTIVO_SEM_BINARIO: Readonly<Record<string, string>> = {
+  'darwin-x64': 'Mac Intel, ADR 0174',
+  'win32-x64': 'Windows, ADR 0187',
+};
 
 export function temBinarioPublicado(platform: string): boolean {
   return !(SEM_BINARIO_PUBLICADO as readonly string[]).includes(platform);
@@ -276,7 +284,7 @@ export async function baixarBinario(platform: string): Promise<ArrayBuffer> {
     // Sem rede: a falha é conhecida de antemão, e ela cai no mesmo caminho
     // best-effort (`falhaDoBinario` → `COMANDO_VIA_NPM`) de qualquer outra.
     throw new Error(
-      `A Release não publica binário para "${platform}" (Mac Intel), por decisão (ADR 0174) — o caminho é o npm, sob Node.`,
+      `A Release não publica binário para "${platform}" (${MOTIVO_SEM_BINARIO[platform] ?? 'por decisão'}), por decisão — o caminho é o npm, sob Node.`,
     );
   }
   const res = await fetch(

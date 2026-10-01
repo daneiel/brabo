@@ -179,6 +179,17 @@ describe('baixarBinario', () => {
     expect(temBinarioPublicado('darwin-arm64')).toBe(true);
   });
 
+  // ADR 0187 — o Windows saiu pelo mesmo molde do Mac Intel.
+  it('win32-x64 recusa sem rede, nomeando o ADR 0187', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(baixarBinario('win32-x64')).rejects.toThrow(/Windows, ADR 0187/);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(temBinarioPublicado('win32-x64')).toBe(false);
+    expect(temBinarioPublicado('linux-x64')).toBe(true);
+  });
+
   it('erro HTTP vira mensagem legível', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(502, null)));
 
@@ -316,7 +327,9 @@ describe('configurarPastaAutomaticamente', () => {
     expect(resultado.pasta).toBe('minha-pasta');
   });
 
-  it('Windows: usa o nome .exe e a instrução final sem chmod', async () => {
+  // ADR 0187: o Windows não tem binário publicado. A pasta e a chave saem
+  // como sempre; o binário falha de antemão e a instrução vira a do npm.
+  it('Windows: não grava binário nenhum e a instrução final é a do npm', async () => {
     const { getFileHandle } = stubAmbienteFeliz();
 
     const resultado = await configurarPastaAutomaticamente({
@@ -325,8 +338,10 @@ describe('configurarPastaAutomaticamente', () => {
       platform: 'win32-x64',
     });
 
-    expect(getFileHandle).toHaveBeenCalledWith('brabo-runner.exe', { create: true });
-    expect(resultado.instrucaoFinal).toBe('.\\brabo-runner.exe');
+    expect(getFileHandle).not.toHaveBeenCalledWith('brabo-runner.exe', { create: true });
+    expect(getFileHandle).toHaveBeenCalledWith('brabo-runner.config.json', { create: true });
+    expect(resultado.falhaDoBinario).toMatch(/ADR 0187/);
+    expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
   });
 
   it('falha (ex.: geração de chave rejeitada) propaga o erro sem registrar chave nenhuma — depois de a pasta já ter sido escolhida', async () => {

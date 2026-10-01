@@ -236,6 +236,7 @@ estado lido do repositório e não da conversa.
 | O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
 | A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
+| O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
 
 ## Estado atual e aberto
 
@@ -706,49 +707,41 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
   prova. Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- Binário standalone: DOIS dos QUATRO alvos chegam à Release. `v4.0.1` e
-  `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
-  `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
-  `v4.0.0` FOI corrigida, com espera de teto 600s em
-  `build-runner-binaries.yml`. O que falta são os outros dois, e o ensaio da
-  matriz (`workflow_dispatch` com tag vazia, run 36775746724) mediu que os dois
-  já CONSTROEM — as correções de build da `dev` valeram — e reprovam no SMOKE,
-  por causas distintas. `win32-x64` saía com código 1 no uso sem argumentos:
-  `ENOENT` em `realpathSync`, porque o runner só reconhecia o caminho virtual
-  do binário compilado de Linux/macOS (`/$bunfs/`) e o do Windows é
-  `B:/~BUN/root/` — ou `B/~BUN/root/`, sem os dois-pontos (AT-343,
-  `apps/runner/src/binario-compilado.ts`, que o `index.ts` e o carregador do
-  `node-pty` perguntam pelas DUAS testemunhas, `import.meta.url` e `argv[1]`). `darwin-arm64`
-  passou do `posix_spawnp failed` e reprovou no `--self-test-pty` com o
-  marcador na saída UMA vez: é o oven-sh/bun#25822, MEDIDO — sob o Bun o
-  `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro `EAGAIN` do
-  fd não-bloqueante, e o terminal do binário parava depois do primeiro pedaço
-  de saída nas TRÊS plataformas Unix (o Linux passava na prova por sorte de
-  tempo). Sob o Bun o runner lê o PTY com leitor próprio
-  (`apps/runner/src/leitor-de-pty.ts`, AT-342), e o `--self-test-pty` ganhou
-  uma segunda volta depois de uma pausa, que reprova o leitor antigo também no
-  Linux. O segundo ensaio (run 36779817686) PROVOU o `darwin-arm64` e os dois
-  Linux; no `win32-x64` o uso passou e o `--self-test-pty` reprovou com
-  `Cannot find package 'node-pty'` (o carregador não reconhecia a forma sem
-  `:`), corrigido; no terceiro (run 36780804339) o `node-pty` carregou e só
-  as sequências iniciais do ConPTY chegaram, sem nem o prompt do `cmd.exe` —
-  o `win32-x64` segue NÃO provado. O auto-teste que reprova agora roda uma
-  SONDA (um segundo PTY com `cmd.exe /c echo`, que não depende de entrada) e
-  relata pedaços, saída do filho e eventos do stream de leitura, para o
-  próximo ensaio separar entrada de leitura; o veredito não muda. O
-  quinto alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
-  AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
-  que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`
-  no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a AT-114 o
-  runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
+- Binário standalone: TRÊS alvos na matriz desde o ADR 0187, os três PROVADOS
+  em ensaio, e DOIS chegando à Release. `v4.0.1` e `v5.0.0` anexam
+  `brabo-runner-linux-x64` e `-linux-arm64` (medido com `gh release view`) — a
+  corrida com o `release.yml` que derrubava o anexo na `v4.0.0` FOI corrigida,
+  com espera de teto 600s em `build-runner-binaries.yml`. O `darwin-arm64`
+  CONSTRÓI e passa o smoke em ensaio (`workflow_dispatch` com tag vazia, runs
+  36779817686 e __RUN__): o que o derrubava era o oven-sh/bun#25822, MEDIDO —
+  sob o Bun o `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro
+  `EAGAIN` do fd não-bloqueante, e o terminal do binário parava depois do
+  primeiro pedaço nas três plataformas Unix (o Linux passava na prova por sorte
+  de tempo). Sob o Bun o runner lê o PTY com leitor próprio
+  (`apps/runner/src/leitor-de-pty.ts`, RN-688), e o `--self-test-pty` faz uma
+  segunda volta depois de uma pausa, que reprova o leitor antigo também no
+  Linux — falta só uma TAG para ele chegar à Release. O `win32-x64` SAIU por
+  decisão do mantenedor (ADR 0187, AT-343), no molde do Mac Intel: quatro
+  ensaios (36775746724, 36779817686, 36780804339, 36781729045) o levaram até
+  carregar o `node-pty` (o caminho virtual `B:/~BUN/root/`, também sem os
+  dois-pontos, reconhecido em `apps/runner/src/binario-compilado.ts` — fica,
+  é o ponto de partida da volta), e a SONDA do auto-teste mediu que sob o Bun
+  o pipe de saída do ConPTY termina depois do primeiro pedaço: até
+  `cmd.exe /c echo` morre com 0xC000013A. O `darwin-x64` (Mac Intel) saiu antes
+  (ADR 0174, AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse
+  bug do Bun que reprova, com a MESMA prova passando sob Node — e ali só com
+  `chmod +x` no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a
+  AT-114 o runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
   (`apps/runner/src/spawn-helper.ts`, só darwin, erro nomeado se falta ou o
-  `chmod` é recusado), provado por teste e NUNCA num macOS real. O Mac Intel usa
-  `npm install -g @brabo/runner`: o `install.sh` diz isso sem baixar, o proxy
-  recusa `darwin-x64` com 400 próprio e o navegador nem pede o download. Os
+  `chmod` é recusado), provado por teste e NUNCA num macOS real. Mac Intel e
+  Windows usam `npm install -g @brabo/runner`: o proxy recusa os dois com 400
+  próprio (`SEM_BINARIO_POR_DECISAO`, nome e ADR por plataforma), o navegador
+  nem pede o download, o `install.sh` diz isso sem baixar no Mac Intel e, no
+  Windows, na recusa que ele já fazia da instalação inteira (ADR 0150). Os
   quatro lugares que enumeram alvos (matriz, `PLATAFORMAS` da api, o `case` do
   `install.sh`, a lista do web) são amarrados por
-  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
-  depois de o Bun corrigir, nunca só trocar o label
+  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel ou o Windows é ADR
+  novo, depois de o Bun corrigir, nunca só devolver as linhas da matriz
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
   fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
   primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de

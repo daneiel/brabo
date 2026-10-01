@@ -895,6 +895,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   stream de leitura — o veredito não muda. O uso sem argumentos foi provado no
   `windows-latest`; o terminal do binário de Windows ainda não.
 
+- **runner**: o binário standalone deixa de ser publicado para Windows
+  (`win32-x64`), por decisão ([ADR 0187](docs/adr/0187-runner-sem-binario-win32-x64.md),
+  AT-343) — no molde do Mac Intel ([ADR 0174](docs/adr/0174-runner-sem-binario-darwin-x64.md)).
+  Os ensaios da matriz levaram o binário até carregar o `node-pty`, e ali a
+  sonda do `--self-test-pty` mediu que, sob o Bun, o pipe de saída do ConPTY
+  termina depois do primeiro pedaço: até `cmd.exe /c echo` morre com
+  0xC000013A. No Windows o agente local é `npm install -g @brabo/runner`, sob
+  Node. O proxy `GET /runner-releases/binary` recusa `win32-x64` com 400
+  próprio que aponta o npm (antes aceitava e respondia 502
+  `plataforma_nao_publicada`), o painel do navegador não pede o download, e a
+  recusa de Windows do `install.sh` passa a dizer o caminho npm. A matriz e o
+  `checksums.txt` passam a esperar TRÊS alvos (`linux-x64`, `linux-arm64`,
+  `darwin-arm64`).
+
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de
