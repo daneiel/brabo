@@ -1,0 +1,22 @@
+{
+  // O teste ao vivo da AT-239 (`jev:vivo`) reexporta a política do roteador
+  // que MORA NA API (`apps/api/src/domain/llm/tool-router.ts`, ver
+  // `roteador.ts`). Aquele arquivo é CommonJS (a api não tem
+  // `"type": "module"`), e com `verbatimModuleSyntax` o TypeScript recusa cada
+  // `export` dele (TS1287) — o mesmo caso de `../../idioma/tsconfig.json`, com
+  // a mesma troca: `verbatimModuleSyntax` sai, `isolatedModules` entra. O
+  // `paths` resolve o `import type` de `@brabo/shared` do arquivo da api, que
+  // `scripts/` não tem como dependência (só tipo: o Node apaga o import).
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true,
+    // O arquivo da api é checado com as regras DELA, que não ligam esta (o
+    // `messages[idxPedido]` de `recortarEstado` reprovaria aqui e passa lá).
+    "noUncheckedIndexedAccess": false,
+    "paths": { "@brabo/shared": ["../../../packages/shared/src/index.ts"] }
+  },
+  "include": ["**/*.ts"],
+  // O `exclude` do pai tira `jev/vivo/**` do primeiro passo; aqui ele não vale.
+  "exclude": []
+}

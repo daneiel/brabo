@@ -1,7 +1,7 @@
 ---
 id: medicao-do-jev
 title: Measuring the Jev tool router
-description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see.
+description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see; and the live with-and-without comparison of AT-239 — instrument, protocol, decision rule and cost estimate written before any run, the run itself blocked on 2026-10-01.
 ---
 
 # Measuring the Jev tool router
@@ -702,6 +702,167 @@ One call, for the 36 new steps: **US$ 0.001275** by `usage.cost` (task ceiling
 US$ 0.30). The policies are offline over the answers already on disk. The
 accumulated spend of the output directory went from US$ 0.4136 to US$ 0.4149.
 
+## Live comparison (AT-239, 2026-10-01): the instrument is ready, the run did not happen
+
+> AT-239 (EP-029, HS-063) asks the question every earlier section left open:
+> **with the router on, do turns get shorter, faster or cheaper, and does the
+> work still come out?** The same tasks, on the same OpenRouter model, with the
+> routing of [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)
+> on and off, on two chat models of different speeds.
+>
+> **Status on 2026-10-01: not measured.** The session that built the instrument
+> (branch `test/jev-com-e-sem`, from `dev` at `d070b000d7`) had a paid key and a
+> US$ 5.00 ceiling, but its egress proxy denied the `CONNECT` to
+> `openrouter.ai:443` by organization policy, and also to `repo.hex.pm` and
+> `builds.hex.pm`, so the engine could not be compiled either. No chat call and
+> no Jev call left the machine: **spend US$ 0.00**, and every cell of the live
+> table below is empty on purpose. What follows is the instrument, the protocol
+> and the decision rule, all written **before** any run, and the numbers that
+> could be measured without the network.
+
+### What the instrument runs, and what is a port
+
+`pnpm --filter @brabo/scripts jev:vivo` (files in `scripts/jev/vivo/`) runs a
+dev agent's loop on five small tasks, once with the router on and once off, and
+calls OpenRouter directly — the api, the engine and the database are not
+involved, like the paid language validation of AT-167.
+
+| file | role | product or port |
+|---|---|---|
+| `roteador.ts` | `recortarEstado`, `montarPedidoAoJev`, `lerRespostaDoJev`, `menuP3`, the `state` ceiling | **the product's code**, re-exported from `apps/api/src/domain/llm/tool-router.ts` |
+| `laco.ts` | the loop: iteration ceiling, recovery of tool calls written as text, stop on an accepted `report_done`/`report_blocked`, the single retry with the whole catalog when a restricted menu got an answer with no tool | port of `ToolLoop`, `EngineApiClient.llm_turn/5` and `DecidirFerramentaDoPassoUseCase` |
+| `recuperacao.ts` | which steps went through `tool_call_recovery.ex` | port; its spec runs the cases of `tool_call_recovery_test.exs` and pins anchor lines of the `.ex` |
+| `rede.ts` | the chat call (messages on the wire as the api writes them) and the Jev call (2 000 ms ceiling, the same named fallbacks) | port of `toWireMessage`/`toWireTool` and of `JevToolRouter`; anchor lines pinned |
+| `ferramentas-dev.exs` → `ferramentas-dev.json` | the **complete** `spec/0` of the nine tools of `Engine.Dev.Tools.registry/0` (name, description, parameter schema) | read from the engine source with plain `elixir`, no compiled engine; a spec fails when the registry or a description drifts |
+| `tarefas.ts` | five tasks on a dependency-free Node project, each with a check run **after** the loop (original tests restored, hidden tests added): "the task came out" | the instrument's own |
+| `executor.ts` | the tools in a temporary sandbox, returning the engine's texts where they are fixed in code | the instrument's own |
+| `resumo.ts`, `vivo.ts` | the table, the decision rule, the cost estimate, the CLI | the instrument's own |
+
+Out of the instrument, the same in both arms and declared: the approval
+pipeline (`terminal` and `write_file` run directly, as in auto mode), context
+compaction, the language orientation and the author profile appended at the
+end of each call, the RAG (empty index), the module contracts (none declared),
+and the rest of the real system prompt (instruction files, business rules, task
+state). The system prompt is the engine's dev identity plus two lines of project
+context; the first user message is the engine's own kickoff
+(`scripts/jev/kickoff.ts`). The cost of each call is the `usage.cost` of the
+response, the number RN-665 ([ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md))
+puts in the metering; the product's `token_usage` is not involved.
+
+### Protocol (written before any run)
+
+- **Models**: `deepseek/deepseek-v4.1-flash` (slower, reasoning) and
+  `anthropic/claude-haiku-4.5` (faster), the two the AT-167 validation already
+  reached with tool definitions on this key.
+- **Tasks**: `T1-media` (implement a function), `T2-moeda` (fix a formatting
+  bug), `T3-limite` (the cause is in another file: `config/`), `T4-slug`
+  (create a module and its tests; hidden tests check it), `T5-renomear` (rename
+  across two files; no rest of the old name may stay in `src/`). Each task's
+  starting state fails its check and a reference solution passes it (spec).
+- **Sample**: 2 rounds → 10 executions per arm per model, 40 in all. Arm order
+  alternates by task and round, so neither arm always gets the provider's
+  slower minute. Iteration ceiling 30 (the product's dev ceiling is 60; here it
+  bounds spend).
+- **Per execution**: steps; steps whose calls came as **text** and went through
+  the recovery; steps where the router was consulted, applied a smaller menu,
+  left the catalog whole without a fallback (no previous tool, or the Jev said
+  `responder_sem_ferramenta`), or **fell back** (with the reason and the RN-059
+  origin); retries with the whole catalog; calls outside the step's menu;
+  wall-clock latency of the whole execution (Jev + chat + tools) and of the LLM
+  part; cost of chat and of Jev; how it ended; whether the task came out.
+- **Decision rule** (`comparar` in `resumo.ts`), per model, on with off:
+  quality — the "task came out" rate of *on* no more than **10 points** below
+  *off*; cost — the mean cost per task that came out (chat + Jev) of *on* not
+  above *off*; latency — the median execution of *on* not above **1.2×** *off*.
+  **Keep on by default** if all three hold on every model; **turn off** if
+  quality fails on every model or no model passes the three; **restrict** to the
+  models that pass otherwise. Fewer than 10 executions per arm is
+  `amostra_insuficiente`, never a verdict.
+
+### Cost estimate (no network)
+
+`--estimar` with the prices that were measurable from earlier records: DeepSeek
+input US$ 0.30 per million and Haiku US$ 1.00 (both derived from the paired
+input cost reported in
+[Measuring the language heuristic](medicao-do-idioma.md#incremental-cost-of-the-orientation));
+output US$ 1.20 for DeepSeek is an **assumption** (not recorded anywhere) and
+US$ 5.00 for Haiku the list price. Assumed 12 steps per execution, 400 tokens of
+history added per step, 150 output tokens, no cache:
+
+| model | per execution | both arms, 2 rounds |
+|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | ~US$ 0.015 | ~US$ 0.29 |
+| `anthropic/claude-haiku-4.5` | ~US$ 0.049 | ~US$ 0.99 |
+| **total** | | **~US$ 1.28** |
+
+The run stops before any call once the accumulated `usage.cost` of the output
+folder reaches `--teto-usd` (default 4.50) and does not start an execution with
+less than `--reserva-usd` (0.10) left.
+
+### What could be measured offline (2026-10-01)
+
+The dev catalog grew since the replay: `listar_contratos_de_modulos`
+(RN-684) is the ninth tool, and `catalogo.json` (eight) is stale for it — the
+replay's 746 → 138 tokens no longer describes the current catalog. On the wire
+(`toWireTool` form, `ferramentas-dev.json`):
+
+| | characters | ≈ tokens (÷ 4) |
+|---|---|---|
+| whole dev catalog, 9 tools | 3 816 | 954 |
+| a 2-tool menu, median over all pairs (min 501, max 1 464) | 850 | 213 |
+| saving per call where P3 restricts the menu | | **≈ 741** |
+
+The Jev costs US$ 0.0000727 per step (AT-237), so the definition saving pays for
+it on a chat model whose input costs more than **US$ 0.098 per million tokens**
+(0.0000727 ÷ 741) — both models of the protocol, at list price. The catch is
+the same one written in "Savings in tool definitions": tool definitions are the
+start of the cached prefix, a menu that changes from step to step breaks the
+cache, and DeepSeek served most of its input from cache in AT-167. Whether the
+saving survives that, and what the extra call in series costs in latency inside
+the loop (p50 306 ms per step, measured outside it), is exactly what the live
+table would answer.
+
+### The live table (empty)
+
+Generated by `jev:vivo --relatorio`; dated by the run, with the commit in each
+record.
+
+| model | Jev | executions | task came out | steps (median · mean) | steps via `tool_call_recovery` | execution p50 · p95 | LLM (chat + Jev) p50 | cost/execution (chat + Jev) | of which Jev | cost per task out | Jev: applied · unrestricted · fallback | retries with whole catalog | outside the menu |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | on | **not measured** | | | | | | | | | | | |
+| `deepseek/deepseek-v4.1-flash` | off | **not measured** | | | | | | | | | | | |
+| `anthropic/claude-haiku-4.5` | on | **not measured** | | | | | | | | | | | |
+| `anthropic/claude-haiku-4.5` | off | **not measured** | | | | | | | | | | | |
+
+### Recommendation (provisional — the owner decides)
+
+**Restrict**: keep the router on for the dev agents (`dev-*`, the `ToolLoop`)
+and off for the conversational agents, until the live table exists. The numbers
+behind it, all from earlier rounds, none from AT-239:
+
+- **Where there is evidence, it is for dev agents.** P3 coverage per dev agent
+  was 84% to 96% on validation (`dev-board-engine` 23/24, `dev-scoring` 35/38,
+  `dev-persistence` 31/34, `dev-game-session` 32/38); every conversational agent
+  had **fewer than four** validation steps (the one gate with data,
+  `qa-estrategia`, was 14/16). "On by default" today extends to the seven
+  conversational agents a menu that was never measured on them.
+- **The quality bound is wide.** Coverage is a ceiling; the replay's end-to-end
+  range is 62% to 91%, and the loss is cushioned by the retry with the whole
+  catalog only when the model answers with no tool at all — not when it picks
+  the wrong tool from a menu of one (61% of the steps).
+- **The cost case is plausible, not shown.** ≈ 741 definition tokens saved per
+  restricted call against US$ 0.0000727 per Jev call is a gain on any model
+  above US$ 0.098 per million input tokens — ignoring the prompt cache, which is
+  the thing most likely to reverse it.
+
+Turning it **off** everywhere is not what these numbers say: nothing measured
+shows a loss, and the fallback paths (2 000 ms ceiling, whole catalog on every
+failure, the retry) bound the damage. **The live run with the rule above
+supersedes this paragraph**, whatever it says; it costs about US$ 1.28 and one
+command where `openrouter.ai` is reachable. Nothing in the code was changed:
+the switch is per workspace (`PUT workspaces/:workspaceId/tool-router`), and a
+per-agent restriction would be a new decision and a new change.
+
 ## Reproducing
 
 ```bash
@@ -764,4 +925,22 @@ pnpm --filter @brabo/scripts jev:analise -- --dados-cache ~/.cache/brabo/replay-
 # --dados-base is the snapshot that fixed the split; what it did not know is "new"
 pnpm --filter @brabo/scripts jev:menu -- --dados-cache ~/.cache/brabo/replay-jev/dados-d.json \
   --dados-base ~/.cache/brabo/replay-jev/dados-c.json --sensibilidade
+```
+
+The live comparison of AT-239 (needs `openrouter.ai` reachable; the output
+folder, `$XDG_CACHE_HOME/brabo/jev-vivo/` by default, stays out of the checkout
+and the script refuses one inside it):
+
+```bash
+# the dev tool definitions, when a dev tool changed (plain elixir, no compiled engine)
+elixir scripts/jev/vivo/ferramentas-dev.exs > scripts/jev/vivo/ferramentas-dev.json
+
+# the estimate, without the network
+pnpm --filter @brabo/scripts jev:vivo -- --estimar \
+  --preco deepseek/deepseek-v4.1-flash=0.3/1.2 --preco anthropic/claude-haiku-4.5=1/5
+
+# the run (resumes; stops before any call at the ceiling), then the table and the verdict
+pnpm --filter @brabo/scripts jev:vivo -- --rodadas 2 --teto-usd 4.5 \
+  --arquivo-de-chave ~/.config/brabo/openrouter-test.env
+pnpm --filter @brabo/scripts jev:vivo -- --relatorio
 ```
