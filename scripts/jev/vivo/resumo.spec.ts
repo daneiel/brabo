@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Passo } from './laco.ts';
-import { comparar, estimar, gastoDe, linhas, tabela, type RegistroDeExecucao } from './resumo.ts';
+import { comparar, estimar, falhaDeInfra, gastoDe, linhas, tabela, type RegistroDeExecucao } from './resumo.ts';
 
 const passo = (p: Partial<Passo> = {}): Passo => ({
   iteracao: 0,
@@ -84,5 +84,22 @@ describe('estimar', () => {
     // desligado: 2 × 1000 × 1/1e6 = 0,002; ligado: + 2 × 0,0000727
     expect(e.totalUsd).toBeCloseTo(0.002 + 0.002 + 2 * 0.0000727, 8);
     expect(e.chamadas).toBe(6);
+  });
+});
+
+describe('falhaDeInfra (a execução que não mediu nada não é gravada)', () => {
+  it('chave sem limite, proxy que recusa e transporte caído são da conta/rede, em qualquer passo', () => {
+    expect(falhaDeInfra({ passos: [passo({ erro: 'HTTP 403: corpo não é JSON' })] })).toBe('passo 0: HTTP 403: corpo não é JSON');
+    expect(falhaDeInfra({ passos: [passo(), passo({ iteracao: 4, erro: 'HTTP 402: sem crédito' })] })).toBe('passo 4: HTTP 402: sem crédito');
+    expect(falhaDeInfra({ passos: [passo({ erro: 'transporte: TimeoutError' })] })).toMatch(/transporte/);
+    expect(falhaDeInfra({ passos: [passo({ erro: 'HTTP 429: rate limit' })] })).not.toBeNull();
+  });
+
+  it('erro do PROVIDER (corpo 200 com `error`) e 5xx seguem sendo desfecho do braço', () => {
+    expect(falhaDeInfra({ passos: [passo({ erro: 'Provider returned error' })] })).toBeNull();
+    expect(falhaDeInfra({ passos: [passo({ erro: 'HTTP 502: upstream' })] })).toBeNull();
+    expect(falhaDeInfra({ passos: [passo()] })).toBeNull();
+    // A queda do JEV (403 no roteador) é caminho do produto, não da conta do chat.
+    expect(falhaDeInfra({ passos: [passo({ roteamento: { ...roteado(false), motivoDaQueda: 'erro_http' } as never })] })).toBeNull();
   });
 });

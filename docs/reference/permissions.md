@@ -306,7 +306,7 @@ flowchart TD
   G --> S{terminal touches path<br/>outside the project folder?}
   G2 --> S
   S -->|yes, and was auto_approve| I2[CAP: require_approval]
-  S -->|no| Z{terminal requests git push,<br/>PR, deploy, or sudo/doas?}
+  S -->|no| Z{git_push/pr_open, or terminal requests<br/>git push, PR, deploy, or sudo/doas?}
   Z -->|yes, and was auto_approve| I3[CAP: require_approval — RN-418]
   Z -->|no| H{merge into protected branch<br/>or instruction_patch?}
   H -->|yes, and was auto_approve| I[CAP: require_approval]
@@ -428,7 +428,10 @@ not loosened — see why right below.
 (`gh pr create`, `gh pr merge`, `glab mr create`/`merge`, releases and
 workflow dispatch), common deploy commands (`kubectl apply`, `helm
 upgrade`, `terraform apply`, `docker push`, `npm publish`, ...) and now
-also `sudo`/`doas` in a `terminal` command are an **ABSOLUTE CAP** — in the
+also `sudo`/`doas` in a `terminal` command are an **ABSOLUTE CAP** (and,
+since [RN-689](../business-rules.md#rn-689), so are the TYPED `git_push` and
+`pr_open` actions, which until then the `"*"` wildcard, a specific rule or
+`permissions.json` promoted to `auto_approve`) — in the
 same final block as the other three caps (see ["Caps"](#caps) below),
 applied after `agent_autonomy` and `permissions.json` have already given
 their opinion: if the verdict up to that point was `auto_approve`, it
@@ -505,9 +508,11 @@ single list `TIPOS_SEM_SEMPRE_PERMITIR`
 `git_merge`, `container_remove`, `instruction_patch`, `parallelize` and
 `raise_max_parallel` — `400` with `reason: "teto_do_sempre_permitir"`. The
 approval card hides the button for the same list (a copy checked against
-this one by test). This does NOT change `decide()` nor what activating
-execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
-each `dev-<module>` (see "What activating execution seeds").
+this one by test). When it shipped, this did NOT change `decide()` nor what
+activating execution seeds; since [RN-689](../business-rules.md#rn-689) both
+changed: `git_push` and `pr_open` are inside the RN-418 cap in `decide()`
+(see ["Caps"](#caps)), and activating execution seeds only `git_commit` as
+`auto_approve` for each `dev-<module>`.
 
 **The unit of the recorded pattern: verb + subcommand, one per segment
 ([RN-675](../business-rules.md#rn-675), owner decision 01/10).** "Always
@@ -617,6 +622,7 @@ Applied **last**, after everything else:
 | `instruction_patch` | `auto_approve` → `require_approval` | you need to see the diff before one agent changes another's behavior ([RN-007](../business-rules.md#rn-007)) |
 | `parallelize` and `raise_max_parallel` | `auto_approve` → `require_approval` | spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit ([RN-086](../business-rules/custo.md#rn-086)) |
 | `terminal` with external-effect git (push/PR/deploy) or `sudo`/`doas` | `auto_approve` → `require_approval` | external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on ([RN-418](../business-rules.md#rn-418), revises [RN-106](../business-rules/autenticacao.md#rn-106)) — see the dedicated section above |
+| typed `git_push` and `pr_open` | `auto_approve` → `require_approval` | the same RN-418 cap through the typed door: neither the auto-mode wildcard, nor a specific `agent_autonomy` rule, nor `permissions.json` promotes them ([RN-689](../business-rules.md#rn-689)). `git_merge` keeps its own cap (first row); `deploy` is not a `proposed_action` type |
 | `container_remove` | `auto_approve` → `require_approval` | discarding a container forces a full reprovision — the same caliber as merging into a protected branch, decided every time, never configured once ([RN-495](../business-rules.md#rn-495)) |
 
 A cap downgrades `auto_approve` to `require_approval`; it does **not**

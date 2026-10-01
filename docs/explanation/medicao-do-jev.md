@@ -719,6 +719,32 @@ accumulated spend of the output directory went from US$ 0.4136 to US$ 0.4149.
 > table below is empty on purpose. What follows is the instrument, the protocol
 > and the decision rule, all written **before** any run, and the numbers that
 > could be measured without the network.
+>
+> **Second attempt, same day: still not measured, for a different reason.** The
+> owner allowed `openrouter.ai` on the session's egress (a `GET` answered 200),
+> and both protocol models were listed with tool support
+> (`deepseek/deepseek-v4.1-flash` at US$ 0.03/0.50 per million input/output,
+> `anthropic/claude-haiku-4.5` at US$ 1.00/5.00). The first chat call came back
+> `HTTP 403 Key limit exceeded (total limit)`: the test key has a US$ 10.00
+> limit, US$ 10.05 already used and no reset (`GET /api/v1/key`). A one-task
+> smoke, outside the protocol and in its own folder, spent **US$ 0.00**; no
+> protocol execution was recorded. Running it needs the owner to raise the
+> key's limit (or hand over another key) — about US$ 1.28 by the estimate below,
+> less at DeepSeek's current price. The smoke also found two things the fake
+> network never could, both fixed or documented in the instrument:
+>
+> - **An account or network failure was recorded as a measured execution.**
+>   Both smoke executions ended `erro` at step 0 with `HTTP 403`, were written
+>   to the output as "the task did not come out", and the resume would never
+>   have repeated them: with a dead key, all 40 executions would have entered
+>   the table. `falhaDeInfra` (`resumo.ts`) now classifies a chat error of HTTP
+>   401/402/403/407/429 or transport as the measurement not happening; `vivo.ts`
+>   does not record that execution, stops the run with the reason, and the
+>   resume repeats it. A provider error in a 200 body, a 5xx, and a Jev
+>   fallback stay outcomes of the arm, as in the engine.
+> - **Node's `fetch` ignores `HTTPS_PROXY`.** Behind a proxy, run with
+>   `NODE_USE_ENV_PROXY=1` (Node ≥ 22.21); without it the calls went direct and
+>   the egress answered 403 with a non-JSON body.
 
 ### What the instrument runs, and what is a port
 
@@ -939,7 +965,9 @@ elixir scripts/jev/vivo/ferramentas-dev.exs > scripts/jev/vivo/ferramentas-dev.j
 pnpm --filter @brabo/scripts jev:vivo -- --estimar \
   --preco deepseek/deepseek-v4.1-flash=0.3/1.2 --preco anthropic/claude-haiku-4.5=1/5
 
-# the run (resumes; stops before any call at the ceiling), then the table and the verdict
+# the run (resumes; stops before any call at the ceiling, and on an account or
+# network failure without recording it), then the table and the verdict;
+# behind a proxy, prefix NODE_USE_ENV_PROXY=1 (Node's fetch ignores HTTPS_PROXY)
 pnpm --filter @brabo/scripts jev:vivo -- --rodadas 2 --teto-usd 4.5 \
   --arquivo-de-chave ~/.config/brabo/openrouter-test.env
 pnpm --filter @brabo/scripts jev:vivo -- --relatorio

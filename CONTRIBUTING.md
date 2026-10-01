@@ -59,6 +59,51 @@ docker run --rm -v "$PWD/apps/engine:/app" -w /app \
   hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3 mix format
 ```
 
+## Quando o git pendura ou é recusado (máquina local, agentes em worktree)
+
+Dois contornos medidos na máquina do mantenedor (AT-187). Os dois são de
+**configuração local** — nada aqui muda o repositório, e nenhum dos dois é
+pré-requisito para quem não tem o sintoma.
+
+**O `origin` por SSH pendura.** `git fetch`/`push`/`ls-remote` ficam parados
+sem erro, enquanto o GitHub responde por HTTPS. Diagnostique antes de trocar —
+com teto, para o diagnóstico não pendurar também:
+
+```bash
+timeout 30 ssh -vT git@github.com      # trava antes do "Authenticated"? o SSH é o problema
+curl -sS -o /dev/null -w '%{time_total}s\n' https://github.com   # responde? a rede está de pé
+```
+
+A saída `-v` diz em que passo parou (conexão na porta 22, troca de chaves,
+oferta da chave do agente). Se o SSH não volta e o HTTPS responde, troque o
+`origin` para HTTPS e deixe o `gh` ser o helper de credencial:
+
+```bash
+gh auth setup-git
+git remote set-url origin https://github.com/daneiel/brabo.git
+git ls-remote origin dev               # confere que voltou a responder
+```
+
+**Um hook local reescreve `git`, e o agente em worktree é recusado.** Se o seu
+ambiente de agente tem um hook que reescreve as chamadas a `git` (no caso
+medido, para `rtk git`) e um guard de worktree que recusa `git` dentro de
+comando composto (`&&`, `;`, `|`), chame o binário direto e um comando por vez:
+
+```bash
+/usr/bin/git status
+/usr/bin/git push -u origin <sua-branch>
+```
+
+Esse hook e esse guard são configuração do ambiente de quem desenvolve, **fora
+deste repositório** — o `.claude/` versionado aqui só tem as definições de
+agente (`.claude/agents/`) e um comando (`.claude/commands/`), nenhum hook.
+O conserto, se vier, é nessa configuração local, nunca aqui.
+
+> **TODO(humano):** em que arquivo mora o hook que reescreve `git` para
+> `rtk git` (ex.: `~/.claude/settings.json`, um `PreToolUse`?), o que é o `rtk`,
+> e qual guard recusa o comando composto — não está no repositório e não pôde
+> ser conferido daqui.
+
 ## Documentação faz parte do PR
 
 Não é etapa posterior nem tarefa de outra pessoa.
