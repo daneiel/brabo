@@ -2,6 +2,13 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Correções
+
+- **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
+- **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
+
 ## v7.0.0 — 2026-10-01
 
 ### ⚠ Mudanças incompatíveis
@@ -1098,8 +1105,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
-- **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
-- **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
 - **api:** `RagEmbeddingService.embedMany` só itera sobre um array de verdade — um objeto com `length` enorme vindo do corpo da requisição não vira limite de laço (CodeQL `js/loop-bound-injection`, último alerta do #782).
 - **Os dois últimos alertas novos do CodeQL da promoção.** Os scripts de medição do Jev (`scripts/jev/dados.ts`, `scripts/jev/replay.ts`) não montam mais SQL com o `--projeto` escapado à mão: o slug vai como variável do psql (`-v slug=…`, citado por `:'slug'`) e o SQL pelo stdin, com `scripts/jev/consultas.spec.ts` provando que um slug com `'` não entra no texto. E `scripts/dev/install-invocacao.spec.ts` roda o instalador copiado para a pasta temporária pelo nome relativo (`bash install.sh`, a forma documentada), sem caminho absoluto no argv do shell.
 
