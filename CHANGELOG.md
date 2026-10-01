@@ -277,6 +277,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   DIFERENTES, e trocou o modelo default: o antigo devolvia o mesmo upstream
   para qualquer critério e não provava nada.
 
+- **ci**: os `services:` dos workflows deixam de ter imagem literal, e o
+  Dependabot passa a propor a subida das imagens de terceiro (AT-246,
+  [ADR 0197](docs/adr/0197-a-imagem-dos-workflows-vem-do-compose.md), sobre os
+  ADRs 0159 e 0178). O pgvector de `ci.yml` e o pgvector/ollama dos dois
+  golden-sets são lidos de `docker/docker-compose.yml` por um workflow
+  reutilizável novo, `imagens-do-compose.yml` (`scripts/ci/imagens-do-compose.ts`),
+  e chegam por `${{ needs.imagens.outputs.<imagem> }}` — uma fonte só de
+  digest, e o PR do bot nunca precisa tocar `.github/workflows/`. O
+  `imagens-pinadas.ts` passa a reprovar, num workflow, imagem literal (mesmo
+  presa por digest), expressão que não seja exatamente essa (literal na
+  expressão, `||`, `env.`, `vars.`, `format()`) e `needs` de um job que não
+  chama o reutilizável. Com isso o `.github/dependabot.yml` liga `docker-compose`
+  (`/docker`) e `docker` (`/docker/*` e `/deploy/k8s/**`), agrupados, uma PR
+  semanal por ecossistema, com `target-branch: dev`. `Testes do engine
+  (ExUnit)` e os shards de api passam a esperar o job `imagens`, com
+  `if: !cancelled()` para nunca virarem `skipped` (que conta como verde).
+  Segue manual, declarado: `neo4j` e `ollama` também moram em
+  `deploy/k8s/base/`, e uma re-publicação da MESMA tag faz as duas PRs nascerem
+  vermelhas até alguém juntá-las; o `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA`.
 - **ci/docker/k8s**: a imagem de terceiro passa a levar a TAG dentro da
   referência, antes do digest — `neo4j:5.26-community@sha256:…`, e
   `FROM node:24.11.1-alpine3.21@sha256:… AS deps` no Dockerfile (AT-139,

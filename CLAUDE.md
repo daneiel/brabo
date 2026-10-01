@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado (AT-246) | ADR 0197 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -1175,13 +1176,27 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (compose E `FROM` de Dockerfile), `deploy/k8s/` e `.github/workflows/` —
   esta última é `services:` de job, ou seja, o MESMO runner que a regra das
   actions protege, alcançado pela outra porta, e foi o lugar que o próprio
-  levantamento do `BRB-004` não tinha visto. `scripts/ci/imagens-pinadas.ts`
+  levantamento do `BRB-004` não tinha visto. E desde o ADR 0197 (AT-246) os
+  workflows NÃO têm literal de imagem nenhum: o `image:` dos `services:` é
+  `${{ needs.imagens.outputs.<imagem> }}`, de um job `imagens` que chama o
+  reutilizável `.github/workflows/imagens-do-compose.yml`, que lê o serviço do
+  compose de DEV (`scripts/ci/imagens-do-compose.ts`, tabela
+  `IMAGENS_DOS_WORKFLOWS`). Serviço novo de workflow entra por ESSE caminho —
+  imagem no compose, linha na tabela, output no reutilizável (o spec reprova
+  se divergirem) —, nunca com um literal. Job EXIGIDO que dependa de `imagens`
+  leva `if: ${{ !cancelled() }}`, senão `imagens` vermelho o deixaria
+  `skipped`, que conta como verde. `scripts/ci/imagens-pinadas.ts`
   reprova no job `lint`, e reprova: referência mutável, digest sem a tag
   INLINE (inclusive a forma antiga, tag só no comentário), comentário que
-  diverge da tag inline, comentário no fim do `FROM`, e a MESMA tag inline com
-  dois digests diferentes — esta última existe porque `golden-set-rag.yml` PROMETE em comentário rodar a
+  diverge da tag inline, comentário no fim do `FROM`, a MESMA tag inline com
+  dois digests diferentes, e — num WORKFLOW — imagem literal (mesmo por
+  digest), expressão que não seja EXATAMENTE `${{ needs.<job>.outputs.<x> }}`
+  (literal na expressão, `||`, `env.`, `vars.`, `format()` são onde um literal
+  mutável se esconde) e `needs` de job que não chama o reutilizável. A regra
+  dos dois digests nasceu da promessa do `golden-set-rag.yml` de rodar a
   mesma versão do compose de dev (o piso do golden-set é chaveado por MODELO,
-  não por ambiente), e com digest isso deixa de ser promessa. São DOIS
+  não por ambiente); desde o ADR 0197 essa promessa é CONSTRUÇÃO, e a regra
+  segue guardando composes × Dockerfiles × manifests. São DOIS
   scripts e não um: `uses:` mora em YAML de workflow com uma sintaxe, imagem
   mora em compose, manifest do kustomize e Dockerfile com outras três. O
   check NÃO cobre as imagens que o PRODUTO publica, e isso é decisão com três
@@ -1192,15 +1207,17 @@ o RACIOCÍNIO da triagem, que continua valendo.
   referência interpolada (`${BRABO_API_IMAGE:?…}`) e estágio de multi-stage.
   A lista de exceções é por NOME e falha fechado: imagem de terceiro nova
   nunca casa com `brabo-`. Preço DECLARADO e não pago aqui: digest congela, e
-  imagem congelada não recebe correção de segurança até alguém trocá-lo à mão
-  — o Dependabot `docker`/`docker-compose` foi DECIDIDO (27/09) e NÃO está
-  ligado: o passo decidido para alinhar os `services:` dos workflows no PR do
-  bot teria de empurrar mudança em `.github/workflows/`, e o `GITHUB_TOKEN`
-  nunca pode (não existe permissão `workflows` para ele) — a saída é do dono,
-  no ADR 0178. Não ligue o ecossistema sem ela: todo PR do bot que tocar
-  pgvector ou ollama nasce vermelho pela regra "mesma tag, dois digests". O
-  `imageName` do CNPG e a `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento
-  manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
+  imagem congelada não recebe correção de segurança até alguém trocá-lo — e
+  desde o ADR 0197 o Dependabot `docker-compose` (`/docker`) e `docker`
+  (`/docker/*` e `/deploy/k8s/**`, NUNCA `/docker` sem o `/*`: o `docker`
+  também lê YAML e abriria um segundo PR para os composes) estão LIGADOS,
+  `target-branch: dev`, cada um com UM grupo — sem grupo, a mesma tag em três
+  pastas de Dockerfile viraria três PRs vermelhos. Segue DECLARADO: `neo4j` e
+  `ollama` moram também em `deploy/k8s/base/`, os dois ecossistemas nunca
+  dividem um PR, e uma re-publicação da MESMA tag faz os dois PRs nascerem
+  vermelhos pela regra dos dois digests até um humano juntá-los — não afrouxe
+  a regra para eles passarem. O `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
   pelo mesmo motivo que a irmã não tem: as duas moram aqui e em
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
