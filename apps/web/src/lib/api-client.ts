@@ -696,9 +696,24 @@ export const sendAgentMessage = (
   agent: string,
   text: string,
 ) =>
+  post<{
+    ok: true;
+    mensagemId: string;
+    // RN-673: `enfileirada` — o agente estava no meio de um turno e a
+    // mensagem entrou na fila dele, para ser lida no fim (junto com as outras).
+    entrega: 'lida' | 'enfileirada';
+    posicao?: number;
+  }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, { text });
+// RN-673: cancela UMA mensagem que espera na fila do agente — só quem a
+// enviou; já lida ou já cancelada volta 409 com a frase do engine.
+export const cancelQueuedAgentMessage = (
+  projectId: string,
+  sessionId: string,
+  agent: string,
+  messageId: string,
+) =>
   post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`,
-    { text },
+    `/projects/${projectId}/sessions/${sessionId}/agents/${agent}/messages/${messageId}/cancel`,
   );
 // RN-122: o botão "Parar" do composer — mata a chamada ao LLM em curso no
 // engine (Task.shutdown, brutal_kill), cortando a conexão no meio pra

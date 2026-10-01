@@ -20,12 +20,6 @@ defmodule Engine.Gates.FakeGateDispatcher do
   end
 
   @impl true
-  def run_qa_estrategia(project_id, session_id, story_id) do
-    notify({:qa_estrategia_dispatch, project_id, session_id, story_id})
-    :ok
-  end
-
-  @impl true
   def run_appsec_design(project_id, story_id) do
     notify({:appsec_dispatch, project_id, story_id})
     :ok

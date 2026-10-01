@@ -2119,7 +2119,8 @@ que você leu ao decidir.
 ### RN-087 — O Dev Lead é o único endereço externo da execução {#rn-087}
 
 Existe um agente `dev-lead`, conversacional, que recebe o handoff do Arquiteto
-e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
+(desde a [RN-672](../business-rules.md#rn-672), da Infra, com o container do
+projeto `running`) e propõe o **plano de execução**: quantos agentes por módulo e por quê. Ele não
 escreve código — distribui trabalho e responde por ele.
 
 **Antes dele, a frase "quem decide é o lead" da [RN-083](#rn-083) não tinha
@@ -2824,8 +2825,10 @@ anterior a esta regra, em vez de mostrar branco.
 
 ### RN-116 — Falha ao CRIAR um handoff não derruba o agente {#rn-116}
 
-`confirm_readiness` (Criativo → PO) e `offer_infra_handoff`/`offer_dev_handoff`
-(Arquiteto → Infra/Dev Lead) chamam a api pra criar o handoff DEPOIS de o
+`confirm_readiness` (Criativo → PO) e `offer_infra_handoff` (Arquiteto → Infra;
+o `offer_dev_handoff`, Arquiteto → Dev Lead, saiu na
+[RN-672](../business-rules.md#rn-672), e o handoff ao Dev Lead que a Infra
+oferece segue a mesma régua) chamam a api pra criar o handoff DEPOIS de o
 turno já ter rodado — no caso do Criativo, depois de o `product_brief` já
 estar gravado no event log. Se essa chamada falhar (api fora, 5xx, etc.), o
 handoff não existe, mas isso NUNCA derruba o GenServer do agente: a falha vira
@@ -2859,13 +2862,15 @@ defeito era só nestes três handlers server-driven, que chamam
 - **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex`
   (`handle_call(:confirm_readiness, ...)`, `emit_falha_handoff/3`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex`
-  (`handle_call(:offer_infra_handoff, ...)`, `handle_call(:offer_dev_handoff, ...)`,
-  `emit_falha_handoff/3`)
+  (`handle_call(:offer_infra_handoff, ...)`, `emit_falha_handoff/3`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex`
+  (`emit_falha_do_handoff_ao_dev_lead/2`, RN-672)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs`
   ("prontidão: falha ao criar o handoff NÃO derruba o processo, e vira
   agent.error durável"); `apps/engine/test/engine/agents/arquiteto_server_test.exs`
-  (as quatro variantes de `offer_infra_handoff`/`offer_dev_handoff`, sucesso e
-  falha)
+  (`offer_infra_handoff`, sucesso e falha);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs` (o handoff ao Dev
+  Lead que a Infra oferece, recusado com 500)
 - **Origem:** relato de uso real no projeto `exp-001` (Criativo → PO); a
   mesma falha estrutural foi achada por leitura de código nos dois handoffs
   do Arquiteto, sem reprodução separada para eles

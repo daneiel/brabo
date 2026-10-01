@@ -669,42 +669,56 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
     return;
   }
 
+  // ADR 0193 (RN-676) — a decisão do dono: operação de git CREDENCIADA roda
+  // no HOST, e o código roda no container. O engine marca o `git fetch`
+  // autenticado de `RunnerGit` com `gitCredenciado: true` (e SÓ ele: comando
+  // de terminal do dev agent nunca carrega a marca), e este runner o executa
+  // aqui fora mesmo com container ativo — onde o `env` chega ao processo filho
+  // (`exec.ts`, mesclado sobre `process.env`). É a MESMA pasta: `estado.dir` é
+  // o bind-mount de `/work` (`DockerViaCli.start`, `${raiz}:/work:rw`), então
+  // o `.git` que o fetch atualiza no host é o que o container enxerga.
+  //
+  // A marca sozinha não basta: sem `env` não há credencial a proteger, e o
+  // comando segue o roteamento de sempre. É a CONJUNÇÃO que decide, e quem a
+  // produz é o engine — `env` presente sem a marca NÃO escapa do container.
+  const temCredencial = !!msg.env && Object.keys(msg.env).length > 0;
+  const gitCredenciadoNoHost = temCredencial && msg.gitCredenciado === true;
+
   // A ordem importa: esta recusa vem DEPOIS de `validarCwdDentroDaRaiz`, de
   // propósito. `guard.ts` é fronteira de CONTENÇÃO, e um comando que aponta
   // para fora da raiz precisa ouvir ISSO — a credencial que não atravessa é
   // capacidade que falta, não comando que se recusa a conter.
   // RN-558 — a credencial não atravessa o `docker exec`, e a recusa é AQUI.
   //
+  // Desde o ADR 0193 ela ENCOLHEU: só o par (`env` presente, container ativo)
+  // SEM a marca de git credenciado chega aqui. Nenhum chamador do engine
+  // produz isso hoje — é a rede para um `env` que viesse de outro lugar, que
+  // NÃO pode ganhar o host por ter credencial (senão `env` viraria a porta de
+  // saída do container) e não pode rodar no container com as variáveis
+  // vazias. O runner ANTERIOR ao ADR 0193 continua recusando com esta mesma
+  // marca, e é por ela que o engine diz "atualize o runner".
+  //
   // Este processo é o ÚNICO que sabe as duas metades ao mesmo tempo: que o
   // comando veio com credencial (`msg.env`, ADR 0056/RN-507) e que ele será
   // roteado para DENTRO do container (`containerAtivo`, ADR 0137). O engine
   // não sabe a segunda — `containerAtivo` nasce `null` a cada execução do
-  // runner e só é setado por `tratarContainerStart`, então um container
-  // `running` REGISTRADO no banco não implica container ativo NESTE processo
-  // (runner reiniciado com o container de pé roteia pro HOST, e aí a
-  // credencial chega). Por isso a checagem não pode subir para
-  // `RunnerReadiness` nem para `RunnerGit`.
-  //
-  // Recusar em vez de rodar: o `docker exec` não tem campo de `env` (ADR 0130,
-  // sem `-e` livre), então o comando rodaria com o helper de credencial
-  // instalado e as variáveis VAZIAS — um `git fetch` com senha em branco
-  // contra o provider remoto, que falha como erro de autenticação e ainda
-  // gasta uma tentativa de login real. Nada é executado.
-  if (estado.containerAtivo && msg.env && Object.keys(msg.env).length > 0) {
+  // runner e só é setado por `tratarContainerStart`. Por isso a checagem não
+  // pode subir para `RunnerReadiness` nem para `RunnerGit`.
+  if (estado.containerAtivo && temCredencial && !gitCredenciadoNoHost) {
     // A CONTAGEM, nunca os nomes nem os valores: a invariante da RN-507 é que
     // `msg.env` não aparece em log nenhum, e esta saída vai para o event log
     // do produto. O número já diz que havia credencial, que é o que se precisa
     // saber aqui.
-    const quantas = Object.keys(msg.env).length;
+    const quantas = Object.keys(msg.env ?? {}).length;
     const explicacao =
       `[runner recusou o comando: ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}] ` +
-      `o comando veio com credencial (${quantas} variável(is) de ambiente, ADR 0056), ` +
-      `mas este runner tem um container ativo e roteia todo comando para dentro ` +
-      `dele por \`docker exec\`, que NÃO tem campo de \`env\` (ADR 0130: sem \`-e\` ` +
-      `livre, de propósito). Executar assim descartaria a credencial em silêncio e ` +
-      `a falha apareceria como erro de autenticação do git. NADA foi executado. ` +
-      `Enquanto a metade que falta não existir, um repositório remoto autenticado ` +
-      `em modo \`runner\` não pode ser clonado com o container de pé.`;
+      `o comando veio com credencial (${quantas} variável(is) de ambiente, ADR 0056) ` +
+      `SEM a marca de git credenciado, e este runner tem um container ativo: todo ` +
+      `comando sem a marca vai para dentro dele por \`docker exec\`, que NÃO tem ` +
+      `campo de \`env\` (ADR 0130: sem \`-e\` livre, de propósito). Executar assim ` +
+      `descartaria a credencial em silêncio e a falha apareceria como erro de ` +
+      `autenticação do git. NADA foi executado. Só a operação de git que o engine ` +
+      `marca roda no host com a credencial (ADR 0193).`;
     console.warn(`exec ${msg.ref}: recusado — ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}`);
     enviarExecResult(canal, {
       ref: msg.ref,
@@ -716,18 +730,22 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
   }
 
   // Log NUNCA imprime `msg.env` (RN-507/ADR 0145) — só ref/command/cwd, os
-  // mesmos três campos de sempre. A credencial de git só existe no `env` do
-  // processo filho que `executarComando` spawna, nunca em texto.
-  console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
+  // mesmos três campos de sempre, mais ONDE rodou quando é o git no host. A
+  // credencial de git só existe no `env` do processo filho que
+  // `executarComando` spawna, nunca em texto.
+  console.log(
+    `exec ${msg.ref}: ${msg.command} (cwd=${cwd})` +
+      (gitCredenciadoNoHost && estado.containerAtivo ? ' [git credenciado, no host]' : ''),
+  );
   // `env` só se aplica ao caminho HOST (`executarComando`/`spawn`) — o
   // container (`docker exec`, via `packages/docker-port`) não tem campo de
-  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Desde a
-  // RN-558, o par (`env` presente, container ativo) já foi RECUSADO acima com
-  // desfecho nomeado: daqui para baixo, ou não há `env`, ou não há container —
-  // nunca um `env` descartado em silêncio.
-  const resultado = estado.containerAtivo
-    ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
-    : await executarComando(msg.command, cwd, { env: msg.env });
+  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Daqui
+  // para baixo: ou o comando vai ao host (sem container, ou git credenciado
+  // marcado), ou vai ao container SEM `env` — nunca um `env` descartado.
+  const resultado =
+    estado.containerAtivo && !gitCredenciadoNoHost
+      ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
+      : await executarComando(msg.command, cwd, { env: msg.env });
   console.log(
     `exec ${msg.ref}: exit=${resultado.exitCode} timedOut=${resultado.timedOut} ` +
       `bytes=${resultado.output.length}`,

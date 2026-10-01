@@ -22,6 +22,7 @@ import { streamChatMessage } from '../lib/chat-stream';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
+import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -223,6 +224,8 @@ export function SessionPage({
     setTurnoViaCanal,
     turnoAgentRef,
   } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
+  // RN-673: a mensagem que entra na fila do agente com turno em curso.
+  const enfileirar = useEnfileirarMensagem(projectId, sessionId, setDraft, acompanharTurnoPeloLog);
 
   // A promoção de histórias pelo fio (RN-126/RN-148) mora em
   // `../lib/session-promocao` desde o PR 8 do ADR 0176.
@@ -630,9 +633,9 @@ export function SessionPage({
 
   /**
    * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
-   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
-   * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
-   * pronta no fio, e os dois handoffs nascem em seguida. Desde o ADR 0163 a
+   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra — o
+   * Arquiteto narra a arquitetura pronta no fio, e o handoff nasce em seguida;
+   * o do Dev Lead sai da Infra, com o container `running` (RN-672). Desde o ADR 0163 a
    * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
    * canal e pelo log (`acompanharTurnoPeloLog`).
    */
@@ -654,7 +657,13 @@ export function SessionPage({
 
   async function handleSend() {
     const text = draft.trim();
-    if (!text || streaming || session?.status !== 'active') return;
+    if (!text || session?.status !== 'active') return;
+    // RN-673: com turno em curso a mensagem a um agente ENTRA NA FILA dele —
+    // sem armar um turno novo na tela (o em curso segue sendo o acompanhado).
+    if (streaming) {
+      if (destinatario && !precisaEscolherDestinatario) await enfileirar(text, destinatario);
+      return;
+    }
     // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
     // O botão já está travado; isto cobre o Enter.
     if (precisaEscolherDestinatario) return;
@@ -935,6 +944,7 @@ export function SessionPage({
             setDraft={setDraft}
             handleComposerKeyDown={handleComposerKeyDown}
             streaming={streaming}
+            podeEnfileirar={streaming && !!destinatario}
             handleSend={handleSend}
             handleCancel={handleCancel}
             criativoActive={criativoActive}

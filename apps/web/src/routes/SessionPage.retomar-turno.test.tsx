@@ -166,8 +166,8 @@ describe('SessionPage — retomar o turno em curso a partir do log (AT-268)', ()
 
     montar();
 
-    const campo = await screen.findByPlaceholderText(PLACEHOLDER);
-    await waitFor(() => expect(campo).toBeDisabled());
+    await screen.findByPlaceholderText(PLACEHOLDER);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).not.toBeNull());
     await waitFor(() => expect(cauda).toHaveBeenCalled());
     expect(sendAgentMessage).not.toHaveBeenCalled();
 
@@ -179,7 +179,10 @@ describe('SessionPage — retomar o turno em curso a partir do log (AT-268)', ()
     await act(async () => {
       canalHandlers?.onEvent?.({ type: 'agent.status', actorId: 'criativo' });
     });
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('CASO DE FALHA: idle mais recente (ou nenhum status) não inventa turno — composer livre, sem leitura da cauda', async () => {
@@ -189,8 +192,8 @@ describe('SessionPage — retomar o turno em curso a partir do log (AT-268)', ()
 
     montar();
 
-    const campo = await screen.findByPlaceholderText(PLACEHOLDER);
-    expect(campo).not.toBeDisabled();
+    await screen.findByPlaceholderText(PLACEHOLDER);
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
     expect(cauda).not.toHaveBeenCalled();
   });
 });

@@ -57,6 +57,63 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
+  [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
+  [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A
+  QA-estratégia deixa o design: no uso real de 29/09 ela esgotou duas vezes o
+  teto de 8 iterações (`toolloop.limit_reached` sem `emit_plano_de_teste`)
+  procurando um código que ainda não existia. Agora ela é o primeiro passo do
+  ciclo de revisão do `qa-verificada` — lê o worktree do dev a partir dos
+  arquivos que a entrega tocou, grava `artifact.plano_de_teste` (que passa a
+  exigir `taskId`) uma vez por task, e o plano chega à Automação como insumo,
+  sem mudar a régua do veredito nem segurar a revisão quando falha. O
+  `assess_implementability` do Dev Lead (gate `implementavel`) propõe o parecer
+  na PRIMEIRA chamada, sobre a história e o `module_map`, sem plano no payload.
+  O teto continua 8.
+- **engine/api**: **o handoff ao Dev Lead sai da Infra, e só com o container
+  `running`** (AT-262, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-672](docs/business-rules.md#rn-672)). "Confirmar arquitetura pronta"
+  passa a oferecer só à Infra — o handoff duplo do Arquiteto sai, com a rota
+  interna `POST /internal/sessions/:id/agent/offer-dev-handoff` do engine. Quem
+  oferece o Dev Lead é o servidor do Infra Lead, sem depender do modelo, quando
+  o container do projeto está registrado `running`: no fim de cada turno dele e
+  quando o `container.running` chega pelo outbox (aprovação posterior,
+  `/containers`, modo `runner`). Oferta pendente não se repete, e Dev Lead já
+  ativo não é falha. A segunda porta do repositório no aceite ao Dev Lead
+  (RN-582) continua.
+- **engine/api**: **a Infra sobe o container sozinha ao receber o handoff**
+  (AT-260, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-671](docs/business-rules.md#rn-671)). Aceitar o handoff da Infra passa a
+  semear `container_start: auto_approve` (decisão do dono, 01/10 — revisa o
+  "nunca semeado" do ADR 0133), e o kickoff do Infra Lead, ANTES da primeira ida
+  ao modelo, elege a candidata do roteamento do Arquiteto (a de mais módulos; no
+  empate, a primeira) e propõe a subida pelo MESMO caminho da tool — com as
+  recusas por modo e estado (RN-566/RN-610) e o 409 sem broker (RN-591)
+  intactos. Em projeto `container`/`mounted` com roteamento o container sobe sem
+  clique; `runner` segue pelo `container_start_via_runner` com aprovação, e
+  `container_remove` segue no teto absoluto. O kickoff diz ao modelo o que JÁ
+  aconteceu, e o fecho da RN-668 deixa de dizer "não foi proposta" quando o
+  servidor propôs. Uma proposta NEGADA pela política (sessão aberta por quem
+  não é `maintainer`) passa a contar como recusa, não como proposta. **Para
+  subir com clique de novo**, troque a regra `container_start` da Infra: o
+  toggle manual/auto do card escreve a curinga, e a regra específica vence.
+- **engine**: **a mensagem enviada com turno em curso entra numa fila e é lida
+  no fim do turno** (AT-267,
+  [ADR 0191](docs/adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md),
+  [RN-673](docs/business-rules.md#rn-673)). Até aqui ela era 409
+  `turno_em_andamento` e ficava gravada sem ser lida. Agora, nos sete agentes
+  conversacionais, ela entra na fila do agente (`chat.message_queued`), e no
+  fim do turno as pendentes são lidas JUNTAS, na ordem, num turno só
+  (`chat.message_delivered`). Teto de 10 por agente e sessão (acima disso, 409
+  `fila_de_mensagens_cheia`). A fila mora no event log e sobrevive a restart
+  do engine. Quem enviou pode cancelar a mensagem enquanto ela espera
+  (`POST …/agents/:agent/messages/:messageId/cancel`, `chat.message_cancelled`).
+  Na tela, o composer não trava mais durante o turno de um agente (o botão
+  vira "Pôr na fila"), e a mensagem pendente aparece "na fila" com o botão de
+  cancelar. O turno do Dev Lead suspenso em aprovação continua recusando.
+  A resposta de `POST …/agents/:agent/message` ganha `mensagemId`, `entrega`
+  (`lida` | `enfileirada`) e `posicao`.
+
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
@@ -634,6 +691,56 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner/engine**: o `git fetch` AUTENTICADO em modo `runner` passa a
+  funcionar com o container do projeto de pé (AT-116, prova AT-111,
+  [ADR 0193](docs/adr/0193-git-credenciado-no-host-do-runner.md),
+  [RN-676](docs/business-rules.md#rn-676)). Até aqui ele terminava sempre na
+  recusa nomeada da RN-558 (`credencial-nao-atravessa-o-container`) — que era
+  justamente o caminho comum. Agora o engine marca esse fetch
+  (`gitCredenciado: true` no `exec`) e o runner o executa no HOST, onde a
+  credencial chega; os comandos do dev agent continuam no `docker exec`, que
+  segue sem campo de `env`. Um `env` sem a marca continua recusado com
+  container ativo. **Runner antigo:** um `brabo-runner` anterior a esta versão
+  não lê a marca e segue recusando — a mensagem passa a dizer para atualizá-lo.
+- **api/web**: **"Sempre permitir" grava verbo + subcomando, um padrão por
+  segmento** (AT-257, que fecha a AT-170;
+  [RN-675](docs/business-rules.md#rn-675), ponto 6 do ADR 0055 decidido no
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md)). Até aqui o clique gravava
+  o comando inteiro, byte a byte — o próximo quase nunca era igual (173
+  cliques no uso real de 29/09) — e o composto virava um padrão que só casava
+  o primeiro segmento. Agora `cd src/app && npm test` grava `Terminal(cd)` e
+  `Terminal(npm test)`, e `cd lib/core && npm test -- --coverage` passa.
+  Verbo + flag (`ls -la`) fica exato, e a unidade que seria prefixo de um teto
+  da RN-418 (`git remote`, `gh pr`) também; o clique sobre push/PR/deploy/
+  `sudo` continua recusado inteiro. O `permission.granted` passa a levar
+  `patterns` (a lista gravada), e a nota do botão diz a unidade.
+- **api/web**: **o modo automático vira piloto automático, e "Sempre
+  permitir" não o desliga mais** (AT-259, AT-255,
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md),
+  [RN-670](docs/business-rules.md#rn-670)). Decisão do dono de 01/10: a
+  RN-603 fica — a curinga `*: auto_approve` aprova tudo, inclusive comando
+  composto sem regra, caminho fora da pasta, `git commit` e branch LOCAL —,
+  menos os tetos absolutos (push/PR/merge/deploy, `sudo`/`doas`, merge em
+  branch protegida, `container_remove`, `instruction_patch`, paralelismo), e
+  `deny` continua vencendo. O defeito medido no uso real de 29/09: o "Sempre
+  permitir" de dev agent gravava `terminal: auto_approve`, que sombreava a
+  curinga e fazia o composto e o escopo voltarem a pedir (97 + 37 pedidos com
+  o modo aceso na tela). Agora essa específica resolve como a curinga, e as
+  linhas já gravadas também se corrigem; com o toggle em manual, ela volta a
+  valer sozinha, com o escopo. A tela diz o que o piloto libera e o que não
+  libera, com a MESMA lista no cartão de lote dos Executores, no
+  `ApprovalCard` e no toggle do card do agente. A contenção que sustenta a
+  decisão (o container monta uma pasta só, em `/work`, abaixo da raiz do
+  broker) ganha prova ponta a ponta no broker; o que ela NÃO cobre está
+  declarado no ADR.
+- **api**: **o escopo de caminho compara com a pasta onde o comando roda**
+  (AT-258, [RN-669](docs/business-rules.md#rn-669)). Com container `running`
+  num projeto `container` ou `mounted`, a raiz é `/work` (a pasta e os
+  `.worktrees` do projeto) mais o `/tmp` do container, com o `cwd` de host
+  traduzido para `/work` como o engine traduz; sem container, a pasta do
+  projeto no host, com o `/tmp` do host fora. Vale para a regra específica
+  `terminal` — antes, `/work/...` e `/tmp` pediam aprovação por "escopo" com o
+  comando rodando justamente ali. `runner` fica como estava.
 - **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
   e do PO) deixa de sair em português para quem escolheu outro idioma de
   resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da

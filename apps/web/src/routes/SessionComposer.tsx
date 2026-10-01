@@ -40,6 +40,12 @@ export interface SessionComposerProps {
   setDraft: Dispatch<SetStateAction<string>>;
   handleComposerKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   streaming: boolean;
+  /**
+   * RN-673: com turno em curso, a mensagem a um agente entra na FILA dele — o
+   * campo e o botão seguem abertos (o botão vira "Pôr na fila"). Falso no chat
+   * sem agente, onde não há fila: lá o turno em curso continua travando.
+   */
+  podeEnfileirar: boolean;
   handleSend: () => Promise<void>;
   handleCancel: () => Promise<void>;
   criativoActive: boolean;
@@ -80,6 +86,7 @@ export function SessionComposer({
   setDraft,
   handleComposerKeyDown,
   streaming,
+  podeEnfileirar,
   handleSend,
   handleCancel,
   criativoActive,
@@ -276,13 +283,15 @@ export function SessionComposer({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleComposerKeyDown}
             placeholder={t('composer.placeholder')}
-            disabled={streaming}
+            disabled={streaming && !podeEnfileirar}
           />
           <Button
             onClick={handleSend}
-            disabled={streaming || !draft.trim() || precisaEscolherDestinatario}
+            disabled={
+              (streaming && !podeEnfileirar) || !draft.trim() || precisaEscolherDestinatario
+            }
           >
-            {t('composer.enviar')}
+            {streaming ? t('composer.enfileirar') : t('composer.enviar')}
           </Button>
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}

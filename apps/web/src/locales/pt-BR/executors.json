@@ -113,6 +113,14 @@
   "autoModeTeam": {
     "title": "Modo automático para o time",
     "subtitle": "A execução começou. Ligar o modo automático nos agentes escolhidos faz os próximos comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto.",
+    "released": {
+      "summary": "O que o piloto automático libera e o que não libera",
+      "title": "O modo automático é o piloto automático — libera, sem perguntar:",
+      "commands": "qualquer comando dentro do container do projeto, mesmo com caminho fora da pasta do projeto",
+      "compound": "comando composto com segmento sem regra no permissions.json",
+      "commitBranch": "git commit e criar branch LOCAL",
+      "alwaysAllow": "clicar \"Sempre permitir\" neste agente não desliga o piloto"
+    },
     "notReleased": {
       "title": "O modo automático NÃO libera — estes continuam pedindo sua aprovação:",
       "merge": "merge em branch protegida (dev, qa, main)",
@@ -121,6 +129,7 @@
       "containerRemove": "remover container (container_remove)",
       "instructionPatch": "mudar instrução de agente (instruction_patch)",
       "parallelize": "paralelizar ou subir o teto de paralelismo",
+      "deny": "o que estiver em deny (ou ask) no permissions.json segue como está escrito",
       "turnOff": "Para desligar, use o toggle manual/auto no card de cada agente."
     },
     "noRole": "Ligar o modo automático pede o papel maintainer (lido do workspace; o papel de projeto não é consultado aqui).",

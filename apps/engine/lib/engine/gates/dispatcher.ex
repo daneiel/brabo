@@ -11,19 +11,6 @@ defmodule Engine.Gates.Dispatcher do
   @callback run_secops(project_id :: String.t(), task_id :: String.t()) :: :ok
 
   @doc """
-  QA-estratégia (ADR 0090, segundo momento do qa-lead): a AVALIAÇÃO
-  pre-dev, por `story_id` — sobe (se preciso) o MESMO `QaLeadServer` de
-  `run_qa/2` e chama `run_design/3`. Mesma indireção pelo mesmo motivo: o
-  chamador (`Engine.Agents.DevLeadTools.run_assessment/2`) não deveria
-  subir um GenServer real num teste leve.
-  """
-  @callback run_qa_estrategia(
-              project_id :: String.t(),
-              session_id :: String.t(),
-              story_id :: String.t()
-            ) :: :ok
-
-  @doc """
   AppSec de DESIGN (RN-360, ADR 0090) — o SEGUNDO momento do secops, por
   `story_id`: threat model STRIDE-lite sobre a story + `module_map`, ANTES
   de existir código/PR. Sobe (se preciso) o MESMO `SecOpsAgentServer` de
@@ -34,8 +21,7 @@ defmodule Engine.Gates.Dispatcher do
   LEVE, sem sandbox Ecto — subir um GenServer real ali só para provar que o
   threat model foi PEDIDO acoplaria o teste do Dev Lead ao banco.
 
-  Sem `session_id`, ao contrário de `run_qa_estrategia/3`, e isso é
-  deliberado: o appsec descobre a sessão pela PRÓPRIA story
+  Sem `session_id`, e isso é deliberado: o appsec descobre a sessão pela PRÓPRIA story
   (`Engine.Gates.AppSecContextBuilder.fetch/2` lê `story["sessionId"]`),
   nunca pela do chamador — a assinatura acompanha
   `SecOpsAgentServer.run_design/2`, que é quem manda aqui.
@@ -62,9 +48,6 @@ defmodule Engine.Gates.Dispatcher do
 
   def run_qa(project_id, task_id), do: impl().run_qa(project_id, task_id)
   def run_secops(project_id, task_id), do: impl().run_secops(project_id, task_id)
-
-  def run_qa_estrategia(project_id, session_id, story_id),
-    do: impl().run_qa_estrategia(project_id, session_id, story_id)
 
   def run_appsec_design(project_id, story_id),
     do: impl().run_appsec_design(project_id, story_id)
@@ -96,13 +79,6 @@ defmodule Engine.Gates.Dispatcher.Live do
   def run_secops(project_id, task_id) do
     {:ok, _pid, _origin} = SecOpsAgentSupervisor.start_agent(project_id)
     SecOpsAgentServer.run(project_id, task_id)
-    :ok
-  end
-
-  @impl true
-  def run_qa_estrategia(project_id, session_id, story_id) do
-    {:ok, _pid, _origin} = QaLeadSupervisor.start_agent(project_id)
-    QaLeadServer.run_design(project_id, session_id, story_id)
     :ok
   end
 

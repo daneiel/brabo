@@ -76,13 +76,33 @@ defmodule Engine.Runners.RunnerRouter do
   nunca recebe uma chave que não sabe interpretar.
   """
   def exec(project_id, command, cwd, timeout_ms, env \\ nil) do
+    despachar_exec(project_id, command, cwd, timeout_ms, env, false)
+  end
+
+  @doc """
+  O `exec` da operação de git CREDENCIADA (ADR 0193, RN-676): o mesmo par
+  `exec`/`exec_result` de `exec/5`, com a MARCA `gitCredenciado: true` no
+  payload — é por ela, e só por ela, que o runner roda o comando no HOST mesmo
+  com um container ativo, onde a credencial do `env` chega ao processo filho.
+
+  Só `Engine.Actions.Workspace.RunnerGit` chama isto (o `git fetch`
+  autenticado); comando de terminal do dev agent passa por `exec/4` e NUNCA
+  carrega a marca, então continua indo ao `docker exec`. Exige `env` não vazio:
+  marca sem credencial não tem o que proteger, e o runner também a ignora.
+  """
+  def exec_git_credenciado(project_id, command, cwd, timeout_ms, env)
+      when is_map(env) and map_size(env) > 0 do
+    despachar_exec(project_id, command, cwd, timeout_ms, env, true)
+  end
+
+  defp despachar_exec(project_id, command, cwd, timeout_ms, env, git_credenciado) do
     case Registry.whereis(project_id) do
       nil ->
         {:error, :not_connected}
 
       pid ->
         ref = Ecto.UUID.generate()
-        send(pid, {:dispatch_exec, ref, command, cwd, env, self(), timeout_ms})
+        send(pid, {:dispatch_exec, ref, command, cwd, env, git_credenciado, self(), timeout_ms})
 
         receive do
           {:runner_exec_result, ^ref, payload} -> {:ok, payload}

@@ -1272,6 +1272,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-cancel-queued",
+          label: "Cancels one message waiting in the agent's queue",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-start",
           label: "Starts an agent in the session",
           className: "api-method post",

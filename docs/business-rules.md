@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1085` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1100` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -308,7 +308,7 @@ stay as they were.
   `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 
 - **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:280` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:283` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -354,7 +354,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:337`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:332`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -472,7 +472,7 @@ previous one. `deny` at any stage returns immediately.
 Before any policy, IAM: each `ActionType` requires a minimum effective
 role. Without it, `deny` with an explicit reason.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:100` (`MIN_ROLE_FOR_ACTION_TYPE`)
+- **Where:** `apps/api/src/domain/actions/decide.ts:108` (`MIN_ROLE_FOR_ACTION_TYPE`)
 - **Test:** `test/domain/actions/decide.spec.ts`
 
 ### RN-006 — Ceiling: merge into a protected branch is never auto-approvable {#rn-006}
@@ -489,7 +489,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:426` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:453` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -2806,10 +2806,17 @@ QA-estratégia, [RN-341](#rn-341)):
    (síntese e critérios executáveis), para o usuário decidir sem precisar
    abrir dois eventos, e propõe a ação.
 
+**Desde a [RN-674](#rn-674) (ADR 0192) os dois passos acima NÃO valem mais.**
+O plano de teste nasce DEPOIS da entrega do dev e alimenta o `qa-verificada`;
+`run_assessment/2` não lê nem dispara plano, propõe o parecer na PRIMEIRA
+chamada, sobre a história e o `module_map` que o Dev Lead já tem no contexto,
+e o payload perdeu `planoDeTeste`/`criteriosExecutaveis`.
+`Dispatcher.run_qa_estrategia/3` saiu. O resto desta regra (proposta, três
+desfechos, papel mínimo, fora dos tetos absolutos) segue igual.
+
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
   (`run_assessment/2`, `spec_assess_implementability/0`),
-  `dev_lead_server.ex` (`run_tool/3`); `apps/engine/lib/engine/gates/dispatcher.ex`
-  (`run_qa_estrategia/3`); `apps/api/src/domain/actions/decide.ts`
+  `dev_lead_server.ex` (`run_tool/3`); `apps/api/src/domain/actions/decide.ts`
   (`assess_implementability`); `docs/gates.yml` (`implementavel`,
   `status: active`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
@@ -2868,15 +2875,21 @@ que `assess_implementability` ([RN-340](#rn-340)) o lê depois. Falha
 silenciosa: `agent.error` durável com origem, mesma régua da
 [RN-059](business-rules/custo.md#rn-059).
 
+**Desde a [RN-674](#rn-674) (ADR 0192) o MOMENTO mudou.** O segundo momento
+continua sendo do `qa-lead`, sem agente novo, e continua nunca suspendendo;
+mas roda DEPOIS da entrega, no começo do ciclo de `run/2`, com o worktree do
+dev e os arquivos do diff — `run_design/3` e `QaEstrategiaContext` saíram, e
+o artefato ganhou `taskId`. O teto continua 8, agora COM o orçamento da task
+por baixo.
+
 - **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex`,
-  `qa_estrategia_context.ex`, `qa_lead_server.ex` (`run_design/3`),
+  `qa_lead_server.ex` (`run_area/3`, desde a [RN-674](#rn-674)),
   `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
   `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
   `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
   acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
-  `qa_estrategia_context_test.exs`, `qa_lead_server_test.exs` (describe
-  "run_design"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  `qa_lead_server_test.exs` (describe "plano de teste da entrega (ADR 0192)"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
   (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
   conversacional DE PROPÓSITO")
 - **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
@@ -2928,7 +2941,7 @@ PRÓPRIO, `Engine.Gates.Hooks.AppSecTermination`.
 Terminado com sucesso, `run_appsec_design/3`
 (`secops_agent_server.ex:234`) emite `artifact.threat_model`
 (`storyId`/`threatModel`/`requisitosDeSeguranca`/`riscos`, schema em
-`apps/engine/lib/engine/harness/artifact_schemas.ex:51` — `riscos` fica de
+`apps/engine/lib/engine/harness/artifact_schemas.ex:71` — `riscos` fica de
 fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
 (teto de iterações, orçamento, ou o modelo parando sem chamar
 `emit_threat_model`) vira `agent.error` durável com origem
@@ -3296,7 +3309,8 @@ por completo. `OfferInfraHandoffUseCase.execute` agora consulta
 `StoryRepository.findByProject(projectId)` e recusa com `BadRequestException`
 quando NENHUMA história do projeto tem `status !== 'draft'` — a checagem vem
 ANTES de gravar `architecture.readiness_confirmed` e ANTES de qualquer
-chamada ao engine (`offerInfraHandoff`/`offerDevHandoff`): uma recusa não
+chamada ao engine (`offerInfraHandoff`; o `offerDevHandoff` saiu na
+[RN-672](#rn-672)): uma recusa não
 pode deixar rastro de handoff meio-ofertado no event log, que é imutável.
 `StoryRepository` foi escolhido (e não `ListBacklogUseCase`) por ser mais
 leve — não precisa montar a árvore épico→história→tarefa para responder
@@ -4089,7 +4103,7 @@ por `permissions.json`.
 
 A condição que torna isto seguro — sem a qual o teto seria decorativo —
 é a metade que fecha "sempre permitir" NA FONTE:
-`ApproveAlwaysActionUseCase`/`patternForAction` recusam gravar padrão em
+`ApproveAlwaysActionUseCase`/`patternsForAction` recusam gravar padrão em
 `allow` pra ação de terminal com efeito externo git ou comando
 privilegiado. A instância específica ainda pode ser aprovada pelo fluxo
 normal (`ApproveActionUseCase`); só o clique que gravaria um padrão pra
@@ -7131,6 +7145,11 @@ depois, e por isso `ProposeActionUseCase` também executa no caminho
 `auto_approved`, mesma lição do comentário sobre `parallelize` nesse arquivo
 ("sem isto a ação nascia, era aprovada — e nada subia").
 
+**Revisado pela [RN-671](#rn-671) (ADR 0190, 01/10):** `container_start` passa
+a ser SEMEADO `auto_approve` no aceite do handoff da Infra, e o servidor do
+Infra Lead propõe a primeira subida sozinho quando há roteamento. O resto desta
+regra — a lista de candidatas, `maintainer`, fora dos tetos absolutos — segue.
+
 **Depois do broker confirmar, a transição de ciclo de vida segue a máquina de
 estados do ADR 0081, nunca reprovisiona à toa.** Sem linha ainda, ou linha em
 `failed`/`removed`: `provisioning` (a que lê a imagem recém-decidida e
@@ -9622,7 +9641,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:339`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:336`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:66` (`derrubar/3`);
@@ -9804,6 +9823,11 @@ janela. O threat model chega a quem precisa pelo caminho que a
 o appsec, porque prometer ao modelo algo que ele não vai receber ali é o
 defeito que a [RN-163](business-rules/autenticacao.md#rn-163) fecha.
 
+**Desde a [RN-674](#rn-674) não há mais `:sem_plano`**: o parecer sai na
+primeira chamada, o disparo do appsec acompanha a proposta, e a leitura do
+histórico serve só à guarda abaixo. O appsec segue no DESIGN — a decisão do
+dono que tirou o plano de teste do pre-dev foi sobre o QA.
+
 **E uma vez só por story.** O modelo é INSTRUÍDO a chamar
 `assess_implementability` de novo enquanto o plano de teste não existe: sem
 guarda, cada rechamada custaria outra rodada de LLM do appsec e mais três
@@ -9821,12 +9845,12 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:254`
-  (`run_assessment/2`, a leitura única do histórico) e `:340`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:244`
+  (`run_assessment/2`, a leitura única do histórico) e `:295`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
-  `apps/engine/lib/engine/gates/dispatcher.ex:43` (o callback) e `:110`
+  `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
-  `apps/engine/test/support/fake_gate_dispatcher.ex:29`
+  `apps/engine/test/support/fake_gate_dispatcher.ex:23`
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
   describe "assess_implementability dispara o appsec (RN-539)" — story sem
   threat model dispara, story com threat model NÃO dispara (a idempotência),
@@ -11839,7 +11863,12 @@ ele roda no HOST (`criarPastaDoProjeto`), não no container.
   `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
   lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
   o teste do engine com a mensagem antiga à vista
-- **Lacuna DECLARADA, que é a METADE que continua aberta:** a credencial
+- **Lacuna DECLARADA, que é a METADE que continua aberta — FECHADA pela
+  [RN-676](#rn-676) ([ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md),
+  decisão do dono de 01/10):** o fetch credenciado vai MARCADO pelo engine e
+  roda no HOST do runner mesmo com container ativo; esta recusa encolheu para o
+  `env` SEM a marca (na prática, um runner anterior ao ADR 0193). O texto
+  abaixo é o de quando ela fechou a metade do silêncio: a credencial
   continua **não atravessando** o `docker exec`. Clone/fetch de repositório
   remoto AUTENTICADO em modo `runner` segue impossível com o container de pé —
   o que mudou é que agora ele falha DIZENDO isso, em vez de parecer erro de
@@ -13529,11 +13558,12 @@ clicando; o agente passa a checar UMA. `GetInfraContextUseCase` segue sem
 por agente ([RN-495](#rn-495)).
 
 Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
-`maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
+`maintainer`, nunca semeada em auto-aprovação (até a [RN-671](#rn-671), que a
+semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:534`
+  dispatch de `container_start` consultando antes de propor), `:604`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -13685,11 +13715,11 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:213`
-  (`reason` no payload do evento de sessão), `:176` (o comentário do outbox
-  sem o campo), `:184` (o payload do outbox, intacto), `:300` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:240`
+  (`reason` no payload do evento de sessão), `:203` (o comentário do outbox
+  sem o campo), `:207` (o payload do outbox, intacto), `:327` (o
   `rejectionReason`, que continua só no `deny`);
-  `apps/api/src/domain/actions/decide.ts:256` (`Decision`, a fonte da string)
+  `apps/api/src/domain/actions/decide.ts:276` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:742`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
   `:765` (`require_approval` pelo default e pelo teto da trava de merge),
@@ -14253,7 +14283,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:480`
+  `propose_infra_pr` perguntando antes do HALT), `:532`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14412,7 +14442,8 @@ o [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)):**
 5. **O handoff ao Dev Lead continua nascendo DEPOIS do de Infra.** O
    `:offer_dev_handoff` que chega com o turno de fechamento do Arquiteto em
    curso fica pendente e roda quando o turno fecha — sucesso, falha, crash ou
-   cancelamento.
+   cancelamento. *(Superado pela [RN-672](#rn-672): o Arquiteto não oferece
+   mais ao Dev Lead, e a pendência deixou de existir.)*
 
 **O que esta regra NÃO fecha:** o `chat.message` que a api grava antes de
 perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
@@ -14421,6 +14452,12 @@ perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
 `infra` pelo compositor caía no Criativo pela cláusula final de
 `AgentCommandController.message/2` — pré-existente, medido aqui e fechado
 depois pela [RN-584](#rn-584), que tirou o destinatário padrão.
+
+**Revisada para a MENSAGEM pela [RN-673](#rn-673)** (ADR 0191): a mensagem do
+usuário que chega com turno em curso não recebe mais `turno_em_andamento` —
+entra na fila do agente e é lida no fim do turno. A recusa do item 2 segue
+valendo para os comandos que não são fala (revisão, prontidão, oferta de
+handoff).
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:120` (o
   aceite), `:130` e `:314` (a recusa durável);
@@ -14671,7 +14708,8 @@ o engine — olhava o estado da sessão antes de gravar.
    desde a [RN-578](#rn-578) (ADR 0163) quem disparou o turno já recebeu `:ok`
    no aceite. Pelo mesmo motivo o `offer_dev_handoff` que o Arquiteto guardou
    para o fecho do turno NÃO roda quando o fecho é o da sessão — o handoff
-   seria recusado. O Infra Lead, que roda o turno dentro do `handle_call`, é
+   seria recusado (desde a [RN-672](#rn-672) não há mais o que guardar: o
+   handoff ao Dev Lead sai da Infra). O Infra Lead, que roda o turno dentro do `handle_call`, é
    morto se não sair em 5s.
 10. **A recusa nunca é calada no engine.** Quase todo chamador de
     `append_event/3` descarta o retorno; o cliente registra o 409
@@ -14730,7 +14768,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:257` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -14940,7 +14978,7 @@ NÃO coberto: a Visão Geral e o card do handoff na sessão lêem o estado do
 repositório, não o de cada sessão, e não mudaram.
 
 - **Onde:**
-  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:54`
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:66`
   (`AGENTES_QUE_PROVISIONAM_O_REPOSITORIO`, gatilho e segunda porta) e `:141`
   (o ramo, antes de `activateAgent`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
@@ -15061,8 +15099,8 @@ volta, `infra` em `AGENTES_DE_CHAT`, a cláusula do Criativo renomeada, o
 - **Código:**
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:42`
   (`@agentes_de_conversa`), `:177` (a cláusula do Criativo), `:192` (a recusa
-  do `infra`), `:254` (`mensagem_sem_texto`), `:225` (`agente_sem_conversa`),
-  `:283` (`agente_ausente`), `:310` (o "Parar" sem agente);
+  do `infra`), `:283` (`mensagem_sem_texto`), `:249` (`agente_sem_conversa`),
+  `:312` (`agente_ausente`), `:310` (o "Parar" sem agente);
   `apps/api/src/interfaces/http/agents/agents.controller.ts:115` e `:174`
   (a resposta 422 documentada); `apps/web/src/lib/session-readiness.ts:37`
   (`AGENTES_DE_CHAT`, a fonte que a guarda lê)
@@ -15109,7 +15147,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:288` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:442` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15227,8 +15265,8 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:419`
-  (`recusar_mensagem/5`) e `:420` (`registrar_recusa_de_mensagem/3`)
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:414`
+  (`recusar_mensagem/5`) e `:415` (`registrar_recusa_de_mensagem/3`)
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
   (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
   não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
@@ -15428,7 +15466,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:567`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:745`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15519,10 +15557,10 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:308`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:661`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:805`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:983`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15872,9 +15910,9 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:248`
   (`scopeRoot` só em `terminal`);
-  `apps/api/src/domain/actions/decide.ts:532` (`terminalNoEscopo`, o único
+  `apps/api/src/domain/actions/decide.ts:559` (`terminalNoEscopo`, o único
   consumidor do escopo)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:889`
   (`container`), `:904` (`mounted`), `:920` (`runner`), `:935` (o caminho
@@ -15961,10 +15999,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:652`
-  (`recusa_local_de_subida`), `:705` (`recusa_por_estado`), `:729`
-  (`recusa_ja_de_pe`), `:747` (`recusa_sem_imagem_decidida`), `:764`
-  (`recusa_pasta_nunca_confirmada`), `:775` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:830`
+  (`recusa_local_de_subida`), `:883` (`recusa_por_estado`), `:907`
+  (`recusa_ja_de_pe`), `:925` (`recusa_sem_imagem_decidida`), `:942`
+  (`recusa_pasta_nunca_confirmada`), `:953` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16384,21 +16422,21 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:160`
-  (`user_message`), `:180` (`TurnoOrfao.fechar_ao_subir`), `:216`
-  (`handle_cast(:kickoff`), `:233` (`handle_cast({:correct`, a fila), `:243`
-  (`handle_cast(:cancel`), `:259` (`handle_call({:user_message`), `:275`
-  (`handle_info`), `:294` (`drenar_correcao_pendente`), `:341`
-  (`toolloop.limit_reached`), `:828` (`concluir`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:187`
+  (`user_message`), `:207` (`TurnoOrfao.fechar_ao_subir`), `:248`
+  (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
+  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:327`
+  (`handle_info`), `:346` (`drenar_correcao_pendente`), `:393`
+  (`toolloop.limit_reached`), `:1006` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:459`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1327` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1675` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -16745,15 +16783,15 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
   (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
   (`idioma_da_resposta`);
-  `apps/engine/lib/engine/agents/criativo_server.ex:123` (`handle_call`, e a
+  `apps/engine/lib/engine/agents/criativo_server.ex:136` (`handle_call`, e a
   MESMA cláusula nos outros seis);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:115`
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:68`
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:78`
   (`resolverIdioma`), `:53` (`idiomaAlvo`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:183`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
@@ -17205,7 +17243,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:279`
 
-  `apps/web/src/routes/SessionPage.tsx:144` (`podeDecidir`), `:284`
+  `apps/web/src/routes/SessionPage.tsx:145` (`podeDecidir`), `:287`
   (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
@@ -17251,11 +17289,11 @@ inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a áre
 inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
 momento do QA-estratégia) nem o teto de iterações do subagente.
 
-- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:120`
-  (`handle_info`), `:206` (`tratar_resultado`), `:241` (resultado desconhecido)
-- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:312`
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:104`
+  (`handle_info`), `:195` (`tratar_resultado`), `:230` (resultado desconhecido)
+- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:325`
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
-  decisão conclui a área); `:265` (uma suspensão, o caminho feliz)
+  decisão conclui a área); `:278` (uma suspensão, o caminho feliz)
 - **Origem:** AT-248, sobre o achado E2 da análise de uso real de 2026-09-29
 
 ### RN-630 — Quem está ativo na sessão se lê da sessão INTEIRA, não dos últimos 200 eventos {#rn-630}
@@ -17557,8 +17595,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:497`
-  (`handoffIdDoEvento`), `:505` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
+  (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -17610,7 +17648,7 @@ Duas leituras da tela de Sessão deixavam o handoff obsoleto (AT-293, AT-294):
 Nenhuma mudança de api nem de engine.
 
 - **Onde:** `apps/web/src/lib/session-handoffs.ts:41` (`origemDoHandoff`),
-  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:191`
+  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:192`
   (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:140`
   (`useAtivosNoProjeto`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
@@ -17768,7 +17806,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
   (`substituirOfertasAoAtivar`);
-  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:101`
+  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
   `apps/engine/lib/engine/harness/tools/offer_handoff.ex:58`
   (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
@@ -18378,7 +18416,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1111`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1126`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18523,7 +18561,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:132` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:134` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -18708,7 +18746,7 @@ handoff manual (ADR 0109) também.
   (`decidirAceiteAutomatico`), `:74` (`backlogCoberto`);
   `apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts:44`
   (`AceitarHandoffAutomaticamenteUseCase`);
-  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:79`
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:91`
   (`AceitePeloSistema`);
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:403`
   (`handoff`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:59`;
@@ -18908,8 +18946,8 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   (`mensagem_sem_branch_de_trabalho`);
   `apps/engine/lib/engine/actions/workspace.ex:70` (`ensure_remoto`), `:224`
   (`init_from_bare!`), `:272` (`remoto_vazio?`);
-  `apps/engine/lib/engine/actions/workspace/runner_git.ex:138` (`add_worktree`),
-  `:163` (`garantir_base`), `:288` (`remoto_vazio?`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
+  `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
   (`add_worktree`), `:86` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
@@ -18968,14 +19006,17 @@ O kickoff e a descrição de `propose_infra_pr` passam a dizer o que o código f
 a subida vem ANTES da PR ou na MESMA resposta, porque a PR encerra o turno. Isso
 é ajuda ao modelo, não a garantia — a garantia é o fecho do item 2.
 
-Nada aqui sobe container nem propõe subida: ela continua sendo `proposed_action`
-proposta pelo modelo e decidida por humano (RN-491), com as recusas por modo e
-estado intactas (RN-566/RN-610). A subida como passo do servidor é a AT-260, que
-depende de decisão do dono.
+Nada aqui sobe container nem propõe subida, com as recusas por modo e estado
+intactas (RN-566/RN-610). Desde a [RN-671](#rn-671) (AT-260) a primeira subida
+é passo do SERVIDOR no kickoff, marcada pelo MESMO `registrar_subida`: no caso
+comum ela foi proposta e o fecho do item 2 não tem o que dizer; ele segue
+falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
+desde então conta como recusa) e quando ela não cabia ao servidor (sem
+roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:400`
-  (`dispatch_calls`), `:446` (`recusa_pr_repetida_no_lote`), `:858`
-  (`registrar_subida`), `:866` (`fechar_subida`), `:884`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:452`
+  (`dispatch_calls`), `:498` (`recusa_pr_repetida_no_lote`), `:1091`
+  (`registrar_subida`), `:1099` (`fechar_subida`), `:1117`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -18986,6 +19027,156 @@ depende de decisão do dono.
   frase), `:1190` (turno sem subida: sem frase), `:1199` (segunda
   `propose_infra_pr` no lote é recusada)
 - **Origem:** AT-264 (uso real de 2026-09-29, item A18 da análise)
+
+### RN-669 — O escopo de caminho compara com a pasta REAL de execução: `/work` e o `/tmp` do container quando ele está de pé {#rn-669}
+
+O teto de escopo do ADR 0055 comparava todo comando com a pasta do projeto no
+HOST, inclusive quando o comando roda DENTRO do container (RN-492/RN-502). No
+uso real de 29/09, os 37 pedidos "escopo" eram `/work/...` e `/tmp`
+comparados com `/home/<usuario>/projetos-brabo/<projeto>` (AT-258).
+
+Com um container `running` REGISTRADO num projeto `container` ou `mounted`, a
+raiz do escopo é `/work` — o ponto de montagem, onde moram a pasta e os
+`.worktrees` do projeto — mais o `/tmp` do PRÓPRIO container. O `cwd` chega
+como caminho de host e é traduzido para `/work` pela mesma regra do engine
+(`cwd_para_container/2`): a raiz vira `/work`, o que está sob ela vira
+`/work/...`, o que está fora segue como veio e fica fora. Em `mounted` a
+tradução é bijetiva. Sem container, a raiz continua a pasta do projeto no host,
+e o `/tmp` do host fica FORA.
+
+Vale para quem não está no piloto (a regra específica `terminal`): o piloto não
+passa pelo escopo ([RN-603](business-rules/autenticacao.md#rn-603), mantida
+pela [RN-670](#rn-670)). `projectScopeRoot` não muda nem se une a
+`permissionsFilePath` ([RN-478](#rn-478)); o PISO de auto-aprovação continua só
+do modo `container` ([RN-493](#rn-493)). `runner` fica fora, de propósito: a api
+não sabe se o runner vai rotear para o container ou para o host (RN-558).
+Argumento de comando com caminho de HOST passa a contar como fora quando há
+container — o engine traduz só o `cwd`, e dentro do container esse caminho não
+existe.
+
+- **Código:** `apps/api/src/domain/actions/path-scope.ts:153` (`cwdNoContainer`),
+  `:174` (`comandoNoEscopoDoContainer`), `:112` (`comandoNoEscopo`, agora com
+  várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
+  `apps/api/src/domain/actions/decide.ts:273` (`execucaoNoContainer`), `:571`
+  (`execucaoNoContainer`, em `terminalNoEscopo`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:150`
+  (`containerExecutionActive`, separado de `execucaoNoContainer`)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts:1274` (com container
+  `/work`, `.worktrees`, `/tmp` e `..` dentro — caminho feliz; `/etc`, outro
+  projeto, `/workspace`, `/tmp/../etc` fora; sem container `/tmp` e `/work`
+  fora — casos de falha); `apps/api/test/domain/actions/path-scope.spec.ts:216`
+  (e a cópia de `/work` travada contra `packages/docker-port`);
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1113`
+  (o modo `mounted` com e sem container, e sem o piso)
+- **Origem:** AT-258 (item A12 da análise do uso real de 29/09), decisão do
+  dono de 01/10, [ADR 0189](adr/0189-o-piloto-automatico.md)
+
+### RN-670 — O modo automático é o PILOTO AUTOMÁTICO, e "Sempre permitir" não o desliga {#rn-670}
+
+Decisão do dono de 01/10 ([ADR 0189](adr/0189-o-piloto-automatico.md)): a
+[RN-603](business-rules/autenticacao.md#rn-603) NÃO é revogada. A curinga
+`*: auto_approve` aprova TUDO, inclusive o composto sintetizado do
+`permissions.json`, caminho fora da pasta, `git commit` e criação de branch
+LOCAL. Seguem fora, nunca auto-aprováveis: push/PR/merge/deploy pelo terminal
+e `sudo`/`doas` ([RN-418](#rn-418)), merge em branch protegida,
+`container_remove`, `instruction_patch` e paralelismo. `deny` explícito vence, e
+`ask` escrito no arquivo pede. A garantia de que isso não alcança o código do
+Brabo é a contenção do container — uma pasta só, em `/work`, estritamente
+abaixo da raiz do broker, sem socket do Docker nem privilégio —, provada em
+`apps/broker/src/contencao-do-brabo.spec.ts`; o que a prova NÃO cobre está
+declarado no ADR 0189.
+
+**"Sempre permitir" não desliga o piloto (AT-255).** O clique de dev agent
+grava `terminal: auto_approve` ([RN-509](#rn-509)), e o repositório devolvia
+essa específica ANTES da curinga, com origem `especifica` — `decide()` deixava
+de reconhecer o modo automático (97 + 37 pedidos no uso real de 29/09, com o
+modo aceso na tela). Agora a específica `auto_approve` sob a curinga
+`auto_approve` resolve como a CURINGA. Específica que diz outra coisa
+(`require_approval`, `deny`) continua vencendo, e com o toggle de volta em
+manual a específica gravada pelo clique volta a valer sozinha, com o escopo. O
+clique continua gravando a específica; quem decide se ela já existe é o campo
+`especifica` da resolução, nunca o modo resolvido.
+
+**A tela diz o que o piloto libera e o que não libera**, com UMA lista nos três
+lugares onde o modo é ligado: o cartão de lote dos Executores
+([RN-661](#rn-661), aberta), o `ApprovalCard` e o toggle do card do agente
+(recolhida). O "não libera" é o texto que a RN-661 já tinha, reusado.
+
+- **Código:** `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
+  (`resolve`), `:67` (`modoEspecifico`, a exceção do piloto);
+  `apps/api/src/application/ports/agent-autonomy-repository.port.ts:5`
+  (`AutonomiaResolvida`, com `especifica`);
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:263`
+  (`especifica`); `apps/api/src/domain/actions/decide.ts:293`
+  (`modoAutomaticoDoAgente`); `apps/web/src/components/OQueOPilotoLibera.tsx:16`
+  (`OQueOPilotoLibera`); `apps/web/src/components/ApprovalCard.tsx:434`,
+  `apps/web/src/components/AgentCard.tsx:164`,
+  `apps/web/src/components/ModoAutomaticoDoTime.tsx:134`
+- **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts:850`
+  (o cenário medido: curinga + "Sempre permitir" segue sem pedido — caminho
+  feliz; toggle em manual volta ao escopo — caso de falha);
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts:115`;
+  `apps/api/test/domain/actions/decide.spec.ts:1210` (commit e branch local
+  livres; push, merge, PR, deploy e `doas` seguem pedindo);
+  `apps/broker/src/contencao-do-brabo.spec.ts:105` (a contenção);
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:86`,
+  `apps/web/src/components/ApprovalCard.test.tsx:145`,
+  `apps/web/src/components/AgentCard.test.tsx:81`
+- **Origem:** AT-259 e AT-255 (itens A9 e A13 da análise do uso real de 29/09),
+  decisão do dono de 01/10
+
+### RN-675 — "Sempre permitir" grava VERBO + SUBCOMANDO, um padrão por segmento do comando {#rn-675}
+
+Decisão do dono de 01/10 (AT-257, que fecha a AT-170 — o ponto 6 do ADR 0055,
+a unidade da generalização; [ADR 0189](adr/0189-o-piloto-automatico.md)). Até
+aqui o clique gravava o comando INTEIRO, byte a byte (`Terminal(<comando>)`):
+o próximo comando quase nunca era igual — 173 cliques no uso real de 29/09 —, e
+o composto virava UM padrão cujo conteúdo só casava o PRIMEIRO segmento, então
+`cd src && npm test` liberava só `cd src`.
+
+Agora cada SEGMENTO do comando (o mesmo corte de `decide()`: `&&`, `||`, `;`,
+`|`, `&`) vira um padrão, e a unidade é:
+
+- o verbo sozinho (`ls`) → o verbo;
+- verbo + palavra (`npm test`, `git status`, `mix test`, `npx vitest`) → os
+  dois. "Palavra" é letra no começo, sem `/`, `.`, `=`, glob nem flag; um
+  argumento que parece palavra (`cd src`) fica como subcomando — o lado
+  ESTREITO da dúvida, porque distinguir os dois exigiria uma lista de verbos,
+  que é o espaço que os achados Z/AD dizem não convergir;
+- verbo + argumento que não é palavra (`cat src/x.ts`, `cd ../lib`) → o verbo;
+- verbo + FLAG (`ls -la src`, `git -C /x status`) → o segmento EXATO: a forma
+  com flag é onde verbo e invocação divergem, e generalizar ali seria escolher
+  uma forma de dentro do código;
+- unidade que é PREFIXO de um teto da [RN-418](#rn-418) (`git remote`,
+  `gh pr`) → o segmento EXATO; e se até o exato é prefixo (`git` sozinho),
+  nenhum padrão para aquele segmento.
+
+O casamento continua o de sempre (prefixo de tokens), o clique sobre comando
+com efeito externo ou privilegiado continua recusado inteiro antes
+(`motivoDeRecusaDoSempreAprovar`, 400 `teto_do_sempre_permitir`), o teto de
+`decide()` roda depois do arquivo, e o escopo de caminho segue limitando ONDE
+fora do piloto ([RN-669](#rn-669)). Quem pode gravar é quem já podia (o papel
+do endpoint, inalterado); a precedência com o modo automático é a da
+[RN-670](#rn-670). O "Sempre permitir" de dev agent de módulo continua indo
+para `agent_autonomy` ([RN-509](#rn-509)), sem padrão. Só os padrões que
+FALTAM são gravados e narrados; o `permission.granted` leva `patterns` (a lista
+gravada) e `pattern` (a mesma lista unida por vírgula, para a timeline).
+
+- **Código:** `apps/api/src/domain/actions/pattern-for-action.ts:22`
+  (`patternsForAction`), `:62` (`unidadeDoSegmento`), `:43` (`SUBCOMANDO`);
+  `apps/api/src/domain/actions/external-effect.ts:237` (`padraoAlcancaTeto`);
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:277`
+  (`faltam`), `:315` (`patternsForAction`)
+- **Teste:** `apps/api/test/domain/actions/pattern-for-action.spec.ts:18`
+  (a unidade, caminho feliz), `:103` (segmento que é prefixo de teto não grava
+  nada — caso de falha); `apps/api/test/domain/actions/external-effect.spec.ts:11`
+  (`padraoAlcancaTeto`);
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts:936`
+  (o clique num composto libera o próximo com os mesmos verbos; outro
+  subcomando continua pedindo; composto que empurra segue recusado);
+  `apps/web/src/components/ApprovalCard.test.tsx:253` (a nota diz a unidade)
+- **Origem:** AT-257 (item A11 da análise do uso real de 29/09) e AT-170
+  (EP-025), decisão do dono de 01/10
 
 ### RN-663 — O merge de PR recusa a PR já mergeada e a proposta repetida; gate pendente é só aviso {#rn-663}
 
@@ -19026,7 +19217,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:915` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:933` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:572`
   (`merge_ja_proposto`), `:595` (`pr_ja_mergeado` — caso de falha), `:627`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19036,3 +19227,319 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
   `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
 - **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)
+
+### RN-671 — A Infra sobe o container no aceite do handoff: o servidor propõe, e a autonomia semeada aprova {#rn-671}
+
+Decisão do dono em 01/10 ([ADR 0190](adr/0190-a-infra-sobe-o-container-no-aceite.md)),
+revisando o "nunca semeado" da [RN-491](#rn-491). No uso real de 29/09 a Infra
+anunciou a subida "em paralelo" e não a propôs; o container só subiu pela
+`/containers` (AT-260).
+
+1. **A semente.** Aceitar o handoff endereçado a `infra` grava, além de
+   `open_infra_pr: auto_approve` e `terminal: deny`, a autonomia
+   `container_start: auto_approve`. Só ela entre as de container:
+   `container_start_via_runner` e `container_stop` seguem nunca semeados, e
+   `container_remove` segue no teto absoluto ([RN-495](#rn-495)).
+2. **O disparo é do SERVIDOR.** No kickoff do Infra Lead, ANTES da primeira ida
+   ao modelo, havendo roteamento vigente (`artifact.module_routing` `roteado`,
+   com candidata) e projeto `container`/`mounted`, o servidor propõe
+   `container_start` pelo MESMO caminho da tool `propose_container_start`: as
+   recusas locais por modo e estado ([RN-566](#rn-566), [RN-610](#rn-610)),
+   depois `propose_action`, onde a api recusa sem broker ([RN-591](#rn-591)),
+   resolve a autonomia e, auto-aprovada, executa a subida, elegendo a imagem
+   por `DecidirImagemDoProjetoUseCase` com `decidedBy: 'infra-lead'`
+   ([RN-491](#rn-491)). `runner` não tem passo do servidor: segue pelo
+   `container_start_via_runner`, proposto pelo modelo e decidido por humano.
+3. **A eleição é determinística.** A candidata do maior número de módulos; no
+   empate, a primeira do roteamento. Rede `none`, recursos padrão, e um
+   `rationale` que diz que foi o servidor.
+4. **O rastro diz quem chamou.** `tool.call` (com `origem: "servidor"`) e
+   `tool.result` duráveis, e nenhuma mensagem de ferramenta no histórico do
+   modelo; o kickoff diz em texto o que JÁ aconteceu (status devolvido, ou o
+   motivo da recusa).
+5. **O fecho da [RN-668](#rn-668) segue verdadeiro.** A subida do servidor marca
+   o turno como a da tool: proposta, o fecho não fala; recusada, ele diz que foi
+   recusada. Proposta NEGADA pela política (status `denied`, como uma sessão
+   aberta por quem não é `maintainer`) conta como recusa, nas duas origens.
+
+Nenhum teto se move: o papel mínimo segue `maintainer` (o efetivo de quem abriu
+a sessão), `deny` de `permissions.json` segue vencendo, e a `/containers` não
+muda (ela propõe como humano, e a autonomia de agente não vale para ela).
+Declarado: o toggle manual/auto do card escreve a curinga, e a regra específica
+vence — pôr a Infra em "manual" não desliga esta semente.
+
+- **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
+  (`INFRA_AUTONOMY_SEEDS`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:268` (`handle_cast`),
+  `:603` (`propor_container_start`), `:666` (`subir_no_aceite`), `:708`
+  (`eleger_candidata`), `:1257` (`passo_da_subida`)
+- **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
+  (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
+  caso de falha);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
+  elege e propõe antes do modelo — caminho feliz), `:1353` (`mounted`), `:1363`
+  (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
+  recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
+  (negada pela política), `:1469` (`eleger_candidata/1`)
+- **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
+
+### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
+
+Decisão do dono em 01/10 ([ADR 0190](adr/0190-a-infra-sobe-o-container-no-aceite.md),
+AT-262). Até aqui "Confirmar arquitetura pronta" oferecia DOIS handoffs — à
+Infra e ao Dev Lead (FASE 14d, `handoff-duplo` em `docs/fluxo.yml`) —, e o Dev
+Lead podia ser aceito antes de existir o container em que os dev agents
+trabalham ([RN-502](#rn-502)). No uso real de 29/09 os dois nasceram da mesma
+confirmação (sessão `be70`, seq 252/254).
+
+1. **A confirmação de arquitetura oferece só à Infra.** `OfferInfraHandoffUseCase`
+   tem um destino (`infra`); o `offerDevHandoff` da porta do engine, a rota
+   `POST /internal/sessions/:id/agent/offer-dev-handoff` e o
+   `:offer_dev_handoff`/`handoff_dev_pendente` do Arquiteto deixaram de
+   existir. `ja_oferecido` passa a significar "a Infra já tinha oferta ou estava
+   ativa".
+2. **Quem oferece o Dev Lead é o servidor do Infra Lead**, por
+   `create_handoff_if_absent/5` (`infra → dev-lead`, ADR 0182): oferta pendente
+   em qualquer sessão do projeto volta como está, e Dev Lead já ativo (409
+   `agente_ja_ativo`) não é falha. Não é ferramenta: o modelo não decide quando
+   o Dev Lead entra.
+3. **Só com o container REGISTRADO `running`** (a leitura local de
+   `ProjectContainerLifecycle`). A pergunta é feita em dois momentos: no fim de
+   todo turno da Infra (`concluir`) — o caso comum, porque a subida do servidor
+   no aceite ([RN-671](#rn-671)) executa dentro do kickoff — e quando o
+   `container.running` do outbox chega fora de um turno (aprovação posterior,
+   `/containers`, `container_start_via_runner`): o `Engine.Outbox.Drain`
+   passa a enfileirar também o `Engine.Workers.InfraOfereceDevLeadWorker`, que
+   avisa por PubSub o Infra Lead do projeto.
+4. **Falha que não é "já atendido" é `agent.error` durável** com origem
+   ([RN-116](business-rules/custo.md#rn-116)), sem derrubar o turno; o fim do
+   próximo turno da Infra tenta de novo.
+
+Fica como estava: a segunda porta do repositório no aceite ao Dev Lead
+([RN-582](#rn-582)) — o aceite é o mesmo, só mudou quem oferece — e a
+ativação de execução encadeada no aceite (RN-161). Declarado: o aviso do
+outbox é at-most-once, como o `Engine.Dev.Wake`; sem Infra Lead de pé naquele
+instante, a oferta espera o fim do próximo turno dele.
+
+- **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
+  (`ALVOS_DA_CONFIRMACAO`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1036` (`oferecer_ao_dev_lead`),
+  `:1006` (`concluir`), `:317` (`handle_info`), `:1023`
+  (`topico_do_container`);
+  `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
+  `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1490`
+  (container `running` no fim do turno: oferece — caminho feliz), `:1504`
+  (sem `running`: não oferece — caso de falha), `:1515` (o aviso fora de
+  turno), `:1532` (o aviso com turno em curso), `:1544` (409 não é falha; 500
+  vira `agent.error`);
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:256` (o Arquiteto
+  não oferece mais ao Dev Lead);
+  `apps/engine/test/engine/workers/infra_oferece_dev_lead_worker_test.exs:9`;
+  `apps/engine/test/engine/outbox/drain_test.exs:266`;
+  `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts:104`,
+  `:147`
+- **Origem:** AT-262 (item A16 da análise do uso real de 29/09)
+
+---
+
+## O plano de teste nasce depois da entrega do dev (RN-674, ADR 0192)
+
+### RN-674 — A QA-estratégia escreve o plano sobre o código ENTREGUE, no começo do ciclo do `qa-verificada`, e o `implementavel` se julga sem ele {#rn-674}
+
+No uso real de 29/09 o plano de teste PRE-DEV ([RN-341](#rn-341)) terminou
+duas vezes em `toolloop.limit_reached` 8/8 sem `emit_plano_de_teste`: o laço
+leu docs, RAG vazio e pastas até concluir que "o código ainda não existe". O
+dono decidiu (01/10) pela saída (b): o plano nasce DEPOIS da entrega. O
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md) revisa o 0090 nesse
+ponto, e a regra tem quatro partes:
+
+1. **O plano é o primeiro passo do ciclo de revisão.** `run_area/3` do
+   `QaLeadServer` obtém o plano da entrega ANTES das subespecialidades
+   (`plano_de_teste_da_entrega/5`): reencontra na cauda da sessão (teto da
+   reidratação, [RN-580](#rn-580)) o `artifact.plano_de_teste` da MESMA
+   `taskId` — a rodada de correção não paga outro laço —, e senão roda
+   `QaEstrategiaAgent.run/6` com o worktree do dev como `workspace_root`, as
+   regras de negócio da task e a lista de arquivos que a entrega tocou
+   (`git diff dev...HEAD`, até 40 nomes). Diff que falha vira texto ("não
+   consegui listar: motivo"), nunca lista vazia.
+2. **O plano é INSUMO, nunca veredito.** Ele chega à Automação no FIM da
+   mensagem dela, para o passo de achar qual teste cobre cada regra; a régua do
+   veredito não muda (uma linha de `coverageMatrix` por regra da story,
+   `approved` só com suite verde e toda regra coberta) e o contrato externo
+   segue sendo UM `qa_verdict` por ciclo. Plano que FALHA não segura a revisão:
+   a QA-estratégia grava `agent.error` com origem ([RN-059](business-rules/custo.md#rn-059))
+   e a Automação recebe a mensagem de sempre, byte a byte.
+3. **O `implementavel` se julga sobre a história e o `module_map`.**
+   `run_assessment/2` não lê nem dispara plano: propõe o parecer na PRIMEIRA
+   chamada, sobre o que o kickoff do Dev Lead já lhe dá, com payload
+   `storyId`/`parecer`/`justificativa`. Gate, dono, severidade `warn` e
+   aprovação humana não mudam; só a `entrada` (`[story-ready, module_map]`).
+   O appsec ([RN-539](#rn-539)) segue disparando ali, no design.
+4. **O teto continua 8.** `"qa-estrategia"` não ganha cláusula em
+   `Iteracoes.tipo/1`; o que mudou foi o insumo. O agente passa a rodar sob o
+   `task_budget_micros` que as subespecialidades compartilham
+   ([RN-036](#rn-036)).
+
+`run_design/3`, `Dispatcher.run_qa_estrategia/3` e `QaEstrategiaContext`
+saíram, e `artifact.plano_de_teste` passa a exigir `taskId`. Declarado e não
+decidido aqui: se os critérios executáveis do plano devem virar linhas
+OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:144` (`plano_de_teste_da_entrega`),
+  `:520` (`plano_de_teste_da_entrega`), `:544` (`plano_ja_emitido`),
+  `:579` (`arquivos_alterados`);
+  `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
+  `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:244` (`run_assessment`),
+  `:315` (`propor_parecer`);
+  `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
+  `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
+  (`qa-estrategia`, `area-qa`, `dev-lead`)
+- **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs`, describe
+  "plano de teste da entrega (ADR 0192)" — o plano antes da Automação e dentro
+  da mensagem dela (caminho feliz), o reuso por `taskId`, o plano de outra
+  task que não conta, e o plano que falha sem segurar a revisão (caso de
+  falha); `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs` (os
+  arquivos da entrega na mensagem, o diff que falhou, `taskId` no artefato);
+  `apps/engine/test/engine/agents/dev_lead_tools_test.exs`, describe
+  "assess_implementability (ADR 0090, insumo do ADR 0192)" (parecer na
+  primeira chamada, payload sem plano); `dev_lead_server_test.exs`
+  ("assess_implementability pending TAMBÉM suspende"); `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  ("sem taskId é rejeitado"). ExUnit: provado só no CI (o `repo.hex.pm` deu
+  403 no ambiente da rodada).
+- **Origem:** AT-269 (item A23 da análise do uso real de 29/09); decisão do
+  dono em 01/10
+
+## O git credenciado roda no host do runner (RN-676)
+
+### RN-676 — Com container ativo, o `git fetch` credenciado de `RunnerGit` roda no HOST do runner, marcado pelo engine; o código continua no container {#rn-676}
+
+Decisão do dono (01/10), registrada no
+[ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md): operação de git
+CREDENCIADA roda no HOST do runner, e o código roda no container. Fecha a
+metade que a [RN-558](#rn-558) deixou aberta — o fetch autenticado em modo
+`runner` com o container de pé, que é o caminho comum, terminava sempre na
+recusa nomeada.
+
+1. **Quem marca é o engine, e só num ponto.** `RunnerGit.fetch!/3` despacha o
+   fetch com credencial por `RunnerRouter.exec_git_credenciado/5`, que põe
+   `gitCredenciado: true` no payload `exec` e exige `env` não vazio por
+   guarda. O comando de terminal do dev agent passa por `RunnerRouter.exec/4` e
+   nunca leva a marca. Sem credencial (provider `local`), o fetch vai sem marca.
+2. **O runner roda no host só com a CONJUNÇÃO**: a marca `true` literal **e**
+   `env` não vazio. Aí o comando vai a `executarComando` (o `env` mesclado sobre
+   `process.env`), mesmo com container ativo. A pasta é a mesma: `estado.dir` é
+   o bind-mount de `/work`.
+3. **`env` sem a marca não ganha o host.** Com container ativo, esse par segue
+   RECUSADO com a marca da RN-558 e origem `politica`. Hoje nenhum chamador do
+   engine o produz; na prática ele chega de um `brabo-runner` anterior ao ADR
+   0193, que não lê a marca — e a mensagem do engine diz para atualizá-lo. A
+   marca sem `env` também não muda nada: o comando vai ao container.
+4. **Nenhuma contenção muda**: `DockerPort.exec` segue sem `env` (ADR 0130), e
+   `RunnerReadiness` (RN-507) fica byte a byte — a marca decide ONDE o runner
+   executa, nunca SE o engine despacha.
+5. **O log nunca traz nome nem valor de variável do `env`**: a recusa dá a
+   contagem, e o log do caminho host acrescenta só `[git credenciado, no host]`.
+
+- **Código:** `apps/runner/src/index.ts:685` (`gitCredenciadoNoHost`), `:650`
+  (`tratarExec`); `apps/runner/src/channel.ts:71` (`gitCredenciado`), `:627`
+  (`gitCredenciado`); `apps/engine/lib/engine/runners/runner_router.ex:93`
+  (`exec_git_credenciado`), `:98` (`despachar_exec`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:338` (`exec`), `:426`
+  (`despachar`); `apps/engine/lib/engine_web/channels/terminal_channel.ex:605`
+  (`git_credenciado`); `apps/engine/lib/engine/runners/credencial_de_git.ex:93`
+  (`mensagem`)
+- **Teste:** `apps/runner/src/index-handlers.spec.ts:366` (o helper real do
+  `git` recebe a credencial no host com container ativo — caminho feliz),
+  `:391` (um `git fetch origin` real sucede no host), `:430` (`env` sem a marca
+  segue recusado — caso de falha); `apps/runner/src/channel.spec.ts:208`;
+  `apps/engine/test/engine/actions/workspace_runner_test.exs:451`, `:466`,
+  `:476`; `apps/engine/test/engine_web/channels/credencial_no_runner_test.exs:149`
+  (AT-111: a corrente pelo `TerminalChannel` real termina em `{:ok, _}`), `:177`.
+  Os testes ExUnit não rodaram no ambiente desta entrega (`repo.hex.pm` 403); o
+  CI os prova.
+- **Origem:** AT-116 (prova: AT-111), decisão do dono de 01/10
+
+### RN-673 — A mensagem que chega com turno em curso entra numa fila persistida no log e é lida no fim do turno, N mensagens num turno só {#rn-673}
+
+Até aqui a mensagem que chegava a um agente conversacional no meio de um turno
+era 409 `turno_em_andamento` ([RN-578](#rn-578)): gravada como `chat.message`
+(a api grava antes de falar com o engine) e nunca lida. O uso real de 29/09
+mediu três numa sessão só — PO, Infra Lead e Dev Lead. Decisão do dono (01/10),
+para os SETE conversacionais pelo mesmo caminho:
+
+1. **Fila, não recusa.** Com turno em curso, a mensagem entra na fila do agente
+   (`TurnoAssincrono.receber_mensagem/4`), o agente grava `chat.message_queued`
+   (`mensagemId`, `texto`, `idioma`, `posicao`) e o clique recebe 202 com
+   `{entrega: "enfileirada", posicao}`. Sem turno, o turno sobe na hora, como
+   sempre (`entrega: "lida"`). A rota da api devolve também o `mensagemId` — o
+   id do `chat.message`.
+2. **N mensagens = 1 turno.** No FIM do turno (`finalizar/1`, nunca
+   `suspender/1`) as pendentes viram UM turno, na ordem de chegada, num texto só
+   (`FilaDeMensagens.texto_do_turno/1`: uma é ela mesma; várias, numeradas), e o
+   agente grava `chat.message_delivered` com os ids. A entrega é uma mensagem a
+   si mesmo, depois do fecho do servidor (a correção de gate do Infra Lead e o
+   handoff do Arquiteto vêm primeiro). A mensagem que chega entre o fim do turno
+   e a entrega entra no FIM da fila, e a fila é entregue na hora.
+3. **Teto de 10** pendentes por agente e sessão. A 11ª é 409
+   `fila_de_mensagens_cheia`, com `agent.error` durável de origem `politica` —
+   ela está gravada e não será lida.
+4. **Cancelar.** `POST …/agents/:agent/messages/:messageId/cancel`
+   (`developer`, o mínimo da rota de mensagem): só quem ENVIOU (403
+   `mensagem_de_outra_pessoa`), só em sessão que aceita conversa
+   ([RN-581](#rn-581)). Quem decide se ela ainda está na fila é o processo do
+   agente, que serializa a corrida com a entrega: 409 `mensagem_fora_da_fila`
+   quando já foi lida ou cancelada. O engine grava `chat.message_cancelled` em
+   nome de quem cancelou; com o agente fora do ar, grava direto (a fila é o log).
+5. **Persistida no log, nunca em tabela.** Pendente = enfileirada e nem
+   entregue nem cancelada — a mesma derivação no engine e na tela. O `init/1`
+   dos sete reconstrói a fila e agenda a entrega; a [RN-580](#rn-580) tira do
+   histórico a cancelada e a pendente do próprio agente; no boot, depois de
+   fechar o turno órfão ([RN-586](#rn-586)), o agente com fila pendente é
+   acordado. O turno interrompido continua nunca refeito.
+6. **Turno suspenso em aprovação** (Dev Lead, RN-284) segue recusando com
+   `aguardando_aprovacao` — sem fim previsto, enfileirar prometeria leitura sem
+   data. A fila que já existia espera a retomada terminar.
+7. **A tela.** Com turno em curso o composer não trava mais para mensagem a
+   agente: o botão vira "Pôr na fila" e a mensagem não arma turno novo. No fio,
+   "na fila de <agente>" com Cancelar para o autor, e "cancelada" riscada. O
+   chat sem agente segue travando.
+
+A recusa `turno_em_andamento` continua para o que não é fala: revisão de
+história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
+
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:301`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:461` (`entregar_fila`),
+  `:346` (`cancelar_mensagem`), `:392` (`fila_ao_subir`), `:497`
+  (`emitir_recusa_por_fila_cheia`);
+  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
+  (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
+  (`acordar_pendentes`);
+  `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:240` (`_mensagem_id`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:398`
+  (`cancel_queued_message`), `:466` (`responder_ao_aceite`);
+  `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
+  (`CancelQueuedAgentMessageUseCase`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:65`
+  (`entregaDaResposta`);
+  `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
+  `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
+  `apps/web/src/lib/enfileirar-mensagem.ts:25` (`useEnfileirarMensagem`);
+  `apps/web/src/routes/SeloDaFila.tsx:22` (`SeloDaFila`)
+- **Teste:** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
+  (entra na fila — caminho feliz), `:181` (N mensagens = 1 turno), `:223` (a
+  que chega na janela vai ao fim), `:246` (teto de 10 — caso de falha), `:276`
+  e `:306` (cancelar e cancelar fora da fila), `:322` (restart), `:349` (Dev
+  Lead suspenso), `:78`/`:120` (derivação e reidratação);
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:70`;
+  `apps/api/test/application/use-cases/agents/cancel-queued-agent-message.use-case.spec.ts:40`,
+  `:61` (outra pessoa — caso de falha), `:95`, `:106`;
+  `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:74`;
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts:531`;
+  `apps/web/src/routes/SessionPage.fila-de-mensagens.test.tsx:163`, `:189`
+  (fila cheia), `:207`, `:233`; `apps/web/src/lib/fila-de-mensagens.test.ts:17`
+- **Origem:** AT-267 (item A21 da análise do uso real de 2026-09-29), decisão do
+  dono de 01/10; [ADR 0191](adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)

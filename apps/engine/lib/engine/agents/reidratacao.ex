@@ -38,6 +38,7 @@ defmodule Engine.Agents.Reidratacao do
   modelo escreva (ADR 0060).
   """
 
+  alias Engine.Agents.FilaDeMensagens
   alias Engine.Sessions.EngineApiClient
 
   # O teto é o `MAX_LIMIT` da rota de eventos da api (`session-event.repository.ts`)
@@ -135,6 +136,9 @@ defmodule Engine.Agents.Reidratacao do
       no handoff; mudar isso é outra decisão).
     * `chat.structured_question` → `assistant`, com as perguntas e opções. Sem
       isso o agente acordava sem saber que tinha perguntado.
+    * `chat.message` cancelado na fila, ou ainda pendente para ESTE agente
+      (RN-673) → NADA: o cancelado nunca foi dito, e o pendente chega pelo
+      turno que lê a fila.
     * `chat.structured_question_answered` → NADA, de propósito: a api grava
       esse evento E, logo depois, um `chat.message` com as respostas já
       formatadas (`AnswerStructuredQuestionUseCase` reusa
@@ -150,7 +154,13 @@ defmodule Engine.Agents.Reidratacao do
   """
   @spec mensagens([map()], String.t()) :: [map()]
   def mensagens(eventos, agent) do
+    # RN-673: a mensagem CANCELADA na fila nunca foi dita a agente nenhum, e a
+    # que segue PENDENTE para este agente chega pelo turno da fila — as duas
+    # ficam fora do histórico.
+    fora = FilaDeMensagens.fora_do_historico(eventos, agent)
+
     eventos
+    |> Enum.reject(&(&1["type"] == "chat.message" and MapSet.member?(fora, &1["id"])))
     |> Enum.reduce([], &acumular(&1, &2, agent))
     |> Enum.reverse()
     |> Enum.map(&renderizar/1)

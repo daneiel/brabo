@@ -8426,7 +8426,7 @@
     },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/message": {
       "post": {
-        "description": "The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.",
+        "description": "The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call. If the agent is mid-turn, the message is NOT refused: it joins the agent's queue (`entrega: \"enfileirada\"`) and is read, with any others queued, in one turn when the current one ends; it can be cancelled while it waits (RN-673, ADR 0191).",
         "operationId": "AgentsController_message",
         "parameters": [
           {
@@ -8472,7 +8472,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "$ref": "#/components/schemas/MensagemAoAgenteResponseDto"
                 }
               }
             }
@@ -8490,7 +8490,7 @@
             "description": "Project, session, or handoff not found."
           },
           "409": {
-            "description": "The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163)."
+            "description": "The agent is not active in this session; or it is waiting on an execution-plan decision; or its queue already holds 10 messages (`fila_de_mensagens_cheia`) — the message was recorded but NOT read by the agent (ADR 0163, RN-673)."
           },
           "422": {
             "description": "The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584)."
@@ -8505,6 +8505,86 @@
           }
         ],
         "summary": "Sends a message to the active agent",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/messages/{messageId}/cancel": {
+      "post": {
+        "description": "A message sent while the agent is mid-turn waits in a queue and is read when the turn ends (RN-673). While it waits, the person who SENT it can cancel it: the engine removes it from the queue and records `chat.message_cancelled`; it is never shown to the model. Someone else's message is 403.",
+        "operationId": "AgentsController_cancelQueued",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "description": "Slug of the agent whose queue holds the message.",
+            "schema": {
+              "example": "po",
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the `chat.message` event (the `mensagemId` the message route returned).",
+            "schema": {
+              "example": "01JC4Z0000EVENTO000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project, session, or handoff not found."
+          },
+          "409": {
+            "description": "The message is no longer queued — the agent already read it, or it was already cancelled; or the session is closed (RN-581)."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancels one message waiting in the agent's queue",
         "tags": [
           "agents"
         ]
@@ -13161,8 +13241,7 @@
           "toAgent": {
             "type": "string",
             "enum": [
-              "infra",
-              "dev-lead"
+              "infra"
             ],
             "example": "infra"
           },
@@ -14975,7 +15054,7 @@
               "confirmado",
               "ja_oferecido"
             ],
-            "description": "`confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab)."
+            "description": "`confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672)."
           },
           "jaAtendidos": {
             "type": "array",
@@ -17958,6 +18037,40 @@
           "projectId",
           "agentId",
           "status"
+        ]
+      },
+      "MensagemAoAgenteResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true,
+            "description": "Always `true`; failure becomes an HTTP error."
+          },
+          "mensagemId": {
+            "type": "string",
+            "example": "01JC4Z0000EVENTO000000000001",
+            "description": "Id of the `chat.message` event recorded for this message — the id that cancels it while it waits in the queue."
+          },
+          "entrega": {
+            "type": "string",
+            "enum": [
+              "lida",
+              "enfileirada"
+            ],
+            "example": "enfileirada",
+            "description": "`lida`: the agent started a turn with it right away. `enfileirada`: the agent was mid-turn, so the message joined its queue and will be read, together with any others queued, in ONE turn when the current one ends (RN-673). The session log carries `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`."
+          },
+          "posicao": {
+            "type": "number",
+            "example": 2,
+            "description": "Position in the queue (1 = next). Present only when `entrega` is `enfileirada`."
+          }
+        },
+        "required": [
+          "ok",
+          "mensagemId",
+          "entrega"
         ]
       },
       "MirrorSyncResultInternalDto": {
