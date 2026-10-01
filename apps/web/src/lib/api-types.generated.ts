@@ -6912,6 +6912,11 @@ export interface components {
              *     ]
              */
             uses: ("codigo" | "documentacao" | "analise" | "imagem" | "conversa")[];
+            /**
+             * @description OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.
+             * @example false
+             */
+            freeRoutingAlias: boolean;
         };
         ModelPriceChangeResponseDto: {
             /** @example 01JC4Z0000PRECO000000000001 */
@@ -20877,6 +20882,13 @@ export interface operations {
             };
             /** @description Some id in the batch doesn't exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activating an OpenRouter free-routing alias (`~…`) — `code: "alias_de_roteamento_livre"`, with the `modelIds` refused. The whole batch is refused. Deactivating one is always allowed (AT-271, RN-679). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

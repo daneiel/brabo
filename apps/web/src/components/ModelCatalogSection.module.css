@@ -137,6 +137,11 @@
   color: var(--text-primary);
 }
 
+.motivoDoAlias {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .slug {
   font-family: var(--font-mono);
   font-size: 11px;

@@ -118,7 +118,7 @@ Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — 
 | `nvidia-nim` | yes | yes | no | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | yes | yes | yes | yes | no | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost` | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost`; Free-routing alias (`~…`) is synced but cannot be curated | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | yes | yes | yes | no | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
 | `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
@@ -526,6 +526,15 @@ Quirks found and tested
   read and the row falls back to the catalog. `model` (the dated version an
   alias like `~deepseek/deepseek-flash-latest` resolved to) and `id` (`gen-…`)
   are read by the base for every provider of the dialect;
+- **Free-routing alias (`~…`) is synced but cannot be curated** (AT-271,
+  [RN-679](../business-rules/custo.md#rn-679)): an id like
+  `~deepseek/deepseek-flash-latest` always redirects to the latest model of the
+  family, its catalog price is a showcase price, and the bill comes from
+  whichever upstream served the call. Sync keeps it in the catalog (dropping
+  it would mark an already-curated one `unavailable`); activating it is 422
+  `alias_de_roteamento_livre`, and the curation read marks it with
+  `freeRoutingAlias`. One activated before the rule stays active and can be
+  turned off — once off, it does not come back;
 - **Connection test**: `GET /key` (official doc) validates the key without
   spending tokens on an actual chat call. It's the first `LLMCredentialConnectionTester`
   on the LLM side. Since [ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)

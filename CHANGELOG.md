@@ -779,6 +779,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   projeto no host, com o `/tmp` do host fora. Vale para a regra específica
   `terminal` — antes, `/work/...` e `/tmp` pediam aprovação por "escopo" com o
   comando rodando justamente ali. `runner` fica como estava.
+- **api/web**: a curadoria de modelos **recusa o alias de roteamento livre do
+  OpenRouter** (`~…`, como `~deepseek/deepseek-flash-latest`) (AT-271,
+  [RN-679](docs/business-rules/custo.md#rn-679)). O catálogo publica para ele
+  um preço de vitrine, e quem cobra é o upstream que atender cada chamada;
+  decisão do dono (01/10): só entra modelo com upstream fixo. Ativar um alias é
+  422 `alias_de_roteamento_livre`, o lote inteiro, com a frase nomeando os
+  modelos — e a tela de catálogo a mostra num toast próprio. A linha do alias
+  ganha o selo "alias de roteamento livre" e o motivo em texto
+  (`freeRoutingAlias` na leitura da curadoria). O alias que já estava ativo
+  **segue ativo** (bindings intactos, nada apagado), sai marcado e pode ser
+  desligado; desligado, não volta.
 - **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
   e do PO) deixa de sair em português para quem escolheu outro idioma de
   resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
