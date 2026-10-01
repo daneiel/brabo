@@ -19,7 +19,10 @@ defmodule Engine.Infra.InfraLeadServer do
   (`route_modules_to_infra`, ADR 0131), qual sobe como o container real do
   projeto — `propose_container_start` (ADR 0131/RN-487, PR 1.5), independente
   da PR de infra: nunca inventa candidata fora da lista, e vira
-  `proposed_action` que SEMPRE exige aprovação humana.
+  `proposed_action`. Desde o ADR 0190 (RN-671) o aceite do handoff semeia
+  `container_start: auto_approve` para a Infra, e o SERVIDOR propõe a subida
+  sozinho no kickoff quando há roteamento (`subir_no_aceite/2`) — a tool
+  continua existindo para as conversas seguintes.
 
   Desde a RN-508 (ADR 0145) ganha uma SEGUNDA tool de subir container,
   `container_start_via_runner` — exclusiva de projeto `execution_mode:
@@ -93,8 +96,20 @@ defmodule Engine.Infra.InfraLeadServer do
   calada), e o fecho do turno (`fechar_subida/2`) diz no fio, com frase do
   SERVIDOR, quando a subida do container não foi proposta — em vez de a
   última palavra ser um "subo em paralelo" do modelo que nenhum `tool.call`
-  cumpriu. A subida continua sendo proposta pelo modelo e decidida por
-  humano; nada aqui a faz sozinho (essa é a AT-260).
+  cumpriu.
+
+  ## A subida no aceite é passo do servidor (RN-671, ADR 0190)
+
+  Desde a AT-260 o kickoff — o turno que nasce do handoff aceito — propõe
+  `container_start` ANTES da primeira ida ao modelo, quando há roteamento
+  vigente e o projeto sobe pelo broker (`container`/`mounted`): o servidor
+  elege a candidata (`eleger_candidata/1`) e passa pelo MESMO
+  `propor_container_start/2` da tool, com as recusas por modo e estado
+  intactas. A proposta nasce auto-aprovada pela autonomia semeada no aceite.
+  Com isso o fecho da RN-668 fica verdadeiro por construção no caso comum: a
+  subida foi proposta, e ele não tem o que dizer. Ele segue falando quando a
+  subida do servidor foi recusada (e nada a corrigiu) e quando ela não cabia
+  ao servidor (sem roteamento, `runner`) e o modelo não a propôs.
   """
 
   use GenServer, restart: :temporary
@@ -215,8 +230,13 @@ defmodule Engine.Infra.InfraLeadServer do
   @impl true
   def handle_cast(:kickoff, state) do
     TurnoAssincrono.iniciar(state, nil, fn ->
+      # O contexto é lido UMA vez: é dele que sai o roteamento que a subida
+      # pelo servidor elege (RN-671) e o texto do kickoff que o modelo lê.
+      ctx = infra_context(state)
+      {state, subida} = subir_no_aceite(state, ctx)
+
       state
-      |> append(user_msg(kickoff_instruction(state)))
+      |> append(user_msg(kickoff_instruction(ctx, subida)))
       |> compact()
       |> run_turn(@max_iterations)
       |> concluir()
@@ -509,8 +529,8 @@ defmodule Engine.Infra.InfraLeadServer do
   # `propose_container_start` NÃO halts como `propose_infra_pr` — é ação
   # independente (elege candidata do roteamento do Arquiteto, ADR 0131), sem
   # consolidação com o Workflows. Despacha inline, direto pra api, e deixa o
-  # loop continuar: o modelo pode chamar `propose_infra_pr` antes/depois, ou
-  # nunca chamar esta.
+  # loop continuar. No kickoff a subida já é do servidor (RN-671); a tool fica
+  # para a eleição que o modelo faz depois, numa conversa.
   #
   # Desde a RN-566 ela consulta LOCALMENTE o `execution_mode` ANTES de chamar
   # `propose_action` — a MESMA régua que a irmã `container_start_via_runner`
@@ -530,32 +550,158 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
 
-    resultado =
-      case recusa_local_de_subida(:container_start, state.project_id) do
-        nil ->
-          actor = %{kind: "agent", id: @agent}
-
-          case EngineApiClient.propose_action(
-                 state.project_id,
-                 state.session_id,
-                 "container_start",
-                 actor,
-                 payload
-               ) do
-            {:ok, %{"id" => _id, "status" => status}} ->
-              {:ok, "container_start proposto (status #{status}) — decisão final do usuário."}
-
-            {:error, reason} ->
-              {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
-          end
-
-        motivo ->
-          {:error, motivo}
-      end
+    resultado = propor_container_start(state, payload)
 
     state
     |> registrar_resultado(id, "propose_container_start", resultado)
     |> registrar_subida("propose_container_start", resultado)
+  end
+
+  # O caminho ÚNICO de `container_start` a partir do Infra Lead — a tool do
+  # modelo (`dispatch_container_start/2`) e o passo do servidor no aceite
+  # (`subir_no_aceite/2`, RN-671) passam por aqui: as MESMAS recusas locais
+  # por modo e estado (RN-566/RN-610), a MESMA `propose_action` (a api decide
+  # a autonomia, recusa sem broker — RN-591 — e elege a imagem pelo
+  # `DecidirImagemDoProjetoUseCase`, RN-491). Não há segunda régua.
+  #
+  # O texto diz o status que a api devolveu, e só fala em "decisão do usuário"
+  # quando ela ficou `pending`: desde o ADR 0190 a autonomia semeada no aceite
+  # faz a proposta nascer auto-aprovada, e aí ela já executou (`executed`) ou
+  # falhou (`failed`) quando a chamada volta.
+  defp propor_container_start(state, payload) do
+    case recusa_local_de_subida(:container_start, state.project_id) do
+      nil ->
+        actor = %{kind: "agent", id: @agent}
+
+        case EngineApiClient.propose_action(
+               state.project_id,
+               state.session_id,
+               "container_start",
+               actor,
+               payload
+             ) do
+          {:ok, %{"id" => _id, "status" => "pending"}} ->
+            {:ok, "container_start proposto (status pending) — decisão final do usuário."}
+
+          # `denied` é a política recusando (papel abaixo de `maintainer`,
+          # `deny` em `permissions.json`): a proposta nasceu, mas nada vai
+          # subir por ela — para o fecho da RN-668 é recusa, não proposta.
+          {:ok, %{"id" => _id, "status" => "denied"} = acao} ->
+            {:error,
+             "container_start negado pela política (status denied)" <>
+               motivo_da_negacao(acao)}
+
+          {:ok, %{"id" => _id, "status" => status}} ->
+            {:ok, "container_start proposto (status #{status})."}
+
+          {:error, reason} ->
+            {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
+        end
+
+      motivo ->
+        {:error, motivo}
+    end
+  end
+
+  defp motivo_da_negacao(%{"rejectionReason" => motivo}) when is_binary(motivo) and motivo != "",
+    do: ": #{motivo}"
+
+  defp motivo_da_negacao(_acao), do: "."
+
+  # --- A subida pelo SERVIDOR no aceite do handoff (RN-671, ADR 0190) ---
+  #
+  # No uso real de 29/09 a Infra anunciou a subida "em paralelo" e não a
+  # propôs; o container só subiu pela `/containers` (AT-260). Desde o ADR 0190
+  # a subida deixa de depender do modelo: no kickoff — o turno que nasce do
+  # handoff aceito —, ANTES da primeira ida ao modelo, o servidor elege uma
+  # candidata do roteamento do Arquiteto e propõe `container_start` pelo
+  # MESMO `propor_container_start/2` da tool. A proposta nasce auto-aprovada
+  # pela autonomia que o aceite semeia (`container_start: auto_approve`,
+  # `INFRA_AUTONOMY_SEEDS`), então a api a executa na mesma chamada.
+  #
+  # Só roda quando há roteamento VIGENTE (`roteado`, com ao menos uma
+  # candidata) e o projeto é `container`/`mounted` — os dois modos que sobem
+  # pelo broker. `runner` fica com o caminho de sempre
+  # (`container_start_via_runner`, proposto pelo modelo e decidido por
+  # humano): a decisão do dono não o mudou. Projeto que o engine não lê
+  # também não ganha subida.
+  #
+  # O rastro é o de uma ferramenta — `tool.call` (com `origem: "servidor"`) e
+  # `tool.result` duráveis —, mas NENHUMA mensagem `role: "tool"` entra no
+  # histórico do modelo: não houve chamada dele a que ela respondesse, e uma
+  # resposta de ferramenta sem a chamada é recusada pelos providers. O que o
+  # modelo sabe da subida vem no TEXTO do kickoff (`passo_da_subida/1`).
+  defp subir_no_aceite(state, {:ok, ctx}) do
+    with %{"status" => "roteado", "roteamento" => rotas} when is_list(rotas) <-
+           Map.get(ctx, "moduleRouting"),
+         {imagem, modulos} <- eleger_candidata(rotas),
+         %{execution_mode: modo} when modo in ~w(container mounted) <-
+           Project.get(state.project_id) do
+      payload = %{
+        imagem: imagem,
+        network: "none",
+        resources: %{},
+        rationale: rationale_do_servidor(modulos, length(rotas))
+      }
+
+      emit(state, "tool.call", %{
+        tool: "propose_container_start",
+        args: payload,
+        origem: "servidor"
+      })
+
+      resultado = propor_container_start(state, payload)
+
+      emit(
+        state,
+        "tool.result",
+        ResultadoDeFerramenta.payload("propose_container_start", resultado)
+      )
+
+      {registrar_subida(state, "propose_container_start", resultado),
+       {:servidor, imagem, resultado}}
+    else
+      _ -> {state, nil}
+    end
+  end
+
+  defp subir_no_aceite(state, _sem_contexto), do: {state, nil}
+
+  @doc """
+  A eleição do servidor (RN-671): a candidata do MAIOR número de módulos, e no
+  empate a que aparece PRIMEIRO no roteamento — determinística, sem modelo, e
+  sempre uma das candidatas (a api recusa qualquer outra imagem). `nil` quando
+  o roteamento não traz candidata nenhuma.
+  """
+  def eleger_candidata(rotas) do
+    validas =
+      for %{"imagemCandidata" => imagem} = rota <- rotas,
+          is_binary(imagem) and imagem != "",
+          do: {imagem, Map.get(rota, "modulo")}
+
+    case validas do
+      [] ->
+        nil
+
+      _ ->
+        modulos_por_imagem = Enum.group_by(validas, &elem(&1, 0), &elem(&1, 1))
+
+        imagem =
+          validas
+          |> Enum.map(&elem(&1, 0))
+          |> Enum.uniq()
+          |> Enum.max_by(&length(Map.fetch!(modulos_por_imagem, &1)))
+
+        {imagem, Map.fetch!(modulos_por_imagem, imagem)}
+    end
+  end
+
+  defp rationale_do_servidor(modulos, total) do
+    nomes = Enum.map_join(modulos, ", ", &to_string/1)
+
+    "Eleita pelo servidor no aceite do handoff da Infra (ADR 0190): a candidata " <>
+      "do Arquiteto para #{length(modulos)} de #{total} módulo(s) (#{nomes}); no " <>
+      "empate, a primeira do roteamento."
   end
 
   # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
@@ -852,9 +998,10 @@ defmodule Engine.Infra.InfraLeadServer do
   #   mexeu na subida e ela não aconteceu. Turno que nunca tocou na subida
   #   (uma pergunta, uma correção de gate) não ganha frase nenhuma.
   #
-  # Nada disto sobe container nem propõe nada: a subida continua sendo
-  # `proposed_action` com decisão humana (RN-491). O campo vive só dentro da
-  # Task do turno e sai do `state` aqui.
+  # Nada disto sobe container nem propõe nada: quem propõe é a tool do modelo
+  # ou, no kickoff, o passo do servidor (`subir_no_aceite/2`, RN-671), e os
+  # dois marcam `:subida_do_turno` pelo mesmo `registrar_subida/3`. O campo
+  # vive só dentro da Task do turno e sai do `state` aqui.
   defp registrar_subida(state, _tool, {:ok, _texto}),
     do: Map.put(state, :subida_do_turno, :proposta)
 
@@ -1009,14 +1156,54 @@ defmodule Engine.Infra.InfraLeadServer do
 
   # --- Kickoff ---
 
-  defp kickoff_instruction(state) do
-    case EngineApiClient.get_infra_context(state.project_id, state.session_id) do
-      {:ok, ctx} -> build_kickoff(ctx)
-      _ -> "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
-    end
+  defp infra_context(state),
+    do: EngineApiClient.get_infra_context(state.project_id, state.session_id)
+
+  defp kickoff_instruction({:ok, ctx}, subida), do: build_kickoff(ctx, subida)
+
+  defp kickoff_instruction(_sem_contexto, _subida),
+    do: "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
+
+  # Os passos 4 e 5 do kickoff — o que o modelo precisa saber da subida. Com
+  # a subida feita pelo SERVIDOR (RN-671), o texto diz o que JÁ aconteceu, e
+  # não pede ao modelo uma eleição que o código já fez; sem ela (sem
+  # roteamento, projeto `runner`), os passos de sempre.
+  defp passo_da_subida({:servidor, imagem, {:ok, texto}}) do
+    """
+    4. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
+       esperar por você: ele elegeu `#{imagem}` entre as candidatas do
+       roteamento abaixo. Resultado: #{texto} Não chame `propose_container_start`
+       de novo neste turno. Se o status for `failed`, diga isso ao usuário com
+       o que você sabe — nunca diga que o container está de pé sem saber.
+    """
   end
 
-  defp build_kickoff(ctx) do
+  defp passo_da_subida({:servidor, imagem, {:error, motivo}}) do
+    """
+    4. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
+       `#{imagem}`, e ela foi RECUSADA: #{motivo}
+       Se outra candidata do roteamento resolver o motivo, chame
+       `propose_container_start` com ela; senão, diga o motivo ao usuário e
+       não prometa subida nenhuma.
+    """
+  end
+
+  defp passo_da_subida(_sem_subida_do_servidor) do
+    """
+    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+       para o container do projeto e chame `propose_container_start` (imagem +
+       network + resources + rationale dizendo por que ESTA candidata, nunca
+       inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
+       container do projeto segue como está.
+    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+       bind-mount pro servidor), `propose_container_start` não serve — chame
+       `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
+       sobe a imagem já decidida). Se você não souber o modo, tente
+       `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
+    """
+  end
+
+  defp build_kickoff(ctx, subida) do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
     routing = Map.get(ctx, "moduleRouting")
@@ -1063,20 +1250,11 @@ defmodule Engine.Infra.InfraLeadServer do
     1. Para cada módulo do module_map abaixo, gere um Dockerfile adequado ao stack.
     2. Gere um compose de desenvolvimento (docker-compose.yml) integrando os módulos.
     3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
-    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
-       para o container do projeto e chame `propose_container_start` (imagem +
-       network + resources + rationale dizendo por que ESTA candidata, nunca
-       inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
-       container do projeto segue como está.
-    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
-       bind-mount pro servidor), `propose_container_start` não serve — chame
-       `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
-       sobe a imagem já decidida). Se você não souber o modo, tente
-       `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
+    #{String.trim_trailing(passo_da_subida(subida))}
     6. Por último, chame `propose_infra_pr` (title + files) com o que é seu — a
        consolidação com o pipeline de CI acontece depois, automaticamente.
-       `propose_infra_pr` ENCERRA o seu turno: a subida do container (passos 4
-       e 5) só acontece se for chamada ANTES dela ou na MESMA resposta. Não
+       `propose_infra_pr` ENCERRA o seu turno: uma subida do container que
+       caiba a você só acontece se for chamada ANTES dela ou na MESMA resposta. Não
        diga que vai subir o container "depois" ou "em paralelo" sem chamar a
        ferramenta — o que não foi chamado não acontece.
 

@@ -7131,6 +7131,11 @@ depois, e por isso `ProposeActionUseCase` também executa no caminho
 `auto_approved`, mesma lição do comentário sobre `parallelize` nesse arquivo
 ("sem isto a ação nascia, era aprovada — e nada subia").
 
+**Revisado pela [RN-671](#rn-671) (ADR 0190, 01/10):** `container_start` passa
+a ser SEMEADO `auto_approve` no aceite do handoff da Infra, e o servidor do
+Infra Lead propõe a primeira subida sozinho quando há roteamento. O resto desta
+regra — a lista de candidatas, `maintainer`, fora dos tetos absolutos — segue.
+
 **Depois do broker confirmar, a transição de ciclo de vida segue a máquina de
 estados do ADR 0081, nunca reprovisiona à toa.** Sem linha ainda, ou linha em
 `failed`/`removed`: `provisioning` (a que lê a imagem recém-decidida e
@@ -13529,11 +13534,12 @@ clicando; o agente passa a checar UMA. `GetInfraContextUseCase` segue sem
 por agente ([RN-495](#rn-495)).
 
 Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
-`maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
+`maintainer`, nunca semeada em auto-aprovação (até a [RN-671](#rn-671), que a
+semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:534`
+  dispatch de `container_start` consultando antes de propor), `:572`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14253,7 +14259,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:480`
+  `propose_infra_pr` perguntando antes do HALT), `:500`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14940,7 +14946,7 @@ NÃO coberto: a Visão Geral e o card do handoff na sessão lêem o estado do
 repositório, não o de cada sessão, e não mudaram.
 
 - **Onde:**
-  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:54`
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:66`
   (`AGENTES_QUE_PROVISIONAM_O_REPOSITORIO`, gatilho e segunda porta) e `:141`
   (o ramo, antes de `activateAgent`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
@@ -15428,7 +15434,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:567`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:713`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15522,7 +15528,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:805`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:951`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15961,10 +15967,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:652`
-  (`recusa_local_de_subida`), `:705` (`recusa_por_estado`), `:729`
-  (`recusa_ja_de_pe`), `:747` (`recusa_sem_imagem_decidida`), `:764`
-  (`recusa_pasta_nunca_confirmada`), `:775` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:798`
+  (`recusa_local_de_subida`), `:851` (`recusa_por_estado`), `:875`
+  (`recusa_ja_de_pe`), `:893` (`recusa_sem_imagem_decidida`), `:910`
+  (`recusa_pasta_nunca_confirmada`), `:921` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16384,12 +16390,12 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:160`
-  (`user_message`), `:180` (`TurnoOrfao.fechar_ao_subir`), `:216`
-  (`handle_cast(:kickoff`), `:233` (`handle_cast({:correct`, a fila), `:243`
-  (`handle_cast(:cancel`), `:259` (`handle_call({:user_message`), `:275`
-  (`handle_info`), `:294` (`drenar_correcao_pendente`), `:341`
-  (`toolloop.limit_reached`), `:828` (`concluir`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:175`
+  (`user_message`), `:195` (`TurnoOrfao.fechar_ao_subir`), `:231`
+  (`handle_cast(:kickoff`), `:253` (`handle_cast({:correct`, a fila), `:263`
+  (`handle_cast(:cancel`), `:279` (`handle_call({:user_message`), `:295`
+  (`handle_info`), `:314` (`drenar_correcao_pendente`), `:361`
+  (`toolloop.limit_reached`), `:974` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -16398,7 +16404,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1327` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1590` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -18708,7 +18714,7 @@ handoff manual (ADR 0109) também.
   (`decidirAceiteAutomatico`), `:74` (`backlogCoberto`);
   `apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts:44`
   (`AceitarHandoffAutomaticamenteUseCase`);
-  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:79`
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:91`
   (`AceitePeloSistema`);
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:403`
   (`handoff`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:59`;
@@ -18968,14 +18974,17 @@ O kickoff e a descrição de `propose_infra_pr` passam a dizer o que o código f
 a subida vem ANTES da PR ou na MESMA resposta, porque a PR encerra o turno. Isso
 é ajuda ao modelo, não a garantia — a garantia é o fecho do item 2.
 
-Nada aqui sobe container nem propõe subida: ela continua sendo `proposed_action`
-proposta pelo modelo e decidida por humano (RN-491), com as recusas por modo e
-estado intactas (RN-566/RN-610). A subida como passo do servidor é a AT-260, que
-depende de decisão do dono.
+Nada aqui sobe container nem propõe subida, com as recusas por modo e estado
+intactas (RN-566/RN-610). Desde a [RN-671](#rn-671) (AT-260) a primeira subida
+é passo do SERVIDOR no kickoff, marcada pelo MESMO `registrar_subida`: no caso
+comum ela foi proposta e o fecho do item 2 não tem o que dizer; ele segue
+falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
+desde então conta como recusa) e quando ela não cabia ao servidor (sem
+roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:400`
-  (`dispatch_calls`), `:446` (`recusa_pr_repetida_no_lote`), `:858`
-  (`registrar_subida`), `:866` (`fechar_subida`), `:884`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:420`
+  (`dispatch_calls`), `:466` (`recusa_pr_repetida_no_lote`), `:1005`
+  (`registrar_subida`), `:1013` (`fechar_subida`), `:1031`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19036,3 +19045,58 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
   `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
 - **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)
+
+### RN-671 — A Infra sobe o container no aceite do handoff: o servidor propõe, e a autonomia semeada aprova {#rn-671}
+
+Decisão do dono em 01/10 ([ADR 0190](adr/0190-a-infra-sobe-o-container-no-aceite.md)),
+revisando o "nunca semeado" da [RN-491](#rn-491). No uso real de 29/09 a Infra
+anunciou a subida "em paralelo" e não a propôs; o container só subiu pela
+`/containers` (AT-260).
+
+1. **A semente.** Aceitar o handoff endereçado a `infra` grava, além de
+   `open_infra_pr: auto_approve` e `terminal: deny`, a autonomia
+   `container_start: auto_approve`. Só ela entre as de container:
+   `container_start_via_runner` e `container_stop` seguem nunca semeados, e
+   `container_remove` segue no teto absoluto ([RN-495](#rn-495)).
+2. **O disparo é do SERVIDOR.** No kickoff do Infra Lead, ANTES da primeira ida
+   ao modelo, havendo roteamento vigente (`artifact.module_routing` `roteado`,
+   com candidata) e projeto `container`/`mounted`, o servidor propõe
+   `container_start` pelo MESMO caminho da tool `propose_container_start`: as
+   recusas locais por modo e estado ([RN-566](#rn-566), [RN-610](#rn-610)),
+   depois `propose_action`, onde a api recusa sem broker ([RN-591](#rn-591)),
+   resolve a autonomia e, auto-aprovada, executa a subida, elegendo a imagem
+   por `DecidirImagemDoProjetoUseCase` com `decidedBy: 'infra-lead'`
+   ([RN-491](#rn-491)). `runner` não tem passo do servidor: segue pelo
+   `container_start_via_runner`, proposto pelo modelo e decidido por humano.
+3. **A eleição é determinística.** A candidata do maior número de módulos; no
+   empate, a primeira do roteamento. Rede `none`, recursos padrão, e um
+   `rationale` que diz que foi o servidor.
+4. **O rastro diz quem chamou.** `tool.call` (com `origem: "servidor"`) e
+   `tool.result` duráveis, e nenhuma mensagem de ferramenta no histórico do
+   modelo; o kickoff diz em texto o que JÁ aconteceu (status devolvido, ou o
+   motivo da recusa).
+5. **O fecho da [RN-668](#rn-668) segue verdadeiro.** A subida do servidor marca
+   o turno como a da tool: proposta, o fecho não fala; recusada, ele diz que foi
+   recusada. Proposta NEGADA pela política (status `denied`, como uma sessão
+   aberta por quem não é `maintainer`) conta como recusa, nas duas origens.
+
+Nenhum teto se move: o papel mínimo segue `maintainer` (o efetivo de quem abriu
+a sessão), `deny` de `permissions.json` segue vencendo, e a `/containers` não
+muda (ela propõe como humano, e a autonomia de agente não vale para ela).
+Declarado: o toggle manual/auto do card escreve a curinga, e a regra específica
+vence — pôr a Infra em "manual" não desliga esta semente.
+
+- **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
+  (`INFRA_AUTONOMY_SEEDS`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (`handle_cast`),
+  `:571` (`propor_container_start`), `:634` (`subir_no_aceite`), `:676`
+  (`eleger_candidata`), `:1171` (`passo_da_subida`)
+- **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
+  (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
+  caso de falha);
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
+  elege e propõe antes do modelo — caminho feliz), `:1353` (`mounted`), `:1363`
+  (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
+  recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
+  (negada pela política), `:1469` (`eleger_candidata/1`)
+- **Origem:** AT-260 (item A14 da análise do uso real de 29/09)

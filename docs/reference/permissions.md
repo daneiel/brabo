@@ -121,7 +121,13 @@ containers page (`/containers`) proposes when someone clicks "Stop" or
 "Remove" on a project's row — always a human, never an agent. Both are
 `maintainer`, same as `container_start`: whoever is accountable for the
 project's infra decides. `container_stop` follows `container_start`'s
-calibration exactly — it CAN be configured `auto_approve` (never seeded).
+calibration — it CAN be configured `auto_approve` — except for the seed:
+`container_stop` is never seeded, while `container_start` is seeded
+`auto_approve` for the Infra agent when its handoff is accepted (ADR 0190,
+[RN-671](../business-rules.md#rn-671)). That seed is what lets the start the
+Infra Lead's SERVER proposes on that accept run without a second click; the
+`maintainer` minimum, the mode/state refusals and the no-broker 409 all still
+apply before it.
 `container_remove` cannot: it discards the container and forces a full
 reprovision, and is in the absolute-caps block below, same treatment as
 external-effect git/privileged commands.
@@ -462,8 +468,9 @@ one above: it isn't a `terminal` command matched by token, it's its own
 for that type — no pattern is ever written, and the user approves the
 specific instance through the normal flow instead. `container_start` and
 `container_stop` are NOT refused this way: they can be configured
-`auto_approve` (never seeded), same calibre as `open_adr_pr`/
-`open_infra_pr`.
+`auto_approve`, same calibre as `open_adr_pr`/`open_infra_pr` —
+`container_stop` is never seeded, and `container_start` is seeded for the
+Infra agent on its handoff accept since ADR 0190.
 
 **Order of an "always allow" click ([RN-642](../business-rules.md#rn-642)).**
 The approval and the pattern are recorded in the SAME transaction: the
