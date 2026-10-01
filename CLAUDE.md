@@ -192,6 +192,8 @@ estado lido do repositório e não da conversa.
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
+| O piloto automático: "Sempre permitir" não o desliga, e o escopo compara com a pasta real de execução (AT-259/255/258) | ADR 0189, RN-669, RN-670 |
+| "Sempre permitir" grava verbo + subcomando, um padrão por segmento (AT-257, fecha a AT-170) | ADR 0189, RN-675 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -409,6 +411,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   alcance, declarado (ADR 0087/0089)
 
 **Lacunas aceitas e declaradas:**
+- **O piloto automático confia na contenção do container, e ela tem bordas
+  que a prova NÃO cobre (ADR 0189).** Provado em
+  `apps/broker/src/contencao-do-brabo.spec.ts`: uma pasta só, em `/work`,
+  estritamente abaixo da raiz do broker, sem socket nem privilégio. Declarado e
+  NÃO remendado (a decisão foi descrever): no compose de PRODUÇÃO nada no host
+  confere que `BRABO_PROJECTS_BASE` não contém o checkout/a pasta do `.env`
+  (o preflight só roda no `pnpm dev`, e a api compara com o próprio `cwd`); o
+  `install.sh` confere a base só no consentimento, sem teste; no modo `runner`
+  nada compara a pasta com um checkout do Brabo na máquina do usuário;
+  `segmentoDeProjetoValidado` aceita `.` (a api nunca o produz); e a rede
+  `egress` alcança as portas publicadas da máquina. Fechar qualquer uma é
+  decisão do dono, não correção de passagem
 - **O Infra Lead propunha `container_start` às cegas; desde a RN-566 ele
   recusa por MODO, desde a RN-610 por ESTADO, e o que sobra da lacuna é a
   IMAGEM em `container`/`mounted`, de propósito.** A metade fechada:
@@ -1525,7 +1539,17 @@ o RACIOCÍNIO da triagem, que continua valendo.
   escopo, porque o dev agent roda no container (`/work`) e o escopo compara
   com a raiz do HOST. Só a curinga em `auto_approve` tem esse poder; regra
   ESPECÍFICA (`terminal: auto_approve`) segue com o escopo, e o toggle
-  "manual" o restaura. Os DEMAIS tetos continuam absolutos MESMO com auto
+  "manual" o restaura. Desde a RN-670 (ADR 0189, decisão do dono de 01/10, que
+  MANTEVE a RN-603) isso é o PILOTO AUTOMÁTICO: `git commit` e branch LOCAL
+  passam, e a específica `auto_approve` SOB a curinga `auto_approve` — o que
+  "Sempre permitir" de dev agent grava — resolve COMO a curinga no repositório,
+  então o clique não desliga mais o piloto; não "conserte" isso deixando de
+  gravar a específica (ela é o que vale quando o toggle volta a manual). E fora
+  do piloto o escopo compara com a pasta REAL de execução (RN-669): com
+  container `running` em `container`/`mounted`, `/work` + o `/tmp` do
+  container, com o `cwd` de host traduzido como o engine traduz; sem ele, a
+  pasta do host, com o `/tmp` do host fora. `runner` fica na raiz do host, de
+  propósito (a api não sabe se o runner roteia para o container). Os DEMAIS tetos continuam absolutos MESMO com auto
   mode ligado, e não têm exceção configurável em lugar nenhum — merge em
   branch protegida,
   `instruction_patch`, `parallelize`/`raise_max_parallel` (RN-154), e o
@@ -1537,7 +1561,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   recusa gravar padrão pra esses comandos). Desde a RN-661 a aba Executores
   OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
   só com o clique, e dizendo o que o modo automático não libera; nunca a grave
-  sem clique.
+  sem clique. E desde a RN-675 (ADR 0189, fecha a AT-170) o padrão que "sempre
+  permitir" grava em `permissions.json` é VERBO + SUBCOMANDO, um por SEGMENTO
+  (`patternsForAction`), nunca o comando inteiro: verbo + flag fica exato e
+  unidade que é prefixo de um teto da RN-418 (`git remote`, `gh pr`) também —
+  não troque isso por uma lista de verbos (é o espaço dos achados Z/AD).
 - O papel de PROJETO sobrepõe o de workspace nos DOIS sentidos —
   `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`, e
   NÃO é "o maior dos dois" (RN-471). Restringir alguém num projeto sensível é

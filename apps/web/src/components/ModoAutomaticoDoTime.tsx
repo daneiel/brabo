@@ -5,6 +5,7 @@ import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
 import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-types';
 import { nomeDoAgente } from '../lib/agents';
 import { Button } from './ui/Button';
+import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ModoAutomaticoDoTime.module.css';
 
 /**
@@ -21,7 +22,9 @@ import styles from './ModoAutomaticoDoTime.module.css';
  *
  * A tela DIZ o que o modo automático NÃO libera — os tetos absolutos (RN-154,
  * RN-418) seguem pedindo aprovação, e quem liga em lote precisa ler isso ANTES
- * do clique, não depois.
+ * do clique, não depois. Desde a RN-670 (ADR 0189) diz também o que o PILOTO
+ * libera, pela MESMA lista do `ApprovalCard` e do card do agente
+ * (`OQueOPilotoLibera`).
  */
 export interface ModoAutomaticoDoTimeProps {
   projectId: string;
@@ -128,18 +131,7 @@ export function ModoAutomaticoDoTime({
         </ul>
       )}
 
-      <div className={styles.naoLibera} data-testid="modo-automatico-nao-libera">
-        <strong>{t('autoModeTeam.notReleased.title')}</strong>
-        <ul>
-          <li>{t('autoModeTeam.notReleased.merge')}</li>
-          <li>{t('autoModeTeam.notReleased.push')}</li>
-          <li>{t('autoModeTeam.notReleased.privileged')}</li>
-          <li>{t('autoModeTeam.notReleased.containerRemove')}</li>
-          <li>{t('autoModeTeam.notReleased.instructionPatch')}</li>
-          <li>{t('autoModeTeam.notReleased.parallelize')}</li>
-        </ul>
-        <span>{t('autoModeTeam.notReleased.turnOff')}</span>
-      </div>
+      <OQueOPilotoLibera />
 
       {!podeLigar && (
         <p className={styles.texto} data-testid="modo-automatico-sem-papel">
