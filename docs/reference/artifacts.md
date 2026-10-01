@@ -262,7 +262,7 @@ offer of its own — the first offer, still pending, is not replaced
 
 ## Artifacts that don't go through here
 
-Two `artifact.*` event types exist in the log without being in this registry,
+Some `artifact.*` event types exist in the log without being in this registry,
 because they are emitted by the **api**, not by the engine:
 
 | event | origin |
@@ -271,6 +271,7 @@ because they are emitted by the **api**, not by the engine:
 | `artifact.insight` | analysis, via a use case in the api |
 | `artifact.project_image` | the Architect, via a use case in the api ([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md), [RN-105](../business-rules/autenticacao.md#rn-105)) |
 | `artifact.module_routing` | the Architect, via a use case in the api — one candidate image per module of the current `module_map`; the Architect CANDIDATES, Infra ELECTS in a later step ([ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md), [RN-487](../business-rules.md#rn-487)) |
+| `artifact.module_contracts` | the Architect, via a use case in the api — per module of the current `module_map`, what it EXPOSES; read by dev agents through `listar_contratos_de_modulos` instead of another module's worktree ([ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md), [RN-684](../business-rules.md#rn-684)) |
 
 They have their own validations in the api's domain. The asymmetry is
 historical, and is noted as

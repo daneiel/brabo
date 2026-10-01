@@ -636,6 +636,27 @@ rate) — the PO's tool (`listar_metricas_de_produto`) names the three
 by name in the TEXT it returns to the model, never letting it conclude by
 omission that there is no gap.
 
+### What the dev agent reads: the contracts between modules
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/module-contracts` (**not** session-scoped) |
+
+The dev agent's read of the Architect's contracts
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)), so
+that it stops reading another module's worktree to discover an interface.
+Same design as the PO's reads: no parameter beyond the project, constant cost
+(the current `module_map` and one read by event type). The response has one
+entry per module of the CURRENT `module_map` — `modulo`, `dependeDe` (the
+map's `dependsOn`: what it consumes) and `expoe` (the current contract's
+items, or `null` when the Architect declared none) — plus
+`contratosForaDoMapa`, the contracts of modules the map no longer has, said
+and never attached to anything. `status: sem_contratos` with `version: 0` is a
+legitimate answer, not an error. The engine tool (`listar_contratos_de_modulos`)
+renders in full only the dev's own module and the ones it consumes, with a
+120-item cap that states what was cut.
+
 ### Where the project's workspace lives — and why READING still isn't a route
 
 The project's `execution_mode` ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
@@ -928,6 +949,7 @@ instead of inventing an image outside it.
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
 | POST | `/module-routing` |
+| POST | `/module-contracts` |
 | POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
@@ -984,6 +1006,22 @@ that exists in the current `module_map` — an unknown name, an empty list, or
 a repeated module all return `400` naming what's wrong. The Architect only
 CANDIDATES: electing among the candidates (or refusing all of them) is a
 later step, owned by Infra.
+
+`/module-contracts` is the Architect's `declare_module_contracts` tool
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)): per
+module of the CURRENT `module_map`, what it EXPOSES to whoever depends on it.
+Same caliber as `/module-routing` — the artifact IS the
+`artifact.module_contracts` event, with no table, versioned, and each call
+carries the WHOLE list and replaces the previous version. The body carries
+`contratos: [{modulo, expoe: [{tipo, assinatura, descricao}]}]`, `tipo` in
+`funcao | rota | evento | dado`. What a module CONSUMES is not in the body: it
+is the current `module_map`'s `dependsOn`, derived when read. An empty list, a
+repeated module, a module outside the current `module_map` (or none), an
+empty or oversized `expoe` (1 to 40 items), an unknown `tipo`, or a missing
+or oversized `assinatura` (300 characters) all return `400` naming the module
+and the item. It is a SEPARATE artifact from the `module_map`, never a field
+of it.
 
 **With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
 body: the use case returns `null` and NestJS serializes that as `content-length: 0`.

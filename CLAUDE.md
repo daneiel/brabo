@@ -190,6 +190,7 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | A Infra sobe o container com o menor recurso elegível, derivado do `module_map` (AT-261) | ADR 0199, RN-683 |
+| O contrato entre módulos vira artefato do Arquiteto, e o dev o lê em vez do worktree alheio (AT-276) | ADR 0200, RN-684 |
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
@@ -1875,6 +1876,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
   na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
   atores externos) vem do tool call.
+- O CONTRATO entre módulos também é artefato do ARQUITETO
+  (`artifact.module_contracts`, versionado, sem tabela, o vigente substitui —
+  RN-684, ADR 0200), e é SEPARADO do `module_map` de propósito: não o
+  transforme em campo do mapa. Por módulo ele diz só o que o módulo EXPÕE; o
+  que ele consome é o `dependsOn` do mapa, derivado na leitura. O dev agent o
+  lê por `listar_contratos_de_modulos` (sem parâmetro, `ctx.module`), e o
+  kickoff dele diz que a interface de outro módulo NÃO se lê no worktree alheio.
 - `decision_record` é o outro polo do mesmo espectro: reusa o padrão
   GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
   `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —

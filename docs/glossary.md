@@ -62,7 +62,7 @@ canonical roles today, defined in
 |---|---|
 | `criativo` | runs ideation with the user and emits business rules |
 | `po` | turns the brief into a backlog (epics, stories, tasks) with DoD and DoR |
-| `arquiteto` | technical decisions (ADRs) and the module map |
+| `arquiteto` | technical decisions (ADRs), the module map and the contract between modules ([RN-684](business-rules.md#rn-684)) |
 | `dev-backend` · `dev-frontend` | implement; run in an isolated worktree |
 | `infra` | provisioning, deploy, and environments — **proactive**, not an executor |
 | `qa` | semantic gate: tests and acceptance criteria |
@@ -73,6 +73,12 @@ canonical roles today, defined in
 The names are **product roles**, capitalized when used as a noun ("the
 Architect proposed an ADR"). Devs are **dynamic**: one agent per
 `module_map` module, not a fixed list.
+
+**Contract between modules** ([ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) —
+the Architect's versioned `artifact.module_contracts`: per module, what it
+EXPOSES (function, route, event or data shape, with the signature). What it
+consumes is the `module_map`'s `dependsOn`. A dev agent reads it with
+`listar_contratos_de_modulos` instead of another dev's worktree.
 
 **Area** (Phase 8b/8c, [ADR 0038](adr/0038-hierarquia-de-agentes.md)) —
 `qa` and `infra` from the table above became area LEADs: they remain the

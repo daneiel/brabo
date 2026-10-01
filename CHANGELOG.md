@@ -67,7 +67,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   enquanto houver módulo sem declaração, nomeado no `rationale`; mapa sem
   declaração nenhuma dá o padrão de sempre. Soma acima do teto é 400 na criação
   do mapa; pedido abaixo do mínimo é `failed` nomeado.
-
+- **engine/api**: **o contrato entre módulos vira artefato do Arquiteto, e o
+  dev agent o lê em vez do worktree alheio** (AT-276,
+  [ADR 0200](docs/adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md),
+  [RN-684](docs/business-rules.md#rn-684); decisão do dono em 01/10). No uso
+  real de 29/09, `dev-board-engine` gastou 5 dos seus 24 passos lendo o
+  worktree de outros módulos para descobrir a interface deles — o
+  `module_map` só diz quem depende de quem. O Arquiteto ganha
+  `declare_module_contracts` (passo 5 do kickoff): por módulo, o que ele EXPÕE
+  (`funcao`/`rota`/`evento`/`dado` + assinatura), gravado como
+  `artifact.module_contracts`, versionado, sem tabela, o vigente substitui. O
+  que cada módulo consome sai do `dependsOn` do mapa na leitura. O dev agent
+  ganha `listar_contratos_de_modulos` (sem parâmetro, escopo do projeto, o
+  dele e o que ele consome por inteiro, teto de 120 itens) e o kickoff dele diz
+  para ler a interface ali, nunca no worktree de outro dev; sem contrato, a
+  ferramenta manda `report_blocked` nomeando o que falta. Rotas internas novas:
+  `POST /internal/sessions/:id/module-contracts` e
+  `GET /internal/projects/:id/module-contracts`. O tipo entra na pasta `docs/`
+  dos artefatos (ADR 0148) como versionado.
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
   [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A

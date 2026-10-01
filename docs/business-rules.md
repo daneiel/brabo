@@ -5639,7 +5639,7 @@ tocado. Os quatro corrigidos passam a emitir `toolloop.limit_reached`
 (mesmo evento do PO, mesmo payload `iteration`/`max_iterations`) antes de
 retornar — nenhuma mudança na estrutura de `dispatch_tool` de cada um.
 
-- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:193`,
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:195`,
   `dev_lead_server.ex:244`, `ux_designer_server.ex:121`,
   `staff_server.ex:113`
 - **Teste:** `apps/engine/test/engine/agents/{arquiteto,dev_lead,
@@ -8551,7 +8551,7 @@ sessão — o segundo não é a versão "séria" do primeiro, é outra ferrament
 para outra escala de decisão.
 
 **Wiring nos cinco conversacionais que ainda não tinham `emit_artifact`** —
-PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:102`), Dev Lead
+PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:103`), Dev Lead
 (`dev_lead_server.ex:153`), UX Designer (`ux_designer_server.ex:94`) e Staff
 (`staff_server.ex:94`); o Criativo já tinha a ferramenta desde a Fase 3b, só
 ganhou o tipo novo (é o `known/0` compartilhado quem decide, sem mudança no
@@ -14384,9 +14384,9 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:983`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
-  `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
+  `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
   `staff_server.ex:86`; as leituras por tipo — `criativo_server.ex:435`,
-  `po_server.ex:352`, `arquiteto_server.ex:311`, `dev_lead_server.ex:431`,
+  `po_server.ex:352`, `arquiteto_server.ex:313`, `dev_lead_server.ex:431`,
   `ux_designer_server.ex:246`;
   `apps/api/src/interfaces/http/internal/leitura-interna-de-eventos.ts:24`,
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:306`,
@@ -14471,7 +14471,7 @@ handoff).
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
   (202), `:243`/`:253`/`:263` (409/409/422);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:211`;
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:160` (adiar), `:202`
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
   `:349` (`acompanharTurnoPeloLog`), `:316`;
@@ -17097,7 +17097,7 @@ a decisão de adoção, com os números, também.
    `ToolLoop` põe na frente (`apps/engine/lib/engine/harness/tool_loop.ex:98`,
    `system_msg`, montada por `system_prompt/1` em `:316`); `pedido` = a última
    mensagem `user` — nos agentes de execução a mensagem inicial do laço
-   (`apps/engine/lib/engine/dev/dev_agent_server.ex:481`, `initial_message/2`,
+   (`apps/engine/lib/engine/dev/dev_agent_server.ex:484`, `initial_message/2`,
    ou a de correção em `:523`), nos conversacionais a fala da pessoa; e
    `passos_recentes` = as 6 últimas chamadas de ferramenta depois dessa
    mensagem, uma entrada por chamada, argumento e resultado cortados em 500
@@ -19890,3 +19890,66 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx:177`
 - **Origem:** AT-254 (item A8 da análise do uso real de 2026-09-29), decisão do
   dono de 01/10
+
+### RN-684 — O contrato entre módulos é artefato versionado do Arquiteto, e o dev agent o lê pela ferramenta, nunca no worktree de outro dev {#rn-684}
+
+Decisão do dono (01/10), registrada no
+[ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md). No uso
+real de 29/09, `dev-board-engine` gastou 5 dos seus 24 passos com ferramenta
+lendo o worktree de outros módulos para descobrir a interface deles: o
+`module_map` diz quem depende de quem, nunca o que um módulo expõe. Aplica a
+[RN-164](business-rules/autenticacao.md#rn-164) aos dev agents.
+
+1. **O artefato é `artifact.module_contracts`**, sem tabela, como o
+   `module_routing` e o `c4_diagram`: o vigente é o de maior `version`, com
+   desempate por `seq`. Cada declaração leva a lista INTEIRA e SUBSTITUI a
+   anterior; mudar contrato é versão nova do Arquiteto.
+2. **Por módulo, só o que ele EXPÕE**: `{modulo, expoe: [{tipo, assinatura,
+   descricao}]}`, `tipo` em `funcao | rota | evento | dado`, `assinatura`
+   obrigatória (até 300 caracteres), de 1 a 40 itens. O que ele CONSOME é o
+   `dependsOn` do `module_map` vigente, derivado na leitura — nunca redigitado.
+3. **A api recusa com 400 e o motivo inteiro** (que volta ao modelo, RN-061):
+   lista vazia, módulo repetido, módulo fora do `module_map` vigente (listando
+   os válidos) ou sem `module_map`, `expoe` vazio ou acima de 40, `tipo`
+   desconhecido, `assinatura` vazia ou acima de 300. Nada é gravado.
+4. **Artefato SEPARADO do `module_map`**, nunca um campo dele: revisar um não
+   reemite o outro.
+5. **O dev lê por `listar_contratos_de_modulos`**, `:direct`, no registro de
+   `Engine.Dev.Tools`: escopo do projeto pela rota, NENHUM parâmetro, o módulo
+   do dev vindo de `ctx.module`. Mostra por inteiro o dele e os que ele
+   consome; quem o consome e os demais, só pelo nome; teto de 120 itens com o
+   corte dito. Contrato de módulo que saiu do mapa é DITO, nunca atribuído.
+6. **O kickoff do dev diz onde ler a interface de outro módulo**, e que não é
+   no worktree de outro dev agent. Sem contrato para um módulo mostrado, a
+   ferramenta manda implementar pelo que a story e a task dizem e, se faltar
+   interface, `report_blocked` nomeando o módulo — nunca reler o worktree.
+
+- **Código:** `apps/api/src/domain/architecture/module-contracts.ts:110`
+  (`validarContratos`);
+  `apps/api/src/application/use-cases/architecture/declare-module-contracts.use-case.ts:55`
+  (`execute`), `:80` (`missingModules`);
+  `apps/api/src/application/use-cases/architecture/get-module-contracts.use-case.ts:23`
+  (`execute`);
+  `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
+  (`execute`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:622`
+  (`moduleContracts`);
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
+  (`moduleContracts`);
+  `apps/engine/lib/engine/harness/tools/declare_module_contracts.ex:91` (`run`);
+  `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
+  (`run`), `:66` (`renderizar`);
+  `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:434` (`module`), `:501`;
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
+- **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
+  (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
+  (módulo fora do mapa — caso de falha), `:222` (sem `module_map`), `:123`
+  (as recusas de domínio), `:239` e `:257` (a leitura do dev);
+  `apps/engine/test/engine/harness/tools/declare_module_contracts_test.exs:26`,
+  `:65` (recusa da api); `apps/engine/test/engine/harness/tools/listar_contratos_de_modulos_test.exs:71`,
+  `:76`, `:97`, `:109`, `:128`; `scripts/jev/kickoff.spec.ts:19`. Os testes
+  ExUnit não rodaram pelo `mix` neste ambiente (`repo.hex.pm` 403; rodaram
+  num harness avulso com os módulos compilados à mão); o CI os prova.
+- **Origem:** AT-276 (item A30 da análise do uso real de 2026-09-29), decisão
+  do dono de 01/10
