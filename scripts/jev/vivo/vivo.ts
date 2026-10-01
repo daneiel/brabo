@@ -40,6 +40,7 @@ import {
   contaNaTabela,
   custoTotal,
   estimar,
+  falhaDeInfra,
   gastoDe,
   linhas,
   MINIMO_DE_EXECUCOES,
@@ -237,6 +238,17 @@ async function main(): Promise<void> {
                 agora: () => Math.round(performance.now()),
               },
             );
+            const infra = falhaDeInfra(exec);
+            if (infra) {
+              // Não grava: a retomada repete esta execução quando a conta/rede voltar.
+              console.error(
+                `${chaveDe(k)}: a chamada de chat falhou por conta ou rede (${infra}); execução NÃO gravada, rodada interrompida. ` +
+                  'Confira o limite da chave (GET /api/v1/key) e, atrás de proxy, rode com NODE_USE_ENV_PROXY=1.',
+              );
+              console.log(relatorio(lerSaida(arquivo)));
+              process.exitCode = 1;
+              return;
+            }
             const registro: RegistroDeExecucao = { ...exec, data, sha, ...k, verificacao: verificar(dir, t.verificacao, t.proibidoEmSrc) };
             appendFileSync(arquivo, JSON.stringify(registro) + '\n', { mode: 0o600 });
             console.error(
