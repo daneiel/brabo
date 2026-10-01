@@ -101,20 +101,16 @@ function gerarEnv(
     'bash',
     [
       '-c',
-      `source "$3"
-       BASE_DE_PROJETOS="$1"
+      `source "$T_3"
+       BASE_DE_PROJETOS="$T_1"
        ${estadoDoBroker}
-       gerar_segredos "$2"
+       gerar_segredos "$T_2"
        dizer_a_origem_do_pepper >&2
-       escrever_env "$2"
+       escrever_env "$T_2"
        printf '%s\\0' ${SEGREDOS.map((s) => `"$${s}"`).join(' ')} "$ORIGEM_DO_PEPPER"`,
-      'install-env',
-      base,
-      arquivo,
-      // O caminho vai como argumento posicional ($3), nunca interpolado no `-c` (AT-346).
-      carregavel(),
+      // Os caminhos vão pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
     ],
-    { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
+    { env: { ...ambienteLimpo(), ...IMAGENS, T_1: base, T_2: arquivo, T_3: carregavel() }, encoding: 'utf8' },
   );
   expect(r.status, r.stderr).toBe(0);
   const partes = r.stdout.split('\0');
@@ -206,18 +202,14 @@ describe('o .env do instalador (AT-083)', () => {
       'bash',
       [
         '-c',
-        `source "$3"
-         BASE_DE_PROJETOS="$2"
+        `source "$T_3"
+         BASE_DE_PROJETOS="$T_2"
          SECRET_KEY_BASE="$(openssl rand -base64 64)"
          gerar_segredos
-         escrever_env "$1"
+         escrever_env "$T_1"
          printf '%s' "$SECRET_KEY_BASE"`,
-        'install-env',
-        arquivo,
-        path.join(tmp, 'projetos'),
-        carregavel(),
       ],
-      { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
+      { env: { ...ambienteLimpo(), ...IMAGENS, T_1: arquivo, T_2: path.join(tmp, 'projetos'), T_3: carregavel() }, encoding: 'utf8' },
     );
     expect(r.status, r.stderr).toBe(0);
     const gerado = r.stdout;
@@ -365,16 +357,12 @@ describe('o .env do instalador liga o broker só quando consentido (ADR 0162)', 
       'bash',
       [
         '-c',
-        `source "$3"
-         BASE_DE_PROJETOS="$2"; BROKER_LIGADO=sim; DOCKER_GID_MEDIDO=''
+        `source "$T_3"
+         BASE_DE_PROJETOS="$T_2"; BROKER_LIGADO=sim; DOCKER_GID_MEDIDO=''
          gerar_segredos
-         escrever_env "$1"`,
-        'install-env',
-        arquivo,
-        path.join(tmp, 'projetos'),
-        carregavel(),
+         escrever_env "$T_1"`,
       ],
-      { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
+      { env: { ...ambienteLimpo(), ...IMAGENS, T_1: arquivo, T_2: path.join(tmp, 'projetos'), T_3: carregavel() }, encoding: 'utf8' },
     );
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('sem o gid do socket medido');

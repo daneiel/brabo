@@ -78,11 +78,11 @@ const IMAGEM = 'ghcr.io/daneiel/brabo-broker@sha256:' + 'e'.repeat(64);
 
 /** Sem terminal: stdin é um pipe. */
 function semTerminal(bin: string): { saida: string; codigo: number } {
-  // Caminho vai como argumento posicional, nunca interpolado no `-c` (AT-346).
-  const r = spawnSync('bash', ['-c', `source "$1"\nBRABO_BROKER_IMAGE='${IMAGEM}'\n${DEPOIS}`, 'bash', carregavel()], {
+  // Caminho vai pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
+  const r = spawnSync('bash', ['-c', `source "$BRABO_ALVO"\nBRABO_BROKER_IMAGE='${IMAGEM}'\n${DEPOIS}`], {
     encoding: 'utf8',
     input: 's\n',
-    env: { ...process.env, NO_COLOR: '1', PATH: `${bin}:${process.env.PATH ?? ''}` },
+    env: { ...process.env, NO_COLOR: '1', PATH: `${bin}:${process.env.PATH ?? ''}`, BRABO_ALVO: carregavel() },
   });
   return { saida: `${r.stdout}${r.stderr}`, codigo: r.status ?? -1 };
 }
@@ -125,11 +125,11 @@ sys.exit(os.waitstatus_to_exitcode(status))
   );
   const r = spawnSync(
     'python3',
-    ['-I', driver, 'bash', '-c', `source "$1"\nBRABO_BROKER_IMAGE='${IMAGEM}'\n${DEPOIS}`, 'bash', carregavel()],
+    ['-I', driver, 'bash', '-c', `source "$BRABO_ALVO"\nBRABO_BROKER_IMAGE='${IMAGEM}'\n${DEPOIS}`],
     {
       encoding: 'utf8',
       timeout: 30_000,
-      env: { ...process.env, NO_COLOR: '1', RESPOSTA: resposta, PATH: `${bin}:${process.env.PATH ?? ''}` },
+      env: { ...process.env, NO_COLOR: '1', RESPOSTA: resposta, PATH: `${bin}:${process.env.PATH ?? ''}`, BRABO_ALVO: carregavel() },
     },
   );
   return { saida: r.stdout ?? '', codigo: r.status ?? -1 };

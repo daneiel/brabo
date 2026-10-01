@@ -28,19 +28,20 @@ const FORMA_CERTA =
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-install-invocacao-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-// Caminho de arquivo NUNCA entra interpolado na string de um `-c`: vai como
-// argumento posicional (`'source "$1"…', 'bash', caminho`) — AT-346, CodeQL
-// `js/shell-command-injection-from-environment`.
+// Caminho de arquivo e conteúdo lido de disco NUNCA entram no argv de um
+// `-c`: vão pelo AMBIENTE (`BRABO_ALVO`/`BRABO_FONTE`) — AT-346 reaberta, o
+// CodeQL `js/shell-command-injection-from-environment` trata o argv inteiro do
+// `bash -c` como comando, inclusive os posicionais.
 function rodar(
   comando: string,
   args: string[],
-  opcoes: { entrada?: string } = {},
+  opcoes: { entrada?: string; env?: Record<string, string> } = {},
 ): { codigo: number; stdout: string; stderr: string } {
   const r = spawnSync(comando, args, {
     cwd: tmp,
     input: opcoes.entrada ?? '',
     encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
+    env: { ...process.env, NO_COLOR: '1', ...opcoes.env },
     timeout: 20_000,
   });
   return { codigo: r.status ?? -1, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
@@ -63,14 +64,14 @@ const dash = ['/bin/dash', '/usr/bin/dash'].find((c) => fs.existsSync(c));
 
 describe('as formas erradas de rodar são recusadas COM NOME, antes de baixar qualquer coisa', () => {
   it('`bash -c "$(curl …)"` — o `$0` é "bash", não um arquivo', () => {
-    esperarRecusaSemArquivo(rodar('bash', ['-c', fonte()]));
+    esperarRecusaSemArquivo(rodar('bash', ['-c', 'eval "$BRABO_FONTE"'], { env: { BRABO_FONTE: fonte() } }));
   });
 
   it('`/bin/bash -c "$(curl …)"` — o `$0` É um arquivo legível, e mesmo assim não é o instalador', (ctx) => {
     // O caso que um `[ -f "$0" ]` sozinho deixaria passar: o hash de
     // `/bin/bash` iria ao manifesto, e a pessoa leria a frase de adulteração.
     if (!bashAbsoluto) ctx.skip('sem bash em /bin nem /usr/bin nesta máquina');
-    esperarRecusaSemArquivo(rodar(bashAbsoluto!, ['-c', fonte()]));
+    esperarRecusaSemArquivo(rodar(bashAbsoluto!, ['-c', 'eval "$BRABO_FONTE"'], { env: { BRABO_FONTE: fonte() } }));
   });
 
   it('`curl … | bash` — o script chega pelo stdin', () => {
@@ -79,7 +80,7 @@ describe('as formas erradas de rodar são recusadas COM NOME, antes de baixar qu
 
   it('`sh -c "$(curl …)"` com dash — a recusa POSIX do topo, e não o "Illegal option" do pipefail', (ctx) => {
     if (!dash) ctx.skip('sem dash nesta máquina — o `sh` do Debian/Ubuntu é o caso que isto mede');
-    const r = rodar(dash!, ['-c', fonte()]);
+    const r = rodar(dash!, ['-c', 'eval "$BRABO_FONTE"'], { env: { BRABO_FONTE: fonte() } });
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('script de bash');
     expect(r.stderr).toContain(FORMA_CERTA);
@@ -113,13 +114,11 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
   it('`hash_sha256` de um arquivo ausente recusa dizendo o quê — e o chamador para ali', () => {
     const r = rodar('bash', [
       '-c',
-      `source "$1"
+      `source "$BRABO_ALVO"
        exigir_ferramenta_de_hash
        x="$(hash_sha256 /nao/existe/install.sh)"
        echo "SEGUIU:[$x]"`,
-      'bash',
-      carregavel(),
-    ]);
+    ], { env: { BRABO_ALVO: carregavel() } });
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
     expect(r.stderr).toContain('/nao/existe/install.sh');
@@ -132,12 +131,10 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
     // incidente — a acusação de adulteração da AT-091, por outro caminho.
     const r = rodar('bash', [
       '-c',
-      `source "$1"
+      `source "$BRABO_ALVO"
        exigir_ferramenta_de_hash
        conferir_hash /nao/existe abc 'MOTIVO-DE-INCIDENTE: pare e investigue'`,
-      'bash',
-      carregavel(),
-    ]);
+    ], { env: { BRABO_ALVO: carregavel() } });
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
     expect(r.stderr).not.toContain('MOTIVO-DE-INCIDENTE');
@@ -154,7 +151,7 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     const corpo = fonte().replace(/\nmain\s+"\$@"\s*$/, '\n');
     const caminho = path.join(tmp, 'install-constante.sh');
     fs.writeFileSync(caminho, corpo);
-    const r = rodar('bash', ['-c', 'source "$1"; printf \'%s\' "$COMO_RODAR"', 'bash', caminho]);
+    const r = rodar('bash', ['-c', 'source "$BRABO_ALVO"; printf \'%s\' "$COMO_RODAR"'], { env: { BRABO_ALVO: caminho } });
     expect(r.stdout).toBe(FORMA_CERTA);
   });
 

@@ -21,7 +21,7 @@ describe('ferramentas-dev.json (gerado de apps/engine por ferramentas-dev.exs)',
     const j = JSON.parse(readFileSync(join(import.meta.dirname, 'ferramentas-dev.json'), 'utf8')) as { ferramentas: { arquivo: string; description: string; parameters: { type?: string } }[] };
     for (const f of j.ferramentas) {
       const fonte = readFileSync(join(RAIZ, f.arquivo), 'utf8').replace(/"\s*<>\s*"/g, '').replace(/\s+/g, ' ');
-      expect(fonte, f.arquivo).toContain(f.description.slice(0, 40).replace(/\s+/g, ' ').replace(/"/g, '\\"'));
+      expect(fonte, f.arquivo).toContain(f.description.slice(0, 40).replace(/\s+/g, ' ').replace(/\\/g, '\\\\').replace(/"/g, '\\"'));
       expect(f.parameters.type).toBe('object');
     }
   });

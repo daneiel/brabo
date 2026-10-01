@@ -899,6 +899,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **Os specs de shell de `scripts/` passam caminho e conteúdo pelo AMBIENTE, e não mais pelo argv do `bash -c` (AT-346 reaberta).** O CodeQL do PR #782 continuou acusando `js/shell-command-injection-from-environment` depois da AT-346, porque trata o argv INTEIRO do `bash -c` (posicionais inclusive) como comando. `rollout-evidencia`, `alarmar-prova`, `smoke-gates`, `install-invocacao` e, pelo mesmo molde, `install-broker`, `install-env`, `install-fechamento`, `install-arquivos-da-instalacao`, `prova-de-restauracao-env` e `backup-lib` leem o caminho de uma variável (`source "$BRABO_ALVO"`); os casos de `bash -c "$(curl …)"` do `install-invocacao` rodam o conteúdo por `eval "$BRABO_FONTE"`, que mantém o `$0` como o nome do shell e a mesma recusa. E `vivo.spec.ts` escapa `\` antes de `"` (`js/incomplete-sanitization`). Só testes mudam.
+
 - **api (segurança)**: o teto de efeito externo da RN-418 passa a valer também
   para as ações TIPADAS `git_push` e `pr_open` (AT-347,
   [RN-689](docs/business-rules.md#rn-689), decisão do dono de 01/10). Até aqui
