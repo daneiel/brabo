@@ -751,21 +751,10 @@ export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSumm
 }
 
 /**
- * Chave de dispositivo do runner local (`lib/runner-bootstrap.ts`) — par
- * Ed25519 gerado no NAVEGADOR do usuário; só a metade PÚBLICA chega até
- * aqui, nunca a privada. Substitui o PAT digitado à mão no fluxo de
- * onboarding "Configurar pasta automaticamente".
- */
-export interface RunnerDeviceKeySummary {
-  id: string;
-  name: string;
-  createdAt: string;
-}
-
-/**
  * A ESPÉCIE de uma chave de dispositivo (ADR 0154, RN-543).
  *
- * `projeto` é a do ADR 0118 — presa ao projeto em que o navegador a gerou.
+ * `projeto` é a do ADR 0118 — presa a um projeto. O navegador deixou de
+ * gerá-la no ADR 0203; as já registradas seguem valendo e aparecem aqui.
  * `maquina` é a que descreve a MÁQUINA (`project_id` nulo no banco): ela
  * aparece na listagem de TODO projeto que atende, e revogá-la derruba o
  * agente local em todos eles.
@@ -773,8 +762,7 @@ export interface RunnerDeviceKeySummary {
 export type RunnerDeviceKeyEspecie = 'projeto' | 'maquina';
 
 /**
- * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519) — mais
- * campos que `RunnerDeviceKeySummary`, que é só o eco do registro.
+ * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519).
  *
  * Inclui as REVOGADAS de propósito: sumir com a linha faria a tela afirmar
  * que a chave nunca existiu. `lastUsedAt` nulo é o sinal da chave ÓRFÃ —

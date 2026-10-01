@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 198 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 199 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -197,6 +197,7 @@ The CLI on the user's machine — its channel, credentials, device keys, distrib
 | [0187](0187-runner-sem-binario-win32-x64.md) | The runner's standalone binary stops promising **Windows**: three targets instead of the four of [ADR 0174](0174-runner-sem-binario-darwin-x64.md), in the same mold. Measured in four `workflow_dispatch` rehearsals (AT-343, runs 36775746724, 36779817686, 36780804339, 36781729045): the binary builds, the usage runs and `node-pty` loads once the Windows virtual path is recognized, but under Bun the `net.Socket` over the ConPTY output named pipe ends after the first chunk — even `cmd.exe /c echo` dies with 0xC000013A (oven-sh/bun#25822 family). Decided by the maintainer: `win32-x64` leaves the matrix and `ALVOS_ESPERADOS`, the `GET /runner-releases/binary` proxy refuses it with its own 400 pointing at `npm install -g @brabo/runner`, the `install.sh` Windows refusal names the npm path, and the browser still detects it but skips the download. Way back: a new ADR once Bun ships the fix |
 | [0193](0193-git-credenciado-no-host-do-runner.md) | CREDENTIALED git runs on the runner HOST, code runs in the container (AT-116, owner decision 01/10): the authenticated `git fetch` of `RunnerGit` goes MARKED (`gitCredenciado: true`, set only by `RunnerRouter.exec_git_credenciado/5`) and the runner executes it on the host even with an active container, where the `env` reaches the child process — the same folder, since `estado.dir` is the `/work` bind-mount. No ADR 0130 port changes (`DockerPort.exec` still has no `env`), `RunnerReadiness` stays byte for byte, and the RN-558 refusal shrinks to `env` WITHOUT the mark (in practice a runner older than this ADR) |
 | [0201](0201-revogacao-por-chave.md) | Revocation targets the KEY, not the `{project, user}` pair (AT-013, owner decision 01/10, revising [RN-520](../business-rules.md#rn-520) over [ADR 0154](0154-chave-de-dispositivo-de-maquina.md) and [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)). The runner socket ticket records WHICH credential asked for it (`credential_kind`/`credential_id`, nullable, Ecto migration in the engine's own schema), the `PatAuthGuard` hands it down, the socket keeps it in `assigns` and in its `id`, and `POST /internal/runner/disconnect-credential` voids the credential's pending tickets and asks EVERY registered runner whether it was born from it — so another runner of the same user, on a PAT or another key, stays up, and a MACHINE key is one request instead of the pair applied N times. PAT revocation (RN-426/427) now drops its connections too. Two transition pieces keep what used to fall falling: a LEGACY connection (ticket without a credential) drops by the pair within the projects the api sends, and if the engine does not know the route the key revocation falls back to `disconnectRunnerOfUser`. The pair route stays for member removal (RN-615). The confirm dialogs change wording only (RN-561); the runner does not change |
+| [0203](0203-aposenta-o-fluxo-do-runner-pelo-navegador.md) | The browser-driven runner setup of [ADR 0118](0118-configuracao-automatica-do-runner-pelo-navegador.md) is retired (AT-014, owner decision 01/10, closes BRB-031): the browser no longer generates the key, downloads the binary or writes the folder, and `RunnerOnboardingPanel` shows the `install.sh` command instead — the installer already downloads the verified binary, installs it executable (`install -m 0755`, so no manual `chmod +x` anywhere) and pairs the machine from the terminal. `apps/web/src/lib/runner-bootstrap.ts` and `POST /projects/:projectId/runner-device-keys` are removed (no other caller; BREAKING), while `GET`/`DELETE` and the internal machine-key route stay. Project keys registered before keep working and stay revocable. Declared: team installations lose the PAT-less way to pair a second machine, and `GET /runner-releases/binary` is left without a production consumer, kept as a separate decision |
 
 ## Auth, access and secrets {#tema-iam}
 
@@ -338,7 +339,7 @@ How documentation is generated, verified and published.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0203**.
+  is superseded — the next one is **0204**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

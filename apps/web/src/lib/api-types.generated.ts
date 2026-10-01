@@ -2665,11 +2665,7 @@ export interface paths {
          */
         get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
-        /**
-         * Registra a chave pública de um dispositivo do runner local
-         * @description A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.
-         */
-        post: operations["RunnerDeviceKeysController_registerDeviceKey"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8779,18 +8775,6 @@ export interface components {
              */
             token: string;
         };
-        RegisterRunnerDeviceKeyRequestDto: {
-            /**
-             * @description Nome pra você reconhecer este dispositivo depois — não é único.
-             * @example laptop
-             */
-            name: string;
-            /**
-             * @description JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador.
-             * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
-             */
-            publicKeyJwk: string;
-        };
         RegistroDeContainerResponseDto: {
             /**
              * @description What was RECORDED (project_containers.status).
@@ -9145,17 +9129,6 @@ export interface components {
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
-        };
-        RunnerDeviceKeyResponseDto: {
-            /** @example 01JC4Z0000CHAVE000000000001 */
-            id: string;
-            /** @example laptop */
-            name: string;
-            /**
-             * Format: date-time
-             * @example 2026-08-27T12:00:00.000Z
-             */
-            createdAt: string;
         };
         RunnerProjectResponseDto: {
             /** @example 01JC4Z0000PROJETO000000001 */
@@ -17195,66 +17168,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
                 };
-            };
-            /** @description No token, expired token, or invalid signature. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Papel insuficiente no projeto. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Projeto não encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rate limit per user or per IP. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    RunnerDeviceKeysController_registerDeviceKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterRunnerDeviceKeyRequestDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunnerDeviceKeyResponseDto"];
-                };
-            };
-            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {

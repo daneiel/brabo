@@ -39,24 +39,13 @@
     "retryButton": "I already installed it, connect",
     "placeholderProjectId": "<project id>",
     "placeholderPath": "<folder>",
-    "autoConfigureButton": "Set up folder automatically",
-    "autoConfiguring": "Setting up…",
-    "autoConfigureError": "Could not set it up automatically. Use the manual command below.",
-    "downloadKitButton": "Download files",
-    "downloadingKit": "Downloading…",
-    "downloadKitNote": "Download both files and move them into the same folder before running the runner.",
-    "downloadKitDone": "Downloads started — check your downloads folder and move both files together.",
-    "platformSelectLabel": "Platform",
-    "successIntro": "Done — inside the folder you chose, run:",
-    "pastaConfigurada": "Folder \"{{pasta}}\" is set up — the runner files are already in it.",
-    "binarioIndisponivel": "The prebuilt binary could not be downloaded right now ({{motivo}}) — the folder setup is still valid, and the command below installs the runner another way.",
-    "successIntroSemBinario": "In your terminal, inside the folder you chose, run:",
-    "successIntroKit": "After moving both files into the same folder, run this inside it:",
     "passoHumano": "This step is yours: the browser does not run programs on your machine.",
-    "avisoTerminalAntes": "Heads up: this ends in your terminal. The browser prepares the folder, and the last step — one command, ready to copy — you run yourself.",
     "copyButton": "Copy",
     "copiedButton": "Copied!",
-    "manualDisclosureSummary": "I'd rather run it manually"
+    "manualDisclosureSummary": "Another machine, or run it manually",
+    "instaladorIntro": "Install the local agent with the Brabo installer. Run this in your terminal, on the machine where Brabo is installed:",
+    "instaladorFaz": "The installer downloads the runner, checks it against the signed release manifest, installs it already executable and pairs this machine — no key, download or chmod in the browser.",
+    "instaladorOutraMaquina": "On another machine, or if you'd rather not run the installer, use the manual command below with an access token."
   },
   "esperaDoRunner": {
     "esperando": "Looking for the runner…",
@@ -78,8 +67,7 @@
     "ressalvaDaConta": "This list belongs to your ACCOUNT, not to this browser: if you are on another machine, that one still needs pairing.",
     "alcance": "A machine key serves every project of yours in runner mode — revoking it takes the local agent down in all of them.",
     "gesto": "On the paired machine, check the local agent's service:",
-    "comandoDeServico": "brabo-runner service status --machine",
-    "parearMesmoAssim": "I'm on another machine — pair this one too"
+    "comandoDeServico": "brabo-runner service status --machine"
   },
   "chaveDeProjeto": {
     "pareada": "This project is already paired: {{nomes}}. A local agent last used that key on {{data}}.",

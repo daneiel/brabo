@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { API_URL, ApiError, getProject, listRunnerDeviceKeys } from '../lib/api-client';
+import { ApiError, getProject, listRunnerDeviceKeys } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { chavesDoProjetoQueryKey } from '../lib/chaves-de-dispositivo-queries';
 import {
@@ -13,14 +13,6 @@ import {
   type ReconhecimentoDeChaveDeProjeto,
   type ReconhecimentoDeAgenteDeMaquina,
 } from '../lib/agente-de-maquina';
-import {
-  baixarKitManual,
-  configurarPastaAutomaticamente,
-  detectarPlataforma,
-  plataformasSuportadas,
-  suportaEscritaDeArquivos,
-  type RunnerPlatform,
-} from '../lib/runner-bootstrap';
 import { Button } from './ui/Button';
 import { Alert } from './ui/Alert';
 import { TerminalIcon } from './ui/icons';
@@ -30,9 +22,9 @@ import styles from './RunnerOnboardingPanel.module.css';
 interface RunnerOnboardingPanelProps {
   /**
    * `null` quando o projeto ainda não existe (passo `workspace` do
-   * `NewProjectWizard`, ANTES da criação antecipada — RN-437/ADR 0108): a
-   * configuração automática precisa de um id real para registrar a chave de
-   * dispositivo, então só o comando manual (com placeholder) fica visível.
+   * `NewProjectWizard`, ANTES da criação antecipada — RN-437/ADR 0108): sem
+   * id não há chave a reconhecer nem runner a esperar, então o painel mostra
+   * o instalador e o comando manual (com placeholder), e nada mais.
    */
   projectId: string | null;
   /** Mensagem específica do que falhou (ex.: `pty_error`, erro de ticket) — cai no genérico quando ausente. */
@@ -66,80 +58,68 @@ interface RunnerOnboardingPanelProps {
   mostrarEspera?: boolean;
 }
 
-type EstadoAutomatico =
-  | { fase: 'idle' }
-  | { fase: 'configurando' }
-  | { fase: 'baixando' }
-  | { fase: 'sucesso'; instrucaoFinal: string; pasta: string; falhaDoBinario: string | null }
-  | { fase: 'kitBaixado'; instrucaoFinal: string; falhaDoBinario: string | null }
-  | { fase: 'erro'; mensagem: string };
-
 /**
- * Cancelar o seletor de pasta chega como `AbortError` e NÃO é falha: nada foi
- * registrado, nada foi gravado, e um alerta vermelho ali diria que algo deu
- * errado quando a pessoa só mudou de ideia. Volta para `idle`, com o botão
- * pronto de novo.
+ * O comando que instala o Brabo E o agente local nesta máquina (RN-526): baixar
+ * um ARQUIVO e rodá-lo com `bash` — nunca `curl … | sh`, nunca `sh -c
+ * "$(curl …)"`. É a MESMA frase do cabeçalho do `install.sh`, do runbook e do
+ * `bootstrap.sh`, e `scripts/dev/install-invocacao.spec.ts` reprova esta cópia
+ * se ela divergir das outras.
  */
-function ehCancelamentoDoSeletor(erro: unknown): boolean {
-  return erro instanceof Error && (erro.name === 'AbortError' || erro.name === 'NotAllowedError');
-}
+export const COMANDO_DO_INSTALADOR =
+  'curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh';
 
 /**
- * Onboarding de instalação do Runner (ADR sobre navegação de pasta via o
- * Runner) — painel compartilhado por TRÊS lugares: `TerminalPanel` (estado
- * "sem runner" da aba Terminal, RN-088), `FolderBrowserModal` (sem como
- * navegar sem runner) e `NewProjectWizard` (passo `workspace`, modo
- * `runner`). Um só texto de instalação, uma só régua de "está conectado?".
+ * Onboarding de instalação do Runner — painel compartilhado por TRÊS lugares:
+ * `TerminalPanel` (estado "sem runner" da aba Terminal, RN-088),
+ * `FolderBrowserModal` (sem como navegar sem runner) e `NewProjectWizard`
+ * (passo `workspace`, modo `runner`). Um só texto de instalação, uma só régua
+ * de "está conectado?".
  *
- * Além do comando manual de sempre (agora sempre com `--token`, e escondido
- * atrás de um `<details>` colapsável — "prefiro rodar manualmente"), oferece
- * um caminho que não pede PAT nenhum: gera um par de chaves Ed25519 NO
- * PRÓPRIO NAVEGADOR, registra a pública no projeto e grava o binário já
- * configurado numa pasta real (File System Access API, só Chromium) ou, fora
- * disso, dispara dois downloads comuns pro usuário mover à mão
- * (`lib/runner-bootstrap.ts`).
+ * ## O caminho é o instalador (ADR 0203, RN-687)
  *
- * ## Os quatro passos, nesta ordem (RN-473)
+ * Até o ADR 0203 o primeiro plano deste painel era o fluxo do ADR 0118: o
+ * NAVEGADOR gerava o par Ed25519, registrava a pública, baixava o binário e
+ * gravava os arquivos numa pasta pela File System Access API. Aquele fluxo foi
+ * APOSENTADO por decisão do mantenedor (BRB-031): era o único caminho que
+ * terminava em `chmod +x` manual, e o `install.sh` já faz as três coisas do
+ * lado certo — baixa o binário conferido contra o `checksums.txt` ASSINADO,
+ * instala com `install -m 0755` (RN-531) e cria a chave NA MÁQUINA
+ * (`brabo-runner device-key create`, RN-551/552/547). Então o painel manda
+ * para ele, com o comando copiável, e o comando manual de sempre (`--token`,
+ * PAT) segue no `<details>` — é o caminho de quem está numa máquina que não é
+ * a da instalação, onde o `install.sh` não cabe.
  *
- * 1. **Pasta** — `showDirectoryPicker` abre antes de qualquer rede ou cripto.
- * 2. **Configuração** — config + chave de dispositivo gravadas ali dentro.
- * 3. **Binário**, best-effort: falhar aqui não descarta nada, só troca a
- *    instrução pelo caminho de distribuição alternativo (`npm install -g
- *    @brabo/runner`).
- * 4. **Instrução e espera** — UM comando copiável, e a `EsperaDoRunner`
- *    logo abaixo, que resolve sozinha quando o runner conectar (RN-474).
- *
- * O passo 4 é humano em qualquer desenho: uma página web não executa binário
- * na máquina de ninguém, e a File System Access API não preserva o bit de
- * execução. O que este painel faz é encolhê-lo a uma linha e um clique de
- * cópia — nunca fingir que ele sumiu.
+ * O passo continua humano, e o painel não finge o contrário: uma página web
+ * não executa programa na máquina de ninguém. O que mudou é que o passo é UM
+ * comando, que já termina com o runner executável e pareado.
  *
  * ## O reconhecimento de máquina já pareada (RN-548, ADR 0154)
  *
  * Desde a RN-543 a listagem de chaves marca a ESPÉCIE, e é daqui que essa
- * marca é consumida: quando a conta já tem chave de MÁQUINA ativa, mandar a
- * pessoa repetir o pareamento que a máquina já tem é o painel respondendo à
- * pergunta errada. A derivação inteira — sete estados, nenhum virando o
- * outro — mora em `lib/agente-de-maquina.ts`, fora do componente, porque a
- * regra é sobre o DADO e o componente é sobre o desenho.
+ * marca é consumida: quando a conta já tem chave ativa que serve este projeto,
+ * mandar a pessoa instalar de novo é o painel respondendo à pergunta errada. A
+ * derivação inteira — sete estados, nenhum virando o outro — mora em
+ * `lib/agente-de-maquina.ts`, fora do componente, porque a regra é sobre o
+ * DADO e o componente é sobre o desenho. Reconhecida a chave, o bloco do
+ * instalador SAI (o gesto é conferir o serviço), e o `<details>` do comando
+ * manual fica — é a resposta de quem está numa OUTRA máquina.
+ *
+ * As chaves de projeto que o navegador registrou ANTES do ADR 0203 continuam
+ * valendo e continuam reconhecidas aqui (`ReconhecimentoDeProjeto`): o runner
+ * configurado assim não quebra.
  *
  * **Reconhecer NÃO é dizer que o agente está de pé.** Chave registrada prova
  * pareamento, nunca processo vivo (RN-468, a régua do `workspaceVerifiedAt`),
  * e a lista é da CONTA e não deste navegador — então nem "esta máquina está
  * pareada" a tela pode afirmar. Os dois limites são ditos em texto, ao lado
- * do reconhecimento, e é por eles que o caminho do ADR 0118 **continua
- * alcançável em todos os estados**: ele apenas deixa de ser o primeiro,
- * recolhido para um `<details>` cujo rótulo nomeia o caso que ele resolve
- * ("esta máquina é outra"). Nada é removido — aposentá-lo é o BRB-031, e é
- * decisão do mantenedor.
+ * do reconhecimento.
  *
  * **Onde isso aparece, e por que não é igual nos três montadores.** O
  * reconhecimento é por PROJETO, porque a rota é
  * `GET /projects/:projectId/runner-device-keys` — então ele existe em
  * `TerminalPanel` e `FolderBrowserModal`, que sempre têm um projeto, e no
  * `NewProjectWizard` só DEPOIS da criação antecipada (RN-437): sem
- * `projectId` não há a quem perguntar, e o painel fica byte a byte como era.
- * A diferença não é escolha de desenho, é a forma do endpoint.
+ * `projectId` não há a quem perguntar.
  */
 export function RunnerOnboardingPanel({
   projectId,
@@ -196,83 +176,14 @@ export function RunnerOnboardingPanel({
     projectId,
     chaves: chavesQuery.data,
   });
-  const jaPareada = maquinaJaPareada(reconhecimento) || projetoJaPareado(reconhecimentoDeProjeto);
+  const maquinaReconhecida = maquinaJaPareada(reconhecimento);
+  const jaPareada = maquinaReconhecida || projetoJaPareado(reconhecimentoDeProjeto);
 
-  const [suportaFS] = useState(() => suportaEscritaDeArquivos());
-  const [plataforma, setPlataforma] = useState<RunnerPlatform | null>(null);
-  const [detectandoPlataforma, setDetectandoPlataforma] = useState(true);
-  const [plataformaManual, setPlataformaManual] = useState<RunnerPlatform>('linux-x64');
-  const [estado, setEstado] = useState<EstadoAutomatico>({ fase: 'idle' });
   const [copiado, setCopiado] = useState(false);
 
-  useEffect(() => {
-    let cancelado = false;
-    void detectarPlataforma().then((detectada) => {
-      if (cancelado) return;
-      setPlataforma(detectada);
-      setDetectandoPlataforma(false);
-    });
-    return () => {
-      cancelado = true;
-    };
-  }, []);
-
-  const modoAutomatico = suportaFS && plataforma !== null;
-  const plataformaEfetiva = plataforma ?? plataformaManual;
-
-  async function handleConfigurarAutomaticamente() {
-    if (!projectId) return;
-    setEstado({ fase: 'configurando' });
+  async function copiarComandoDoInstalador() {
     try {
-      const { instrucaoFinal, pasta, falhaDoBinario } = await configurarPastaAutomaticamente({
-        projectId,
-        apiUrl: API_URL,
-        platform: plataformaEfetiva,
-        // Só o fluxo AUTOMÁTICO recebe o caminho: nele o navegador grava os
-        // arquivos DENTRO da pasta escolhida, então `cd <caminho>` leva a
-        // pessoa a um lugar onde o comando funciona. O kit manual (abaixo)
-        // NÃO recebe, e não é esquecimento — lá os arquivos caem na pasta de
-        // downloads, e prefixar `cd` mandaria para uma pasta onde eles ainda
-        // não estão.
-        caminhoDoProjeto,
-      });
-      setCopiado(false);
-      setEstado({ fase: 'sucesso', instrucaoFinal, pasta, falhaDoBinario });
-    } catch (erro) {
-      if (ehCancelamentoDoSeletor(erro)) {
-        setEstado({ fase: 'idle' });
-        return;
-      }
-      setEstado({
-        fase: 'erro',
-        mensagem: erro instanceof Error ? erro.message : t('runnerOnboarding.autoConfigureError'),
-      });
-    }
-  }
-
-  async function handleBaixarKit() {
-    if (!projectId) return;
-    setEstado({ fase: 'baixando' });
-    try {
-      const { instrucaoFinal, falhaDoBinario } = await baixarKitManual({
-        projectId,
-        apiUrl: API_URL,
-        platform: plataformaEfetiva,
-      });
-      setCopiado(false);
-      setEstado({ fase: 'kitBaixado', instrucaoFinal, falhaDoBinario });
-    } catch (erro) {
-      setEstado({
-        fase: 'erro',
-        mensagem: erro instanceof Error ? erro.message : t('runnerOnboarding.autoConfigureError'),
-      });
-    }
-  }
-
-  async function copiarInstrucao() {
-    if (estado.fase !== 'sucesso' && estado.fase !== 'kitBaixado') return;
-    try {
-      await navigator.clipboard.writeText(estado.instrucaoFinal);
+      await navigator.clipboard.writeText(COMANDO_DO_INSTALADOR);
       setCopiado(true);
     } catch {
       // Sem toast dedicado aqui — o bloco de código já é copiável à mão
@@ -285,68 +196,6 @@ export function RunnerOnboardingPanel({
     caminho: caminhoDoProjeto?.trim() || t('runnerOnboarding.placeholderPath'),
   });
 
-  /*
-   * O pareamento do ADR 0118 — o aviso do passo humano e os botões — num
-   * bloco só, porque ele muda de LUGAR (primeiro plano ou dentro do
-   * `<details>`) e nunca de conteúdo. Duplicar o JSX nos dois ramos faria as
-   * duas cópias divergirem exatamente uma vez.
-   */
-  const blocoDePareamento = projectId && (
-    <>
-      {/* O passo humano é anunciado ANTES do clique, não só no fim.
-          `passoHumano` já existia — mas só era renderizado no estado de
-          SUCESSO, depois de a pessoa escolher a pasta e esperar. Quem clica
-          num botão chamado "Configurar pasta automaticamente" e só então
-          descobre que ainda vai ter de abrir um terminal foi surpreendido,
-          mesmo que nenhuma frase tenha mentido. A RN-473 diz que a tela nunca
-          finge que o passo não existe; anunciá-lo no fim é o mais tarde
-          possível para não ser fingimento.
-
-          O texto do sucesso CONTINUA lá: aqui ele avisa que o passo VAI
-          existir, lá ele explica POR QUE existe. São duas perguntas
-          diferentes, feitas em momentos diferentes. */}
-      {estado.fase === 'idle' && (
-        <p className={styles.avisoPassoHumano}>
-          {t('runnerOnboarding.avisoTerminalAntes')}
-        </p>
-      )}
-
-      <div className={styles.acoesAutomaticas}>
-        {modoAutomatico ? (
-          <Button type="button" onClick={() => void handleConfigurarAutomaticamente()} loading={estado.fase === 'configurando'}>
-            {estado.fase === 'configurando'
-              ? t('runnerOnboarding.autoConfiguring')
-              : t('runnerOnboarding.autoConfigureButton')}
-          </Button>
-        ) : (
-          <>
-            {!detectandoPlataforma && plataforma === null && (
-              <label className={styles.selecaoPlataforma}>
-                {t('runnerOnboarding.platformSelectLabel')}
-                <select
-                  value={plataformaManual}
-                  onChange={(e) => setPlataformaManual(e.target.value as RunnerPlatform)}
-                >
-                  {plataformasSuportadas().map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <Button type="button" variant="secondary" onClick={() => void handleBaixarKit()} loading={estado.fase === 'baixando'}>
-              {estado.fase === 'baixando'
-                ? t('runnerOnboarding.downloadingKit')
-                : t('runnerOnboarding.downloadKitButton')}
-            </Button>
-            <p className={styles.detalhe}>{t('runnerOnboarding.downloadKitNote')}</p>
-          </>
-        )}
-      </div>
-    </>
-  );
-
   return (
     <div className={[styles.painel, className].filter(Boolean).join(' ')} role="status">
       <TerminalIcon size={22} />
@@ -358,14 +207,7 @@ export function RunnerOnboardingPanel({
         <ReconhecimentoDeMaquina
           reconhecimento={reconhecimento}
           projectId={projectId}
-          // UMA espera por tela, e a regra não muda com o reconhecimento: se a
-          // pessoa entrou no `<details>` e configurou a pasta mesmo assim, quem
-          // mostra a espera é o bloco de sucesso, que é o passo mais recente.
-          // Duas esperas seriam duas sondas, dois tetos e — no pior caso — duas
-          // frases discordando sobre o mesmo carimbo.
-          mostrarEspera={
-            mostrarEspera && estado.fase !== 'sucesso' && estado.fase !== 'kitBaixado'
-          }
+          mostrarEspera={mostrarEspera}
         />
       )}
 
@@ -375,69 +217,28 @@ export function RunnerOnboardingPanel({
           projectId={projectId}
           // A espera é UMA por tela: se a máquina já foi reconhecida, é o bloco
           // dela que a mostra.
-          mostrarEspera={
-            mostrarEspera &&
-            !maquinaJaPareada(reconhecimento) &&
-            estado.fase !== 'sucesso' &&
-            estado.fase !== 'kitBaixado'
-          }
+          mostrarEspera={mostrarEspera && !maquinaReconhecida}
         />
       )}
 
-      {/* O caminho do ADR 0118 NUNCA some — ele muda de lugar. Reconhecida a
-          máquina, o primeiro plano passa a ser "o agente não está de pé", e
-          parear vai para um `<details>` cujo rótulo nomeia o único caso em que
-          ele ainda é a resposta: você está em OUTRA máquina. */}
-      {jaPareada ? (
-        <details className={styles.manual}>
-          <summary>{t('agenteDeMaquina.parearMesmoAssim')}</summary>
-          <div className={styles.instrucao}>{blocoDePareamento}</div>
-        </details>
-      ) : (
-        blocoDePareamento
-      )}
-
-      {estado.fase === 'erro' && (
-        <Alert tone="danger" role="alert">
-          {estado.mensagem}
-        </Alert>
-      )}
-
-      {(estado.fase === 'sucesso' || estado.fase === 'kitBaixado') && (
+      {/* O instalador é o caminho de quem ainda não tem chave que sirva este
+          projeto (ADR 0203). Reconhecida a chave, ele sai: o gesto passa a ser
+          conferir o serviço, e o comando manual abaixo é a resposta de quem
+          está em OUTRA máquina. */}
+      {!jaPareada && (
         <div className={styles.instrucao}>
-          {estado.fase === 'sucesso' ? (
-            <Alert tone="success">
-              {t('runnerOnboarding.pastaConfigurada', { pasta: estado.pasta })}
-            </Alert>
-          ) : (
-            <Alert tone="success">{t('runnerOnboarding.downloadKitDone')}</Alert>
-          )}
-
-          {/* A falha do binário NÃO descarta a configuração (RN-473): os dois
-              arquivos que o runner precisa já estão gravados, e o que muda é
-              só POR ONDE o executável chega. O aviso diz o que houve, e a
-              instrução abaixo já é a do caminho alternativo. */}
-          {estado.falhaDoBinario && (
-            <Alert tone="warning">
-              {t('runnerOnboarding.binarioIndisponivel', { motivo: estado.falhaDoBinario })}
-            </Alert>
-          )}
-
-          <p>
-            {estado.falhaDoBinario
-              ? t('runnerOnboarding.successIntroSemBinario')
-              : estado.fase === 'sucesso'
-                ? t('runnerOnboarding.successIntro')
-                : t('runnerOnboarding.successIntroKit')}
-          </p>
-          <code className={styles.comando}>{estado.instrucaoFinal}</code>
-          <Button type="button" variant="secondary" onClick={() => void copiarInstrucao()}>
+          <p className={styles.avisoPassoHumano}>{t('runnerOnboarding.instaladorIntro')}</p>
+          <code className={styles.comando}>{COMANDO_DO_INSTALADOR}</code>
+          <Button type="button" variant="secondary" onClick={() => void copiarComandoDoInstalador()}>
             {copiado ? t('runnerOnboarding.copiedButton') : t('runnerOnboarding.copyButton')}
           </Button>
+          <p className={styles.detalhe}>{t('runnerOnboarding.instaladorFaz')}</p>
+          <p className={styles.detalhe}>{t('runnerOnboarding.instaladorOutraMaquina')}</p>
           <p className={styles.detalhe}>{t('runnerOnboarding.passoHumano')}</p>
 
-          {/* Só existe configuração feita se havia `projectId` — os dois
-              handlers retornam cedo sem ele. A guarda é para o compilador. */}
+          {/* A espera da RN-474: depois do instalador, o que falta é o agente
+              CONECTAR, e é isso que ela responde sozinha. Sem projeto não há o
+              que esperar. */}
           {projectId && mostrarEspera && <EsperaDoRunner projectId={projectId} />}
         </div>
       )}
@@ -470,8 +271,8 @@ export function RunnerOnboardingPanel({
  * Sete estados chegam aqui e **seis** renderizam alguma coisa.
  * `semChaveDeMaquina` renderiza NADA de propósito, e isso não é um vazio
  * escondido: o painel inteiro já É a resposta para "nenhuma máquina pareada",
- * e uma linha dizendo isso ao lado do botão de parear seria a tela repetindo
- * em prosa o que o botão diz em ação. Os outros seis afirmam coisas que o
+ * e uma linha dizendo isso ao lado do comando do instalador seria a tela
+ * repetindo em prosa o que o comando diz em ação. Os outros seis afirmam coisas que o
  * painel sozinho não afirma — inclusive os dois que afirmam ignorância.
  */
 function ReconhecimentoDeMaquina({
@@ -527,8 +328,8 @@ function ReconhecimentoDeMaquina({
 
       {/* As três ressalvas, e nenhuma é opcional: a primeira separa "pareada"
           de "rodando" (RN-468), a segunda separa "sua conta" de "este
-          navegador" — sem ela, o `<details>` de parear pareceria um caminho
-          morto para quem está numa segunda máquina — e a terceira diz o que a
+          navegador" — sem ela, o `<details>` do comando manual pareceria um
+          caminho morto para quem está numa segunda máquina — e a terceira diz o que a
           ESPÉCIE custa: revogar esta chave derruba o agente em todo projeto. */}
       <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaNaoEBatimento')}</p>
       <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaDaConta')}</p>

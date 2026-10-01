@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 198 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 199 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -333,10 +333,14 @@ from a status, so a network error says "I don't know" instead of spinning in
 "checking…" forever. A registered key is NOT a running agent — the same
 discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
 ACCOUNT, not to this browser, so the strongest sentence available is "your
-account has a paired machine". Both limits are stated on screen, and they are
-why the [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) flow is
-not removed: it moves into a `<details>` whose label names the case it still
-answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
+account has a paired machine". Both limits are stated on screen. The
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+browser flow (generate the key, download the binary, write the folder) was
+retired in [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+([RN-687](business-rules.md#rn-687)): the panel now shows the `install.sh`
+command, which leaves once a key serving the project is recognised, and the
+manual PAT command stays in a `<details>` named for the case it answers
+(another machine). The read's minimum comes from `roleAtLeast`
 against the ENDPOINT's `developer`, and a real 403 lands in the same state —
 the workspace role is a proxy, the api is the authority.
 

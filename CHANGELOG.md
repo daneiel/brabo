@@ -6,6 +6,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### ⚠ Mudanças incompatíveis
 
+- **runner**: o fluxo de configuração do runner pelo NAVEGADOR (ADR 0118) foi
+  aposentado (AT-014, `BRB-031`,
+  [ADR 0203](docs/adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md),
+  [RN-687](docs/business-rules.md#rn-687)). O painel do runner (aba Terminal,
+  navegador de pastas e passo `workspace` do assistente) deixa de gerar chave,
+  baixar o binário e gravar a pasta, e passa a mostrar o comando do instalador
+  (`curl -fsSLO …/install.sh && bash install.sh`), que baixa o binário
+  conferido, o instala já executável — sem o `chmod +x` manual que o fluxo do
+  navegador exigia — e pareia a máquina. O comando manual com token de acesso
+  (`--token`) continua no painel, como o caminho de outra máquina.
+  **A rota `POST /projects/:projectId/runner-device-keys` foi REMOVIDA** — ela
+  só servia ao fluxo do navegador. `GET` e `DELETE` da mesma rota continuam.
+  **Nada muda para quem já configurou pelo navegador:** a chave de projeto
+  registrada continua valendo, aparece nas Configurações e pode ser revogada, e
+  a pasta configurada continua sendo lida pelo `brabo-runner`. Quem chamava o
+  `POST` por fora do produto passa a criar a chave com
+  `brabo-runner device-key create` e a registrá-la pelo instalador.
+
 - **dev**: o compose de DEV (`docker/docker-compose.yml`) passa a ser o projeto
   Docker **`brabo-dev`** (AT-173, [ADR 0170](docs/adr/0170-compose-de-dev-brabo-dev.md)).
   Containers `brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…, rede

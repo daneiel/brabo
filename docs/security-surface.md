@@ -645,26 +645,28 @@ reason in the URL.
   with a fresh ticket each attempt; the option is now REQUIRED by the type
   (`OpcoesDoSocket`) and asserted by a test over the option passed to the
   constructor, since a test that only checks "it connects" passed throughout.
-- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
-  session JWT**, unlike `runner-ticket` above — the browser, already
-  logged in, registers the Ed25519 public key it just generated (the
-  private half never leaves it) before offering the runner binary for
-  download. Since [RN-551](business-rules.md#rn-551) the browser is no longer
-  the only generator: `brabo-runner device-key create` generates the pair on
-  the MACHINE and writes the private half to disk, mode 600, under
-  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`). What that changes for
-  this page is the shape of the secret, not its travel: the private half still
-  never crosses the wire, and only the public JWK and the registration `id`
-  ever do. What that CLI deliberately does not have is a credential to
-  register with — the registration stays with whoever holds the service token
-  (the installer, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
-  point 1), so each side holds exactly one secret and neither sees the other's.
-  The file the runner reads never exists without its `kid`: `create` writes a
+- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+  session JWT**, unlike `runner-ticket` above — the caller is a screen (the
+  device-keys section of Settings, and the `RunnerOnboardingPanel` recognizing
+  an already-paired machine). Until [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+  ([RN-687](business-rules.md#rn-687)) there was a third, a `POST` through
+  which the browser registered the Ed25519 public key it had just generated
+  (ADR 0118). That flow was retired and the route went with it, because it had
+  no other caller: keys are now born on the machine — `brabo-runner
+  device-key create` ([RN-551](business-rules.md#rn-551)) generates the pair
+  and writes the private half to disk, mode 600, under
+  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`) — and registered by the
+  installer through the internal route below. The private half still never
+  crosses the wire; only the public JWK and the registration `id` ever do.
+  What that CLI deliberately does not have is a credential to register with —
+  the registration stays with whoever holds the service token (the installer,
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 1), so
+  each side holds exactly one secret and neither sees the other's. The file
+  the runner reads never exists without its `kid`: `create` writes a
   `.parcial` name the reader ignores, and `finish --id <id>` stamps and
-  renames. `POST` persists the public key only — there's no "raw secret"
-  to hand back the way `IssuePersonalAccessTokenUseCase` does, because
-  the client already holds the only secret involved (the private key) and
-  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  renames. Project keys registered by the browser BEFORE ADR 0203 keep
+  working: `PatAuthGuard` still accepts them, `GET` lists them and `DELETE`
+  revokes them. `GET` lists the caller's own keys, revoked ones
   included ([RN-519](business-rules.md#rn-519)) — it is what makes
   revocation reachable at all, and until it existed an orphan key (tab
   closed midway through the automatic-setup flow) was invisible and
@@ -681,9 +683,8 @@ reason in the URL.
   which is which (`especie`): a MACHINE key (`projectId: null`) serves every
   project of its owner, so it shows up in every project's listing — without
   that it would be invisible and permanent in every screen, the very defect
-  RN-519 closed, reborn in the new species. This `POST` still creates only
-  project-bound keys; the one that creates MACHINE keys is
-  `POST /internal/machine-device-keys`, below
+  RN-519 closed, reborn in the new species. The route that creates MACHINE
+  keys is `POST /internal/machine-device-keys`, below
   ([RN-552](business-rules.md#rn-552)) — a different route, a different
   credential and a different caller. The KEY MATERIAL it registers is produced
   on the machine: `brabo-runner device-key create`
@@ -1368,7 +1369,6 @@ reason in the URL.
 | GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
-| POST | `/projects/:projectId/runner-device-keys` | role:developer |
 | GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |

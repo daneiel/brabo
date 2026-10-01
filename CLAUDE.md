@@ -245,6 +245,7 @@ estado lido do repositório e não da conversa.
 | O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
 | A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
 | O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
+| O fluxo do runner pelo navegador é aposentado; o painel manda para o instalador (AT-014, BRB-031, BREAKING) | ADR 0203, RN-687 |
 
 ## Estado atual e aberto
 
@@ -644,10 +645,18 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   do navegador, então nem "esta máquina está pareada" cabe. A seção nova herda
   esse vocabulário INTEIRO em vez de inventar um segundo: `lastUsedAt` é uso
   registrado, "ativa"/"revogada" fala da LINHA e nunca de conexão, e a espécie
-  de máquina nunca ganha verde. É por essas duas
-  ressalvas que o fluxo do ADR 0118 NÃO foi removido: ele muda de LUGAR (um
-  `<details>` com o rótulo do caso que resolve), e aposentá-lo segue sendo o
-  BRB-031
+  de máquina nunca ganha verde. O fluxo do ADR 0118 (o navegador gerando a
+  chave, baixando o binário e gravando a pasta) foi APOSENTADO no ADR 0203
+  (RN-687, BRB-031 fechado): o painel manda para o `install.sh`, com o
+  comando, e o instalador SAI do painel quando há chave reconhecida; o comando
+  manual com PAT fica no `<details>`, como o caminho de OUTRA máquina. A rota
+  `POST .../runner-device-keys` saiu junto (sem chamador); `GET`/`DELETE`
+  ficam, e chave de PROJETO já registrada continua valendo e revogável — não
+  "limpe" a espécie `projeto` do banco nem do guard: é ela que mantém de pé o
+  runner configurado pelo navegador antes do ADR 0203. Preço declarado:
+  instalação com TIME não tem mais caminho sem PAT para parear uma segunda
+  máquina, e `GET /runner-releases/binary` ficou sem consumidor de produção,
+  mantido por decisão à parte
 - **O instalador sobe de uma pasta vazia desde a RN-570 (ADR 0160), mas só a
   partir da PRÓXIMA tag final.** O compose de instalação e os três arquivos que
   a instalação usa por caminho relativo viajam como assets `brabo-install-*` no
@@ -776,11 +785,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   (`apps/runner/src/spawn-helper.ts`, só darwin, erro nomeado se falta ou o
   `chmod` é recusado), provado por teste e NUNCA num macOS real. Mac Intel e
   Windows usam `npm install -g @brabo/runner`: o proxy recusa os dois com 400
-  próprio (`SEM_BINARIO_POR_DECISAO`, nome e ADR por plataforma), o navegador
-  nem pede o download, o `install.sh` diz isso sem baixar no Mac Intel e, no
-  Windows, na recusa que ele já fazia da instalação inteira (ADR 0150). Os
-  quatro lugares que enumeram alvos (matriz, `PLATAFORMAS` da api, o `case` do
-  `install.sh`, a lista do web) são amarrados por
+  próprio (`SEM_BINARIO_POR_DECISAO`, nome e ADR por plataforma), o `install.sh`
+  diz isso sem baixar no Mac Intel e, no Windows, na recusa que ele já fazia da
+  instalação inteira (ADR 0150). Os TRÊS lugares que enumeram alvos (matriz,
+  `PLATAFORMAS` da api, o `case` do `install.sh` — a lista do web saiu com o
+  fluxo do navegador, ADR 0203) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel ou o Windows é ADR
   novo, depois de o Bun corrigir, nunca só devolver as linhas da matriz
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
@@ -957,13 +966,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `proposed_action` — é configuração consentida (a linha da RN-516).
   `--project`/`--dir`/`--token` são
   OPCIONAIS quando a pasta tem `brabo-runner.config.json` e a chave de
-  dispositivo gravados pelo fluxo do navegador (RN-464..466, ADR 0118):
-  o navegador gera um par Ed25519 (Web Crypto), registra a chave pública
-  como `runner_device_keys` e grava os três arquivos numa pasta via File
-  System Access API (fallback de dois downloads fora do Chromium) —
+  dispositivo (RN-464..466, ADR 0118) — gravados, até o ADR 0203, pelo fluxo
+  do navegador, que gerava o par Ed25519 (Web Crypto), registrava a pública
+  como `runner_device_keys` e gravava os três arquivos via File System Access
+  API. Esse fluxo foi APOSENTADO (ADR 0203, RN-687), mas a LEITURA da pasta
+  continua: quem a configurou assim segue funcionando —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
   dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a RN-551
-  (ADR 0155 ponto 4) o navegador NÃO é mais o único gerador: `brabo-runner
+  (ADR 0155 ponto 4) o gerador é o TERMINAL: `brabo-runner
   device-key create` gera o par NA MÁQUINA e `device-key finish --id <id>`
   carimba o `kid`. São DOIS comandos porque o `kid` É o id do registro no
   SERVIDOR (RN-475) e só existe depois dele — o `create` grava um `.parcial`

@@ -159,6 +159,19 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     expect(trecho).toContain('${COMO_RODAR}');
   });
 
+  it('o painel do runner no web ensina a MESMA forma (ADR 0203, RN-687)', () => {
+    // Desde o ADR 0203 o `RunnerOnboardingPanel` manda para o instalador, e o
+    // comando que ele mostra é uma CÓPIA — TS não lê o `install.sh`. A cópia
+    // é conferida aqui, contra a constante do próprio instalador.
+    const painel = fs.readFileSync(
+      path.join(RAIZ, 'apps/web/src/components/RunnerOnboardingPanel.tsx'),
+      'utf8',
+    );
+    const m = /export const COMANDO_DO_INSTALADOR =\s*'([^']+)';/.exec(painel);
+    expect(m, 'não achei `COMANDO_DO_INSTALADOR` no painel — o extrator ficou cego').not.toBeNull();
+    expect(m![1]).toBe(FORMA_CERTA);
+  });
+
   it('o runbook e o bootstrap ensinam a forma certa, e nenhum dos dois a antiga', () => {
     const runbook = fs.readFileSync(path.join(RAIZ, 'docs/runbook.md'), 'utf8');
     expect(runbook).toContain(FORMA_CERTA);
