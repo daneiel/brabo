@@ -508,8 +508,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     # A recusa é ENTRADA do laço (RN-163) — texto de resultado de ferramenta,
     # NOMEANDO o caminho certo. O loop continuou e o turno concluiu.
-    recusa =
-      Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
 
     assert recusa["role"] == "tool"
     assert recusa["content"] =~ "runner"
@@ -1237,7 +1236,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
       _ = InfraLeadServer.handle_cast(:cancel, em_curso)
     end
 
-    test "segunda mensagem com turno em curso: recusa NOMEADA e durável, nada é lido",
+    # RN-673 (ADR 0191): até aqui era recusa nomeada (409 `turno_em_andamento`)
+    # e a mensagem nunca era lida. Agora entra na FILA genérica de
+    # `TurnoAssincrono` — a mesma dos outros seis.
+    test "segunda mensagem com turno em curso: entra na fila, sem recusa, sem tocar o turno",
          %{state: state} do
       Process.put(:fake_llm_turn_stream_hang, true)
 
@@ -1246,22 +1248,25 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
       assert_receive :turno_pendurado, 1_000
 
-      assert {:reply, {:error, :turno_em_andamento}, mesmo} =
+      assert {:reply, {:ok, :enfileirada, 1}, mesmo} =
                InfraLeadServer.handle_call(
-                 {:user_message, "Continue"},
+                 {:user_message, "Continue", nil, "evt-1"},
                  {self(), make_ref()},
                  em_curso
                )
 
       assert mesmo.turno_assincrono == em_curso.turno_assincrono
       refute Enum.any?(mesmo.messages, &(&1["content"] == "Continue"))
+      assert [%{id: "evt-1", texto: "Continue"}] = mesmo.fila_de_mensagens
 
       assert_received {:event_appended, _, _,
                        %{
-                         type: "agent.error",
+                         type: "chat.message_queued",
                          actorId: "infra",
-                         payload: %{reason: "turno_em_andamento"}
+                         payload: %{mensagemId: "evt-1"}
                        }}
+
+      refute_received {:event_appended, _, _, %{type: "agent.error"}}
 
       _ = InfraLeadServer.handle_cast(:cancel, mesmo)
     end

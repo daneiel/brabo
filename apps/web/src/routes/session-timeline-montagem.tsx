@@ -43,6 +43,8 @@ import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
+import { estadosNaFila } from '../lib/fila-de-mensagens';
+import { SeloDaFila } from './SeloDaFila';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -379,6 +381,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     });
   }
 
+  // RN-673: o estado de cada mensagem na fila de um agente — derivado do log
+  // UMA vez por montagem, como o engine o deriva.
+  const filaDasMensagens = estadosNaFila(events);
+
   for (const event of events) {
     // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
     // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
@@ -406,6 +412,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // desconhecido —, nunca quem está vendo a tela.
       const autor = autorDaMensagem(event.actor, autoria);
       const deAgente = autor.tipo === 'agente';
+      const naFila = filaDasMensagens.get(event.id);
       empurrar({
         mensagem: true, // RN-644: conta no corte do fio
         node: (
@@ -435,6 +442,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
                 <span className={styles.messageName}>{rotuloDoAutor(autor)}</span>
+                {naFila && (
+                  <SeloDaFila
+                    projectId={projectId}
+                    sessionId={sessionId}
+                    mensagemId={event.id}
+                    estado={naFila}
+                    // Só quem ENVIOU cancela (a api recusa os outros com 403),
+                    // e só com a sessão aberta.
+                    podeCancelar={isActive && autor.tipo === 'voce'}
+                  />
+                )}
               </div>
               <div className={styles.bubble}>{text}</div>
             </div>

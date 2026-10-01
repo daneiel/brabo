@@ -2409,7 +2409,7 @@ descrito aqui.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:507` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:510` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),

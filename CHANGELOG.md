@@ -57,6 +57,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: **a mensagem enviada com turno em curso entra numa fila e é lida
+  no fim do turno** (AT-267,
+  [ADR 0191](docs/adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md),
+  [RN-673](docs/business-rules.md#rn-673)). Até aqui ela era 409
+  `turno_em_andamento` e ficava gravada sem ser lida. Agora, nos sete agentes
+  conversacionais, ela entra na fila do agente (`chat.message_queued`), e no
+  fim do turno as pendentes são lidas JUNTAS, na ordem, num turno só
+  (`chat.message_delivered`). Teto de 10 por agente e sessão (acima disso, 409
+  `fila_de_mensagens_cheia`). A fila mora no event log e sobrevive a restart
+  do engine. Quem enviou pode cancelar a mensagem enquanto ela espera
+  (`POST …/agents/:agent/messages/:messageId/cancel`, `chat.message_cancelled`).
+  Na tela, o composer não trava mais durante o turno de um agente (o botão
+  vira "Pôr na fila"), e a mensagem pendente aparece "na fila" com o botão de
+  cancelar. O turno do Dev Lead suspenso em aprovação continua recusando.
+  A resposta de `POST …/agents/:agent/message` ganha `mensagemId`, `entrega`
+  (`lida` | `enfileirada`) e `posicao`.
+
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

@@ -48,6 +48,10 @@ defmodule EngineWeb.Router do
     # sessão — mesmo padrão de `agent/message` (o "agent" vem do corpo, não
     # da URL, porque um endpoint só cobre os quatro conversacionais).
     post "/sessions/:sessionId/agent/cancel", AgentCommandController, :cancel
+    # RN-673: cancela UMA mensagem que espera na fila do agente.
+    post "/sessions/:sessionId/agent/queued-message/cancel",
+         AgentCommandController,
+         :cancel_queued_message
 
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,

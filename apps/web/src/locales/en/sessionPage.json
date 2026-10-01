@@ -61,7 +61,8 @@
     "destinatarioLabel": "To",
     "destinatarioPlaceholder": "Choose the agent…",
     "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
-    "semAgente": "No agent in this session: the message goes to the model, without an agent."
+    "semAgente": "No agent in this session: the message goes to the model, without an agent.",
+    "enfileirar": "Queue"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
@@ -231,5 +232,13 @@
       "outrasCount_other": "{{count}} other entries",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     }
+  },
+  "fila": {
+    "naFila": "queued for {{agente}} — read when the current turn ends",
+    "cancelar": "Cancel",
+    "cancelada": "cancelled in the queue — no agent read it",
+    "cancelarSoAutor": "Only the person who sent the message can cancel it.",
+    "erroCancelar": "Could not cancel the message.",
+    "enfileirada": "{{agente}} is mid-turn: the message joined its queue (position {{posicao}}) and will be read when the turn ends."
   }
 }

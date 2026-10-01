@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -2060,6 +2061,18 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Na tela, "a chamada resolveu" deixou de significar "o turno acabou": depois
   do aceite chama-se `acompanharTurnoPeloLog`, nunca `finalizarTurnoDoAgente`.
   Não volte a segurar o request pelo turno.
+  Desde a RN-673 (ADR 0191) a MENSAGEM do usuário não recebe mais
+  `turno_em_andamento`: com turno em curso ela entra na FILA do agente
+  (`TurnoAssincrono.receber_mensagem/4`, 202 com `entrega: "enfileirada"`), e
+  no fim do turno as pendentes viram UM turno, na ordem. O estado mora no LOG
+  (`chat.message_queued`/`_delivered`/`_cancelled`, todos com o id do
+  `chat.message`), nunca em tabela — o `init/1` reconstrói a fila e o boot
+  acorda quem tem pendente. Teto de 10 por agente e sessão (409
+  `fila_de_mensagens_cheia`); quem ENVIOU cancela enquanto pende. A fila é
+  UMA, em `TurnoAssincrono` — servidor novo só fornece `turno_de_mensagem/2`,
+  nunca fila própria. `turno_em_andamento` segue para o que não é fala
+  (revisão, prontidão, oferta de handoff), e o Dev Lead suspenso segue
+  recusando com `aguardando_aprovacao`.
   O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
   processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
   + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos sete
@@ -2111,8 +2124,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   "Mergear" do card da PR aberta só PROPÕE o merge — quem confirma é o
   clique humano no card, e o teto da RN-418 não se move. O card fica inerte
   enquanto a decisão está em voo e diz a frase da api quando ela recusa (409
-  incluído); reabrir a sessão retoma do log o turno em curso, sem fila de
-  mensagem (essa é decisão pendente do dono).
+  incluído); reabrir a sessão retoma do log o turno em curso. A fila de
+  mensagem que esta linha dava como decisão pendente FECHOU na RN-673 (ADR
+  0191) — ver a convenção do clique que responde ao aceitar.
   Quem pergunta "o que espera decisão" — contador do trilho, painel, aba
   Aprovações, roster da Visão geral/Executores/Código — lê a fila do PROJETO
   (`useProjectPendingActions`, chave `['project-pending-actions', projectId]`),
