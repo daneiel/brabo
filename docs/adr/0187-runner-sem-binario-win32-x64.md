@@ -95,7 +95,7 @@ outros alvos.
 ## Consequences
 
 - A promessa do binário standalone é de **três** alvos, e as três estão
-  PROVADAS em ensaio (run `36779817686`, e o run deste ADR na branch). A
+  PROVADAS em ensaio (runs `36779817686` e `36805241339`, este já com a matriz de três). A
   Release continua recebendo dois até a próxima tag final exercitar o
   `darwin-arm64`.
 - Quem usa Windows precisa de Node instalado para ter o agente local, e o

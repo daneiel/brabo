@@ -713,7 +713,7 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   corrida com o `release.yml` que derrubava o anexo na `v4.0.0` FOI corrigida,
   com espera de teto 600s em `build-runner-binaries.yml`. O `darwin-arm64`
   CONSTRÓI e passa o smoke em ensaio (`workflow_dispatch` com tag vazia, runs
-  36779817686 e __RUN__): o que o derrubava era o oven-sh/bun#25822, MEDIDO —
+  36779817686 e 36805241339): o que o derrubava era o oven-sh/bun#25822, MEDIDO —
   sob o Bun o `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro
   `EAGAIN` do fd não-bloqueante, e o terminal do binário parava depois do
   primeiro pedaço nas três plataformas Unix (o Linux passava na prova por sorte
