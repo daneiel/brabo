@@ -592,10 +592,17 @@ defmodule EngineWeb.TerminalChannel do
   # nem em log nenhum daqui pra frente; ver `apps/runner/src/index.ts`, que
   # audita explicitamente que este campo nunca é logado do lado dele.
   @impl true
-  def handle_info({:dispatch_exec, ref, command, cwd, env, from, timeout_ms}, socket) do
+  def handle_info(
+        {:dispatch_exec, ref, command, cwd, env, git_credenciado, from, timeout_ms},
+        socket
+      ) do
     if tem_capacidade?(socket, "exec") do
       payload = %{command: command, cwd: cwd}
       payload = if env, do: Map.put(payload, :env, env), else: payload
+      # ADR 0193/RN-676 — a marca só viaja quando é verdadeira (mesmo motivo do
+      # `env` acima: runner antigo nunca recebe chave que não sabe ler, e o
+      # payload de terminal comum fica byte a byte como sempre).
+      payload = if git_credenciado, do: Map.put(payload, :gitCredenciado, true), else: payload
       despachar_pedido(socket, ref, from, timeout_ms, "exec", payload)
     else
       # RN-514: empurrar "exec" pra um runner que não declarou `exec` seria a

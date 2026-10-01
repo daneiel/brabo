@@ -752,13 +752,22 @@ Before RN-558 the command ran anyway, with the variables empty, and you saw a
 plain authentication failure. Now it is refused before executing, and nothing
 runs. The refusal never prints variable names or values, only the count.
 
-**What to do today:**
+**Since [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+([RN-676](business-rules.md#rn-676)) this refusal no longer happens on the
+common path:** the engine marks the authenticated `fetch` (`gitCredenciado`)
+and a current runner runs it on the **host** even with the container up — the
+same folder, mounted at `/work`. If you still see it, the connected
+`brabo-runner` is older than that change and does not read the mark.
 
-1. Stop the project's container (the `/containers` page, "Parar") and let the
-   worktree materialise — on the host path the credential is delivered
-   normally, and the initial `fetch` succeeds.
-2. Bring the container back up and carry on; the clone is idempotent and is not
-   repeated.
+**What to do:**
+
+1. Update the `brabo-runner` on the user's machine and restart it (or its
+   service). That is the fix.
+2. If you cannot update right now: stop the project's container (the
+   `/containers` page, "Parar") and let the worktree materialise — on the host
+   path the credential is delivered normally, and the initial `fetch`
+   succeeds. Then bring the container back up; the clone is idempotent and is
+   not repeated.
 
 A **local** repository (no token) is unaffected, and so are `container` and
 `mounted` projects — they never go through this path. So is

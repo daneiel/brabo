@@ -13,6 +13,16 @@ defmodule EngineWeb.CredencialNoRunnerTest do
   `TerminalChannel` (push `exec` com `env`) -> `exec_result` -> `RunnerGit` ->
   `CredencialDeGit` -> `DevAgentServer` (`dev.blocked` com origem `politica`).
 
+  ## ADR 0193 (RN-676) — a corrente ganhou o ramo que funciona
+
+  Desde o ADR 0193 o fetch credenciado sai MARCADO (`gitCredenciado: true` no
+  push `exec`) e o runner atual o roda no HOST mesmo com container ativo. O
+  primeiro teste abaixo é a troca da recusa por sucesso: um runner dublê que se
+  comporta como o atual (marca + `env` → responde do host; `env` sem marca →
+  a recusa gravada) e a corrente termina em `{:ok, _}`. A recusa REAL segue
+  provada no teste seguinte, agora como o que um runner ANTERIOR ao ADR 0193
+  devolve — ele não lê a marca, e é por ela que o engine diz "atualize".
+
   ## O que isto NÃO prova
 
   Não executa o runner TypeScript: nenhum processo `node` sobe aqui (o job do
@@ -103,10 +113,12 @@ defmodule EngineWeb.CredencialNoRunnerTest do
   defp rodar_ate_o_fim(canal, tarefa, fetch_com_env, vistos \\ []) do
     receive do
       %Phoenix.Socket.Message{event: "exec", payload: %{ref: ref, command: comando} = p} ->
+        send(self(), {:marca_vista, comando, Map.get(p, :gitCredenciado, false)})
+
         resposta =
           cond do
             Map.has_key?(p, :env) and String.contains?(comando, "fetch origin") ->
-              fetch_com_env.(ref)
+              fetch_com_env.(ref, Map.get(p, :gitCredenciado) == true)
 
             String.starts_with?(comando, "test ") ->
               %{"ref" => ref, "exitCode" => 1, "output" => "", "timedOut" => false}
@@ -126,13 +138,49 @@ defmodule EngineWeb.CredencialNoRunnerTest do
     end
   end
 
-  test "container ativo: a recusa REAL do runner atravessa o canal e vira desfecho `politica`",
+  defp marcas_vistas(acc \\ []) do
+    receive do
+      {:marca_vista, comando, marca} -> marcas_vistas([{comando, marca} | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  test "AT-111/ADR 0193 — container ativo: o fetch credenciado vai MARCADO, roda no host e a corrente SUCEDE",
+       %{project_id: id, canal: canal} do
+    remoto = remoto_com_token()
+    tarefa = Task.async(fn -> Workspace.ensure_remoto(id, remoto) end)
+
+    # O runner ATUAL com container ativo: marca + credencial → roda no host e
+    # responde do host; credencial SEM marca → a recusa gravada de sempre.
+    {resultado, vistos} =
+      rodar_ate_o_fim(canal, tarefa, fn ref, marcado? ->
+        if marcado? do
+          %{"ref" => ref, "exitCode" => 0, "output" => "", "timedOut" => false}
+        else
+          resposta_gravada_do_runner(ref)
+        end
+      end)
+
+    assert {:ok, _dir} = resultado
+
+    # A credencial chegou ao canal SÓ no fetch, e ele (e só ele) foi marcado.
+    [{_, env}] = Enum.filter(vistos, fn {c, _} -> String.contains?(c, "fetch origin") end)
+    assert env["BRABO_GIT_TOKEN"] == remoto.token
+
+    marcas = marcas_vistas()
+    assert [{_, true}] = Enum.filter(marcas, fn {c, _} -> String.contains?(c, "fetch origin") end)
+
+    assert Enum.all?(marcas, fn {c, m} -> String.contains?(c, "fetch origin") or m == false end)
+  end
+
+  test "runner ANTERIOR ao ADR 0193 (não lê a marca): a recusa REAL atravessa o canal e vira `politica`",
        %{project_id: id, canal: canal} do
     remoto = remoto_com_token()
     tarefa = Task.async(fn -> Workspace.ensure_remoto(id, remoto) end)
 
     {resultado, vistos} =
-      rodar_ate_o_fim(canal, tarefa, &resposta_gravada_do_runner/1)
+      rodar_ate_o_fim(canal, tarefa, fn ref, _marcado? -> resposta_gravada_do_runner(ref) end)
 
     # Elo 1 — a credencial saiu do engine e CHEGOU ao canal, só no fetch.
     [{_, env}] = Enum.filter(vistos, fn {c, _} -> String.contains?(c, "fetch origin") end)
@@ -165,7 +213,7 @@ defmodule EngineWeb.CredencialNoRunnerTest do
     tarefa = Task.async(fn -> Workspace.ensure_remoto(id, remoto) end)
 
     {resultado, vistos} =
-      rodar_ate_o_fim(canal, tarefa, fn ref ->
+      rodar_ate_o_fim(canal, tarefa, fn ref, _marcado? ->
         %{"ref" => ref, "exitCode" => 0, "output" => "", "timedOut" => false}
       end)
 
@@ -179,7 +227,7 @@ defmodule EngineWeb.CredencialNoRunnerTest do
     tarefa = Task.async(fn -> Workspace.ensure_remoto(id, remoto_com_token()) end)
 
     {{:error, mensagem}, _} =
-      rodar_ate_o_fim(canal, tarefa, fn ref ->
+      rodar_ate_o_fim(canal, tarefa, fn ref, _marcado? ->
         %{
           "ref" => ref,
           "exitCode" => 128,

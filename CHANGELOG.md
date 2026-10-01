@@ -634,6 +634,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner/engine**: o `git fetch` AUTENTICADO em modo `runner` passa a
+  funcionar com o container do projeto de pé (AT-116, prova AT-111,
+  [ADR 0193](docs/adr/0193-git-credenciado-no-host-do-runner.md),
+  [RN-676](docs/business-rules.md#rn-676)). Até aqui ele terminava sempre na
+  recusa nomeada da RN-558 (`credencial-nao-atravessa-o-container`) — que era
+  justamente o caminho comum. Agora o engine marca esse fetch
+  (`gitCredenciado: true` no `exec`) e o runner o executa no HOST, onde a
+  credencial chega; os comandos do dev agent continuam no `docker exec`, que
+  segue sem campo de `env`. Um `env` sem a marca continua recusado com
+  container ativo. **Runner antigo:** um `brabo-runner` anterior a esta versão
+  não lê a marca e segue recusando — a mensagem passa a dizer para atualizá-lo.
 - **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
   e do PO) deixa de sair em português para quem escolheu outro idioma de
   resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da

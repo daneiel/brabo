@@ -11839,7 +11839,12 @@ ele roda no HOST (`criarPastaDoProjeto`), não no container.
   `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
   lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
   o teste do engine com a mensagem antiga à vista
-- **Lacuna DECLARADA, que é a METADE que continua aberta:** a credencial
+- **Lacuna DECLARADA, que é a METADE que continua aberta — FECHADA pela
+  [RN-676](#rn-676) ([ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md),
+  decisão do dono de 01/10):** o fetch credenciado vai MARCADO pelo engine e
+  roda no HOST do runner mesmo com container ativo; esta recusa encolheu para o
+  `env` SEM a marca (na prática, um runner anterior ao ADR 0193). O texto
+  abaixo é o de quando ela fechou a metade do silêncio: a credencial
   continua **não atravessando** o `docker exec`. Clone/fetch de repositório
   remoto AUTENTICADO em modo `runner` segue impossível com o container de pé —
   o que mudou é que agora ele falha DIZENDO isso, em vez de parecer erro de
@@ -18908,8 +18913,8 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   (`mensagem_sem_branch_de_trabalho`);
   `apps/engine/lib/engine/actions/workspace.ex:70` (`ensure_remoto`), `:224`
   (`init_from_bare!`), `:272` (`remoto_vazio?`);
-  `apps/engine/lib/engine/actions/workspace/runner_git.ex:138` (`add_worktree`),
-  `:163` (`garantir_base`), `:288` (`remoto_vazio?`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
+  `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
   (`add_worktree`), `:86` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
@@ -19036,3 +19041,53 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
   `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
 - **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)
+
+## O git credenciado roda no host do runner (RN-676)
+
+### RN-676 — Com container ativo, o `git fetch` credenciado de `RunnerGit` roda no HOST do runner, marcado pelo engine; o código continua no container {#rn-676}
+
+Decisão do dono (01/10), registrada no
+[ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md): operação de git
+CREDENCIADA roda no HOST do runner, e o código roda no container. Fecha a
+metade que a [RN-558](#rn-558) deixou aberta — o fetch autenticado em modo
+`runner` com o container de pé, que é o caminho comum, terminava sempre na
+recusa nomeada.
+
+1. **Quem marca é o engine, e só num ponto.** `RunnerGit.fetch!/3` despacha o
+   fetch com credencial por `RunnerRouter.exec_git_credenciado/5`, que põe
+   `gitCredenciado: true` no payload `exec` e exige `env` não vazio por
+   guarda. O comando de terminal do dev agent passa por `RunnerRouter.exec/4` e
+   nunca leva a marca. Sem credencial (provider `local`), o fetch vai sem marca.
+2. **O runner roda no host só com a CONJUNÇÃO**: a marca `true` literal **e**
+   `env` não vazio. Aí o comando vai a `executarComando` (o `env` mesclado sobre
+   `process.env`), mesmo com container ativo. A pasta é a mesma: `estado.dir` é
+   o bind-mount de `/work`.
+3. **`env` sem a marca não ganha o host.** Com container ativo, esse par segue
+   RECUSADO com a marca da RN-558 e origem `politica`. Hoje nenhum chamador do
+   engine o produz; na prática ele chega de um `brabo-runner` anterior ao ADR
+   0193, que não lê a marca — e a mensagem do engine diz para atualizá-lo. A
+   marca sem `env` também não muda nada: o comando vai ao container.
+4. **Nenhuma contenção muda**: `DockerPort.exec` segue sem `env` (ADR 0130), e
+   `RunnerReadiness` (RN-507) fica byte a byte — a marca decide ONDE o runner
+   executa, nunca SE o engine despacha.
+5. **O log nunca traz nome nem valor de variável do `env`**: a recusa dá a
+   contagem, e o log do caminho host acrescenta só `[git credenciado, no host]`.
+
+- **Código:** `apps/runner/src/index.ts:685` (`gitCredenciadoNoHost`), `:650`
+  (`tratarExec`); `apps/runner/src/channel.ts:71` (`gitCredenciado`), `:627`
+  (`gitCredenciado`); `apps/engine/lib/engine/runners/runner_router.ex:93`
+  (`exec_git_credenciado`), `:98` (`despachar_exec`);
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex:338` (`exec`), `:426`
+  (`despachar`); `apps/engine/lib/engine_web/channels/terminal_channel.ex:605`
+  (`git_credenciado`); `apps/engine/lib/engine/runners/credencial_de_git.ex:93`
+  (`mensagem`)
+- **Teste:** `apps/runner/src/index-handlers.spec.ts:366` (o helper real do
+  `git` recebe a credencial no host com container ativo — caminho feliz),
+  `:391` (um `git fetch origin` real sucede no host), `:430` (`env` sem a marca
+  segue recusado — caso de falha); `apps/runner/src/channel.spec.ts:208`;
+  `apps/engine/test/engine/actions/workspace_runner_test.exs:451`, `:466`,
+  `:476`; `apps/engine/test/engine_web/channels/credencial_no_runner_test.exs:149`
+  (AT-111: a corrente pelo `TerminalChannel` real termina em `{:ok, _}`), `:177`.
+  Os testes ExUnit não rodaram no ambiente desta entrega (`repo.hex.pm` 403); o
+  CI os prova.
+- **Origem:** AT-116 (prova: AT-111), decisão do dono de 01/10

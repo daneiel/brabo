@@ -308,7 +308,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
           send(parent, :fake_runner_ready)
 
           receive do
-            {:dispatch_exec, ref, command, cwd, _env, from, _timeout_ms} ->
+            {:dispatch_exec, ref, command, cwd, _env, _git_credenciado, from, _timeout_ms} ->
               send(from, {:runner_exec_result, ref, responder.(command, cwd)})
           end
         end)
