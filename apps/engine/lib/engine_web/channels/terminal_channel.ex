@@ -143,11 +143,15 @@ defmodule EngineWeb.TerminalChannel do
   o TRANSPORTE (`Endpoint.broadcast(id, "disconnect", %{})`, o mecanismo
   documentado do Phoenix — ver `EngineWeb.RunnerSocket.id/1`) e para.
 
-  A comparação é por USUÁRIO, e não pela credencial: `Engine.Runners.SocketTicket`
-  guarda `project_id`/`user_id`/`kind` e nada mais. O custo está declarado no
-  moduledoc de `Engine.Runners.Revogacao` — um runner do MESMO usuário
-  conectado com PAT ou com outra chave também cai, e reconecta sozinho se a
-  credencial dele ainda valer.
+  Desde o ADR 0201 (RN-685) há DOIS pedidos, e cada um compara uma coisa:
+  `{:derrubar_por_credencial, ...}` — o da revogação de chave e de PAT —
+  compara a CREDENCIAL que abriu esta conexão (`socket.assigns.credencial`,
+  vinda do ticket), e um runner do mesmo usuário aberto com outra chave ou
+  com PAT fica de pé; `{:derrubar_por_revogacao, ...}` continua comparando o
+  USUÁRIO, porque é o da remoção de membro (RN-615), que tira a pessoa e não
+  uma credencial. A conexão LEGADA (ticket sem credencial, do rollout) cai
+  pelo par usuário/projeto no primeiro pedido também — ver o moduledoc de
+  `Engine.Runners.Revogacao`.
 
   ## Auditoria (PTY é ação do usuário, não passa por `proposed_action`)
 
@@ -719,16 +723,16 @@ defmodule EngineWeb.TerminalChannel do
     {:noreply, socket}
   end
 
-  # Revogação de credencial alcançando a conexão VIVA (ADR 0147 ponto 6,
-  # RN-520) — `Engine.Runners.Revogacao.derrubar/2` manda isto pro pid que o
+  # Remoção de membro alcançando a conexão VIVA (ADR 0147 ponto 6, RN-520,
+  # RN-615) — `Engine.Runners.Revogacao.derrubar/3` manda isto pro pid que o
   # `Registry` entrega, porque o `user_id` daquela conexão só existe AQUI,
   # em `socket.assigns`.
   #
-  # A comparação é por USUÁRIO, nunca por credencial: a identidade do PAT ou
-  # da chave de dispositivo que originou o ticket morre no `PatAuthGuard` da
-  # api e nunca chega ao socket (ver o moduledoc de `Engine.Runners.Revogacao`
-  # para o custo declarado). Runner de OUTRO usuário no mesmo projeto fica de
-  # pé, e o pedinte é informado disso — nunca um `:ok` que não descreve o que
+  # A comparação é por USUÁRIO, com a credencial que for: quem chama é a
+  # remoção de membro, que tira a PESSOA do projeto. A revogação de UMA
+  # credencial passa pelo `{:derrubar_por_credencial, ...}`, logo abaixo
+  # (ADR 0201). Runner de OUTRO usuário no mesmo projeto fica de pé, e o
+  # pedinte é informado disso — nunca um `:ok` que não descreve o que
   # aconteceu.
   #
   # Derruba o TRANSPORTE, não só este processo: parar só o canal deixaria o
@@ -747,6 +751,33 @@ defmodule EngineWeb.TerminalChannel do
     else
       send(from, {:runner_derrubado, ref, :de_outro_dono})
       {:noreply, socket}
+    end
+  end
+
+  # Revogação de UMA credencial (ADR 0201, RN-685) —
+  # `Engine.Runners.Revogacao.derrubar_credencial/4` pergunta a TODO runner
+  # registrado, e só este canal sabe com que credencial a conexão dele nasceu.
+  #
+  # - credencial IGUAL à revogada: cai (`:derrubado`);
+  # - SEM credencial (ticket emitido por uma api anterior ao ADR 0201), do
+  #   MESMO dono, num dos projetos que a credencial alcança: cai pelo par,
+  #   como antes (`:derrubado_legado`) — não derrubar reabriria a RN-519
+  #   durante o rollout;
+  # - qualquer outro caso: fica de pé (`:intocado`), e o pedinte é informado.
+  #
+  # A queda é a mesma de sempre: o TRANSPORTE pelo `disconnect` no id do
+  # socket (que, com credencial, só ela compartilha) e o `{:stop, ...}` que
+  # libera a presença no `Registry` na hora.
+  @impl true
+  def handle_info({:derrubar_por_credencial, ref, credencial, legado, from}, socket) do
+    desfecho = desfecho_da_revogacao_por_credencial(socket, credencial, legado)
+    send(from, {:runner_derrubado, ref, desfecho})
+
+    if desfecho == :intocado do
+      {:noreply, socket}
+    else
+      desconectar_transporte(socket)
+      {:stop, {:shutdown, :credencial_revogada}, socket}
     end
   end
 
@@ -832,13 +863,36 @@ defmodule EngineWeb.TerminalChannel do
     case RunnerSocket.socket_id(
            socket.assigns[:kind],
            socket.assigns[:project_id],
-           socket.assigns[:user_id]
+           socket.assigns[:user_id],
+           socket.assigns[:credencial]
          ) do
       nil -> :ok
       id -> EngineWeb.Endpoint.broadcast(id, "disconnect", %{})
     end
 
     :ok
+  end
+
+  # A decisão de `handle_info({:derrubar_por_credencial, ...})`, separada para
+  # ler como a tabela que ela é. Só o socket `:runner` é alvo: o `:web` nunca
+  # ocupa o `Registry`, então nem chega a ser perguntado — a cláusula é cinto.
+  defp desfecho_da_revogacao_por_credencial(socket, credencial, legado) do
+    assigns = socket.assigns
+
+    cond do
+      assigns[:role] != :runner ->
+        :intocado
+
+      is_map(assigns[:credencial]) ->
+        if assigns[:credencial] == credencial, do: :derrubado, else: :intocado
+
+      is_binary(legado[:user_id]) and assigns[:user_id] == legado[:user_id] and
+          MapSet.member?(legado[:projetos] || MapSet.new(), assigns[:project_id]) ->
+        :derrubado_legado
+
+      true ->
+        :intocado
+    end
   end
 
   defp tem_capacidade?(socket, capacidade) do

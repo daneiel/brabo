@@ -95,6 +95,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   tema fora da lista, tema sem ADR e linha do índice na seção errada, fora de
   seção ou fora da ordem numérica. **ADR novo** ganha uma linha em
   `temas.yml` no mesmo PR. A taxonomia é proposta para revisão do dono.
+- **api/engine/web**: **revogar uma credencial derruba só as conexões abertas
+  COM ELA** (AT-013, [ADR 0201](docs/adr/0201-revogacao-por-chave.md),
+  [RN-685](docs/business-rules.md#rn-685), revisando a
+  [RN-520](docs/business-rules.md#rn-520); decisão do dono em 01/10). O ticket
+  do socket `/runner` passa a guardar QUAL credencial o pediu — a chave de
+  dispositivo pelo `kid`, ou o PAT — (colunas novas em
+  `engine.runner_socket_tickets`, migration Ecto aditiva), e a revogação pede
+  ao engine `POST /internal/runner/disconnect-credential`: anula os tickets
+  pendentes dela e derruba, em qualquer projeto, só o runner que nasceu dela.
+  Outro runner do mesmo usuário, com outra chave ou com PAT, **fica de pé** —
+  antes caía junto. A chave de MÁQUINA vira UM pedido em vez do par
+  `{projeto, usuário}` aplicado por projeto, e alcança até projeto que a api
+  não listaria. **Revogar um PAT** (o próprio, ou como `maintainer`) **passa a
+  derrubar** o runner conectado com ele — antes só impedia o ticket seguinte.
+  Conexão aberta com ticket de antes do deploy cai pelo par, como antes, e um
+  engine que não conheça a rota faz a revogação de chave voltar ao par. A
+  confirmação de revogar em Configurações e na Conta troca o "outro runner
+  seu também cai" por "só cai o que se conectou com ESTA chave". Sem ação do
+  operador: a migration roda no job de sempre.
+
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
   [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A

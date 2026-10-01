@@ -84,11 +84,18 @@ defmodule EngineWeb.Router do
     # O runner sobe o container do projeto na máquina do usuário (ADR 0137) —
     # ver EngineWeb.ContainerCommandController. Só para projeto
     # mounted/runner; container vai pelo broker, que nunca chama isto.
-    # Revogação de credencial alcançando a conexão viva (ADR 0147 ponto 6,
-    # RN-520) — ver EngineWeb.RunnerConnectionCommandController.
+    # Remoção de membro alcançando a conexão viva (ADR 0147 ponto 6,
+    # RN-520, RN-615) — ver EngineWeb.RunnerConnectionCommandController.
     post "/projects/:projectId/runner/disconnect",
          RunnerConnectionCommandController,
          :disconnect
+
+    # Revogação de UMA credencial (chave de dispositivo ou PAT) derrubando
+    # só as conexões dela, em qualquer projeto (ADR 0201, RN-685). Sem
+    # `:projectId` no caminho: a chave de máquina não tem um.
+    post "/runner/disconnect-credential",
+         RunnerConnectionCommandController,
+         :disconnect_credential
 
     post "/projects/:projectId/containers/start", ContainerCommandController, :start
     post "/projects/:projectId/containers/stop", ContainerCommandController, :stop

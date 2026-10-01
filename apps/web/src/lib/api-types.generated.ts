@@ -2404,7 +2404,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga um Personal Access Token próprio
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.
          */
         delete: operations["PersonalAccessTokensController_revokePat"];
         options?: never;
@@ -2424,7 +2424,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga o Personal Access Token de QUALQUER usuário no projeto
-         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.
+         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.
          */
         delete: operations["PersonalAccessTokensController_revokePatAsMaintainer"];
         options?: never;
@@ -2688,7 +2688,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -3580,7 +3580,7 @@ export interface paths {
         post?: never;
         /**
          * Revokes one of the authenticated user’s own MACHINE device keys
-         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
+         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the LIVE connections opened with this key, in EVERY project (RN-520/RN-543). Since RN-685 (ADR 0201) the target is the KEY: another runner of the same user, connected with a PAT or with another key, stays up. The key’s still-unused tickets are voided. With no project yet there is no connection to drop. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
          */
         delete: operations["MachineDeviceKeysController_revokeMachineDeviceKey"];
         options?: never;

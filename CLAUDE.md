@@ -242,6 +242,7 @@ estado lido do repositório e não da conversa.
 | A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
 | O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
+| A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
 
 ## Estado atual e aberto
 
@@ -615,12 +616,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   invalidar só a própria deixa o painel anunciando a revogada. Segue aberto: a
   rota que CRIA chave de máquina só serve instalação de UMA pessoa (409 com
   duas ou mais), então instalação com time não tem por onde criar chave de
-  máquina — declarado, não acaso. (2) O ALVO da revogação continua sendo
-  `{projeto, usuário}` e NUNCA `{chave}` (RN-520): a tela DIZ isso na
-  confirmação e não muda: outro runner seu no mesmo projeto cai junto, mesmo
-  com PAT ou outra chave, e reconecta se a credencial ainda valer. Mudar o
-  alvo exige coluna nova em `runner_socket_tickets` e contrato novo de auth —
-  frente própria, com ADR. (3) A visão de `maintainer` (listar/revogar de
+  máquina — declarado, não acaso. (2) O ALVO da revogação deixou de ser
+  `{projeto, usuário}` e passou a ser a CHAVE (RN-685, ADR 0201, revisando a
+  RN-520): `runner_socket_tickets` guarda QUAL credencial pediu o ticket
+  (`credential_kind`/`credential_id`, nuláveis — `terminal` e ticket de api
+  anterior não têm), o socket a guarda em `assigns` e no `id`, e a revogação
+  de chave ou de PAT pede `POST /internal/runner/disconnect-credential`, que
+  anula os tickets pendentes dela e pergunta a TODO runner do cluster se nasceu
+  dela — outro runner seu, com PAT ou outra chave, fica de pé, e a confirmação
+  da tela diz isso. NÃO apague as duas peças de transição: a conexão LEGADA
+  (ticket sem credencial) cai pelo par nos projetos que a api manda, e engine
+  sem a rota faz a revogação de chave voltar ao par — sem elas a revogação
+  deixaria de derrubar o que derrubava (RN-519). O par
+  `runner/disconnect` continua, como alvo da remoção de membro (RN-615). (3) A visão de `maintainer` (listar/revogar de
   qualquer usuário) segue FORA por DECISÃO da RN-519, não por omissão.
   Desde a RN-548 o web também CONSOME essa
   listagem para outra pergunta — `RunnerOnboardingPanel` reconhece máquina já

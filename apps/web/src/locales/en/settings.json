@@ -516,9 +516,9 @@
     "modal": {
       "title": "Revoke device key",
       "body": "Revoking “{{name}}” is final: it stops authenticating the local agent, and creating another one is a new flow.",
-      "alcanceMaquina": "This is a MACHINE key: it serves every project of yours in runner mode, and revoking it drops the local agent in all of them — not just this project.",
-      "alcanceProjeto": "This is a PROJECT key: revoking it drops the local agent in its project.",
-      "colateral": "Dropping reaches {project, user} and never one particular key: another runner of yours in the same project also falls, even authenticated with a different credential — and reconnects on its own if that credential is still valid.",
+      "alcanceMaquina": "This is a MACHINE key: it serves every project of yours in runner mode, and revoking it drops the local agent that connected with it in all of them — not just this project.",
+      "alcanceProjeto": "This is a PROJECT key: revoking it drops the local agent that connected with it, in its project.",
+      "precisao": "Only what connected with THIS key falls: another runner of yours in the same project, authenticated with another key or with a token, stays connected. A connection request made with it and not yet used stops being valid too.",
       "cancel": "Cancel",
       "confirm": "Revoke"
     }

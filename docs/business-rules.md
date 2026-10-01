@@ -9588,6 +9588,15 @@ ALCANCE ([RN-520](#rn-520)), não amplitude.
 
 ### RN-520 — Revogar deixa de só impedir ticket NOVO e passa a derrubar a conexão VIVA; o alvo é `{projeto, usuário}` e nunca `{chave}`, e derrubar nunca derruba a revogação {#rn-520}
 
+> **Revisada pela [RN-685](#rn-685) ([ADR 0201](adr/0201-revogacao-por-chave.md)):**
+> o ticket do socket passou a guardar QUAL credencial o pediu, e a revogação de
+> chave (e a de PAT) derruba só as conexões abertas COM ELA — outro runner do
+> mesmo usuário, com outra chave ou com PAT, fica de pé. O "custo declarado"
+> abaixo deixou de valer. O par `{projeto, usuário}` sobrevive como o alvo da
+> remoção de membro ([RN-615](#rn-615)), como o da conexão LEGADA (ticket sem
+> credencial) durante o rollout, e como o plano B quando o engine não conhece a
+> rota por credencial.
+
 A outra metade do **ponto 6** do
 [ADR 0147](adr/0147-agente-local-com-capacidades.md). Revogar uma chave de
 dispositivo impedia o ticket SEGUINTE e nada mais: um `brabo-runner` já
@@ -19953,3 +19962,121 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   num harness avulso com os módulos compilados à mão); o CI os prova.
 - **Origem:** AT-276 (item A30 da análise do uso real de 2026-09-29), decisão
   do dono de 01/10
+
+### RN-685 — Revogar uma credencial derruba só as conexões abertas COM ELA: o ticket do socket guarda a credencial, e o alvo deixa de ser `{projeto, usuário}` {#rn-685}
+
+Revisa a [RN-520](#rn-520). Até aqui, revogar uma chave de dispositivo derrubava
+a conexão viva do runner pelo par `{projeto, usuário}`, porque a identidade da
+credencial morria no `PatAuthGuard`: um runner do MESMO usuário conectado com
+PAT ou com outra chave caía junto, e a chave de MÁQUINA
+([RN-543](#rn-543)) multiplicava isso por projeto. Revogar um PAT não derrubava
+nada.
+
+**O ticket guarda QUAL credencial o pediu.** `runner_socket_tickets` (tabela do
+engine) ganha `credential_kind` (`device_key` | `pat`) e `credential_id` (o
+`kid`, que é o id do registro — [RN-475](#rn-475) —, ou o id do PAT), as duas
+NULÁVEIS: o ticket de `terminal` é da aba da web e não tem credencial de
+dispositivo, e o de `runner` emitido por uma api anterior chega sem ela. O
+`PatAuthGuard` anota a credencial DEPOIS de autorizar
+(`request.credencialDeDispositivo`), o ticket de `runner` a leva ao engine e o
+de `terminal` nunca leva; par incompleto ou espécie desconhecida vira AUSENTE,
+nunca uma credencial inventada.
+
+**O socket guarda a credencial, e o id dele também.** `connect/3` põe
+`assigns.credencial`, e o id passa a ser
+`runner_socket:<kind>:<projectId>:<userId>:<espécie>:<id>` quando ela existe —
+o `disconnect` que o canal difunde para o próprio id alcança só aquela
+credencial.
+
+**A revogação de UMA credencial:**
+
+1. **anula os tickets PENDENTES dela** — o pedido feito segundos antes da
+   revogação não entra depois dela (`consumed_at`, o mesmo estado de "já
+   usado", nenhum estado novo);
+2. **pergunta a TODO runner do cluster** se ele nasceu desta credencial — só o
+   canal sabe —, e só quem nasceu dela cai. A chave de máquina é UM pedido, e
+   cai em todo projeto em que abriu conexão, inclusive num que a api não
+   listaria;
+3. responde um BALANÇO (`derrubados`, `legados`, `intocados`, `semResposta`,
+   `ticketsAnulados`) — zero derrubados é o caso normal da chave órfã
+   ([RN-519](#rn-519)).
+
+Vale para as três revogações: a de chave (por projeto e pela Conta,
+[RN-611](#rn-611)) e as duas de PAT (a do dono, [RN-426](#rn-426),
+e a do `maintainer`, [RN-427](#rn-427)).
+Revoga PRIMEIRO, derruba depois, e derrubar continua sendo efeito colateral que
+só LOGA — o `DELETE` segue 204 e idempotente.
+
+**O que já caía continua caindo** (a proibição da AT-013). A conexão LEGADA —
+ticket sem credencial — do mesmo dono, num dos projetos que a revogação de
+CHAVE manda como alcance (o da linha, ou os candidatos da máquina), cai pelo
+par como antes; o PAT não ganha alcance legado, porque não derrubava nada. E se
+o engine não conhece a rota por credencial (404 de um engine anterior), a
+revogação de chave volta ao par, `disconnectRunnerOfUser`, projeto a projeto.
+
+**O par `{projeto, usuário}` continua, com outro dono:** é o alvo da remoção de
+membro ([RN-615](#rn-615)), que tira a PESSOA, com a credencial que for.
+
+**A tela diz a precisão** ([RN-561](#rn-561)): a confirmação de revogar — chaves
+de dispositivo em Configurações e chaves de máquina na Conta — troca *"outro
+runner seu também cai"* por *"só cai o que se conectou com ESTA chave"*. Muda o
+rótulo, não o comportamento.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:151`
+  (`credencialDeDispositivo`, o PAT), `:236` (`credencialDeDispositivo`, a
+  chave);
+  `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts:67`
+  (`runnerTicket`);
+  `apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts:55`
+  (`execute`);
+  `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:71`
+  (`execute`), `:109` (`derrubarConexoesDaChave`);
+  `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
+  (`derrubarConexoesDoPat`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:599`
+  (`disconnectRunnerCredential`);
+  `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
+  (`anular_pendentes_da_credencial`);
+  `apps/engine/lib/engine/runners/revogacao.ex:131` (`derrubar_credencial`);
+  `apps/engine/lib/engine/runners/registry.ex:64` (`todos`);
+  `apps/engine/lib/engine_web/channels/runner_socket.ex:81` (`socket_id`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:772`
+  (`handle_info`), `:879` (`desfecho_da_revogacao_por_credencial`);
+  `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:58`
+  (`disconnect_credential`);
+  `apps/engine/priv/repo/migrations/20261001120000_add_credential_to_runner_socket_tickets.exs`;
+  `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:346`,
+  `apps/web/src/routes/MachineDeviceKeysSection.tsx:202`
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (`describe "o alvo da queda é a CHAVE"` — caminho feliz; `describe "CASO DE
+  FALHA: o engine não atende o pedido por chave"` — o plano B pelo par; a
+  máquina num pedido só);
+  `apps/api/test/application/use-cases/auth/machine-device-keys.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token.use-case.spec.ts`
+  e `revoke-personal-access-token-as-maintainer.use-case.spec.ts`;
+  `apps/api/test/interfaces/pat-auth.guard.spec.ts` (a credencial anotada nos
+  dois caminhos, e não anotada na recusa);
+  `apps/api/test/interfaces/http/runner/runner-tickets.guards.integration.spec.ts`
+  (o PAT real até o pedido ao engine);
+  `apps/api/test/application/use-cases/runner/request-runner-ticket.use-case.spec.ts`
+  (o `terminal` nunca leva credencial);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (`describe "o alvo é a CREDENCIAL"`, inclusive o 404 que LANÇA);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "revogação por CREDENCIAL"` — o canal real que cai, o PAT do mesmo
+  usuário que fica de pé, a máquina em dois projetos sem lista, o legado pelo
+  par, o ticket pendente anulado);
+  `apps/engine/test/engine/runners/socket_ticket_test.exs`,
+  `apps/engine/test/engine_web/channels/runner_socket_test.exs`,
+  `apps/engine/test/engine_web/controllers/runner_connection_command_controller_test.exs`
+  (200 com balanço, 400 de credencial fora de forma);
+  `apps/web/src/routes/settings/chaves-de-dispositivo.test.tsx`,
+  `apps/web/src/routes/MachineDeviceKeysSection.test.tsx` (a frase da precisão,
+  e a do alvo antigo que não volta)
+- **ADR:** [0201](adr/0201-revogacao-por-chave.md)
+- **Origem:** AT-013 (HS-008, EP-003), decisão do dono em 01/10. Fica
+  declarado e NÃO feito: o ticket SEM credencial (de api anterior) não é
+  anulado na revogação — não há o que comparar, e a janela é de 30 s, só no
+  rollout; e os testes ExUnit só rodam no CI (`repo.hex.pm` dá 403 no ambiente
+  em que foram escritos)
