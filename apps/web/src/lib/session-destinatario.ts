@@ -5,6 +5,7 @@ import type { AgentTokenUsage, Handoff, SessionEvent } from './api-types';
 import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 import { pollQueParaNoErro } from './query-policy';
 import { AGENTES_DE_CHAT } from './session-readiness';
+import { addressableAgents } from './agents';
 
 /**
  * O DESTINATÁRIO da mensagem do composer (RN-631, AT-251).
@@ -252,4 +253,26 @@ export function useDestinatarioDoChat({
     precisaEscolher: destinatario === null && opcoes.length > 1,
     escolher,
   };
+}
+
+/**
+ * Quem a consultiva sem agente pode CHAMAR para conversar (RN-682): os
+ * agentes que conversam (`AGENTES_DE_CHAT`, a lista que o engine casa com
+ * cláusula própria — RN-584) e que o handoff manual alcança
+ * (`addressableAgents`), menos quem já entrou na sessão. Um agente que não
+ * conversa (os leads de área sem cláusula de chat) seria chamado para receber
+ * uma mensagem que o engine recusa.
+ *
+ * Sem o Criativo: só a consultiva fica sem opção de destinatário (na criativa
+ * ele é opção desde antes de ativado), e a consultiva promete, no convite, que
+ * o Criativo não entra — abrir a ideação é o que a criativa FAZ (RN-097).
+ */
+export function agentesParaChamar(activeFor: (agent: string) => boolean): string[] {
+  const enderecaveis = new Set<string>(addressableAgents());
+  return AGENTES_DE_CHAT.filter(
+    (agente) =>
+      agente !== DESTINATARIO_DA_SESSAO_CRIATIVA &&
+      enderecaveis.has(agente) &&
+      !activeFor(agente),
+  );
 }
