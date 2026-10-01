@@ -864,6 +864,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api (segurança)**: o teto de efeito externo da RN-418 passa a valer também
+  para as ações TIPADAS `git_push` e `pr_open` (AT-347,
+  [RN-689](docs/business-rules.md#rn-689), decisão do dono de 01/10). Até aqui
+  `decide()` só tetava o COMANDO de terminal (`git push` digitado); a ação
+  tipada, com o papel mínimo cumprido, nascia `auto_approved` pelo curinga do
+  modo automático, por regra específica de `agent_autonomy` ou por um `allow`
+  em `permissions.json` — medido em teste nos três estágios. Agora as duas
+  nascem `pending`, com o motivo nomeado no `proposed_action.created`, e `deny`
+  continua vencendo. **Consequência visível:** o dev agent deixa de empurrar e
+  de abrir a PR sozinho — a ativação da execução (e o aceite de paralelização)
+  semeia só `git_commit` em `auto_approve`, e o agente espera em
+  `awaiting_approval` até você aprovar o push e a PR (o caminho da
+  [RN-050](docs/business-rules/custo.md#rn-050)); só depois o gate de QA abre.
+  Linhas antigas de autonomia `git_push`/`pr_open` ficam no banco e não valem
+  mais. `git_merge` segue com o teto próprio; `open_adr_pr`, `open_infra_pr` e
+  as ações de container não mudam. O "sempre permitir" dessas duas já era
+  recusado na fonte (RN-642).
 - **api/ci (segurança)**: fecham os sete alertas novos do CodeQL que
   reprovavam o check da promoção `qa → main` (AT-344, AT-345, AT-346). O aviso
   ao canal da sessão (`SessionChannelNotifier`, RN-579) só monta a URL de

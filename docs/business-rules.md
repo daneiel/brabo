@@ -460,7 +460,7 @@ Order: **(a) IAM → (b) `agent_autonomy` → (c) `permissions.json`**. Each
 stage can only **raise** permissiveness; a silent stage never lowers the
 previous one. `deny` at any stage returns immediately.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:116`
+- **Where:** `apps/api/src/domain/actions/decide.ts:118`
 - **Test:** `test/domain/actions/decide.spec.ts` (10 KB — the largest in
   the domain)
 
@@ -469,7 +469,7 @@ previous one. `deny` at any stage returns immediately.
 Before any policy, IAM: each `ActionType` requires a minimum effective
 role. Without it, `deny` with an explicit reason.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:108` (`MIN_ROLE_FOR_ACTION_TYPE`)
+- **Where:** `apps/api/src/domain/actions/decide.ts:110` (`MIN_ROLE_FOR_ACTION_TYPE`)
 - **Test:** `test/domain/actions/decide.spec.ts`
 
 ### RN-006 — Ceiling: merge into a protected branch is never auto-approvable {#rn-006}
@@ -486,7 +486,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:453` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:472` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -499,7 +499,7 @@ Changing an agent's instruction always requires a human decision. The
 feature's value is in the human seeing the diff; auto-approving would be
 the agent rewriting itself.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:166`
+- **Where:** `apps/api/src/domain/actions/decide.ts:168`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0016](adr/0016-anamnese-proficiencia-patches-instrucao.md) §8
 
@@ -614,7 +614,7 @@ still consumes exactly ONE lap. See
 
 - **Where:** `DEFAULT_MAX_GATE_CORRECTIONS = 3` in
   `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:21`;
-  applied in `activate-execution.use-case.ts:85` and, in the engine, in
+  applied in `activate-execution.use-case.ts:89` and, in the engine, in
   `qa_lead_server.ex:268` and `secops_agent_server.ex:142`
 - **Test:** `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`
   (the specialization returns `{:blocked, ...}` without calling the api)
@@ -4092,6 +4092,11 @@ relações em si.
 
 ### RN-418 — Efeito externo git e comando privilegiado (sudo/doas) viram teto absoluto, nunca `deny` {#rn-418}
 
+**Revisada pela [RN-689](#rn-689)** (AT-347, decisão do dono de 01/10): o teto
+abaixo vale também para as ações TIPADAS `git_push` e `pr_open`, que até ali
+só tinham o papel mínimo e nasciam `auto_approved` pelo curinga, por regra
+específica ou por `permissions.json`. O resto desta entrada continua valendo.
+
 Revisa a [RN-106](business-rules/autenticacao.md#rn-106) por decisão GLOBAL e explícita do dono do
 produto: `git push`, abertura de PR, deploy (a mesma detecção por
 prefixo que a RN-106 já tinha) e `sudo`/`doas` (novo — casados por VERBO
@@ -6764,7 +6769,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   derivação), com `LocalizacaoDeProjetoInvalidaError` em `:219`,
   `apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts:77`
   (o único chamador do caminho do arquivo),
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
   409), `apps/web/src/routes/ProjectOverviewTab.tsx:431`
@@ -13752,11 +13757,11 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
   (`reason` no payload do evento de sessão), `:223` (o comentário do outbox
   sem o campo), `:227` (o payload do outbox, intacto), `:356` (o
   `rejectionReason`, que continua só no `deny`);
-  `apps/api/src/domain/actions/decide.ts:276` (`Decision`, a fonte da string)
+  `apps/api/src/domain/actions/decide.ts:278` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
   `:925` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:953` (`deny` com o mesmo texto do `rejectionReason`), `:971` (o outbox
+  `:981` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -15014,7 +15019,7 @@ repositório, não o de cada sessão, e não mudaram.
   `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:66`
   (`AGENTES_QUE_PROVISIONAM_O_REPOSITORIO`, gatilho e segunda porta) e `:141`
   (o ramo, antes de `activateAgent`);
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:139`
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:143`
   (a recusa, antes de qualquer efeito);
   `apps/api/src/domain/execution/repositorio-para-executar.ts:50`
   (`motivoDeExecucaoSemRepositorio`, e os dois nomes de agente que o aceite
@@ -15032,7 +15037,7 @@ repositório, não o de cada sessão, e não mudaram.
   `apps/api/test/application/use-cases/agents/accept-handoff-provisiona-uma-vez.spec.ts`
   (as duas portas contra o banco: "UM createRepo, UMA linha, nenhuma falha", e
   "o exp001: Arquiteto aceito SEM repositório, e a segunda porta provisiona");
-  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts:723`
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts:725`
   ("sem repositório: 409, e NENHUM efeito antes da recusa", "a frase nomeia o
   handoff ao Dev Lead pendente — a saída do exp001", "repositório ADOTADO conta
   como repositório"); `apps/api/test/domain/execution/repositorio-para-executar.spec.ts`;
@@ -15946,13 +15951,13 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
   (`segmentoSobABaseDeProjetos`, reusada);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:268`
   (`scopeRoot` só em `terminal`);
-  `apps/api/src/domain/actions/decide.ts:559` (`terminalNoEscopo`, o único
+  `apps/api/src/domain/actions/decide.ts:578` (`terminalNoEscopo`, o único
   consumidor do escopo)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1049`
-  (`container`), `:1064` (`mounted`), `:1080` (`runner`), `:1095` (o caminho
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1077`
+  (`container`), `:1092` (`mounted`), `:1108` (`runner`), `:1123` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
-  da base), `:1119` (`indisponivel`), `:1135` (outro tipo e o outbox sem o
-  campo), `:1155` (evento anterior, sem o campo, pela mesma leitura);
+  da base), `:1147` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
+  campo), `:1183` (evento anterior, sem o campo, pela mesma leitura);
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
   (a função pura, nos três modos e nos três casos de `indisponivel`)
 - **ADR:** [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7)
@@ -17518,16 +17523,16 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
    'teto_do_sempre_permitir'` e `actionType`. A web esconde o botão pela cópia
    em `apps/web/src/lib/sempre-permitir.ts`, conferida contra a da api por
    teste; comando de terminal segue com o botão (repetir o parser na tela
-   seria segunda régua) e recebe a recusa da api. NÃO muda `decide()` nem a
-   semeadura: `DEV_AUTO_GIT_ACTIONS` continua dando `auto_approve` a
-   `git_commit`/`git_push`/`pr_open` de cada `dev-<modulo>` na ativação — o
-   que fecha é o CLIQUE criar autonomia nova para esses tipos.
+   seria segunda régua) e recebe a recusa da api. Quando nasceu, NÃO mudava
+   `decide()` nem a semeadura; desde a [RN-689](#rn-689) mudam os dois —
+   `git_push`/`pr_open` estão no teto de `decide()` e a ativação semeia só
+   `git_commit` —, e o padrão que o clique gravaria para eles seria inerte.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
   (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:255`
-  (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:29`
-  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:60` (`motivoDeRecusaDoSempreAprovar`),
+  (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:30`
+  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:61` (`motivoDeRecusaDoSempreAprovar`),
   `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
 - **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
   ("ordem e idempotência (RN-642)": clique duplo, cliques concorrentes, ação
@@ -17838,7 +17843,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`travarOfertasDoDestino`);
   `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:88`
   (`substituirOfertasAoAtivar`);
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:295`
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
@@ -19091,7 +19096,7 @@ existe.
 - **Código:** `apps/api/src/domain/actions/path-scope.ts:153` (`cwdNoContainer`),
   `:174` (`comandoNoEscopoDoContainer`), `:112` (`comandoNoEscopo`, agora com
   várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
-  `apps/api/src/domain/actions/decide.ts:273` (`execucaoNoContainer`), `:571`
+  `apps/api/src/domain/actions/decide.ts:275` (`execucaoNoContainer`), `:590`
   (`execucaoNoContainer`, em `terminalNoEscopo`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:170`
   (`containerExecutionActive`, separado de `execucaoNoContainer`)
@@ -19100,7 +19105,7 @@ existe.
   projeto, `/workspace`, `/tmp/../etc` fora; sem container `/tmp` e `/work`
   fora — casos de falha); `apps/api/test/domain/actions/path-scope.spec.ts:216`
   (e a cópia de `/work` travada contra `packages/docker-port`);
-  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1113`
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1141`
   (o modo `mounted` com e sem container, e sem o piso)
 - **Origem:** AT-258 (item A12 da análise do uso real de 29/09), decisão do
   dono de 01/10, [ADR 0189](adr/0189-o-piloto-automatico.md)
@@ -19141,7 +19146,7 @@ lugares onde o modo é ligado: o cartão de lote dos Executores
   `apps/api/src/application/ports/agent-autonomy-repository.port.ts:5`
   (`AutonomiaResolvida`, com `especifica`);
   `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:263`
-  (`especifica`); `apps/api/src/domain/actions/decide.ts:293`
+  (`especifica`); `apps/api/src/domain/actions/decide.ts:295`
   (`modoAutomaticoDoAgente`); `apps/web/src/components/OQueOPilotoLibera.tsx:16`
   (`OQueOPilotoLibera`); `apps/web/src/components/ApprovalCard.tsx:434`,
   `apps/web/src/components/AgentCard.tsx:164`,
@@ -20199,3 +20204,60 @@ sem consumidor de produção e NÃO foi removido — é decisão à parte.
   volta)
 - **Decisão arquitetural:** [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
 - **Origem:** AT-014 (`BRB-031`), decisão do dono em 01/10
+
+## O teto da RN-418 vale também pela porta tipada (RN-689)
+
+### RN-689 — `git_push` e `pr_open` tipados nunca são auto-aprováveis: o teto da RN-418 vale para o comando E para a ação {#rn-689}
+
+Revisa a [RN-418](#rn-418), por decisão do dono (01/10). Até aqui o teto de
+efeito externo de `decide()` só olhava `actionType === 'terminal'`: o
+`git push` DIGITADO virava `require_approval`, e a mensagem mandava usar a ação
+tipada `git_push` — que, com o papel mínimo (`maintainer`) cumprido, nascia
+`auto_approved` por QUALQUER um dos três estágios: o curinga `"*"` do modo
+automático ([RN-153](business-rules/autenticacao.md#rn-153), o piloto da
+[RN-670](#rn-670)), uma regra específica de `agent_autonomy` (a ativação da
+execução semeava `git_push`/`pr_open` em `auto_approve` para cada
+`dev-<modulo>`) ou um `allow` em `permissions.json`. Medido em
+`decide.spec.ts` antes da correção: os seis casos (dois tipos × três estágios)
+saíam `auto_approve`.
+
+**A regra:** `git_push` e `pr_open` entram no bloco de tetos absolutos — se o
+veredito até ali é `auto_approve`, vira `require_approval` incondicional, com o
+motivo nomeado ("teto de efeito externo (RN-418): … nunca é auto-aprovável"),
+que vai no `proposed_action.created`. `deny` já retornou antes e continua
+vencendo; a ORIGEM da autonomia não importa. O "sempre permitir" dos dois já
+era recusado na fonte ([RN-642](#rn-642), `TIPOS_SEM_SEMPRE_PERMITIR`), e é essa
+metade que impede o teto de ser decorativo.
+
+**A semeadura acompanha:** `DEV_AUTO_GIT_ACTIONS` passa a ser só `git_commit`
+— na ativação e no aceite de paralelização. Semear push e PR seria gravar uma
+autonomia que `decide()` nunca honra, a tela prometendo o que não acontece (o
+argumento da RN-642). Linhas já gravadas ficam no banco, inertes. O dev agent
+segue o caminho da [RN-050](business-rules/custo.md#rn-050): commit executado,
+push e PR `pending`, agente em `awaiting_approval` retendo o worktree até o
+`task.pr_settled`; só então o gate abre.
+
+Ficam FORA, de propósito: `git_merge` (teto próprio de branch protegida);
+`git_commit` (fica na máquina, RN-670); `open_adr_pr` e `open_infra_pr` (abrem
+PR real no provider, mas a decisão do dono não os cobre — `open_infra_pr` é
+semeado `auto_approve` no aceite da Infra, [RN-671](#rn-671)); as ações de
+bootstrap (`git_repo_create`/`git_branch_create`/`git_branch_protect`, que não
+passam por `decide()`); e `deploy`, que não é tipo de `proposed_action` — só
+existe como destino da mensagem do comando de terminal.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts:406` (`ehAcaoTipadaComEfeitoExterno`);
+  `apps/api/src/domain/actions/external-effect.ts:258`
+  (`ACOES_TIPADAS_COM_EFEITO_EXTERNO`), `:266` (`ehAcaoTipadaComEfeitoExterno`),
+  `:280` (`mensagemDoTetoDaAcaoTipada`);
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:71`
+  (`DEV_AUTO_GIT_ACTIONS`)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts:1375` (os dois tipos
+  com curinga, regra específica e `allow` saem `require_approval`; `deny`
+  continua vencendo — caso de falha; `git_commit` e `git_merge` para branch
+  não protegida ficam fora); `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:953`
+  (com Postgres: nascem `pending` com o motivo no evento);
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts:473`
+  e `accept-parallelization.use-case.spec.ts:141` (semeiam só `git_commit`);
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts:795`
+  ("sempre permitir" recusado, 400 `teto_do_sempre_permitir`)
+- **Origem:** AT-347, decisão do dono em 01/10
