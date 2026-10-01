@@ -104,7 +104,7 @@
     "semRepositorio": "Sem repositório ainda: aceitar este handoff o provisiona, e só então a execução pode ser ativada.",
     "acompanheExecucao": "Acompanhe a execução em Executores",
     "infraTitulo": "{{de}} passou o bastão à Infra",
-    "infraDetalhe": "Aceitar ativa o Infra Lead, que assume o provisionamento e vai PROPOR a subida do container do projeto — a proposta ainda passa por você em Aprovações.",
+    "infraDetalhe": "Aceitar ativa o Infra Lead e já autoriza a subida do container: num projeto Container ou Pasta montada com o roteamento do Arquiteto pronto, ele elege a imagem e sobe o container sem outro clique. Continuam pedindo sua decisão a subida num projeto Runner local e o merge da PR de infra.",
     "infraBotao": "Aceitar handoff da Infra",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
