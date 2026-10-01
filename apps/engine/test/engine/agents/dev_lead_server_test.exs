@@ -95,18 +95,6 @@ defmodule Engine.Agents.DevLeadServerTest do
     }
   end
 
-  defp plano_de_teste_event(story_id) do
-    %{
-      "type" => "artifact.plano_de_teste",
-      "payload" => %{
-        "storyId" => story_id,
-        "planoDeTeste" => "cobrir X",
-        "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
-        "estrategiaDeAutomacao" => "integração"
-      }
-    }
-  end
-
   test "o plano ENCERRA o turno: uma só proposed_action (status auto_approved do fake)", %{
     state: state
   } do
@@ -461,8 +449,10 @@ defmodule Engine.Agents.DevLeadServerTest do
     # Dev Lead. Não repete a dança inteira de retomada (já provada acima,
     # agnóstica de tool_name/tool_call_id): só prova que `assess_implementability`
     # também suspende quando a api segura a ação como pending.
+    # ADR 0192: sem plano de teste nenhum na sessão — o parecer não espera
+    # mais por ele, e a suspensão acontece na PRIMEIRA chamada.
     test "assess_implementability pending TAMBÉM suspende, sem agent.done", %{state: state} do
-      Process.put(:fake_events, [plano_de_teste_event("st-1")])
+      Process.put(:fake_events, [])
       Process.put(:fake_propose_action, %{"id" => "pa-imp-1", "status" => "pending"})
       Process.put(:fake_llm_turns, [assessment_turn("st-1")])
 
@@ -485,28 +475,30 @@ defmodule Engine.Agents.DevLeadServerTest do
       }
     end
 
-    # RN-163: erro de ferramenta é ENTRADA do laço, não fim de linha — sem
-    # plano de teste ainda, `assess_implementability` devolve `{:error, _}`
-    # (não `{:pending, _}`), e o turno CONTINUA para o próximo turno
-    # scriptado em vez de suspender.
-    test "assess_implementability sem plano ainda NÃO suspende — o laço continua", %{
+    # RN-163: erro de ferramenta é ENTRADA do laço, não fim de linha. Desde o
+    # ADR 0192 o único erro que sobra antes da proposta é a leitura do
+    # histórico (a guarda do appsec) — e ele também não suspende.
+    test "assess_implementability com o histórico ilegível NÃO suspende — o laço continua", %{
       state: state
     } do
-      Process.put(:fake_events, [])
+      # Só a leitura da CAUDA sem filtro (a de `run_assessment/2`) falha — o
+      # kickoff lê por TIPO e segue de pé.
+      Process.put(:fake_events_error_quando, fn opts ->
+        if Keyword.get(opts, :latest) && is_nil(Keyword.get(opts, :types)), do: :timeout
+      end)
+
       Application.put_env(:engine, :gate_dispatcher, Engine.Gates.FakeGateDispatcher)
       on_exit(fn -> Application.delete_env(:engine, :gate_dispatcher) end)
 
       Process.put(:fake_llm_turns, [
-        assessment_turn("st-sem-plano"),
-        FakeEngineApiClient.final_response("ok, vou esperar o plano")
+        assessment_turn("st-1"),
+        FakeEngineApiClient.final_response("não consegui, tento depois")
       ])
 
       assert {:noreply, final_state} = sync_cast(DevLeadServer, :kickoff, state)
 
       assert final_state.aguardando_aprovacao == nil
       refute_received {:propose_action, "assess_implementability", _actor, _payload}
-
-      assert_received {:qa_estrategia_dispatch, _project_id, _session_id, "st-sem-plano"}
     end
   end
 end

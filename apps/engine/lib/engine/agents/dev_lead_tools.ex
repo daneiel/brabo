@@ -35,37 +35,26 @@ defmodule Engine.Agents.DevLeadTools do
   ## `assess_implementability` (ADR 0090) — o gate `implementavel` ativo
 
   `docs/gates.yml` declarava o gate `implementavel` como `status: planned`
-  desde a FASE 14d (dono `dev-lead`, entrada `[story-ready, plano-de-teste]`,
-  entregável `parecer-implementabilidade`) — nunca ativado. Esta ferramenta
-  ativa: `run_assessment/2` monta o parecer e chama
-  `EngineApiClient.propose_action/5` com `"assess_implementability"`, MESMO
-  padrão de `run/2`/`propose_execution_plan` acima (contrato de três
+  desde a FASE 14d (dono `dev-lead`, entregável `parecer-implementabilidade`)
+  — nunca ativado. Esta ferramenta ativa: `run_assessment/2` monta o parecer
+  e chama `EngineApiClient.propose_action/5` com `"assess_implementability"`,
+  MESMO padrão de `run/2`/`propose_execution_plan` acima (contrato de três
   desfechos, `{:ok, texto} | {:pending, action_id} | {:error, texto}`).
 
-  ### O plano de teste é um PRÉ-REQUISITO, não um argumento da ferramenta
+  ### O insumo é a story e o `module_map`, não o plano de teste (ADR 0192)
 
-  O parecer de implementabilidade lê o `artifact.plano_de_teste` mais
-  recente da story (emitido por `Engine.Gates.QaEstrategiaAgent`,
-  segundo momento do `qa-lead` — ver `docs/fluxo.yml`, papel
-  `qa-estrategia`) do HISTÓRICO da própria sessão do Dev Lead. Duas
-  chamadas possíveis:
-
-    1. **Sem plano ainda** — `run_assessment/2` DISPARA a avaliação por
-       `Engine.Gates.Dispatcher.run_qa_estrategia/3` (mesma indireção
-       trocável em teste que `run_qa/2`/`run_secops/2` já usam — sobe o
-       `QaLeadServer` do projeto se preciso e chama `run_design/3`, `cast`
-       assíncrono, mesmo estilo do resto da área de QA) e devolve
-       `{:error, texto}`
-       explicando que ainda não há plano e que o modelo deve chamar de
-       novo em instantes. Erro de ferramenta é ENTRADA do laço, não fim de
-       linha (RN-163): o Dev Lead tem teto de 14 iterações para tentar de
-       novo depois que o plano existir. A janela de espera é aceita e
-       declarada — o `QaEstrategiaAgent` roda em processo separado
-       (`qa-lead`), então não há como este `run/2` síncrono bloquear
-       esperando o resultado sem acoplar os dois processos.
-    2. **Com plano** — monta o parecer (`storyId`/`parecer`/
-       `justificativa`/o plano de teste embutido no payload, para o
-       usuário decidir sem precisar abrir dois eventos) e propõe a ação.
+  O ADR 0090 fazia o parecer depender do `artifact.plano_de_teste` da story:
+  sem plano, esta ferramenta disparava a QA-estratégia e devolvia erro
+  pedindo para chamar de novo. No uso real de 29/09 o plano NUNCA chegou —
+  a QA-estratégia esgotou o teto de 8 iterações procurando um código que
+  ainda não existia — e o Dev Lead ficou sem parecer. O dono decidiu (01/10)
+  que o plano de teste nasce DEPOIS da entrega do dev (RN-674), e o gate
+  perdeu aquele insumo. O que o substitui é o que o Dev Lead JÁ tem no
+  contexto do próprio turno: a história (RF, RNF, DoD) e o `module_map`
+  vigente, que o kickoff dele lista. O julgamento é dele, na `justificativa`
+  — a ferramenta não busca nada para isso, e o parecer sai na PRIMEIRA
+  chamada. O payload perdeu `planoDeTeste`/`criteriosExecutaveis`: não há
+  plano para embutir antes do código.
 
   ### O appsec dispara junto, e NÃO é pré-requisito (RN-539)
 
@@ -75,17 +64,17 @@ defmodule Engine.Agents.DevLeadTools do
   nomeava ESTE ponto como o gatilho natural. É ele agora, por
   `Engine.Gates.Dispatcher.run_appsec_design/2`.
 
-  Ele dispara em PARALELO, nas DUAS saídas acima, e o parecer NÃO espera por
+  Ele dispara em PARALELO à proposta do parecer, e o parecer NÃO espera por
   ele. Fazer o parecer depender do threat model faria o gate `implementavel`
-  depender de DUAS produções assíncronas em vez de uma, e queimaria dois
-  turnos do Dev Lead onde hoje se queima um. O threat model chega a quem
+  depender de uma produção assíncrona — exatamente a espera que o ADR 0192
+  tirou do plano de teste. O threat model chega a quem
   precisa pelo caminho que a RN-361 já definiu — handoff para `arquiteto`,
   `dev-lead` e `infra` —, não por este retorno.
 
   A idempotência é obrigatória, e é o que `disparar_appsec_se_preciso/3`
-  guarda: o desfecho `:sem_plano` PEDE ao modelo que chame de novo, e sem a
-  guarda cada rechamada custaria mais uma rodada de LLM e mais três handoffs
-  sobre a mesma story.
+  guarda: o modelo pode reavaliar a mesma story (ou repetir a chamada depois
+  de um erro), e sem a guarda cada rechamada custaria mais uma rodada de LLM
+  e mais três handoffs sobre a mesma story.
   """
 
   alias Engine.Agents.Reidratacao
@@ -223,15 +212,14 @@ defmodule Engine.Agents.DevLeadTools do
     %{
       name: "assess_implementability",
       description:
-        "Avalia se uma story do backlog é IMPLEMENTÁVEL, a partir do plano de " <>
-          "teste da QA-estratégia (docs/fluxo.yml). Se a story ainda não tem " <>
-          "plano de teste, esta chamada DISPARA a avaliação e devolve erro " <>
-          "pedindo para tentar de novo em instantes — não propõe decisão " <>
-          "nenhuma nesse caso. Com o plano em mãos, propõe o parecer de " <>
+        "Avalia se uma story do backlog é IMPLEMENTÁVEL, a partir da própria " <>
+          "história (RF, RNF, definition of done) e do module_map vigente que " <>
+          "você já tem no contexto — o plano de teste só existe DEPOIS da " <>
+          "entrega do dev, não é insumo daqui. Propõe o parecer de " <>
           "implementabilidade: é uma decisão real, que o usuário aprova ou " <>
-          "recusa em Aprovações (gate `implementavel`). Nos dois casos, se a " <>
-          "story ainda não tem threat model, esta chamada também pede o de " <>
-          "AppSec — que corre em paralelo e não atrasa o parecer.",
+          "recusa em Aprovações (gate `implementavel`). Se a story ainda não " <>
+          "tem threat model, esta chamada também pede o de AppSec — que corre " <>
+          "em paralelo e não atrasa o parecer.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -242,7 +230,7 @@ defmodule Engine.Agents.DevLeadTools do
           },
           "justificativa" => %{
             "type" => "string",
-            "description" => "o que no plano de teste (ou na story) sustenta o parecer"
+            "description" => "o que na story (RF/RNF/DoD) e no module_map sustenta o parecer"
           }
         },
         "required" => ["storyId", "parecer", "justificativa"]
@@ -258,29 +246,19 @@ defmodule Engine.Agents.DevLeadTools do
       )
       when parecer in ["implementavel", "inviavel"] do
     # A CAUDA, com o mesmo teto da reidratação (RN-580, ADR 0060): sem
-    # `latest`, a api devolve os PRIMEIROS 200 e numa sessão longa o plano de
-    # teste recém-emitido ficava de fora.
+    # `latest`, a api devolve os PRIMEIROS 200 e numa sessão longa o threat
+    # model recém-emitido ficava de fora.
     case EngineApiClient.list_events(state.project_id, state.session_id,
            latest: true,
            limit: Reidratacao.teto()
          ) do
       {:ok, eventos} ->
         # Em PARALELO, e sem que o parecer dependa disso — ver a seção
-        # "O appsec dispara junto" no moduledoc.
+        # "O appsec dispara junto" no moduledoc. É a ÚNICA razão de ler o
+        # histórico aqui desde o ADR 0192: o plano de teste deixou de ser
+        # pré-requisito.
         disparar_appsec_se_preciso(state, story_id, eventos)
-
-        case plano_de_teste_mais_recente(eventos, story_id) do
-          {:ok, plano} ->
-            propor_parecer(state, story_id, parecer, justificativa, plano)
-
-          :sem_plano ->
-            Dispatcher.run_qa_estrategia(state.project_id, state.session_id, story_id)
-
-            {:error,
-             "ainda não há plano de teste para essa story — pedi a avaliação de " <>
-               "QA-estratégia agora. Chame assess_implementability de novo em " <>
-               "instantes (o parecer só sai depois que o plano existir)."}
-        end
+        propor_parecer(state, story_id, parecer, justificativa)
 
       {:error, reason} ->
         {:error, "não consegui ler o histórico da sessão: #{inspect(reason)}"}
@@ -292,41 +270,18 @@ defmodule Engine.Agents.DevLeadTools do
       {:error,
        "assess_implementability exige storyId, parecer (implementavel|inviavel) e justificativa"}
 
-  # O plano de teste vive no event log da PRÓPRIA sessão do Dev Lead — é lá
-  # que `Engine.Gates.QaEstrategiaAgent.run/4` emite `artifact.plano_de_teste`
-  # (ver `qa_estrategia_agent.ex`, chamado com o mesmo `session_id`). O MAIS
-  # RECENTE vence: o histórico é imutável, uma story pode ser reavaliada.
+  # A leitura do histórico é UMA por chamada de `run_assessment/2` (ADR 0060:
+  # nada de duas leituras na mesma invocação), e serve só à guarda do appsec.
   #
-  # A leitura do histórico é UMA por chamada de `run_assessment/2` (o
-  # chamador acima), e as duas perguntas — "já há plano de teste?" e "já há
-  # threat model?" — são respondidas sobre a MESMA lista. Duas chamadas de
-  # `list_events/2` na mesma invocação seriam o amplificador de tráfego que
-  # o ADR 0060 recusa, ainda mais aqui: o modelo é instruído a tentar de
-  # novo, então este caminho é quente.
-  defp plano_de_teste_mais_recente(eventos, story_id) do
-    eventos
-    |> Enum.filter(&plano_da_story?(&1, story_id))
-    |> List.last()
-    |> case do
-      nil -> :sem_plano
-      evento -> {:ok, Map.get(evento, "payload", %{})}
-    end
-  end
-
-  defp plano_da_story?(%{"type" => "artifact.plano_de_teste", "payload" => payload}, story_id),
-    do: Map.get(payload, "storyId") == story_id
-
-  defp plano_da_story?(_evento, _story_id), do: false
-
   # RN-539: o appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`) era
   # ACIONÁVEL e não tinha chamador de produção nenhum — `docs/fluxo.yml`
   # declarava a lacuna e nomeava ESTE ponto como o gatilho natural.
   #
-  # A guarda de idempotência não é zelo: o desfecho `:sem_plano` acima PEDE
-  # ao modelo que chame `assess_implementability` de novo, e sem ela cada
-  # rechamada dispararia outra rodada de LLM do appsec e mais três handoffs
-  # (RN-361) sobre a MESMA story. A pergunta aqui é EXISTE, não QUAL —
-  # diferente do plano de teste, onde o mais recente vence.
+  # A guarda de idempotência não é zelo: o modelo pode chamar
+  # `assess_implementability` de novo para a mesma story (reavaliar, ou
+  # repetir depois de um erro), e sem ela cada rechamada dispararia outra
+  # rodada de LLM do appsec e mais três handoffs (RN-361) sobre a MESMA
+  # story. A pergunta aqui é EXISTE, não QUAL.
   #
   # Limite declarado: `artifact.threat_model` é emitido na sessão da STORY
   # (`emit_threat_model/3` lê `story["sessionId"]`), enquanto esta leitura é
@@ -353,15 +308,16 @@ defmodule Engine.Agents.DevLeadTools do
 
   defp threat_model_da_story?(_evento, _story_id), do: false
 
-  defp propor_parecer(state, story_id, parecer, justificativa, plano) do
+  # ADR 0192: sem `planoDeTeste`/`criteriosExecutaveis` — o plano nasce
+  # depois da entrega e não existe aqui. O que o usuário lê para decidir é a
+  # justificativa do Dev Lead sobre a história e o `module_map`.
+  defp propor_parecer(state, story_id, parecer, justificativa) do
     actor = %{kind: "agent", id: "dev-lead"}
 
     payload = %{
       storyId: story_id,
       parecer: parecer,
-      justificativa: justificativa,
-      planoDeTeste: Map.get(plano, "planoDeTeste"),
-      criteriosExecutaveis: Map.get(plano, "criteriosExecutaveis", [])
+      justificativa: justificativa
     }
 
     case EngineApiClient.propose_action(

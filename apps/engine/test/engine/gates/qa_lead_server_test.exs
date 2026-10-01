@@ -45,8 +45,27 @@ defmodule Engine.Gates.QaLeadServerTest do
       status: "working"
     })
 
+    # ADR 0192 (RN-674): todo ciclo começa pelo plano de teste da entrega,
+    # com a QA-estratégia no MESMO processo. Fila PRÓPRIA dela — os turnos
+    # que cada teste escreve em `:fake_llm_turns` continuam sendo da
+    # Automação e da Performance/Segurança, como sempre foram.
+    Process.put(:fake_llm_turns_por_agente, %{
+      "qa-estrategia" => [ler_entrega(), emitir_plano()]
+    })
+
     {:ok, state} = QaLeadServer.init(project_id)
     %{project_id: project_id, session_id: session_id, state: state}
+  end
+
+  defp ler_entrega,
+    do: FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/cadastro.ts"})
+
+  defp emitir_plano do
+    FakeEngineApiClient.tool_call_response("emit_plano_de_teste", %{
+      "planoDeTeste" => "cobrir o cadastro entregue",
+      "criteriosExecutaveis" => ["dado e-mail novo, quando cadastra, então cria a conta"],
+      "estrategiaDeAutomacao" => "integração na api"
+    })
   end
 
   defp terminal_ok do
@@ -56,12 +75,6 @@ defmodule Engine.Gates.QaLeadServerTest do
       "executionResult" => %{"exitCode" => 0, "stdout" => "ok"}
     }
   end
-
-  # --- helpers de run_design (ADR 0090) ---
-  defp epico(stories), do: %{"id" => "ep-1", "title" => "Épico", "stories" => stories}
-
-  defp story_backlog(id),
-    do: %{"id" => id, "title" => "Cadastro", "rf" => [], "rnf" => [], "dod" => []}
 
   defp dev_context(rnf) do
     %{
@@ -383,60 +396,143 @@ defmodule Engine.Gates.QaLeadServerTest do
     end
   end
 
-  # ADR 0090 — o segundo momento: SEM task_id, SEM DevAgentState. O contexto
-  # do `setup` (DevAgentState de "task-abc12345") não entra aqui de propósito
-  # — é o que prova que este caminho não depende dele.
-  describe "run_design (ADR 0090, segundo momento do qa-lead)" do
-    test "story inexistente: agent.error com origem modelo, nada mais", %{
-      state: state,
-      project_id: project_id,
-      session_id: session_id
-    } do
-      Process.put(:fake_backlog, [])
-
-      assert {:noreply, ^state} =
-               QaLeadServer.handle_cast({:run_design, session_id, "st-fantasma"}, state)
-
-      assert_received {:event_appended, ^project_id, ^session_id,
-                       %{type: "agent.error", payload: payload}}
-
-      assert payload.origem == "modelo"
-      assert payload.mensagem =~ "st-fantasma"
-      refute_received {:llm_turn, "qa-estrategia", _messages, _tools}
+  # ADR 0192 (RN-674) — o plano de teste nasce DEPOIS da entrega, como
+  # primeiro passo do ciclo de sempre (`run/2`), e é INSUMO do gate
+  # `qa-verificada`: nunca um segundo veredito, nunca uma trava nova.
+  describe "plano de teste da entrega (ADR 0192)" do
+    defp aprovar_automacao do
+      [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "approved",
+          "resumo" => "cobertura completa",
+          "itens" => [],
+          "coverageMatrix" => []
+        })
+      ]
     end
 
-    test "story existente: QaEstrategiaAgent roda e o plano vira artefato", %{
+    defp conteudos(messages) do
+      Enum.map(messages, fn m ->
+        case Map.get(m, "content") do
+          c when is_binary(c) -> c
+          _ -> ""
+        end
+      end)
+    end
+
+    defp plano_emitido(task_id) do
+      %{
+        "type" => "artifact.plano_de_teste",
+        "payload" => %{
+          "storyId" => "st-1",
+          "taskId" => task_id,
+          "planoDeTeste" => "plano JÁ escrito na rodada anterior",
+          "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
+          "estrategiaDeAutomacao" => "unidade"
+        }
+      }
+    end
+
+    test "o plano roda ANTES da Automação, sobre a entrega, e entra na mensagem dela", %{
       state: state,
       project_id: project_id,
       session_id: session_id
     } do
-      # `QaEstrategiaAgent` roda sem `workspace_root` (ver o moduledoc dele) —
-      # o ToolLoop cai no fallback `Workspace.workspace_dir/1`, que lê este
-      # env. As demais describes deste arquivo nunca precisaram: o
-      # `dev_state.worktree_path` do `setup` já preenche `workspace_root`.
-      Application.put_env(:engine, :project_workspaces_root, System.tmp_dir!())
-      on_exit(fn -> Application.delete_env(:engine, :project_workspaces_root) end)
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
 
-      Process.put(:fake_backlog, [epico([story_backlog("st-1")])])
-      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
 
-      Process.put(:fake_llm_turns, [
-        FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/x.ts"}),
-        FakeEngineApiClient.tool_call_response("emit_plano_de_teste", %{
-          "planoDeTeste" => "cobrir o cadastro",
-          "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
-          "estrategiaDeAutomacao" => "integração"
-        })
-      ])
+      # O plano é da ENTREGA: carrega a task, e vai para a sessão do dev.
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "artifact.plano_de_teste", payload: plano}}
 
-      assert {:noreply, ^state} =
-               QaLeadServer.handle_cast({:run_design, session_id, "st-1"}, state)
+      assert plano.taskId == "task-abc12345"
+      assert plano.storyId == "st-1"
+
+      # A lista de arquivos da entrega vai na mensagem do plano — aqui o
+      # projeto não tem repositório, e o texto DIZ que não listou, em vez de
+      # uma lista vazia que pareceria "a entrega não tocou nada".
+      assert_received {:llm_turn, "qa-estrategia", msgs_do_plano, _tools}
+      assert Enum.any?(conteudos(msgs_do_plano), &(&1 =~ "não consegui listar"))
+
+      assert_received {:llm_turn, "qa-automacao", msgs_da_automacao, _tools}
+      assert Enum.any?(conteudos(msgs_da_automacao), &(&1 =~ "cobrir o cadastro entregue"))
+
+      # O contrato externo não muda: UM veredito de QA.
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _r, _i, nil}
+    end
+
+    test "a rodada de correção REUSA o plano da mesma task — nenhum laço novo", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_events, [plano_emitido("task-abc12345")])
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:llm_turn, "qa-estrategia", _messages, _tools}
+      refute_received {:event_appended, _, ^session_id, %{type: "artifact.plano_de_teste"}}
+
+      assert_received {:llm_turn, "qa-automacao", msgs_da_automacao, _tools}
+
+      assert Enum.any?(
+               conteudos(msgs_da_automacao),
+               &(&1 =~ "plano JÁ escrito na rodada anterior")
+             )
+    end
+
+    test "plano de OUTRA task não conta: a entrega ganha o próprio", %{state: state} do
+      Process.put(:fake_events, [plano_emitido("task-outra")])
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:llm_turn, "qa-estrategia", _messages, _tools}
+
+      assert_received {:event_appended, _, _,
+                       %{type: "artifact.plano_de_teste", payload: %{taskId: "task-abc12345"}}}
+    end
+
+    # O sintoma do uso real (`toolloop.limit_reached` sem plano) continua
+    # POSSÍVEL — o teto segue 8, de propósito. O que ele não pode é segurar a
+    # revisão nem passar calado.
+    test "plano que falha: agent.error com origem, e a revisão segue SEM ele", %{
+      state: state,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_llm_turns_por_agente, %{
+        "qa-estrategia" => [FakeEngineApiClient.final_response("não sei o que fazer")]
+      })
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
 
       assert_received {:event_appended, ^project_id, ^session_id,
-                       %{type: "artifact.plano_de_teste", payload: payload}}
+                       %{type: "agent.error", actorId: "qa-estrategia", payload: falha}}
 
-      assert payload.storyId == "st-1"
-      refute_received {:event_appended, _, _, %{type: "agent.error"}}
+      assert falha.origem == "modelo"
+      refute_received {:event_appended, _, _, %{type: "artifact.plano_de_teste"}}
+
+      assert_received {:llm_turn, "qa-automacao", msgs_da_automacao, _tools}
+      refute Enum.any?(conteudos(msgs_da_automacao), &(&1 =~ "Plano de teste da QA-estratégia"))
+
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _r, _i, nil}
     end
   end
 end

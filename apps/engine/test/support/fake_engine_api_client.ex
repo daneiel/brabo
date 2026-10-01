@@ -720,6 +720,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       reason = Process.get(:fake_llm_turn_error) ->
         {:error, reason}
 
+      # `:fake_llm_turns_por_agente` — `%{agente => [resp, ...]}`: uma fila
+      # PRÓPRIA para um agente, consumida antes de `:fake_llm_always` e da
+      # fila única. Existe desde o ADR 0192 (RN-674): o `QaLeadServer` roda a
+      # QA-estratégia ANTES das subespecialidades no MESMO processo, e sem
+      # fila própria o plano comeria os turnos que cada teste escreveu para a
+      # Automação. Fila declarada e vazia devolve a resposta final — nunca
+      # cai na fila única de outro agente.
+      Map.has_key?(Process.get(:fake_llm_turns_por_agente, %{}), agent) ->
+        filas = Process.get(:fake_llm_turns_por_agente)
+
+        case Map.fetch!(filas, agent) do
+          [resp | rest] ->
+            Process.put(:fake_llm_turns_por_agente, Map.put(filas, agent, rest))
+            {:ok, resp}
+
+          [] ->
+            {:ok, final_response()}
+        end
+
       resp = Process.get(:fake_llm_always) ->
         {:ok, resp}
 
