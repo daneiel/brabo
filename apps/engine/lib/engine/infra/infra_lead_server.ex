@@ -696,6 +696,10 @@ defmodule Engine.Infra.InfraLeadServer do
          {imagem, modulos} <- eleger_candidata(rotas),
          %{execution_mode: modo} when modo in ~w(container mounted) <-
            Project.get(state.project_id) do
+      # `resources` VAZIO de propósito (RN-683): o servidor escolhe o MENOR
+      # recurso elegível, e quem o deriva do `module_map` é a api, na execução
+      # — uma régua só, nunca uma segunda cópia da soma aqui. O `rationale`
+      # gravado ganha, lá, de onde veio cada número.
       payload = %{
         imagem: imagem,
         network: "none",
@@ -760,7 +764,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     "Eleita pelo servidor no aceite do handoff da Infra (ADR 0190): a candidata " <>
       "do Arquiteto para #{length(modulos)} de #{total} módulo(s) (#{nomes}); no " <>
-      "empate, a primeira do roteamento."
+      "empate, a primeira do roteamento. Recursos: o mínimo derivado do module_map."
   end
 
   # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o

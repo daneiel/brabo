@@ -31,11 +31,13 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   perfis de proficiência e patches de instrução já gravados continuam
   intactos e visíveis.
 
-  Default DESLIGADO a partir de agora: decisão do usuário em 2026-08-10
-  ("hoje ele não está trazendo dados de muito valor"), documentada em
-  docs/explanation/backlog.md — não é bug, é pausa reversível. Ligar de
-  volta é `ANAMNESE_ENABLED=true` MAIS `START_ANAMNESE=true` (a chave de
-  boot acima, sem a qual não há tick a reabilitar) e reiniciar o engine.
+  Default LIGADO desde a RN-680 (ADR 0196, decisão do dono em 2026-10-01:
+  religar com correções — sem sujeito elegível a rodada não roda, e a
+  hipótese aceita vira fato do perfil no grafo). De 2026-08-10 até ali o
+  default foi DESLIGADO, por decisão do usuário ("hoje ele não está trazendo
+  dados de muito valor"). Pausar de novo é `ANAMNESE_ENABLED=false` e
+  reiniciar o engine; a corrente periódica precisa também de
+  `START_ANAMNESE=true` (a chave de boot acima, sem a qual não há tick).
 
   Esta frase foi FALSA de 2026-08-10 até a RN-540: `ANAMNESE_ENABLED` não
   estava no `environment:` do serviço `engine` de nenhum compose, e o
@@ -45,7 +47,7 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova a próxima que
   faltar.
   """
-  def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, false)
+  def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, true)
 
   @doc """
   Confere `enabled?/0` a cada tick, não só no boot (RN-115): sem essa

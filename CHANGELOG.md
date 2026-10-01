@@ -57,6 +57,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **infra**: a Infra sobe o container com o MENOR recurso elegível, derivado
+  do `module_map` (AT-261, [ADR 0199](docs/adr/0199-recurso-minimo-derivado-do-module-map.md),
+  [RN-683](docs/business-rules.md#rn-683)). Cada módulo do mapa pode declarar
+  `resources` (cpus, memoryMb, pidsLimit — os três ou nenhum), e a ferramenta
+  `create_module_map` do Arquiteto passa a pedi-lo. `container_start` com
+  recursos omitidos — sempre o caso da subida do servidor no aceite — sobe com a
+  SOMA entre módulos (todos dividem um container), com piso no padrão de hoje
+  enquanto houver módulo sem declaração, nomeado no `rationale`; mapa sem
+  declaração nenhuma dá o padrão de sempre. Soma acima do teto é 400 na criação
+  do mapa; pedido abaixo do mínimo é `failed` nomeado.
+
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
   [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A
@@ -132,6 +143,37 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   recusa o plano com 400 `plano_de_execucao_invalido`, nomeando a tarefa. O
   claim passa a ser pelo módulo da TAREFA; tarefa sem módulo só é pegável
   quando a história tem um módulo só.
+- **engine/api**: **a Anamnese volta a rodar, e não roda sem sujeito** (AT-277,
+  [ADR 0196](docs/adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.md),
+  [RN-680](docs/business-rules.md#rn-680)). `ANAMNESE_ENABLED` volta ao default
+  `true` no engine e nos três composes (`START_ANAMNESE` não muda; o Psicólogo
+  segue pausado) — **quem quer a pausa de antes põe
+  `ANAMNESE_ENABLED=false` no `.env`**. A rodada sem membro EFETIVO do projeto
+  com interação própria na janela não chama o LLM nem o RAG e diz o motivo no
+  log (e, se pedida à mão, no event log); o dono do workspace sem linha em
+  `project_members` passa a ser membro, que era o que fazia toda rodada do
+  uso real de 29/09 terminar paga em "nenhum membro elegível". A hipótese do
+  Psicólogo aceita pela PRÓPRIA pessoa vira **fato do perfil** no grafo
+  (`FatoDoPerfil`, reconstruído por `grafo:reprojetar`) e entra, como
+  mensagem de sistema efêmera, no turno dos agentes que conversam com ela; a
+  aceita por outra pessoa e a recusada ficam só registradas.
+- **api**, **engine**: **história e regra parecidas com uma existente geram
+  AVISO por embedding** (AT-171,
+  [ADR 0198](docs/adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md),
+  [RN-681](docs/business-rules/custo.md#rn-681)). Depois de gravar, o título é
+  comparado com os do mesmo tipo no projeto pelo modelo de embedding do RAG, e
+  cosseno a partir de 0,80 volta ao PO/Criativo no resultado de `create_story`
+  ou `emit_artifact` e vira `backlog.semantic_duplicate_warned` no log — nunca
+  recusa (a duplicata exata segue recusada, RN-080/081). O limiar é PONTO DE
+  PARTIDA não calibrado: os vetores reais dos pares de calibração ainda não
+  foram gravados (`apps/api/scripts/gravar-vetores-de-duplicata.ts`). Sem
+  provider de embedding (só o Ollama declara), a checagem é PULADA e diz por
+  quê (`backlog.semantic_duplicate_check_skipped`). **O gasto entra no
+  metering** como linha própria de `token_usage` (ator
+  `system`/`duplicata-semantica`) — exceção ao corte do ADR 0075 só para esta
+  checagem. Emitir fica mais lento com projeto grande: até 101 títulos
+  vetorizados por emissão, teto de 10 s.
+
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
@@ -728,6 +770,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   por timer.
 
 ### Correções
+
+- **web/api**: a sessão consultiva sem agente deixa de mandar a mensagem ao
+  modelo cru (AT-254, [RN-682](docs/business-rules.md#rn-682)). Até aqui o
+  envio sem destinatário ia ao SSE de `POST .../chat`, que manda só o texto
+  atual, sem histórico e sem prompt de sistema, e a resposta saía assinada
+  pelo nome do modelo ("não tenho acesso a conversas anteriores"). Agora,
+  por decisão do dono, o composer **pede um agente**: a linha do destinatário
+  lista quem pode ser chamado (os agentes que conversam, menos o Criativo,
+  que a consultiva não abre) e o "Chamar" é o handoff manual de sempre; o
+  envio fica travado até haver destinatário. A api recusa o mesmo caso para
+  qualquer cliente: `POST .../chat` numa consultiva sem agente ativado é
+  **422 `destinatario_ausente`**, antes de gravar ou chamar o modelo. O caso
+  de uso do chat não mudou — os smokes de provider o usam direto como
+  instrumento de ponta a ponta.
 
 - **runner/engine**: o `git fetch` AUTENTICADO em modo `runner` passa a
   funcionar com o container do projeto de pé (AT-116, prova AT-111,

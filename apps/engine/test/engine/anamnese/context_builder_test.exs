@@ -32,11 +32,25 @@ defmodule Engine.Anamnese.ContextBuilderTest do
     %{project_id: Ecto.UUID.generate()}
   end
 
+  # RN-680: a busca no RAG só acontece com SUJEITO elegível — membro com
+  # interação própria na janela. O banco de teste não tem eventos, então o
+  # padrão traz um membro e UMA decisão dele.
   defp anamnese_context(overrides \\ %{}) do
     Map.merge(
       %{
         "competencyCatalog" => ["nestjs", "git"],
-        "members" => [],
+        "members" => [
+          %{"userId" => "user-1", "name" => "Dani", "email" => "d@x", "role" => "owner"}
+        ],
+        "decisions" => [
+          %{
+            "actionType" => "terminal",
+            "status" => "approved",
+            "rejectionReason" => nil,
+            "decidedBy" => "user-1",
+            "decidedAt" => "2026-07-19T10:00:00Z"
+          }
+        ],
         "queuedHypotheses" => [],
         "currentProfiles" => [],
         "instructions" => [],
@@ -63,6 +77,18 @@ defmodule Engine.Anamnese.ContextBuilderTest do
 
     refute ctx.relevant_snippets_degraded
     assert_received {:rag_search, ^project_id, _query, 5}
+  end
+
+  test "RN-680: sem sujeito elegível, o rag_search NÃO é chamado (a rodada não vai rodar)", %{
+    project_id: project_id
+  } do
+    Process.put(:fake_anamnese_context, anamnese_context(%{"members" => []}))
+    Process.put(:fake_rag_search, %{"hits" => [], "degraded" => false})
+
+    assert {:ok, ctx} = ContextBuilder.fetch(project_id)
+
+    assert ctx.relevant_snippets == nil
+    refute_received {:rag_search, _, _, _}
   end
 
   test "rag_search falhando: degrada pro comportamento atual (só a janela), sem erro na rodada",

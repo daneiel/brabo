@@ -494,3 +494,31 @@ describe('classifyEvent — aceite automático do handoff (RN-660)', () => {
     expect(c.text).toContain('engine fora');
   });
 });
+
+describe('classifyEvent — duplicata semântica (RN-681)', () => {
+  it('o aviso nomeia o item, o parecido e a similaridade — e não é "ruim"', () => {
+    const c = classifyEvent(
+      ev('backlog.semantic_duplicate_warned', 'duplicata-semantica', {
+        kind: 'story',
+        title: 'Endpoint GET /hello público que devolve saudação imediata',
+        similarToTitle: 'Endpoint público de saudação determinística',
+        similarity: 0.86,
+      }),
+    );
+    expect(c.bad).toBe(false);
+    expect(c.text).toContain('história');
+    expect(c.text).toContain('Endpoint público de saudação determinística');
+    expect(c.text).toContain('0.86');
+  });
+
+  it('a checagem pulada diz o motivo', () => {
+    const c = classifyEvent(
+      ev('backlog.semantic_duplicate_check_skipped', 'duplicata-semantica', {
+        kind: 'business_rule',
+        reason: 'provider "ollama" não respondeu',
+      }),
+    );
+    expect(c.text).toContain('pulada');
+    expect(c.text).toContain('ollama');
+  });
+});

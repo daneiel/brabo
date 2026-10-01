@@ -936,6 +936,14 @@ instead of inventing an image outside it.
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
 claiming the same task.
 
+`/module-map` takes, per module, an optional `resources` object (`cpus`,
+`memoryMb`, `pidsLimit` — all three or none): what THAT module needs alone in
+the project container ([RN-683](../business-rules.md#rn-683),
+[ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)). A partial
+declaration, a value above the container ceiling, or a SUM over modules above
+it returns `400` with the reason — modules share ONE container, so the sum is
+the minimum the Infra starts it with.
+
 `/project-image` is the Architect's `choose_project_image` tool (FASE 25a,
 [ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
 fixes the project's container image. Same caliber as `/module-map` — the
@@ -1295,7 +1303,7 @@ Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyS
 | POST | `/sessions` | starts the `SessionServer` |
 | POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
-| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?, mensagemId?}`. **`202` on ACCEPTANCE**, before the turn ends: empty body when the turn started (`lida`), `{entrega: "enfileirada", posicao}` when the agent was mid-turn and the message joined its QUEUE — read with any others in one turn when the current one ends ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` when the agent refuses before starting: `aguardando_aprovacao` (Dev Lead suspended) or `fila_de_mensagens_cheia` (10 already queued) — a message no longer gets `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` is the id of the `chat.message` the api recorded; it is what cancels the queued message. `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
+| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` on ACCEPTANCE**, before the turn ends: empty body when the turn started (`lida`), `{entrega: "enfileirada", posicao}` when the agent was mid-turn and the message joined its QUEUE — read with any others in one turn when the current one ends ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` when the agent refuses before starting: `aguardando_aprovacao` (Dev Lead suspended) or `fila_de_mensagens_cheia` (10 already queued) — a message no longer gets `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` is the id of the `chat.message` the api recorded; it is what cancels the queued message. `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
 | POST | `/sessions/:id/agent/queued-message/cancel` | body `{projectId, agent, mensagemId, userId}` — cancels ONE message waiting in the agent's queue ([RN-673](../business-rules.md#rn-673)); the api already checked that `userId` sent it. With the agent up, its process decides: `204`, or **`409`** `mensagem_fora_da_fila` (already read or cancelled). With the agent down, `chat.message_cancelled` is recorded directly — the queue is the log. **`422`** for an agent with no conversation or an incomplete body |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
 | POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
@@ -1306,7 +1314,7 @@ Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyS
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | on-demand reanalysis |
 | GET | `/psychologist/status` | reads the global `PSYCHOLOGIST_ENABLED` flag ([RN-454](../business-rules.md#rn-454)) — no side effect, global (not scoped to a session) |
-| POST | `/projects/:id/anamnese/run` | Anamnese run |
+| POST | `/projects/:id/anamnese/run` | Anamnese run, enqueued with `origem: "manual"`: a round with no eligible subject makes no LLM call and records `anamnese.run_skipped` with `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules.md#rn-680)) |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |

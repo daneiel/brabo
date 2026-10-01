@@ -220,7 +220,7 @@ describe('SessionPage — nome e tipo', () => {
 
     expect(await screen.findByText('Consultiva')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Iniciar ideação' })).toBeNull();
-    expect(screen.getByText(/Nenhum agente é ativado/)).toBeTruthy();
+    expect(screen.getByText(/Nenhum agente entra sozinho/)).toBeTruthy();
   });
 });
 

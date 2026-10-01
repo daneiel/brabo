@@ -5658,7 +5658,8 @@ visual: a linha de status do Claude Code. O fio só recebe a bolha de
 resposta DEPOIS que o turno termina; a regra é do CHAT (canal Phoenix) e
 vale só para os seis agentes conversacionais — o chat consultivo sem
 agente ativo (SSE, `streamChatMessage`) continua com a bolha de streaming
-de sempre, intocada.
+de sempre, intocada. (Desde a [RN-682](#rn-682) a tela não chama mais esse
+SSE: a consultiva sem agente pede um agente antes de enviar.)
 
 **Mecanismo (engine)**: os seis servers já emitem `tool.call` DURÁVEL no
 event log; passam a também fazer `broadcast(state, "tool.call", %{tool:
@@ -13856,8 +13857,8 @@ grande (a única rodada real foi o compose de dev, 98 eventos, 2,5 s), e a prova
 no cluster local que o BRB-018 pede não foi feita — ele segue aberto.
 
 - **Código:** `apps/api/src/application/graph-projection/graph-event-translator.ts:15`
-  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:26` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
-  tradutor), `:69` (`projetarEvento`), `:90` (`projetarFechamentoDeSessao`);
+  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:31` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
+  tradutor), `:75` (`projetarEvento`), `:99` (`projetarFechamentoDeSessao`);
   `apps/api/src/application/graph-projection/graph-projector.ts:77` (o projetor
   monta o MESMO tradutor), `:141` (chega à fonte pela outbox e delega);
   `apps/api/src/scripts/reprojetar-grafo.ts:124` (`montarTradutor`), `:145`
@@ -14380,7 +14381,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:973`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:983`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14589,7 +14590,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:887` (`avisar_canal`);
+  `:607`, `:630`, `:897` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14770,8 +14771,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:939`
-  (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:949`
+  (`narrar_recusa_de_sessao_encerrada`), `:1243` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15759,7 +15760,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1689` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1699` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15843,7 +15844,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1633` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1643` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16782,12 +16783,12 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
   cache a cada troca de autor ou de idioma — cache não é observável hoje.
 
-- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:228`
-  (`anexar`), `:205` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
-  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:234`
+  (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
+  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
+  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
   (`idioma_da_resposta`);
@@ -16883,9 +16884,9 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 - **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:174`
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
-  `:270` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
+  `:260` (`idioma_do_projeto_para_o_artefato`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
+  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17148,8 +17149,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:611`
-  (`llm_turn`), `:678` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:615`
+  (`llm_turn`), `:685` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17545,7 +17546,9 @@ desde sempre (AT-251).
 4. **Duas ou mais opções e nenhuma escolha válida: sem destinatário.** O
    "Enviar" (e o Enter) fica travado e a tela diz em TEXTO que é preciso
    escolher — nunca "a mais recente". Zero opções é o chat da sessão sem agente
-   (SSE), e a tela também o diz.
+   (SSE), e a tela também o diz. **Revisado pela [RN-682](#rn-682):** zero
+   opções também trava o envio — a consultiva sem agente pede um agente, e o
+   SSE ao modelo cru deixou de ser chamado pela tela.
 5. **A escolha é lembrada por sessão no `localStorage`** — conforto de quem vê
    (sem armazenamento a tela só volta a pedir a escolha), nunca estado do
    produto.
@@ -17599,7 +17602,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
+  `apps/web/src/routes/SessionComposer.tsx:252` (`destinatarioRow`), `:168`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
   (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -17853,7 +17856,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1038`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1048`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19258,7 +19261,9 @@ anunciou a subida "em paralelo" e não a propôs; o container só subiu pela
    `container_start_via_runner`, proposto pelo modelo e decidido por humano.
 3. **A eleição é determinística.** A candidata do maior número de módulos; no
    empate, a primeira do roteamento. Rede `none`, recursos padrão, e um
-   `rationale` que diz que foi o servidor.
+   `rationale` que diz que foi o servidor. *(Revisado pela [RN-683](#rn-683):
+   os recursos vão omitidos e a api sobe com o mínimo derivado do
+   `module_map`, não com o padrão.)*
 4. **O rastro diz quem chamou.** `tool.call` (com `origem: "servidor"`) e
    `tool.result` duráveis, e nenhuma mensagem de ferramenta no histórico do
    modelo; o kickoff diz em texto o que JÁ aconteceu (status devolvido, ou o
@@ -19350,6 +19355,63 @@ instante, a oferta espera o fim do próximo turno dele.
 ---
 
 ## O plano de teste nasce depois da entrega do dev (RN-674, ADR 0192)
+
+### RN-683 — A Infra sobe o container com o MENOR recurso elegível, derivado do que o Arquiteto declara por módulo no `module_map` {#rn-683}
+
+Decisão do dono em 01/10 ([ADR 0199](adr/0199-recurso-minimo-derivado-do-module-map.md),
+AT-261). Até aqui `resources` omitido virava `RECURSOS_PADRAO` (2 cpus,
+4096 MiB, 512 pids) e a subida do servidor no aceite ([RN-671](#rn-671)) o
+omitia sempre: todo container nascia no padrão, sem noção de mínimo.
+
+1. **Cada módulo declara o seu.** O `module_map` ganha `resources`
+   (`cpus`, `memoryMb`, `pidsLimit`) por módulo — o que AQUELE módulo precisa
+   sozinho no container. A ferramenta `create_module_map` o pede; a api o
+   aceita ausente e recusa com 400, na criação do mapa: declaração pela METADE
+   (os três ou nenhum), valor não positivo ou acima do teto, e SOMA entre
+   módulos acima do teto. O campo mora no JSON do artefato, sem migration.
+2. **O mínimo é a SOMA, campo a campo.** Um projeto tem UM container
+   (`project_id UNIQUE` em `project_containers`) e os módulos rodam nele ao
+   mesmo tempo; o máximo entre módulos subdimensionaria o container sempre que
+   dois estivessem de pé.
+3. **Módulo sem declaração: piso no padrão de hoje.** Não se inventa número.
+   Havendo módulo sem declaração, o mínimo é o maior entre a soma dos
+   declarados e `RECURSOS_PADRAO`, campo a campo, e o `rationale` NOMEIA quem
+   não declarou. Sem declaração nenhuma (todo mapa anterior a esta regra), e
+   sem `module_map` vigente, o mínimo é exatamente o padrão de hoje.
+4. **A execução de `container_start` resolve campo a campo.** Omitido vira o
+   mínimo (a subida do servidor manda tudo omitido); abaixo do mínimo é
+   `failed` nomeado, sem gravar decisão de imagem nem subir; acima vale até o
+   teto, que não muda. O `rationale` do `artifact.project_image` gravado ganha
+   "Recursos mínimos (RN-683): …" com os módulos somados e a versão do mapa.
+5. **Uma régua só.** Quem deriva é a api; o engine não soma nada e a subida do
+   servidor diz no rationale que os recursos são o mínimo derivado.
+
+Fora, declarado: `choose_project_image` (o Arquiteto decide a imagem e os
+recursos dele) e `container_start_via_runner` (sobe a imagem já decidida) não
+mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
+
+- **Código:** `apps/api/src/domain/containers/recursos-minimos.ts:70`
+  (`validarRecursosDoModulo`), `:108` (`derivarRecursosMinimos`), `:150`
+  (`validarSomaNoTeto`), `:171` (`resolverRecursosDaSubida`), `:206`
+  (`explicarRecursosMinimos`);
+  `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts:134`
+  (`normalizarModulo`);
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
+  (`resolverRecursosDaSubida`);
+  `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:762`
+  (`rationale_do_servidor`)
+- **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
+  (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
+  `:54` (soma acima do teto — caso de falha), `:94` (abaixo do mínimo);
+  `apps/api/test/application/use-cases/architecture/create-module-map.use-case.spec.ts:190`
+  (grava), `:208` (pela metade — caso de falha), `:217` (soma no teto);
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts:530`
+  (subida do servidor com a soma), `:556` (sem declaração), `:575` (acima),
+  `:588` (abaixo — caso de falha), `:608` (sem mapa);
+  `apps/engine/test/engine/harness/tools/create_module_map_test.exs:94`, `:109`;
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:1307`
+- **Origem:** AT-261 (item A15 da análise do uso real de 29/09)
 
 ### RN-674 — A QA-estratégia escreve o plano sobre o código ENTREGUE, no começo do ciclo do `qa-verificada`, e o `implementavel` se julga sem ele {#rn-674}
 
@@ -19684,3 +19746,147 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/engine/test/engine/agents/dev_lead_server_test.exs:131`
 - **Decisão arquitetural:** [ADR 0194](adr/0194-aprovar-o-plano-ativa-a-execucao.md)
 - **Origem:** AT-274 (item A28 / extra E5 da análise do uso real de 29/09)
+
+## A Anamnese religada: sujeito elegível e fato do perfil (RN-680)
+
+### RN-680 — A Anamnese não roda sem sujeito elegível, e a hipótese que a própria pessoa aceitou vira fato do perfil dela no grafo e entra no contexto dos agentes que conversam com ela {#rn-680}
+
+Decisão do dono em 01/10 (AT-277): **religar a Anamnese com correções**. No
+uso real de 29/09 ela rodou seis vezes e as seis terminaram em
+`anamnese.run_skipped` ("nenhum membro elegível"), escritos pelo MODELO depois
+de uma chamada paga (8 933 micros), e as três hipóteses aceitas ficaram na fila
+sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.md).
+
+1. **Sem sujeito elegível, a rodada não roda.** Sujeito é o membro EFETIVO do
+   projeto (`projectRole ?? workspaceRole`, a régua da [RN-471](#rn-471)),
+   fora do opt-out, com interação PRÓPRIA no que a rodada mostra ao modelo —
+   evento dele com `actor_kind: "user"` na janela, ou decisão dele. A guarda
+   vem ANTES da triagem e nem a hipótese na fila a atravessa. Sem sujeito:
+   nenhuma chamada ao LLM e nenhuma busca no RAG; o motivo vai NOMEADO para o
+   log do engine (`sem_sujeito_elegivel`, com `nenhum_membro` ou
+   `nenhuma_interacao_propria` e os números) e, na rodada pedida à mão,
+   também para o event log (`anamnese.run_skipped` com
+   `causa: "sem_sujeito_elegivel"`). Pelo tick é só log — seria um aviso a cada
+   15 minutos por projeto. O prompt passa a listar só os sujeitos.
+2. **Membro do projeto é o EFETIVO.** Criar projeto não grava
+   `project_members`, e a Anamnese lia só essa tabela — o dono do workspace
+   nunca era membro. Os três casos de uso da Anamnese passam a ler
+   `listEffectiveMembers`; `listMembers` continua só `project_members`.
+3. **A hipótese ACEITA pela PRÓPRIA pessoa vira fato do perfil.** O
+   `psychologist.hypothesis_accepted` carrega `projectId`, `sujeito` (o autor
+   da sessão analisada), `hipotese`, `sugestao` e `fatoDoPerfil`, e o
+   `GraphEventTranslator` — o mesmo do projetor e de `grafo:reprojetar` — o
+   traduz para `(:FatoDoPerfil {hypothesisId})`, ligado à pessoa (`SOBRE`) e ao
+   projeto (`NO_PROJETO`). `fatoDoPerfil` só é `true` quando quem aceitou é o
+   sujeito: um fato sobre a pessoa nunca nasce do clique de outra, e o payload
+   diz por quê (`motivoSemFato`). A recusada fica só registrada, como antes.
+   Os aceites gravados antes desta RN não têm os campos e não viram fato.
+4. **O fato entra no contexto dos agentes que conversam com a pessoa.** A
+   mensagem do autor a um agente conversacional leva os fatos DELE neste
+   projeto — lidos por `QueryUserContextUseCase`, escopados ao projeto, os 5
+   mais recentes, com o total ao lado e o recorte dito —, e o engine os põe no
+   turno como mensagem `system` EFÊMERA, pelo mesmo caminho do idioma
+   ([RN-622](#rn-622)): nunca no histórico, antes da orientação de idioma, com
+   teto de 2 000 caracteres. Grafo fora do ar vira log, e o turno segue sem os
+   fatos. Turno sem autor não recebe fatos.
+5. **Religada.** `ANAMNESE_ENABLED` volta ao default `true` no `runtime.exs` e
+   nos três composes; `START_ANAMNESE` não muda (o de produção segue `false`,
+   divergência já declarada). O Psicólogo segue pausado.
+
+- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:46` (`avaliar`);
+  `apps/engine/lib/engine/workers/anamnese_worker.ex:63` (`maybe_analyze`),
+  `:82` (`narrar_sem_sujeito`);
+  `apps/api/src/domain/iam/membros-efetivos.ts:16` (`membrosEfetivos`);
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:209` (`listEffectiveMembers`);
+  `apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts:75` (`fatoDoPerfil`);
+  `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
+  `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
+  `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:87` (`resolverPerfil`);
+  `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:213` (`com_idioma_do_autor`);
+  `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
+- **Teste:** `apps/engine/test/engine/anamnese/elegibilidade_test.exs:17`
+  (caminho feliz), `:35` e `:46` (sem sujeito — casos de falha);
+  `apps/engine/test/engine/workers/anamnese_worker_test.exs:305` (sem membro,
+  nem com fila, não chama o LLM), `:324`, `:343` (rodada à mão narra), `:360`;
+  `apps/engine/test/engine/anamnese/context_builder_test.exs:82`;
+  `apps/api/test/infrastructure/persistence/drizzle/project-effective-members.repository.spec.ts:69`;
+  `apps/api/test/application/use-cases/execution/accept-dismiss-hypothesis.use-case.spec.ts:136`,
+  `:156` (aceite de terceiro não vira fato);
+  `apps/api/test/application/graph-projection/graph-projector.spec.ts:361`, `:386`;
+  `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:181`,
+  `:207` (grafo fora do ar);
+  `apps/engine/test/engine/harness/perfil_do_autor_test.exs:14`;
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:428`
+- **Origem:** AT-277 (item A31 da análise do uso real de 29/09; decisão do dono
+  em 01/10)
+
+### RN-682 — A consultiva sem agente pede um agente: o composer não envia sem destinatário, e a rota de chat recusa com nome {#rn-682}
+
+Até aqui, a mensagem de uma sessão **consultiva** sem agente ia ao SSE de
+`POST .../chat` (`SendChatMessageUseCase`), que manda ao modelo vinculado só o
+texto atual — sem histórico, sem prompt de sistema, sem ferramenta — e grava a
+resposta com o NOME DO MODELO como ator. Medido no uso real de 29/09: a sessão
+5d66 respondeu "não tenho acesso a conversas anteriores". A decisão do dono
+(01/10) é que, sem agente ativo, a consultiva **pede para escolher um agente**
+— a mesma régua da [RN-584](#rn-584) (nenhum destinatário padrão) chegando ao
+último caso que ainda tinha um: o modelo cru.
+
+**A medição, antes do conserto:** a rota de chat tinha UM cliente, a tela
+(`handleSend`, só quando não havia destinatário — o que, desde a
+[RN-631](#rn-631), só acontecia na consultiva sem agente: a criativa sempre tem
+o Criativo como opção). O `curl` que o seed imprime é dica de desenvolvimento,
+numa sessão criativa. O caso de uso tem um SEGUNDO consumidor legítimo: os
+smokes de provider (`*-provider.smoke.spec.ts`) o usam direto como instrumento
+de ponta a ponta (credencial → chamada → metering) numa sessão sem agente. Por
+isso a recusa da api mora na ROTA, e o caso de uso não muda.
+
+**A regra:**
+
+1. **A tela não envia sem destinatário.** O "Enviar" e o Enter ficam travados
+   com zero opções, como já ficavam com duas sem escolha; o ramo do SSE saiu de
+   `handleSend`.
+2. **A linha do destinatário MOSTRA quem pode ser chamado.** Sem opção, o
+   seletor do handoff manual ([RN-440](#rn-440)) muda de lugar para dentro
+   dela — "Para", a lista, e "Chamar" —, e o seletor de cima some para não
+   haver a mesma escolha em dois lugares. A lista são os agentes que conversam
+   (`AGENTES_DE_CHAT`, os que o engine casa com cláusula própria) e que o
+   handoff manual alcança, menos quem já entrou e **menos o Criativo**: a
+   consultiva promete no convite que ele não entra, porque abrir a ideação é o
+   que a criativa faz ([RN-097](#rn-097)). Chamar oferece o handoff; aceitá-lo
+   no fio faz do agente o destinatário (RN-631).
+3. **A api recusa o mesmo caso para qualquer cliente.** `POST .../chat` numa
+   sessão consultiva em que nenhum `agent.activated` foi gravado é **422**
+   `{reason: "destinatario_ausente"}`, com a frase que aponta
+   `.../agents/:agent/message`, ANTES de qualquer efeito: nada é gravado e
+   nenhum modelo é chamado. A recusa sai como resposta HTTP e não como quadro
+   `error` dentro de um stream 200 — o handler devolve `Promise<Observable>`,
+   e a rejeição antes do cabeçalho do SSE vira a resposta normal.
+
+**O que esta regra NÃO fecha, declarado:**
+
+- **A rota segue respondendo pelo modelo cru fora desse caso**: numa criativa
+  sem agente (o `curl` do seed) e numa consultiva COM agente, para quem a
+  chamar à mão. A tela não a chama em nenhum dos dois; a decisão do dono foi
+  sobre a consultiva sem agente, e fechar a rota inteira é decisão à parte.
+- O chat livre com histórico, a outra opção da AT-254, não foi feito.
+
+- **Código:** `apps/api/src/domain/sessions/chat-sem-destinatario.ts:24`
+  (`chatSemDestinatarioRecusado`), `:17` (`MOTIVO_CHAT_SEM_DESTINATARIO`);
+  `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
+  (`GarantirDestinatarioDoChatUseCase`);
+  `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
+  `apps/web/src/lib/session-destinatario.ts:270` (`agentesParaChamar`);
+  `apps/web/src/routes/SessionPage.tsx:655` (`handleSend`);
+  `apps/web/src/routes/SessionComposer.tsx:276`
+- **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
+  (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
+  `apps/api/test/interfaces/http/llm/chat.controller.spec.ts:56` (422 como
+  resposta HTTP), `:79` (caminho feliz);
+  `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx:458` (não
+  envia — caso de falha), `:471` (lista e Chamar — caminho feliz);
+  `apps/web/src/lib/session-destinatario.test.ts:93`;
+  `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx:177`
+- **Origem:** AT-254 (item A8 da análise do uso real de 2026-09-29), decisão do
+  dono de 01/10

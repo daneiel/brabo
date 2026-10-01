@@ -272,7 +272,8 @@ export interface RosterFacts {
    * Staff (docs/fluxo.yml, camada_decisao_tecnica, ADR 0088) — mesmo
    * critério de presença de `infraActive`: só entra no roster quando há
    * handoff `accepted` endereçado a ele NESTA sessão. Dormente para
-   * disparo automático (a Anamnese que o dispararia está pausada); o fato
+   * disparo automático (nenhum gatilho automático existe; a Anamnese,
+   * religada na RN-680, não o dispara); o fato
    * aqui só reflete ativação MANUAL já aceita.
    */
   staffActive: boolean;

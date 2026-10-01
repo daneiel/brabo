@@ -468,6 +468,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-semantic-duplicate-check",
+          label: "Warns when a just-written business rule looks like an existing one",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-story",
           label: "Creates a story with functional/non-functional requirements, DoD, DoR, and covered rules",
           className: "api-method post",

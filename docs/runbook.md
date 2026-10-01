@@ -3857,9 +3857,13 @@ exposed in `docker-compose.yml`.
 > on the next boot regardless of the guard. The queue needs to be
 > **purged**, not just have the guard turned off.
 
-> **Turning the Anamnesis or the Psychologist back on: two variables, not
-> one.** They have been paused since 2026-08-10, and the pause is a product
-> decision, not a bug. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
+> **Turning the Anamnesis or the Psychologist on: two variables, not
+> one.** Both were paused on 2026-08-10 by product decision, not a bug. The
+> Psychologist still is; the Anamnesis was turned back on by the owner on
+> 2026-10-01 ([RN-680](business-rules.md#rn-680)) — `ANAMNESE_ENABLED`
+> defaults to `true` again in the code and the three composes, and a round
+> with no eligible subject makes no LLM call and says why in the engine log
+> (`sem_sujeito_elegivel`). Pausing it again is `ANAMNESE_ENABLED=false`. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
 > product flags (may a NEW round happen at all); `START_ANAMNESE` is the boot
 > key (is the periodic tick even scheduled). The periodic Anamnesis needs both
 > at `true`; the Psychologist has no boot key, because its automatic trigger
@@ -3870,7 +3874,7 @@ exposed in `docker-compose.yml`.
 > does not forward the host environment — so setting them in `.env` did
 > nothing at all, silently, while three places in the code promised the pause
 > was reversible. They are mapped now, with the code's own default (`false`
-> in both files: the pause itself is unchanged). The **install** compose
+> in both files at the time; `ANAMNESE_ENABLED` is `true` since RN-680). The **install** compose
 > (`docker/docker-compose.install.yml`) was the third file and was left out of
 > that fix; since AT-202 it maps the same flags with the same defaults, and
 > `scripts/ci/flags-do-engine-no-compose.spec.ts` checks all **three** files
@@ -3887,8 +3891,8 @@ exposed in `docker-compose.yml`.
 > was never woken. Neither key spends tokens with the product flags off: with
 > `ANAMNESE_ENABLED=false` the Anamnesis `kickoff/0` schedules no job at all,
 > and the drain only enqueues the Psychologist with `PSYCHOLOGIST_ENABLED=true`.
-> On an install, turning the Anamnesis back on is therefore just
-> `ANAMNESE_ENABLED=true`. On Kubernetes there was nothing to fix — a
+> On an install, the Anamnesis is therefore on or off by
+> `ANAMNESE_ENABLED` alone (default `true` since RN-680). On Kubernetes there was nothing to fix — a
 > Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
 > these variables. Both flags are read at boot: change them and
 > `docker compose up -d engine`.

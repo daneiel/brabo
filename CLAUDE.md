@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| A Infra sobe o container com o menor recurso elegível, derivado do `module_map` (AT-261) | ADR 0199, RN-683 |
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
@@ -197,6 +198,7 @@ estado lido do repositório e não da conversa.
 | Aprovar o plano do Dev Lead ativa a execução; a tarefa ganha o módulo que ele atribui (AT-263/AT-274) | ADR 0194, RN-677, RN-678 |
 | A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado (AT-246) | ADR 0197 |
 | A curadoria recusa o alias `~` do OpenRouter, preço de vitrine (AT-271) | RN-679 |
+| A Anamnese religada: não roda sem sujeito elegível, e a hipótese aceita vira fato do perfil (AT-277) | ADR 0196, RN-680 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -236,6 +238,8 @@ estado lido do repositório e não da conversa.
 | O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
 | A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
+| A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
+| A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
 
 ## Estado atual e aberto
 
@@ -365,13 +369,31 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   payload dela, com eleição de imagem, nunca fazia sentido pra um caminho
   sem roteamento contra o qual eleger) — `container_start_via_runner` é o
   tipo novo, exclusivo desse modo
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
-  aguardando spec; Staff dormente para disparo automático (acionável manual)
-
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`,
-  `PSYCHOLOGIST_ENABLED=false`), aguardando spec. A pausa segue valendo e a
-  decisão de produto NÃO mudou — o que mudou na RN-540 é que ela passou a ser
-  REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec; Staff dormente para disparo automático (acionável manual —
+  nenhum código o dispara, nem a Anamnese)
+- A Anamnese foi RELIGADA em 2026-10-01 por decisão do dono (RN-680, ADR
+  0196): `ANAMNESE_ENABLED` volta ao default `true` no `runtime.exs` e nos
+  três composes (`START_ANAMNESE` não mudou: `false` só no de produção,
+  divergência já declarada), com duas correções que são regra. (1) A rodada
+  NÃO roda sem SUJEITO elegível — membro EFETIVO do projeto
+  (`listEffectiveMembers`, a régua da RN-471; criar projeto não grava
+  `project_members`, e era por isso que toda rodada do uso real de 29/09
+  terminava paga em "nenhum membro elegível"), fora do opt-out, com
+  interação PRÓPRIA na janela (`Engine.Anamnese.Elegibilidade`, antes da
+  triagem; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
+  chamada ao LLM nem ao RAG, motivo nomeado no log e, só na rodada pedida à
+  mão, `anamnese.run_skipped`. (2) A hipótese que a PRÓPRIA pessoa aceitou
+  (quem aceita é o autor da sessão) vira `FatoDoPerfil` no grafo, traduzido
+  de `psychologist.hypothesis_accepted` pelo MESMO `GraphEventTranslator`, e
+  entra no turno dos agentes que conversam com ela como mensagem `system`
+  EFÊMERA (`Engine.Harness.PerfilDoAutor`, o caminho do idioma da RN-622;
+  lida por `QueryUserContextUseCase`, escopada ao projeto, 5 fatos, teto de
+  2 000 caracteres). Aceite de terceiro e recusa ficam só registrados.
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec — e a Anamnese esteve pausada junto até a RN-680. A pausa do
+  Psicólogo segue valendo e a decisão de produto NÃO mudou — o que mudou na
+  RN-540 é que ela passou a ser REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
   do serviço `engine` de compose NENHUM, o Compose não repassa o ambiente do
   host, e `ANAMNESE_ENABLED=true` no `.env` era inerte — `runtime.exs` caía no
   default `"false"` em silêncio, enquanto TRÊS lugares (os docblocks dos dois
@@ -652,7 +674,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - dbre: `plano-de-capacidade` e `tuning` sem prazo (exigem volume real)
 - Métricas permanentemente "não medido": funil ideação→commit, adoção por
   feature, MTTR/change failure rate (ADR 0089/0091/0092)
-- Gasto de embedding fora do metering (corte declarado do ADR 0075)
+- Gasto de embedding fora do metering (corte declarado do ADR 0075), salvo a
+  checagem de duplicata semântica (ADR 0198, RN-681), que é linha própria
+- O limiar da duplicata semântica (0,80, RN-681) é PONTO DE PARTIDA NÃO
+  calibrado: os vetores reais dos pares de calibração não puderam ser gravados
+  (registry do Ollama e Hugging Face bloqueados no ambiente). Gravar é
+  `apps/api/scripts/gravar-vetores-de-duplicata.ts` com o Ollama de pé; a prova
+  (`limiar-de-duplicata.calibracao.spec.ts`) PULA até lá. Não mexa no número
+  sem gravar, e se a gravação não separar os pares, reveja os pares ou o texto
+  comparado — nunca afrouxe o teste
 - Painel de Problemas/lint/testes na aba Código segue pendência declarada da
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
   fecharam depois)
@@ -1767,6 +1797,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   INFRA elegendo entre as candidatas do próprio roteamento do Arquiteto
   (`container_start`, `'infra-lead'`) — nunca um caminho paralelo, os dois
   passam por `DecidirImagemDoProjetoUseCase`/`validarDecisaoDeImagem`.
+  Os RECURSOS que a Infra sobe vêm do `module_map` desde a RN-683 (ADR 0199):
+  cada módulo declara `resources` e o mínimo é a SOMA (um container por
+  projeto), com piso no padrão de hoje enquanto houver módulo sem declaração —
+  nunca um número inventado, nunca o máximo entre módulos. Quem deriva é a
+  api (`recursos-minimos.ts`); o engine manda `resources` vazio e não soma.
   Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — nos
   TRÊS modos de execução desde a RN-494/ADR 0135, que revogou a dispensa
   que `mounted`/`runner` tinham (RN-169/RN-421). `mounted`/`runner`
@@ -2298,7 +2333,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   outros oito degradam com `false` (RN-191), e virar essa flag exige smoke com
   credencial, nunca leitura de doc. O gasto de embedding NÃO passa pelo
   metering ainda — corte declarado do ADR 0075, porque `token_usage.session_id`
-  é `NOT NULL` e indexar repositório não acontece dentro de sessão.
+  é `NOT NULL` e indexar repositório não acontece dentro de sessão. A ÚNICA
+  exceção é a checagem de duplicata semântica (ADR 0198, RN-681), que roda na
+  emissão de história/regra, dentro de sessão, e grava linha própria (ator
+  `system`/`duplicata-semantica`); o `uso` que `RagEmbeddingService` devolve é
+  ignorado pela indexação e pela busca de propósito — não o "aproveite" lá.
 - UI: fidelidade estrita ao design system em design/ (tokens, tipografia
   Space Grotesk/Archivo/IBM Plex Mono, dark mode primário). Contraste é
   medido por teste sobre os tokens e layout é verificado no navegador

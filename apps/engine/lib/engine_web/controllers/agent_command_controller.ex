@@ -132,7 +132,7 @@ defmodule EngineWeb.AgentCommandController do
     # pelo canal e, quando é falha, pelo `agent.error` durável.
     responder_ao_aceite(
       conn,
-      PoServer.user_message(session_id, text, idioma_da_resposta(params), mensagem_id(params))
+      PoServer.user_message(session_id, text, autor_do_turno(params), mensagem_id(params))
     )
   end
 
@@ -152,7 +152,7 @@ defmodule EngineWeb.AgentCommandController do
       DevLeadServer.user_message(
         session_id,
         text,
-        idioma_da_resposta(params),
+        autor_do_turno(params),
         mensagem_id(params)
       )
     )
@@ -174,7 +174,7 @@ defmodule EngineWeb.AgentCommandController do
       ArquitetoServer.user_message(
         session_id,
         text,
-        idioma_da_resposta(params),
+        autor_do_turno(params),
         mensagem_id(params)
       )
     )
@@ -196,7 +196,7 @@ defmodule EngineWeb.AgentCommandController do
       UxDesignerServer.user_message(
         session_id,
         text,
-        idioma_da_resposta(params),
+        autor_do_turno(params),
         mensagem_id(params)
       )
     )
@@ -215,7 +215,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      StaffServer.user_message(session_id, text, idioma_da_resposta(params), mensagem_id(params))
+      StaffServer.user_message(session_id, text, autor_do_turno(params), mensagem_id(params))
     )
   end
 
@@ -239,7 +239,7 @@ defmodule EngineWeb.AgentCommandController do
       CriativoServer.user_message(
         session_id,
         text,
-        idioma_da_resposta(params),
+        autor_do_turno(params),
         mensagem_id(params)
       )
     )
@@ -269,7 +269,7 @@ defmodule EngineWeb.AgentCommandController do
       InfraLeadServer.user_message(
         session_id,
         text,
-        idioma_da_resposta(params),
+        autor_do_turno(params),
         mensagem_id(params)
       )
     )
@@ -523,6 +523,17 @@ defmodule EngineWeb.AgentCommandController do
   # a mensagem sem id ainda é enfileirada (só não pode ser cancelada).
   defp mensagem_id(%{"mensagemId" => id}) when is_binary(id) and id != "", do: id
   defp mensagem_id(_params), do: nil
+
+  # RN-680 (ADR 0196): os fatos do perfil do AUTOR, já em texto e com teto,
+  # resolvidos pela api (`perfilDoAutor`, OPCIONAL como o idioma). Com eles, o
+  # valor que o servidor repassa a `IdiomaDaResposta.com_idioma_do_autor/2` é
+  # `%{idioma: _, perfil: _}`; sem eles, é só o idioma, como sempre — nenhum
+  # servidor de agente muda por causa disso.
+  defp autor_do_turno(%{"perfilDoAutor" => perfil} = params)
+       when is_binary(perfil) and perfil != "",
+       do: %{idioma: idioma_da_resposta(params), perfil: perfil}
+
+  defp autor_do_turno(params), do: idioma_da_resposta(params)
 
   # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
   # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o
