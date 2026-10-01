@@ -574,7 +574,7 @@ jobs:
 
           # O workspace PESSOAL que a RN-546 cria na mesma transação. Sem ele o
           # "Novo projeto" não teria onde criar, e é por isso que ele entrou.
-          ws="$(curl -fsS "${api}/workspaces" -H "Authorization: Bearer ${token}" | jq -r '.[0].id')"
+          ws="$(curl -fsS "${api}/workspaces" -H "Authorization: Bearer ${token}" | jq -r '.[0].workspace.id')"
           [ -n "$ws" ] && [ "$ws" != 'null' ] \
             || { echo '::error::a conta nasceu sem workspace pessoal'; exit 1; }
 
