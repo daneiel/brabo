@@ -35,8 +35,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
   describe "propose_execution_plan" do
     test "propõe o plano como proposed_action, com o total somado (status auto_approved do fake)",
          %{ctx: ctx} do
-      assert {:ok, msg} =
-               DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
 
       assert msg =~ "3 agente(s)"
       assert msg =~ "2 módulo(s)"
@@ -105,6 +104,49 @@ defmodule Engine.Agents.DevLeadToolsTest do
                )
 
       refute_received {:propose_action, _, _, _}
+    end
+
+    # AT-274 (RN-678): o Dev Lead atribui o módulo de cada tarefa no plano.
+    test "`tarefas` viaja no payload como o modelo a escreveu", %{ctx: ctx} do
+      tarefas = [%{"taskId" => "t-1", "modulo" => "api"}]
+      DevLeadTools.run(Map.put(plano([modulo("api", 1)]), "tarefas", tarefas), ctx)
+
+      assert_received {:propose_action, "propose_execution_plan", _actor, payload}
+      assert payload.tarefas == tarefas
+    end
+
+    test "a recusa NOMEADA da api (tarefa sem módulo) volta ao modelo como está", %{ctx: ctx} do
+      Process.put(
+        :fake_propose_action_erro,
+        {400,
+         %{
+           "code" => "plano_de_execucao_invalido",
+           "message" => "A tarefa t-1 está sem módulo."
+         }}
+      )
+
+      assert {:error, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "plano recusado: A tarefa t-1 está sem módulo."
+      assert msg =~ "proponha o plano de novo"
+    end
+
+    # AT-263 (RN-677): auto-aprovado, a api já ativou (ou falhou ao ativar).
+    test "status executed diz que a execução foi ATIVADA", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{"id" => "pa-10", "status" => "executed"})
+
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "execução ATIVADA"
+    end
+
+    test "status failed vira {:error, _} com o motivo da ativação", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{
+        "id" => "pa-11",
+        "status" => "failed",
+        "executionResult" => %{"motivo" => "Projeto sem repositório"}
+      })
+
+      assert {:error, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
+      assert msg =~ "a ativação da execução falhou: Projeto sem repositório"
     end
 
     test "sem os campos obrigatorios: erro que diz quais", %{ctx: ctx} do

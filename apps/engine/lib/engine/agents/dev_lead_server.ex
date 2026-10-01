@@ -490,10 +490,62 @@ defmodule Engine.Agents.DevLeadServer do
            "architecture.module_map_created",
            "backlog.story_created"
          ]) do
-      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
-      _ -> "Proponha o plano de execução (propose_execution_plan)."
+      {:ok, events, truncado?} ->
+        build_kickoff(events) <>
+          Reidratacao.aviso_de_recorte(truncado?) <> tarefas_do_backlog(state.project_id)
+
+      _ ->
+        "Proponha o plano de execução (propose_execution_plan)." <>
+          tarefas_do_backlog(state.project_id)
     end
   end
+
+  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
+  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
+  # nesta sessão (o PO pode ter escrito as tarefas noutra). Uma leitura por
+  # kickoff, pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica de
+  # fora (não há o que distribuir). Falha vira uma linha dita, nunca kickoff
+  # perdido: o plano sem `tarefas` é recusado pela api com motivo nomeado.
+  @max_tarefas_no_kickoff 200
+
+  defp tarefas_do_backlog(project_id) do
+    case EngineApiClient.list_backlog(project_id) do
+      {:ok, epicos} when is_list(epicos) ->
+        linhas =
+          for epico <- epicos,
+              historia <- Map.get(epico, "stories", []),
+              tarefa <- Map.get(historia, "tasks", []),
+              Map.get(tarefa, "status") != "done" do
+            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
+              "| história: #{Map.get(historia, "title")} " <>
+              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
+              modulo_atual(tarefa)
+          end
+
+        mostradas = Enum.take(linhas, @max_tarefas_no_kickoff)
+
+        corte =
+          case length(linhas) - length(mostradas) do
+            0 -> ""
+            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
+          end
+
+        """
+
+        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
+        — só o dev agent daquele módulo vai pegá-la):
+        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
+        """
+
+      _ ->
+        "\n\n(não consegui listar as tarefas do backlog agora — use os task_id que conhecer.)"
+    end
+  end
+
+  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
+    do: " [módulo atual: #{m}]"
+
+  defp modulo_atual(_tarefa), do: ""
 
   defp build_kickoff(events) do
     modulos =
@@ -520,7 +572,10 @@ defmodule Engine.Agents.DevLeadServer do
 
     """
     Você recebeu a arquitetura do Arquiteto. Avalie o trabalho e proponha o
-    PLANO DE EXECUÇÃO com `propose_execution_plan`.
+    PLANO DE EXECUÇÃO com `propose_execution_plan`. Aprovar o plano é o que
+    ATIVA a execução — antes dele nenhum dev agent sobe. No plano, atribua
+    CADA tarefa pendente a UM módulo do module_map (`tarefas`): só o dev
+    daquele módulo pega a tarefa, e tarefa sem módulo recusa o plano.
 
     Você NÃO escreve código. Decide quantos agentes valem a pena para o
     trabalho em mão, e responde por essa escolha.
@@ -591,13 +646,32 @@ defmodule Engine.Agents.DevLeadServer do
   # (ADR 0086, RN-284) — mesmo vocabulário de `Engine.Dev.DevAgentServer` e
   # `Engine.Gates.QaLeadServer`, para quem lê os três não aprender três
   # frases diferentes para o mesmo conceito.
+  # O plano aprovado ATIVA a execução (AT-263, RN-677): o resultado é o do
+  # `ExecuteExecutionPlanUseCase` na api, reconhecido pela chave
+  # `sessaoDeExecucao` — e vem ANTES das cláusulas genéricas de
+  # `executed`/`failed`, que leriam "exit ?" de um resultado sem `exitCode`.
+  defp texto_do_desfecho(%{
+         status: "executed",
+         execution_result: %{"sessaoDeExecucao" => sessao} = exec
+       }) do
+    "plano aprovado e execução ATIVADA na sessão #{sessao}: " <>
+      "#{Enum.join(Map.get(exec, "modulos", []), ", ")}; " <>
+      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído."
+  end
+
+  defp texto_do_desfecho(%{
+         status: "failed",
+         execution_result: %{"sessaoDeExecucao" => _, "motivo" => motivo}
+       }) do
+    "o plano foi aprovado, mas a ativação da execução falhou: #{motivo}"
+  end
+
   defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
     "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
   end
 
-  # `propose_execution_plan` não tem execute-* pipeline — aprovação manual
-  # fica em `"approved"` para sempre (ver o comentário equivalente em
-  # `DevLeadTools.classificar/4`). Os três contam como sucesso.
+  # `assess_implementability` não tem execute-* pipeline — a aprovação manual
+  # fica em `"approved"`. Os três contam como sucesso.
   defp texto_do_desfecho(%{status: status})
        when status in ["executed", "auto_approved", "approved"],
        do: "plano aprovado e registrado."

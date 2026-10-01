@@ -115,7 +115,7 @@
       "modulesCount_one": "{{count}} módulo",
       "modulesCount_other": "{{count}} módulos",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " Você ainda decide quando ativar a execução."
+      "note": " e ATIVA a execução: os dev agents sobem e começam a gastar."
     },
     "assessImplementability": {
       "verb": "avalia a implementabilidade de uma story",

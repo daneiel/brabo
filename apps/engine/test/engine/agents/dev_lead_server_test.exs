@@ -126,6 +126,40 @@ defmodule Engine.Agents.DevLeadServerTest do
            "o laço voltou ao modelo depois do plano e ele propôs de novo"
   end
 
+  # AT-274 (RN-678): o kickoff lista as tarefas PENDENTES do backlog do
+  # projeto com o `task_id`, para o plano atribuir o módulo de cada uma.
+  test "o kickoff lista as tarefas pendentes com task_id (as `done` ficam de fora)", %{
+    state: state
+  } do
+    Process.put(:fake_backlog, [
+      %{
+        "id" => "ep-1",
+        "title" => "Jogo",
+        "stories" => [
+          %{
+            "id" => "st-1",
+            "title" => "Peça cai",
+            "moduleIds" => ["board-engine", "input-keyboard"],
+            "tasks" => [
+              %{"id" => "t-pendente", "title" => "Loop de queda", "status" => "todo"},
+              %{"id" => "t-feita", "title" => "Já feita", "status" => "done"}
+            ]
+          }
+        ]
+      }
+    ])
+
+    Process.put(:fake_llm_always, plano_turn("um agente na api"))
+    sync_cast(DevLeadServer, :kickoff, state)
+
+    assert_received {:llm_turn_stream, "dev-lead", messages, _tools}
+    kickoff = messages |> Enum.map(&Map.get(&1, "content", "")) |> Enum.join("\n")
+    assert kickoff =~ "TAREFAS PENDENTES"
+    assert kickoff =~ "task_id=t-pendente | Loop de queda"
+    assert kickoff =~ "board-engine, input-keyboard"
+    refute kickoff =~ "t-feita"
+  end
+
   test "o plano recusado NÃO encerra o turno — o modelo pode corrigir", %{
     state: state
   } do
@@ -213,8 +247,7 @@ defmodule Engine.Agents.DevLeadServerTest do
       FakeEngineApiClient.final_response("Plano registrado.", "claude-haiku")
     ])
 
-    assert {:reply, :ok, _} =
-             sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
+    assert {:reply, :ok, _} = sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
 
     session_id = state.session_id
 
@@ -235,8 +268,7 @@ defmodule Engine.Agents.DevLeadServerTest do
   test "erro narrado no frame final vira agent.error e o turno fecha inteiro", %{state: state} do
     Process.put(:fake_llm_turns, [%{"error" => "Nenhuma credencial cadastrada para openrouter"}])
 
-    assert {:reply, :ok, final_state} =
-             sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
+    assert {:reply, :ok, final_state} = sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
 
     session_id = state.session_id
 
@@ -387,6 +419,70 @@ defmodule Engine.Agents.DevLeadServerTest do
       # O turno RETOMOU de verdade: uma segunda chamada ao modelo aconteceu
       # (a que produziu a resposta final, depois do resultado real).
       assert_received {:llm_turn_stream, "dev-lead", _messages, _tools}
+    end
+
+    # AT-263 (RN-677): aprovar o plano ATIVA a execução — o desfecho que o
+    # Dev Lead lê é o do executor da api, não mais "plano registrado".
+    test "action_settled EXECUTADO diz em qual sessão a execução foi ativada", %{state: state} do
+      Process.put(:fake_propose_action, %{"id" => "pa-ativa", "status" => "pending"})
+      Process.put(:fake_llm_turns, [plano_turn("um agente na api")])
+      {:noreply, suspenso} = sync_cast(DevLeadServer, :kickoff, state)
+
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("execução no ar")])
+
+      desfecho = %{
+        action_id: "pa-ativa",
+        status: "executed",
+        execution_result: %{
+          "sessaoDeExecucao" => "sess-exec",
+          "modulos" => ["api"],
+          "tarefasAtribuidas" => 2
+        },
+        rejection_reason: nil
+      }
+
+      {:noreply, retomando} = DevLeadServer.handle_info({:action_settled, desfecho}, suspenso)
+      %{turno_assincrono: %{task: %Task{ref: ref}}} = retomando
+      assert_receive {^ref, resultado}, 5_000
+      DevLeadServer.handle_info({ref, resultado}, retomando)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "propose_execution_plan"} = r}}
+
+      assert r.ok == true
+      assert r.resultado =~ "execução ATIVADA na sessão sess-exec"
+      assert r.resultado =~ "2 tarefa(s) com módulo atribuído"
+    end
+
+    test "action_settled FALHOU (ativação recusada) grava ok: false com o motivo", %{state: state} do
+      Process.put(:fake_propose_action, %{"id" => "pa-falha", "status" => "pending"})
+      Process.put(:fake_llm_turns, [plano_turn("um agente na api")])
+      {:noreply, suspenso} = sync_cast(DevLeadServer, :kickoff, state)
+
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("falta o repositório")])
+
+      desfecho = %{
+        action_id: "pa-falha",
+        status: "failed",
+        execution_result: %{
+          "sessaoDeExecucao" => nil,
+          "modulos" => [],
+          "tarefasAtribuidas" => 0,
+          "motivo" => "Projeto sem repositório"
+        },
+        rejection_reason: nil
+      }
+
+      {:noreply, retomando} = DevLeadServer.handle_info({:action_settled, desfecho}, suspenso)
+      %{turno_assincrono: %{task: %Task{ref: ref}}} = retomando
+      assert_receive {^ref, resultado}, 5_000
+      DevLeadServer.handle_info({ref, resultado}, retomando)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "tool.result", payload: %{tool: "propose_execution_plan"} = r}}
+
+      assert r.ok == false
+      assert r.erro =~ "a ativação da execução falhou: Projeto sem repositório"
     end
 
     test "action_settled RECUSADO grava tool.result com ok: false e o motivo (RN-593)", %{

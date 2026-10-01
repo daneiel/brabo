@@ -23415,6 +23415,12 @@
             "example": 0,
             "description": "How many correction rounds the gates have already requested."
           },
+          "module": {
+            "type": "object",
+            "example": "api",
+            "nullable": true,
+            "description": "The module the task belongs to, assigned by the Dev Lead in the approved execution plan (RN-678). Only the dev agent of that module claims it. `null` while no plan assigned one — such a task is claimable only when its story has exactly one module."
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T10:00:00.000Z",
@@ -23438,6 +23444,7 @@
           "blockedOrigin",
           "gateStatus",
           "gateCorrectionCount",
+          "module",
           "createdAt",
           "updatedAt"
         ]

@@ -1612,7 +1612,7 @@ que não libera o escopo.
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:172`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:192`
   (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
@@ -1770,6 +1770,12 @@ Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
 [RN-404](../business-rules.md#rn-404) (ADR 0094), que revalida no backend.
 
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
+
+> **Revisada pela [RN-677](../business-rules.md#rn-677) (ADR 0194, decisão do
+> dono em 01/10):** aceitar o handoff ao Dev Lead deixou de encadear a ativação
+> da execução, para TODO papel — o aceite só o traz para PLANEJAR, e quem ativa
+> é a APROVAÇÃO do plano dele (`propose_execution_plan`). O texto abaixo
+> descreve a fusão como ela era.
 
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
 automaticamente quando `toAgent === 'dev-lead'` E o papel EFETIVO de quem
@@ -2409,7 +2415,7 @@ descrito aqui.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:507` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:495` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
