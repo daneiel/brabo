@@ -64,3 +64,76 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 0
+
+  # 3. LIGA as imagens de terceiro (ADR 0197, sobre os ADRs 0159 e 0178). Elas
+  #    estão presas como `imagem:tag@sha256:<índice>` — a tag INLINE é o que o
+  #    Dependabot lê (ele não lê comentário), e o digest decide os bytes. O
+  #    `scripts/ci/imagens-pinadas.ts` continua reprovando quem não pinar.
+  #
+  #    O que destravou: até o ADR 0197, pgvector e ollama também eram literais
+  #    nos `services:` dos workflows, que nenhum ecossistema lê, e todo PR do
+  #    bot nasceria vermelho por "mesma tag, dois digests". Agora os workflows
+  #    leem a imagem do compose (`.github/workflows/imagens-do-compose.yml`),
+  #    e o PR do bot nunca precisa tocar `.github/workflows/`.
+  #
+  #    `docker-compose`: os composes moram TODOS em `/docker`, então uma subida
+  #    atualiza dev, produção e instalação no MESMO PR.
+  - package-ecosystem: docker-compose
+    directory: /docker
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Um PR por semana com tudo: a mesma imagem aparece em mais de um
+      # compose, e um PR por imagem não muda isso — só multiplica o review.
+      imagens-dos-composes:
+        patterns: ['*']
+    ignore:
+      # `brabo-api:prod` e irmãs: imagens que o compose de produção CONSTRÓI.
+      - dependency-name: 'brabo-*'
+    commit-message:
+      prefix: chore
+      include: scope
+
+  #    `docker`: os `FROM` dos Dockerfiles (uma pasta por imagem em `docker/*`)
+  #    e os manifests do kustomize. NUNCA `/docker` sem o `/*`: o ecossistema
+  #    `docker` também lê YAML com `image:` (é como ele cobre Kubernetes), e
+  #    leria os composes, abrindo um segundo PR para a mesma imagem.
+  #
+  #    O grupo é o que impede o vermelho ENTRE pastas: `node:24-alpine` mora em
+  #    três Dockerfiles de dev e `node:24.21.0-alpine3.23` em três de produção,
+  #    cada um numa pasta — sem grupo seriam três PRs, cada um com a mesma tag e
+  #    um digest diferente dos outros dois.
+  #
+  #    O que segue DECLARADO (ADR 0197): `neo4j` e `ollama` moram também em
+  #    `deploy/k8s/base/`, e um ecossistema não agrupa com o outro. Quando o
+  #    registry só re-publica a MESMA tag com outro digest, os dois PRs (este e
+  #    o dos composes) nascem vermelhos pela regra "mesma tag, dois digests", e
+  #    quem revisa junta as duas subidas num PR só.
+  #
+  #    Ficam no procedimento MANUAL do runbook, com ou sem este bloco: o
+  #    `imageName` do CloudNativePG (chave que ecossistema nenhum lê) e a
+  #    `IMAGEM_DO_GOLDEN_SET_QA` (uma constante TypeScript).
+  - package-ecosystem: docker
+    directories:
+      - /docker/*
+      - /deploy/k8s/**
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      imagens-dos-dockerfiles-e-manifests:
+        patterns: ['*']
+    ignore:
+      # As imagens que este repositório CONSTRÓI (`brabo-api:prod` no compose e
+      # no kustomize base): não há registry de terceiro onde procurá-las, e
+      # onde elas atravessam um registry o ADR 0119 já as resolve por digest.
+      - dependency-name: 'brabo-*'
+      - dependency-name: 'ghcr.io/*/brabo-*'
+    commit-message:
+      prefix: chore
+      include: scope

@@ -1775,6 +1775,12 @@ Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
 
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
 
+> **Revisada pela [RN-677](../business-rules.md#rn-677) (ADR 0194, decisão do
+> dono em 01/10):** aceitar o handoff ao Dev Lead deixou de encadear a ativação
+> da execução, para TODO papel — o aceite só o traz para PLANEJAR, e quem ativa
+> é a APROVAÇÃO do plano dele (`propose_execution_plan`). O texto abaixo
+> descreve a fusão como ela era.
+
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
 automaticamente quando `toAgent === 'dev-lead'` E o papel EFETIVO de quem
 aceita — lido do mesmo `useCurrentWorkspaceWithRole()` que já autoriza o

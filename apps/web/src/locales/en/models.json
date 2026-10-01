@@ -59,7 +59,8 @@
     "readsImage": "reads image",
     "thinking": "thinking",
     "generatesImage": "generates image",
-    "manualPricing": "manual pricing"
+    "manualPricing": "manual pricing",
+    "freeRoutingAlias": "free-routing alias"
   },
   "catalog": {
     "title": "Model catalog",
@@ -89,9 +90,11 @@
       "activated": "Models activated",
       "deactivated": "Models deactivated",
       "saveError": "Could not save",
-      "usesUpdated": "Uses updated"
+      "usesUpdated": "Uses updated",
+      "aliasRefused": "Free-routing aliases cannot be curated"
     },
     "empty": "No model in the catalog. Register a provider credential and update.",
+    "freeRoutingAliasReason": "Showcase price: the bill comes from whichever upstream serves each call. A \"~\" alias cannot be activated — pick a model with a fixed upstream.",
     "markedHidden_one": "{{count}} marked",
     "markedHidden_other": "{{count}} marked",
     "batchBar": {

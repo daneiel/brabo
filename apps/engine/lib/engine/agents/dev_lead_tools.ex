@@ -4,8 +4,19 @@ defmodule Engine.Agents.DevLeadTools do
   ADR 0053) e avaliar a IMPLEMENTABILIDADE de uma story (ADR 0090).
 
   Ele não escreve código — distribui trabalho e responde por ele. O plano diz
-  quantos agentes por módulo e **por quê**, e é isso que o usuário aceita ao
-  ativar a execução.
+  quantos agentes por módulo e **por quê**, e — desde a RN-678 (AT-274) — de
+  QUAL módulo é cada tarefa (`tarefas`, `[{taskId, modulo}]`): é por essa
+  atribuição que só o `dev-<modulo>` certo pega a tarefa.
+
+  ## Aprovar o plano ATIVA a execução (AT-263, RN-677, ADR 0194)
+
+  Revisão da RN-161: o aceite do handoff ao Dev Lead só o traz para PLANEJAR.
+  A ativação da execução (dev agents, worktrees, gasto) acontece quando o
+  humano APROVA este `propose_execution_plan` — a api ganhou o executor
+  (`ExecuteExecutionPlanUseCase`), que grava o módulo das tarefas e chama o
+  MESMO `ActivateExecutionUseCase` do botão. A api valida o plano contra o
+  `module_map` vigente já na PROPOSTA (400 `plano_de_execucao_invalido`), e a
+  frase dela volta ao modelo como erro da ferramenta, para ele corrigir.
 
   ## O plano é `proposed_action` (ADR 0086, RN-284) — revisão da decisão original
 
@@ -87,10 +98,11 @@ defmodule Engine.Agents.DevLeadTools do
       name: "propose_execution_plan",
       description:
         "Propõe o plano de execução: quantos agentes por módulo e por quê. " <>
-          "Use UMA vez, depois de avaliar o module_map e o backlog pegável. " <>
-          "É uma decisão real, que o usuário aprova ou recusa em Aprovações — " <>
-          "não sobe agente nenhum sozinho, e a conversa espera a decisão " <>
-          "antes de continuar.",
+          "Use UMA vez, depois de avaliar o module_map e o backlog pegável, e " <>
+          "atribua cada tarefa a um módulo em `tarefas`. É uma decisão real, que " <>
+          "o usuário aprova ou recusa em Aprovações — APROVAR é o que ativa a " <>
+          "execução (sobe os dev agents), e a conversa espera a decisão antes " <>
+          "de continuar.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -117,15 +129,32 @@ defmodule Engine.Agents.DevLeadTools do
           "resumo" => %{
             "type" => "string",
             "description" => "o plano em uma frase, para o usuário decidir sem ler a lista"
+          },
+          "tarefas" => %{
+            "type" => "array",
+            "description" =>
+              "TODA tarefa pendente do backlog, cada uma com o módulo (do module_map) " <>
+                "cujo dev agent vai pegá-la — só o dev daquele módulo pega a tarefa",
+            "items" => %{
+              "type" => "object",
+              "properties" => %{
+                "taskId" => %{
+                  "type" => "string",
+                  "description" => "o task_id da lista de tarefas"
+                },
+                "modulo" => %{"type" => "string", "description" => "um módulo do module_map"}
+              },
+              "required" => ["taskId", "modulo"]
+            }
           }
         },
-        "required" => ["modulos", "resumo"]
+        "required" => ["modulos", "resumo", "tarefas"]
       }
     }
   end
 
   @spec run(map(), map()) :: {:ok, String.t()} | {:pending, String.t()} | {:error, String.t()}
-  def run(%{"modulos" => modulos, "resumo" => resumo}, state) when is_list(modulos) do
+  def run(%{"modulos" => modulos, "resumo" => resumo} = args, state) when is_list(modulos) do
     case validar(modulos) do
       {:error, motivo} ->
         {:error, motivo}
@@ -134,7 +163,17 @@ defmodule Engine.Agents.DevLeadTools do
         total = Enum.reduce(normalizados, 0, &(&1.agentes + &2))
         actor = %{kind: "agent", id: "dev-lead"}
 
-        payload = %{modulos: normalizados, resumo: resumo, totalAgentes: total}
+        # `tarefas` vai como veio: quem a confere é a API, contra o
+        # `module_map` vigente (RN-678) — uma régua só, e a frase da recusa
+        # dela volta ao modelo (`erro_da_proposta/1`).
+        tarefas = Map.get(args, "tarefas", [])
+
+        payload = %{
+          modulos: normalizados,
+          resumo: resumo,
+          totalAgentes: total,
+          tarefas: tarefas
+        }
 
         case EngineApiClient.propose_action(
                state.project_id,
@@ -144,10 +183,10 @@ defmodule Engine.Agents.DevLeadTools do
                payload
              ) do
           {:ok, action} ->
-            classificar(Map.get(action, "status"), Map.get(action, "id"), total, normalizados)
+            classificar(Map.get(action, "status"), action, total, normalizados)
 
           {:error, reason} ->
-            {:error, "não consegui propor o plano de execução: #{inspect(reason)}"}
+            {:error, erro_da_proposta(reason)}
         end
     end
   end
@@ -155,28 +194,49 @@ defmodule Engine.Agents.DevLeadTools do
   def run(_args, _state),
     do: {:error, "propose_execution_plan exige `modulos` (lista) e `resumo`"}
 
-  # `propose_execution_plan` não tem execute-* pipeline (não há efeito a
-  # aplicar na aprovação — a criação dos agentes acontece depois, num ato
-  # SEPARADO, quando o usuário ativa a execução). Por isso a aprovação
-  # manual nunca sai de `"approved"` — a máquina de estados
-  # (`action-state-machine.ts`) modela `approved -> executed | failed` como
-  # aberto, mas nada aqui chama essa transição, e não deveria: não há o que
-  # executar. `"auto_approved"` é o caminho da aprovação automática (o
-  # usuário configurou `permissions.json`/`agent_autonomy`); `"executed"`
-  # entraria aqui se um dia este tipo ganhar pipeline própria. Os três
-  # contam como sucesso — o plano foi aceito.
-  defp classificar(status, _action_id, total, normalizados)
-       when status in ["executed", "auto_approved", "approved"] do
+  # A recusa NOMEADA da api (RN-678): tarefa sem módulo, módulo fora do
+  # `module_map`, tarefa que não é do projeto. A frase vai ao modelo como está,
+  # com o que fazer — é entrada do laço (RN-163), e ele corrige o plano.
+  defp erro_da_proposta({400, %{"code" => "plano_de_execucao_invalido", "message" => motivo}}),
+    do: "plano recusado: #{motivo} Corrija `tarefas` e proponha o plano de novo."
+
+  defp erro_da_proposta(reason),
+    do: "não consegui propor o plano de execução: #{inspect(reason)}"
+
+  # Desde a RN-677 (AT-263, ADR 0194) `propose_execution_plan` TEM pipeline
+  # na api: aprovar (ou auto-aprovar) grava o módulo das tarefas e ATIVA a
+  # execução, e a ação termina `executed` (com a sessão de execução no
+  # `executionResult`) ou `failed` (com o motivo). Auto-aprovado, a api já
+  # executa na proposta e devolve o desfecho aqui; `"auto_approved"`/
+  # `"approved"` seguem contando como sucesso para não chamar de erro uma ação
+  # cujo desfecho ainda não chegou.
+  defp classificar("executed", _action, total, normalizados) do
     {:ok,
-     "plano aprovado: #{total} agente(s) em #{length(normalizados)} módulo(s). " <>
-       "O usuário ativa a execução quando quiser."}
+     "plano aprovado e execução ATIVADA: #{total} agente(s) em " <>
+       "#{length(normalizados)} módulo(s); cada tarefa vai para o dev do módulo atribuído."}
   end
 
-  defp classificar("pending", action_id, _total, _normalizados) when is_binary(action_id) do
+  defp classificar(status, _action, total, normalizados)
+       when status in ["auto_approved", "approved"] do
+    {:ok,
+     "plano aprovado: #{total} agente(s) em #{length(normalizados)} módulo(s). " <>
+       "A aprovação ativa a execução."}
+  end
+
+  defp classificar("failed", action, _total, _normalizados) do
+    motivo = get_in(action, ["executionResult", "motivo"]) || "sem motivo registrado"
+
+    {:error,
+     "o plano foi aprovado, mas a ativação da execução falhou: #{motivo}. " <>
+       "Diga ao usuário o que falta."}
+  end
+
+  defp classificar("pending", %{"id" => action_id}, _total, _normalizados)
+       when is_binary(action_id) do
     {:pending, action_id}
   end
 
-  defp classificar(status, _action_id, _total, _normalizados) do
+  defp classificar(status, _action, _total, _normalizados) do
     {:error, "o plano não foi registrado (status inesperado: #{inspect(status)})"}
   end
 

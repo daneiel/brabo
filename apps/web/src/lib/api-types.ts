@@ -587,6 +587,13 @@ export interface ModelComCuradoria extends Model {
    * "ninguém opinou", não "não serve".
    */
   uses: UsoDeModelo[];
+  /**
+   * Alias de roteamento livre do OpenRouter (`~…`, RN-679): preço de vitrine,
+   * cobrança pelo upstream que atender. A api recusa ATIVÁ-LO (422
+   * `alias_de_roteamento_livre`); o que já estava ativo segue ativo e vem
+   * marcado por isto.
+   */
+  freeRoutingAlias: boolean;
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;

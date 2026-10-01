@@ -150,17 +150,6 @@ export function SessionPage({
   // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
   const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const [reabrindo, setReabrindo] = useState(false);
-  // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
-  // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
-  // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
-  // (ver `handleAcceptHandoff`) ou se o segundo clique em "Ativar execução"
-  // continua necessário. Quem só é `developer` não perde nada: continua
-  // podendo aceitar o handoff, só não ganha o atalho — ativar exige
-  // `maintainer`/`owner` de qualquer forma, então encadear para um
-  // `developer` só produziria uma chamada fadada a 403.
-  const podeFundirHandoffComExecucao =
-    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
-
   // AT-328: no móvel o painel nasce fechado e abre como gaveta sobre o fio.
   const movel = useLayoutMovel();
   const [asideOpen, setAsideOpen] = usePainelDeContexto(movel, !!highlightEvent);
@@ -268,7 +257,6 @@ export function SessionPage({
     queryClient,
     showToast,
     t,
-    podeFundirHandoffComExecucao,
     iniciarTurnoDoAgente,
     turnoAgentRef,
     setTurnoViaCanal,

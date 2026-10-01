@@ -194,6 +194,9 @@ estado lido do repositório e não da conversa.
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
 | O piloto automático: "Sempre permitir" não o desliga, e o escopo compara com a pasta real de execução (AT-259/255/258) | ADR 0189, RN-669, RN-670 |
 | "Sempre permitir" grava verbo + subcomando, um padrão por segmento (AT-257, fecha a AT-170) | ADR 0189, RN-675 |
+| Aprovar o plano do Dev Lead ativa a execução; a tarefa ganha o módulo que ele atribui (AT-263/AT-274) | ADR 0194, RN-677, RN-678 |
+| A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado (AT-246) | ADR 0197 |
+| A curadoria recusa o alias `~` do OpenRouter, preço de vitrine (AT-271) | RN-679 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -1169,13 +1172,27 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (compose E `FROM` de Dockerfile), `deploy/k8s/` e `.github/workflows/` —
   esta última é `services:` de job, ou seja, o MESMO runner que a regra das
   actions protege, alcançado pela outra porta, e foi o lugar que o próprio
-  levantamento do `BRB-004` não tinha visto. `scripts/ci/imagens-pinadas.ts`
+  levantamento do `BRB-004` não tinha visto. E desde o ADR 0197 (AT-246) os
+  workflows NÃO têm literal de imagem nenhum: o `image:` dos `services:` é
+  `${{ needs.imagens.outputs.<imagem> }}`, de um job `imagens` que chama o
+  reutilizável `.github/workflows/imagens-do-compose.yml`, que lê o serviço do
+  compose de DEV (`scripts/ci/imagens-do-compose.ts`, tabela
+  `IMAGENS_DOS_WORKFLOWS`). Serviço novo de workflow entra por ESSE caminho —
+  imagem no compose, linha na tabela, output no reutilizável (o spec reprova
+  se divergirem) —, nunca com um literal. Job EXIGIDO que dependa de `imagens`
+  leva `if: ${{ !cancelled() }}`, senão `imagens` vermelho o deixaria
+  `skipped`, que conta como verde. `scripts/ci/imagens-pinadas.ts`
   reprova no job `lint`, e reprova: referência mutável, digest sem a tag
   INLINE (inclusive a forma antiga, tag só no comentário), comentário que
-  diverge da tag inline, comentário no fim do `FROM`, e a MESMA tag inline com
-  dois digests diferentes — esta última existe porque `golden-set-rag.yml` PROMETE em comentário rodar a
+  diverge da tag inline, comentário no fim do `FROM`, a MESMA tag inline com
+  dois digests diferentes, e — num WORKFLOW — imagem literal (mesmo por
+  digest), expressão que não seja EXATAMENTE `${{ needs.<job>.outputs.<x> }}`
+  (literal na expressão, `||`, `env.`, `vars.`, `format()` são onde um literal
+  mutável se esconde) e `needs` de job que não chama o reutilizável. A regra
+  dos dois digests nasceu da promessa do `golden-set-rag.yml` de rodar a
   mesma versão do compose de dev (o piso do golden-set é chaveado por MODELO,
-  não por ambiente), e com digest isso deixa de ser promessa. São DOIS
+  não por ambiente); desde o ADR 0197 essa promessa é CONSTRUÇÃO, e a regra
+  segue guardando composes × Dockerfiles × manifests. São DOIS
   scripts e não um: `uses:` mora em YAML de workflow com uma sintaxe, imagem
   mora em compose, manifest do kustomize e Dockerfile com outras três. O
   check NÃO cobre as imagens que o PRODUTO publica, e isso é decisão com três
@@ -1186,15 +1203,17 @@ o RACIOCÍNIO da triagem, que continua valendo.
   referência interpolada (`${BRABO_API_IMAGE:?…}`) e estágio de multi-stage.
   A lista de exceções é por NOME e falha fechado: imagem de terceiro nova
   nunca casa com `brabo-`. Preço DECLARADO e não pago aqui: digest congela, e
-  imagem congelada não recebe correção de segurança até alguém trocá-lo à mão
-  — o Dependabot `docker`/`docker-compose` foi DECIDIDO (27/09) e NÃO está
-  ligado: o passo decidido para alinhar os `services:` dos workflows no PR do
-  bot teria de empurrar mudança em `.github/workflows/`, e o `GITHUB_TOKEN`
-  nunca pode (não existe permissão `workflows` para ele) — a saída é do dono,
-  no ADR 0178. Não ligue o ecossistema sem ela: todo PR do bot que tocar
-  pgvector ou ollama nasce vermelho pela regra "mesma tag, dois digests". O
-  `imageName` do CNPG e a `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento
-  manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
+  imagem congelada não recebe correção de segurança até alguém trocá-lo — e
+  desde o ADR 0197 o Dependabot `docker-compose` (`/docker`) e `docker`
+  (`/docker/*` e `/deploy/k8s/**`, NUNCA `/docker` sem o `/*`: o `docker`
+  também lê YAML e abriria um segundo PR para os composes) estão LIGADOS,
+  `target-branch: dev`, cada um com UM grupo — sem grupo, a mesma tag em três
+  pastas de Dockerfile viraria três PRs vermelhos. Segue DECLARADO: `neo4j` e
+  `ollama` moram também em `deploy/k8s/base/`, os dois ecossistemas nunca
+  dividem um PR, e uma re-publicação da MESMA tag faz os dois PRs nascerem
+  vermelhos pela regra dos dois digests até um humano juntá-los — não afrouxe
+  a regra para eles passarem. O `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
   pelo mesmo motivo que a irmã não tem: as duas moram aqui e em
   docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
@@ -2096,6 +2115,22 @@ o RACIOCÍNIO da triagem, que continua valendo.
   — vira `agent.error` explicando a pendência, e 409 no clique. Sem tabela de estado própria: restart do engine
   durante a espera perde a inscrição no `Engine.Dev.Wake`, lacuna aceita e
   declarada (a decisão continua registrada em Aprovações).
+- A execução é ATIVADA pela APROVAÇÃO do plano do Dev Lead, nunca pelo
+  aceite do handoff a ele (RN-677, ADR 0194, revisa a RN-161): aceitar o Dev
+  Lead só o traz para PLANEJAR, e o web não encadeia mais
+  `execution/activate`. Aprovar (ou auto-aprovar) `propose_execution_plan`
+  roda `ExecuteExecutionPlanUseCase`, que grava o módulo das tarefas e chama o
+  MESMO `ActivateExecutionUseCase` do botão — não escreva uma segunda régua de
+  ativação: o 409 sem repositório, o 409 de sessão consultiva e
+  `findActiveExecutionSession` moram ali. O botão explícito "Ativar execução"
+  (card do Dev Lead e Visão Geral) continua como gesto próprio. A tarefa tem
+  MÓDULO (`tasks.module`, RN-678), atribuído pelo Dev Lead em
+  `tarefas: [{ taskId, modulo }]` e validado contra o `module_map` vigente na
+  proposta (400 `plano_de_execucao_invalido`) e de novo na aprovação; o claim é
+  pelo módulo da TAREFA (`daTarefaDoModulo`, o mesmo predicado na contagem),
+  e tarefa sem módulo só é pegável quando a história tem UM módulo — não
+  alargue essa ponte para "qualquer módulo da história", que é o defeito que a
+  regra fecha.
 - A chave de LLM que um agente gasta é a do OWNER do workspace
   (RN-058); o relatório desse gasto é do owner e só dele (RN-060). O
   membro vê o PRÓPRIO consumo por ATOR, em tokens e custo estimado, e

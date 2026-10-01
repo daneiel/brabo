@@ -113,7 +113,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   cancelar. O turno do Dev Lead suspenso em aprovação continua recusando.
   A resposta de `POST …/agents/:agent/message` ganha `mensagemId`, `entrega`
   (`lida` | `enfileirada`) e `posicao`.
-
+- **api, engine, web**: **aprovar o plano do Dev Lead é o que ativa a execução**
+  (AT-263, [RN-677](docs/business-rules.md#rn-677),
+  [ADR 0194](docs/adr/0194-aprovar-o-plano-ativa-a-execucao.md)). Aceitar o
+  handoff ao Dev Lead deixou de encadear `POST .../execution/activate` (revisa
+  a RN-161): ele só entra para PLANEJAR. Aprovar (ou auto-aprovar) o
+  `propose_execution_plan` agora grava o módulo das tarefas e chama a MESMA
+  ativação do botão — o 409 sem repositório, o 409 de sessão consultiva e a
+  reativação na sessão de execução vigente continuam iguais. A ação termina
+  `executed` (com a sessão de execução) ou `failed` (com o motivo), e o Dev
+  Lead diz qual foi ao retomar. O botão "Ativar execução" do card e o da Visão
+  Geral continuam, como gesto explícito.
+- **api, engine**: **a tarefa pertence a um módulo, e só o dev dele a pega**
+  (AT-274, [RN-678](docs/business-rules.md#rn-678)). Coluna `tasks.module`
+  (migração `0068_modulo_da_tarefa`), atribuída pelo Dev Lead no plano
+  (`tarefas: [{ taskId, modulo }]`); o kickoff dele lista as tarefas pendentes
+  com o `task_id`. Tarefa sem módulo ou com módulo fora do `module_map` vigente
+  recusa o plano com 400 `plano_de_execucao_invalido`, nomeando a tarefa. O
+  claim passa a ser pelo módulo da TAREFA; tarefa sem módulo só é pegável
+  quando a história tem um módulo só.
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
@@ -334,6 +352,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   DIFERENTES, e trocou o modelo default: o antigo devolvia o mesmo upstream
   para qualquer critério e não provava nada.
 
+- **ci**: os `services:` dos workflows deixam de ter imagem literal, e o
+  Dependabot passa a propor a subida das imagens de terceiro (AT-246,
+  [ADR 0197](docs/adr/0197-a-imagem-dos-workflows-vem-do-compose.md), sobre os
+  ADRs 0159 e 0178). O pgvector de `ci.yml` e o pgvector/ollama dos dois
+  golden-sets são lidos de `docker/docker-compose.yml` por um workflow
+  reutilizável novo, `imagens-do-compose.yml` (`scripts/ci/imagens-do-compose.ts`),
+  e chegam por `${{ needs.imagens.outputs.<imagem> }}` — uma fonte só de
+  digest, e o PR do bot nunca precisa tocar `.github/workflows/`. O
+  `imagens-pinadas.ts` passa a reprovar, num workflow, imagem literal (mesmo
+  presa por digest), expressão que não seja exatamente essa (literal na
+  expressão, `||`, `env.`, `vars.`, `format()`) e `needs` de um job que não
+  chama o reutilizável. Com isso o `.github/dependabot.yml` liga `docker-compose`
+  (`/docker`) e `docker` (`/docker/*` e `/deploy/k8s/**`), agrupados, uma PR
+  semanal por ecossistema, com `target-branch: dev`. `Testes do engine
+  (ExUnit)` e os shards de api passam a esperar o job `imagens`, com
+  `if: !cancelled()` para nunca virarem `skipped` (que conta como verde).
+  Segue manual, declarado: `neo4j` e `ollama` também moram em
+  `deploy/k8s/base/`, e uma re-publicação da MESMA tag faz as duas PRs nascerem
+  vermelhas até alguém juntá-las; o `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA`.
 - **ci/docker/k8s**: a imagem de terceiro passa a levar a TAG dentro da
   referência, antes do digest — `neo4j:5.26-community@sha256:…`, e
   `FROM node:24.11.1-alpine3.21@sha256:… AS deps` no Dockerfile (AT-139,
@@ -741,6 +779,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   projeto no host, com o `/tmp` do host fora. Vale para a regra específica
   `terminal` — antes, `/work/...` e `/tmp` pediam aprovação por "escopo" com o
   comando rodando justamente ali. `runner` fica como estava.
+- **api/web**: a curadoria de modelos **recusa o alias de roteamento livre do
+  OpenRouter** (`~…`, como `~deepseek/deepseek-flash-latest`) (AT-271,
+  [RN-679](docs/business-rules/custo.md#rn-679)). O catálogo publica para ele
+  um preço de vitrine, e quem cobra é o upstream que atender cada chamada;
+  decisão do dono (01/10): só entra modelo com upstream fixo. Ativar um alias é
+  422 `alias_de_roteamento_livre`, o lote inteiro, com a frase nomeando os
+  modelos — e a tela de catálogo a mostra num toast próprio. A linha do alias
+  ganha o selo "alias de roteamento livre" e o motivo em texto
+  (`freeRoutingAlias` na leitura da curadoria). O alias que já estava ativo
+  **segue ativo** (bindings intactos, nada apagado), sai marcado e pode ser
+  desligado; desligado, não volta.
 - **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
   e do PO) deixa de sair em português para quem escolheu outro idioma de
   resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
