@@ -17644,7 +17644,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:252` (`destinatarioRow`), `:168`
+  `apps/web/src/routes/SessionComposer.tsx:256` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
   (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`

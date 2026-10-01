@@ -103,7 +103,7 @@
     "semRepositorio": "No repository yet: accepting this handoff provisions it, and only then can execution be activated.",
     "acompanheExecucao": "Follow the execution in Executors",
     "infraTitulo": "{{de}} handed off to Infra",
-    "infraDetalhe": "Accepting activates the Infra Lead, who takes over provisioning and will PROPOSE starting the project container — the proposal still comes back to you in Approvals.",
+    "infraDetalhe": "Accepting activates the Infra Lead and already authorizes starting the container: in a Container or Mounted folder project with the Architect's routing ready, it picks the image and starts the container without another click. Starting it in a Local runner project and merging the infra PR still wait for your decision.",
     "infraBotao": "Accept the Infra handoff",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
