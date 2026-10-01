@@ -903,6 +903,32 @@ defmodule Engine.Sessions.EngineApiClient do
     do: Map.get(mapa, chave) || Map.get(mapa, Atom.to_string(chave))
 
   defp campo(_, _), do: nil
+
+  # --- Contrato entre módulos (ADR 0200, RN-684) ---
+  #
+  # No FIM da fachada, e a implementação no fim do `Live`, de propósito: as
+  # RNs citam este arquivo por linha, e um bloco no meio deslocaria dezenas de
+  # referências que nada têm a ver com ele.
+
+  @doc """
+  O Arquiteto DECLARA o contrato (a lista inteira, nova versão a cada chamada)
+  e o dev agent o LÊ — um item por módulo do module_map vigente, com o que ele
+  consome (`dependsOn`) e o que expõe. A leitura não leva `session_id`: o
+  recurso é do projeto.
+  """
+  @callback declare_module_contracts(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              contratos :: [map()]
+            ) ::
+              {:ok, map()} | {:error, term()}
+  @callback list_module_contracts(project_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  def declare_module_contracts(project_id, session_id, contratos),
+    do: impl().declare_module_contracts(project_id, session_id, contratos)
+
+  def list_module_contracts(project_id), do: impl().list_module_contracts(project_id)
 end
 
 defmodule Engine.Sessions.EngineApiClient.Live do
@@ -1832,4 +1858,18 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   defp service_token, do: Application.fetch_env!(:engine, :service_token)
 
   defp api_url, do: Application.fetch_env!(:engine, :api_url)
+
+  # RN-684 (ADR 0200): no fim do módulo, pelo mesmo motivo do bloco da fachada.
+  @impl true
+  def declare_module_contracts(project_id, session_id, contratos) do
+    post_returning("/internal/sessions/#{session_id}/module-contracts", %{
+      projectId: project_id,
+      contratos: contratos
+    })
+  end
+
+  @impl true
+  def list_module_contracts(project_id) do
+    get_json("/internal/projects/#{project_id}/module-contracts")
+  end
 end

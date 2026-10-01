@@ -68,7 +68,7 @@ export interface Chamada {
    * O texto que o LAÇO recebeu quando o resultado não foi gravado como
    * `tool.result`: comando de terminal que esperou aprovação volta ao dev agent
    * pelo desfecho da `proposed_action` (`texto_do_desfecho/1`,
-   * `dev_agent_server.ex:457`), e o event log só guarda o desfecho na tabela.
+   * `dev_agent_server.ex:460`), e o event log só guarda o desfecho na tabela.
    * Reconstruído dali, no mesmo formato; `null` = não há desfecho liquidado.
    */
   resultadoReconstruido?: string | null;
@@ -82,7 +82,7 @@ export interface Acao {
   rejection_reason: string | null;
 }
 
-/** `dev_agent_server.ex:457-475` (`texto_do_desfecho/1`), o que o modelo lê no lugar de "pending". */
+/** `dev_agent_server.ex:460-478` (`texto_do_desfecho/1`), o que o modelo lê no lugar de "pending". */
 export function textoDoDesfecho(a: Acao): string | null {
   const exec = a.execution_result;
   const s = (v: unknown, padrao = ''): string => (typeof v === 'string' ? v : v === undefined || v === null ? padrao : String(v));

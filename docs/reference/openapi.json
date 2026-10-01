@@ -998,6 +998,46 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/module-contracts": {
+      "get": {
+        "description": "One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.",
+        "operationId": "InternalProjectsController_moduleContracts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContratosDoProjetoResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "The contracts between modules, for a dev agent to read (RN-684)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/product-metrics": {
       "get": {
         "description": "The SAME report as the `analise:funil` script (ADR 0089) — session → commit → PR → merge funnel, real lead time and real deployment frequency — through the same pure functions and the same query (`apps/api/src/application/services/funil-metrics.ts`), so the two never diverge from the same fact. Closes `docs/fluxo.yml` (role `po`, input `metricas-de-produto`, previously `status: lacuna`) (RN-407).",
@@ -2212,6 +2252,62 @@
           }
         ],
         "summary": "Proposes raising an area's parallelism cap",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/module-contracts": {
+      "post": {
+        "description": "The artifact IS the `artifact.module_contracts` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Each call carries the WHOLE list and replaces the previous version. What a module consumes is not written here: it is the current module_map's `dependsOn`.",
+        "operationId": "InternalSessionsController_moduleContracts",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclareModuleContractsInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContratosDeclaradosResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty list, repeated module, module outside the current module_map (or no module_map), a module with an empty or oversized `expoe`, an item with an unknown `tipo`, or a missing/oversized `assinatura`."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Declares a new version of the contracts between modules",
         "tags": [
           "internal"
         ]
@@ -15371,6 +15467,136 @@
           "imagemVersao"
         ]
       },
+      "ContratoDeModuloInternalDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "board-engine",
+            "description": "Module name — must exist in the current module_map."
+          },
+          "expoe": {
+            "description": "What the module exposes to whoever depends on it. 1 to 40.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoInternalDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "expoe"
+        ]
+      },
+      "ContratoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "board-engine"
+          },
+          "expoe": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "expoe"
+        ]
+      },
+      "ContratoLidoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "game-session"
+          },
+          "dependeDe": {
+            "example": [
+              "board-engine",
+              "scoring"
+            ],
+            "description": "The current module_map's `dependsOn`: what this module CONSUMES.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expoe": {
+            "nullable": true,
+            "description": "What it exposes. `null` = the Architect declared no contract for this module (different from exposing nothing).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDeContratoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "modulo",
+          "dependeDe",
+          "expoe"
+        ]
+      },
+      "ContratosDeclaradosResponseDto": {
+        "type": "object",
+        "properties": {
+          "contratos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "contratos",
+          "version"
+        ]
+      },
+      "ContratosDoProjetoResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_contratos",
+              "declarados"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "example": 2,
+            "description": "0 when there is no contract."
+          },
+          "modulos": {
+            "description": "One per module of the CURRENT module_map, in map order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoLidoDeModuloResponseDto"
+            }
+          },
+          "contratosForaDoMapa": {
+            "example": [],
+            "description": "Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "modulos",
+          "contratosForaDoMapa"
+        ]
+      },
       "ConvertExecutionModeDto": {
         "type": "object",
         "properties": {
@@ -16082,6 +16308,26 @@
           "rationale",
           "network",
           "resources"
+        ]
+      },
+      "DeclareModuleContractsInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contratos": {
+            "description": "The WHOLE contract list: each call is a new version that replaces the previous one. What a module CONSUMES is not here — it is derived from the current module_map's `dependsOn` when read.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratoDeModuloInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "contratos"
         ]
       },
       "DelegationResponseDto": {
@@ -17706,6 +17952,63 @@
           "revokedAt",
           "lastUsedAt",
           "token"
+        ]
+      },
+      "ItemDeContratoInternalDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "funcao",
+              "rota",
+              "evento",
+              "dado"
+            ],
+            "example": "funcao",
+            "description": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape."
+          },
+          "assinatura": {
+            "type": "string",
+            "example": "placePiece(board: Board, piece: Piece, pos: Pos): Board",
+            "description": "How another module uses it. Up to 300 characters."
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Returns a new board; never mutates the one passed in."
+          }
+        },
+        "required": [
+          "tipo",
+          "assinatura"
+        ]
+      },
+      "ItemDeContratoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "funcao",
+              "rota",
+              "evento",
+              "dado"
+            ],
+            "example": "funcao"
+          },
+          "assinatura": {
+            "type": "string",
+            "example": "placePiece(board: Board, piece: Piece, pos: Pos): Board"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Returns a new board; never mutates the one passed in."
+          }
+        },
+        "required": [
+          "tipo",
+          "assinatura",
+          "descricao"
         ]
       },
       "JwksResponseDto": {

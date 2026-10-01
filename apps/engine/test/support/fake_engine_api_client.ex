@@ -334,6 +334,33 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # RN-684: o fake devolve a lista que recebeu, versão 1 — ou o erro posto em
+  # `:fake_module_contracts`, pelo `reply/2` de sempre.
+  @impl true
+  def declare_module_contracts(_project_id, _session_id, contratos) do
+    notify({:module_contracts_declared, contratos})
+
+    reply(:fake_module_contracts, %{
+      "version" => 1,
+      "contratos" =>
+        Enum.map(contratos, fn c ->
+          %{"modulo" => Map.get(c, :modulo), "expoe" => Map.get(c, :expoe, [])}
+        end)
+    })
+  end
+
+  @impl true
+  def list_module_contracts(project_id) do
+    notify({:module_contracts_listed, project_id})
+
+    reply(:fake_module_contracts_lidos, %{
+      "status" => "sem_contratos",
+      "version" => 0,
+      "modulos" => [],
+      "contratosForaDoMapa" => []
+    })
+  end
+
   @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
     # Atraso opcional via Application env (NÃO dicionário de processo): o

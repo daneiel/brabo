@@ -128,7 +128,7 @@ defmodule Engine.Harness.IdiomaDaResposta do
     emit_artifact
     create_epic create_story create_task
     create_module_map assign_story_modules choose_project_image create_c4_diagram
-    route_modules_to_infra propose_adr emit_insight
+    route_modules_to_infra declare_module_contracts propose_adr emit_insight
     propose_execution_plan assess_implementability
     propose_prototype
     propose_rfc

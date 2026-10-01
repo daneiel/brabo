@@ -320,12 +320,12 @@ Where each new field comes from in the engine (`apps/engine/lib/engine/…`):
 
 | field | source |
 |---|---|
-| `pedido` (dev) | `initial_message/2`, `dev/dev_agent_server.ex:481`; task and story titles from `tasks`/`stories` |
+| `pedido` (dev) | `initial_message/2`, `dev/dev_agent_server.ex:484`; task and story titles from `tasks`/`stories` |
 | `pedido` (`qa-automacao`) | `initial_message/2`, `gates/qa_automacao_agent.ex:108`; task from the last `dev.awaiting_gate`, requirements from the story |
 | `pedido` (`qa-estrategia`, `appsec`) | `gates/qa_estrategia_agent.ex:93`, `gates/appsec_agent.ex:79`; **the story is not recoverable from the log**, so the message says so and carries the module map |
 | recent steps by run | `ToolLoop.Default.init/1` and `loop/1` (`harness/tool_loop.ex`): `messages` is built per `run` |
 | complete results, `texto` | the `tool` and `assistant` messages `loop/1` appends (`concluir_despacho/5`, `append(ctx, message)`); the log cuts results at 2 000 |
-| approved-command results (`acoes`) | `texto_do_desfecho/1`, `dev/dev_agent_server.ex:457`; the log has no `tool.result` for them, only `proposed_actions.execution_result` |
+| approved-command results (`acoes`) | `texto_do_desfecho/1`, `dev/dev_agent_server.ex:460`; the log has no `tool.result` for them, only `proposed_actions.execution_result` |
 | `progresso`, `trilha` | counts over the run's earlier calls in the same `messages` |
 
 Not ported, and said so in `kickoff.ts`: the Anamnese (its message is built

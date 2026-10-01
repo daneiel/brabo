@@ -428,6 +428,13 @@ reason in the URL.
   scope is closed to the project by the path, and the cost per call is
   constant (three reads in the backlog, two in the rules, one query against
   `proposed_actions` filtered by index in the product metrics).
+- **The dev agent's contract read** — `GET /internal/projects/:projectId/module-contracts`
+  ([RN-684](business-rules.md#rn-684), [ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md))
+  — follows the same rule: no secret, nothing beyond the project id, one
+  entry per module of the current `module_map`. Its writing twin,
+  `POST /internal/sessions/:sessionId/module-contracts`, takes only the
+  Architect's declaration (what each module exposes) and validates every name
+  against the current `module_map`; neither route touches a worktree.
 - **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
   ADR 0104) is called only by the engine, after a runner connects and sends
   `workspace_confirm` over the channel — never directly by the runner,
@@ -1231,6 +1238,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-routing` | engine-service |
+| POST | `/internal/sessions/:sessionId/module-contracts` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
@@ -1243,6 +1251,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| GET | `/internal/projects/:projectId/module-contracts` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
 | POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |

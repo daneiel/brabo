@@ -300,6 +300,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-module-contracts",
+          label: "The contracts between modules, for a dev agent to read (RN-684)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-product-metrics",
           label: "The project's delivery funnel and partial DORA metrics, for the PO to read",
           className: "api-method get",
@@ -428,6 +434,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/internal-sessions-controller-max-parallel-proposal",
           label: "Proposes raising an area's parallelism cap",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-module-contracts",
+          label: "Declares a new version of the contracts between modules",
           className: "api-method post",
         },
         {

@@ -95,6 +95,7 @@ camada_decisao_tecnica:
       - { artefato: module_map, destino: [dev-lead, area-dev] }     # RN-159
       - { artefato: artifact.project_image, destino: aba-code }     # RN-105
       - { artefato: artifact.c4_diagram, destino: visao-geral }     # RN-149
+      - { artefato: artifact.module_contracts, destino: area-dev }  # RN-684
       - { artefato: artifact.module_routing, destino: area-infra,
           nota: "candidata; quem elege é a Infra, PR à parte" }     # RN-487
       - { artefato: handoff, destino: area-infra,
