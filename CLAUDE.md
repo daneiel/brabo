@@ -236,6 +236,7 @@ estado lido do repositório e não da conversa.
 | O formulário estruturado segue o idioma da resposta; a descrição da ferramenta deixa de fixar pt-BR (AT-282) | RN-667 |
 | A PR do dev agent mira `dev`, o worktree nasce de `dev` e o gate julga o diff contra `dev`, os três juntos (AT-250) | RN-664 |
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
+| O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
 
 ## Estado atual e aberto
 
@@ -2462,6 +2463,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o runbook em inglês tem a tabela: a tradução pt-BR está atrás (AT-209) e uma
   segunda cópia sem conferência seria a cópia que a tabela existe para
   substituir.
+- O índice de ADR é agrupado por TEMA, e o tema mora FORA do ADR (ADR 0202,
+  AT-137): `docs/adr/temas.yml` tem a lista fechada (15 temas) e UM tema por
+  ADR. ADR novo ganha a linha dele ali e a linha do índice na seção do tema, em
+  ordem numérica, no MESMO PR — o `docs:check`
+  (`scripts/docs/temas-de-adr.mjs`, `block`) reprova ADR sem tema, tema fora
+  da lista ou sem ADR, e linha na seção errada. O índice é CONFERIDO, nunca
+  gerado (as frases são curadas). Tema novo é mudança da lista, justificada no
+  PR; passar de 15 exige ADR.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de

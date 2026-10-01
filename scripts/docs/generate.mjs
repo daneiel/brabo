@@ -25,6 +25,7 @@ import { aferir as aferirRefsComSimbolo, JANELA } from './refs-com-simbolo.mjs';
 import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
+import { conferirTemas, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
   DESTINO as DESTINO_DO_INVENTARIO,
@@ -587,6 +588,35 @@ function verificarIndiceAdr() {
   } else {
     console.log('  ok        docs/adr/index.md (todos os ADRs linkados)');
   }
+}
+
+/**
+ * O tema de cada ADR (ADR 0202, AT-137): irmão de `verificarIndiceAdr`. Aquele
+ * pergunta se o ADR está no índice; este, se está no tema CERTO — o de
+ * `docs/adr/temas.yml`, que mora fora do ADR porque ADR aceito não é editado.
+ * A regra inteira está em `temas-de-adr.mjs`. Reprova; `CEGO` também.
+ */
+function verificarTemasDeAdr() {
+  const r = conferirTemas({
+    temasYml: ler(TEMAS_DE_ADR),
+    arquivosAdr: arquivos('docs/adr/[0-9]*.md').map((f) => f.replace('docs/adr/', '')),
+    indice: ler(INDICE_DE_ADR),
+  });
+
+  if (r.cego) {
+    pendencias.push('temas de ADR');
+    console.log(
+      `  CEGO      ${TEMAS_DE_ADR} — ${r.cego}.\n` +
+        '            Ajuste o arquivo, o índice ou scripts/docs/temas-de-adr.mjs.',
+    );
+    return;
+  }
+  if (r.problemas.length === 0) {
+    console.log(`  ok        temas de ADR (${r.adrs} ADRs em ${r.temas} temas, índice agrupado por eles)`);
+    return;
+  }
+  pendencias.push('temas de ADR');
+  for (const p of r.problemas) console.log(`  TEMA      [${p.regra}] ${p.motivo}`);
 }
 
 /**
@@ -1190,6 +1220,7 @@ gerarOpenapi();
 gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
+verificarTemasDeAdr();
 verificarContagensEmProsa();
 verificarFrasesAncoradasNoCodigo();
 verificarContagensDerivadasDoCodigo();
