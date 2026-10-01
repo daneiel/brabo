@@ -8,9 +8,10 @@ defmodule Engine.Agents.DevLeadServer do
 
   Desde o ADR 0090 ele também é dono do gate `implementavel`
   (`docs/gates.yml`, ativo): a ferramenta `assess_implementability` propõe o
-  parecer de implementabilidade de uma story, a partir do plano de teste que
-  a QA-estratégia produz (`Engine.Gates.QaEstrategiaAgent`, segundo momento
-  do `qa-lead` — ver `docs/fluxo.yml`). Mesmo mecanismo de suspensão do
+  parecer de implementabilidade de uma story, a partir da própria história e
+  do `module_map` que o kickoff já lhe dá — desde o ADR 0192 (RN-674) o plano
+  de teste da QA-estratégia nasce DEPOIS da entrega do dev e alimenta o gate
+  `qa-verificada`, não este. Mesmo mecanismo de suspensão do
   `propose_execution_plan`.
 
   Espelha o `Engine.Agents.ArquitetoServer` e o `Engine.Infra.InfraLeadServer`:

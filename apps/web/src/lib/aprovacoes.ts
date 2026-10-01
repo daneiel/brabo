@@ -319,8 +319,9 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
     const porque = justificativa ? `: "${curto(justificativa)}"` : '';
     // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
-    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
-    // parecer; não sobe agente nenhum.
+    // Lead, a partir da história e do `module_map` (desde o ADR 0192 o plano
+    // de teste nasce depois da entrega). Aprovar registra o parecer; não sobe
+    // agente nenhum.
     return `Registra a story como ${rotulo}${porque}.`;
   },
 

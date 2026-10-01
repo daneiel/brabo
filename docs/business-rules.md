@@ -2806,10 +2806,17 @@ QA-estratégia, [RN-341](#rn-341)):
    (síntese e critérios executáveis), para o usuário decidir sem precisar
    abrir dois eventos, e propõe a ação.
 
+**Desde a [RN-674](#rn-674) (ADR 0192) os dois passos acima NÃO valem mais.**
+O plano de teste nasce DEPOIS da entrega do dev e alimenta o `qa-verificada`;
+`run_assessment/2` não lê nem dispara plano, propõe o parecer na PRIMEIRA
+chamada, sobre a história e o `module_map` que o Dev Lead já tem no contexto,
+e o payload perdeu `planoDeTeste`/`criteriosExecutaveis`.
+`Dispatcher.run_qa_estrategia/3` saiu. O resto desta regra (proposta, três
+desfechos, papel mínimo, fora dos tetos absolutos) segue igual.
+
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
   (`run_assessment/2`, `spec_assess_implementability/0`),
-  `dev_lead_server.ex` (`run_tool/3`); `apps/engine/lib/engine/gates/dispatcher.ex`
-  (`run_qa_estrategia/3`); `apps/api/src/domain/actions/decide.ts`
+  `dev_lead_server.ex` (`run_tool/3`); `apps/api/src/domain/actions/decide.ts`
   (`assess_implementability`); `docs/gates.yml` (`implementavel`,
   `status: active`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
@@ -2868,15 +2875,21 @@ que `assess_implementability` ([RN-340](#rn-340)) o lê depois. Falha
 silenciosa: `agent.error` durável com origem, mesma régua da
 [RN-059](business-rules/custo.md#rn-059).
 
+**Desde a [RN-674](#rn-674) (ADR 0192) o MOMENTO mudou.** O segundo momento
+continua sendo do `qa-lead`, sem agente novo, e continua nunca suspendendo;
+mas roda DEPOIS da entrega, no começo do ciclo de `run/2`, com o worktree do
+dev e os arquivos do diff — `run_design/3` e `QaEstrategiaContext` saíram, e
+o artefato ganhou `taskId`. O teto continua 8, agora COM o orçamento da task
+por baixo.
+
 - **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex`,
-  `qa_estrategia_context.ex`, `qa_lead_server.ex` (`run_design/3`),
+  `qa_lead_server.ex` (`run_area/3`, desde a [RN-674](#rn-674)),
   `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
   `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
   `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
   acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
-  `qa_estrategia_context_test.exs`, `qa_lead_server_test.exs` (describe
-  "run_design"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  `qa_lead_server_test.exs` (describe "plano de teste da entrega (ADR 0192)"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
   (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
   conversacional DE PROPÓSITO")
 - **Origem:** [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
@@ -2928,7 +2941,7 @@ PRÓPRIO, `Engine.Gates.Hooks.AppSecTermination`.
 Terminado com sucesso, `run_appsec_design/3`
 (`secops_agent_server.ex:234`) emite `artifact.threat_model`
 (`storyId`/`threatModel`/`requisitosDeSeguranca`/`riscos`, schema em
-`apps/engine/lib/engine/harness/artifact_schemas.ex:51` — `riscos` fica de
+`apps/engine/lib/engine/harness/artifact_schemas.ex:71` — `riscos` fica de
 fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
 (teto de iterações, orçamento, ou o modelo parando sem chamar
 `emit_threat_model`) vira `agent.error` durável com origem
@@ -9804,6 +9817,11 @@ janela. O threat model chega a quem precisa pelo caminho que a
 o appsec, porque prometer ao modelo algo que ele não vai receber ali é o
 defeito que a [RN-163](business-rules/autenticacao.md#rn-163) fecha.
 
+**Desde a [RN-674](#rn-674) não há mais `:sem_plano`**: o parecer sai na
+primeira chamada, o disparo do appsec acompanha a proposta, e a leitura do
+histórico serve só à guarda abaixo. O appsec segue no DESIGN — a decisão do
+dono que tirou o plano de teste do pre-dev foi sobre o QA.
+
 **E uma vez só por story.** O modelo é INSTRUÍDO a chamar
 `assess_implementability` de novo enquanto o plano de teste não existe: sem
 guarda, cada rechamada custaria outra rodada de LLM do appsec e mais três
@@ -9821,12 +9839,12 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:254`
-  (`run_assessment/2`, a leitura única do histórico) e `:340`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:244`
+  (`run_assessment/2`, a leitura única do histórico) e `:295`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
-  `apps/engine/lib/engine/gates/dispatcher.ex:43` (o callback) e `:110`
+  `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
-  `apps/engine/test/support/fake_gate_dispatcher.ex:29`
+  `apps/engine/test/support/fake_gate_dispatcher.ex:23`
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
   describe "assess_implementability dispara o appsec (RN-539)" — story sem
   threat model dispara, story com threat model NÃO dispara (a idempotência),
@@ -17251,11 +17269,11 @@ inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a áre
 inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
 momento do QA-estratégia) nem o teto de iterações do subagente.
 
-- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:120`
-  (`handle_info`), `:206` (`tratar_resultado`), `:241` (resultado desconhecido)
-- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:312`
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:104`
+  (`handle_info`), `:195` (`tratar_resultado`), `:230` (resultado desconhecido)
+- **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:325`
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
-  decisão conclui a área); `:265` (uma suspensão, o caminho feliz)
+  decisão conclui a área); `:278` (uma suspensão, o caminho feliz)
 - **Origem:** AT-248, sobre o achado E2 da análise de uso real de 2026-09-29
 
 ### RN-630 — Quem está ativo na sessão se lê da sessão INTEIRA, não dos últimos 200 eventos {#rn-630}
@@ -19036,3 +19054,74 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/routes/MergearNoChat.test.tsx:135`, `:148`;
   `apps/web/src/lib/gate-do-merge.test.ts:5`, `:18`
 - **Origem:** AT-249 (item A3/extra E3 da análise do uso real de 29/09)
+
+---
+
+## O plano de teste nasce depois da entrega do dev (RN-674, ADR 0192)
+
+### RN-674 — A QA-estratégia escreve o plano sobre o código ENTREGUE, no começo do ciclo do `qa-verificada`, e o `implementavel` se julga sem ele {#rn-674}
+
+No uso real de 29/09 o plano de teste PRE-DEV ([RN-341](#rn-341)) terminou
+duas vezes em `toolloop.limit_reached` 8/8 sem `emit_plano_de_teste`: o laço
+leu docs, RAG vazio e pastas até concluir que "o código ainda não existe". O
+dono decidiu (01/10) pela saída (b): o plano nasce DEPOIS da entrega. O
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md) revisa o 0090 nesse
+ponto, e a regra tem quatro partes:
+
+1. **O plano é o primeiro passo do ciclo de revisão.** `run_area/3` do
+   `QaLeadServer` obtém o plano da entrega ANTES das subespecialidades
+   (`plano_de_teste_da_entrega/5`): reencontra na cauda da sessão (teto da
+   reidratação, [RN-580](#rn-580)) o `artifact.plano_de_teste` da MESMA
+   `taskId` — a rodada de correção não paga outro laço —, e senão roda
+   `QaEstrategiaAgent.run/6` com o worktree do dev como `workspace_root`, as
+   regras de negócio da task e a lista de arquivos que a entrega tocou
+   (`git diff dev...HEAD`, até 40 nomes). Diff que falha vira texto ("não
+   consegui listar: motivo"), nunca lista vazia.
+2. **O plano é INSUMO, nunca veredito.** Ele chega à Automação no FIM da
+   mensagem dela, para o passo de achar qual teste cobre cada regra; a régua do
+   veredito não muda (uma linha de `coverageMatrix` por regra da story,
+   `approved` só com suite verde e toda regra coberta) e o contrato externo
+   segue sendo UM `qa_verdict` por ciclo. Plano que FALHA não segura a revisão:
+   a QA-estratégia grava `agent.error` com origem ([RN-059](business-rules/custo.md#rn-059))
+   e a Automação recebe a mensagem de sempre, byte a byte.
+3. **O `implementavel` se julga sobre a história e o `module_map`.**
+   `run_assessment/2` não lê nem dispara plano: propõe o parecer na PRIMEIRA
+   chamada, sobre o que o kickoff do Dev Lead já lhe dá, com payload
+   `storyId`/`parecer`/`justificativa`. Gate, dono, severidade `warn` e
+   aprovação humana não mudam; só a `entrada` (`[story-ready, module_map]`).
+   O appsec ([RN-539](#rn-539)) segue disparando ali, no design.
+4. **O teto continua 8.** `"qa-estrategia"` não ganha cláusula em
+   `Iteracoes.tipo/1`; o que mudou foi o insumo. O agente passa a rodar sob o
+   `task_budget_micros` que as subespecialidades compartilham
+   ([RN-036](#rn-036)).
+
+`run_design/3`, `Dispatcher.run_qa_estrategia/3` e `QaEstrategiaContext`
+saíram, e `artifact.plano_de_teste` passa a exigir `taskId`. Declarado e não
+decidido aqui: se os critérios executáveis do plano devem virar linhas
+OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
+
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:144` (`plano_de_teste_da_entrega`),
+  `:520` (`plano_de_teste_da_entrega`), `:544` (`plano_ja_emitido`),
+  `:579` (`arquivos_alterados`);
+  `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
+  `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:244` (`run_assessment`),
+  `:315` (`propor_parecer`);
+  `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
+  `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
+  (`qa-estrategia`, `area-qa`, `dev-lead`)
+- **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs`, describe
+  "plano de teste da entrega (ADR 0192)" — o plano antes da Automação e dentro
+  da mensagem dela (caminho feliz), o reuso por `taskId`, o plano de outra
+  task que não conta, e o plano que falha sem segurar a revisão (caso de
+  falha); `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs` (os
+  arquivos da entrega na mensagem, o diff que falhou, `taskId` no artefato);
+  `apps/engine/test/engine/agents/dev_lead_tools_test.exs`, describe
+  "assess_implementability (ADR 0090, insumo do ADR 0192)" (parecer na
+  primeira chamada, payload sem plano); `dev_lead_server_test.exs`
+  ("assess_implementability pending TAMBÉM suspende"); `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  ("sem taskId é rejeitado"). ExUnit: provado só no CI (o `repo.hex.pm` deu
+  403 no ambiente da rodada).
+- **Origem:** AT-269 (item A23 da análise do uso real de 29/09); decisão do
+  dono em 01/10

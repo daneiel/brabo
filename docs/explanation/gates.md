@@ -209,6 +209,16 @@ The real work sits outside the file: the Dev Lead needed a new tool
 feed the assessment with a real test plan. The registry only started
 describing what the code now does.
 
+That input did not survive real use.
+[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
+([RN-674](../business-rules.md#rn-674)) moved the test plan to AFTER the
+dev's delivery — written PRE-DEV it had no code to read and ran out of
+iterations — and the gate's `entrada` changed from `plano-de-teste` to
+`module_map`: the Dev Lead judges the story and the module map it already
+has. The plan now feeds `qa-verificada`, as input to the one verdict that
+gate already gives. Same lesson in the other direction: the registry line
+changed because WHO DELIVERS WHAT TO WHOM changed, not to make a gate pass.
+
 ## A registry can age in the wrong direction — stale, not inactive
 
 `implementavel` is the example of a gate that needed new code to leave

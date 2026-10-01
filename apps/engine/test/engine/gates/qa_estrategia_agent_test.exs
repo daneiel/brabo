@@ -3,6 +3,12 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
   # `ContextBuilder.build_layers/2`), como QaPerformanceSegurancaAgentTest.
   # O ToolLoop real roda síncrono contra o fake de LLM (dicionário de
   # processo).
+  #
+  # Desde o ADR 0192 (RN-674) este agente roda DEPOIS da entrega do dev, com
+  # o MESMO `dev_state`/`dev_context` das subespecialidades de QA e a lista de
+  # arquivos do diff — quem a calcula é o `QaLeadServer`, e a fiação inteira
+  # (plano antes da Automação, reuso por task, falha que não segura a
+  # revisão) está provada em `qa_lead_server_test.exs`.
   use Engine.DataCase, async: false
 
   alias Engine.Gates.QaEstrategiaAgent
@@ -11,30 +17,44 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
-    # `QaEstrategiaAgent` roda sem `workspace_root` (ver o moduledoc dele) —
-    # o ToolLoop cai no fallback `Workspace.workspace_dir/1`, que lê este env.
-    Application.put_env(:engine, :project_workspaces_root, System.tmp_dir!())
+
+    worktree =
+      Path.join(
+        System.tmp_dir!(),
+        "brabo-qa-estrategia-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(worktree)
 
     on_exit(fn ->
+      File.rm_rf!(worktree)
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
       Application.delete_env(:engine, :tool_loop_max_iterations)
-      Application.delete_env(:engine, :project_workspaces_root)
     end)
 
     # UUID de verdade: `ContextBuilder.build_layers/2` (via `system_prompt/1`
     # do ToolLoop) lê o banco por `project_id`, e o tipo da coluna é uuid.
-    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+    %{
+      project_id: Ecto.UUID.generate(),
+      session_id: Ecto.UUID.generate(),
+      dev_state: %{worktree_path: worktree, task_budget_micros: nil}
+    }
   end
 
-  defp story do
+  defp dev_context do
     %{
-      "id" => "st-1",
-      "title" => "Cadastro de usuário",
-      "description" => "Como visitante, quero me cadastrar.",
-      "rf" => ["Aceita e-mail e senha"],
-      "rnf" => [],
-      "dod" => ["Testes de unidade verdes"]
+      task: %{"id" => "task-1", "title" => "Cadastro na api"},
+      story: %{
+        "id" => "st-1",
+        "title" => "Cadastro de usuário",
+        "description" => "Como visitante, quero me cadastrar.",
+        "rf" => ["Aceita e-mail e senha"],
+        "rnf" => [],
+        "dod" => ["Testes de unidade verdes"]
+      },
+      business_rules_units: [],
+      task_state_units: []
     }
   end
 
@@ -46,16 +66,31 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     })
   end
 
-  test "lê algo, emite o plano e o artefato entra no event log da sessão", %{
+  defp conteudo_inicial(messages) do
+    # messages[0] é o system prompt que o ToolLoop injeta; a mensagem que
+    # `build_ctx/5` monta é a seguinte.
+    messages |> Enum.at(1) |> Map.get("content")
+  end
+
+  test "lê a entrega, emite o plano, e o artefato carrega story E task", %{
     project_id: project_id,
-    session_id: session_id
+    session_id: session_id,
+    dev_state: dev_state
   } do
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/cadastro.ts"}),
       emitir_plano()
     ])
 
-    assert {:ok, plano} = QaEstrategiaAgent.run(project_id, session_id, story(), nil)
+    assert {:ok, plano} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, ["src/cadastro.ts"]}
+             )
 
     assert plano.criterios_executaveis == [
              "dado e-mail novo, quando cadastra, então cria a conta"
@@ -69,32 +104,66 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
                      }}
 
     assert payload.storyId == "st-1"
+    assert payload.taskId == "task-1"
     assert payload.estrategiaDeAutomacao == "testes de integração na api"
   end
 
-  test "module_map vigente entra no contexto do modelo, sem quebrar sem ele", %{
+  test "os arquivos da entrega entram na mensagem — é o que aponta as 8 iterações", %{
     project_id: project_id,
-    session_id: session_id
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/cadastro.ts"}),
+      emitir_plano()
+    ])
+
+    assert {:ok, _plano} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, ["apps/api/src/cadastro.ts", "apps/api/test/cadastro.spec.ts"]}
+             )
+
+    assert_received {:llm_turn, "qa-estrategia", messages, _tools}
+    conteudo = conteudo_inicial(messages)
+    assert conteudo =~ "- apps/api/src/cadastro.ts"
+    assert conteudo =~ "- apps/api/test/cadastro.spec.ts"
+    assert conteudo =~ "ENTREGOU"
+    assert conteudo =~ "Cadastro na api"
+  end
+
+  test "diff que falhou não derruba o plano: a mensagem diz POR QUE não listou", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
   } do
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.tool_call_response("search_workspace", %{"query" => "cadastro"}),
       emitir_plano()
     ])
 
-    module_map = %{"modules" => [%{"name" => "api", "stack" => "NestJS"}]}
-
-    assert {:ok, _plano} = QaEstrategiaAgent.run(project_id, session_id, story(), module_map)
+    assert {:ok, _plano} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:error, :not_found}
+             )
 
     assert_received {:llm_turn, "qa-estrategia", messages, _tools}
-    # messages[0] é o system prompt que o ToolLoop injeta; a mensagem que
-    # `build_ctx/4` monta (com o module_map) é a seguinte.
-    conteudo = messages |> Enum.at(1) |> Map.get("content")
-    assert conteudo =~ "api"
+    assert conteudo_inicial(messages) =~ "não consegui listar: :not_found"
   end
 
   test "limite de iterações sem emit_plano_de_teste vira agent.error, origem modelo", %{
     project_id: project_id,
-    session_id: session_id
+    session_id: session_id,
+    dev_state: dev_state
   } do
     Process.put(
       :fake_llm_always,
@@ -103,7 +172,16 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
 
     Application.put_env(:engine, :tool_loop_max_iterations, 2)
 
-    assert {:error, motivo} = QaEstrategiaAgent.run(project_id, session_id, story(), nil)
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
     assert motivo =~ "limite de iterações"
 
     assert_received {:event_appended, ^project_id, ^session_id,
@@ -115,13 +193,23 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
 
   test "modelo para sem chamar a ferramenta: falha narrada, origem modelo", %{
     project_id: project_id,
-    session_id: session_id
+    session_id: session_id,
+    dev_state: dev_state
   } do
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.final_response("não sei o que fazer")
     ])
 
-    assert {:error, motivo} = QaEstrategiaAgent.run(project_id, session_id, story(), nil)
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
     assert motivo =~ "emit_plano_de_teste"
 
     assert_received {:event_appended, ^project_id, ^session_id,

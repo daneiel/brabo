@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |

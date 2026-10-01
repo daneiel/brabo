@@ -57,6 +57,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
+  [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
+  [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A
+  QA-estratégia deixa o design: no uso real de 29/09 ela esgotou duas vezes o
+  teto de 8 iterações (`toolloop.limit_reached` sem `emit_plano_de_teste`)
+  procurando um código que ainda não existia. Agora ela é o primeiro passo do
+  ciclo de revisão do `qa-verificada` — lê o worktree do dev a partir dos
+  arquivos que a entrega tocou, grava `artifact.plano_de_teste` (que passa a
+  exigir `taskId`) uma vez por task, e o plano chega à Automação como insumo,
+  sem mudar a régua do veredito nem segurar a revisão quando falha. O
+  `assess_implementability` do Dev Lead (gate `implementavel`) propõe o parecer
+  na PRIMEIRA chamada, sobre a história e o `module_map`, sem plano no payload.
+  O teto continua 8.
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

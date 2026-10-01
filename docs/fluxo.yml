@@ -111,7 +111,9 @@ camada_decisao_tecnica:
     entradas:
       - { artefato: handoff + module_map, origem: arquiteto,
           nota: "aceitar encadeia ativação de execução quando o papel efetivo já autoriza — RN-161" }
-      - { artefato: plano-de-teste, origem: qa-estrategia }        # ADR 0090
+      # plano-de-teste saiu daqui no ADR 0192 (RN-674): nasce DEPOIS da
+      # entrega do dev e entra no qa-verificada; o parecer de
+      # implementabilidade se julga sobre a história e o module_map acima
       - { artefato: threat-model, origem: appsec, status: proposto }
       - { artefato: parecer-de-migracao, origem: dbre, status: proposto }
     saidas:
@@ -158,26 +160,29 @@ camada_execucao:
 
 camada_qualidade:
   - id: qa-estrategia
-    papel_de_mercado: QA Engineer (estratégia, shift-left)
+    papel_de_mercado: QA Engineer (estratégia de teste da entrega)
     status: active                                                 # ADR 0090
     absorvido_por: >
-      area-qa — o critério de separação PREVISTO aqui se confirmou: é o
-      próprio qa-lead (Engine.Gates.QaLeadServer.run_design/3), SEGUNDO
+      area-qa — é o próprio qa-lead (Engine.Gates.QaLeadServer), SEGUNDO
       momento, mesmo processo, entregável separado do veredito de PR —
-      nunca agente novo
+      nunca agente novo. Desde o ADR 0192 (RN-674) o momento é DEPOIS da
+      entrega do dev, no começo do ciclo do qa-verificada, e não mais no
+      design: no uso real de 29/09 o plano PRE-DEV esgotou o teto (8)
+      procurando um código que ainda não existia
     entradas:
       - { artefato: story, origem: po }                            # via backlog
-      - { artefato: module_map, origem: arquiteto, status: opcional }
-    entregaveis: [plano-de-teste-por-story, criterio-executavel,
+      - { artefato: entrega (worktree + diff contra dev), origem: dev } # ADR 0192
+    entregaveis: [plano-de-teste-por-entrega, criterio-executavel,
       estrategia-de-automacao]
-    saidas: [{ artefato: plano-de-teste, destino: [dev-lead, dev] }]
-    gate_saida: { id: implementavel, status: ativo }
+    saidas: [{ artefato: plano-de-teste, destino: area-qa }]      # ADR 0192
+    gate_saida: { id: qa-verificada, status: ativo, nota: "insumo, não veredito próprio" }
 
   - id: area-qa
     papel_de_mercado: SDET + QA de execução
     status: active
     estrutura: qa-lead + qa-automacao + qa-perf-seguranca (ADR 0038)
-    entradas: [{ artefato: pr-remota, origem: dev }]
+    entradas: [{ artefato: pr-remota, origem: dev },
+               { artefato: plano-de-teste, origem: qa-estrategia }] # ADR 0192
     internas: [delegacao-privada, suspensao-retomada-por-decisao (13b),
                falha-com-origem-ao-lead]
     saidas: [{ artefato: veredito-qa, destino: gates }]
@@ -202,7 +207,8 @@ camada_seguranca:
     acionamento: >
       assess_implementability do Dev Lead (gate implementavel) — o gatilho
       natural que esta linha declarava como lacuna, agora implementado
-      (RN-539). Ao avaliar uma story, run_assessment/2
+      (RN-539). O appsec SEGUE no design depois do ADR 0192: a decisão do
+      dono que tirou o plano de teste do pre-dev foi sobre o QA. Ao avaliar uma story, run_assessment/2
       (apps/engine/lib/engine/agents/dev_lead_tools.ex) chama
       Engine.Gates.Dispatcher.run_appsec_design/2, que sobe o
       SecOpsAgentServer do projeto e faz run_design/2. Dispara em PARALELO,

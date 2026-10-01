@@ -201,7 +201,7 @@ have to learn a second name just because the conversational agent doesn't use
 | `artifact.insight` | — |
 | `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validated in `Engine.Agents.StaffTools`, not by `ArtifactSchemas` — same case as `artifact.insight`): `problema`, `opcoes` (list of `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call |
-| `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), PRE-DEV |
+| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), written AFTER the dev's delivery and consumed by the `qa-verificada` cycle since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules.md#rn-674)) |
 | `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — SecOps' "second moment" over a story's DESIGN ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
 The schemas are closed: a missing field rejects the emission
@@ -413,7 +413,7 @@ Extracted from the emission points: **94 identifiers**, of which **2** are not d
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
-- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
