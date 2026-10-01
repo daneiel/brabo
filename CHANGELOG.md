@@ -57,6 +57,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine/api**: **a Anamnese volta a rodar, e não roda sem sujeito** (AT-277,
+  [ADR 0196](docs/adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.md),
+  [RN-680](docs/business-rules.md#rn-680)). `ANAMNESE_ENABLED` volta ao default
+  `true` no engine e nos três composes (`START_ANAMNESE` não muda; o Psicólogo
+  segue pausado) — **quem quer a pausa de antes põe
+  `ANAMNESE_ENABLED=false` no `.env`**. A rodada sem membro EFETIVO do projeto
+  com interação própria na janela não chama o LLM nem o RAG e diz o motivo no
+  log (e, se pedida à mão, no event log); o dono do workspace sem linha em
+  `project_members` passa a ser membro, que era o que fazia toda rodada do
+  uso real de 29/09 terminar paga em "nenhum membro elegível". A hipótese do
+  Psicólogo aceita pela PRÓPRIA pessoa vira **fato do perfil** no grafo
+  (`FatoDoPerfil`, reconstruído por `grafo:reprojetar`) e entra, como
+  mensagem de sistema efêmera, no turno dos agentes que conversam com ela; a
+  aceita por outra pessoa e a recusada ficam só registradas.
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

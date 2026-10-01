@@ -129,7 +129,7 @@ defmodule EngineWeb.AgentCommandController do
     # RN-578): `:ok` é 202, e a recusa ANTES de subir o turno (turno já em
     # curso) é 409 — ver `responder_ao_aceite/2`. O desfecho do turno segue
     # pelo canal e, quando é falha, pelo `agent.error` durável.
-    responder_ao_aceite(conn, PoServer.user_message(session_id, text, idioma_da_resposta(params)))
+    responder_ao_aceite(conn, PoServer.user_message(session_id, text, autor_do_turno(params)))
   end
 
   def message(
@@ -145,7 +145,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      DevLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+      DevLeadServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -162,7 +162,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      ArquitetoServer.user_message(session_id, text, idioma_da_resposta(params))
+      ArquitetoServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -179,7 +179,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      UxDesignerServer.user_message(session_id, text, idioma_da_resposta(params))
+      UxDesignerServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -196,7 +196,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      StaffServer.user_message(session_id, text, idioma_da_resposta(params))
+      StaffServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -217,7 +217,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      CriativoServer.user_message(session_id, text, idioma_da_resposta(params))
+      CriativoServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -242,7 +242,7 @@ defmodule EngineWeb.AgentCommandController do
 
     responder_ao_aceite(
       conn,
-      InfraLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+      InfraLeadServer.user_message(session_id, text, autor_do_turno(params))
     )
   end
 
@@ -406,6 +406,17 @@ defmodule EngineWeb.AgentCommandController do
        do: idioma
 
   defp idioma_da_resposta(_params), do: nil
+
+  # RN-680 (ADR 0196): os fatos do perfil do AUTOR, já em texto e com teto,
+  # resolvidos pela api (`perfilDoAutor`, OPCIONAL como o idioma). Com eles, o
+  # valor que o servidor repassa a `IdiomaDaResposta.com_idioma_do_autor/2` é
+  # `%{idioma: _, perfil: _}`; sem eles, é só o idioma, como sempre — nenhum
+  # servidor de agente muda por causa disso.
+  defp autor_do_turno(%{"perfilDoAutor" => perfil} = params)
+       when is_binary(perfil) and perfil != "",
+       do: %{idioma: idioma_da_resposta(params), perfil: perfil}
+
+  defp autor_do_turno(params), do: idioma_da_resposta(params)
 
   # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
   # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o

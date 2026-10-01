@@ -86,6 +86,7 @@ defmodule Engine.Harness.IdiomaDaResposta do
 
   require Logger
 
+  alias Engine.Harness.PerfilDoAutor
   alias Engine.Projects.Project
 
   @chave :brabo_idioma_do_autor
@@ -201,7 +202,18 @@ defmodule Engine.Harness.IdiomaDaResposta do
   retomada) não pode herdar o idioma de quem falou antes.
 
   `idioma` `nil` é turno com autor cuja resolução não chegou: sem orientação.
+
+  Desde a RN-680 o valor pode ser também `%{idioma: _, perfil: _}` — o
+  controller o monta quando a api mandou os fatos do perfil do autor
+  (`perfilDoAutor`). O perfil vai para `Engine.Harness.PerfilDoAutor` pelo
+  MESMO dicionário, e o idioma segue o caminho de sempre. É por aqui, e não
+  por um argumento novo, que o perfil passa pelos servidores sem que nenhum
+  deles mude.
   """
+  def com_idioma_do_autor(%{idioma: idioma, perfil: perfil}, fun) when is_function(fun, 0) do
+    PerfilDoAutor.com_perfil(perfil, fn -> com_idioma_do_autor(idioma, fun) end)
+  end
+
   def com_idioma_do_autor(idioma, fun) when is_function(fun, 0) do
     anterior = Process.get(@chave)
     Process.put(@chave, {:autor, idioma})

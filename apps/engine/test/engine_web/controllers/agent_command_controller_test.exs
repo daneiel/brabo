@@ -422,6 +422,43 @@ defmodule EngineWeb.AgentCommandControllerTest do
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
       assert %{"role" => "user"} = List.last(enviado)
     end
+
+    # RN-680 (ADR 0196): os fatos do perfil do autor viajam no mesmo comando e
+    # entram como mensagem de sistema ANTES da orientação de idioma.
+    test "perfilDoAutor chega ao modelo antes do idioma", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        mandar_ao_criativo(conn, project_id, session_id, %{
+          "idiomaDaResposta" => "en",
+          "perfilDoAutor" => "Fatos do perfil: prefere uma pergunta por vez"
+        })
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
+
+      assert %{"role" => "system", "content" => "Fatos do perfil" <> _} = Enum.at(enviado, -2)
+    end
+
+    test "perfilDoAutor que não é texto: a mensagem é aceita, sem perfil", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        mandar_ao_criativo(conn, project_id, session_id, %{
+          "idiomaDaResposta" => "en",
+          "perfilDoAutor" => 42
+        })
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
+      assert %{"role" => "user"} = Enum.at(enviado, -2)
+    end
   end
 
   # O kickoff do PO sobe um turno no start FRESCO; espera ele fechar para o

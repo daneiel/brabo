@@ -139,7 +139,8 @@ export const AGENTS: Record<AgentKey, AgentDef> = {
   // Staff/Principal Engineer (docs/fluxo.yml, camada_decisao_tecnica, ADR
   // 0088) — RFC + PoC descartável para problema sistêmico RECORRENTE,
   // devolvido ao Arquiteto por handoff. Dormente para disparo AUTOMÁTICO
-  // (a Anamnese, que o dispararia, está pausada — ANAMNESE_ENABLED=false);
+  // (nenhum gatilho automático existe — a Anamnese, religada na RN-680, não
+  // o dispara);
   // acionável MANUALMENTE por handoff aceito, mesmo mecanismo genérico dos
   // demais leads (sem entrar em USER_STARTED_AGENTS).
   staff: {
