@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 189 architectural decision records, grouped by phase, with what each one decided.
+description: Brabo's 191 architectural decision records, grouped by phase, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -323,7 +323,7 @@ The loop that makes the team improve.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0194**.
+  is superseded — the next one is **0198**.
 - **Three sections, only those:** **Context** (the problem or force that motivated it),
   **Decision** (what was decided), **Consequences** (the accepted trade-offs and
   what's left for later).

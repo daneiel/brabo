@@ -9626,6 +9626,11 @@ export interface components {
              */
             gateCorrectionCount: number;
             /**
+             * @description The module the task belongs to, assigned by the Dev Lead in the approved execution plan (RN-678). Only the dev agent of that module claims it. `null` while no plan assigned one — such a task is claimable only when its story has exactly one module.
+             * @example api
+             */
+            module: Record<string, never> | null;
+            /**
              * Format: date-time
              * @example 2026-07-25T10:00:00.000Z
              */
