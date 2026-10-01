@@ -11995,6 +11995,9 @@
           "404": {
             "description": "Some id in the batch doesn't exist."
           },
+          "422": {
+            "description": "Activating an OpenRouter free-routing alias (`~…`) — `code: \"alias_de_roteamento_livre\"`, with the `modelIds` refused. The whole batch is refused. Deactivating one is always allowed (AT-271, RN-679)."
+          },
           "429": {
             "description": "Rate limit per user or per IP."
           }
@@ -18202,6 +18205,11 @@
                 "conversa"
               ]
             }
+          },
+          "freeRoutingAlias": {
+            "type": "boolean",
+            "example": false,
+            "description": "OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored."
           }
         },
         "required": [
@@ -18223,7 +18231,8 @@
           "createdAt",
           "updatedAt",
           "isActive",
-          "uses"
+          "uses",
+          "freeRoutingAlias"
         ]
       },
       "ModelPriceChangeResponseDto": {

@@ -237,6 +237,55 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
 - **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
   (AT-270)
 
+### RN-679 — A curadoria recusa o alias de roteamento livre do OpenRouter {#rn-679}
+
+Decisão do dono (01/10): **o alias `~` não entra na curadoria** — só modelo
+com upstream fixo. O alias de roteamento livre do OpenRouter (o id que começa
+com `~`, como `~deepseek/deepseek-flash-latest`) "sempre redireciona para o
+último da família": o catálogo publica um preço de VITRINE (no uso real de
+29/09, o do endpoint mais barato da família), a lista de endpoints vem vazia,
+e quem cobra é o upstream que atendeu. Não há upstream contra o qual o preço
+congelado do [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+signifique alguma coisa. A alternativa — preçar por upstream — foi recusada.
+
+1. **A régua é do provider.** `ehAliasDeRoteamentoLivre` é `provider =
+   'openrouter'` E nome começando com `~`; o mesmo prefixo noutro provider não
+   é alias e não recusa.
+2. **Ativar recusa, com código.** `POST .../models/activate` com
+   `isActive: true` e algum alias no lote é **422** com
+   `code: "alias_de_roteamento_livre"`, os `modelIds` recusados e uma frase que
+   os nomeia. O lote INTEIRO é recusado, como o 404 do id inexistente
+   ([RN-043](#rn-043)): nem o modelo de upstream fixo do mesmo lote é ligado.
+   A tela de catálogo mostra a frase da api num toast de título próprio, e
+   casa pelo `code`, nunca pelo texto.
+3. **O sync NÃO filtra o alias.** Ele continua no catálogo — sumir dali faria
+   o sync marcar `unavailable` o que já estava curado, e a cascata pularia os
+   bindings dele em silêncio. A leitura da curadoria o MARCA:
+   `freeRoutingAlias`, derivado de provider e nome na leitura, nunca gravado.
+   A linha mostra o selo e o motivo em TEXTO antes de alguém tentar ativar.
+4. **O que já estava curado segue funcionando.** É mensurável (o nome com `~`
+   na linha do OpenRouter), e a saída escolhida é a menos surpreendente: o
+   alias ativo antes da regra **continua ativo** — os bindings dele seguem
+   resolvendo, o seletor segue mostrando —, sai marcado no catálogo, e pode
+   ser DESLIGADO. Desligado, não volta. Nada é apagado e nenhum binding é
+   reescrito. Binding NOVO para um alias ainda ativo não é recusado aqui: a
+   regra é da curadoria, e o binding segue a [RN-043](#rn-043).
+
+- **Where:** `apps/api/src/domain/llm/alias-de-roteamento-livre.ts:23` (`ehAliasDeRoteamentoLivre`),
+  `:41` (`AliasDeRoteamentoLivreError`),
+  `apps/api/src/application/use-cases/llm/set-models-active.use-case.ts:59` (`AliasDeRoteamentoLivreError`),
+  `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts:67` (`freeRoutingAlias`),
+  `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:60` (`code`),
+  `apps/web/src/components/ModelCatalogSection.tsx:557` (`recusaDeAliasLivre`)
+- **Test:** `test/application/use-cases/llm/set-models-active.use-case.spec.ts`
+  (lote recusado inteiro com código e ids; upstream fixo ativa; `~` fora do
+  OpenRouter ativa; alias curado antes da regra segue ativo, marcado, desliga
+  e não volta), `test/interfaces/http/shared/llm-binding-error.filter.spec.ts`,
+  `apps/web/src/components/ModelCatalogSection.test.tsx` (selo e motivo;
+  toast da recusa; toast genérico para outro erro)
+- **Origin:** AT-271 (item A25 da análise do uso real de 29/09); complementa a
+  [RN-665](#rn-665)
+
 ### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
 
 Um binding de modelo pode guardar um **critério de roteamento** —
