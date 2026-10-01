@@ -267,7 +267,10 @@ round: after the write **commits**, the api calls
 engine broadcasts the same `event.appended`. Writes that arrived from the
 engine itself (`/internal/*`) are not announced a second time. The call is
 best effort and never awaited; if it is lost, the browser's 15s fallback poll
-covers it, as before.
+covers it, as before. The `:id` is sent only when the session id is a
+UUID (the column type): the api checks it where it builds the URL, encodes the
+segment and confirms the result keeps the `ENGINE_URL` origin and the expected
+path — anything else is dropped without a call (AT-344).
 
 ### LLM
 

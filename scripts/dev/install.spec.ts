@@ -335,7 +335,7 @@ describe('install.sh — o hash num PATH sem sha256sum', () => {
   afterAll(() => fs.rmSync(tmpRaiz, { recursive: true, force: true }));
 
   function caminhoDe(cmd: string): string | null {
-    const r = spawnSync('sh', ['-c', `command -v ${cmd}`], { encoding: 'utf8' });
+    const r = spawnSync('sh', ['-c', 'command -v "$1"', 'sh', cmd], { encoding: 'utf8' });
     const achado = r.stdout.trim();
     return r.status === 0 && achado !== '' ? achado : null;
   }
@@ -367,9 +367,11 @@ describe('install.sh — o hash num PATH sem sha256sum', () => {
     return dir;
   }
 
-  function rodar(corpo: string, ferramentas: string[]) {
+  // Caminho de arquivo vai em `args`, como argumento posicional ($1, $2…),
+  // nunca interpolado no `-c` (AT-346).
+  function rodar(corpo: string, ferramentas: string[], args: string[] = []) {
     const bin = comPath(ferramentas);
-    return spawnSync(path.join(bin, 'bash'), ['-c', `${PRELUDIO}\n${corpo}`], {
+    return spawnSync(path.join(bin, 'bash'), ['-c', `${PRELUDIO}\n${corpo}`, 'bash', ...args], {
       encoding: 'utf8',
       // PATH é o que se está controlando; `HOME` vai junto porque o script
       // deriva o caminho do marcador dele e morre sob `set -u` sem ele.
@@ -418,8 +420,9 @@ describe('install.sh — o hash num PATH sem sha256sum', () => {
   // certo e a comparação passa. Este é o caso que o E2E da v6.1.0 reprovou.
   it.skipIf(!TEM_SHASUM)('com apenas shasum, calcula o hash certo e NÃO recusa', () => {
     const r = rodar(
-      `exigir_ferramenta_de_hash; echo "resolveu:$FERRAMENTA_DE_HASH"; hash_sha256 '${arquivo}'`,
+      'exigir_ferramenta_de_hash; echo "resolveu:$FERRAMENTA_DE_HASH"; hash_sha256 "$1"',
       ['shasum'],
+      [arquivo],
     );
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('resolveu:shasum');
@@ -430,8 +433,9 @@ describe('install.sh — o hash num PATH sem sha256sum', () => {
   // outro — e aí sim a mensagem é a de incidente, com o texto do chamador.
   it.skipIf(!TEM_SHASUM)('com apenas shasum, hash divergente recusa com o texto do incidente', () => {
     const r = rodar(
-      `exigir_ferramenta_de_hash; conferir_hash '${arquivo}' 'deadbeef' 'o binário do runner NÃO bate com o manifesto assinado.'`,
+      `exigir_ferramenta_de_hash; conferir_hash "$1" 'deadbeef' 'o binário do runner NÃO bate com o manifesto assinado.'`,
       ['shasum', 'tr'],
+      [arquivo],
     );
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('o binário do runner NÃO bate com o manifesto assinado.');
@@ -465,7 +469,7 @@ describe('install.sh — o hash num PATH sem sha256sum', () => {
   // roda ANTES da checagem, de propósito: `--print-plan` não baixa nada, e
   // exigir a ferramenta ali negaria a leitura a quem só quer entender.
   it('o plano declara a ferramenta, e é imprimível sem ela', () => {
-    const r = rodar(`'${SCRIPT}' --print-plan`, []);
+    const r = rodar('"$1" --print-plan', [], [SCRIPT]);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('conferir-hash\tfaz\t');
     expect(r.stdout).toMatch(/shasum -a 256/);
