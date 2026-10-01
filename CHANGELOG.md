@@ -685,6 +685,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não enxerga), e um `TODO(humano)` registra que nenhum compose as repassa ao
   serviço `api`.
 
+- **docs**: o `pnpm docs:check` passa a REPROVAR ref `caminho:N` (`símbolo`)
+  de RN que não bate com o código, ou cujo caminho não resolve a um arquivo só
+  (AT-122) — a aferição da AT-096 sai de `warn` para `block`, por decisão do
+  dono, porque a lista zerou em 26/09 e voltou a 140 em cinco dias. As 140
+  foram relidas pelo símbolo (nenhum falso positivo, nenhum símbolo ausente);
+  três bullets duplicados por resolução de conflito saíram (RN-120, RN-547,
+  RN-626), e a ref de teste da RN-587 passa a nomear o `qa`, que substituiu o
+  `infra` no teste desde a RN-617. Resultado: 883 refs casam o padrão, 883
+  batem. A janela segue ±3 e zero refs continua `CEGO`. Ver
+  [documentation-workflow.md](docs/explanation/documentation-workflow.md#line-references-with-a-symbol).
+
 - **ci**: o `release.yml` passa a escanear com Trivy as imagens que PUBLICA,
   por digest e antes de assiná-las (AT-179, ADR 0172). HIGH ou CRITICAL com
   correção disponível reprova o release e a imagem não recebe assinatura — com

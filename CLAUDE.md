@@ -246,6 +246,7 @@ estado lido do repositório e não da conversa.
 | A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
 | O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
 | O fluxo do runner pelo navegador é aposentado; o painel manda para o instalador (AT-014, BRB-031, BREAKING) | ADR 0203, RN-687 |
+| As refs `caminho:N` (`símbolo`) das RNs relidas pelo símbolo, e a aferição promovida a `block` (AT-122) | documentation-workflow.md |
 
 ## Estado atual e aberto
 
@@ -2516,15 +2517,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `scripts/docs/contagens-do-codigo.mjs` (AT-123) — uma linha por FRASE, um
   extrator por fonte, cada extrator provado por MUTAÇÃO no `.spec.ts` ao lado.
   Número que muda a cada PR (arquivos por app) é DATADO, não derivado.
-  Irmã em `warn` (AT-096): `verificarRefsComSimbolo` confere, nos três arquivos
+  Irmã em `block` desde a AT-122 (nasceu `warn` na AT-096):
+  `verificarRefsComSimbolo` confere, nos três arquivos
   de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
   que herda o caminho do MESMO item — contra o código, ±3 linhas. Só esse
   padrão: ref sem símbolo, par por `/` e símbolo que não é identificador ficam
   de FORA, de propósito (aferição barulhenta é desligada no primeiro mês).
-  Relata e não reprova, exceto ZERO refs extraídas (`CEGO`). Ao escrever RN
-  nova, cite `caminho:N` (`símbolo`) — é o que a torna conferível — e releia
-  pelo símbolo, nunca por um número antigo. NÃO alargue a janela para o aviso
-  sumir; o critério para `block` está em `documentation-workflow.md`.
+  REPROVA a ref que não bate e a que não resolve a um arquivo só, e ZERO refs
+  extraídas é `CEGO` (`veredito` em `refs-com-simbolo.mjs`, provado por
+  mutação no spec ao lado). O `warn` não segurou a deriva: a lista zerou em
+  26/09 e voltou a 140 em cinco dias. As traduções pt-BR das RNs NÃO são
+  aferidas. Ao escrever RN nova, cite `caminho:N` (`símbolo`) — é o que a
+  torna conferível — e releia pelo símbolo, nunca por um número antigo. PR que
+  desloca código citado por RN corrige a ref no MESMO PR. NÃO alargue a janela
+  para o vermelho sumir, nem estreite o padrão para esconder ref real.
 - O runbook termina com a tabela `procedure | anchor | verification |
   schedule` dos procedimentos de OPERAÇÃO (AT-193, EP-015), e o `docs:check` a
   confere em `block` (`scripts/docs/procedimentos-do-runbook.mjs`, provado por
