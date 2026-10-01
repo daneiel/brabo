@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "55cb8cda911358afd8db99512ca4a06f311d1974deef24ba9403ae91066288b4",
+  "openapiSha256": "326fa2a970694997a8df26b5305ffcc3c49239a092ef3f333c89a4991724428b",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -197,8 +197,8 @@
     "budgets-controller-set-session-budget.api.mdx": "dbad853e412aaf9b2a24805ee699974050bf95dc25bbf93f3eff620d3d7a45bc",
     "chat-controller-chat.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "chat-controller-chat.RequestSchema.json": "0ff25a46fcc49c5433e5326b9fa6e16e710e94ac307d0177180ce8563088cfa7",
-    "chat-controller-chat.StatusCodes.json": "d0966c36ad925b7bb23b15cafca1e145c3448b23803b76a41cbc3aaee2676f74",
-    "chat-controller-chat.api.mdx": "65480ce89dc1906955d2807984c58eb1f7efdfa578d093948bf244af8224acd9",
+    "chat-controller-chat.StatusCodes.json": "a19b7ee6e7ef33bc04fb9c0ee5d8e6fe4adc62ef58b25286002ee391e1104f6e",
+    "chat-controller-chat.api.mdx": "6635d71e09e5ab4f5e3501845c30f3754415e827e023935d7ddf9ca3cf750d0e",
     "code-controller-blame.ParamsDetails.json": "c4cf3de034123e2345ac41ad25377fc9a3657f70caf09b929276ca00c2bfbcec",
     "code-controller-blame.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "code-controller-blame.StatusCodes.json": "6c396ab0568d97599b69330e83d230dd8b6ddacd5acf4b0a0015ba06f1c2e3f1",

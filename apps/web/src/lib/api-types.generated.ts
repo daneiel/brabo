@@ -3000,7 +3000,7 @@ export interface paths {
         put?: never;
         /**
          * Talks to the session's model, with the response streamed
-         * @description Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`.
+         * @description Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`. This route carries NO agent: it sends the text alone to the bound model, with no history and no system prompt. In a `consultiva` session where no agent was ever activated it is refused before any effect (RN-682) — talk to an agent through `.../agents/:agent/message` instead.
          */
         post: operations["ChatController_chat"];
         delete?: never;
@@ -18362,6 +18362,13 @@ export interface operations {
             };
             /** @description Project or session not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
