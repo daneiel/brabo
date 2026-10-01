@@ -247,6 +247,7 @@ estado lido do repositório e não da conversa.
 | O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
 | O fluxo do runner pelo navegador é aposentado; o painel manda para o instalador (AT-014, BRB-031, BREAKING) | ADR 0203, RN-687 |
 | As refs `caminho:N` (`símbolo`) das RNs relidas pelo símbolo, e a aferição promovida a `block` (AT-122) | documentation-workflow.md |
+| O teto da RN-418 vale também para `git_push`/`pr_open` TIPADOS, e a ativação deixa de semeá-los (AT-347) | RN-689 |
 
 ## Estado atual e aberto
 
@@ -1639,7 +1640,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   incondicional, agora é `require_approval` incondicional, com a mesma
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
-  recusa gravar padrão pra esses comandos). Desde a RN-661 a aba Executores
+  recusa gravar padrão pra esses comandos). O teto vale pelas DUAS portas
+  desde a RN-689: o COMANDO de terminal e as ações TIPADAS `git_push` e
+  `pr_open` — nem curinga, nem regra específica, nem `permissions.json` as
+  promovem, e por isso a ativação semeia só `git_commit` para os dev agents
+  (push e PR do dev passam pela sua aprovação, RN-050). `git_merge` tem o
+  teto próprio; `open_adr_pr`/`open_infra_pr` ficam fora por decisão. Desde a RN-661 a aba Executores
   OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
   só com o clique, e dizendo o que o modo automático não libera; nunca a grave
   sem clique. E desde a RN-675 (ADR 0189, fecha a AT-170) o padrão que "sempre
@@ -1841,7 +1847,8 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o `brabo-runner`, na máquina do usuário (ADR 0137, RN-497). O que mudou
   aqui foi só a exigência de alguém ter decidido a imagem antes de abrir a
   leitura.
-  `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
+  `git push`, abertura de PR e deploy NÃO saem pelo terminal, e as ações
+  TIPADAS `git_push`/`pr_open` também não se auto-aprovam (RN-689) — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
   mesmo dentro do escopo do projeto, mesmo com auto mode ligado, mesmo com
