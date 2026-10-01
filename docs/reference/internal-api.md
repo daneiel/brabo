@@ -936,6 +936,14 @@ instead of inventing an image outside it.
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
 claiming the same task.
 
+`/module-map` takes, per module, an optional `resources` object (`cpus`,
+`memoryMb`, `pidsLimit` — all three or none): what THAT module needs alone in
+the project container ([RN-683](../business-rules.md#rn-683),
+[ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)). A partial
+declaration, a value above the container ceiling, or a SUM over modules above
+it returns `400` with the reason — modules share ONE container, so the sum is
+the minimum the Infra starts it with.
+
 `/project-image` is the Architect's `choose_project_image` tool (FASE 25a,
 [ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
 fixes the project's container image. Same caliber as `/module-map` — the

@@ -5489,7 +5489,7 @@ export interface components {
              */
             projectId: string;
             /**
-             * @description Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level.
+             * @description Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level. Each module may declare `resources` (cpus, memoryMb, pidsLimit — all three or none); a partial declaration, a value above the container ceiling, or a SUM over modules above it is also 400 (RN-683).
              * @example [
              *       {
              *         "name": "api",
@@ -5497,7 +5497,12 @@ export interface components {
              *         "responsibility": "Rules and HTTP",
              *         "dependsOn": [
              *           "db"
-             *         ]
+             *         ],
+             *         "resources": {
+             *           "cpus": 1,
+             *           "memoryMb": 1024,
+             *           "pidsLimit": 256
+             *         }
              *       }
              *     ]
              */
@@ -7104,6 +7109,8 @@ export interface components {
              *     ]
              */
             dependsOn: string[];
+            /** @description What THIS module needs alone inside the project container (RN-683, ADR 0199). Absent when the Architect did not declare it. The Infra starts the container with the SUM over modules, floored at the default while any module is undeclared. */
+            resources?: components["schemas"]["RecursosDoContainerResponseDto"];
         };
         MySpendResponseDto: {
             /**

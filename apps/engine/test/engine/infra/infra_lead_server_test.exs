@@ -1296,13 +1296,15 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
       {:propose_action, "container_start", ator, payload} = Enum.at(mensagens, posicao_da_subida)
       assert ator == %{kind: "agent", id: "infra"}
-      # A candidata de DOIS dos três módulos vence; a rede e os recursos são
-      # os defaults da tool.
+      # A candidata de DOIS dos três módulos vence; a rede é o default da tool,
+      # e os recursos vão VAZIOS para a api derivar o mínimo (RN-683).
       assert payload.imagem == "node:22-bookworm-slim"
       assert payload.network == "none"
       assert payload.resources == %{}
       assert payload.rationale =~ "Eleita pelo servidor"
       assert payload.rationale =~ "2 de 3 módulo(s) (api, web)"
+      # RN-683: o servidor não manda número — pede o mínimo que a api deriva.
+      assert payload.rationale =~ "o mínimo derivado do module_map"
 
       # Rastro durável, marcado como do servidor.
       assert Enum.any?(

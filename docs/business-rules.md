@@ -19252,7 +19252,9 @@ anunciou a subida "em paralelo" e não a propôs; o container só subiu pela
    `container_start_via_runner`, proposto pelo modelo e decidido por humano.
 3. **A eleição é determinística.** A candidata do maior número de módulos; no
    empate, a primeira do roteamento. Rede `none`, recursos padrão, e um
-   `rationale` que diz que foi o servidor.
+   `rationale` que diz que foi o servidor. *(Revisado pela [RN-683](#rn-683):
+   os recursos vão omitidos e a api sobe com o mínimo derivado do
+   `module_map`, não com o padrão.)*
 4. **O rastro diz quem chamou.** `tool.call` (com `origem: "servidor"`) e
    `tool.result` duráveis, e nenhuma mensagem de ferramenta no histórico do
    modelo; o kickoff diz em texto o que JÁ aconteceu (status devolvido, ou o
@@ -19344,6 +19346,63 @@ instante, a oferta espera o fim do próximo turno dele.
 ---
 
 ## O plano de teste nasce depois da entrega do dev (RN-674, ADR 0192)
+
+### RN-683 — A Infra sobe o container com o MENOR recurso elegível, derivado do que o Arquiteto declara por módulo no `module_map` {#rn-683}
+
+Decisão do dono em 01/10 ([ADR 0199](adr/0199-recurso-minimo-derivado-do-module-map.md),
+AT-261). Até aqui `resources` omitido virava `RECURSOS_PADRAO` (2 cpus,
+4096 MiB, 512 pids) e a subida do servidor no aceite ([RN-671](#rn-671)) o
+omitia sempre: todo container nascia no padrão, sem noção de mínimo.
+
+1. **Cada módulo declara o seu.** O `module_map` ganha `resources`
+   (`cpus`, `memoryMb`, `pidsLimit`) por módulo — o que AQUELE módulo precisa
+   sozinho no container. A ferramenta `create_module_map` o pede; a api o
+   aceita ausente e recusa com 400, na criação do mapa: declaração pela METADE
+   (os três ou nenhum), valor não positivo ou acima do teto, e SOMA entre
+   módulos acima do teto. O campo mora no JSON do artefato, sem migration.
+2. **O mínimo é a SOMA, campo a campo.** Um projeto tem UM container
+   (`project_id UNIQUE` em `project_containers`) e os módulos rodam nele ao
+   mesmo tempo; o máximo entre módulos subdimensionaria o container sempre que
+   dois estivessem de pé.
+3. **Módulo sem declaração: piso no padrão de hoje.** Não se inventa número.
+   Havendo módulo sem declaração, o mínimo é o maior entre a soma dos
+   declarados e `RECURSOS_PADRAO`, campo a campo, e o `rationale` NOMEIA quem
+   não declarou. Sem declaração nenhuma (todo mapa anterior a esta regra), e
+   sem `module_map` vigente, o mínimo é exatamente o padrão de hoje.
+4. **A execução de `container_start` resolve campo a campo.** Omitido vira o
+   mínimo (a subida do servidor manda tudo omitido); abaixo do mínimo é
+   `failed` nomeado, sem gravar decisão de imagem nem subir; acima vale até o
+   teto, que não muda. O `rationale` do `artifact.project_image` gravado ganha
+   "Recursos mínimos (RN-683): …" com os módulos somados e a versão do mapa.
+5. **Uma régua só.** Quem deriva é a api; o engine não soma nada e a subida do
+   servidor diz no rationale que os recursos são o mínimo derivado.
+
+Fora, declarado: `choose_project_image` (o Arquiteto decide a imagem e os
+recursos dele) e `container_start_via_runner` (sobe a imagem já decidida) não
+mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
+
+- **Código:** `apps/api/src/domain/containers/recursos-minimos.ts:70`
+  (`validarRecursosDoModulo`), `:108` (`derivarRecursosMinimos`), `:150`
+  (`validarSomaNoTeto`), `:171` (`resolverRecursosDaSubida`), `:206`
+  (`explicarRecursosMinimos`);
+  `apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts:134`
+  (`normalizarModulo`);
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
+  (`resolverRecursosDaSubida`);
+  `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:762`
+  (`rationale_do_servidor`)
+- **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
+  (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
+  `:54` (soma acima do teto — caso de falha), `:94` (abaixo do mínimo);
+  `apps/api/test/application/use-cases/architecture/create-module-map.use-case.spec.ts:190`
+  (grava), `:208` (pela metade — caso de falha), `:217` (soma no teto);
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts:530`
+  (subida do servidor com a soma), `:556` (sem declaração), `:575` (acima),
+  `:588` (abaixo — caso de falha), `:608` (sem mapa);
+  `apps/engine/test/engine/harness/tools/create_module_map_test.exs:94`, `:109`;
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs:1307`
+- **Origem:** AT-261 (item A15 da análise do uso real de 29/09)
 
 ### RN-674 — A QA-estratégia escreve o plano sobre o código ENTREGUE, no começo do ciclo do `qa-verificada`, e o `implementavel` se julga sem ele {#rn-674}
 

@@ -62,7 +62,10 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
           },
           "resources" => %{
             "type" => "object",
-            "description" => "Teto de recursos: cpus, memoryMb, pidsLimit. Omitir usa o padrão.",
+            "description" =>
+              "Teto de recursos: cpus, memoryMb, pidsLimit. Omitir (o recomendado) sobe com o " <>
+                "MÍNIMO derivado do module_map — a soma do que o Arquiteto declarou por " <>
+                "módulo (RN-683). Abaixo desse mínimo a subida é recusada.",
             "properties" => %{
               "cpus" => %{"type" => "number"},
               "memoryMb" => %{"type" => "number"},

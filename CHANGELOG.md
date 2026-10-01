@@ -57,6 +57,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **infra**: a Infra sobe o container com o MENOR recurso elegível, derivado
+  do `module_map` (AT-261, [ADR 0199](docs/adr/0199-recurso-minimo-derivado-do-module-map.md),
+  [RN-683](docs/business-rules.md#rn-683)). Cada módulo do mapa pode declarar
+  `resources` (cpus, memoryMb, pidsLimit — os três ou nenhum), e a ferramenta
+  `create_module_map` do Arquiteto passa a pedi-lo. `container_start` com
+  recursos omitidos — sempre o caso da subida do servidor no aceite — sobe com a
+  SOMA entre módulos (todos dividem um container), com piso no padrão de hoje
+  enquanto houver módulo sem declaração, nomeado no `rationale`; mapa sem
+  declaração nenhuma dá o padrão de sempre. Soma acima do teto é 400 na criação
+  do mapa; pedido abaixo do mínimo é `failed` nomeado.
+
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
   [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A
