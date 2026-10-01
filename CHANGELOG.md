@@ -853,6 +853,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api/ci (segurança)**: fecham os sete alertas novos do CodeQL que
+  reprovavam o check da promoção `qa → main` (AT-344, AT-345, AT-346). O aviso
+  ao canal da sessão (`SessionChannelNotifier`, RN-579) só monta a URL de
+  `POST /internal/sessions/:id/event-appended` para `sessionId` em forma de
+  UUID — validado no MESMO escopo que monta a URL, com o segmento por
+  `encodeURIComponent` e a URL conferida contra a ORIGEM e o caminho do
+  `ENGINE_URL`; id com `/`, `..`, `?`, `#`, `@` ou `%2F` não vira chamada
+  (`js/request-forgery`, crítico; o host nunca vinha do usuário, e o id de
+  sessão já é `uuid` no banco, então nenhum aviso legítimo deixa de sair). O
+  resumo do Trivy da release escapa a barra invertida ANTES da barra vertical
+  em cada célula, e quebra de linha vira espaço — um `x\|y` vindo do relatório
+  não abre mais coluna (`js/incomplete-sanitization`). E os specs de
+  `scripts/` que carregam um `.sh` por `bash -c` passam o caminho como
+  ARGUMENTO posicional (`source "$1"`) em vez de interpolá-lo na string do
+  comando (`js/shell-command-injection-from-environment`): os quatro specs
+  acusados e outros sete com o mesmo molde.
+
 - **web/api**: a sessão consultiva sem agente deixa de mandar a mensagem ao
   modelo cru (AT-254, [RN-682](docs/business-rules.md#rn-682)). Até aqui o
   envio sem destinatário ia ao SSE de `POST .../chat`, que manda só o texto
