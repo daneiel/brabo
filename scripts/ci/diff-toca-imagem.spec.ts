@@ -46,7 +46,7 @@ describe('classificar', () => {
 
   it.each([
     ['docs/gates.yml', 'a api o carrega na imagem e o smoke o cobra (RN-070)'],
-    ['THIRD_PARTY_NOTICES.md', 'copiado para a imagem do engine'],
+    ['THIRD_PARTY_NOTICES.md', 'copiado para as cinco imagens'],
     ['.github/workflows/ci.yml', 'é onde os passos do próprio job moram'],
     ['docker-bake.hcl', 'define as cinco imagens'],
     ['.dockerignore', 'decide o contexto de build'],

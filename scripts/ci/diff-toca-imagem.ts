@@ -26,7 +26,7 @@
  *     carrega (`docker/api/Dockerfile.prod`, e o `!docs/gates.yml` do
  *     `.dockerignore`) — a api o lê em runtime e o smoke o cobra (RN-070);
  *   - `THIRD_PARTY_NOTICES.md` é o único `.md` da raiz copiado para uma
- *     imagem (a do engine);
+ *     imagem (as cinco, AT-120);
  *   - `.github/workflows/ci.yml` é onde os PRÓPRIOS passos do job moram.
  *
  * Sintaxe apagável apenas (o Node executa este `.ts` por type stripping).
@@ -40,7 +40,7 @@ export interface RegraSemImagem {
   casa: (arquivo: string) => boolean;
 }
 
-/** `.md` direto na raiz (sem barra), exceto o que o engine copia. */
+/** `.md` direto na raiz (sem barra), exceto o que as imagens copiam. */
 function mdDaRaiz(arquivo: string): boolean {
   return !arquivo.includes('/') && arquivo.endsWith('.md') && arquivo !== 'THIRD_PARTY_NOTICES.md';
 }
@@ -57,7 +57,7 @@ export const REGRAS_SEM_IMAGEM: readonly RegraSemImagem[] = [
     descricao: '.github/ (exceto .github/workflows/ci.yml, onde este job mora)',
     casa: (a) => a.startsWith('.github/') && a !== '.github/workflows/ci.yml',
   },
-  { descricao: '*.md da raiz (exceto THIRD_PARTY_NOTICES.md, copiado para a imagem do engine)', casa: mdDaRaiz },
+  { descricao: '*.md da raiz (exceto THIRD_PARTY_NOTICES.md, copiado para as cinco imagens)', casa: mdDaRaiz },
   { descricao: 'design/*.md (o .dockerignore os exclui; design/tokens.css NÃO)', casa: (a) => /^design\/[^/]+\.md$/.test(a) },
 ];
 

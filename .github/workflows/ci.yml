@@ -1138,6 +1138,24 @@ jobs:
             echo "ok: $img -> $user"
           done
 
+      # AT-120: a oferta escrita de fonte viaja DENTRO de cada imagem publicada,
+      # e o que se prova aqui é a imagem construída, não o Dockerfile (o spec
+      # `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` guarda o `COPY`; um
+      # `.dockerignore` novo o tiraria do contexto só no build). `cat` existe
+      # nas cinco bases (busybox), e o `cmp` cobra o MESMO conteúdo do checkout.
+      - name: A oferta de fonte está dentro das cinco imagens
+        if: steps.diff.outputs.rodar == 'true'
+        run: |
+          set -euo pipefail
+          for img in brabo-api:prod brabo-engine:prod brabo-web:prod brabo-backup:prod brabo-broker:prod; do
+            if ! docker run --rm --network none --entrypoint cat "$img" \
+                /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md | cmp -s - THIRD_PARTY_NOTICES.md; then
+              echo "::error::$img não carrega /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md igual ao do checkout (AT-120)"
+              exit 1
+            fi
+            echo "ok: $img carrega a oferta de fonte"
+          done
+
       # Os quatro scans abaixo eram QUATRO steps sequenciais via
       # `aquasecurity/trivy-action`, somando ~28s (api 17s — inclui o download
       # da base de vulnerabilidades —, engine 6s, web 2s, backup 3s). GitHub

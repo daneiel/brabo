@@ -100,6 +100,21 @@ RUN chmod 0755 /usr/local/bin/brabo-entrypoint.sh \
  && ! grep -rq 'fonts.googleapis.com' /usr/share/nginx/html/index.html \
  && command -v envsubst >/dev/null
 
+# A oferta escrita de fonte viaja DENTRO da imagem, na MESMA forma da do engine
+# (`docker/engine/Dockerfile.prod`, AT-020): o mesmo `THIRD_PARTY_NOTICES.md`,
+# no mesmo caminho, do root e só leitura (0644), copiado ANTES do `USER`. Por
+# decisão do mantenedor (AT-120), TODA imagem publicada a carrega — nenhuma é
+# declarada dispensada. Quem faz `docker pull` não tem o repositório.
+# A PASTA nasce antes, e por um `RUN`, não pelo `COPY`: o BuildKit aplica o
+# `--chmod` também às pastas que o `COPY` cria, e `/usr/share/doc/brabo` nascia
+# `0644` — sem o bit de execução, ninguém além do root a atravessa, e o `cat`
+# como o `USER` da imagem dava "Permission denied" (medido na AT-120, inclusive
+# na imagem do engine). Com a pasta já existente em `0755`, o `COPY` só cria o
+# arquivo.
+RUN install -d -m 0755 /usr/share/doc/brabo
+COPY --chown=root:root --chmod=0644 THIRD_PARTY_NOTICES.md \
+     /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md
+
 # `nginx` (uid 101) já existe na imagem oficial — não criamos usuário novo.
 USER nginx
 
