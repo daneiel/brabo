@@ -450,9 +450,9 @@ Extracted from the emission points: **97 identifiers**, of which **2** are not d
 - `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
 - `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
-- `chat.message_cancelled` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
-- `chat.message_delivered` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
-- `chat.message_queued` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `chat.message_cancelled` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_delivered` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_queued` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
 - `chat.structured_question` <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
 - `chat.structured_question_answered` <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub>
 - `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
