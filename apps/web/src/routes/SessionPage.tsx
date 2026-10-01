@@ -630,9 +630,9 @@ export function SessionPage({
 
   /**
    * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
-   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
-   * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
-   * pronta no fio, e os dois handoffs nascem em seguida. Desde o ADR 0163 a
+   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra — o
+   * Arquiteto narra a arquitetura pronta no fio, e o handoff nasce em seguida;
+   * o do Dev Lead sai da Infra, com o container `running` (RN-672). Desde o ADR 0163 a
    * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
    * canal e pelo log (`acompanharTurnoPeloLog`).
    */

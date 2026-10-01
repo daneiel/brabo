@@ -97,8 +97,9 @@ camada_decisao_tecnica:
       - { artefato: artifact.c4_diagram, destino: visao-geral }     # RN-149
       - { artefato: artifact.module_routing, destino: area-infra,
           nota: "candidata; quem elege é a Infra, PR à parte" }     # RN-487
-      - { artefato: handoff-duplo, destino: [dev-lead, area-infra],
+      - { artefato: handoff, destino: area-infra,
           pre_condicao: RN-160 } # "Confirmar arquitetura pronta" exige história promovida
+          # o handoff ao dev-lead saiu daqui na RN-672 (ADR 0190): quem o oferece é a area-infra
       - { artefato: nfrs-mensuraveis, destino: [dev-lead, qa-estrategia,
           platform], status: proposto, regra: NFR sem como-medir é inválido }
     gate_saida: { id: adr-aprovado, status: proposto }
@@ -109,8 +110,10 @@ camada_decisao_tecnica:
     status: active
     teto: 14
     entradas:
-      - { artefato: handoff + module_map, origem: arquiteto,
+      - { artefato: handoff, origem: area-infra, pre_condicao: "container do projeto running",
+          regra: RN-672,
           nota: "aceitar encadeia ativação de execução quando o papel efetivo já autoriza — RN-161" }
+      - { artefato: module_map, origem: arquiteto }                 # RN-159
       # plano-de-teste saiu daqui no ADR 0192 (RN-674): nasce DEPOIS da
       # entrega do dev e entra no qa-verificada; o parecer de
       # implementabilidade se julga sobre a história e o module_map acima
@@ -252,10 +255,15 @@ camada_plataforma:
     entradas: [{ artefato: handoff, origem: arquiteto },
                { artefato: threat-model, origem: appsec, status: proposto },
                { artefato: artifact.module_routing, origem: arquiteto,
-                 status: proposto,
-                 nota: "roteamento existe (ADR 0131); elege-e-propõe é PR à parte" }]
+                 nota: "a Infra elege (ADR 0133); no aceite, o servidor elege e sobe (RN-671)" }]
     saidas: [{ artefato: ci-workflows, destino: repositorio },
              { artefato: proposta-de-infra, destino: usuario },
+             { artefato: container-do-projeto, destino: dev-lead,
+               via: proposed_action, regra: RN-671,
+               nota: "o servidor propõe no aceite; container_start semeado auto_approve (ADR 0190)" },
+             { artefato: handoff, destino: dev-lead, regra: RN-672,
+               pre_condicao: "container do projeto running",
+               nota: "passo do servidor: fim de turno da Infra ou container.running do outbox" },
              { artefato: pipeline-verde, destino: platform, status: planned }]
     gate_saida: { id: deployavel, status: planned }   # DEPLOY_ENABLED
 

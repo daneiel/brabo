@@ -508,8 +508,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     # A recusa é ENTRADA do laço (RN-163) — texto de resultado de ferramenta,
     # NOMEANDO o caminho certo. O loop continuou e o turno concluiu.
-    recusa =
-      Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
 
     assert recusa["role"] == "tool"
     assert recusa["content"] =~ "runner"
@@ -1218,6 +1217,355 @@ defmodule Engine.Infra.InfraLeadServerTest do
                new_state.messages,
                &(&1["name"] == "propose_infra_pr" and &1["content"] =~ "já foi chamada")
              )
+    end
+  end
+
+  # --- RN-671 (AT-260, ADR 0190): a subida no aceite é passo do SERVIDOR ---
+
+  defp contexto_roteado(rotas) do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github",
+      "moduleRouting" => %{
+        "status" => "roteado",
+        "roteamento" =>
+          for {modulo, imagem} <- rotas do
+            %{"modulo" => modulo, "imagemCandidata" => imagem, "porque" => "estabilidade e LTS"}
+          end,
+        "version" => 1,
+        "eventId" => "evt-routing-1",
+        "createdAt" => "2026-10-01T00:00:00Z"
+      }
+    })
+  end
+
+  # A caixa do processo de teste, na ordem em que o fake notificou.
+  defp caixa(acc \\ []) do
+    receive do
+      msg -> caixa([msg | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  defp kickoff_lido(caixa) do
+    Enum.find_value(caixa, fn
+      {:llm_turn_stream, "infra", messages, _tools} ->
+        Enum.find_value(messages, &(&1["role"] == "user" && &1["content"]))
+
+      _ ->
+        nil
+    end)
+  end
+
+  describe "a subida no aceite é passo do servidor (RN-671)" do
+    test "projeto `container` com roteamento: o servidor elege e propõe ANTES de o modelo falar",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+
+      contexto_roteado([
+        {"api", "node:22-bookworm-slim"},
+        {"worker", "python:3.12-slim"},
+        {"web", "node:22-bookworm-slim"}
+      ])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{"id" => "pa-auto", "status" => "executed"}
+      })
+
+      # O modelo fecha o turno pela PR, sem chamar subida nenhuma — no uso real
+      # de 29/09 era exatamente aqui que o container não subia.
+      Process.put(:fake_llm_turns, [
+        lote(
+          [{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}],
+          "Proponho a PR."
+        )
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      mensagens = caixa()
+
+      posicao_da_subida =
+        Enum.find_index(mensagens, &match?({:propose_action, "container_start", _, _}, &1))
+
+      posicao_do_modelo = Enum.find_index(mensagens, &match?({:llm_turn_stream, _, _, _}, &1))
+
+      assert posicao_da_subida < posicao_do_modelo
+
+      {:propose_action, "container_start", ator, payload} = Enum.at(mensagens, posicao_da_subida)
+      assert ator == %{kind: "agent", id: "infra"}
+      # A candidata de DOIS dos três módulos vence; a rede e os recursos são
+      # os defaults da tool.
+      assert payload.imagem == "node:22-bookworm-slim"
+      assert payload.network == "none"
+      assert payload.resources == %{}
+      assert payload.rationale =~ "Eleita pelo servidor"
+      assert payload.rationale =~ "2 de 3 módulo(s) (api, web)"
+
+      # Rastro durável, marcado como do servidor.
+      assert Enum.any?(
+               mensagens,
+               &match?(
+                 {:event_appended, _, _,
+                  %{
+                    type: "tool.call",
+                    payload: %{tool: "propose_container_start", origem: "servidor"}
+                  }},
+                 &1
+               )
+             )
+
+      assert Enum.any?(
+               mensagens,
+               &match?(
+                 {:event_appended, _, _,
+                  %{type: "tool.result", payload: %{tool: "propose_container_start", ok: true}}},
+                 &1
+               )
+             )
+
+      # O modelo lê o que JÁ aconteceu, e não recebe uma resposta de
+      # ferramenta sem chamada (os providers a recusam).
+      assert kickoff_lido(mensagens) =~ "JÁ foi proposta pelo SERVIDOR"
+      assert kickoff_lido(mensagens) =~ "status executed"
+
+      refute Enum.any?(mensagens, fn
+               {:llm_turn_stream, "infra", messages, _} ->
+                 Enum.any?(messages, &(&1["role"] == "tool"))
+
+               _ ->
+                 false
+             end)
+
+      # A promessa da RN-668 fica verdadeira por construção: a PR encerra o
+      # turno e o fecho não diz que a subida não foi proposta.
+      refute Enum.any?(mensagens, fn
+               {:event_appended, _, _, %{type: "agent.response", payload: %{content: c}}} ->
+                 c =~ "NÃO foi proposta"
+
+               _ ->
+                 false
+             end)
+    end
+
+    test "projeto `mounted` também sobe pelo servidor (o broker atende os dois)", %{state: state} do
+      insert_project!(state.project_id, "mounted")
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert_received {:propose_action, "container_start", _, %{imagem: "node:22-bookworm-slim"}}
+    end
+
+    test "projeto `runner`: o servidor NÃO sobe — o caminho via runner segue com o modelo",
+         %{state: state} do
+      insert_project!(state.project_id, "runner")
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      mensagens = caixa()
+      refute Enum.any?(mensagens, &match?({:propose_action, _, _, _}, &1))
+      assert kickoff_lido(mensagens) =~ "5. Se o projeto estiver no modo `runner`"
+      refute kickoff_lido(mensagens) =~ "SERVIDOR"
+    end
+
+    test "sem roteamento vigente: o servidor não sobe nada", %{state: state} do
+      insert_project!(state.project_id, "container")
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:propose_action, "container_start", _, _}
+    end
+
+    test "a api recusa (sem broker): o kickoff diz RECUSADA e o fecho da RN-668 fala",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(
+        :fake_propose_action_erro,
+        {409,
+         %{
+           "code" => "sem_broker_na_instalacao",
+           "message" => "Esta instalação não tem broker de container (BROKER_URL vazia)."
+         }}
+      )
+
+      Process.put(:fake_llm_turns, [
+        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      mensagens = caixa()
+      assert kickoff_lido(mensagens) =~ "foi RECUSADA: container_start recusado: Esta instalação"
+
+      assert Enum.any?(
+               mensagens,
+               &match?(
+                 {:event_appended, _, _,
+                  %{type: "tool.result", payload: %{tool: "propose_container_start", ok: false}}},
+                 &1
+               )
+             )
+
+      respostas =
+        for {:event_appended, _, _, %{type: "agent.response", payload: %{content: c}}} <-
+              mensagens,
+            do: c
+
+      assert List.last(respostas) =~ "a tentativa por `propose_container_start` foi recusada"
+    end
+
+    test "container já `running`: a recusa por estado (RN-610) vale para o servidor também",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "running")
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:propose_action, "container_start", _, _}
+    end
+
+    test "a política nega (sessão sem `maintainer`): é recusa, não proposta, para o kickoff e o fecho",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{
+          "id" => "pa-negada",
+          "status" => "denied",
+          "rejectionReason" => "papel insuficiente: exige maintainer"
+        }
+      })
+
+      Process.put(:fake_llm_turns, [
+        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      mensagens = caixa()
+      assert kickoff_lido(mensagens) =~ "negado pela política (status denied): papel insuficiente"
+
+      respostas =
+        for {:event_appended, _, _, %{type: "agent.response", payload: %{content: c}}} <-
+              mensagens,
+            do: c
+
+      assert List.last(respostas) =~ "a tentativa por `propose_container_start` foi recusada"
+    end
+
+    test "eleger_candidata/1: maioria vence, empate fica com a primeira, vazio é nil" do
+      rota = fn modulo, imagem -> %{"modulo" => modulo, "imagemCandidata" => imagem} end
+
+      assert InfraLeadServer.eleger_candidata([
+               rota.("a", "x:1"),
+               rota.("b", "y:1"),
+               rota.("c", "y:1")
+             ]) ==
+               {"y:1", ["b", "c"]}
+
+      assert InfraLeadServer.eleger_candidata([rota.("a", "x:1"), rota.("b", "y:1")]) ==
+               {"x:1", ["a"]}
+
+      assert InfraLeadServer.eleger_candidata([]) == nil
+      assert InfraLeadServer.eleger_candidata([rota.("a", "")]) == nil
+    end
+  end
+
+  # --- RN-672 (AT-262, ADR 0190): o Dev Lead é oferecido PELA INFRA ---
+
+  describe "o handoff ao Dev Lead sai da Infra, com o container `running` (RN-672)" do
+    test "turno que termina com o container REGISTRADO `running`: oferece ao Dev Lead, no modo if_absent",
+         %{state: state, session_id: session_id} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "running")
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert_received {:handoff_if_absent, _, ^session_id, "infra", "dev-lead", nil}
+      # Nunca pelo `create_handoff` comum, que substituiria a oferta pendente.
+      refute_received {:handoff_created, _, _, _, "dev-lead", _}
+    end
+
+    test "container ainda não `running` (provisioning, ou nenhum): NÃO oferece", %{state: state} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "provisioning")
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:handoff_if_absent, _, _, _, "dev-lead", _}
+    end
+
+    test "o aviso de container `running` fora de turno oferece; de OUTRO projeto, não", %{
+      state: state,
+      session_id: session_id
+    } do
+      registrar_container!(state.project_id, "running")
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, Ecto.UUID.generate()}, state)
+
+      refute_received {:handoff_if_absent, _, _, _, _, _}
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      assert_received {:handoff_if_absent, _, ^session_id, "infra", "dev-lead", nil}
+    end
+
+    test "o aviso com turno em curso não oferece — o fecho do turno faz a mesma pergunta", %{
+      state: state
+    } do
+      registrar_container!(state.project_id, "running")
+      em_curso = %{state | turno_assincrono: %{task: :qualquer}}
+
+      assert {:noreply, ^em_curso} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, em_curso)
+
+      refute_received {:handoff_if_absent, _, _, _, _, _}
+    end
+
+    test "Dev Lead já ativo (409) não é falha; outra recusa vira agent.error durável", %{
+      state: state,
+      session_id: session_id
+    } do
+      registrar_container!(state.project_id, "running")
+
+      Process.put(:fake_handoff_if_absent, %{
+        "dev-lead" => {:error, {409, %{"reason" => "agente_ja_ativo"}}}
+      })
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      refute_received {:event_appended, _, _, %{type: "agent.error"}}
+
+      Process.put(:fake_handoff_if_absent, %{
+        "dev-lead" => {:error, {500, %{"message" => "erro interno"}}}
+      })
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+      assert payload.origem == "infra"
+      assert payload.mensagem =~ "não consegui oferecer o handoff ao dev-lead"
     end
   end
 

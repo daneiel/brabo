@@ -193,6 +193,8 @@ estado lido do repositório e não da conversa.
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
+| A Infra sobe o container sozinha no aceite do handoff (AT-260) | ADR 0190, RN-671 |
+| O handoff ao Dev Lead sai da Infra, só com o container `running` (AT-262) | ADR 0190, RN-672 |
 | O tema escuro vira preto neutro, e a dívida de contraste acaba (AT-283/AT-284) | ADR 0181, RN-640 |
 | "Sempre permitir" aprova e grava o padrão na mesma transação; clique em ação já aprovada vira sucesso nomeado, e os tipos do teto (git tipado) deixam de oferecer o botão (AT-310/AT-320) | RN-642 |
 | O chat mostra e deixa escolher o destinatário, e a oferta de handoff é casada pelo `handoffId` (AT-251) | RN-631 |
@@ -290,8 +292,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `/containers` recusa antes do clique a subida de `container`/`mounted`. As
   duas metades são a MESMA decisão do mantenedor ("os dois"). O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
-  `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
-  `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
+  `container_start` é `proposed_action` de verdade (`maintainer`) — e desde
+  o ADR 0190 (RN-671) é SEMEADA `auto_approve` no aceite do handoff da Infra,
+  com o SERVIDOR do Infra Lead propondo a primeira subida sozinho no kickoff
+  quando há roteamento (`container`/`mounted`; `runner` segue pelo modelo e
+  com aprovação) —, e
   `ExecuteContainerStartUseCase` chama `ContainerBrokerPort.start` de
   verdade quando aprovada — o Infra Lead elege uma das candidatas do
   roteamento do Arquiteto (`artifact.module_routing`, ADR 0131) e a eleição
@@ -308,9 +313,9 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `remove` também têm chamador: a página global de containers
   (`/containers`) propõe `container_stop`/`container_remove` — dois tipos
   novos, sempre um HUMANO clicando "Parar"/"Remover" numa linha da tela,
-  nunca um agente. `container_stop` segue o MESMO calibre de
-  `container_start` (`maintainer`, pode ser configurado auto-aprovável,
-  nunca seedado); `container_remove` — o mais destrutivo dos três, descarta
+  nunca um agente. `container_stop` segue o calibre de
+  `container_start` (`maintainer`, pode ser configurado auto-aprovável), mas
+  NUNCA é semeado — a semente do ADR 0190 é só a da subida; `container_remove` — o mais destrutivo dos três, descarta
   o container e exige reprovisionar do zero — entra no MESMO teto absoluto
   de git push/comando privilegiado (RN-418): nunca auto-aprovável, "sempre
   permitir" recusado na fonte. A tela em si tem seu próprio teto: perguntar

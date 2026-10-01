@@ -4304,7 +4304,7 @@ export interface components {
              * @example infra
              * @enum {string}
              */
-            toAgent: "infra" | "dev-lead";
+            toAgent: "infra";
             /** @enum {string} */
             motivo: "oferta_pendente" | "agente_ativo";
         };
@@ -5208,7 +5208,7 @@ export interface components {
              */
             ok: true;
             /**
-             * @description `confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab).
+             * @description `confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672).
              * @enum {string}
              */
             desfecho: "confirmado" | "ja_oferecido";

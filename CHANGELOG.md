@@ -70,6 +70,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `assess_implementability` do Dev Lead (gate `implementavel`) propõe o parecer
   na PRIMEIRA chamada, sobre a história e o `module_map`, sem plano no payload.
   O teto continua 8.
+- **engine/api**: **o handoff ao Dev Lead sai da Infra, e só com o container
+  `running`** (AT-262, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-672](docs/business-rules.md#rn-672)). "Confirmar arquitetura pronta"
+  passa a oferecer só à Infra — o handoff duplo do Arquiteto sai, com a rota
+  interna `POST /internal/sessions/:id/agent/offer-dev-handoff` do engine. Quem
+  oferece o Dev Lead é o servidor do Infra Lead, sem depender do modelo, quando
+  o container do projeto está registrado `running`: no fim de cada turno dele e
+  quando o `container.running` chega pelo outbox (aprovação posterior,
+  `/containers`, modo `runner`). Oferta pendente não se repete, e Dev Lead já
+  ativo não é falha. A segunda porta do repositório no aceite ao Dev Lead
+  (RN-582) continua.
+- **engine/api**: **a Infra sobe o container sozinha ao receber o handoff**
+  (AT-260, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-671](docs/business-rules.md#rn-671)). Aceitar o handoff da Infra passa a
+  semear `container_start: auto_approve` (decisão do dono, 01/10 — revisa o
+  "nunca semeado" do ADR 0133), e o kickoff do Infra Lead, ANTES da primeira ida
+  ao modelo, elege a candidata do roteamento do Arquiteto (a de mais módulos; no
+  empate, a primeira) e propõe a subida pelo MESMO caminho da tool — com as
+  recusas por modo e estado (RN-566/RN-610) e o 409 sem broker (RN-591)
+  intactos. Em projeto `container`/`mounted` com roteamento o container sobe sem
+  clique; `runner` segue pelo `container_start_via_runner` com aprovação, e
+  `container_remove` segue no teto absoluto. O kickoff diz ao modelo o que JÁ
+  aconteceu, e o fecho da RN-668 deixa de dizer "não foi proposta" quando o
+  servidor propôs. Uma proposta NEGADA pela política (sessão aberta por quem
+  não é `maintainer`) passa a contar como recusa, não como proposta. **Para
+  subir com clique de novo**, troque a regra `container_start` da Infra: o
+  toggle manual/auto do card escreve a curinga, e a regra específica vence.
+
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

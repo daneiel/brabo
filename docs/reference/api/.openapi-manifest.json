@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "d9c89a98abbffb4674b7aec8d227cd36ed5867ff85403244bc97b4361980fdf6",
+  "openapiSha256": "07603d9a13c05a743200ef25c108c8be41aa3a282db3b3680361a03b9abca529",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -40,8 +40,8 @@
     "agents-controller-cancel.api.mdx": "07f661ad576c71b069edacc041122b7a5bea8a150f8a17ae1d5de265b3dc9aad",
     "agents-controller-handoff-infra.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "agents-controller-handoff-infra.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "agents-controller-handoff-infra.StatusCodes.json": "5253cf1532aece4ee72a358d88477a71b3bf02239ab907e166b7ad26faa13614",
-    "agents-controller-handoff-infra.api.mdx": "888ef40372b5b6630f7b18809b1823564bdfd9b6eb37af7667d2db4066b1b0c3",
+    "agents-controller-handoff-infra.StatusCodes.json": "0b9b385f0b0503c0857c2bdd3302446a6115029fad2528807d2359c3c54b4b4f",
+    "agents-controller-handoff-infra.api.mdx": "81525ed33b291c913a15c693f40bd9775f519890f6d9d8d34e6c28224da00726",
     "agents-controller-handoffs.ParamsDetails.json": "4e5efb20e1409eeb815c23b3b0bb5f88ddd8dee4944337c72d226e3093b7b4ba",
     "agents-controller-handoffs.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "agents-controller-handoffs.StatusCodes.json": "af2817ec1b049d849f8f9b61cf8a568eed6741cf8ccb0c8dad89fc8039ac2a9f",

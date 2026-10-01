@@ -322,11 +322,6 @@ defmodule EngineWeb.AgentCommandController do
     responder_ao_aceite(conn, ArquitetoServer.offer_infra_handoff(session_id))
   end
 
-  def offer_dev_handoff(conn, %{"sessionId" => session_id}) do
-    :ok = ArquitetoServer.offer_dev_handoff(session_id)
-    send_resp(conn, 202, "")
-  end
-
   @doc """
   Cancela o turno em curso do agente conversacional ativo na sessão
   (RN-122) — o botão "Parar" do composer. Idempotente por natureza:
