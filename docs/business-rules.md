@@ -5652,7 +5652,8 @@ visual: a linha de status do Claude Code. O fio só recebe a bolha de
 resposta DEPOIS que o turno termina; a regra é do CHAT (canal Phoenix) e
 vale só para os seis agentes conversacionais — o chat consultivo sem
 agente ativo (SSE, `streamChatMessage`) continua com a bolha de streaming
-de sempre, intocada.
+de sempre, intocada. (Desde a [RN-682](#rn-682) a tela não chama mais esse
+SSE: a consultiva sem agente pede um agente antes de enviar.)
 
 **Mecanismo (engine)**: os seis servers já emitem `tool.call` DURÁVEL no
 event log; passam a também fazer `broadcast(state, "tool.call", %{tool:
@@ -17539,7 +17540,9 @@ desde sempre (AT-251).
 4. **Duas ou mais opções e nenhuma escolha válida: sem destinatário.** O
    "Enviar" (e o Enter) fica travado e a tela diz em TEXTO que é preciso
    escolher — nunca "a mais recente". Zero opções é o chat da sessão sem agente
-   (SSE), e a tela também o diz.
+   (SSE), e a tela também o diz. **Revisado pela [RN-682](#rn-682):** zero
+   opções também trava o envio — a consultiva sem agente pede um agente, e o
+   SSE ao modelo cru deixou de ser chamado pela tela.
 5. **A escolha é lembrada por sessão no `localStorage`** — conforto de quem vê
    (sem armazenamento a tela só volta a pedir a escolha), nunca estado do
    produto.
@@ -17593,7 +17596,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:245` (`destinatarioRow`), `:168`
+  `apps/web/src/routes/SessionComposer.tsx:252` (`destinatarioRow`), `:168`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
   (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -19543,3 +19546,72 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (fila cheia), `:207`, `:233`; `apps/web/src/lib/fila-de-mensagens.test.ts:17`
 - **Origem:** AT-267 (item A21 da análise do uso real de 2026-09-29), decisão do
   dono de 01/10; [ADR 0191](adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)
+
+### RN-682 — A consultiva sem agente pede um agente: o composer não envia sem destinatário, e a rota de chat recusa com nome {#rn-682}
+
+Até aqui, a mensagem de uma sessão **consultiva** sem agente ia ao SSE de
+`POST .../chat` (`SendChatMessageUseCase`), que manda ao modelo vinculado só o
+texto atual — sem histórico, sem prompt de sistema, sem ferramenta — e grava a
+resposta com o NOME DO MODELO como ator. Medido no uso real de 29/09: a sessão
+5d66 respondeu "não tenho acesso a conversas anteriores". A decisão do dono
+(01/10) é que, sem agente ativo, a consultiva **pede para escolher um agente**
+— a mesma régua da [RN-584](#rn-584) (nenhum destinatário padrão) chegando ao
+último caso que ainda tinha um: o modelo cru.
+
+**A medição, antes do conserto:** a rota de chat tinha UM cliente, a tela
+(`handleSend`, só quando não havia destinatário — o que, desde a
+[RN-631](#rn-631), só acontecia na consultiva sem agente: a criativa sempre tem
+o Criativo como opção). O `curl` que o seed imprime é dica de desenvolvimento,
+numa sessão criativa. O caso de uso tem um SEGUNDO consumidor legítimo: os
+smokes de provider (`*-provider.smoke.spec.ts`) o usam direto como instrumento
+de ponta a ponta (credencial → chamada → metering) numa sessão sem agente. Por
+isso a recusa da api mora na ROTA, e o caso de uso não muda.
+
+**A regra:**
+
+1. **A tela não envia sem destinatário.** O "Enviar" e o Enter ficam travados
+   com zero opções, como já ficavam com duas sem escolha; o ramo do SSE saiu de
+   `handleSend`.
+2. **A linha do destinatário MOSTRA quem pode ser chamado.** Sem opção, o
+   seletor do handoff manual ([RN-440](#rn-440)) muda de lugar para dentro
+   dela — "Para", a lista, e "Chamar" —, e o seletor de cima some para não
+   haver a mesma escolha em dois lugares. A lista são os agentes que conversam
+   (`AGENTES_DE_CHAT`, os que o engine casa com cláusula própria) e que o
+   handoff manual alcança, menos quem já entrou e **menos o Criativo**: a
+   consultiva promete no convite que ele não entra, porque abrir a ideação é o
+   que a criativa faz ([RN-097](#rn-097)). Chamar oferece o handoff; aceitá-lo
+   no fio faz do agente o destinatário (RN-631).
+3. **A api recusa o mesmo caso para qualquer cliente.** `POST .../chat` numa
+   sessão consultiva em que nenhum `agent.activated` foi gravado é **422**
+   `{reason: "destinatario_ausente"}`, com a frase que aponta
+   `.../agents/:agent/message`, ANTES de qualquer efeito: nada é gravado e
+   nenhum modelo é chamado. A recusa sai como resposta HTTP e não como quadro
+   `error` dentro de um stream 200 — o handler devolve `Promise<Observable>`,
+   e a rejeição antes do cabeçalho do SSE vira a resposta normal.
+
+**O que esta regra NÃO fecha, declarado:**
+
+- **A rota segue respondendo pelo modelo cru fora desse caso**: numa criativa
+  sem agente (o `curl` do seed) e numa consultiva COM agente, para quem a
+  chamar à mão. A tela não a chama em nenhum dos dois; a decisão do dono foi
+  sobre a consultiva sem agente, e fechar a rota inteira é decisão à parte.
+- O chat livre com histórico, a outra opção da AT-254, não foi feito.
+
+- **Código:** `apps/api/src/domain/sessions/chat-sem-destinatario.ts:24`
+  (`chatSemDestinatarioRecusado`), `:17` (`MOTIVO_CHAT_SEM_DESTINATARIO`);
+  `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
+  (`GarantirDestinatarioDoChatUseCase`);
+  `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
+  `apps/web/src/lib/session-destinatario.ts:270` (`agentesParaChamar`);
+  `apps/web/src/routes/SessionPage.tsx:655` (`handleSend`);
+  `apps/web/src/routes/SessionComposer.tsx:276`
+- **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
+  (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
+  `apps/api/test/interfaces/http/llm/chat.controller.spec.ts:56` (422 como
+  resposta HTTP), `:79` (caminho feliz);
+  `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx:458` (não
+  envia — caso de falha), `:471` (lista e Chamar — caminho feliz);
+  `apps/web/src/lib/session-destinatario.test.ts:93`;
+  `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx:177`
+- **Origem:** AT-254 (item A8 da análise do uso real de 2026-09-29), decisão do
+  dono de 01/10

@@ -691,6 +691,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web/api**: a sessão consultiva sem agente deixa de mandar a mensagem ao
+  modelo cru (AT-254, [RN-682](docs/business-rules.md#rn-682)). Até aqui o
+  envio sem destinatário ia ao SSE de `POST .../chat`, que manda só o texto
+  atual, sem histórico e sem prompt de sistema, e a resposta saía assinada
+  pelo nome do modelo ("não tenho acesso a conversas anteriores"). Agora,
+  por decisão do dono, o composer **pede um agente**: a linha do destinatário
+  lista quem pode ser chamado (os agentes que conversam, menos o Criativo,
+  que a consultiva não abre) e o "Chamar" é o handoff manual de sempre; o
+  envio fica travado até haver destinatário. A api recusa o mesmo caso para
+  qualquer cliente: `POST .../chat` numa consultiva sem agente ativado é
+  **422 `destinatario_ausente`**, antes de gravar ou chamar o modelo. O caso
+  de uso do chat não mudou — os smokes de provider o usam direto como
+  instrumento de ponta a ponta.
+
 - **runner/engine**: o `git fetch` AUTENTICADO em modo `runner` passa a
   funcionar com o container do projeto de pé (AT-116, prova AT-111,
   [ADR 0193](docs/adr/0193-git-credenciado-no-host-do-runner.md),

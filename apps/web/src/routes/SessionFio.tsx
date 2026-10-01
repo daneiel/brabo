@@ -208,7 +208,9 @@ export function SessionFio({
           consultivo sem agente ativo (SSE, `streamChatMessage`) — um
           turno de agente conversacional narra pela faixa de
           atividade (`TurnActivityStrip`, logo abaixo do fio), nunca
-          pelos dois ao mesmo tempo. */}
+          pelos dois ao mesmo tempo. Desde a RN-682 a tela não abre
+          mais esse SSE (a consultiva sem agente pede um agente); a
+          bolha segue para o `statusAgent` que chega sem faixa. */}
       {!turnoViaCanal && (
         <BolhaDoStreaming
           store={streamingStore}

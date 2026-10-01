@@ -3216,3 +3216,21 @@ lados: no runner, um `git credential fill` e um `git fetch origin` reais com o
 helper do `GitAuth` sucedem no host com container ativo; no engine, a corrente
 pelo `TerminalChannel` real termina em `{:ok, _}`. Os ExUnit não rodaram no
 ambiente da entrega (`repo.hex.pm` 403) e ficaram para o CI.
+
+### A consultiva sem agente pede um agente (AT-254, RN-682)
+
+2026-10-01, rodada 36. No uso real de 29/09 uma sessão consultiva sem agente
+respondeu "não tenho acesso a conversas anteriores": a mensagem sem
+destinatário ia ao SSE de `POST .../chat`, que manda ao modelo vinculado só o
+texto atual — sem histórico, sem prompt de sistema — e grava a resposta com o
+nome do modelo como ator. A decisão do dono (01/10) foi pedir um agente em vez
+de dar histórico ao chat livre. Medido antes: a tela era o único cliente da
+rota (o `curl` impresso pelo seed é dica de desenvolvimento, numa sessão
+criativa), e o caso de uso `SendChatMessageUseCase` tinha um segundo consumidor
+legítimo, os smokes de provider, que o usam como instrumento de ponta a ponta
+numa sessão sem agente. Por isso a recusa da api mora na ROTA, numa guarda
+própria, e o caso de uso ficou intacto. Na tela, a linha do destinatário passou
+a carregar o próprio seletor do handoff manual quando não há agente — o mesmo
+gesto de sempre, agora no lugar onde ele é a única forma de a mensagem ter
+destino —, e o Criativo ficou fora da lista porque a consultiva promete que ele
+não entra.
