@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:811` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:797` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:637` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:643` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:215`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1100` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1088` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -305,10 +305,7 @@ Provisioning, AdoptionPlan) have no conversational turn in progress and
 stay as they were.
 
 - **Where:** `apps/web/src/lib/hooks.ts:221` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:258` (`eventsQuery`)
-
-- **Where:** `apps/web/src/lib/hooks.ts:210` (`useSessionEvents`),
-  `apps/web/src/routes/SessionPage.tsx:283` (`eventsQuery`)
+  `apps/web/src/routes/SessionPage.tsx:270` (`eventsQuery`)
 - **Test:** `apps/web/src/lib/hooks.pausar-poll.test.tsx`
 - **Edge case:** pausing the timer isn't disabling the query — explicit
   invalidation keeps working, and the fix depends on it to never miss data.
@@ -354,7 +351,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:332`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:361`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -5974,9 +5971,9 @@ inventado: renderizar "agora" faria a linha mais urgente da tela ser a que
 menos se sabe, sem nada denunciando a mentira. Acrescentar coluna e migração
 na api resolveria de verdade e é decisão à parte, fora do escopo desta.
 
-- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:104` (`ORDEM_DAS_FILAS`),
-  `:113` (`FILAS_ACIONAVEIS`), `:135` (`montarFilas` — a dedupe por
-  identidade e o empréstimo de data), `:241` (`temAlgoEsperando`);
+- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:108` (`ORDEM_DAS_FILAS`),
+  `:117` (`FILAS_ACIONAVEIS`), `:139` (`montarFilas` — a dedupe por
+  identidade e o empréstimo de data), `:245` (`temAlgoEsperando`);
   `apps/web/src/components/PainelPrecisaDeVoce.tsx:246-248` (`role="dialog"`,
   `aria-modal`, rótulo) e `:279-284` (grupo por fila, com a contagem dela);
   `apps/web/src/routes/ProjectPage.tsx:120` (monta as filas a partir dos
@@ -6770,7 +6767,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:417`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:431`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -8888,9 +8885,9 @@ tipo lhe sejam **entregues**, nunca permissão para nada.
 
 - **Onde:** `apps/engine/lib/engine/runners/capacidades.ex` (novo — o
   vocabulário, o legado, o que cada modo exige e as duas mensagens);
-  `apps/engine/lib/engine_web/channels/terminal_channel.ex:204`
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:208`
   (`join/3` passa a receber `params`), `:215` (`autorizar_por_papel/3`),
-  `:247` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:301`
+  `:251` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:305`
   (`exigencias_do_projeto/1`, que era `modo_de_execucao/1` até a RN-516 fazer a mesma consulta responder também o destino do espelho), `:595` (o gate de `exec` em
   `handle_info({:dispatch_exec, ...})`) e `:762` (o de `pty` em
   `handle_info({:relay, "pty_" <> _, ...})`);
@@ -9688,10 +9685,10 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:336`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:402`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
-  `apps/engine/lib/engine/runners/revogacao.ex:66` (`derrubar/3`);
+  `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
   `apps/engine/lib/engine_web/channels/terminal_channel.ex:697`
   (`handle_info({:derrubar_por_revogacao, …})`);
   `apps/engine/lib/engine_web/channels/runner_socket.ex:79` (`id/1`, que deixou
@@ -9892,8 +9889,8 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:244`
-  (`run_assessment/2`, a leitura única do histórico) e `:295`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:303`
+  (`run_assessment/2`, a leitura única do histórico) e `:355`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -10231,12 +10228,12 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
 
 - **Onde:** `apps/runner/src/pasta-do-projeto.ts:132` (`criarPastaDoProjeto` —
   a ordem guarda→disco→versionamento e os cinco motivos);
-  `apps/runner/src/channel.ts:164` (`WorkspaceCreateMessage`), `:185`
-  (`WorkspaceCreateResultMessage`), `:467` (`CAPACIDADE_DE_WORKSPACE` e
-  `capacidadesDoRunner`); `apps/runner/src/index.ts:1000`
+  `apps/runner/src/channel.ts:173` (`WorkspaceCreateMessage`), `:194`
+  (`WorkspaceCreateResultMessage`), `:476` (`CAPACIDADE_DE_WORKSPACE` e
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:1027`
   (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
   `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
-  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:161`
+  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:181`
   (`create_workspace/3`); `apps/engine/lib/engine/runners/capacidades.ex:95`
   (`workspace` no vocabulário, e fora do legado);
   `apps/engine/lib/engine_web/channels/terminal_channel.ex:666`
@@ -12453,7 +12450,7 @@ diferença não é escolha de desenho: é a forma do endpoint.
   (as duas consultas e o `ReconhecimentoDeMaquina`),
   `apps/web/src/components/RunnerOnboardingPanel.module.css`
   (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:434`
-  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:706`
+  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:773`
   (`RunnerDeviceKeyListItem`, `RunnerDeviceKeyEspecie`),
   `apps/web/src/locales/{en,pt-BR}/terminal.json` (`agenteDeMaquina.*`)
 - **Teste:** `apps/web/src/lib/agente-de-maquina.test.ts` — o caminho feliz
@@ -12841,32 +12838,19 @@ de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
 TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
 existia, antes de qualquer escrita.
 
-- **Código:** `install.sh:1534` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:1333` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
-  o teto), `:1433` (`parear_esta_maquina`, o `id` virando `--id`), `:1510`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1236`
+- **Código:** `install.sh:1548` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1347` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1447` (`parear_esta_maquina`, o `id` virando `--id`), `:1524`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1250`
   (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
-  `:1255` (`criar_primeira_conta`) e `:1296` (`registrar_chave_de_maquina`) —
-  os vereditos das duas rotas —, `:1311` (`ler_sem_eco`), `:1215`
-  (`nome_da_maquina`), `:1456` (`avisar_chave_parcial`), `:1194`/`:1201`
-  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1857` (a
-  chamada, depois do runner e antes do marcador), `:1792` (o `ownerEmail`).
-  Números relidos pelo símbolo em 18/09 (AT-096); os de `:966`/`:682` já não
-  batiam em 17/09
-
-- **Código:** `install.sh:1477` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:1276` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
-  o teto), `:1376` (`parear_esta_maquina`, o `id` virando `--id`), `:1453`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1179`
-  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
-  `:1220` (`criar_primeira_conta`) e `:1239` (`registrar_chave_de_maquina`) —
-  os vereditos das duas rotas —, `:1254` (`ler_sem_eco`), `:1158`
-  (`nome_da_maquina`), `:1440` (`avisar_chave_parcial`), `:1137`/`:1144`
-  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1795` (a
-  chamada, depois do runner e antes do marcador), `:1806` (o `ownerEmail`).
-  Números relidos pelo símbolo em 18/09 (AT-096) e de novo em 27/09 (AT-065,
-  que acrescentou o ramo do Mac Intel em `instalar_o_runner`); os de
-  `:966`/`:682` já não batiam em 17/09
+  `:1291` (`criar_primeira_conta`) e `:1310` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1325` (`ler_sem_eco`), `:1229`
+  (`nome_da_maquina`), `:1511` (`avisar_chave_parcial`), `:1208`/`:1215`
+  (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1871` (a
+  chamada, depois do runner e antes do marcador), `:1882` (o `ownerEmail`).
+  Números relidos pelo símbolo em 18/09 (AT-096), em 27/09 (AT-065, que
+  acrescentou o ramo do Mac Intel em `instalar_o_runner`) e em 01/10 (AT-122);
+  os de `:966`/`:682` já não batiam em 17/09
 - **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
   rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
   de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o
@@ -13609,8 +13593,8 @@ Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
 semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:604`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
+  dispatch de `container_start` consultando antes de propor), `:861`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -13693,7 +13677,7 @@ pode depender dela — é justamente por depender dela que ele não saía.
 
 - **Código:** `.github/workflows/build-runner-binaries.yml:283` (o job, agora
   sem `needs:`), `:318` (`timeout-minutes: 40`, que cabe as duas esperas),
-  `:328` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:335` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
   `:397` (o passo que espera), `:401`/`:402` (os dois tetos), `:410` (a Release
   ausente, que é erro), `:433` (o teto dos binários, que é `notice`), `:499` (o
   manifesto nomeando o que não cobre)
@@ -13764,15 +13748,15 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:240`
-  (`reason` no payload do evento de sessão), `:203` (o comentário do outbox
-  sem o campo), `:207` (o payload do outbox, intacto), `:327` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:260`
+  (`reason` no payload do evento de sessão), `:223` (o comentário do outbox
+  sem o campo), `:227` (o payload do outbox, intacto), `:356` (o
   `rejectionReason`, que continua só no `deny`);
   `apps/api/src/domain/actions/decide.ts:276` (`Decision`, a fonte da string)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:742`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:834` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:862` (`deny` com o mesmo texto do `rejectionReason`), `:811` (o outbox
+  `:925` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:953` (`deny` com o mesmo texto do `rejectionReason`), `:971` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -14121,7 +14105,7 @@ compose de desenvolvimento, que sobe o broker por padrão ([RN-512](#rn-512)) ma
 deixa `BROKER_URL` vazia até alguém a pôr no `.env`, o aviso aparece — e está
 certo, porque sem a variável a api nunca chama o broker.
 
-- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:377`
+- **Código:** `apps/api/src/interfaces/http/iam/workspaces.controller.ts:404`
   (`getProjectsBase`, `:256` o campo novo),
   `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:554`,
   `apps/api/src/interfaces/http/iam/iam-http.module.ts` (o módulo do broker
@@ -14185,7 +14169,7 @@ instalação sem broker continua possível pelo agente.
   `mounted` recusam antes da imagem), `:70` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:522` (botão inerte e o motivo
-  em texto, nunca propõe), `:577` (`runner` segue subindo)
+  em texto, nunca propõe), `:594` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -14332,7 +14316,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:532`
+  `propose_infra_pr` perguntando antes do HALT), `:559`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14423,7 +14407,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:983`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1059`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14632,7 +14616,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:897` (`avisar_canal`);
+  `:607`, `:630`, `:928` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14813,8 +14797,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:949`
-  (`narrar_recusa_de_sessao_encerrada`), `:1243` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1014`
+  (`narrar_recusa_de_sessao_encerrada`), `:1308` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -14922,8 +14906,8 @@ toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:206`
-  (`reopen`); `apps/web/src/lib/api-client.ts:629` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:150` (`podeReabrir`), `:531`
+  (`reopen`); `apps/web/src/lib/api-client.ts:623` (`reopenSession`);
+  `apps/web/src/routes/SessionPage.tsx:150` (`podeReabrir`), `:525`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
 - **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:22`
@@ -15314,11 +15298,12 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:414`
-  (`recusar_mensagem/5`) e `:415` (`registrar_recusa_de_mensagem/3`)
-- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
-  (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
-  não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:547`
+  (`recusar_mensagem/5`) e `:552` (`registrar_recusa_de_mensagem/3`)
+- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:164`
+  (`qa`, o agente do roster que segue sem conversa — até a RN-617 o caso era o
+  `infra`, que passou a conversar: o `agent.error` com a frase e o motivo), `:178` (nome desconhecido
+  não vira ator), `:194`, `:209`, `:224` (sem sessão: nada gravado — caso de
   falha); mutação medida: com o registro removido, 4 dos 5 falham;
   `scripts/ci/destinos-do-composer.spec.ts` (a recusa de `message/2` é
   `recusar_mensagem/5` e ela grava o `agent.error`; seis mutações mortas)
@@ -15515,7 +15500,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:745`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:776`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15607,9 +15592,9 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:308`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:661`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:736`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:983`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1014`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
@@ -15802,7 +15787,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1699` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1784` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15886,7 +15871,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1643` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1736` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -15959,15 +15944,15 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:248`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:268`
   (`scopeRoot` só em `terminal`);
   `apps/api/src/domain/actions/decide.ts:559` (`terminalNoEscopo`, o único
   consumidor do escopo)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:958`
-  (`container`), `:973` (`mounted`), `:989` (`runner`), `:1004` (o caminho
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1049`
+  (`container`), `:1064` (`mounted`), `:1080` (`runner`), `:1095` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
-  da base), `:1028` (`indisponivel`), `:1044` (outro tipo e o outbox sem o
-  campo), `:1064` (evento anterior, sem o campo, pela mesma leitura);
+  da base), `:1119` (`indisponivel`), `:1135` (outro tipo e o outbox sem o
+  campo), `:1155` (evento anterior, sem o campo, pela mesma leitura);
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
   (a função pura, nos três modos e nos três casos de `indisponivel`)
 - **ADR:** [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7)
@@ -16048,10 +16033,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:830`
-  (`recusa_local_de_subida`), `:883` (`recusa_por_estado`), `:907`
-  (`recusa_ja_de_pe`), `:925` (`recusa_sem_imagem_decidida`), `:942`
-  (`recusa_pasta_nunca_confirmada`), `:953` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:861`
+  (`recusa_local_de_subida`), `:914` (`recusa_por_estado`), `:938`
+  (`recusa_ja_de_pe`), `:925` (`recusa_sem_imagem_decidida`), `:973`
+  (`recusa_pasta_nunca_confirmada`), `:984` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16381,7 +16366,7 @@ uma linha de log com de/para/quem.
   (`TransferWorkspaceOwnershipUseCase`);
   `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:98`
   (`transferirTitularidade`);
-  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:297`
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:324`
   (`transferOwnership`)
 - **Teste:**
   `apps/api/test/application/use-cases/iam/remove-workspace-member.use-case.spec.ts`
@@ -16474,18 +16459,18 @@ deu e com as quatro ferramentas.
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:187`
   (`user_message`), `:207` (`TurnoOrfao.fechar_ao_subir`), `:248`
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
-  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:327`
-  (`handle_info`), `:346` (`drenar_correcao_pendente`), `:393`
-  (`toolloop.limit_reached`), `:1006` (`concluir`);
+  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
+  (`handle_info`), `:373` (`drenar_correcao_pendente`), `:420`
+  (`toolloop.limit_reached`), `:1037` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:459`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:592`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1675` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1683` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -16678,7 +16663,7 @@ turno com autor humano — a divergência que esta regra declarava fechou.
   `apps/api/src/application/use-cases/iam/create-project.use-case.ts:72`
   (`language`); `apps/api/src/application/use-cases/iam/update-project.use-case.ts:18`
   (`idiomaDoProjetoOuRecusa`);
-  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:219`
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts:233`
   (`language`); `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/api/test/application/use-cases/iam/idioma-do-projeto.use-case.spec.ts:63`
   (nasce com o idioma de quem cria), `:74` (a escolha da conta vence a
@@ -16737,7 +16722,7 @@ turno com autor humano — a divergência que esta regra declarava fechou.
   (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
   (`origemPorExtenso`), `:219` (`podeTrocar`);
   `apps/web/src/routes/SessionTopbar.tsx:243` (`SessionLanguageIndicator`),
-  `:116` (`modoDaBarra`), `:343` (`AjustesAgrupados`);
+  `:116` (`modoDaBarra`), `:360` (`AjustesAgrupados`);
   `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
 - **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
   1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
@@ -16829,17 +16814,17 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
-  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:634`
+  (`IdiomaDaResposta`), `:704` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
   `apps/engine/lib/engine/agents/criativo_server.ex:136` (`handle_call`, e a
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:78`
-  (`resolverIdioma`), `:53` (`idiomaAlvo`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:116`
+  (`resolverIdioma`), `:74` (`idiomaAlvo`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
@@ -16927,8 +16912,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:260` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
-  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:634`
+  (`IdiomaDaResposta`), `:704` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17191,8 +17176,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:615`
-  (`llm_turn`), `:685` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:630`
+  (`llm_turn`), `:700` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17289,11 +17274,9 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
-  (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:84` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:138` (`podeDecidir`), `:267`
-
-  `apps/web/src/routes/SessionPage.tsx:145` (`podeDecidir`), `:287`
-  (`useRetomarTurnoDoLog`), `:899` (`PendenciasDeOutrasSessoes`)
+  (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
+  `apps/web/src/routes/SessionPage.tsx:147` (`podeDecidir`), `:274`
+  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17444,7 +17427,7 @@ seguiram em `in_review` (AT-275).
    proposta repetida) veio depois, na [RN-663](#rn-663), antes de o merge
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:252`
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:257`
   (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:311`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
@@ -17645,7 +17628,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:252` (`destinatarioRow`), `:168`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:362`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
   (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -17723,7 +17706,7 @@ sem quem navegue (a tela montada fora da rota), só o aviso de sempre, e a tela
 fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
-- **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:178`
+- **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
   (`handleActivateExecution`); `apps/web/src/router.tsx:332` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
@@ -17853,7 +17836,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`travarOfertasDoDestino`);
   `apps/api/src/infrastructure/persistence/drizzle/handoff.repository.ts:94`
   (`travarOfertasDoDestino`);
-  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:84`
+  `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:88`
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
   (`substituirOfertasAoAtivar`);
@@ -17898,7 +17881,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1048`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1105`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -18467,7 +18450,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1126`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1113`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18653,7 +18636,7 @@ leitura existe para nomear, e as rotas de escrita seguem sendo de API.
   (`listMembers`);
   `apps/api/src/application/use-cases/iam/list-workspace-members.use-case.ts:16`
   (`execute`);
-  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:114`
+  `apps/api/src/infrastructure/persistence/drizzle/workspace.repository.ts:127`
   (`listMembers`)
 - **Teste:**
   `apps/api/test/application/use-cases/iam/list-workspace-members.use-case.spec.ts:75`
@@ -18749,7 +18732,7 @@ vale só para aquele projeto. Os dois scripts de validação que exercitam o flu
 manual (`validacao-fase-12.ts`, `validacao-real.ts`) passam a pedir `manual`
 explícito.
 
-- **Código:** `apps/api/src/db/schema/iam.ts:278` (`storyPromotion`);
+- **Código:** `apps/api/src/db/schema/iam.ts:282` (`storyPromotion`);
   `apps/api/src/db/migrations/0065_default_de_promocao_auto.sql`;
   `apps/web/src/routes/NewProjectWizard.tsx:978` (a linha do Confirmar);
   `apps/web/src/routes/settings/PromotionSection.tsx:75` (a nota do default)
@@ -19066,8 +19049,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:452`
-  (`dispatch_calls`), `:498` (`recusa_pr_repetida_no_lote`), `:1091`
-  (`registrar_subida`), `:1099` (`fechar_subida`), `:1117`
+  (`dispatch_calls`), `:525` (`recusa_pr_repetida_no_lote`), `:1122`
+  (`registrar_subida`), `:1130` (`fechar_subida`), `:1148`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19110,7 +19093,7 @@ existe.
   várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
   `apps/api/src/domain/actions/decide.ts:273` (`execucaoNoContainer`), `:571`
   (`execucaoNoContainer`, em `terminalNoEscopo`);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:150`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:170`
   (`containerExecutionActive`, separado de `execucaoNoContainer`)
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts:1274` (com container
   `/work`, `.worktrees`, `/tmp` e `..` dentro — caminho feliz; `/etc`, outro
@@ -19269,8 +19252,8 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:933` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:572`
-  (`merge_ja_proposto`), `:595` (`pr_ja_mergeado` — caso de falha), `:627`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
+  (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
   `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:473`;
   `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
@@ -19323,9 +19306,9 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:268` (`handle_cast`),
-  `:603` (`propor_container_start`), `:666` (`subir_no_aceite`), `:708`
-  (`eleger_candidata`), `:1257` (`passo_da_subida`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
+  `:630` (`propor_container_start`), `:693` (`subir_no_aceite`), `:739`
+  (`eleger_candidata`), `:1288` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
@@ -19376,8 +19359,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1036` (`oferecer_ao_dev_lead`),
-  `:1006` (`concluir`), `:317` (`handle_info`), `:1023`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1067` (`oferecer_ao_dev_lead`),
+  `:1037` (`concluir`), `:345` (`handle_info`), `:1054`
   (`topico_do_container`);
   `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
   `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
@@ -19502,8 +19485,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:244` (`run_assessment`),
-  `:315` (`propor_parecer`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:303` (`run_assessment`),
+  `:374` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19553,12 +19536,12 @@ recusa nomeada.
 5. **O log nunca traz nome nem valor de variável do `env`**: a recusa dá a
    contagem, e o log do caminho host acrescenta só `[git credenciado, no host]`.
 
-- **Código:** `apps/runner/src/index.ts:685` (`gitCredenciadoNoHost`), `:650`
+- **Código:** `apps/runner/src/index.ts:694` (`gitCredenciadoNoHost`), `:659`
   (`tratarExec`); `apps/runner/src/channel.ts:71` (`gitCredenciado`), `:627`
   (`gitCredenciado`); `apps/engine/lib/engine/runners/runner_router.ex:93`
   (`exec_git_credenciado`), `:98` (`despachar_exec`);
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:338` (`exec`), `:426`
-  (`despachar`); `apps/engine/lib/engine_web/channels/terminal_channel.ex:605`
+  (`despachar`); `apps/engine/lib/engine_web/channels/terminal_channel.ex:609`
   (`git_credenciado`); `apps/engine/lib/engine/runners/credencial_de_git.ex:93`
   (`mensagem`)
 - **Teste:** `apps/runner/src/index-handlers.spec.ts:366` (o helper real do
@@ -19629,8 +19612,8 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:240` (`_mensagem_id`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:398`
-  (`cancel_queued_message`), `:466` (`responder_ao_aceite`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:393`
+  (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
   (`CancelQueuedAgentMessageUseCase`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:65`
@@ -19704,10 +19687,10 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:329`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:334`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:224`
-  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:653`
+  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:692`
   (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:301`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
@@ -19771,8 +19754,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:180` (`module`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:511`
-  (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:211`
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:550`
+  (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:200`
   (`erro_da_proposta`)
 - **Teste:** `apps/api/test/domain/execution/plano-de-execucao.spec.ts:22`
   (caminho feliz), `:41` (tarefa sem módulo — caso de falha), `:49` (módulo
@@ -19844,7 +19827,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
   `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:87` (`resolverPerfil`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:97` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:213` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
@@ -19920,7 +19903,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
   `apps/web/src/lib/session-destinatario.ts:270` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:655` (`handleSend`);
+  `apps/web/src/routes/SessionPage.tsx:643` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -19974,7 +19957,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   (`execute`);
   `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
   (`execute`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:622`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:663`
   (`moduleContracts`);
   `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
   (`moduleContracts`);

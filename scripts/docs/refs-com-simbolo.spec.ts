@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { aferir, candidatos, conferir, extrairRefs, resolverCaminho } from './refs-com-simbolo.mjs';
+import { aferir, candidatos, conferir, extrairRefs, resolverCaminho, veredito } from './refs-com-simbolo.mjs';
 
 /**
  * A regra (AT-096): uma ref `caminho:N` seguida de `(`símbolo`` numa RN diz
@@ -139,5 +139,45 @@ describe('resolverCaminho e aferir', () => {
     expect(r.naoBatem).toHaveLength(1);
     expect(r.naoBatem[0]).toMatchObject({ resolvido: 'install.sh', linha: 30, achadoEm: 3, linhaNoDoc: 1 });
     expect(r.naoResolvidas).toHaveLength(1);
+  });
+});
+
+describe('veredito (em `block` desde a AT-122)', () => {
+  const raiz = mkdtempSync(join(tmpdir(), 'refs-veredito-'));
+  mkdirSync(join(raiz, 'docs'), { recursive: true });
+  writeFileSync(join(raiz, 'install.sh'), 'a\nb\npost_interno() {\n' + 'x\n'.repeat(20) + 'ler_sem_eco() {\n');
+  const versionados = ['install.sh'];
+  const comRn = (rn: string) => {
+    writeFileSync(join(raiz, 'docs/rn.md'), rn);
+    return veredito(aferir(raiz, versionados, ['docs/rn.md']));
+  };
+  const certa = '- `install.sh:3` (`post_interno`), `:24` (`ler_sem_eco`)\n';
+
+  it('todas batem: ok', () => {
+    expect(comRn(certa)).toBe('ok');
+  });
+
+  it('MUTAÇÃO: uma ref deslocada para fora da janela reprova', () => {
+    expect(comRn(certa.replace('`:24`', '`:14`'))).toBe('reprova');
+  });
+
+  it('MUTAÇÃO: o símbolo que sumiu do arquivo reprova', () => {
+    expect(comRn(certa.replace('ler_sem_eco', 'ler_com_eco'))).toBe('reprova');
+  });
+
+  it('MUTAÇÃO: ref cujo arquivo saiu (não resolve) reprova', () => {
+    expect(comRn(certa + '- `sumiu.sh:1` (`foo`)\n')).toBe('reprova');
+  });
+
+  it('MUTAÇÃO: texto reescrito a ponto de a extração dar zero é CEGO, nunca ok', () => {
+    expect(comRn('- `install.sh:3` — post_interno, e `:24` — ler_sem_eco\n')).toBe('CEGO');
+    expect(comRn('')).toBe('CEGO');
+  });
+
+  it('o veredito é puro sobre o resultado', () => {
+    expect(veredito({ total: 0, naoBatem: [], naoResolvidas: [] })).toBe('CEGO');
+    expect(veredito({ total: 0, naoBatem: [], naoResolvidas: [{}] })).toBe('reprova');
+    expect(veredito({ total: 2, naoBatem: [{}], naoResolvidas: [] })).toBe('reprova');
+    expect(veredito({ total: 2, naoBatem: [], naoResolvidas: [] })).toBe('ok');
   });
 });

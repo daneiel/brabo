@@ -685,6 +685,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não enxerga), e um `TODO(humano)` registra que nenhum compose as repassa ao
   serviço `api`.
 
+- **docs**: o `pnpm docs:check` passa a REPROVAR ref `caminho:N` (`símbolo`)
+  de RN que não bate com o código, ou cujo caminho não resolve a um arquivo só
+  (AT-122) — a aferição da AT-096 sai de `warn` para `block`, por decisão do
+  dono, porque a lista zerou em 26/09 e voltou a 140 em cinco dias. As 140
+  foram relidas pelo símbolo (nenhum falso positivo, nenhum símbolo ausente);
+  três bullets duplicados por resolução de conflito saíram (RN-120, RN-547,
+  RN-626), e a ref de teste da RN-587 passa a nomear o `qa`, que substituiu o
+  `infra` no teste desde a RN-617. Resultado: 883 refs casam o padrão, 883
+  batem. A janela segue ±3 e zero refs continua `CEGO`. Ver
+  [documentation-workflow.md](docs/explanation/documentation-workflow.md#line-references-with-a-symbol).
+
 - **ci**: o `release.yml` passa a escanear com Trivy as imagens que PUBLICA,
   por digest e antes de assiná-las (AT-179, ADR 0172). HIGH ou CRITICAL com
   correção disponível reprova o release e a imagem não recebe assinatura — com
@@ -852,6 +863,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   por timer.
 
 ### Correções
+
+- **api/ci (segurança)**: fecham os sete alertas novos do CodeQL que
+  reprovavam o check da promoção `qa → main` (AT-344, AT-345, AT-346). O aviso
+  ao canal da sessão (`SessionChannelNotifier`, RN-579) só monta a URL de
+  `POST /internal/sessions/:id/event-appended` para `sessionId` em forma de
+  UUID — validado no MESMO escopo que monta a URL, com o segmento por
+  `encodeURIComponent` e a URL conferida contra a ORIGEM e o caminho do
+  `ENGINE_URL`; id com `/`, `..`, `?`, `#`, `@` ou `%2F` não vira chamada
+  (`js/request-forgery`, crítico; o host nunca vinha do usuário, e o id de
+  sessão já é `uuid` no banco, então nenhum aviso legítimo deixa de sair). O
+  resumo do Trivy da release escapa a barra invertida ANTES da barra vertical
+  em cada célula, e quebra de linha vira espaço — um `x\|y` vindo do relatório
+  não abre mais coluna (`js/incomplete-sanitization`). E os specs de
+  `scripts/` que carregam um `.sh` por `bash -c` passam o caminho como
+  ARGUMENTO posicional (`source "$1"`) em vez de interpolá-lo na string do
+  comando (`js/shell-command-injection-from-environment`): os quatro specs
+  acusados e outros sete com o mesmo molde.
 
 - **web/api**: a sessão consultiva sem agente deixa de mandar a mensagem ao
   modelo cru (AT-254, [RN-682](docs/business-rules.md#rn-682)). Até aqui o

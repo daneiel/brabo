@@ -1616,7 +1616,7 @@ que não libera o escopo.
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:175`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:195`
   (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
@@ -2419,7 +2419,7 @@ descrito aqui.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:510` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:504` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),

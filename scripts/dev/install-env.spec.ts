@@ -101,7 +101,7 @@ function gerarEnv(
     'bash',
     [
       '-c',
-      `source "${carregavel()}"
+      `source "$3"
        BASE_DE_PROJETOS="$1"
        ${estadoDoBroker}
        gerar_segredos "$2"
@@ -111,6 +111,8 @@ function gerarEnv(
       'install-env',
       base,
       arquivo,
+      // O caminho vai como argumento posicional ($3), nunca interpolado no `-c` (AT-346).
+      carregavel(),
     ],
     { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
   );
@@ -204,7 +206,7 @@ describe('o .env do instalador (AT-083)', () => {
       'bash',
       [
         '-c',
-        `source "${carregavel()}"
+        `source "$3"
          BASE_DE_PROJETOS="$2"
          SECRET_KEY_BASE="$(openssl rand -base64 64)"
          gerar_segredos
@@ -213,6 +215,7 @@ describe('o .env do instalador (AT-083)', () => {
         'install-env',
         arquivo,
         path.join(tmp, 'projetos'),
+        carregavel(),
       ],
       { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
     );
@@ -362,13 +365,14 @@ describe('o .env do instalador liga o broker só quando consentido (ADR 0162)', 
       'bash',
       [
         '-c',
-        `source "${carregavel()}"
+        `source "$3"
          BASE_DE_PROJETOS="$2"; BROKER_LIGADO=sim; DOCKER_GID_MEDIDO=''
          gerar_segredos
          escrever_env "$1"`,
         'install-env',
         arquivo,
         path.join(tmp, 'projetos'),
+        carregavel(),
       ],
       { env: { ...ambienteLimpo(), ...IMAGENS }, encoding: 'utf8' },
     );

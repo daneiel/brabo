@@ -28,6 +28,9 @@ const FORMA_CERTA =
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-install-invocacao-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
+// Caminho de arquivo NUNCA entra interpolado na string de um `-c`: vai como
+// argumento posicional (`'source "$1"…', 'bash', caminho`) — AT-346, CodeQL
+// `js/shell-command-injection-from-environment`.
 function rodar(
   comando: string,
   args: string[],
@@ -110,10 +113,12 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
   it('`hash_sha256` de um arquivo ausente recusa dizendo o quê — e o chamador para ali', () => {
     const r = rodar('bash', [
       '-c',
-      `source "${carregavel()}"
+      `source "$1"
        exigir_ferramenta_de_hash
        x="$(hash_sha256 /nao/existe/install.sh)"
        echo "SEGUIU:[$x]"`,
+      'bash',
+      carregavel(),
     ]);
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
@@ -127,9 +132,11 @@ describe('a ferramenta de hash que não consegue ler o arquivo falha NOMEADA (AT
     // incidente — a acusação de adulteração da AT-091, por outro caminho.
     const r = rodar('bash', [
       '-c',
-      `source "${carregavel()}"
+      `source "$1"
        exigir_ferramenta_de_hash
        conferir_hash /nao/existe abc 'MOTIVO-DE-INCIDENTE: pare e investigue'`,
+      'bash',
+      carregavel(),
     ]);
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('não consegui calcular o sha256');
@@ -147,7 +154,7 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     const corpo = fonte().replace(/\nmain\s+"\$@"\s*$/, '\n');
     const caminho = path.join(tmp, 'install-constante.sh');
     fs.writeFileSync(caminho, corpo);
-    const r = rodar('bash', ['-c', `source "${caminho}"; printf '%s' "$COMO_RODAR"`]);
+    const r = rodar('bash', ['-c', 'source "$1"; printf \'%s\' "$COMO_RODAR"', 'bash', caminho]);
     expect(r.stdout).toBe(FORMA_CERTA);
   });
 
