@@ -2541,9 +2541,65 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/semantic-duplicate-check": {
+      "post": {
+        "description": "Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).",
+        "operationId": "InternalSessionsController_semanticDuplicateCheck",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticDuplicateCheckInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticDuplicateCheckResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Warns when a just-written business rule looks like an existing one",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/stories": {
       "post": {
-        "description": "`businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id.",
+        "description": "`businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id. The response also carries `semanticDuplicate` (RN-681): an embedding-based WARNING against the project stories, never a refusal.",
         "operationId": "InternalSessionsController_story",
         "parameters": [
           {
@@ -2571,7 +2627,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoryResponseDto"
+                  "$ref": "#/components/schemas/CreatedStoryResponseDto"
                 }
               }
             }
@@ -15422,6 +15478,156 @@
           "systemName"
         ]
       },
+      "CreatedStoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "epicId": {
+            "type": "string",
+            "example": "01JC4Z0000EPICO000000000001"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "01JC4Z8QK3M7YV2N5T9B0PXHRA"
+          },
+          "title": {
+            "type": "string",
+            "example": "Add item to cart"
+          },
+          "description": {
+            "type": "string",
+            "example": "As a buyer, I want to gather items before paying."
+          },
+          "rf": {
+            "example": [
+              "The cart accepts up to 50 items"
+            ],
+            "description": "Functional requirements.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rnf": {
+            "example": [
+              "The response stays under 200 ms at p95"
+            ],
+            "description": "Non-functional requirements.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "businessRuleIds": {
+            "example": [
+              "RN-014"
+            ],
+            "description": "Business rules covered. This is where rule→story coverage is computed in `GET /projects/:id/coverage`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dod": {
+            "example": [
+              "Unit tests green"
+            ],
+            "description": "Definition of done.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dor": {
+            "example": [
+              "Module defined"
+            ],
+            "description": "Definition of ready.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "moduleIds": {
+            "example": [
+              "api"
+            ],
+            "description": "Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "ready",
+              "in_progress",
+              "done"
+            ],
+            "example": "ready"
+          },
+          "proposedReady": {
+            "type": "boolean",
+            "example": true,
+            "description": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode."
+          },
+          "returnedReason": {
+            "type": "object",
+            "example": "DoD too generic — spell out the acceptance criteria.",
+            "nullable": true,
+            "description": "Why the user returned the story to the PO. `null` when it was never returned."
+          },
+          "returnedAt": {
+            "type": "object",
+            "example": "2026-08-02T14:00:00.000Z",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-07-25T09:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-07-25T09:40:00.000Z",
+            "format": "date-time"
+          },
+          "semanticDuplicate": {
+            "$ref": "#/components/schemas/SemanticDuplicateCheckResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "epicId",
+          "projectId",
+          "sessionId",
+          "title",
+          "description",
+          "rf",
+          "rnf",
+          "businessRuleIds",
+          "dod",
+          "dor",
+          "moduleIds",
+          "status",
+          "proposedReady",
+          "returnedReason",
+          "returnedAt",
+          "createdAt",
+          "updatedAt",
+          "semanticDuplicate"
+        ]
+      },
       "CreateEpicInternalDto": {
         "type": "object",
         "properties": {
@@ -22221,6 +22427,113 @@
           "ticket",
           "expiresAt",
           "engineWsUrl"
+        ]
+      },
+      "SemanticDuplicateCheckInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "business_rule"
+            ],
+            "example": "business_rule"
+          },
+          "title": {
+            "type": "string",
+            "example": "Greeting with the caller name",
+            "description": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison."
+          }
+        },
+        "required": [
+          "projectId",
+          "kind",
+          "title"
+        ]
+      },
+      "SemanticDuplicateCheckResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "warned",
+              "clean",
+              "skipped",
+              "nothing_to_compare"
+            ],
+            "description": "`warned` NEVER blocks: the item was already written. `skipped` carries the reason — no embedding provider, daemon down, the 10 s ceiling — and is also narrated in the event log."
+          },
+          "similarTo": {
+            "$ref": "#/components/schemas/SemanticDuplicateSimilarDto"
+          },
+          "closest": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SemanticDuplicateSimilarDto"
+              }
+            ]
+          },
+          "similarity": {
+            "type": "number",
+            "example": 0.83
+          },
+          "threshold": {
+            "type": "number",
+            "example": 0.8,
+            "description": "Cosine threshold — a STARTING POINT, not calibrated (ADR 0198)."
+          },
+          "compared": {
+            "type": "number",
+            "example": 12,
+            "description": "How many existing items were compared (the most recent, up to 100)."
+          },
+          "total": {
+            "type": "number",
+            "example": 12,
+            "description": "How many exist in the project."
+          },
+          "reason": {
+            "type": "string",
+            "example": "provider \"ollama\" did not answer"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "description": "The sentence the agent reads in the tool result; `null` when there is nothing to say."
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ]
+      },
+      "SemanticDuplicateSimilarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000HISTORIA000000001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Deterministic public greeting endpoint"
+          },
+          "similarity": {
+            "type": "number",
+            "example": 0.83
+          }
+        },
+        "required": [
+          "id",
+          "title"
         ]
       },
       "SendAgentMessageDto": {

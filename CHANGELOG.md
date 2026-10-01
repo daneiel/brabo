@@ -57,6 +57,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**, **engine**: **história e regra parecidas com uma existente geram
+  AVISO por embedding** (AT-171,
+  [ADR 0198](docs/adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md),
+  [RN-681](docs/business-rules/custo.md#rn-681)). Depois de gravar, o título é
+  comparado com os do mesmo tipo no projeto pelo modelo de embedding do RAG, e
+  cosseno a partir de 0,80 volta ao PO/Criativo no resultado de `create_story`
+  ou `emit_artifact` e vira `backlog.semantic_duplicate_warned` no log — nunca
+  recusa (a duplicata exata segue recusada, RN-080/081). O limiar é PONTO DE
+  PARTIDA não calibrado: os vetores reais dos pares de calibração ainda não
+  foram gravados (`apps/api/scripts/gravar-vetores-de-duplicata.ts`). Sem
+  provider de embedding (só o Ollama declara), a checagem é PULADA e diz por
+  quê (`backlog.semantic_duplicate_check_skipped`). **O gasto entra no
+  metering** como linha própria de `token_usage` (ator
+  `system`/`duplicata-semantica`) — exceção ao corte do ADR 0075 só para esta
+  checagem. Emitir fica mais lento com projeto grande: até 101 títulos
+  vetorizados por emissão, teto de 10 s.
+
 - **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
   [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
   [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o

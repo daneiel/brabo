@@ -1,0 +1,69 @@
+---
+id: internal-sessions-controller-semantic-duplicate-check
+title: "Warns when a just-written business rule looks like an existing one"
+description: "Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`)."
+sidebar_label: "Warns when a just-written business rule looks like an existing one"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Warns when a just-written business rule looks like an existing one"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/sessions/{sessionId}/semantic-duplicate-check"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-sessions-controller-semantic-duplicate-check.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-sessions-controller-semantic-duplicate-check.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-sessions-controller-semantic-duplicate-check.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

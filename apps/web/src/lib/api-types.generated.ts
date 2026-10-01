@@ -1042,6 +1042,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/semantic-duplicate-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Warns when a just-written business rule looks like an existing one
+         * @description Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).
+         */
+        post: operations["InternalSessionsController_semanticDuplicateCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/stories": {
         parameters: {
             query?: never;
@@ -1053,7 +1073,7 @@ export interface paths {
         put?: never;
         /**
          * Creates a story with functional/non-functional requirements, DoD, DoR, and covered rules
-         * @description `businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id.
+         * @description `businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id. The response also carries `semanticDuplicate` (RN-681): an embedding-based WARNING against the project stories, never a refusal.
          */
         post: operations["InternalSessionsController_story"];
         delete?: never;
@@ -5430,6 +5450,93 @@ export interface components {
             /** @description External actors of the Context level (Simon Brown). The Container level's containers do NOT go here: they come from the project's current module_map. */
             actors?: components["schemas"]["C4AtorInternalDto"][];
         };
+        CreatedStoryResponseDto: {
+            /** @example 01JC4Z0000HISTORIA000000001 */
+            id: string;
+            /** @example 01JC4Z0000EPICO000000000001 */
+            epicId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example Add item to cart */
+            title: string;
+            /** @example As a buyer, I want to gather items before paying. */
+            description: string;
+            /**
+             * @description Functional requirements.
+             * @example [
+             *       "The cart accepts up to 50 items"
+             *     ]
+             */
+            rf: string[];
+            /**
+             * @description Non-functional requirements.
+             * @example [
+             *       "The response stays under 200 ms at p95"
+             *     ]
+             */
+            rnf: string[];
+            /**
+             * @description Business rules covered. This is where rule→story coverage is computed in `GET /projects/:id/coverage`.
+             * @example [
+             *       "RN-014"
+             *     ]
+             */
+            businessRuleIds: string[];
+            /**
+             * @description Definition of done.
+             * @example [
+             *       "Unit tests green"
+             *     ]
+             */
+            dod: string[];
+            /**
+             * @description Definition of ready.
+             * @example [
+             *       "Module defined"
+             *     ]
+             */
+            dor: string[];
+            /**
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @example [
+             *       "api"
+             *     ]
+             */
+            moduleIds: string[];
+            /**
+             * @example ready
+             * @enum {string}
+             */
+            status: "draft" | "ready" | "in_progress" | "done";
+            /**
+             * @description The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: "draft"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.
+             * @example true
+             */
+            proposedReady: boolean;
+            /**
+             * @description Why the user returned the story to the PO. `null` when it was never returned.
+             * @example DoD too generic — spell out the acceptance criteria.
+             */
+            returnedReason: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-08-02T14:00:00.000Z
+             */
+            returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-25T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-25T09:40:00.000Z
+             */
+            updatedAt: string;
+            semanticDuplicate: components["schemas"]["SemanticDuplicateCheckResponseDto"];
+        };
         CreateEpicInternalDto: {
             /**
              * Format: uuid
@@ -8904,6 +9011,61 @@ export interface components {
              */
             engineWsUrl: string;
         };
+        SemanticDuplicateCheckInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * @example business_rule
+             * @enum {string}
+             */
+            kind: "business_rule";
+            /**
+             * @description Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.
+             * @example Greeting with the caller name
+             */
+            title: string;
+        };
+        SemanticDuplicateCheckResponseDto: {
+            /**
+             * @description `warned` NEVER blocks: the item was already written. `skipped` carries the reason — no embedding provider, daemon down, the 10 s ceiling — and is also narrated in the event log.
+             * @enum {string}
+             */
+            status: "warned" | "clean" | "skipped" | "nothing_to_compare";
+            similarTo?: components["schemas"]["SemanticDuplicateSimilarDto"];
+            closest?: components["schemas"]["SemanticDuplicateSimilarDto"] | null;
+            /** @example 0.83 */
+            similarity?: number;
+            /**
+             * @description Cosine threshold — a STARTING POINT, not calibrated (ADR 0198).
+             * @example 0.8
+             */
+            threshold?: number;
+            /**
+             * @description How many existing items were compared (the most recent, up to 100).
+             * @example 12
+             */
+            compared?: number;
+            /**
+             * @description How many exist in the project.
+             * @example 12
+             */
+            total?: number;
+            /** @example provider "ollama" did not answer */
+            reason?: string;
+            /** @description The sentence the agent reads in the tool result; `null` when there is nothing to say. */
+            message: string | null;
+        };
+        SemanticDuplicateSimilarDto: {
+            /** @example 01JC4Z0000HISTORIA000000001 */
+            id: string;
+            /** @example Deterministic public greeting endpoint */
+            title: string;
+            /** @example 0.83 */
+            similarity?: number;
+        };
         SendAgentMessageDto: {
             /**
              * @description User's message to the session's active agent.
@@ -12045,6 +12207,52 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_semanticDuplicateCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemanticDuplicateCheckInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticDuplicateCheckResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_story: {
         parameters: {
             query?: never;
@@ -12065,7 +12273,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StoryResponseDto"];
+                    "application/json": components["schemas"]["CreatedStoryResponseDto"];
                 };
             };
             /** @description Invalid body. */

@@ -9,8 +9,14 @@ defmodule Engine.Harness.Tools.EmitArtifact do
   `business_rule` passa antes por uma checagem de duplicata EXATA no
   projeto (`Engine.Harness.ArtifactDedupe`) — o evento é imutável, então
   o único momento em que dá para recusar é a entrada. Duplicata
-  SEMÂNTICA continua passando, e de propósito: ver o moduledoc de lá.
+  SEMÂNTICA continua passando — não é recusada —, mas desde a RN-681
+  (ADR 0198) é AVISADA: depois de gravar, a api compara o título com os das
+  regras do projeto por embedding e a frase dela volta ao modelo junto com o
+  "emitido". Checagem que não pôde rodar diz por quê; falha DELA nunca vira
+  falha da emissão.
   """
+
+  require Logger
 
   @behaviour Engine.Harness.Tool
 
@@ -128,7 +134,7 @@ defmodule Engine.Harness.Tools.EmitArtifact do
         }
 
         case EngineApiClient.append_event(ctx.project_id, ctx.session_id, event) do
-          :ok -> {:ok, "artefato #{type} emitido"}
+          :ok -> {:ok, "artefato #{type} emitido" <> aviso_semantico(type, payload, ctx)}
           {:error, reason} -> {:error, "falha ao emitir artefato: #{inspect(reason)}"}
         end
 
@@ -136,4 +142,32 @@ defmodule Engine.Harness.Tools.EmitArtifact do
         {:error, "artefato inválido: #{inspect(reason)}"}
     end
   end
+
+  # RN-681: a duplicata SEMÂNTICA, só para `business_rule` (a mesma fronteira
+  # da RN-080). Roda DEPOIS do append — a regra já existe, e o aviso é sobre
+  # ela, nunca uma recusa. Tudo o que der errado aqui vira TEXTO no resultado
+  # e linha de log, e a emissão continua `{:ok, _}`.
+  defp aviso_semantico("business_rule", %{"title" => titulo}, ctx) when is_binary(titulo) do
+    case EngineApiClient.check_semantic_duplicate(ctx.project_id, ctx.session_id, %{
+           kind: "business_rule",
+           title: titulo
+         }) do
+      {:ok, %{"message" => mensagem}} when is_binary(mensagem) and mensagem != "" ->
+        "\n" <> mensagem
+
+      {:ok, _sem_frase} ->
+        ""
+
+      {:error, motivo} ->
+        Logger.warning(
+          "[infra] checagem de duplicata semântica não respondeu " <>
+            "(sessão #{ctx.session_id}): #{inspect(motivo)}"
+        )
+
+        "\nA checagem de duplicata semântica não respondeu (#{inspect(motivo)}); " <>
+          "a regra foi registrada sem ela."
+    end
+  end
+
+  defp aviso_semantico(_type, _payload, _ctx), do: ""
 end

@@ -153,6 +153,21 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198): chamada por
+  `emit_artifact` DEPOIS de gravar a regra. `fields` leva `kind`
+  (`"business_rule"`) e `title`; devolve `{:ok, %{"status" => ..., "message"
+  => texto | nil}}`. Nunca recusa a regra — ela já existe —, e quem chama
+  não deixa uma falha desta chamada virar falha da emissão. A história não
+  passa por aqui: a api checa dentro da própria criação, e o aviso volta no
+  corpo de `create_story` (`"semanticDuplicate"`).
+  """
+  @callback check_semantic_duplicate(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
   Ferramentas de LEITURA do PO (RN-164) — as três escopadas ao PROJETO, não à
   sessão: regra de negócio, backlog e métricas de produto atravessam as
   sessões, e limitar a leitura à sessão corrente é justamente o que fazia o
@@ -728,6 +743,22 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().create_task(project_id, session_id, fields)
       |> avisar_canal(session_id, "backlog.task_created", nil)
 
+  # A api grava `backlog.semantic_duplicate_warned`/`_check_skipped` por uma
+  # rota `/internal/*`, que não avisa o canal sozinha (AT-157) — a fachada
+  # avisa, e só quando houve evento: `clean` e `nothing_to_compare` não narram.
+  def check_semantic_duplicate(project_id, session_id, fields) do
+    resultado = impl().check_semantic_duplicate(project_id, session_id, fields)
+
+    tipo =
+      case resultado do
+        {:ok, %{"status" => "warned"}} -> "backlog.semantic_duplicate_warned"
+        {:ok, %{"status" => "skipped"}} -> "backlog.semantic_duplicate_check_skipped"
+        _ -> nil
+      end
+
+    avisar_canal(resultado, session_id, tipo, "duplicata-semantica")
+  end
+
   def list_business_rules(project_id), do: impl().list_business_rules(project_id)
 
   def list_backlog(project_id), do: impl().list_backlog(project_id)
@@ -1057,6 +1088,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def create_story(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/stories",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def check_semantic_duplicate(project_id, session_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/semantic-duplicate-check",
       Map.put(fields, :projectId, project_id)
     )
   end
