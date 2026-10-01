@@ -189,6 +189,7 @@ estado lido do repositório e não da conversa.
 | O laço roteia a ferramenta pelo Jev (AT-238) | ADR 0179, RN-625 |
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
+| A Infra sobe o container com o menor recurso elegível, derivado do `module_map` (AT-261) | ADR 0199, RN-683 |
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
@@ -1786,6 +1787,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   INFRA elegendo entre as candidatas do próprio roteamento do Arquiteto
   (`container_start`, `'infra-lead'`) — nunca um caminho paralelo, os dois
   passam por `DecidirImagemDoProjetoUseCase`/`validarDecisaoDeImagem`.
+  Os RECURSOS que a Infra sobe vêm do `module_map` desde a RN-683 (ADR 0199):
+  cada módulo declara `resources` e o mínimo é a SOMA (um container por
+  projeto), com piso no padrão de hoje enquanto houver módulo sem declaração —
+  nunca um número inventado, nunca o máximo entre módulos. Quem deriva é a
+  api (`recursos-minimos.ts`); o engine manda `resources` vazio e não soma.
   Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — nos
   TRÊS modos de execução desde a RN-494/ADR 0135, que revogou a dispensa
   que `mounted`/`runner` tinham (RN-169/RN-421). `mounted`/`runner`

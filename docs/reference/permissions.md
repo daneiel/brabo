@@ -162,6 +162,17 @@ ADR 0024) and the next step — and the lifecycle row is **not** marked
 leave `project_containers` asserting a state that never existed. None of
 this touches `decide()`, the caps, or who may approve.
 
+**And `container_start` resolves its resources there**
+([RN-683](../business-rules.md#rn-683),
+[ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)): a field
+the proposal OMITS — every field, in the server's start on handoff acceptance
+— becomes the MINIMUM derived from the current `module_map` (the sum of what
+each module declared, floored at today's default while any module declared
+nothing); a field BELOW that minimum is a named `failed`, recorded before any
+image decision or lifecycle transition; above it, the usual ceiling applies.
+Like the folder materialization, this is execution, not policy: `decide()`
+and who may approve do not change.
+
 ## How a pattern matches a command
 
 Not by substring. The command is tokenized with shell rules and the pattern
