@@ -13675,9 +13675,11 @@ pode depender dela — é justamente por depender dela que ele não saía.
   antes de anexar, `id-token: write`, o `install.sh` no manifesto). É ESTÁTICO,
   e o limite é declarado no topo do arquivo: o job só se prova numa tag final,
   e nunca rodou em nenhuma
-- **Lacuna DECLARADA:** a matriz é de quatro alvos desde o ADR 0174 e a Release
-  continua recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na
-  `dev` nunca exercitada. O manifesto vai nascer cobrindo dois e vai
+- **Lacuna DECLARADA:** a matriz é de TRÊS alvos desde o
+  [ADR 0187](adr/0187-runner-sem-binario-win32-x64.md) (o `win32-x64` saiu pelo
+  mesmo molde do ADR 0174, e `ALVOS_ESPERADOS` acompanhou) e a Release
+  continua recebendo **dois** — o `darwin-arm64` está provado em ensaio
+  ([RN-688](#rn-688)) e só falta uma tag final exercitá-lo. O manifesto vai nascer cobrindo dois e vai
   **dizer** isso, que é a diferença entre parcial e silencioso. E, com a matriz
   falhando inteira, o job gasta as duas esperas antes de recusar
 - **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)
@@ -20080,3 +20082,47 @@ rótulo, não o comportamento.
   anulado na revogação — não há o que comparar, e a janela é de 30 s, só no
   rollout; e os testes ExUnit só rodam no CI (`repo.hex.pm` dá 403 no ambiente
   em que foram escritos)
+
+### RN-688 — O binário do runner lê o PTY com leitor próprio sob o Bun, e o auto-teste prova a SEGUNDA leitura {#rn-688}
+
+Sob o Bun (o binário do `bun build --compile`, [ADR 0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)),
+o `tty.ReadStream` com que o `node-pty` lê o lado mestre do PTY é um
+`fs.ReadStream`, e a primeira leitura sem dados do fd não-bloqueante SOBE como
+`EAGAIN`: o stream se destrói, fecha o fd, e nenhum `onData` chega depois disso
+(oven-sh/bun#25822). O terminal interativo do binário parava depois do primeiro
+pedaço de saída nas TRÊS plataformas Unix; o Linux passava na prova só porque a
+primeira leitura já trazia o eco e a resposta juntos.
+
+**A regra:** sob o Bun e fora do Windows, o `spawn` do `node-pty` roda com o
+`tty.ReadStream` trocado por um leitor próprio que lê o MESMO fd com `fs.read`
+e, no `EAGAIN`, ESPERA e tenta de novo (de 4 ms, dobrando até 32 ms, voltando
+ao mínimo a cada dado); `EIO` ou zero bytes é fim. A troca vale só DURANTE o
+`spawn` e é restaurada mesmo quando ele lança; sob o Node o módulo volta
+INTACTO. O fd e o processo filho continuam os de verdade — nada simula saída.
+E o `--self-test-pty` faz DUAS voltas, a segunda depois de uma pausa sem nada a
+ler: é a pausa que força a leitura a passar por um `EAGAIN`, e é por ela que o
+leitor antigo reprova também no Linux. Quando reprova, o auto-teste diz por quê
+(pedaços, saída do filho, uma sonda num segundo PTY e os eventos do stream) — o
+veredito não muda.
+
+Foi a sonda que mediu o Windows: lá o lado de leitura é o pipe nomeado do
+ConPTY, aberto pelo `node-pty` como `net.Socket`, sem fd que o leitor possa
+assumir, e o pipe termina depois do primeiro pedaço — por isso o `win32-x64`
+saiu da matriz ([ADR 0187](adr/0187-runner-sem-binario-win32-x64.md)) em vez de
+ganhar contorno.
+
+- **Onde:** `apps/runner/src/leitor-de-pty.ts:60` (`precisaDoLeitorProprio`),
+  `:70` (`LeitorDeFdNaoBloqueante`), `:115` (`agendar`), `:152`
+  (`comLeitorDePtyProprio`); `apps/runner/src/native-pty-loader.ts:114`
+  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1268`
+  (`PAUSA_ENTRE_VOLTAS_MS`), `:1291` (`sondarPty`), `:1346`
+  (`rodarAutoTestePty`)
+- **Teste:** `apps/runner/src/leitor-de-pty.spec.ts:14` (só sob o Bun e fora do
+  Windows), `:23` (fora dele, o MESMO módulo), `:28` (troca só durante o
+  `spawn`, restaura quando ele lança — caso de falha), `:48` (as duas voltas de
+  um `cat` real, com `EAGAIN` entre elas); a prova de ponta a ponta é o
+  `smoke:bin` da matriz, verde em `darwin-arm64`, `linux-x64` e `linux-arm64`
+  no ensaio `36779817686`
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md),
+  [0187](adr/0187-runner-sem-binario-win32-x64.md)
+- **Origem:** AT-342, AT-343

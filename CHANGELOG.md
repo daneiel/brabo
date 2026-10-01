@@ -988,6 +988,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   permissões; só um macOS real prova a correção de ponta a ponta. O binário
   standalone já extraía o helper com `0755` e não muda.
 
+- **runner**: o terminal interativo do binário standalone deixa de parar de
+  receber saída depois do primeiro pedaço (AT-342). Sob o Bun, o
+  `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro `EAGAIN` do
+  fd não-bloqueante (oven-sh/bun#25822): medido em Linux x64, escrevendo 200 ms
+  depois do spawn, nenhuma saída chegava. No `macos-14` o `--self-test-pty`
+  reprovava por isso (o marcador chegava UMA vez, só o eco); no Linux passava
+  por sorte de tempo. Sob o Bun o runner agora lê o PTY com um leitor próprio
+  que espera e tenta de novo no `EAGAIN` (consulta o fd ocioso a no máximo
+  32 ms), e o `--self-test-pty` faz uma segunda volta depois de uma pausa —
+  com o leitor antigo ela reprova também no Linux. Provado no binário
+  `linux-x64` e, no ensaio da matriz, também no `darwin-arm64` e no
+  `linux-arm64`.
+
+- **runner**: o binário standalone de Windows deixa de sair com código 1 e
+  `ENOENT` em `realpathSync` antes de fazer qualquer coisa (AT-343). O runner
+  só reconhecia o caminho virtual do binário compilado de Linux/macOS
+  (`/$bunfs/root/`); o do Windows é `B:/~BUN/root/` — e chega também sem os
+  dois-pontos (`B/~BUN/root/`) ou com o `~` codificado na URL. Todas passam a
+  ser reconhecidas, pelo `import.meta.url` OU pelo `argv[1]` nos dois lugares
+  que perguntam (o carregador do `node-pty` só olhava o primeiro e caía no
+  `import('node-pty')` comum, `Cannot find package`), e no Windows o `--self-test-pty` usa `cmd.exe` no lugar de
+  `/bin/cat`. Quando o `--self-test-pty` reprova, ele passa a dizer por quê:
+  quantos pedaços de saída chegaram, se o filho saiu, e o resultado de uma
+  sonda num segundo PTY (`cmd.exe /c echo` ou `/bin/echo`) com os eventos do
+  stream de leitura — o veredito não muda. O uso sem argumentos foi provado no
+  `windows-latest`; o terminal do binário de Windows ainda não.
+
+- **runner**: o binário standalone deixa de ser publicado para Windows
+  (`win32-x64`), por decisão ([ADR 0187](docs/adr/0187-runner-sem-binario-win32-x64.md),
+  AT-343) — no molde do Mac Intel ([ADR 0174](docs/adr/0174-runner-sem-binario-darwin-x64.md)).
+  Os ensaios da matriz levaram o binário até carregar o `node-pty`, e ali a
+  sonda do `--self-test-pty` mediu que, sob o Bun, o pipe de saída do ConPTY
+  termina depois do primeiro pedaço: até `cmd.exe /c echo` morre com
+  0xC000013A. No Windows o agente local é `npm install -g @brabo/runner`, sob
+  Node. O proxy `GET /runner-releases/binary` recusa `win32-x64` com 400
+  próprio que aponta o npm (antes aceitava e respondia 502
+  `plataforma_nao_publicada`), o painel do navegador não pede o download, e a
+  recusa de Windows do `install.sh` passa a dizer o caminho npm. A matriz e o
+  `checksums.txt` passam a esperar TRÊS alvos (`linux-x64`, `linux-arm64`,
+  `darwin-arm64`).
+
 - **web**: cada mensagem do fio da sessão aparece sob QUEM a escreveu, e não
   mais sob quem está vendo a tela (AT-329, [RN-652](docs/business-rules.md#rn-652)).
   Numa sessão compartilhada a fala de outra pessoa saía com o seu nome, e a de

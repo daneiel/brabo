@@ -39,8 +39,8 @@ chmod +x ./brabo-runner && ./brabo-runner
 ```
 
 ```powershell
-# Windows
-.\brabo-runner.exe
+# Windows (pacote npm — não há binário, ADR 0187)
+brabo-runner
 ```
 
 Sem digitar id de projeto nem token — o CLI lê o config e a chave de
@@ -68,7 +68,6 @@ de Node, npm nem toolchain de compilação instalados:
 | Linux x64 | `brabo-runner-linux-x64` |
 | Linux ARM64 | `brabo-runner-linux-arm64` |
 | macOS Apple Silicon | `brabo-runner-darwin-arm64` |
-| Windows x64 | `brabo-runner-win32-x64.exe` |
 
 > A tabela é a MATRIZ, não o que cada Release tem: até a `v5.0.0` só os dois
 > binários Linux chegaram a ser anexados (confira com `gh release view`).
@@ -79,6 +78,13 @@ de Node, npm nem toolchain de compilação instalados:
 > `node-pty` no macOS (oven-sh/bun#25822). A MESMA prova passa sob Node, então
 > no Mac Intel o caminho é `npm install -g @brabo/runner` — e é isso que o
 > `install.sh` e o painel do navegador dizem em vez de baixar.
+>
+> **Windows não tem binário, por decisão** (ADR 0187): o binário constrói e
+> carrega o `node-pty`, mas sob o Bun o pipe de saída do ConPTY termina depois
+> do primeiro pedaço — até `cmd.exe /c echo` morre com 0xC000013A, a mesma
+> família do bug do Mac Intel. No Windows o caminho é
+> `npm install -g @brabo/runner`, sob Node; o painel do navegador diz isso em
+> vez de baixar, e o `install.sh` já recusava Windows (ADR 0150).
 
 ```sh
 # Linux/macOS
@@ -306,6 +312,19 @@ arquivo é hardlink do store, então o `chmod` vale também para o store.
 O binário standalone não depende disso: ele embute o conteúdo do
 `spawn-helper` e o extrai com `0755` (`native-pty-loader.ts`). E isto não é o
 bug do Bun (oven-sh/bun#25822), que reprova o binário mesmo com o bit certo.
+
+Esse bug do Bun é MEDIDO (AT-342): sob o Bun, o `tty.ReadStream` com que o
+`node-pty` lê o PTY é um `fs.ReadStream`, e a primeira leitura sem dados no fd
+não-bloqueante sobe como `EAGAIN`, destrói o stream e fecha o fd — o terminal
+para de receber saída depois do primeiro pedaço, em qualquer plataforma Unix.
+Sob o Bun (o binário, ou `bun run` em dev) o runner troca esse leitor, só
+durante o `spawn`, por um leitor próprio do mesmo fd que espera e tenta de novo
+no `EAGAIN` (`leitor-de-pty.ts`; o fd ocioso é consultado a no máximo 32 ms).
+Sob o Node nada muda. O `--self-test-pty` faz duas voltas com uma pausa entre
+elas, e é a pausa que reprova o leitor antigo — antes, no Linux, a prova
+passava porque a primeira leitura trazia o eco e a resposta juntos. No Windows
+o self-test usa `cmd.exe` (não há `/bin/cat`) e conta o marcador sem as
+sequências de controle do ConPTY.
 
 ## Chave de dispositivo pelo terminal (`device-key create | finish`)
 
