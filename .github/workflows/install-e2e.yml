@@ -62,16 +62,25 @@ jobs:
       # junto com `release.yml`. Mesma corrida que `build-runner-binaries.yml`
       # documenta e resolve do mesmo jeito: espera LIMITADA, e ausência que
       # PERSISTE pelo teto é erro explícito.
-      - name: Esperar a Release existir
+      - name: Esperar a Release e os assets do instalador
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
         run: |
           set -euo pipefail
+          # A Release fica VISÍVEL antes de os assets subirem: na v7.0.0 ela
+          # apareceu às 20:06:11 e o install.sh só às 20:06:37, e o download
+          # das 20:06:23 deu 404. Espera-se pelos TRÊS assets que o primeiro
+          # passo e a autoverificação do instalador leem, não pela Release.
           limite=$(( SECONDS + 900 ))
-          until gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; do
+          faltam() {
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+              --jq '[.assets[].name] as $a | ["install.sh","checksums.txt","checksums.txt.bundle"] - $a | length' \
+              2>/dev/null || echo 3
+          }
+          until [ "$(faltam)" = "0" ]; do
             if [ "$SECONDS" -ge "$limite" ]; then
-              echo "::error::a Release de $TAG não existe depois de 900s — este workflow só EXERCITA uma Release existente."
+              echo "::error::a Release de $TAG não tem install.sh, checksums.txt e checksums.txt.bundle depois de 900s — este workflow só EXERCITA uma Release existente."
               exit 1
             fi
             sleep 20
@@ -565,7 +574,7 @@ jobs:
 
           # O workspace PESSOAL que a RN-546 cria na mesma transação. Sem ele o
           # "Novo projeto" não teria onde criar, e é por isso que ele entrou.
-          ws="$(curl -fsS "${api}/workspaces" -H "Authorization: Bearer ${token}" | jq -r '.[0].id')"
+          ws="$(curl -fsS "${api}/workspaces" -H "Authorization: Bearer ${token}" | jq -r '.[0].workspace.id')"
           [ -n "$ws" ] && [ "$ws" != 'null' ] \
             || { echo '::error::a conta nasceu sem workspace pessoal'; exit 1; }
 
