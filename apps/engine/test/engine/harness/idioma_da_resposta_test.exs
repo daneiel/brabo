@@ -142,6 +142,23 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
       assert enviado == @historico
     end
 
+    # RN-680: o controller manda `%{idioma: _, perfil: _}` quando a api trouxe
+    # os fatos do perfil do autor; o idioma segue igual e o perfil entra pelo
+    # mesmo dicionário, ANTES da orientação (que continua a última).
+    test "com perfil do autor: o idioma vale igual e o perfil vai antes da orientação" do
+      project_id = projeto("en")
+
+      enviado =
+        IdiomaDaResposta.com_idioma_do_autor(%{idioma: "pt-BR", perfil: "fatos do perfil"}, fn ->
+          @historico
+          |> Engine.Harness.PerfilDoAutor.anexar("criativo")
+          |> IdiomaDaResposta.anexar(project_id, "criativo")
+        end)
+
+      assert orientacao_enviada(enviado) =~ "português brasileiro"
+      assert Enum.at(enviado, -2) == %{"role" => "system", "content" => "fatos do perfil"}
+    end
+
     test "o idioma do autor não sobrevive ao handle_call que o pôs" do
       project_id = projeto("en")
       IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn -> :ok end)

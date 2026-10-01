@@ -13856,8 +13856,8 @@ grande (a única rodada real foi o compose de dev, 98 eventos, 2,5 s), e a prova
 no cluster local que o BRB-018 pede não foi feita — ele segue aberto.
 
 - **Código:** `apps/api/src/application/graph-projection/graph-event-translator.ts:15`
-  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:26` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
-  tradutor), `:69` (`projetarEvento`), `:90` (`projetarFechamentoDeSessao`);
+  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:31` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
+  tradutor), `:75` (`projetarEvento`), `:99` (`projetarFechamentoDeSessao`);
   `apps/api/src/application/graph-projection/graph-projector.ts:77` (o projetor
   monta o MESMO tradutor), `:141` (chega à fonte pela outbox e delega);
   `apps/api/src/scripts/reprojetar-grafo.ts:124` (`montarTradutor`), `:145`
@@ -14380,7 +14380,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:973`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:983`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14589,7 +14589,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:887` (`avisar_canal`);
+  `:607`, `:630`, `:897` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14770,8 +14770,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:939`
-  (`narrar_recusa_de_sessao_encerrada`), `:1233` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:949`
+  (`narrar_recusa_de_sessao_encerrada`), `:1243` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15759,7 +15759,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1689` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1699` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15843,7 +15843,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1633` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1643` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16782,12 +16782,12 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
   cache a cada troca de autor ou de idioma — cache não é observável hoje.
 
-- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:228`
-  (`anexar`), `:205` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
-  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:284`
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:234`
+  (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
+  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
+  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
   (`idioma_da_resposta`);
@@ -16883,9 +16883,9 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 - **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:174`
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
-  `:270` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
-  (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
+  `:260` (`idioma_do_projeto_para_o_artefato`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:604`
+  (`IdiomaDaResposta`), `:689` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17148,8 +17148,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:611`
-  (`llm_turn`), `:678` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:615`
+  (`llm_turn`), `:685` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17853,7 +17853,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1038`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1048`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19684,3 +19684,78 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/engine/test/engine/agents/dev_lead_server_test.exs:131`
 - **Decisão arquitetural:** [ADR 0194](adr/0194-aprovar-o-plano-ativa-a-execucao.md)
 - **Origem:** AT-274 (item A28 / extra E5 da análise do uso real de 29/09)
+
+## A Anamnese religada: sujeito elegível e fato do perfil (RN-680)
+
+### RN-680 — A Anamnese não roda sem sujeito elegível, e a hipótese que a própria pessoa aceitou vira fato do perfil dela no grafo e entra no contexto dos agentes que conversam com ela {#rn-680}
+
+Decisão do dono em 01/10 (AT-277): **religar a Anamnese com correções**. No
+uso real de 29/09 ela rodou seis vezes e as seis terminaram em
+`anamnese.run_skipped` ("nenhum membro elegível"), escritos pelo MODELO depois
+de uma chamada paga (8 933 micros), e as três hipóteses aceitas ficaram na fila
+sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.md).
+
+1. **Sem sujeito elegível, a rodada não roda.** Sujeito é o membro EFETIVO do
+   projeto (`projectRole ?? workspaceRole`, a régua da [RN-471](#rn-471)),
+   fora do opt-out, com interação PRÓPRIA no que a rodada mostra ao modelo —
+   evento dele com `actor_kind: "user"` na janela, ou decisão dele. A guarda
+   vem ANTES da triagem e nem a hipótese na fila a atravessa. Sem sujeito:
+   nenhuma chamada ao LLM e nenhuma busca no RAG; o motivo vai NOMEADO para o
+   log do engine (`sem_sujeito_elegivel`, com `nenhum_membro` ou
+   `nenhuma_interacao_propria` e os números) e, na rodada pedida à mão,
+   também para o event log (`anamnese.run_skipped` com
+   `causa: "sem_sujeito_elegivel"`). Pelo tick é só log — seria um aviso a cada
+   15 minutos por projeto. O prompt passa a listar só os sujeitos.
+2. **Membro do projeto é o EFETIVO.** Criar projeto não grava
+   `project_members`, e a Anamnese lia só essa tabela — o dono do workspace
+   nunca era membro. Os três casos de uso da Anamnese passam a ler
+   `listEffectiveMembers`; `listMembers` continua só `project_members`.
+3. **A hipótese ACEITA pela PRÓPRIA pessoa vira fato do perfil.** O
+   `psychologist.hypothesis_accepted` carrega `projectId`, `sujeito` (o autor
+   da sessão analisada), `hipotese`, `sugestao` e `fatoDoPerfil`, e o
+   `GraphEventTranslator` — o mesmo do projetor e de `grafo:reprojetar` — o
+   traduz para `(:FatoDoPerfil {hypothesisId})`, ligado à pessoa (`SOBRE`) e ao
+   projeto (`NO_PROJETO`). `fatoDoPerfil` só é `true` quando quem aceitou é o
+   sujeito: um fato sobre a pessoa nunca nasce do clique de outra, e o payload
+   diz por quê (`motivoSemFato`). A recusada fica só registrada, como antes.
+   Os aceites gravados antes desta RN não têm os campos e não viram fato.
+4. **O fato entra no contexto dos agentes que conversam com a pessoa.** A
+   mensagem do autor a um agente conversacional leva os fatos DELE neste
+   projeto — lidos por `QueryUserContextUseCase`, escopados ao projeto, os 5
+   mais recentes, com o total ao lado e o recorte dito —, e o engine os põe no
+   turno como mensagem `system` EFÊMERA, pelo mesmo caminho do idioma
+   ([RN-622](#rn-622)): nunca no histórico, antes da orientação de idioma, com
+   teto de 2 000 caracteres. Grafo fora do ar vira log, e o turno segue sem os
+   fatos. Turno sem autor não recebe fatos.
+5. **Religada.** `ANAMNESE_ENABLED` volta ao default `true` no `runtime.exs` e
+   nos três composes; `START_ANAMNESE` não muda (o de produção segue `false`,
+   divergência já declarada). O Psicólogo segue pausado.
+
+- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:46` (`avaliar`);
+  `apps/engine/lib/engine/workers/anamnese_worker.ex:63` (`maybe_analyze`),
+  `:82` (`narrar_sem_sujeito`);
+  `apps/api/src/domain/iam/membros-efetivos.ts:16` (`membrosEfetivos`);
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:209` (`listEffectiveMembers`);
+  `apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts:75` (`fatoDoPerfil`);
+  `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
+  `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
+  `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:87` (`resolverPerfil`);
+  `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:213` (`com_idioma_do_autor`);
+  `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
+- **Teste:** `apps/engine/test/engine/anamnese/elegibilidade_test.exs:17`
+  (caminho feliz), `:35` e `:46` (sem sujeito — casos de falha);
+  `apps/engine/test/engine/workers/anamnese_worker_test.exs:305` (sem membro,
+  nem com fila, não chama o LLM), `:324`, `:343` (rodada à mão narra), `:360`;
+  `apps/engine/test/engine/anamnese/context_builder_test.exs:82`;
+  `apps/api/test/infrastructure/persistence/drizzle/project-effective-members.repository.spec.ts:69`;
+  `apps/api/test/application/use-cases/execution/accept-dismiss-hypothesis.use-case.spec.ts:136`,
+  `:156` (aceite de terceiro não vira fato);
+  `apps/api/test/application/graph-projection/graph-projector.spec.ts:361`, `:386`;
+  `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:181`,
+  `:207` (grafo fora do ar);
+  `apps/engine/test/engine/harness/perfil_do_autor_test.exs:14`;
+  `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:428`
+- **Origem:** AT-277 (item A31 da análise do uso real de 29/09; decisão do dono
+  em 01/10)

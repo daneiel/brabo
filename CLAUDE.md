@@ -197,6 +197,7 @@ estado lido do repositório e não da conversa.
 | Aprovar o plano do Dev Lead ativa a execução; a tarefa ganha o módulo que ele atribui (AT-263/AT-274) | ADR 0194, RN-677, RN-678 |
 | A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado (AT-246) | ADR 0197 |
 | A curadoria recusa o alias `~` do OpenRouter, preço de vitrine (AT-271) | RN-679 |
+| A Anamnese religada: não roda sem sujeito elegível, e a hipótese aceita vira fato do perfil (AT-277) | ADR 0196, RN-680 |
 | O merge recusa PR já mergeada e proposta repetida; gate pendente vira aviso (AT-249) | RN-663 |
 | O custo real que o provider devolve vira o número do metering (AT-270) | ADR 0188, RN-665 |
 | O metering lê cache e reasoning tokens (AT-272) | ADR 0188, RN-666 |
@@ -365,13 +366,31 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   payload dela, com eleição de imagem, nunca fazia sentido pra um caminho
   sem roteamento contra o qual eleger) — `container_start_via_runner` é o
   tipo novo, exclusivo desse modo
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
-  aguardando spec; Staff dormente para disparo automático (acionável manual)
-
-- Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`,
-  `PSYCHOLOGIST_ENABLED=false`), aguardando spec. A pausa segue valendo e a
-  decisão de produto NÃO mudou — o que mudou na RN-540 é que ela passou a ser
-  REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec; Staff dormente para disparo automático (acionável manual —
+  nenhum código o dispara, nem a Anamnese)
+- A Anamnese foi RELIGADA em 2026-10-01 por decisão do dono (RN-680, ADR
+  0196): `ANAMNESE_ENABLED` volta ao default `true` no `runtime.exs` e nos
+  três composes (`START_ANAMNESE` não mudou: `false` só no de produção,
+  divergência já declarada), com duas correções que são regra. (1) A rodada
+  NÃO roda sem SUJEITO elegível — membro EFETIVO do projeto
+  (`listEffectiveMembers`, a régua da RN-471; criar projeto não grava
+  `project_members`, e era por isso que toda rodada do uso real de 29/09
+  terminava paga em "nenhum membro elegível"), fora do opt-out, com
+  interação PRÓPRIA na janela (`Engine.Anamnese.Elegibilidade`, antes da
+  triagem; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
+  chamada ao LLM nem ao RAG, motivo nomeado no log e, só na rodada pedida à
+  mão, `anamnese.run_skipped`. (2) A hipótese que a PRÓPRIA pessoa aceitou
+  (quem aceita é o autor da sessão) vira `FatoDoPerfil` no grafo, traduzido
+  de `psychologist.hypothesis_accepted` pelo MESMO `GraphEventTranslator`, e
+  entra no turno dos agentes que conversam com ela como mensagem `system`
+  EFÊMERA (`Engine.Harness.PerfilDoAutor`, o caminho do idioma da RN-622;
+  lida por `QueryUserContextUseCase`, escopada ao projeto, 5 fatos, teto de
+  2 000 caracteres). Aceite de terceiro e recusa ficam só registrados.
+- Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
+  aguardando spec — e a Anamnese esteve pausada junto até a RN-680. A pausa do
+  Psicólogo segue valendo e a decisão de produto NÃO mudou — o que mudou na
+  RN-540 é que ela passou a ser REVERSÍVEL de verdade: as duas flags não estavam mapeadas no `environment:`
   do serviço `engine` de compose NENHUM, o Compose não repassa o ambiente do
   host, e `ANAMNESE_ENABLED=true` no `.env` era inerte — `runtime.exs` caía no
   default `"false"` em silêncio, enquanto TRÊS lugares (os docblocks dos dois

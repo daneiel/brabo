@@ -26,7 +26,7 @@ defmodule Engine.Anamnese.ContextBuilder do
   (só a janela temporal), sem impedir a rodada — nunca é requisito.
   """
 
-  alias Engine.Anamnese.Triage
+  alias Engine.Anamnese.{Elegibilidade, Triage}
   alias Engine.Sessions.EngineApiClient
 
   # Quantos trechos do RAG entram no prompt, no máximo. PRÓPRIA (RN-150):
@@ -77,18 +77,30 @@ defmodule Engine.Anamnese.ContextBuilder do
     events_budget = max(Triage.max_prompt_events() - @rag_top_k, 0)
     events = list_events(project_id, window_from, window_to, events_budget)
 
+    members = Map.get(ctx, "members", [])
+    decisions = Map.get(ctx, "decisions", [])
+
+    # RN-680: rodada sem sujeito elegível não vai rodar (o worker a recusa com
+    # `Elegibilidade.avaliar/1`), então a busca no RAG — que pode custar um
+    # embedding — não é feita para ela.
     {relevant_snippets, relevant_snippets_degraded} =
-      fetch_relevant_snippets(project_id, competency_catalog, current_profiles)
+      case Elegibilidade.avaliar(%{members: members, events: events, decisions: decisions}) do
+        {:ok, _sujeitos} ->
+          fetch_relevant_snippets(project_id, competency_catalog, current_profiles)
+
+        {:sem_sujeito, _motivo, _detalhe} ->
+          {nil, false}
+      end
 
     %{
       competency_catalog: competency_catalog,
-      members: Map.get(ctx, "members", []),
+      members: members,
       queued_hypotheses: Map.get(ctx, "queuedHypotheses", []),
       current_profiles: current_profiles,
       instructions: Map.get(ctx, "instructions", []),
       # Aprovações/negações do usuário na janela — o quarto sinal do
       # enunciado, que não existe no event log (mora em proposed_actions).
-      decisions: Map.get(ctx, "decisions", []),
+      decisions: decisions,
       window_from: window_from,
       window_to: window_to,
       events: events,

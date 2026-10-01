@@ -5,6 +5,7 @@ defmodule Engine.Sessions.EngineApiClient do
   """
 
   alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Harness.PerfilDoAutor
   alias Engine.Harness.RoteamentoDeFerramenta
 
   @callback report_termination(
@@ -608,8 +609,14 @@ defmodule Engine.Sessions.EngineApiClient do
   # ferramenta (`tool_router.decided`) e, se o menu restrito fez o modelo
   # responder sem chamar ferramenta, repete o passo UMA vez com o catálogo
   # inteiro (`opts: [catalogo_completo: true]`). Ver `RoteamentoDeFerramenta`.
+  #
+  # RN-680 (ADR 0196): os fatos do perfil do AUTOR do turno entram pelo mesmo
+  # lugar, ANTES do idioma — que continua sendo a última mensagem.
   def llm_turn(project_id, session_id, agent, messages, tools) do
-    enviadas = IdiomaDaResposta.anexar(messages, project_id, agent, tools)
+    enviadas =
+      messages
+      |> PerfilDoAutor.anexar(agent)
+      |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
     impl().llm_turn(project_id, session_id, agent, enviadas, tools, [])
     |> repetir_com_catalogo_inteiro(tools, fn ->
@@ -676,7 +683,10 @@ defmodule Engine.Sessions.EngineApiClient do
     do: impl().list_events(project_id, session_id, opts)
 
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
-    enviadas = IdiomaDaResposta.anexar(messages, project_id, agent, tools)
+    enviadas =
+      messages
+      |> PerfilDoAutor.anexar(agent)
+      |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
     impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta, [])
     |> repetir_stream_sem_texto(tools, fn ->
