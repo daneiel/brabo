@@ -174,6 +174,18 @@ the `message` is the sentence the agent reads as its tool result
 ([RN-636](../business-rules.md#rn-636)) — returns ANY pending offer to the
 target instead of replacing it.
 
+The Creative→PO offer that an "I'm ready — the need is validated" click asked
+for is ACCEPTED in the same call, on behalf of the person who clicked
+([RN-658](../business-rules.md#rn-658),
+[ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md)): the offer is
+`criativo` → `po`, from this session, carrying the `product_brief` born after
+the latest marked `readiness.confirmed`. The acceptance goes through the same
+`AcceptHandoffUseCase` as the card (same events, the person as actor, an
+`implicito` mark), and the response then carries `status: "accepted"`. The
+engine only matches `{:ok, _}`, so nothing changes on its side; a failed
+implicit acceptance never turns into an error for the engine — it becomes a
+durable `agent.error` and the offer is still returned.
+
 `GET /events` is what the seven conversational agents read when their process
 comes up over a session that already has a conversation, and what their
 kickoffs read to find the brief, the rules, the module map and the stories
@@ -312,6 +324,42 @@ even in the error frame. The four engine conversational agents
 extract the field from the frame and include it in the `agent.response` payload
 (`modelName`), which is what `SessionPage.tsx` reads to show the model next
 to the agent's name.
+
+#### The Jev may narrow the tool menu ([RN-625](../business-rules.md#rn-625))
+
+Since [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md) both
+paths may ask the Jev tool router which tool fits the step before calling the
+chat model, and then offer the model only the menu that is left. The contract
+changes are additive:
+
+- **Request:** both bodies accept an optional `catalogoCompleto: boolean`.
+  `true` skips the router for that call and offers the whole `tools` list. The
+  engine sets it when it repeats a step whose restricted menu made the model
+  answer without calling a tool (once per step).
+- **Response:** `RunLlmTurnResult` and the `final` frame of
+  `LlmTurnStreamEvent` gain an optional `toolRouting` — the menu before and
+  after, the pick, its confidence, the previous tool of the run, latency, the
+  Jev's real cost, and, on any fall to the whole catalog, `motivoDaQueda` and
+  `origemDaQueda` (`infra`/`modelo`/`codigo`). It is ABSENT when the router was
+  not consulted: a provider other than OpenRouter, fewer than two tools, or the
+  workspace switch (`tool_router_enabled`) off. The engine records it as the
+  `tool_router.decided` event.
+- **Stream:** `/llm-turn-stream` may emit a `tool_routing_started` frame
+  BEFORE any `delta`. Engines that do not know it ignore it as an unknown frame
+  type.
+
+The turn never fails because of the router: every error falls to the whole
+catalog, with the reason in `toolRouting`. No route was added or removed.
+
+#### `usage.costMicros` is the real cost when the provider says it ([RN-665](../business-rules/custo.md#rn-665))
+
+Since [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) the `usage.costMicros`
+that both paths return — and that the engine sums into the area budget — is
+the REAL cost the provider returned, when it returned one (today only
+OpenRouter's `usage.cost`, and never on a BYOK call). Otherwise it is the
+frozen catalog price, as before ([ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+The field name and shape do not change; what changes is the number the engine
+receives for the same call, which can be higher than the catalog one.
 
 #### Spend reports do NOT go through here
 
@@ -1240,19 +1288,19 @@ already exists where it has a human owner
 
 ## api → engine
 
-Twenty command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
 | POST | `/sessions` | starts the `SessionServer` |
 | POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
 | POST | `/sessions/:id/agent/start` | starts an agent turn |
-| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?}`. **`202` on ACCEPTANCE**, before the turn ends; **`409`** `{error, motivo}` when the agent refuses before starting (`turno_em_andamento`, `aguardando_aprovacao`) ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
+| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?, mensagemId?}`. **`202` on ACCEPTANCE**, before the turn ends: empty body when the turn started (`lida`), `{entrega: "enfileirada", posicao}` when the agent was mid-turn and the message joined its QUEUE — read with any others in one turn when the current one ends ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` when the agent refuses before starting: `aguardando_aprovacao` (Dev Lead suspended) or `fila_de_mensagens_cheia` (10 already queued) — a message no longer gets `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` is the id of the `chat.message` the api recorded; it is what cancels the queued message. `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
+| POST | `/sessions/:id/agent/queued-message/cancel` | body `{projectId, agent, mensagemId, userId}` — cancels ONE message waiting in the agent's queue ([RN-673](../business-rules.md#rn-673)); the api already checked that `userId` sent it. With the agent up, its process decides: `204`, or **`409`** `mensagem_fora_da_fila` (already read or cancelled). With the agent down, `chat.message_cancelled` is recorded directly — the queue is the log. **`422`** for an agent with no conversation or an incomplete body |
 | POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
 | POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
 | POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api; `202` on acceptance, `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra — `202` on acceptance, with the closing turn still running; `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)); arriving while the Arquiteto's closing turn runs, it is HELD and created when that turn ends, so it still lands after the Infra one ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra — `202` on acceptance, with the closing turn still running; `409` turn in progress ([RN-578](../business-rules.md#rn-578)). It is the ONLY offer the architecture confirmation makes: the `offer-dev-handoff` route is gone, and the Dev Lead is offered by the Infra Lead once the project container is `running` ([RN-672](../business-rules.md#rn-672)) |
 | POST | `/sessions/:id/execution/start` | activates the execution phase |
 | POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |

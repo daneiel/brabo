@@ -120,6 +120,13 @@ become a real repository document.
 Validatable, but **not** emittable by tool. The Creative server emits it only
 after you confirm readiness — never through a model tool call.
 
+Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the click
+that asks for it — "I'm ready — the need is validated" — also records
+`necessity.validated` with `productBriefId: null`: the brief is the next
+`product_brief` after that `readiness.confirmed`, and the handoff that carries
+it to the PO is accepted on behalf of whoever clicked
+([RN-657](../business-rules.md#rn-657), [RN-658](../business-rules.md#rn-658)).
+
 ### `task_blocked` — server
 
 | field | required |
@@ -206,17 +213,23 @@ reasoning as `propose_execution_plan`/`propose_infra_pr`) — no
 | field | required |
 |---|---|
 | `storyId` | ✅ |
+| `taskId` | ✅ — since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) |
 | `planoDeTeste` | ✅ |
 | `criteriosExecutaveis` | ✅ — **non-empty** list |
 | `estrategiaDeAutomacao` | ✅ |
 
 The deliverable of QA-strategy (ADR 0090; `docs/fluxo.yml`, role
-`qa-estrategia`, the `qa-lead`'s second moment): the test plan for ONE story,
-emitted BEFORE the dev agent writes any code — the `implementavel` gate
-(`docs/gates.yml`) consumes it. It is born from `emit_plano_de_teste`, but the
-model doesn't emit the artifact directly — `Engine.Gates.QaEstrategiaAgent`
-extracts the result from the tool call and calls `ArtifactEmitter.emit/5`, the
-same pattern as `qa_verdict`/`task_blocked`.
+`qa-estrategia`, the `qa-lead`'s second moment). Since
+[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
+([RN-674](../business-rules.md#rn-674)) it is the test plan for ONE task's
+DELIVERY, written AFTER the dev agent delivered, over the dev's worktree and
+the files the delivery touched: it is the first step of the `qa-verificada`
+cycle (`QaLeadServer.run_area/3`), consumed as INPUT by the Automation
+subspecialty, and found again by `taskId` on the correction round. Until ADR
+0192 it was emitted PRE-DEV and fed the `implementavel` gate. It is born from
+`emit_plano_de_teste`, but the model doesn't emit the artifact directly —
+`Engine.Gates.QaEstrategiaAgent` extracts the result from the tool call and
+calls `ArtifactEmitter.emit/5`, the same pattern as `qa_verdict`/`task_blocked`.
 
 An empty `criteriosExecutaveis` fails for the same reason as
 `infra_delegation_files`: a plan with no criteria at all isn't a plan.

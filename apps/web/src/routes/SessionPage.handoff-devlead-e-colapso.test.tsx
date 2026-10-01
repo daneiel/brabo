@@ -349,7 +349,7 @@ describe('SessionPage — problema 2: "Ativar execução" inline no card do Dev 
  * mantém o fluxo de hoje: aceitar não ativa nada, e "Ativar execução"
  * continua ali como segundo botão.
  */
-describe('SessionPage — problema 4: fusão handoff + execução por papel efetivo (RN-161)', () => {
+describe('SessionPage — problema 4: aceitar o Dev Lead não ativa a execução (RN-677, revisa a RN-161)', () => {
   const HANDOFF_DEVLEAD: Handoff = {
     id: 'handoff-devlead',
     sessionId: ID,
@@ -389,76 +389,41 @@ describe('SessionPage — problema 4: fusão handoff + execução por papel efet
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
-  it('maintainer aceitando o handoff já encadeia activateExecution, sem segundo clique', async () => {
+  // RN-677 (AT-263, ADR 0194) — revisa a RN-161: aceitar o handoff ao Dev
+  // Lead só o traz para PLANEJAR. A fusão com a ativação SAIU para todo papel;
+  // quem ativa é a aprovação do plano dele (`propose_execution_plan`), na api.
+  it.each(['maintainer', 'owner', 'developer'] as const)(
+    '%s aceitando o handoff NÃO ativa a execução — a ativação é aprovar o plano',
+    async (papel) => {
+      workspaceComPapelMock.mockReturnValue(workspaceComPapel(papel));
+      acceptHandoff.mockResolvedValue(undefined);
+      activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
+      montarComCardDevLead();
+
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
+      );
+
+      await waitFor(() => {
+        expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-devlead');
+      });
+      await esperarMicrotasksDrenarem();
+      expect(activateExecution).not.toHaveBeenCalled();
+      expect(screen.queryByText('Execução ativada')).not.toBeInTheDocument();
+    },
+  );
+
+  it('o atalho explícito "Ativar execução" do card (RN-137) continua sendo um clique próprio', async () => {
     workspaceComPapelMock.mockReturnValue(workspaceComPapel('maintainer'));
-    acceptHandoff.mockResolvedValue(undefined);
-    activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
+    activateExecution.mockResolvedValue({ sessionId: ID, modules: ['api'] });
     montarComCardDevLead();
 
-    const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar Dev Lead',
-    });
-    fireEvent.click(botaoAceitar);
-
-    await waitFor(() => {
-      expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-devlead');
-    });
-    await waitFor(() => {
-      expect(activateExecution).toHaveBeenCalledWith('proj-1', ID);
-    });
-    expect(await screen.findByText('Execução ativada')).toBeInTheDocument();
-  });
-
-  it('owner aceitando o handoff também encadeia (mesmo papel que o backend já exige pra ativar)', async () => {
-    workspaceComPapelMock.mockReturnValue(workspaceComPapel('owner'));
-    acceptHandoff.mockResolvedValue(undefined);
-    activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
-    montarComCardDevLead();
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Ativar execução' }));
 
     await waitFor(() => {
       expect(activateExecution).toHaveBeenCalledWith('proj-1', ID);
     });
-  });
-
-  it('developer aceitando o handoff NÃO encadeia — mantém os dois botões separados', async () => {
-    workspaceComPapelMock.mockReturnValue(workspaceComPapel('developer'));
-    acceptHandoff.mockResolvedValue(undefined);
-    montarComCardDevLead();
-
-    const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar Dev Lead',
-    });
-    // O segundo botão continua ali, do jeito que já era antes da fusão —
-    // ninguém que só tem `developer` perde a capacidade de aceitar.
-    expect(screen.getByRole('button', { name: 'Ativar execução' })).toBeInTheDocument();
-
-    fireEvent.click(botaoAceitar);
-
-    await waitFor(() => {
-      expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'handoff-devlead');
-    });
-    await esperarMicrotasksDrenarem();
-    expect(activateExecution).not.toHaveBeenCalled();
-  });
-
-  it('sem papel resolvido ainda (workspace undefined) também NÃO encadeia', async () => {
-    // workspaceComPapelMock já devolve undefined por padrão (beforeEach).
-    acceptHandoff.mockResolvedValue(undefined);
-    montarComCardDevLead();
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Aceitar handoff e iniciar Dev Lead' }),
-    );
-
-    await waitFor(() => {
-      expect(acceptHandoff).toHaveBeenCalled();
-    });
-    await esperarMicrotasksDrenarem();
-    expect(activateExecution).not.toHaveBeenCalled();
+    expect(acceptHandoff).not.toHaveBeenCalled();
   });
 });
 

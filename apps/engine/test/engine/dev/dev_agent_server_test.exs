@@ -109,6 +109,9 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert_received {:propose_action, "pr_open", _, pr_payload}
     assert pr_payload.title =~ "Cadastro"
     assert pr_payload.body =~ "Definition of Done"
+    # RN-664 (AT-250): a PR mira `dev` explicitamente — sem o campo, a api
+    # completava com a branch default (`main`).
+    assert pr_payload.targetBranch == "dev"
     assert_received {:task_marked, "task-abc12345", "in_review", "dev-api"}
     assert_received {:gate_opened, "task-abc12345", "dev-api"}
     assert_received {:gate_dispatch, :qa, _, "task-abc12345"}

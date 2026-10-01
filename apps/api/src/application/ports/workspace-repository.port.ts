@@ -1,5 +1,8 @@
 import type { Workspace } from '../../domain/iam/workspace.entity';
-import type { WorkspaceMember } from '../../domain/iam/workspace-member.entity';
+import type {
+  WorkspaceMember,
+  WorkspaceMemberWithUser,
+} from '../../domain/iam/workspace-member.entity';
 import type { Role } from '../../domain/iam/role';
 
 export interface WorkspaceInput {
@@ -42,6 +45,17 @@ export abstract class WorkspaceRepository {
     id: string,
     userId: string,
   ): Promise<Workspace | null>;
+  /** Liga/desliga o roteamento de ferramenta pelo Jev (ADR 0179); `null` se o workspace não existe. */
+  abstract setToolRouterEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<Workspace | null>;
+
+  /**
+   * Os membros do workspace com nome e e-mail (AT-335, RN-652). Só id, nome,
+   * e-mail e papel — a mesma forma de `ProjectRepository.listMembers`.
+   */
+  abstract listMembers(workspaceId: string): Promise<WorkspaceMemberWithUser[]>;
   abstract findMemberRole(
     workspaceId: string,
     userId: string,

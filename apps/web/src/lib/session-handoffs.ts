@@ -25,7 +25,6 @@ export interface DerivacoesDeHandoff {
   handoffDaInfraOferecido: Handoff | undefined;
   prontidaoJaDeclarada: boolean;
   arquiteturaJaDeclarada: boolean;
-  necessidadeJaValidada: boolean;
 }
 
 /**
@@ -183,19 +182,15 @@ export function derivarHandoffsDaSessao(
     return origem === 'agente' || (origem === 'desconhecida' && h.artifactId !== null);
   });
   // Espelho de `prontidaoJaDeclarada`, para o Arquiteto (problema 1):
-  // `OfferInfraHandoffUseCase` oferece o handoff ao Infra (e ao Dev Lead) na
-  // MESMA confirmação — a existência de QUALQUER handoff saindo do Arquiteto
-  // já prova que a confirmação aconteceu. Salvo o MANUAL (RN-633): os dois
-  // automáticos não levam artefato, então aqui não há marca de reserva, e o
+  // `OfferInfraHandoffUseCase` oferece o handoff ao Infra na confirmação — a
+  // existência de QUALQUER handoff saindo do Arquiteto já prova que a
+  // confirmação aconteceu. (O Dev Lead deixou de sair daqui na RN-672: quem o
+  // oferece é a Infra, com o container `running`.) Salvo o MANUAL (RN-633): o
+  // automático não leva artefato, então aqui não há marca de reserva, e o
   // de origem desconhecida (fora da janela) segue contando, como antes.
   const arquiteturaJaDeclarada = handoffs.some(
     (h) => h.fromAgent === 'arquiteto' && origemDoHandoff(h, events) !== 'manual',
   );
-
-  // A necessidade já foi validada? (RN-406) Diferente dos dois gates acima,
-  // esta confirmação NÃO produz handoff — é só o registro
-  // `necessity.validated` no event log, então a fonte é o próprio `events`.
-  const necessidadeJaValidada = events.some((e) => e.type === 'necessity.validated');
 
   return {
     activeFor,
@@ -204,6 +199,5 @@ export function derivarHandoffsDaSessao(
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
-    necessidadeJaValidada,
   };
 }

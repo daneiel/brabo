@@ -40,11 +40,31 @@ defmodule Engine.Actions.Workspace.RunnerGit do
 
   Interno ao runner (ADR 0137): com um container ativo, ele roteia para
   `docker exec`; sem ele, para o host. Este módulo nunca DECIDE qual dos dois
-  — ele só entrega o comando pelo canal, exatamente como
+  para comando SEM credencial — exceção única desde o ADR 0193, abaixo: o
+  fetch credenciado vai marcado para o host. Fora dela, ele só entrega o
+  comando pelo canal, exatamente como
   `Engine.Actions.TerminalExecutor.run_via_runner/4` já fazia para comando
   de terminal comum.
 
-  ## RN-558 — e quando a credencial não atravessa
+  ## ADR 0193 (RN-676) — o git credenciado roda no HOST do runner
+
+  Decisão do dono (01/10): operação de git credenciada roda no HOST, código
+  roda no container. O `fetch!/3` autenticado sai daqui MARCADO
+  (`RunnerRouter.exec_git_credenciado/5`, `gitCredenciado: true` no payload), e
+  o runner o executa no host mesmo com container ativo — onde o `env` chega ao
+  processo filho (`apps/runner/src/exec.ts`). O host e o container enxergam a
+  MESMA pasta (`estado.dir` montada em `/work`), então o `.git` que o fetch
+  atualiza é o do worktree que o dev agent usa. Nenhuma porta do ADR 0130
+  muda (o `docker exec` continua sem `env`) e `RunnerReadiness` fica como
+  está. Todo o resto daqui (`init`, `checkout`, `worktree`, `rm`) não carrega
+  credencial e segue o roteamento de sempre. Este é o ÚNICO ponto do engine
+  que marca.
+
+  ## RN-558 — e quando a credencial não atravessa (o que sobrou dela)
+
+  O texto abaixo descreve a situação ANTES do ADR 0193. Depois dele, a recusa
+  só chega quando o runner conectado é anterior à marca (não a lê, e roteia o
+  fetch ao container) — ver `Engine.Runners.CredencialDeGit`.
 
   O `docker exec` não tem campo de `env` (ADR 0130, sem `-e` livre), então o
   caminho de container é o único dos dois que NÃO carrega a credencial. Como o
@@ -62,6 +82,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   """
 
   alias Engine.Actions.GitAuth
+  alias Engine.Projects.ProjectRepository
   alias Engine.Runners.{CredencialDeGit, RunnerReadiness, RunnerRouter}
 
   @timeout_ms 60_000
@@ -128,9 +149,15 @@ defmodule Engine.Actions.Workspace.RunnerGit do
     :ok
   end
 
-  @doc "Espelho de `Engine.Dev.WorktreeManager.add_worktree/3`, via o runner."
-  def add_worktree(project_id, work_dir, agent_id, task_slug) do
-    with :pronto <- RunnerReadiness.verificar(project_id) do
+  @doc """
+  Espelho de `Engine.Dev.WorktreeManager.add_worktree/4`, via o runner: a
+  branch nasce de `base` (a de trabalho, RN-664), com a MESMA garantia da base
+  local e a MESMA recusa nomeada quando nem `base` nem `origin/<base>` existem.
+  Sem `base` (`nil`), nasce do HEAD, como antes.
+  """
+  def add_worktree(project_id, work_dir, agent_id, task_slug, base \\ nil) do
+    with :pronto <- RunnerReadiness.verificar(project_id),
+         {:ok, ponto_de_partida} <- garantir_base(project_id, work_dir, base) do
       path = worktree_path(work_dir, agent_id)
       branch = "feature/#{task_slug}"
       _ = remove_worktree(project_id, work_dir, agent_id)
@@ -138,13 +165,55 @@ defmodule Engine.Actions.Workspace.RunnerGit do
       # `-B`, mesmo motivo do caminho local (`Engine.Dev.WorktreeManager`):
       # redefine a branch em vez de recusar quando ela já existe de uma
       # tentativa anterior da MESMA task.
-      case git(project_id, work_dir, "worktree add #{shq(path)} -B #{shq(branch)}") do
+      comando = "worktree add #{shq(path)} -B #{shq(branch)}" <> ponto_de_partida
+
+      case git(project_id, work_dir, comando) do
         {:ok, {0, _}} -> {:ok, %{path: path, branch: branch}}
         {:ok, {_status, out}} -> {:error, out}
         {:error, motivo} -> {:error, motivo}
       end
     else
       {:erro, motivo} -> {:error, RunnerReadiness.mensagem(motivo, project_id)}
+      {:error, _} = erro -> erro
+    end
+  end
+
+  defp garantir_base(_project_id, _work_dir, nil), do: {:ok, ""}
+
+  defp garantir_base(project_id, work_dir, base) do
+    cond do
+      ref?(project_id, work_dir, "refs/heads/#{base}") ->
+        {:ok, " " <> shq(base)}
+
+      ref?(project_id, work_dir, "refs/remotes/origin/#{base}") ->
+        case git(project_id, work_dir, "branch #{shq(base)} #{shq("origin/" <> base)}") do
+          {:ok, {0, _}} -> {:ok, " " <> shq(base)}
+          {:ok, {_status, out}} -> {:error, out}
+          {:error, motivo} -> {:error, motivo}
+        end
+
+      head_vazio_em?(project_id, work_dir, base) ->
+        {:ok, ""}
+
+      true ->
+        {:error,
+         ProjectRepository.mensagem_sem_branch_de_trabalho(
+           "nem #{base} nem origin/#{base} no working tree"
+         )}
+    end
+  end
+
+  defp ref?(project_id, work_dir, ref) do
+    match?({:ok, {0, _}}, git(project_id, work_dir, "rev-parse --verify --quiet #{shq(ref)}"))
+  end
+
+  defp head_vazio_em?(project_id, work_dir, base) do
+    case git(project_id, work_dir, "symbolic-ref HEAD") do
+      {:ok, {0, out}} ->
+        String.trim(out) == "refs/heads/#{base}" and not ref?(project_id, work_dir, "HEAD")
+
+      _ ->
+        false
     end
   end
 
@@ -219,10 +288,27 @@ defmodule Engine.Actions.Workspace.RunnerGit do
         :ok
 
       _ ->
-        # Bare repo provisionado mas nunca recebeu push (sem commits, sem
-        # origin/<branch> ainda) — mesmo fallback do caminho local: cria um
-        # branch local vazio válido.
-        git!(project_id, dir, "checkout -b #{shq(default_branch)}")
+        if remoto_vazio?(project_id, dir) do
+          # Bare repo provisionado mas nunca recebeu push (sem commits, sem
+          # origin/<branch> ainda) — mesmo fallback do caminho local: cria um
+          # branch local vazio válido.
+          git!(project_id, dir, "checkout -b #{shq(default_branch)}")
+        else
+          # RN-664 — mesma recusa do caminho local
+          # (`Engine.Actions.Workspace.init_from_bare!/4`): o remoto tem
+          # branches mas não a de trabalho, e nem uma `dev` vazia nem a default
+          # servem de base.
+          raise ProjectRepository.mensagem_sem_branch_de_trabalho(
+                  "o remoto não tem origin/#{default_branch}"
+                )
+        end
+    end
+  end
+
+  defp remoto_vazio?(project_id, dir) do
+    case git(project_id, dir, "branch -r") do
+      {:ok, {0, saida}} -> String.trim(saida) == ""
+      _ -> false
     end
   end
 
@@ -246,12 +332,16 @@ defmodule Engine.Actions.Workspace.RunnerGit do
     # bater byte a byte com o que um `git fetch origin` comum produziria.
     comando = Enum.join(["git"] ++ GitAuth.args_de_auth(remoto) ++ ["fetch", "origin"], " ")
 
-    case exec(project_id, comando, dir, env) do
+    # ADR 0193/RN-676 — com credencial, o fetch vai MARCADO como git
+    # credenciado, e o runner o roda no HOST mesmo com container ativo. Sem
+    # credencial (provider `local`), segue o caminho de sempre, sem marca.
+    case exec(project_id, comando, dir, env, env != nil) do
       {:ok, {0, _}} ->
         :ok
 
-      # RN-558 — a recusa NOMEADA do runner, quando ele tem container ativo e a
-      # credencial não teria como atravessar o `docker exec`. Vem antes da
+      # RN-558 — a recusa NOMEADA do runner. Desde o ADR 0193 ela só chega
+      # quando o runner conectado é ANTERIOR à marca e roteou o fetch ao
+      # container. Vem antes da
       # cláusula genérica de propósito: ela diria "git fetch falhou" sobre um
       # `git fetch` que nunca chegou a rodar, e mandaria quem lê caçar token
       # inválido ou rede fora.
@@ -308,10 +398,10 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   # `exec!/4` levanta, para os pontos de `init_from_bare!/5` que não têm
   # fallback nenhum (mkdir/touch/init/remote add — falhar aqui é falha real,
   # não um caminho alternativo a tentar).
-  defp exec(project_id, command, cwd, env \\ nil) do
+  defp exec(project_id, command, cwd, env \\ nil, git_credenciado \\ false) do
     case RunnerReadiness.verificar(project_id) do
       :pronto ->
-        case RunnerRouter.exec(project_id, command, cwd, @timeout_ms, env) do
+        case despachar(project_id, command, cwd, env, git_credenciado) do
           {:ok, payload} ->
             {:ok, {Map.get(payload, "exitCode") || -1, Map.get(payload, "output") || ""}}
 
@@ -328,6 +418,16 @@ defmodule Engine.Actions.Workspace.RunnerGit do
         {:error, RunnerReadiness.mensagem(motivo, project_id)}
     end
   end
+
+  # ADR 0193 — o ÚNICO ponto do engine que marca um `exec` como git
+  # credenciado. A pré-condição da RN-507 (`RunnerReadiness`) já passou acima,
+  # byte a byte a mesma: a marca muda ONDE o runner roda o comando, nunca SE o
+  # engine o despacha.
+  defp despachar(project_id, command, cwd, env, true),
+    do: RunnerRouter.exec_git_credenciado(project_id, command, cwd, @timeout_ms, env)
+
+  defp despachar(project_id, command, cwd, env, false),
+    do: RunnerRouter.exec(project_id, command, cwd, @timeout_ms, env)
 
   defp exec!(project_id, command, cwd, env) do
     case exec(project_id, command, cwd, env) do

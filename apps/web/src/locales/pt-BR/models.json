@@ -59,7 +59,8 @@
     "readsImage": "lê imagem",
     "thinking": "thinking",
     "generatesImage": "gera imagem",
-    "manualPricing": "preço manual"
+    "manualPricing": "preço manual",
+    "freeRoutingAlias": "alias de roteamento livre"
   },
   "catalog": {
     "title": "Catálogo de modelos",
@@ -90,9 +91,11 @@
       "activated": "Modelos ativados",
       "deactivated": "Modelos desativados",
       "saveError": "Não foi possível salvar",
-      "usesUpdated": "Usos atualizados"
+      "usesUpdated": "Usos atualizados",
+      "aliasRefused": "Alias de roteamento livre não entra na curadoria"
     },
     "empty": "Nenhum modelo no catálogo. Cadastre uma credencial de provider e atualize.",
+    "freeRoutingAliasReason": "Preço de vitrine: quem cobra é o upstream que atender cada chamada. Alias com \"~\" não pode ser ativado — escolha um modelo com upstream fixo.",
     "markedHidden_zero": "{{count}} marcados",
     "markedHidden_one": "{{count}} marcado",
     "markedHidden_other": "{{count}} marcados",

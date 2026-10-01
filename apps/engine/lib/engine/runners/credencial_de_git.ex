@@ -4,6 +4,18 @@ defmodule Engine.Runners.CredencialDeGit do
   `docker exec` do runner, e desde esta entrega isso é um desfecho NOMEADO em
   vez de um descarte em silêncio.
 
+  ## Depois do ADR 0193 (RN-676) — a recusa encolheu, e continua existindo
+
+  O `git fetch` credenciado de `Engine.Actions.Workspace.RunnerGit` passou a
+  viajar MARCADO (`gitCredenciado: true`) e o runner o executa no HOST mesmo
+  com container ativo — a credencial chega, e a recusa deixou de disparar no
+  caminho comum. Ela continua existindo, no runner, para o par (`env`
+  presente, container ativo) SEM a marca: hoje nenhum chamador do engine
+  produz isso, então na prática ela aparece por DESCOMPASSO de versão — um
+  runner anterior ao ADR 0193 não lê a marca e recusa como antes, com a marca
+  da RN-558. A origem continua `politica` (a contenção funcionando), e a
+  mensagem passou a apontar o conserto: atualizar o `brabo-runner`.
+
   ## O que acontecia
 
   `Engine.Runners.RunnerReadiness` (RN-507, ADR 0145) exige container `running`
@@ -84,9 +96,11 @@ defmodule Engine.Runners.CredencialDeGit do
       "recusou o comando porque tem um container ativo — todo comando vai para " <>
       "dentro dele por `docker exec`, que não tem campo de `env` (ADR 0130). " <>
       "NADA foi executado, e a credencial não vazou. Isto não é token inválido " <>
-      "nem falha de rede (#{@marca}). Enquanto a metade que falta não existir, " <>
-      "clone/fetch de repositório remoto AUTENTICADO em modo `runner` só funciona " <>
-      "com o container parado. Recusa do runner, verbatim: #{saida_do_runner}"
+      "nem falha de rede (#{@marca}). Desde o ADR 0193 o fetch credenciado vai " <>
+      "marcado para rodar no HOST do runner; esta recusa quer dizer que o " <>
+      "`brabo-runner` conectado é anterior a essa versão e não leu a marca — " <>
+      "atualize-o (ou pare o container) e tente de novo. " <>
+      "Recusa do runner, verbatim: #{saida_do_runner}"
   end
 
   @doc """

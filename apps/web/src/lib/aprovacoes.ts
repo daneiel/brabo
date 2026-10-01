@@ -307,10 +307,14 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
         ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
         : '';
     const porque = resumo ? `: "${curto(resumo)}"` : '';
-    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
-    // uma ação separada (ativar execução), depois. Ver o comentário de
-    // `DevLeadTools.classificar/4`.
-    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
+    const tarefas = quantidade(p, 'tarefas');
+    const comTarefas =
+      tarefas !== undefined && tarefas > 0
+        ? ` Cada uma das ${plural(tarefas, 'tarefa', 'tarefas')} vai para o dev do módulo que o Dev Lead escolheu.`
+        : '';
+    // RN-677 (AT-263, ADR 0194): aprovar o plano É ativar a execução — sobe
+    // os dev agents e começa o gasto. A frase diz isso antes do clique.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}`;
   },
 
   assess_implementability: (p) => {
@@ -319,8 +323,9 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
     const porque = justificativa ? `: "${curto(justificativa)}"` : '';
     // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
-    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
-    // parecer; não sobe agente nenhum.
+    // Lead, a partir da história e do `module_map` (desde o ADR 0192 o plano
+    // de teste nasce depois da entrega). Aprovar registra o parecer; não sobe
+    // agente nenhum.
     return `Registra a story como ${rotulo}${porque}.`;
   },
 

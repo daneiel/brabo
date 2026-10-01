@@ -49,13 +49,13 @@ export interface SessionReadiness {
   arquitetoActive: boolean;
   hasBusinessRule: boolean;
   hasPromotedStory: boolean;
-  hasProductBrief: boolean;
 }
 
 /**
  * As derivações de "prontidão" da sessão (RN-160/RN-161) — os gates que
- * habilitam "Estou pronto para produzir", "Confirmar arquitetura pronta" e
- * "Validar necessidade". O agente que recebe a mensagem do composer
+ * habilitam "Estou pronto — a necessidade está validada" e "Confirmar
+ * arquitetura pronta". "Validar necessidade" saiu no ADR 0185: o primeiro
+ * botão a fecha (RN-657). O agente que recebe a mensagem do composer
  * (`activeAgent`, "o último ativado") saiu daqui na RN-631: deixou de ser
  * derivado do log e passou a ser escolhido (`session-destinatario.ts`).
  * Extraídas de `SessionPage.tsx` (PR 5/5, ADR 0122) — a única fatia do plano
@@ -129,21 +129,10 @@ export function useSessionReadiness(
     [backlogData],
   );
 
-  // Gate `necessidade-validada` (Criativo → PO — auditoria fluxo.yml x
-  // código, achado B2, RN-406/ADR 0095): só faz sentido "validar" um
-  // `product_brief` que já existe — a consolidação que `confirm_readiness`
-  // já produziu. Por isso o botão de validação só habilita DEPOIS que o de
-  // "Estou pronto para produzir" já rodou, nunca antes dele.
-  const hasProductBrief = useMemo(
-    () => events.some((e) => e.type === 'artifact.product_brief'),
-    [events],
-  );
-
   return {
     criativoActive,
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
-    hasProductBrief,
   };
 }

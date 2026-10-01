@@ -152,7 +152,7 @@ export function kickoffDoPasso(cx: Contexto, p: Passo): string | null {
   const historia: Historia | null = porId(cx.dados.historias, tarefa?.storyId);
   if (p.ator.startsWith('dev-') && p.ator !== 'dev-lead') return tarefa ? kickoffDoDev(tarefa, historia) : null;
   if (p.ator === 'qa-automacao') return tarefa ? kickoffDaQaAutomacao(tarefa, historia) : null;
-  if (p.ator === 'qa-estrategia') return kickoffDaQaEstrategia(null, modulos);
+  if (p.ator === 'qa-estrategia') return kickoffDaQaEstrategia(tarefa, historia, { erro: 'a lista de arquivos da entrega não fica no event log' });
   if (p.ator === 'appsec') return kickoffDoAppsec(null, modulos);
   return null;
 }

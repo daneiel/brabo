@@ -348,7 +348,7 @@ interpolam id em URL, não só os que o CodeQL reportou:
 
 - dentro de `postCommand`, que a maioria dos métodos já usa
   (`startAgent`, `sendAgentMessage`, `confirmReadiness`, `cancelAgentTurn`,
-  `offerInfraHandoff`, `offerDevHandoff`, `invalidateInstructions`,
+  `offerInfraHandoff`, `invalidateInstructions`,
   `startExecution`, `acceptParallelization`, `rearmDevAgent`,
   `reviseStory`) — o chamador lista as tuplas `(nome, valor)` que já
   interpolou no `path`, e `postCommand` valida TODAS antes de montar a
@@ -1598,7 +1598,11 @@ olha a origem; merge em branch protegida, `instruction_patch`,
 auto-aprováveis ([RN-154](#rn-154)). Regra específica do tipo vence a curinga
 no repositório e chega como `'especifica'`: `terminal: require_approval` com a
 curinga ligada segue pedindo. Desligar (o toggle do card do agente grava a
-curinga como `require_approval`) restaura o teto.
+curinga como `require_approval`) restaura o teto. Desde a
+[RN-670](../business-rules.md#rn-670) (ADR 0189) a específica `auto_approve`
+sob a curinga `auto_approve` — o que "Sempre permitir" de dev agent grava —
+resolve como a CURINGA, e não desliga mais o modo automático; e, fora dele, o
+escopo compara com a pasta REAL de execução ([RN-669](../business-rules.md#rn-669)).
 
 A tela diz, antes do clique, o que o modo libera e o que continua pedindo: a
 nota do `ApprovalCard` aparece nas DUAS variantes (chat e fila de Aprovações),
@@ -1606,14 +1610,14 @@ e o card do agente mostra uma frase sob o toggle — só quando a CURINGA está
 ligada, porque o toggle sobre o tipo representativo grava regra específica,
 que não libera o escopo.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:271` (`modoAutomaticoDoAgente`),
-  `apps/api/src/domain/actions/decide.ts:346` (o veredito sintetizado do
-  composto ignorado), `apps/api/src/domain/actions/decide.ts:409` (o teto de
+- **Onde:** `apps/api/src/domain/actions/decide.ts:293` (`modoAutomaticoDoAgente`),
+  `apps/api/src/domain/actions/decide.ts:368` (o veredito sintetizado do
+  composto ignorado), `apps/api/src/domain/actions/decide.ts:436` (o teto de
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:146`
-  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:105`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:175`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts` ("modo automático
@@ -1770,6 +1774,12 @@ Só valia no CLIENTE: uma chamada HTTP direta ignorava a regra. Fechado por
 [RN-404](../business-rules.md#rn-404) (ADR 0094), que revalida no backend.
 
 ### RN-161 — Aceitar o handoff pro Dev Lead encadeia a ativação de execução quando o papel efetivo já autoriza {#rn-161}
+
+> **Revisada pela [RN-677](../business-rules.md#rn-677) (ADR 0194, decisão do
+> dono em 01/10):** aceitar o handoff ao Dev Lead deixou de encadear a ativação
+> da execução, para TODO papel — o aceite só o traz para PLANEJAR, e quem ativa
+> é a APROVAÇÃO do plano dele (`propose_execution_plan`). O texto abaixo
+> descreve a fusão como ela era.
 
 `handleAcceptHandoff` (`SessionPage.tsx`) encadeia `activateExecution`
 automaticamente quando `toAgent === 'dev-lead'` E o papel EFETIVO de quem
@@ -2409,7 +2419,7 @@ descrito aqui.
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
   toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:507` (`fio`)
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:510` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),

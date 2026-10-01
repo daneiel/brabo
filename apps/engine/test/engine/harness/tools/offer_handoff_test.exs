@@ -33,6 +33,32 @@ defmodule Engine.Harness.Tools.OfferHandoffTest do
     assert texto =~ "nenhum novo foi criado"
   end
 
+  # RN-660 (ADR 0186): a api aceitou pelo sistema — o modelo não pode ficar
+  # esperando um clique que não vem.
+  test "aceite automático: diz que o destino já foi ativado", %{ctx: ctx} do
+    Process.put(:fake_handoff, %{
+      "id" => "ho-1",
+      "status" => "accepted",
+      "desfecho" => "criado",
+      "aceiteAutomatico" => %{"aceito" => true}
+    })
+
+    assert {:ok, texto} = OfferHandoff.run(%{"to_agent" => "arquiteto"}, ctx)
+    assert texto =~ "aceito automaticamente"
+    refute texto =~ "aguardando o usuário"
+  end
+
+  test "sem aceite automático: segue aguardando o usuário", %{ctx: ctx} do
+    Process.put(:fake_handoff, %{
+      "id" => "ho-1",
+      "desfecho" => "criado",
+      "aceiteAutomatico" => %{"aceito" => false, "motivo" => "regras_sem_historia"}
+    })
+
+    assert {:ok, texto} = OfferHandoff.run(%{"to_agent" => "arquiteto"}, ctx)
+    assert texto =~ "aguardando o usuário aceitar"
+  end
+
   test "destino já ativo: a frase da api vira o erro que o modelo lê", %{ctx: ctx} do
     frase = ~s(Handoff não criado: o agente "arquiteto" já está ativo neste projeto)
 

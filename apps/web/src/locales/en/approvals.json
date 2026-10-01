@@ -110,7 +110,7 @@
       "modulesCount_one": "{{count}} module",
       "modulesCount_other": "{{count}} modules",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " You still decide when to activate execution."
+      "note": " and ACTIVATES execution: the dev agents start and begin spending."
     },
     "assessImplementability": {
       "verb": "assesses a story's implementability",
@@ -135,7 +135,7 @@
       "autoMode": "Auto mode"
     },
     "notes": {
-      "alwaysAllow": "Always allow: records the rule in the project's .brabo/permissions.json.",
+      "alwaysAllow": "Always allow: records, in the project's .brabo/permissions.json, one rule per command segment, by verb + subcommand (e.g. \"npm test\", \"git status\") — the next command with the same verb and subcommand runs without asking.",
       "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
       "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."
@@ -214,12 +214,11 @@
       "loadingQueue": "Loading the queue…",
       "queueError": "Couldn't load the approval queue.",
       "empty": "No pending approvals. The team is flowing.",
-      "motivoForaDoRecorte": {
-        "porque": "this tab reads one session's log, and the reason lives in the log of the session that proposed the action.",
-        "todas_one": "The policy reason for this action is not among the events this screen loaded: {{porque}}",
-        "todas_other": "The policy reason for these {{count}} actions is not among the events this screen loaded: {{porque}}",
-        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}",
-        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below is not among the events this screen loaded: {{porque}}"
+      "motivoNaoLido": {
+        "todas_one": "The policy reason for this action could not be read: reading the log of the session that proposed it failed.",
+        "todas_other": "The policy reason for these {{count}} actions could not be read: reading the log of the session that proposed them failed.",
+        "algumas_one": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed it failed.",
+        "algumas_other": "The policy reason for {{count}} of the {{total}} actions below could not be read: reading the log of the session that proposed them failed."
       }
     },
     "devPrs": {
@@ -265,7 +264,8 @@
     "mergeErrorTitle": "Couldn't propose the merge",
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
-    "mergeNoSession": "No session in the project to propose the action."
+    "mergeNoSession": "No session in the project to propose the action.",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
   },
   "politica": {
     "motivo": "Policy decided by: {{motivo}}",

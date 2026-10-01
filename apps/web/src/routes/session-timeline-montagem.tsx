@@ -13,6 +13,7 @@ import type {
   StructuredQuestion,
   StructuredQuestionAnsweredPayload,
   StructuredQuestionPayload,
+  Task,
 } from '../lib/api-types';
 import type { useTurnoDoAgente } from '../lib/session-turno';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -38,9 +39,12 @@ import {
 import { decisaoDaPoliticaDaAcao } from '../lib/decisao-da-politica';
 import { StorySlide } from './StorySlide';
 import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
+import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
+import { estadosNaFila } from '../lib/fila-de-mensagens';
+import { SeloDaFila } from './SeloDaFila';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -377,6 +381,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     });
   }
 
+  // RN-673: o estado de cada mensagem na fila de um agente — derivado do log
+  // UMA vez por montagem, como o engine o deriva.
+  const filaDasMensagens = estadosNaFila(events);
+
   for (const event of events) {
     // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
     // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
@@ -404,6 +412,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // desconhecido —, nunca quem está vendo a tela.
       const autor = autorDaMensagem(event.actor, autoria);
       const deAgente = autor.tipo === 'agente';
+      const naFila = filaDasMensagens.get(event.id);
       empurrar({
         mensagem: true, // RN-644: conta no corte do fio
         node: (
@@ -433,6 +442,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
                 <span className={styles.messageName}>{rotuloDoAutor(autor)}</span>
+                {naFila && (
+                  <SeloDaFila
+                    projectId={projectId}
+                    sessionId={sessionId}
+                    mensagemId={event.id}
+                    estado={naFila}
+                    // Só quem ENVIOU cancela (a api recusa os outros com 403),
+                    // e só com a sessão aberta.
+                    podeCancelar={isActive && autor.tipo === 'voce'}
+                  />
+                )}
               </div>
               <div className={styles.bubble}>{text}</div>
             </div>
@@ -579,6 +599,54 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                 {nomeDoAgente(toAgent)}
               </span>
+            </span>
+          </div>
+        ),
+      });
+    } else if (
+      event.type === 'handoff.accepted' &&
+      (event.payload as { automatico?: boolean } | null)?.automatico === true
+    ) {
+      // RN-660 (ADR 0186): o SISTEMA aceitou o handoff do PO ao Arquiteto,
+      // sem clique. O aceite humano não aparece no fio (o clique já foi
+      // visto por quem clicou); este aparece, porque ninguém clicou e o fio
+      // é o único lugar onde a pessoa descobre por que o Arquiteto entrou.
+      const payload = event.payload as {
+        toAgent?: string;
+        criterio?: { regras?: number };
+      };
+      empurrar({
+        desfecho: true,
+        node: (
+          <div
+            className={styles.handoffDivider}
+            key={event.id}
+            data-testid="handoff-aceite-automatico"
+          >
+            <span className={styles.handoffPill}>
+              {t('handoff.aceiteAutomatico', {
+                agente: nomeDoAgente(payload.toAgent),
+                regras: payload.criterio?.regras ?? 0,
+              })}
+            </span>
+          </div>
+        ),
+      });
+    } else if (event.type === 'handoff.auto_accept_failed') {
+      const payload = event.payload as { toAgent?: string; error?: string };
+      empurrar({
+        desfecho: true,
+        node: (
+          <div
+            className={styles.handoffDivider}
+            key={event.id}
+            data-testid="handoff-aceite-automatico-falhou"
+          >
+            <span className={styles.handoffPill}>
+              {t('handoff.aceiteAutomaticoFalhou', {
+                agente: nomeDoAgente(payload.toAgent),
+                erro: payload.error ?? '',
+              })}
             </span>
           </div>
         ),
@@ -787,6 +855,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             className={styles.message}
             key={event.id}
             style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            // Seletor ESTRUTURAL do E2E (`e2e/testes/turno-pelo-canal.spec.ts`,
+            // AT-338): a bolha de falha e a origem dela, sem ler o texto, que
+            // muda com o idioma da conta.
+            data-testid="falha-de-turno"
+            data-origem={origem}
           >
             <span className={styles.avatar}>
               <AlertCircleIcon size={15} />
@@ -855,6 +928,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           sessionId={sessionId}
           pr={prAberta}
           podeDecidir={podeDecidir}
+          // AT-249 (RN-663): o gate que ainda falta, pela tarefa que a
+          // `pr_open` carrega — aviso, o botão segue ativo.
+          gatePendente={gatePendenteNoMerge(
+            tarefaDaAcao(action, backlogQuery.data),
+          )}
         />
       ) : null;
     // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
@@ -934,4 +1012,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     titulo: t('turno.passosDoTurno'),
     trailing: (count) => t('turno.passosCount', { count }),
   });
+}
+
+/** A tarefa que a `pr_open` abriu (`storyTaskId` no payload), se o backlog carregado a tem. */
+function tarefaDaAcao(acao: ProposedAction, epics: Epic[] | undefined): Task | undefined {
+  const taskId = (acao.payload as { storyTaskId?: unknown } | null)?.storyTaskId;
+  if (typeof taskId !== 'string') return undefined;
+  for (const epic of epics ?? []) {
+    for (const story of epic.stories) {
+      const task = story.tasks.find((t) => t.id === taskId);
+      if (task) return task;
+    }
+  }
+  return undefined;
 }

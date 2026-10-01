@@ -27,6 +27,7 @@ import { GetProjectPermissionsUseCase } from './get-project-permissions.use-case
 import { SetProjectPermissionsUseCase } from './set-project-permissions.use-case';
 import { ListProjectsForWorkspaceUseCase } from './list-projects-for-workspace.use-case';
 import { ListProjectMembersUseCase } from './list-project-members.use-case';
+import { ListWorkspaceMembersUseCase } from './list-workspace-members.use-case';
 import { GetWorkspaceSummaryUseCase } from './get-workspace-summary.use-case';
 import { GetProjectsStatusForWorkspaceUseCase } from './get-projects-status-for-workspace.use-case';
 import { GetProjectsSummaryForWorkspaceUseCase } from './get-projects-summary-for-workspace.use-case';
@@ -40,6 +41,7 @@ import { DetectarIdiomaDoAutorUseCase } from './detectar-idioma-do-autor.use-cas
 // depende do repositório de áreas (DrizzleModule é global), e importar o
 // módulo de agentes traria sessões e o cliente do engine junto — aresta nova
 // entre IAM e agentes por causa de uma classe sem estado.
+import { SetWorkspaceToolRouterUseCase } from './set-workspace-tool-router.use-case';
 import { SeedAgentAreasUseCase } from '../agents/seed-agent-areas.use-case';
 
 const USE_CASES = [
@@ -52,6 +54,7 @@ const USE_CASES = [
   AddWorkspaceMemberUseCase,
   RemoveWorkspaceMemberUseCase,
   TransferWorkspaceOwnershipUseCase,
+  SetWorkspaceToolRouterUseCase,
   CreateProjectUseCase,
   ConfirmProjectWorkspaceUseCase,
   ConvertProjectExecutionModeUseCase,
@@ -68,6 +71,7 @@ const USE_CASES = [
   SetProjectPermissionsUseCase,
   ListProjectsForWorkspaceUseCase,
   ListProjectMembersUseCase,
+  ListWorkspaceMembersUseCase,
   GetWorkspaceSummaryUseCase,
   GetProjectsStatusForWorkspaceUseCase,
   GetProjectsSummaryForWorkspaceUseCase,

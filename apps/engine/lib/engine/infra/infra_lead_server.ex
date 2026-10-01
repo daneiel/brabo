@@ -19,7 +19,10 @@ defmodule Engine.Infra.InfraLeadServer do
   (`route_modules_to_infra`, ADR 0131), qual sobe como o container real do
   projeto — `propose_container_start` (ADR 0131/RN-487, PR 1.5), independente
   da PR de infra: nunca inventa candidata fora da lista, e vira
-  `proposed_action` que SEMPRE exige aprovação humana.
+  `proposed_action`. Desde o ADR 0190 (RN-671) o aceite do handoff semeia
+  `container_start: auto_approve` para a Infra, e o SERVIDOR propõe a subida
+  sozinho no kickoff quando há roteamento (`subir_no_aceite/2`) — a tool
+  continua existindo para as conversas seguintes.
 
   Desde a RN-508 (ADR 0145) ganha uma SEGUNDA tool de subir container,
   `container_start_via_runner` — exclusiva de projeto `execution_mode:
@@ -63,6 +66,18 @@ defmodule Engine.Infra.InfraLeadServer do
   (a PR de infra e as duas subidas de container, com as recusas locais das
   RN-566/RN-610/RN-577 intactas).
 
+  ## O Dev Lead é oferecido pela Infra, com o container de pé (RN-672)
+
+  Desde a AT-262 (ADR 0190) o handoff ao Dev Lead sai DAQUI, e não mais da
+  confirmação de arquitetura do Arquiteto: no fim de cada turno (`concluir/1`)
+  e quando o container do projeto chega em `running` fora de um turno
+  (`{:container_running, project_id}`, por `Engine.Workers.InfraOfereceDevLeadWorker`
+  a partir do `container.running` do outbox), o servidor pergunta se o
+  container está REGISTRADO `running` e, só então, oferece `infra → dev-lead`
+  no modo "só se ninguém recebeu ainda" (`create_handoff_if_absent/5`, ADR
+  0182). É passo de servidor, não ferramenta: o modelo não decide quando o
+  Dev Lead entra.
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -84,6 +99,29 @@ defmodule Engine.Infra.InfraLeadServer do
   Workflows, consolida, e só então chama a api (uma vez, com a união dos
   arquivos). O SPEC da tool não muda — o modelo não percebe diferença
   nenhuma.
+
+  ## A subida que se anuncia é a que o código fez (RN-668)
+
+  O HALT de `propose_infra_pr` é o único ponto em que o código corta o laço
+  com o modelo querendo continuar. Desde a RN-668 o lote inteiro da resposta
+  é despachado ANTES dele (uma subida pedida na mesma resposta não some mais
+  calada), e o fecho do turno (`fechar_subida/2`) diz no fio, com frase do
+  SERVIDOR, quando a subida do container não foi proposta — em vez de a
+  última palavra ser um "subo em paralelo" do modelo que nenhum `tool.call`
+  cumpriu.
+
+  ## A subida no aceite é passo do servidor (RN-671, ADR 0190)
+
+  Desde a AT-260 o kickoff — o turno que nasce do handoff aceito — propõe
+  `container_start` ANTES da primeira ida ao modelo, quando há roteamento
+  vigente e o projeto sobe pelo broker (`container`/`mounted`): o servidor
+  elege a candidata (`eleger_candidata/1`) e passa pelo MESMO
+  `propor_container_start/2` da tool, com as recusas por modo e estado
+  intactas. A proposta nasce auto-aprovada pela autonomia semeada no aceite.
+  Com isso o fecho da RN-668 fica verdadeiro por construção no caso comum: a
+  subida foi proposta, e ele não tem o que dizer. Ele segue falando quando a
+  subida do servidor foi recusada (e nada a corrigiu) e quando ela não cabia
+  ao servidor (sem roteamento, `runner`) e o modelo não a propôs.
   """
 
   use GenServer, restart: :temporary
@@ -108,7 +146,6 @@ defmodule Engine.Infra.InfraLeadServer do
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
   # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
   alias Engine.Runners.Registry, as: RunnerRegistry
-  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "infra"
@@ -146,8 +183,12 @@ defmodule Engine.Infra.InfraLeadServer do
   #
   # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
   # (RN-622); `nil` = sem orientação neste turno.
-  def user_message(session_id, text, idioma \\ nil),
-    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
+
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
   @doc "Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova."
   def correct(session_id, findings), do: GenServer.cast(via(session_id), {:correct, findings})
@@ -168,6 +209,11 @@ defmodule Engine.Infra.InfraLeadServer do
     # antes do aceite; agora ele passa pelo MESMO `TurnoAssincrono` dos outros.
     _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
 
+    # RN-672: o aviso de que o container do projeto subiu chega por PubSub
+    # (cluster-wide — o job do outbox roda em QUALQUER réplica, e o Registry
+    # da sessão é local ao nó; a mesma razão de `Engine.Dev.Wake`).
+    Phoenix.PubSub.subscribe(Engine.PubSub, topico_do_container(project_id))
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
@@ -184,8 +230,13 @@ defmodule Engine.Infra.InfraLeadServer do
        ],
        # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
        # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
-       # do turno, e uma segunda mensagem ser RECUSADA com nome em vez de
-       # esperar na fila do processo.
+       # do turno, e uma segunda mensagem entrar na fila de mensagens (RN-673)
+       # em vez de esperar na caixa do processo.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil,
        # Correção de gate (`{:correct, _}`) que chegou com um turno em curso:
        # guardada e rodada no fecho, na ordem de chegada. Antes da RN-617 o
@@ -199,13 +250,18 @@ defmodule Engine.Infra.InfraLeadServer do
   # Os três turnos — kickoff, correção de gate e mensagem do composer — rodam
   # pelo MESMO `TurnoAssincrono` (RN-617). O kickoff continua sendo um cast
   # disparado só no start FRESCO; o que mudou é ONDE ele roda: numa Task, e
-  # por isso "Parar" o alcança e uma mensagem que chega no meio dele recebe
-  # 409 `turno_em_andamento` em vez de esperar o turno inteiro na fila.
+  # por isso "Parar" o alcança e uma mensagem que chega no meio dele entra na
+  # fila de mensagens (RN-673) e é lida no fim dele.
   @impl true
   def handle_cast(:kickoff, state) do
     TurnoAssincrono.iniciar(state, nil, fn ->
+      # O contexto é lido UMA vez: é dele que sai o roteamento que a subida
+      # pelo servidor elege (RN-671) e o texto do kickoff que o modelo lê.
+      ctx = infra_context(state)
+      {state, subida} = subir_no_aceite(state, ctx)
+
       state
-      |> append(user_msg(kickoff_instruction(state)))
+      |> append(user_msg(kickoff_instruction(ctx, subida)))
       |> compact()
       |> run_turn(@max_iterations)
       |> concluir()
@@ -244,29 +300,63 @@ defmodule Engine.Infra.InfraLeadServer do
   # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
   # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
   # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
   @impl true
-  def handle_call({:user_message, text, idioma}, from, state) do
-    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
-      handle_call({:user_message, text}, from, state)
-    end)
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
   end
 
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
   @impl true
-  def handle_call({:user_message, text}, from, state) do
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
+
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
 
-    TurnoAssincrono.iniciar(state, from, fn ->
+    fn ->
       work |> run_turn(@max_iterations) |> concluir()
-    end)
+    end
   end
+
+  # RN-672: o container do projeto chegou em `running` (o `container.running`
+  # do outbox, entregue por `Engine.Workers.InfraOfereceDevLeadWorker`). Com
+  # turno em curso não se faz nada aqui: o fecho dele (`concluir/1`) faz a
+  # MESMA pergunta, lendo o registro, e oferecer dos dois lados só geraria a
+  # segunda chamada que o modo `if_absent` responderia "já oferecido".
+  @impl true
+  def handle_info({:container_running, project_id}, %{project_id: project_id} = state) do
+    case state.turno_assincrono do
+      nil -> {:noreply, oferecer_ao_dev_lead(state)}
+      _em_curso -> {:noreply, state}
+    end
+  end
+
+  def handle_info({:container_running, _outro_projeto}, state), do: {:noreply, state}
 
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
       # A fila vem do state ANTERIOR à mensagem: o `novo_state` é o que a Task
       # devolveu, e ela capturou o state do INÍCIO do turno — antes de a
-      # correção chegar e entrar na fila (o mesmo raciocínio do
-      # `handoff_dev_pendente` do Arquiteto).
+      # correção chegar e entrar na fila.
       {:ok, novo_state} ->
         pendentes = Map.get(state, :correcoes_pendentes, [])
 
@@ -375,17 +465,34 @@ defmodule Engine.Infra.InfraLeadServer do
     end
   end
 
+  # O lote INTEIRO de uma resposta é despachado antes de qualquer HALT
+  # (RN-668). Até ali, `propose_infra_pr` parava o `reduce_while` no meio do
+  # lote: uma `propose_container_start` escrita DEPOIS dela, na mesma
+  # resposta, era descartada sem `tool.call`, sem `tool.result` e sem aviso —
+  # o modelo dizia "subo o container em paralelo", pedia as duas, e o código
+  # executava uma. É a forma do Dev Lead (`propose_execution_plan`): o lote
+  # roda todo, e só DEPOIS o sucesso encerra o turno.
+  #
+  # A PR aceita fica guardada e o HALT acontece no fim do lote; uma segunda
+  # `propose_infra_pr` na MESMA resposta é recusada com motivo (a primeira é
+  # a que consolida), nunca somada nem descartada calada.
   defp dispatch_calls(calls, state, remaining) do
     calls
-    |> Enum.reduce_while({:cont, state}, fn call, {:cont, st} ->
+    |> Enum.reduce({nil, state}, fn call, {pr, st} ->
       case Map.get(call, "name") do
         "propose_infra_pr" ->
           args = Map.get(call, "arguments", %{})
           title = Map.get(args, "title", "Dockerfiles e compose de dev")
           files = Map.get(args, "files", [])
 
-          case recusa_de_infra_pr(call, title, files, st) do
-            nil ->
+          cond do
+            pr != nil ->
+              {pr, recusa_pr_repetida_no_lote(call, title, files, st)}
+
+            st_recusado = recusa_de_infra_pr(call, title, files, st) ->
+              {nil, st_recusado}
+
+            true ->
               st =
                 append(st, %{
                   "role" => "tool",
@@ -396,26 +503,41 @@ defmodule Engine.Infra.InfraLeadServer do
                   :pinned => false
                 })
 
-              {:halt, {:proposed, title, files, st}}
-
-            st_recusado ->
-              {:cont, {:cont, st_recusado}}
+              {{title, files}, st}
           end
 
         "propose_container_start" ->
-          {:cont, {:cont, dispatch_container_start(call, st)}}
+          {pr, dispatch_container_start(call, st)}
 
         "container_start_via_runner" ->
-          {:cont, {:cont, dispatch_container_start_via_runner(call, st)}}
+          {pr, dispatch_container_start_via_runner(call, st)}
 
         _ ->
-          {:cont, {:cont, dispatch_tool(call, st)}}
+          {pr, dispatch_tool(call, st)}
       end
     end)
     |> case do
-      {:proposed, _title, _files, _state} = result -> result
-      {:cont, state} -> run_turn(state, remaining - 1)
+      {{title, files}, state} -> {:proposed, title, files, state}
+      {nil, state} -> run_turn(state, remaining - 1)
     end
+  end
+
+  defp recusa_pr_repetida_no_lote(call, title, files, state) do
+    caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+    emit(state, "tool.call", %{
+      tool: "propose_infra_pr",
+      args: %{title: title, paths: caminhos}
+    })
+
+    registrar_resultado(
+      state,
+      Map.get(call, "id"),
+      "propose_infra_pr",
+      {:error,
+       "`propose_infra_pr` já foi chamada nesta mesma resposta — só a primeira " <>
+         "chamada é consolidada com o Workflows, e esta não foi proposta."}
+    )
   end
 
   # `propose_infra_pr` sem repositório (RN-577) — `nil` quando o projeto TEM
@@ -466,8 +588,8 @@ defmodule Engine.Infra.InfraLeadServer do
   # `propose_container_start` NÃO halts como `propose_infra_pr` — é ação
   # independente (elege candidata do roteamento do Arquiteto, ADR 0131), sem
   # consolidação com o Workflows. Despacha inline, direto pra api, e deixa o
-  # loop continuar: o modelo pode chamar `propose_infra_pr` antes/depois, ou
-  # nunca chamar esta.
+  # loop continuar. No kickoff a subida já é do servidor (RN-671); a tool fica
+  # para a eleição que o modelo faz depois, numa conversa.
   #
   # Desde a RN-566 ela consulta LOCALMENTE o `execution_mode` ANTES de chamar
   # `propose_action` — a MESMA régua que a irmã `container_start_via_runner`
@@ -487,30 +609,158 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
 
-    resultado =
-      case recusa_local_de_subida(:container_start, state.project_id) do
-        nil ->
-          actor = %{kind: "agent", id: @agent}
+    resultado = propor_container_start(state, payload)
 
-          case EngineApiClient.propose_action(
-                 state.project_id,
-                 state.session_id,
-                 "container_start",
-                 actor,
-                 payload
-               ) do
-            {:ok, %{"id" => _id, "status" => status}} ->
-              {:ok, "container_start proposto (status #{status}) — decisão final do usuário."}
+    state
+    |> registrar_resultado(id, "propose_container_start", resultado)
+    |> registrar_subida("propose_container_start", resultado)
+  end
 
-            {:error, reason} ->
-              {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
-          end
+  # O caminho ÚNICO de `container_start` a partir do Infra Lead — a tool do
+  # modelo (`dispatch_container_start/2`) e o passo do servidor no aceite
+  # (`subir_no_aceite/2`, RN-671) passam por aqui: as MESMAS recusas locais
+  # por modo e estado (RN-566/RN-610), a MESMA `propose_action` (a api decide
+  # a autonomia, recusa sem broker — RN-591 — e elege a imagem pelo
+  # `DecidirImagemDoProjetoUseCase`, RN-491). Não há segunda régua.
+  #
+  # O texto diz o status que a api devolveu, e só fala em "decisão do usuário"
+  # quando ela ficou `pending`: desde o ADR 0190 a autonomia semeada no aceite
+  # faz a proposta nascer auto-aprovada, e aí ela já executou (`executed`) ou
+  # falhou (`failed`) quando a chamada volta.
+  defp propor_container_start(state, payload) do
+    case recusa_local_de_subida(:container_start, state.project_id) do
+      nil ->
+        actor = %{kind: "agent", id: @agent}
 
-        motivo ->
-          {:error, motivo}
-      end
+        case EngineApiClient.propose_action(
+               state.project_id,
+               state.session_id,
+               "container_start",
+               actor,
+               payload
+             ) do
+          {:ok, %{"id" => _id, "status" => "pending"}} ->
+            {:ok, "container_start proposto (status pending) — decisão final do usuário."}
 
-    registrar_resultado(state, id, "propose_container_start", resultado)
+          # `denied` é a política recusando (papel abaixo de `maintainer`,
+          # `deny` em `permissions.json`): a proposta nasceu, mas nada vai
+          # subir por ela — para o fecho da RN-668 é recusa, não proposta.
+          {:ok, %{"id" => _id, "status" => "denied"} = acao} ->
+            {:error,
+             "container_start negado pela política (status denied)" <>
+               motivo_da_negacao(acao)}
+
+          {:ok, %{"id" => _id, "status" => status}} ->
+            {:ok, "container_start proposto (status #{status})."}
+
+          {:error, reason} ->
+            {:error, "container_start recusado: #{motivo_da_recusa_da_api(reason)}"}
+        end
+
+      motivo ->
+        {:error, motivo}
+    end
+  end
+
+  defp motivo_da_negacao(%{"rejectionReason" => motivo}) when is_binary(motivo) and motivo != "",
+    do: ": #{motivo}"
+
+  defp motivo_da_negacao(_acao), do: "."
+
+  # --- A subida pelo SERVIDOR no aceite do handoff (RN-671, ADR 0190) ---
+  #
+  # No uso real de 29/09 a Infra anunciou a subida "em paralelo" e não a
+  # propôs; o container só subiu pela `/containers` (AT-260). Desde o ADR 0190
+  # a subida deixa de depender do modelo: no kickoff — o turno que nasce do
+  # handoff aceito —, ANTES da primeira ida ao modelo, o servidor elege uma
+  # candidata do roteamento do Arquiteto e propõe `container_start` pelo
+  # MESMO `propor_container_start/2` da tool. A proposta nasce auto-aprovada
+  # pela autonomia que o aceite semeia (`container_start: auto_approve`,
+  # `INFRA_AUTONOMY_SEEDS`), então a api a executa na mesma chamada.
+  #
+  # Só roda quando há roteamento VIGENTE (`roteado`, com ao menos uma
+  # candidata) e o projeto é `container`/`mounted` — os dois modos que sobem
+  # pelo broker. `runner` fica com o caminho de sempre
+  # (`container_start_via_runner`, proposto pelo modelo e decidido por
+  # humano): a decisão do dono não o mudou. Projeto que o engine não lê
+  # também não ganha subida.
+  #
+  # O rastro é o de uma ferramenta — `tool.call` (com `origem: "servidor"`) e
+  # `tool.result` duráveis —, mas NENHUMA mensagem `role: "tool"` entra no
+  # histórico do modelo: não houve chamada dele a que ela respondesse, e uma
+  # resposta de ferramenta sem a chamada é recusada pelos providers. O que o
+  # modelo sabe da subida vem no TEXTO do kickoff (`passo_da_subida/1`).
+  defp subir_no_aceite(state, {:ok, ctx}) do
+    with %{"status" => "roteado", "roteamento" => rotas} when is_list(rotas) <-
+           Map.get(ctx, "moduleRouting"),
+         {imagem, modulos} <- eleger_candidata(rotas),
+         %{execution_mode: modo} when modo in ~w(container mounted) <-
+           Project.get(state.project_id) do
+      payload = %{
+        imagem: imagem,
+        network: "none",
+        resources: %{},
+        rationale: rationale_do_servidor(modulos, length(rotas))
+      }
+
+      emit(state, "tool.call", %{
+        tool: "propose_container_start",
+        args: payload,
+        origem: "servidor"
+      })
+
+      resultado = propor_container_start(state, payload)
+
+      emit(
+        state,
+        "tool.result",
+        ResultadoDeFerramenta.payload("propose_container_start", resultado)
+      )
+
+      {registrar_subida(state, "propose_container_start", resultado),
+       {:servidor, imagem, resultado}}
+    else
+      _ -> {state, nil}
+    end
+  end
+
+  defp subir_no_aceite(state, _sem_contexto), do: {state, nil}
+
+  @doc """
+  A eleição do servidor (RN-671): a candidata do MAIOR número de módulos, e no
+  empate a que aparece PRIMEIRO no roteamento — determinística, sem modelo, e
+  sempre uma das candidatas (a api recusa qualquer outra imagem). `nil` quando
+  o roteamento não traz candidata nenhuma.
+  """
+  def eleger_candidata(rotas) do
+    validas =
+      for %{"imagemCandidata" => imagem} = rota <- rotas,
+          is_binary(imagem) and imagem != "",
+          do: {imagem, Map.get(rota, "modulo")}
+
+    case validas do
+      [] ->
+        nil
+
+      _ ->
+        modulos_por_imagem = Enum.group_by(validas, &elem(&1, 0), &elem(&1, 1))
+
+        imagem =
+          validas
+          |> Enum.map(&elem(&1, 0))
+          |> Enum.uniq()
+          |> Enum.max_by(&length(Map.fetch!(modulos_por_imagem, &1)))
+
+        {imagem, Map.fetch!(modulos_por_imagem, imagem)}
+    end
+  end
+
+  defp rationale_do_servidor(modulos, total) do
+    nomes = Enum.map_join(modulos, ", ", &to_string/1)
+
+    "Eleita pelo servidor no aceite do handoff da Infra (ADR 0190): a candidata " <>
+      "do Arquiteto para #{length(modulos)} de #{total} módulo(s) (#{nomes}); no " <>
+      "empate, a primeira do roteamento."
   end
 
   # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
@@ -571,7 +821,9 @@ defmodule Engine.Infra.InfraLeadServer do
           {:error, motivo}
       end
 
-    registrar_resultado(state, id, "container_start_via_runner", resultado)
+    state
+    |> registrar_resultado(id, "container_start_via_runner", resultado)
+    |> registrar_subida("container_start_via_runner", resultado)
   end
 
   # `nil` quando a tool PODE propor; mensagem NOMEADA quando não pode — a
@@ -780,10 +1032,130 @@ defmodule Engine.Infra.InfraLeadServer do
   # visível pelo `dev.error` que `aplicar/2` emite.
   defp concluir({:proposed, title, files, state}) do
     {_status, state} = finalize(state, title, files)
+
+    state
+    |> fechar_subida(:pr_encerrou_o_turno)
+    |> oferecer_ao_dev_lead()
+  end
+
+  defp concluir({:done, state}) do
+    state
+    |> fechar_subida(:turno_terminou)
+    |> oferecer_ao_dev_lead()
+  end
+
+  # --- O handoff ao Dev Lead sai da Infra (RN-672, ADR 0190) ---
+
+  @doc "Tópico em que o aviso de container `running` do projeto chega (RN-672)."
+  def topico_do_container(project_id), do: "infra:container_running:" <> project_id
+
+  # Só com o container REGISTRADO `running` (a decisão do dono): é ele que os
+  # dev agents exigem para trabalhar (RN-502), e oferecer o Dev Lead antes
+  # deixava aceitável uma execução sem onde rodar. A leitura é a mesma de
+  # `container_registrado_de_pe?/1`, local e sem HTTP — só que `running`, e
+  # não `provisioning`.
+  #
+  # `create_handoff_if_absent/5` (ADR 0182, RN-636): oferta pendente ao Dev Lead
+  # em qualquer sessão do projeto volta como está, e Dev Lead já ATIVO é 409
+  # `agente_ja_ativo` — nenhuma das duas é falha, e é isso que deixa este passo
+  # rodar no fim de TODO turno sem empilhar ofertas. Outra recusa vira
+  # `agent.error` durável com origem (RN-116), sem derrubar o turno.
+  defp oferecer_ao_dev_lead(state) do
+    if ProjectContainerLifecycle.status_registrado(state.project_id) == "running" do
+      case EngineApiClient.create_handoff_if_absent(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "dev-lead",
+             nil
+           ) do
+        {:ok, _handoff} -> state
+        {:error, {409, %{"reason" => "agente_ja_ativo"}}} -> state
+        {:error, reason} -> emit_falha_do_handoff_ao_dev_lead(state, reason)
+      end
+    else
+      state
+    end
+  end
+
+  defp emit_falha_do_handoff_ao_dev_lead(state, reason) do
+    origem = FalhaDeTurno.origem(reason)
+
+    mensagem =
+      "O container do projeto está de pé, mas não consegui oferecer o handoff " <>
+        "ao dev-lead: #{inspect(reason)}. O fim de cada turno meu tenta de " <>
+        "novo — me mande uma mensagem para eu repetir a oferta."
+
+    emit(state, "agent.error", %{origem: origem, mensagem: mensagem, reason: inspect(reason)})
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
 
-  defp concluir({:done, state}), do: state
+  # --- O que o turno fez com a subida do container (RN-668) ---
+  #
+  # A RN-163 na Infra: o que o turno ANUNCIA sobre a subida é decidido aqui,
+  # pelo código, depois de o laço acabar — sabendo se alguma proposta de
+  # subida foi ACEITA pela api neste turno —, e não pelo texto que o modelo
+  # escreveu (be70 seq 282: "subo o container em paralelo", sem `tool.call`
+  # de subida depois). O modelo pode prometer o que quiser; a última palavra
+  # do fio é do servidor, na forma do desfecho consolidado do Criativo
+  # (`encerrar/2`), e só quando o que foi feito contradiz o que podia ter sido
+  # prometido:
+  #
+  # - `:pr_encerrou_o_turno` — `propose_infra_pr` encerra o turno sem nova ida
+  #   ao modelo. É o ÚNICO ponto em que o CÓDIGO corta o laço com o modelo
+  #   querendo continuar, e é onde a promessa "em paralelo" morre. Se nenhuma
+  #   subida foi proposta e o container não está REGISTRADO de pé, o fio diz.
+  # - `:turno_terminou` — o modelo parou sozinho. Só se fala da subida se ela
+  #   foi TENTADA e recusada sem nenhuma proposta aceita depois: aí o turno
+  #   mexeu na subida e ela não aconteceu. Turno que nunca tocou na subida
+  #   (uma pergunta, uma correção de gate) não ganha frase nenhuma.
+  #
+  # Nada disto sobe container nem propõe nada: quem propõe é a tool do modelo
+  # ou, no kickoff, o passo do servidor (`subir_no_aceite/2`, RN-671), e os
+  # dois marcam `:subida_do_turno` pelo mesmo `registrar_subida/3`. O campo
+  # vive só dentro da Task do turno e sai do `state` aqui.
+  defp registrar_subida(state, _tool, {:ok, _texto}),
+    do: Map.put(state, :subida_do_turno, :proposta)
+
+  defp registrar_subida(%{subida_do_turno: :proposta} = state, _tool, {:error, _}), do: state
+
+  defp registrar_subida(state, tool, {:error, _texto}),
+    do: Map.put(state, :subida_do_turno, {:recusada, tool})
+
+  defp fechar_subida(state, como) do
+    subida = Map.get(state, :subida_do_turno)
+
+    with false <- subida == :proposta,
+         frase when is_binary(frase) <- desfecho_da_subida(subida, como),
+         false <- container_registrado_de_pe?(state.project_id) do
+      emit_response(state, frase)
+    end
+
+    Map.delete(state, :subida_do_turno)
+  end
+
+  # O container já REGISTRADO de pé não deve subida nenhuma: dizer "nada vai
+  # subir" sobre ele seria o fio afirmando o que não leu. A leitura é a mesma
+  # de `recusa_ja_de_pe/2`, local e sem HTTP.
+  defp container_registrado_de_pe?(project_id),
+    do: ProjectContainerLifecycle.status_registrado(project_id) in ~w(running provisioning)
+
+  defp desfecho_da_subida({:recusada, tool}, _como),
+    do:
+      "Fechando o turno: a subida do container NÃO foi proposta nele — a " <>
+        "tentativa por `#{tool}` foi recusada, com o motivo no resultado da " <>
+        "ferramenta. Nenhum container vai subir sem uma proposta aprovada: " <>
+        "peça de novo numa próxima mensagem ou use a página Containers."
+
+  defp desfecho_da_subida(nil, :pr_encerrou_o_turno),
+    do:
+      "Fechando o turno: propor a PR de infra encerra o meu turno, e nele a " <>
+        "subida do container NÃO foi proposta. Nenhum container vai subir " <>
+        "sem uma proposta aprovada: peça a subida numa próxima mensagem ou " <>
+        "use a página Containers."
+
+  defp desfecho_da_subida(nil, :turno_terminou), do: nil
 
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
@@ -897,14 +1269,54 @@ defmodule Engine.Infra.InfraLeadServer do
 
   # --- Kickoff ---
 
-  defp kickoff_instruction(state) do
-    case EngineApiClient.get_infra_context(state.project_id, state.session_id) do
-      {:ok, ctx} -> build_kickoff(ctx)
-      _ -> "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
-    end
+  defp infra_context(state),
+    do: EngineApiClient.get_infra_context(state.project_id, state.session_id)
+
+  defp kickoff_instruction({:ok, ctx}, subida), do: build_kickoff(ctx, subida)
+
+  defp kickoff_instruction(_sem_contexto, _subida),
+    do: "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
+
+  # Os passos 4 e 5 do kickoff — o que o modelo precisa saber da subida. Com
+  # a subida feita pelo SERVIDOR (RN-671), o texto diz o que JÁ aconteceu, e
+  # não pede ao modelo uma eleição que o código já fez; sem ela (sem
+  # roteamento, projeto `runner`), os passos de sempre.
+  defp passo_da_subida({:servidor, imagem, {:ok, texto}}) do
+    """
+    4. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
+       esperar por você: ele elegeu `#{imagem}` entre as candidatas do
+       roteamento abaixo. Resultado: #{texto} Não chame `propose_container_start`
+       de novo neste turno. Se o status for `failed`, diga isso ao usuário com
+       o que você sabe — nunca diga que o container está de pé sem saber.
+    """
   end
 
-  defp build_kickoff(ctx) do
+  defp passo_da_subida({:servidor, imagem, {:error, motivo}}) do
+    """
+    4. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
+       `#{imagem}`, e ela foi RECUSADA: #{motivo}
+       Se outra candidata do roteamento resolver o motivo, chame
+       `propose_container_start` com ela; senão, diga o motivo ao usuário e
+       não prometa subida nenhuma.
+    """
+  end
+
+  defp passo_da_subida(_sem_subida_do_servidor) do
+    """
+    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+       para o container do projeto e chame `propose_container_start` (imagem +
+       network + resources + rationale dizendo por que ESTA candidata, nunca
+       inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
+       container do projeto segue como está.
+    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+       bind-mount pro servidor), `propose_container_start` não serve — chame
+       `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
+       sobe a imagem já decidida). Se você não souber o modo, tente
+       `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
+    """
+  end
+
+  defp build_kickoff(ctx, subida) do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
     routing = Map.get(ctx, "moduleRouting")
@@ -951,19 +1363,13 @@ defmodule Engine.Infra.InfraLeadServer do
     1. Para cada módulo do module_map abaixo, gere um Dockerfile adequado ao stack.
     2. Gere um compose de desenvolvimento (docker-compose.yml) integrando os módulos.
     3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
-    4. Chame `propose_infra_pr` (title + files) com o que é seu — a consolidação
-       com o pipeline de CI acontece depois, automaticamente.
-    5. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
-       para o container do projeto e chame `propose_container_start` (imagem +
-       network + resources + rationale dizendo por que ESTA candidata, nunca
-       inventando uma imagem fora da lista). Este passo é INDEPENDENTE dos
-       anteriores — pode acontecer antes, depois, ou nunca (sem roteamento
-       vigente, pule-o; o container do projeto segue como está).
-    6. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
-       bind-mount pro servidor), `propose_container_start` não serve — chame
-       `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
-       sobe a imagem já decidida). Se você não souber o modo, tente
-       `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
+    #{String.trim_trailing(passo_da_subida(subida))}
+    6. Por último, chame `propose_infra_pr` (title + files) com o que é seu — a
+       consolidação com o pipeline de CI acontece depois, automaticamente.
+       `propose_infra_pr` ENCERRA o seu turno: uma subida do container que
+       caiba a você só acontece se for chamada ANTES dela ou na MESMA resposta. Não
+       diga que vai subir o container "depois" ou "em paralelo" sem chamar a
+       ferramenta — o que não foi chamado não acontece.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
 

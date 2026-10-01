@@ -168,6 +168,15 @@ and the numbers above are the BEFORE. What changed underneath:
   it a red shard would make it `skipped`, and `skipped` counts as green for
   a required check. The shard names are **not** required checks and must
   not be listed in a ruleset. Typecheck runs in shard 1 only.
+- **`Testes do engine (ExUnit)` and the api shards wait for a new job,
+  `imagens / Ler as imagens do compose`** (ADR 0197): it reads the pgvector
+  reference from `docker/docker-compose.yml` and hands it to their
+  `services:`, so no workflow holds an image literal. It is **not** a
+  required check and must not be listed in a ruleset — whatever it decides
+  shows up in the jobs that need it. Those jobs carry `if: ${{ !cancelled() }}`
+  for the same reason as the aggregators above: if `imagens` failed, the
+  default would SKIP `Testes do engine (ExUnit)`, and `skipped` counts as green
+  for a required check; with it the job runs, gets an empty image and fails.
 - `claude-code-review.yml` got `concurrency` (cancel-in-progress, per PR) and
   `timeout-minutes: 30`; `docs-check.yml` got `timeout-minutes` on both jobs
   (AT-306).

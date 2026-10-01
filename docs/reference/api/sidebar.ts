@@ -594,6 +594,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/model-bindings-controller-get-resolved-bindings",
+          label: "Resolves the model of several agents and areas in one read",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/models-controller-list",
           label: "Lists the models active IN THE PROJECT's WORKSPACE",
           className: "api-method get",
@@ -1266,6 +1272,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-cancel-queued",
+          label: "Cancels one message waiting in the agent's queue",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-start",
           label: "Starts an agent in the session",
           className: "api-method post",
@@ -1422,6 +1434,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-members",
+          label: "Lists the workspace's members",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-add-member",
           label: "Associates a user with the workspace",
           className: "api-method post",
@@ -1479,6 +1497,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-get-summary",
           label: "Aggregated workspace summary",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-set-tool-router",
+          label: "Turns the Jev tool routing on or off for the workspace",
+          className: "api-method put",
         },
         {
           type: "doc",

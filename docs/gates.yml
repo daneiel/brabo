@@ -52,6 +52,8 @@ gates:
     # seguir — o handoff Criativo→PO já aconteceu dentro do próprio
     # `confirm_readiness` (RN-142), e esta confirmação é só o registro de que
     # um humano validou a necessidade, não um portão que bloqueia o PO.
+    # Desde o ADR 0185 (RN-657) o clique é o MESMO do "Estou pronto" — segue
+    # humano e segue `warn`.
     severidade: warn
     aprovacao_humana: true
     status: active
@@ -110,7 +112,10 @@ gates:
   - id: qa-verificada
     fluxo: pr
     dono: area-qa # lead consolida (ADR 0038)
-    entrada: [pr-aberta]
+    # `plano-de-teste` desde o ADR 0192 (RN-674): a QA-estratégia o escreve
+    # sobre a ENTREGA, no começo do ciclo, e ele é INSUMO da revisão — o
+    # veredito continua um só, com a régua de sempre.
+    entrada: [pr-aberta, plano-de-teste]
     entregavel: veredito-qa
     verificacao: script # veredito no event log, ADR 0020
     severidade: block
@@ -292,7 +297,10 @@ gates:
   - id: implementavel # Dev Lead — FASE 14d (ADR 0053); ativado pelo ADR 0090
     fluxo: pre-dev
     dono: dev-lead
-    entrada: [story-ready, plano-de-teste]
+    # O ADR 0192 (RN-674) tirou o `plano-de-teste` daqui: ele nasce DEPOIS da
+    # entrega do dev e alimenta `qa-verificada`. O parecer passa a ser julgado
+    # sobre a história e o `module_map` que o Dev Lead já tem no contexto.
+    entrada: [story-ready, module_map]
     entregavel: parecer-implementabilidade
     verificacao: script
     severidade: warn # nasce warn mesmo quando ativar

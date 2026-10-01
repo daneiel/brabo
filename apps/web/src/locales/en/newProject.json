@@ -102,6 +102,8 @@
     "bootstrapLabel": "Bootstrap",
     "visibilityLabel": "Visibility",
     "managedFolder": "folder managed by Brabo",
+    "promotionLabel": "Story promotion",
+    "promotionAutoValue": "automatic — the PO promotes (new-project default; change it in Settings)",
     "bootstrapAdoptValue": "nothing runs without your approval",
     "bootstrapStepsValue_one": "{{count}} Gitflow step",
     "bootstrapStepsValue_other": "{{count}} Gitflow steps",

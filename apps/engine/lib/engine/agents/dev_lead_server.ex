@@ -8,9 +8,10 @@ defmodule Engine.Agents.DevLeadServer do
 
   Desde o ADR 0090 ele também é dono do gate `implementavel`
   (`docs/gates.yml`, ativo): a ferramenta `assess_implementability` propõe o
-  parecer de implementabilidade de uma story, a partir do plano de teste que
-  a QA-estratégia produz (`Engine.Gates.QaEstrategiaAgent`, segundo momento
-  do `qa-lead` — ver `docs/fluxo.yml`). Mesmo mecanismo de suspensão do
+  parecer de implementabilidade de uma story, a partir da própria história e
+  do `module_map` que o kickoff já lhe dá — desde o ADR 0192 (RN-674) o plano
+  de teste da QA-estratégia nasce DEPOIS da entrega do dev e alimenta o gate
+  `qa-verificada`, não este. Mesmo mecanismo de suspensão do
   `propose_execution_plan`.
 
   Espelha o `Engine.Agents.ArquitetoServer` e o `Engine.Infra.InfraLeadServer`:
@@ -97,7 +98,6 @@ defmodule Engine.Agents.DevLeadServer do
   }
 
   alias Engine.Dev.Wake
-  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "dev-lead"
@@ -129,8 +129,12 @@ defmodule Engine.Agents.DevLeadServer do
 
   # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
   # (RN-622); `nil` = sem orientação neste turno.
-  def user_message(session_id, text, idioma \\ nil),
-    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
+
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
   # --- Callbacks ---
 
@@ -176,6 +180,11 @@ defmodule Engine.Agents.DevLeadServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil,
        # O laço suspenso esperando a decisão do plano de execução (ADR 0086,
        # RN-284). Só em memória — ver a lacuna de restart declarada no
@@ -206,16 +215,6 @@ defmodule Engine.Agents.DevLeadServer do
     :ok
   end
 
-  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
-  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
-  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
-  @impl true
-  def handle_call({:user_message, text, idioma}, from, state) do
-    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
-      handle_call({:user_message, text}, from, state)
-    end)
-  end
-
   # Guarda: enquanto o plano de execução está aguardando decisão do usuário,
   # a conversa NÃO recomeça — precisa vir ANTES da cláusula genérica de
   # `{:user_message, text}` para o pattern match casar aqui primeiro. A
@@ -231,8 +230,18 @@ defmodule Engine.Agents.DevLeadServer do
   # `emit` (durável) E `broadcast` (efêmero) — mesmo par que `emit_falha/2`
   # usa em todo o resto deste arquivo. Só `emit` deixaria quem está com a
   # aba aberta sem sinal nenhum até o próximo poll do event log.
+  #
+  # RN-673 (ADR 0191): a fila de mensagens NÃO vale aqui, por decisão — o turno
+  # suspenso não tem fim previsto (depende de um humano decidir em Aprovações),
+  # e enfileirar seria prometer leitura "no fim do turno" sem fim à vista. A
+  # mensagem que já estava na fila quando o turno suspendeu espera a RETOMADA
+  # terminar (`TurnoAssincrono.entregar_fila/1` pula estado suspenso).
   @impl true
-  def handle_call({:user_message, _text}, _from, %{aguardando_aprovacao: %{}} = state) do
+  def handle_call(
+        {:user_message, _text, _idioma, _mensagem_id},
+        _from,
+        %{aguardando_aprovacao: %{}} = state
+      ) do
     origem = "politica"
 
     mensagem =
@@ -250,11 +259,33 @@ defmodule Engine.Agents.DevLeadServer do
     {:reply, {:error, :aguardando_aprovacao}, state}
   end
 
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
   @impl true
-  def handle_call({:user_message, text}, from, state) do
-    work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
   end
+
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
+  @impl true
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
 
   # A ação que segurava o laço teve desfecho (ADR 0086/RN-284 — mesmo padrão
   # do dev agent, ADR 0052, e do `QaLeadServer` para os subagentes de QA). O
@@ -266,6 +297,14 @@ defmodule Engine.Agents.DevLeadServer do
   # esperando — entrega duplicada (retry do Oban, drain concorrente) ou
   # tardia (o servidor já morreu e um novo subiu, ver a lacuna declarada no
   # moduledoc) vira no-op na cláusula seguinte, nunca derruba o processo.
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
+    work = state |> append(user_msg(text)) |> compact()
+    fn -> run_turn(work, @max_iterations) end
+  end
+
   @impl true
   def handle_info(
         {:action_settled, %{action_id: action_id} = desfecho},
@@ -490,10 +529,62 @@ defmodule Engine.Agents.DevLeadServer do
            "architecture.module_map_created",
            "backlog.story_created"
          ]) do
-      {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
-      _ -> "Proponha o plano de execução (propose_execution_plan)."
+      {:ok, events, truncado?} ->
+        build_kickoff(events) <>
+          Reidratacao.aviso_de_recorte(truncado?) <> tarefas_do_backlog(state.project_id)
+
+      _ ->
+        "Proponha o plano de execução (propose_execution_plan)." <>
+          tarefas_do_backlog(state.project_id)
     end
   end
+
+  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
+  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
+  # nesta sessão (o PO pode ter escrito as tarefas noutra). Uma leitura por
+  # kickoff, pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica de
+  # fora (não há o que distribuir). Falha vira uma linha dita, nunca kickoff
+  # perdido: o plano sem `tarefas` é recusado pela api com motivo nomeado.
+  @max_tarefas_no_kickoff 200
+
+  defp tarefas_do_backlog(project_id) do
+    case EngineApiClient.list_backlog(project_id) do
+      {:ok, epicos} when is_list(epicos) ->
+        linhas =
+          for epico <- epicos,
+              historia <- Map.get(epico, "stories", []),
+              tarefa <- Map.get(historia, "tasks", []),
+              Map.get(tarefa, "status") != "done" do
+            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
+              "| história: #{Map.get(historia, "title")} " <>
+              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
+              modulo_atual(tarefa)
+          end
+
+        mostradas = Enum.take(linhas, @max_tarefas_no_kickoff)
+
+        corte =
+          case length(linhas) - length(mostradas) do
+            0 -> ""
+            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
+          end
+
+        """
+
+        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
+        — só o dev agent daquele módulo vai pegá-la):
+        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
+        """
+
+      _ ->
+        "\n\n(não consegui listar as tarefas do backlog agora — use os task_id que conhecer.)"
+    end
+  end
+
+  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
+    do: " [módulo atual: #{m}]"
+
+  defp modulo_atual(_tarefa), do: ""
 
   defp build_kickoff(events) do
     modulos =
@@ -520,7 +611,10 @@ defmodule Engine.Agents.DevLeadServer do
 
     """
     Você recebeu a arquitetura do Arquiteto. Avalie o trabalho e proponha o
-    PLANO DE EXECUÇÃO com `propose_execution_plan`.
+    PLANO DE EXECUÇÃO com `propose_execution_plan`. Aprovar o plano é o que
+    ATIVA a execução — antes dele nenhum dev agent sobe. No plano, atribua
+    CADA tarefa pendente a UM módulo do module_map (`tarefas`): só o dev
+    daquele módulo pega a tarefa, e tarefa sem módulo recusa o plano.
 
     Você NÃO escreve código. Decide quantos agentes valem a pena para o
     trabalho em mão, e responde por essa escolha.
@@ -591,13 +685,32 @@ defmodule Engine.Agents.DevLeadServer do
   # (ADR 0086, RN-284) — mesmo vocabulário de `Engine.Dev.DevAgentServer` e
   # `Engine.Gates.QaLeadServer`, para quem lê os três não aprender três
   # frases diferentes para o mesmo conceito.
+  # O plano aprovado ATIVA a execução (AT-263, RN-677): o resultado é o do
+  # `ExecuteExecutionPlanUseCase` na api, reconhecido pela chave
+  # `sessaoDeExecucao` — e vem ANTES das cláusulas genéricas de
+  # `executed`/`failed`, que leriam "exit ?" de um resultado sem `exitCode`.
+  defp texto_do_desfecho(%{
+         status: "executed",
+         execution_result: %{"sessaoDeExecucao" => sessao} = exec
+       }) do
+    "plano aprovado e execução ATIVADA na sessão #{sessao}: " <>
+      "#{Enum.join(Map.get(exec, "modulos", []), ", ")}; " <>
+      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído."
+  end
+
+  defp texto_do_desfecho(%{
+         status: "failed",
+         execution_result: %{"sessaoDeExecucao" => _, "motivo" => motivo}
+       }) do
+    "o plano foi aprovado, mas a ativação da execução falhou: #{motivo}"
+  end
+
   defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
     "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
   end
 
-  # `propose_execution_plan` não tem execute-* pipeline — aprovação manual
-  # fica em `"approved"` para sempre (ver o comentário equivalente em
-  # `DevLeadTools.classificar/4`). Os três contam como sucesso.
+  # `assess_implementability` não tem execute-* pipeline — a aprovação manual
+  # fica em `"approved"`. Os três contam como sucesso.
   defp texto_do_desfecho(%{status: status})
        when status in ["executed", "auto_approved", "approved"],
        do: "plano aprovado e registrado."

@@ -209,11 +209,14 @@ Agora o runner **recusa** esse par antes de executar qualquer coisa, com uma
 saída que diz o que aconteceu, por quê, e que **nada** foi executado. A recusa
 nunca cita nome nem valor das variáveis — só quantas eram.
 
-**O que isso significa na prática:** clonar ou atualizar um repositório
-**remoto autenticado** em modo runner só funciona com o container **parado**.
-Repositório local (sem credencial) não é afetado, nem `workspace_create`, que
-roda no host. Entregar a credencial ao `docker exec` mexeria na porta de
-contenção e é decisão à parte — a metade aberta está declarada na RN-558.
+**Desde o ADR 0193 (RN-676) o git credenciado roda no HOST:** o engine marca o
+`git fetch` autenticado com `gitCredenciado: true`, e este runner, com a marca
+**e** um `env` não vazio, executa o comando no host mesmo com o container de pé
+— a mesma pasta, já que ela é o bind-mount de `/work`. Os comandos do dev agent
+continuam indo ao `docker exec`, que segue sem `env`. Um `env` **sem** a marca,
+com container ativo, continua recusado como acima: é a marca do engine, e não a
+credencial, que decide ir ao host. Repositório local (sem credencial) não é
+afetado, nem `workspace_create`, que sempre rodou no host.
 
 ### Agente de MÁQUINA: sem `--project`, uma conexão por projeto (RN-544)
 

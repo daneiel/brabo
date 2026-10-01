@@ -753,7 +753,7 @@ export interface paths {
         put?: never;
         /**
          * Offers a handoff from one agent to another
-         * @description Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent.
+         * @description Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent. Two exceptions. The Creative→PO offer carrying the `product_brief` that an "I'm ready — the need is validated" click asked for is accepted on behalf of whoever clicked, with that person as the actor and `implicito` in the payload (RN-658, ADR 0185). The PO's handoff to the Arquiteto is accepted by the SYSTEM when the backlog is covered (at least one business rule, none without a story) and the repository is `local` with no git credential in the project (RN-660, ADR 0186); `aceiteAutomatico` says whether it happened and, if not, why. Either way the response then carries `status: accepted`.
          */
         post: operations["InternalSessionsController_handoff"];
         delete?: never;
@@ -2244,6 +2244,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/model-bindings/resolved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolves the model of several agents and areas in one read
+         * @description Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped.
+         */
+        get: operations["ModelBindingsController_getResolvedBindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/models": {
         parameters: {
             query?: never;
@@ -2796,9 +2816,29 @@ export interface paths {
         put?: never;
         /**
          * Sends a message to the active agent
-         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call.
+         * @description The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call. If the agent is mid-turn, the message is NOT refused: it joins the agent's queue (`entrega: "enfileirada"`) and is read, with any others queued, in one turn when the current one ends; it can be cancelled while it waits (RN-673, ADR 0191).
          */
         post: operations["AgentsController_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/messages/{messageId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels one message waiting in the agent's queue
+         * @description A message sent while the agent is mid-turn waits in a queue and is read when the turn ends (RN-673). While it waits, the person who SENT it can cancel it: the engine removes it from the queue and records `chat.message_cancelled`; it is never shown to the model. Someone else's message is 403.
+         */
+        post: operations["AgentsController_cancelQueued"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2896,7 +2936,7 @@ export interface paths {
         put?: never;
         /**
          * Confirms the Criativo's business need has been validated
-         * @description Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate.
+         * @description Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate. Since ADR 0185 (RN-657) the "I'm ready — the need is validated" click (`POST .../readiness`) records this event itself, and the web no longer calls this route; it stays for sessions whose readiness click predates that ADR.
          */
         post: operations["AgentsController_validateNecessityHandoff"];
         delete?: never;
@@ -3131,7 +3171,7 @@ export interface paths {
         put?: never;
         /**
          * Reopens a closed session, keeping everything it had
-         * @description Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit.
+         * @description Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit. Requires `developer` (ADR 0184).
          */
         post: operations["SessionsController_reopen"];
         delete?: never;
@@ -3699,7 +3739,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lists the workspace's members
+         * @description Who is associated with the WORKSPACE, with the workspace role — the role every project inherits unless a project row overrides it. Completes `GET projects/:projectId/members`, which lists only project rows: whoever reaches a project through the workspace alone shows up here and not there. Only id, name, e-mail and role.
+         */
+        get: operations["WorkspacesController_listMembers"];
         put?: never;
         /**
          * Associates a user with the workspace
@@ -4044,6 +4088,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/tool-router": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Turns the Jev tool routing on or off for the workspace
+         * @description On by default. When on AND the turn model is from OpenRouter, an agent step with two or more tools first asks the Jev which tool fits, and the chat model is offered only that tool and the previous one. The Jev never approves or denies anything: an action that needs approval still does. Any failure of the Jev falls back to the whole catalog. Turning it off stops every call to the Jev, and its cost with them.
+         */
+        put: operations["WorkspacesController_setToolRouter"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/unread-events": {
         parameters: {
             query?: never;
@@ -4078,6 +4142,17 @@ export interface components {
              * @example api
              */
             module: string;
+        };
+        AceiteAutomaticoResponseDto: {
+            /** @example true */
+            aceito: boolean;
+            criterio?: components["schemas"]["CriterioDoAceiteResponseDto"];
+            /**
+             * @description Why a person still has to click. `falhou`: the system tried and the accept failed — `handoff.auto_accept_failed` is in the event log.
+             * @example regras_sem_historia
+             * @enum {string}
+             */
+            motivo?: "nao_e_po_para_arquiteto" | "oferta_nao_pendente" | "sem_regras_de_negocio" | "regras_sem_historia" | "repositorio_nao_local" | "credencial_de_git_no_projeto" | "autor_sem_papel" | "falhou";
         };
         AceiteResponseDto: {
             /**
@@ -4249,7 +4324,7 @@ export interface components {
              * @example infra
              * @enum {string}
              */
-            toAgent: "infra" | "dev-lead";
+            toAgent: "infra";
             /** @enum {string} */
             motivo: "oferta_pendente" | "agente_ativo";
         };
@@ -4609,6 +4684,21 @@ export interface components {
             filesSkipped: number;
             chunksCreated: number;
             embedding: components["schemas"]["IndexEmbeddingResponseDto"];
+        };
+        BindingResolvidoDaChaveResponseDto: {
+            /**
+             * @description The agent slug or the area key, exactly as requested.
+             * @example dev-lead
+             */
+            key: string;
+            /** @description The SAME value the single-key route answers for this key — `null` when no level of the cascade has a model. */
+            binding: components["schemas"]["ResolvedBindingResponseDto"] | null;
+        };
+        BindingsResolvidosEmLoteResponseDto: {
+            /** @description One entry per requested agent, in the order requested. */
+            agents: components["schemas"]["BindingResolvidoDaChaveResponseDto"][];
+            /** @description One entry per requested area, in the order requested. */
+            areas: components["schemas"]["BindingResolvidoDaChaveResponseDto"][];
         };
         BlockTaskInternalDto: {
             /**
@@ -5138,7 +5228,7 @@ export interface components {
              */
             ok: true;
             /**
-             * @description `confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab).
+             * @description `confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672).
              * @enum {string}
              */
             desfecho: "confirmado" | "ja_oferecido";
@@ -5429,8 +5519,8 @@ export interface components {
              */
             maxConsecutiveBlocked?: number;
             /**
-             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
-             * @example manual
+             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
+             * @example auto
              * @enum {string}
              */
             storyPromotion?: "manual" | "auto";
@@ -5613,6 +5703,24 @@ export interface components {
              * @example connection test failed for openrouter: openrouter responded 401
              */
             motivo?: string;
+        };
+        CriterioDoAceiteResponseDto: {
+            /**
+             * @description Business rules in the project.
+             * @example 4
+             */
+            regras: number;
+            /**
+             * @description Rules cited by at least one story — equal to `regras`.
+             * @example 4
+             */
+            cobertas: number;
+            /**
+             * @description `local`: the project already had a `local` repository. `a_provisionar_local`: none yet — the accept provisions a `local` one.
+             * @example a_provisionar_local
+             * @enum {string}
+             */
+            repositorio: "local" | "a_provisionar_local";
         };
         DecideBootstrapPlanDto: {
             /**
@@ -6489,6 +6597,8 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
+            /** @description The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`. */
+            toolRouting?: components["schemas"]["ToolRoutingResponseDto"];
         };
         LlmTurnStreamEventResponseDto: {
             /**
@@ -6514,7 +6624,7 @@ export interface components {
             /** @example 340 */
             outputTokens: number;
             /**
-             * @description Cost in micro-USD.
+             * @description Cost in micro-USD: the REAL cost the provider returned when it did (OpenRouter's `usage.cost`), otherwise the frozen catalog price (ADR 0188, RN-665).
              * @example 52700
              */
             costMicros: number;
@@ -6611,6 +6721,29 @@ export interface components {
              * @enum {string}
              */
             status: "todo" | "in_progress" | "in_review" | "done";
+        };
+        MensagemAoAgenteResponseDto: {
+            /**
+             * @description Always `true`; failure becomes an HTTP error.
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description Id of the `chat.message` event recorded for this message — the id that cancels it while it waits in the queue.
+             * @example 01JC4Z0000EVENTO000000000001
+             */
+            mensagemId: string;
+            /**
+             * @description `lida`: the agent started a turn with it right away. `enfileirada`: the agent was mid-turn, so the message joined its queue and will be read, together with any others queued, in ONE turn when the current one ends (RN-673). The session log carries `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`.
+             * @example enfileirada
+             * @enum {string}
+             */
+            entrega: "lida" | "enfileirada";
+            /**
+             * @description Position in the queue (1 = next). Present only when `entrega` is `enfileirada`.
+             * @example 2
+             */
+            posicao?: number;
         };
         MirrorSyncResultInternalDto: {
             /**
@@ -6779,6 +6912,11 @@ export interface components {
              *     ]
              */
             uses: ("codigo" | "documentacao" | "analise" | "imagem" | "conversa")[];
+            /**
+             * @description OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.
+             * @example false
+             */
+            freeRoutingAlias: boolean;
         };
         ModelPriceChangeResponseDto: {
             /** @example 01JC4Z0000PRECO000000000001 */
@@ -7060,6 +7198,52 @@ export interface components {
              * @enum {string}
              */
             desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
+        };
+        OfertaInternaDeHandoffResponseDto: {
+            /** @example 01JC4Z0000HANDOFF00000000001 */
+            id: string;
+            /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
+            sessionId: string;
+            /** @example 01JC4Z0000PROJETO0000000001 */
+            projectId: string;
+            /**
+             * @description Slug of the agent that passed the baton.
+             * @example criativo
+             */
+            fromAgent: string;
+            /**
+             * @description Slug of the receiving agent.
+             * @example po
+             */
+            toAgent: string;
+            /**
+             * @description Artifact that motivated the handoff (product_brief, module_map…).
+             * @example 01JC4Z0000ARTEFATO000000001
+             */
+            artifactId: Record<string, never> | null;
+            /**
+             * @description This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.
+             * @example offered
+             * @enum {string}
+             */
+            status: "offered" | "accepted" | "completed" | "rejected" | "superseded";
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-24T10:05:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description `criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`).
+             * @example criado
+             * @enum {string}
+             */
+            desfecho: "criado" | "substituiu_oferta" | "ja_oferecido";
+            aceiteAutomatico: components["schemas"]["AceiteAutomaticoResponseDto"];
         };
         OkResponseDto: {
             /**
@@ -7630,8 +7814,8 @@ export interface components {
              */
             maxConsecutiveBlocked: Record<string, never> | null;
             /**
-             * @description Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation (opt-in; where projects predating 12c ended up).
-             * @example manual
+             * @description Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation — the new-project default since RN-659; projects created before it keep whatever value they had.
+             * @example auto
              * @enum {string}
              */
             storyPromotion: "manual" | "auto";
@@ -8689,6 +8873,11 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+            /**
+             * @description Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.
+             * @example true
+             */
+            catalogoCompleto?: boolean;
         };
         RunnerDeviceKeyListResponseDto: {
             /** @example 01JC4Z0000CHAVE000000000001 */
@@ -9122,6 +9311,13 @@ export interface components {
              */
             language: string | null;
         };
+        SetToolRouterDto: {
+            /**
+             * @description Whether the Jev chooses the tool of each agent step. On by default; it only acts when the turn model is from OpenRouter.
+             * @example false
+             */
+            enabled: boolean;
+        };
         SkippedBindingResponseDto: {
             /**
              * @example agent
@@ -9377,6 +9573,11 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+            /**
+             * @description Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.
+             * @example true
+             */
+            catalogoCompleto?: boolean;
         };
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
@@ -9425,6 +9626,11 @@ export interface components {
              */
             gateCorrectionCount: number;
             /**
+             * @description The module the task belongs to, assigned by the Dev Lead in the approved execution plan (RN-678). Only the dev agent of that module claims it. `null` while no plan assigned one — such a task is claimable only when its story has exactly one module.
+             * @example api
+             */
+            module: Record<string, never> | null;
+            /**
              * Format: date-time
              * @example 2026-07-25T10:00:00.000Z
              */
@@ -9456,6 +9662,53 @@ export interface components {
             arguments: {
                 [key: string]: unknown;
             };
+        };
+        ToolRoutingResponseDto: {
+            /** @example typesafe/jev-1.13 */
+            modelo: string;
+            /**
+             * @description How many tools the agent had at this step.
+             * @example 9
+             */
+            ofertadas: number;
+            /** @description The tool names BEFORE the router. */
+            menuAntes: string[];
+            /** @description The tool names the chat model was offered (the whole catalog on any fall). */
+            menuDepois: string[];
+            /** @example create_story */
+            escolha: Record<string, never> | null;
+            /** @example 0.91 */
+            confianca: Record<string, never> | null;
+            /**
+             * @example {
+             *       "opcao": "create_task",
+             *       "probabilidade": 0.06
+             *     }
+             */
+            segunda: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description The previous tool of the same run.
+             * @example read_file
+             */
+            anterior: Record<string, never> | null;
+            /** @description The Jev answered AND the menu came out smaller than the catalog. */
+            aplicado: boolean;
+            /** @enum {string|null} */
+            motivoDaQueda: "timeout" | "erro_http" | "erro_de_rede" | "resposta_invalida" | "escolha_fora_das_opcoes" | "estado_grande" | "colisao_de_nome" | null;
+            /** @enum {string|null} */
+            origemDaQueda: "infra" | "modelo" | "codigo" | null;
+            detalheDaQueda: Record<string, never> | null;
+            /** @example 212 */
+            latenciaMs: number;
+            /**
+             * @description REAL cost of the Jev answer (`usage.cost`), in micro-USD.
+             * @example 52
+             */
+            custoMicros: number;
+            /** @description `true` when the Jev charged but the `token_usage` row could not be written. */
+            gastoNaoRegistrado: boolean;
         };
         TransferOwnershipDto: {
             /**
@@ -9515,8 +9768,8 @@ export interface components {
              */
             maxConsecutiveBlocked?: number;
             /**
-             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `manual` (new-project default): the PO proposes and YOU decide, in the Backlog tab. `auto`: a complete story is already born `ready`, with no human step — this was the behavior up through 12c, and projects created before it stayed on it. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
-             * @example manual
+             * @description Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.
+             * @example auto
              * @enum {string}
              */
             storyPromotion?: "manual" | "auto";
@@ -9636,6 +9889,20 @@ export interface components {
              */
             role: "viewer" | "developer" | "maintainer" | "owner";
         };
+        WorkspaceMemberComUsuarioResponseDto: {
+            /** @example 01JC4Z0000USUARIO0000000002 */
+            userId: string;
+            /**
+             * @description The WORKSPACE role — what every project of the workspace inherits unless a project row overrides it (RN-471).
+             * @example maintainer
+             * @enum {string}
+             */
+            role: "viewer" | "developer" | "maintainer" | "owner";
+            /** @example Senior Dev */
+            name: string | null;
+            /** @example dev@brabo.dev */
+            email: string;
+        };
         WorkspaceMemberResponseDto: {
             /** @example 01JC4Z0000WORKSPACE00000001 */
             workspaceId: string;
@@ -9665,6 +9932,11 @@ export interface components {
             slug: string;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
+            /**
+             * @description Whether the tool-routing step by the Jev (ADR 0179) runs for this workspace. On by default; it only acts when the turn model is from OpenRouter, so `true` on a workspace without OpenRouter does nothing.
+             * @example true
+             */
+            toolRouterEnabled: boolean;
             /**
              * Format: date-time
              * @example 2026-07-20T09:12:00.000Z
@@ -11153,7 +11425,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfertaDeHandoffResponseDto"];
+                    "application/json": components["schemas"]["OfertaInternaDeHandoffResponseDto"];
                 };
             };
             /** @description Invalid body. */
@@ -15506,6 +15778,67 @@ export interface operations {
             };
         };
     };
+    ModelBindingsController_getResolvedBindings: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated agent slugs. */
+                agents?: string;
+                /** @description Comma-separated area keys. */
+                areas?: string;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingsResolvidosEmLoteResponseDto"];
+                };
+            };
+            /** @description A malformed key, or more keys than the batch cap. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Scope not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelsController_list: {
         parameters: {
             query?: never;
@@ -17246,7 +17579,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OkResponseDto"];
+                    "application/json": components["schemas"]["MensagemAoAgenteResponseDto"];
                 };
             };
             /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
@@ -17277,7 +17610,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The agent is not active in this session; or it is still in the middle of a turn, or waiting on an execution-plan decision — the message was recorded but NOT read by the agent (ADR 0163). */
+            /** @description The agent is not active in this session; or it is waiting on an execution-plan decision; or its queue already holds 10 messages (`fila_de_mensagens_cheia`) — the message was recorded but NOT read by the agent (ADR 0163, RN-673). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -17286,6 +17619,67 @@ export interface operations {
             };
             /** @description The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentsController_cancelQueued: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+                /** @description Slug of the agent whose queue holds the message. */
+                agent: string;
+                /** @description Id of the `chat.message` event (the `mensagemId` the message route returned). */
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project, session, or handoff not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The message is no longer queued — the agent already read it, or it was already cancelled; or the session is closed (RN-581). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17775,6 +18169,8 @@ export interface operations {
                 limit?: string;
                 /** @description Fetches the tail of the log; ignores `afterSeq`. */
                 latest?: string;
+                /** @description Only the events whose `payload.actionId` is this action — e.g. its `proposed_action.created`, which carries the policy `reason` and `scopeRoot` the action row does not keep (RN-614). Combines with the other parameters; `seq` is no longer contiguous in the page, so a caller filtering by action must not derive omitted counts from it. An empty value is a `400`. */
+                actionId?: string;
             };
             header?: never;
             path: {
@@ -17792,6 +18188,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginaDeEventosResponseDto"];
                 };
+            };
+            /** @description `actionId` is present but empty. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
@@ -20062,6 +20465,55 @@ export interface operations {
             };
         };
     };
+    WorkspacesController_listMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMemberComUsuarioResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     WorkspacesController_addMember: {
         parameters: {
             query?: never;
@@ -20435,6 +20887,13 @@ export interface operations {
             };
             /** @description Some id in the batch doesn't exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activating an OpenRouter free-routing alias (`~…`) — `code: "alias_de_roteamento_livre"`, with the `modelIds` refused. The whole batch is refused. Deactivating one is always allowed (AT-271, RN-679). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21046,6 +21505,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkspaceSummaryResponseDto"];
                 };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_setToolRouter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetToolRouterDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {

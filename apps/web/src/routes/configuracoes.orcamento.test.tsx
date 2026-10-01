@@ -32,10 +32,12 @@ import type { ChaveDeAba } from './project-tabs';
  * só), a carga caiu para 49 e o minuto para 64 — os tetos abaixo são esses.
  *
  * O "55" do levantamento é a mesma carga medida a 5s, com os dois primeiros
- * polls da moldura dentro. Dos 50 de agora, 20 são o binding RESOLVIDO de cada
- * agente e de cada área, uma rota por chave — cortá-los pede rota de LOTE na
- * api, fora deste corte. Dos 68 do minuto, todos são da MOLDURA (Shell e
- * trilho), comuns a toda aba.
+ * polls da moldura dentro. Dos 50 de então, 20 eram o binding RESOLVIDO de cada
+ * agente e de cada área, uma rota por chave. A AT-334 (RN-654) os trocou pela
+ * leitura em LOTE (`GET .../model-bindings/resolved`), que as três seções de
+ * modelo leem pela mesma chave: a carga caiu de 49 para 30 (medido aqui, sobre
+ * a `dev` em 94e5dc721d). Dos 64 do minuto, todos são da MOLDURA (Shell e
+ * trilho), comuns a toda aba — a AT-334 não os mexe.
  */
 
 const contagem = new Map<string, number>();
@@ -121,6 +123,7 @@ function corpoDe(rota: string): unknown {
  * buscam. É por elas que a volta à aba se mede.
  */
 const ROTAS_DE_CONFIGURACAO = [
+  /\/model-bindings\/resolved$/,
   /agent-bindings\//,
   /area-bindings\//,
   /\/model-binding$/,
@@ -236,8 +239,14 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     expect(porRota['GET /projects/:id/git/repository']).toBe(1);
     expect(porRota['GET /workspaces']).toBe(1);
     for (const [rota, n] of Object.entries(porRota)) expect([rota, n]).toEqual([rota, 1]);
-    // `dev`: 53.
-    expect(total(porRota)).toBeLessThanOrEqual(49);
+    // AT-334 (RN-654): os bindings resolvidos dos 17 agentes e das 3 áreas
+    // vêm numa leitura só — e nenhuma rota por chave sobra na carga.
+    expect(porRota['GET /projects/:id/model-bindings/resolved']).toBe(1);
+    expect(
+      Object.keys(porRota).filter((k) => /agent-bindings\/|area-bindings\//.test(k)),
+    ).toEqual([]);
+    // `dev`: 53 → 49 (AT-321) → 30 (AT-334).
+    expect(total(porRota)).toBeLessThanOrEqual(30);
   }, 60_000);
 
   it('um minuto parado na aba: nenhum poll de configuração', async () => {
@@ -256,14 +265,26 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
 
   it('trocar de aba e voltar dentro do minuto não refaz as buscas de configuração', async () => {
     const { irPara } = await carga();
-    // A Visão geral busca o que é DELA (inclusive o binding de três agentes,
-    // com o frescor de sempre); o que se mede é só a VOLTA.
+    // A Visão geral busca o que é DELA; os bindings do roster ela lê do
+    // MESMO lote desta aba (AT-339), então nem eles entram. O que se mede
+    // aqui é só a VOLTA.
     await irPara('overview');
     contagem.clear();
     await irPara('settings');
 
     // `dev`: 31 — as 19 seções remontavam e refaziam a carga delas.
     expect(Object.fromEntries([...contagem].filter(([k]) => ehDeConfiguracao(k)))).toEqual({});
+  }, 60_000);
+
+  it('ir de Configurações para a Visão geral não busca binding nenhum: o lote já está no cache (AT-339)', async () => {
+    const { irPara } = await carga();
+    contagem.clear();
+    await irPara('overview');
+    const ida = Object.fromEntries(contagem);
+
+    // `dev`: 3 — um `GET .../agent-bindings/:slug` por agente do roster base
+    // (Criativo, PO, Arquiteto), mesmo com o lote dos 17 já em cache.
+    expect(Object.keys(ida).filter((k) => /agent-bindings\/|model-bindings\/resolved/.test(k))).toEqual([]);
   }, 60_000);
 
   it('CASO DE FALHA: salvar invalida e busca NA HORA, e depois do minuto a volta busca de novo', async () => {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
+import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './AgentCard.module.css';
 
 // `travado` (Fase 12b — RN-047): circuit breaker do dev agent disparado.
@@ -42,6 +43,9 @@ interface AgentCardProps {
    * pedindo aprovação (RN-603). Quem decide se cabe é o chamador: só a
    * curinga `"*"` ligada é modo automático — o toggle sobre o tipo
    * representativo grava uma regra específica, que não libera o escopo.
+   * Desde a RN-670 (ADR 0189) a frase vem com a lista inteira do piloto
+   * (`OQueOPilotoLibera`, recolhida) — a mesma do `ApprovalCard` e dos
+   * Executores.
    */
   autonomyHint?: string;
   /** Task/atividade corrente — o que o agente está fazendo AGORA. */
@@ -155,7 +159,10 @@ export function AgentCard({
         </div>
       )}
       {autonomy && onAutonomyChange && autonomyHint && (
-        <p className={styles.autonomyHint}>{autonomyHint}</p>
+        <>
+          <p className={styles.autonomyHint}>{autonomyHint}</p>
+          <OQueOPilotoLibera recolhido />
+        </>
       )}
 
       {status === 'travado' && onRearm && (

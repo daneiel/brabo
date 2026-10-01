@@ -40,6 +40,12 @@ export interface SessionComposerProps {
   setDraft: Dispatch<SetStateAction<string>>;
   handleComposerKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   streaming: boolean;
+  /**
+   * RN-673: com turno em curso, a mensagem a um agente entra na FILA dele — o
+   * campo e o botão seguem abertos (o botão vira "Pôr na fila"). Falso no chat
+   * sem agente, onde não há fila: lá o turno em curso continua travando.
+   */
+  podeEnfileirar: boolean;
   handleSend: () => Promise<void>;
   handleCancel: () => Promise<void>;
   criativoActive: boolean;
@@ -50,10 +56,6 @@ export interface SessionComposerProps {
   arquiteturaJaDeclarada: boolean;
   handleArchitectureReadiness: () => Promise<void>;
   hasPromotedStory: boolean;
-  necessidadeJaValidada: boolean;
-  validandoNecessidade: boolean;
-  handleValidateNecessity: () => Promise<void>;
-  hasProductBrief: boolean;
   handleActivate: () => Promise<void>;
   /**
    * ADR 0183 (RN-650): reabrir sessão encerrada. `podeReabrir` é o papel
@@ -84,6 +86,7 @@ export function SessionComposer({
   setDraft,
   handleComposerKeyDown,
   streaming,
+  podeEnfileirar,
   handleSend,
   handleCancel,
   criativoActive,
@@ -94,10 +97,6 @@ export function SessionComposer({
   arquiteturaJaDeclarada,
   handleArchitectureReadiness,
   hasPromotedStory,
-  necessidadeJaValidada,
-  validandoNecessidade,
-  handleValidateNecessity,
-  hasProductBrief,
   handleActivate,
   podeReabrir = false,
   reabrindo = false,
@@ -284,13 +283,15 @@ export function SessionComposer({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleComposerKeyDown}
             placeholder={t('composer.placeholder')}
-            disabled={streaming}
+            disabled={streaming && !podeEnfileirar}
           />
           <Button
             onClick={handleSend}
-            disabled={streaming || !draft.trim() || precisaEscolherDestinatario}
+            disabled={
+              (streaming && !podeEnfileirar) || !draft.trim() || precisaEscolherDestinatario
+            }
           >
-            {t('composer.enviar')}
+            {streaming ? t('composer.enfileirar') : t('composer.enviar')}
           </Button>
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}
@@ -305,6 +306,12 @@ export function SessionComposer({
             "Estou pronto para produzir" DEPOIS do handoff — convidando a
             declarar de novo uma prontidão que já foi declarada, e cuja
             consequência (o handoff para o PO) já está na tela.
+
+            Desde o ADR 0185 o mesmo clique fecha os DOIS gates — a
+            prontidão e a necessidade validada (RN-657) — e aceita em nome
+            da pessoa o handoff ao PO que o Criativo oferecer (RN-658). O
+            rótulo diz isso: é ele que faz do clique um julgamento de
+            mérito, e não só o piso "≥1 regra" da RN-142.
           */}
           {criativoActive && !prontidaoJaDeclarada && (
             <Button
@@ -314,7 +321,7 @@ export function SessionComposer({
               title={
                 !hasBusinessRule
                   ? t('composer.prontoParaProduzirDesabilitado')
-                  : undefined
+                  : t('composer.prontoParaProduzirExplica')
               }
             >
               {t('composer.prontoParaProduzir')}
@@ -337,30 +344,6 @@ export function SessionComposer({
               }
             >
               {t('composer.confirmarArquitetura')}
-            </Button>
-          )}
-          {/*
-            Gate `necessidade-validada` (RN-406, ADR 0095): confirmação
-            humana SEPARADA de "Estou pronto para produzir" — este botão
-            só existe para não deixar o Criativo (o modelo) se
-            autovalidar (`modelo-de-time.md`, anti-padrão registrado).
-            Habilita só DEPOIS que o product_brief já existe (não dá pra
-            "validar" algo que ainda não foi consolidado) e some assim
-            que já foi validada.
-          */}
-          {criativoActive && !necessidadeJaValidada && (
-            <Button
-              variant="success"
-              loading={validandoNecessidade}
-              onClick={handleValidateNecessity}
-              disabled={streaming || !hasProductBrief}
-              title={
-                !hasProductBrief
-                  ? t('composer.confirmarNecessidadeDesabilitado')
-                  : undefined
-              }
-            >
-              {t('composer.confirmarNecessidade')}
             </Button>
           )}
         </div>
@@ -391,7 +374,7 @@ export function SessionComposer({
               >
                 {t('ativacao.reabrir')}
               </Button>
-              {!podeReabrir && <span>{t('ativacao.reabrirExigeMaintainer')}</span>}
+              {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </>
           ) : (
             <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>

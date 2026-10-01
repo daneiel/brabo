@@ -174,8 +174,9 @@ async function fazerLogin(): Promise<LoginDaSemeadura> {
     // (`AUTH_LOCKOUT_IP_THRESHOLDS`, default `20:30,30:120`, janela de 15
     // minutos), que responde com o MESMO 401 uniforme de credencial
     // inválida, de propósito: distinguir os dois seria dizer ao atacante
-    // quando ele acertou o e-mail. Cada execução gasta 3 logins — o `setup`,
-    // o spec de autenticação e ESTE, memoizado para a suite inteira —, e
+    // quando ele acertou o e-mail. Cada execução gasta 4 logins — o `setup`,
+    // o spec de autenticação, ESTE (memoizado para a suite inteira) e o
+    // `cookiesDeUmLoginProprio()` de `turno-pelo-canal.spec.ts` —, e
     // repetir a suite muitas vezes seguidas estoura o balde. Sem esta
     // mensagem, a próxima pessoa caça um bug de credencial que não existe.
     throw new Error(
@@ -262,10 +263,16 @@ export async function idsPendentes(token: string, sessao: SessaoSemeada): Promis
  *
  * A ativação importa: é ela que faz a api chamar o engine, e sem sessão
  * ativa não há canal `session:<id>` para o navegador tentar abrir.
- * `kind: 'consultiva'` pelo mesmo motivo do smoke — nada aqui ativa
- * EXECUÇÃO, e `execution.activated` em sessão consultiva é 409 por desenho.
+ * `kind: 'consultiva'` por padrão, pelo mesmo motivo do smoke — nada aqui
+ * ativa EXECUÇÃO, e `execution.activated` em sessão consultiva é 409 por
+ * desenho. `criativa` é a de `semearSessaoSemCredencial`: é o único `kind` em
+ * que o composer oferece um destinatário (o Criativo) antes de qualquer
+ * ativação (RN-631).
  */
-export async function semearSessao(token: string): Promise<SessaoSemeada> {
+export async function semearSessao(
+  token: string,
+  kind: 'consultiva' | 'criativa' = 'consultiva',
+): Promise<SessaoSemeada> {
   const cabecalhos = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -296,7 +303,7 @@ export async function semearSessao(token: string): Promise<SessaoSemeada> {
     await fetch(`${API}/projects/${projectId}/sessions`, {
       method: 'POST',
       headers: cabecalhos,
-      body: JSON.stringify({ kind: 'consultiva' }),
+      body: JSON.stringify({ kind }),
     }),
     'POST /projects/:id/sessions',
   );
@@ -368,4 +375,125 @@ export async function semearProjetoRunner(token: string): Promise<{
   );
 
   return { workspaceId, projectId: exigirId(projeto, 'projeto') };
+}
+
+/**
+ * Um login PRÓPRIO, com os cookies (`brabo_refresh` httpOnly e `brabo_csrf`)
+ * para um contexto de navegador — fora da memoização de `autenticar()`.
+ *
+ * Existe porque os dois estados de navegador que a execução já tem são de
+ * outros specs, e cada um vale UMA vez (ver "Só UM spec por execução pode usar
+ * o estado do `setup`" no README): o do `setup` é de
+ * `socket-da-sessao.spec.ts`, e os cookies da semeadura são de
+ * `aprovacao-inline.spec.ts`. Um terceiro spec com sessão de navegador precisa
+ * de um refresh que ninguém mais use — e isso custa UM login a mais do balde
+ * do lockout por IP, contado no README. Não memoize: memoizar devolveria o
+ * mesmo refresh a dois consumidores, que é o defeito que esta função evita.
+ */
+export async function cookiesDeUmLoginProprio(): Promise<CookieDaSemeadura[]> {
+  return (await fazerLogin()).cookies;
+}
+
+export interface SessaoSemCredencial extends SessaoSemeada {
+  /** O provider do modelo vinculado — o que NÃO tem credencial do dono. */
+  provider: string;
+  modelId: string;
+}
+
+interface ModeloDoCatalogo {
+  id: string;
+  provider: string;
+  supportsToolCalling: boolean;
+  availability: string;
+}
+
+/**
+ * Sessão CRIATIVA num workspace cujo modelo é de um provider SEM credencial do
+ * dono — o turno do Criativo sobe, pede o modelo à api e FALHA antes de
+ * qualquer chamada de rede ao provider (AT-338). Sem LLM e sem custo.
+ *
+ * O desfecho foi lido no código, não suposto: `StreamLlmTurnUseCase` resolve o
+ * binding, confere o orçamento e, para provider que não é `ollama`, procura a
+ * credencial do DONO do workspace (RN-058); sem ela, o frame final é
+ * `Nenhuma credencial cadastrada para <provider>`. O `CriativoServer` o
+ * recebe como `{:final, texto}`, e `Engine.Agents.FalhaDeTurno.origem/1`
+ * classifica `credencial` como `politica` (RN-059).
+ *
+ * Por que vincular um modelo, em vez de deixar o workspace novo sem nenhum: sem
+ * binding o texto seria OUTRO (`Nenhum modelo vinculado para esta sessão`),
+ * também `politica`, e o spec provaria um desfecho que ninguém pediu. E por que
+ * não o workspace do seed: ele vincula o modelo LOCAL (`ollama`), que não pede
+ * credencial — o turno tentaria o daemon, que o compose de produção não sobe
+ * fora do profile `llm`, e a falha seria de `infra`.
+ *
+ * O modelo sai do catálogo que o seed semeia, com três filtros: aceita
+ * ferramentas (o Criativo pede `emit_artifact`, e a cascata PULA modelo sem
+ * tool calling — cairia de novo em "nenhum modelo"), não está
+ * `unavailable`, e o provider dele não tem credencial do usuário (o seed pode
+ * gravar credenciais a partir do ambiente). Se nenhum servir, LANÇA dizendo
+ * por quê: sem isso o spec veria um turno que DEU CERTO, gastando token.
+ */
+export async function semearSessaoSemCredencial(token: string): Promise<SessaoSemCredencial> {
+  const cabecalhos = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  const sessao = await semearSessao(token, 'criativa');
+
+  const credenciais = await fetch(`${API}/users/me/credentials`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const corpoDasCredenciais = await credenciais.text();
+  if (!credenciais.ok) {
+    throw new Error(
+      `GET /users/me/credentials respondeu ${credenciais.status}: ${corpoDasCredenciais.slice(0, 500)}`,
+    );
+  }
+  const comCredencial = new Set(
+    (JSON.parse(corpoDasCredenciais) as Array<{ provider?: unknown }>).map((c) =>
+      String(c.provider),
+    ),
+  );
+
+  const catalogo = (await json(
+    await fetch(`${API}/workspaces/${sessao.workspaceId}/models/catalog`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    'GET /workspaces/:id/models/catalog',
+  )) as { local?: Record<string, ModeloDoCatalogo[]>; cloud?: Record<string, ModeloDoCatalogo[]> };
+  const modelo = Object.values(catalogo.cloud ?? {})
+    .flat()
+    .find(
+      (m) =>
+        m.provider !== 'ollama' &&
+        m.supportsToolCalling &&
+        m.availability !== 'unavailable' &&
+        !comCredencial.has(m.provider),
+    );
+  if (!modelo) {
+    throw new Error(
+      'nenhum modelo de nuvem com tool calling num provider SEM credencial do ' +
+        `usuário (credenciais: ${[...comCredencial].join(', ') || 'nenhuma'}): o ` +
+        'turno não falharia por credencial. Ver semearSessaoSemCredencial.',
+    );
+  }
+
+  await json(
+    await fetch(`${API}/workspaces/${sessao.workspaceId}/models/activate`, {
+      method: 'POST',
+      headers: cabecalhos,
+      body: JSON.stringify({ modelIds: [modelo.id], isActive: true }),
+    }),
+    'POST /workspaces/:id/models/activate',
+  );
+  await json(
+    await fetch(`${API}/workspaces/${sessao.workspaceId}/model-binding`, {
+      method: 'PUT',
+      headers: cabecalhos,
+      body: JSON.stringify({ modelId: modelo.id }),
+    }),
+    'PUT /workspaces/:id/model-binding',
+  );
+
+  return { ...sessao, provider: modelo.provider, modelId: modelo.id };
 }

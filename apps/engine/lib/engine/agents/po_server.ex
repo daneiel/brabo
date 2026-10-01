@@ -36,7 +36,6 @@ defmodule Engine.Agents.PoServer do
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
   alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
-  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
@@ -67,8 +66,12 @@ defmodule Engine.Agents.PoServer do
   @doc "Roteia uma mensagem do usuário pro PO (refino do backlog)."
   # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
   # (RN-622); `nil` = sem orientação neste turno.
-  def user_message(session_id, text, idioma \\ nil),
-    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
+  def user_message(session_id, text, idioma \\ nil, mensagem_id \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma, mensagem_id}, 180_000)
+
+  @doc "Cancela uma mensagem que espera na fila deste agente (RN-673)."
+  def cancelar_mensagem(session_id, mensagem_id, user_id),
+    do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
   @doc """
   Devolução de história recusada (Fase 12c — RN-048): o usuário não promoveu
@@ -140,6 +143,11 @@ defmodule Engine.Agents.PoServer do
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
+       # RN-673: a fila de mensagens que chegaram com turno em curso,
+       # reconstruída do log (sobrevive a restart), e como montar o turno
+       # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
      }}
   end
@@ -169,23 +177,43 @@ defmodule Engine.Agents.PoServer do
   # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
   # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
   # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  #
+  # RN-673 (ADR 0191): a mensagem passa por `TurnoAssincrono.receber_mensagem/4`
+  # — com turno em curso ela ENTRA NA FILA em vez de ser recusada, e a fila
+  # vira um turno só no fim dele. `mensagem_id` é o do `chat.message` que a api
+  # gravou; é por ele que a mensagem pendente pode ser cancelada.
   @impl true
-  def handle_call({:user_message, text, idioma}, from, state) do
-    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
-      handle_call({:user_message, text}, from, state)
-    end)
+  def handle_call({:user_message, text, idioma, mensagem_id}, from, state) do
+    TurnoAssincrono.receber_mensagem(
+      state,
+      from,
+      %{texto: text, idioma: idioma, id: mensagem_id},
+      &turno_de_mensagem/2
+    )
   end
 
+  def handle_call({:user_message, text, idioma}, from, state),
+    do: handle_call({:user_message, text, idioma, nil}, from, state)
+
+  def handle_call({:user_message, text}, from, state),
+    do: handle_call({:user_message, text, nil, nil}, from, state)
+
   @impl true
-  def handle_call({:user_message, text}, from, state) do
-    work = state |> append(user_msg(text)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
-  end
+  def handle_call({:cancelar_mensagem, mensagem_id, user_id}, _from, state),
+    do: TurnoAssincrono.cancelar_mensagem(state, mensagem_id, user_id)
 
   @impl true
   def handle_call({:revise, story}, from, state) do
     work = state |> append(revision_message(story)) |> compact()
     TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+  end
+
+  # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
+  # `handle_call` fazia inline. `TurnoAssincrono` a guarda no state e a usa
+  # também para o turno que lê a FILA (várias falas num texto só).
+  defp turno_de_mensagem(state, text) do
+    work = state |> append(user_msg(text)) |> compact()
+    fn -> run_turn(work, @max_iterations) end
   end
 
   @impl true

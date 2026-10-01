@@ -173,7 +173,7 @@ image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72
 ```
 
 ```dockerfile
-FROM node:24.11.1-alpine3.21@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS deps
 ```
 
 With both present, Docker pulls by the digest: the tag is information for
@@ -216,7 +216,9 @@ worse than a `docker compose pull` going stale.
   installer fills — the third-party ones arrived by tag, next to them.
 - `ci.yml`, `golden-set-rag.yml` and `golden-set-qa.yml` run third-party images as job
   `services:`. That is literally the runner the action rule exists to
-  protect, reached by the other door.
+  protect, reached by the other door. Since
+  [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md) they hold
+  no literal: see *The workflows read the compose* below.
 
 To resolve a tag into the digest to write down — the **index** digest, so
 the pin keeps working on `linux/arm64` as well as `linux/amd64`:
@@ -259,17 +261,44 @@ What the check deliberately does **not** cover:
 The exception list is by *name* and fails closed: a new third-party image
 never matches `brabo-`, so it is born under the rule.
 
-**The price is real and is not paid here.** An image pinned by digest
-receives no security update until someone changes the digest by hand —
-the same debt the action SHAs carry. `.github/dependabot.yml` enables the
-`github-actions` ecosystem for that reason. The maintainer decided on
-2026-09-27 to enable the `docker` and `docker-compose` ecosystems too, and
-the inline tag of ADR 0178 is the half of that decision that is in place;
-the other half is **not enabled yet** and ADR 0178 says why: the decided
-step that would align the workflows' `services:` on the bot's PR cannot push
-with the `GITHUB_TOKEN`, which is never allowed to change `.github/workflows/`.
-Until that is decided, bumping a digest is the
-[runbook procedure](../runbook.md#subindo-imagem-de-terceiro).
+### The workflows read the compose {#the-workflows-read-the-compose}
+
+Until [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md)
+`pgvector` and `ollama` lived twice: in the composes and, as literals, in the
+`services:` of `ci.yml` and the two golden-set workflows. No Dependabot
+ecosystem reads a workflow's `services:`, so every bot PR bumping one of them in
+the compose would have been born red by the "same tag, two digests" rule, and
+the step that would align the workflow on the bot's PR cannot push with the
+`GITHUB_TOKEN`, which is never allowed to change `.github/workflows/`.
+
+The literal is gone. A reusable workflow, `.github/workflows/imagens-do-compose.yml`,
+runs `scripts/ci/imagens-do-compose.ts`, which reads each service's `image:` from
+`docker/docker-compose.yml` (and refuses one that is not
+`image:tag@sha256:<index>`), and the callers write
+`image: ${{ needs.imagens.outputs.pgvector }}`. A duplicate that does not exist
+cannot diverge: the bot's PR touches only the compose, and the CI of that very
+PR already runs against the new image. What `golden-set-rag.yml` used to
+*promise* in a comment — the same Ollama as dev, because the golden-set floor is
+keyed by model and not by environment — is now true by construction.
+
+`imagens-pinadas.ts` learned the new shape and closes the door it opens. In a
+workflow it fails any third-party **literal** (pinned or not); any expression
+that is not exactly `${{ needs.<job>.outputs.<name> }}` — a literal inside the
+expression, an `||` default, `env.`, `vars.`, `format()` are all places a
+mutable reference could hide, and the old pattern did not even match a line
+with spaces; and a `needs.<job>` whose job does not call the reusable workflow,
+or an output it does not declare. Each rule is proved by mutation in its spec.
+
+**The price is real, and Dependabot now pays part of it.** An image pinned by
+digest receives no security update until someone changes the digest — the same
+debt the action SHAs carry. `.github/dependabot.yml` enables `github-actions`
+for that reason and, since ADR 0197, `docker-compose` (`/docker`) and `docker`
+(`/docker/*` and `/deploy/k8s/**`), each grouped into one weekly PR into `dev`.
+Still manual, and declared in ADR 0197: `neo4j` and `ollama` also live in
+`deploy/k8s/base/`, the two ecosystems never share a PR, and a same-tag digest
+re-roll makes both PRs fail until a human joins them; the CloudNativePG
+`imageName` and `IMAGEM_DO_GOLDEN_SET_QA` are read by no ecosystem. Those
+follow the [runbook procedure](../runbook.md#subindo-imagem-de-terceiro).
 
 **A digest guarantees immutability, not availability.** The pin protects
 against the owner of a tag moving it; it does not protect against the
@@ -362,7 +391,7 @@ Declared, not fixed:
   already closed.
 
   Every Dependabot PR enters through `dev` (`target-branch: dev` on the
-  three entries). Security updates ignore that key and open against the
+  five entries — the two image ecosystems included, since ADR 0197). Security updates ignore that key and open against the
   default branch, so `dependabot-para-dev.yml` closes the ones `dev`
   already fixes and retargets the rest — see *Dependabot enters through
   dev* in `branching-policy.md`.
@@ -418,14 +447,14 @@ Declared, not fixed:
   Authenticode), which needs a paid signing identity and stays in
   [the backlog](backlog.md).
 - ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
-  (above): all 39 third-party references — composes, kustomize manifests,
-  Dockerfile `FROM` lines and the workflow `services:` — are pinned by
-  digest with the tag inside the reference (ADR 0178), and
-  `scripts/ci/imagens-pinadas.ts` fails the `lint` job on the next
-  regression. What is **not** closed, and is the price of the pin rather
+  (above): all 33 third-party references — composes, kustomize manifests and
+  Dockerfile `FROM` lines — are pinned by digest with the tag inside the
+  reference (ADR 0178), the workflow `services:` read theirs from the compose
+  (ADR 0197), and `scripts/ci/imagens-pinadas.ts` fails the `lint` job on the
+  next regression. What is **not** closed, and is the price of the pin rather
   than a leftover: a digest receives no security update until someone bumps
-  it by hand. Dependabot's `docker`/`docker-compose` ecosystems are decided
-  but not enabled — see ADR 0178 for what blocks them.
+  it. Dependabot's `docker`/`docker-compose` ecosystems propose those bumps
+  since ADR 0197; what they cannot reach is listed there.
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
 - **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**

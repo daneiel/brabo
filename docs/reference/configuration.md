@@ -416,6 +416,7 @@ preflight because it runs on the host, and the api can only compare against
 | `DEFAULT_CONTEXT_WINDOW` | `8192` | used when the model doesn't declare its window |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
 | `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | ceiling for a terminal command |
 | `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/custo.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
 | `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |

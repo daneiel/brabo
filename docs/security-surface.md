@@ -408,8 +408,16 @@ reason in the URL.
   active) before executing anything, and the engine classifies the refusal with
   origin `politica` rather than `codigo`. The refusal text names neither the
   variables nor their values, only how many there were. The credential still
-  does not cross, and that half is declared open: authenticated clone/fetch in
-  `runner` mode requires the container stopped.
+  does not cross the container boundary, and since
+  [ADR 0193](adr/0193-git-credenciado-no-host-do-runner.md)
+  ([RN-676](business-rules.md#rn-676)) it does not need to: the engine marks
+  the authenticated `fetch` (`gitCredenciado: true`, set from one place,
+  `RunnerRouter.exec_git_credenciado/5`) and the runner runs THAT command on
+  the host, where the `env` reaches the child process; the dev agent's
+  commands still go to `docker exec`. The trust boundary is the mark, not the
+  `env`: a command carrying `env` WITHOUT the mark is still refused while a
+  container is active, so the credential field never becomes a way out of the
+  container. No ADR 0130 port changed.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
@@ -992,6 +1000,17 @@ reason in the URL.
   (`role:owner`, target must already be `owner`, else 409
   `titular_precisa_ser_owner`) moves it — [RN-616](business-rules.md#rn-616).
   Any owner may transfer it, including to another owner who did not ask.
+- **`GET /workspaces/:workspaceId/members` is `role:viewer`, not the `owner`
+  of the three write routes next to it** ([RN-652](business-rules.md#rn-652),
+  AT-335). The minimum is the endpoint's (RN-102): reading the roster is not
+  maintaining it. `viewer` is what the neighbouring reads use
+  (`GET /workspaces/:workspaceId`, `/projects`) and what
+  `GET /projects/:projectId/members` uses — the read this one completes, since
+  whoever enters a project through the workspace role alone has no project
+  row. Anyone who can open a session can see who spoke in it, and a
+  workspace `viewer` already sees every project of the workspace. The body is
+  the same shape as the project read — `userId`, `name`, `email`, `role` —
+  and nothing else (no `createdAt`, no account state).
 - **Self-PROMOTION is now refused on both association routes**, which changes
   `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
   capability that stayed (*"the caps are about going down"*); ADR 0157 revises
@@ -1088,6 +1107,17 @@ reason in the URL.
   so nothing crosses a project boundary. The same routes now answer with the
   CURRENT offer instead of always a new row (`desfecho`), and the internal one
   accepts `seAusente` — a switch that can only make the call write LESS.
+- **The internal `POST /internal/sessions/:sessionId/handoffs` may now ACCEPT
+  the Creative→PO offer it creates, and the classification didn't change** —
+  still `engine-service` ([RN-658](business-rules.md#rn-658),
+  [ADR 0185](adr/0185-estou-pronto-fecha-os-dois-gates.md)). The engine gains no
+  power to activate an agent: the api decides, from the `readiness.confirmed`
+  that a PERSON recorded through `POST .../readiness` (`role:developer`, the same
+  minimum as accepting by the card), and records that person as the actor. The
+  engine cannot forge the mark — it never writes `readiness.confirmed` — and
+  the offer must carry the `product_brief` born after that click, in the same
+  session. `POST .../agents/criativo/validate-necessity` keeps its route and
+  role, with no web caller left ([RN-657](business-rules.md#rn-657)).
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
   ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
@@ -1130,6 +1160,24 @@ reason in the URL.
   wildcard to a client that already knows it has `maintainer`/`owner` —
   but what actually guarantees the role is this same
   `@RequireRole('maintainer')`, unchanged.
+- **The Jev tool router is a new OUTBOUND call carrying agent context**
+  ([ADR 0179](adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
+  [RN-625](business-rules.md#rn-625)). Before a chat call to an OpenRouter
+  model, the api POSTs to `https://openrouter.ai/api/alpha/decisions` (the
+  Decisions API, alpha) with the workspace owner's OpenRouter key — the SAME
+  key the chat already spends, decrypted in the same use case, never logged
+  and never returned. What travels is the `state`: the agent id, the last user
+  message (cut at 6,000 characters), the start of the system message (1,500),
+  and up to six recent tool calls with arguments and results cut at 500
+  characters each — plus the tool NAMES and DESCRIPTIONS, never their
+  `parameters`. That is content the chat call already sends to the same
+  OpenRouter account, in a smaller slice, but it now reaches a second model
+  (`typesafe/jev-1.13`) behind it. The switch is per workspace
+  (`PUT /workspaces/:workspaceId/tool-router`, `role:owner`, on by default) and
+  it only fires with an OpenRouter chat model. The router narrows the tool
+  menu and nothing else: it cannot approve, deny, or widen anything, and a
+  call the model makes outside the menu still becomes a Proposed Action under
+  the same policy. Any failure of the call falls to the whole catalog.
 - **`POST .../actions/:actionId/approve_always` gained `desfecho` and
   `padraoGravado` in the response, and the classification didn't change** —
   still `role:developer` ([RN-642](business-rules.md#rn-642)). The approval
@@ -1289,6 +1337,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/members/:userId` | role:maintainer |
 | GET | `/projects/:projectId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
+| GET | `/projects/:projectId/model-bindings/resolved` | role:viewer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | POST | `/projects/:projectId/personal-access-tokens` | role:developer |
@@ -1317,6 +1366,7 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/actions/:actionId/deny` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/message` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/messages/:messageId/cancel` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/start` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
@@ -1342,16 +1392,18 @@ reason in the URL.
 | POST | `/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
-| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:maintainer |
+| POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
 | PATCH | `/workspaces/:workspaceId` | role:maintainer |
+| GET | `/workspaces/:workspaceId/members` | role:viewer |
 | POST | `/workspaces/:workspaceId/members` | role:owner |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | role:owner |
 | PUT | `/workspaces/:workspaceId/owner-of-record` | role:owner |
+| PUT | `/workspaces/:workspaceId/tool-router` | role:owner |
 | GET | `/workspaces/:workspaceId/model-binding` | role:viewer |
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |

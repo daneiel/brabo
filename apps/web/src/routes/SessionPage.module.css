@@ -379,6 +379,27 @@
    `Input.module.css` para o `.hint`) e que, na prática, ninguém via. Vira um
    CHIP: `--text-secondary` sobre `--surface-2`, com o ícone de modelo, para
    dizer o que aquele texto É. */
+/* RN-673: a mensagem que espera na fila de um agente (ou que foi cancelada
+   enquanto esperava) — o mesmo chip do modelo, com o botão de cancelar ao
+   lado. Cancelada fica riscada: não foi lida por ninguém. */
+.seloDaFila {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+.seloDaFila[data-estado='cancelada'] {
+  text-decoration: line-through;
+}
+
 .messageModelo {
   display: inline-flex;
   align-items: center;
@@ -1201,6 +1222,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
   margin-top: var(--space-2);
 }
 
@@ -1208,6 +1230,12 @@
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   color: var(--text-muted);
+}
+
+/* AT-249 (RN-663): o gate pendente, em TEXTO — aviso, o botão segue ativo. */
+.mergearAvisoDeGate {
+  font-size: var(--fs-meta);
+  color: var(--warning);
 }
 
 /*

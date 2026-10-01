@@ -53,16 +53,16 @@
     "placeholder": "Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)",
     "enviar": "Enviar",
     "parar": "Parar",
-    "prontoParaProduzir": "Estou pronto para produzir",
+    "prontoParaProduzir": "Estou pronto — a necessidade está validada",
+    "prontoParaProduzirExplica": "Fecha a prontidão e a validação da necessidade, e chama o PO: ele entra sozinho quando o Criativo terminar o resumo do produto",
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
     "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
-    "confirmarNecessidade": "Confirmar necessidade validada",
-    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade",
     "destinatarioLabel": "Para",
     "destinatarioPlaceholder": "Escolha o agente…",
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
-    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente."
+    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente.",
+    "enfileirar": "Pôr na fila"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -71,7 +71,7 @@
     "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens.",
     "reabrir": "Reabrir sessão",
     "reabrirExplicacao": "Reabrir volta a sessão a ativa com tudo o que ela já tinha: a conversa, as regras de negócio, as perguntas respondidas e as ofertas entre agentes. O encerramento anterior fica registrado.",
-    "reabrirExigeMaintainer": "Reabrir a sessão exige o papel maintainer neste workspace."
+    "reabrirExigeDeveloper": "Reabrir a sessão exige o papel developer neste workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",
@@ -95,6 +95,8 @@
     "semMotivo": "sem motivo"
   },
   "handoff": {
+    "aceiteAutomatico": "Aceito automaticamente: o backlog cobre as {{regras}} regras de negócio e o repositório é local, então {{agente}} entrou sem clique.",
+    "aceiteAutomaticoFalhou": "O aceite automático do handoff a {{agente}} falhou: {{erro}}. Aceite pelo card da oferta.",
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
@@ -132,8 +134,7 @@
     "erroIniciarIdeacao": "Não foi possível iniciar a ideação",
     "erroConfirmarProntidao": "Não foi possível confirmar prontidão",
     "erroConfirmarArquitetura": "Não foi possível confirmar a arquitetura",
-    "necessidadeValidada": "Necessidade validada",
-    "erroValidarNecessidade": "Não foi possível validar a necessidade",
+    "prontoRegistrado": "Necessidade validada. O PO entra quando o resumo do produto ficar pronto",
     "erroAceitarHandoff": "Não foi possível aceitar o handoff",
     "handoffManualEnviado": "Handoff enviado",
     "erroHandoffManual": "Não foi possível enviar o handoff",
@@ -213,14 +214,23 @@
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
-    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa."
+    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa.",
+    "motivoNaoLido": {
+      "todas_zero": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "todas_one": "Não foi possível ler o motivo da política deste card: a leitura do log da sessão que propôs a ação falhou.",
+      "todas_other": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_zero": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_one": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs a ação falhou.",
+      "algumas_other": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou."
+    }
   },
   "mergearNoChat": {
     "botao": "Mergear",
     "propondo": "Propondo…",
     "semPapel": "Mergear aqui exige o papel developer no projeto.",
     "nota": "Propõe o merge nesta sessão; quem confirma é você, no card que aparece — o merge segue manual.",
-    "erroTitulo": "Não foi possível propor o merge"
+    "erroTitulo": "Não foi possível propor o merge",
+    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
   },
   "fio": {
     "historico": {
@@ -232,5 +242,13 @@
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     }
+  },
+  "fila": {
+    "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",
+    "cancelar": "Cancelar",
+    "cancelada": "cancelada na fila — nenhum agente a leu",
+    "cancelarSoAutor": "Só quem enviou a mensagem pode cancelá-la.",
+    "erroCancelar": "Não foi possível cancelar a mensagem.",
+    "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."
   }
 }

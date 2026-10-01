@@ -190,7 +190,7 @@ describe('SessionPage — o aviso do canal compõe com o acompanhamento pelo log
     confirmReadiness.mockResolvedValue({ ok: true });
     cauda.mockResolvedValue({ items: [STATUS(4, 'working')], nextCursor: null });
     montar();
-    const botao = await screen.findByRole('button', { name: 'Estou pronto para produzir' });
+    const botao = await screen.findByRole('button', { name: 'Estou pronto — a necessidade está validada' });
     fireEvent.click(botao);
     const campo = await screen.findByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
@@ -199,12 +199,12 @@ describe('SessionPage — o aviso do canal compõe com o acompanhamento pelo log
       await vi.advanceTimersByTimeAsync(0);
     });
     await waitFor(() => expect(cauda).toHaveBeenCalledTimes(1));
-    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Parar' })).not.toBeNull();
     return campo;
   }
 
   it('caminho feliz: o agent.status do acompanhado no canal fecha o turno SEM esperar o tique', async () => {
-    const campo = await aceitarTurnoDoCriativo();
+    await aceitarTurnoDoCriativo();
 
     // O turno fechou no log; o `agent.done` do canal se perdeu, mas o aviso do
     // `agent.status` persistido chegou.
@@ -218,11 +218,14 @@ describe('SessionPage — o aviso do canal compõe com o acompanhamento pelo log
     });
 
     expect(cauda).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('CASO DE FALHA coberto: aviso de OUTRO agente não lê a cauda, e o tique de 4s continua sendo a rede', async () => {
-    const campo = await aceitarTurnoDoCriativo();
+    await aceitarTurnoDoCriativo();
 
     cauda.mockResolvedValue({
       items: [STATUS(4, 'working'), STATUS(9, 'idle')],
@@ -234,18 +237,18 @@ describe('SessionPage — o aviso do canal compõe com o acompanhamento pelo log
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(cauda).toHaveBeenCalledTimes(1);
-    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Parar' })).not.toBeNull();
 
     // Nenhum aviso útil chegou: o tique fecha o turno, como antes da RN-579.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(4000);
     });
     expect(cauda).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('turno fechado: o aviso deixa de ler a cauda, e o tique para', async () => {
-    const campo = await aceitarTurnoDoCriativo();
+    await aceitarTurnoDoCriativo();
     cauda.mockResolvedValue({
       items: [STATUS(4, 'working'), STATUS(9, 'idle')],
       nextCursor: null,
@@ -254,7 +257,7 @@ describe('SessionPage — o aviso do canal compõe com o acompanhamento pelo log
       canalHandlers?.onAgentDone?.();
       await vi.advanceTimersByTimeAsync(0);
     });
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
     const leituras = cauda.mock.calls.length;
 
     await act(async () => {

@@ -36,7 +36,7 @@ describe('autorDaMensagem', () => {
     });
   });
 
-  it('pessoa fora de project_members (só papel de workspace) é "outroMembro", nunca "voce"', () => {
+  it('pessoa fora das duas listas de membros é "outroMembro", nunca "voce"', () => {
     expect(autorDaMensagem({ kind: 'user', id: 'carla' }, ctx)).toEqual({
       tipo: 'outroMembro',
     });

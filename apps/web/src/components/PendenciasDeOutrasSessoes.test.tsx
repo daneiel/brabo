@@ -8,6 +8,7 @@ const getProjectPendingActions = vi.fn();
 const approveAction = vi.fn();
 const denyAction = vi.fn();
 const approveAlwaysAction = vi.fn();
+const listSessionEvents = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -17,6 +18,7 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     approveAction: (...a: unknown[]) => approveAction(...a),
     denyAction: (...a: unknown[]) => denyAction(...a),
     approveAlwaysAction: (...a: unknown[]) => approveAlwaysAction(...a),
+    listSessionEvents: (...a: unknown[]) => listSessionEvents(...a),
   };
 });
 
@@ -54,8 +56,10 @@ function acao(id: string, over: Partial<ProposedAction> = {}): ProposedAction {
   };
 }
 
-function montar(podeDecidir = true) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function montar(
+  podeDecidir = true,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <PendenciasDeOutrasSessoes projectId="proj-1" sessionId={AQUI} podeDecidir={podeDecidir} />
@@ -65,6 +69,9 @@ function montar(podeDecidir = true) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // O motivo da política de cada card é lido pela ação (AT-340); por padrão
+  // o log responde sem o evento.
+  listSessionEvents.mockResolvedValue({ items: [], nextCursor: null });
 });
 
 describe('PendenciasDeOutrasSessoes (AT-265)', () => {
@@ -169,5 +176,70 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     expect(topo).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: 'Aprovar' })).toBeNull();
     expect(topo).toHaveTextContent('Aprovações 1');
+  });
+});
+
+/**
+ * AT-340 (RN-656) — cada card das pendências de outras sessões mostra o motivo
+ * da política, lido pela ação na sessão que a propôs, com o MESMO cache da aba
+ * Aprovações.
+ */
+describe('PendenciasDeOutrasSessoes — motivo da política (AT-340)', () => {
+  const criada = (actionId: string) => ({
+    id: `evt-${actionId}`,
+    sessionId: EXECUCAO,
+    seq: 3,
+    type: 'proposed_action.created',
+    actor: { kind: 'agent', id: 'dev-api' },
+    payload: {
+      actionId,
+      actionType: 'terminal',
+      status: 'pending',
+      reason: 'comando fora da allowlist',
+      scopeRoot: { ancora: 'workspace', segmento: 'proj-1' },
+    },
+    createdAt: new Date().toISOString(),
+  });
+
+  it('lê o motivo pela ação, na sessão DELA, uma vez só enquanto o cache viver', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    listSessionEvents.mockResolvedValue({ items: [criada('a1')], nextCursor: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { unmount } = montar(true, client);
+    const motivo = await screen.findByTestId('motivo-da-politica');
+    expect(motivo).toHaveTextContent('comando fora da allowlist');
+    expect(listSessionEvents).toHaveBeenCalledWith('proj-1', EXECUCAO, {
+      actionId: 'a1',
+      limit: 200,
+    });
+
+    // Remontar (voltar ao chat, abrir outra sessão) não relê: evento é
+    // imutável, `staleTime: Infinity` — a mesma chave da aba Aprovações.
+    unmount();
+    montar(true, client);
+    expect(await screen.findByTestId('motivo-da-politica')).toHaveTextContent(
+      'comando fora da allowlist',
+    );
+    expect(listSessionEvents).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('motivo-nao-lido')).toBeNull();
+  });
+
+  it('CASO DE FALHA: a leitura que falha deixa o card calado e diz a lacuna UMA vez', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1'), acao('a2')]);
+    listSessionEvents.mockImplementation(
+      async (_p: string, _s: string, o: { actionId: string }) => {
+        if (o.actionId === 'a2') throw new ApiError(500, 'falhou');
+        return { items: [criada('a1')], nextCursor: null };
+      },
+    );
+
+    montar();
+
+    const nota = await screen.findByTestId('motivo-nao-lido');
+    expect(nota).toHaveTextContent('1 dos 2 cards');
+    // Só o card lido fala; o da leitura falha não inventa motivo nem diz
+    // "não registrado", que é o que a api afirma quando responde sem evento.
+    expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1);
   });
 });

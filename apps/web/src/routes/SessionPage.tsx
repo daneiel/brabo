@@ -22,6 +22,7 @@ import { streamChatMessage } from '../lib/chat-stream';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
+import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -145,21 +146,10 @@ export function SessionPage({
   // (RN-102) — `roleAtLeast`, nunca lista à mão. O papel lido é o de WORKSPACE:
   // a tela não busca `project_members`, e a lacuna (RN-471) fica declarada.
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
-  // ADR 0183 (RN-650): reabrir pede `maintainer` no endpoint. Mesmo papel de
-  // WORKSPACE (a lacuna da RN-471 já declarada acima).
-  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'maintainer');
+  // ADR 0184 (RN-650): reabrir pede `developer` no endpoint, o de encerrar.
+  // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
+  const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
   const [reabrindo, setReabrindo] = useState(false);
-  // RN-161: MESMO papel EFETIVO que `POST .../execution/activate` já exige
-  // no backend (`RequireRole('maintainer')`, ver `ExecutionController`) —
-  // decide se aceitar o handoff pro Dev Lead encadeia a ativação sozinho
-  // (ver `handleAcceptHandoff`) ou se o segundo clique em "Ativar execução"
-  // continua necessário. Quem só é `developer` não perde nada: continua
-  // podendo aceitar o handoff, só não ganha o atalho — ativar exige
-  // `maintainer`/`owner` de qualquer forma, então encadear para um
-  // `developer` só produziria uma chamada fadada a 403.
-  const podeFundirHandoffComExecucao =
-    workspaceComPapel?.role === 'owner' || workspaceComPapel?.role === 'maintainer';
-
   // AT-328: no móvel o painel nasce fechado e abre como gaveta sobre o fio.
   const movel = useLayoutMovel();
   const [asideOpen, setAsideOpen] = usePainelDeContexto(movel, !!highlightEvent);
@@ -223,6 +213,8 @@ export function SessionPage({
     setTurnoViaCanal,
     turnoAgentRef,
   } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
+  // RN-673: a mensagem que entra na fila do agente com turno em curso.
+  const enfileirar = useEnfileirarMensagem(projectId, sessionId, setDraft, acompanharTurnoPeloLog);
 
   // A promoção de histórias pelo fio (RN-126/RN-148) mora em
   // `../lib/session-promocao` desde o PR 8 do ADR 0176.
@@ -248,16 +240,13 @@ export function SessionPage({
     finalizarTurnoDoAgente,
   });
 
-  // As ações de handoff e execução que não são turno de conversa (RN-406,
-  // RN-440, RN-161, RN-137, RN-153) moram em `../lib/session-acoes-de-handoff`
+  // As ações de handoff e execução que não são turno de conversa (RN-440, RN-161, RN-137, RN-153) moram em `../lib/session-acoes-de-handoff`
   // desde o PR 9 do ADR 0176.
   const {
     ativandoExecucao,
-    validandoNecessidade,
     manualHandoffTarget,
     setManualHandoffTarget,
     enviandoHandoffManual,
-    handleValidateNecessity,
     handleRequestManualHandoff,
     handleAcceptHandoff,
     handleActivateExecution,
@@ -268,7 +257,6 @@ export function SessionPage({
     queryClient,
     showToast,
     t,
-    podeFundirHandoffComExecucao,
     iniciarTurnoDoAgente,
     turnoAgentRef,
     setTurnoViaCanal,
@@ -331,8 +319,7 @@ export function SessionPage({
   const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
   // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
-  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory` e
-  // `hasProductBrief` — moraram aqui até a extração do hook
+  // `arquitetoActive`, `hasBusinessRule` e `hasPromotedStory` — moraram aqui até a extração do hook
   // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
   // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
   // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
@@ -342,7 +329,6 @@ export function SessionPage({
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
-    hasProductBrief,
   } = useSessionReadiness(events, backlogQuery.data);
 
   // O destinatário da mensagem do composer é ESCOLHIDO, nunca derivado do log
@@ -380,7 +366,6 @@ export function SessionPage({
     handoffDaInfraOferecido,
     prontidaoJaDeclarada,
     arquiteturaJaDeclarada,
-    necessidadeJaValidada,
   } = useMemo(
     () => derivarHandoffsDaSessao(events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto),
     [events, handoffs, ativadosNaSessaoInteira, ativosNoProjeto],
@@ -614,6 +599,13 @@ export function SessionPage({
       // pelo log. Até lá esta linha era `finalizarTurnoDoAgente()` (a rede de
       // segurança da RN-131), e a chamada só resolvia com o turno pronto.
       acompanharTurnoPeloLog('criativo');
+      // ADR 0185: o clique fechou a necessidade (RN-657) e aceita, em nome
+      // de quem clicou, o handoff ao PO que o turno oferecer (RN-658). É o
+      // gesto de chamar o PO — o mesmo que aceitar pelo card (RN-631) —, então
+      // o destinatário passa a ser ele; enquanto o PO não entra, a escolha
+      // não vale e o Criativo, opção única, segue recebendo.
+      escolherDestinatario('po');
+      showToast({ title: t('toasts.prontoRegistrado'), tone: 'success' });
     } catch (erro) {
       cancelarTurnoOtimista();
       if (avisarSessaoEncerrada(erro)) return;
@@ -629,9 +621,9 @@ export function SessionPage({
 
   /**
    * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
-   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra e ao
-   * Dev Lead na MESMA confirmação (FASE 14d) — o Arquiteto narra a arquitetura
-   * pronta no fio, e os dois handoffs nascem em seguida. Desde o ADR 0163 a
+   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra — o
+   * Arquiteto narra a arquitetura pronta no fio, e o handoff nasce em seguida;
+   * o do Dev Lead sai da Infra, com o container `running` (RN-672). Desde o ADR 0163 a
    * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
    * canal e pelo log (`acompanharTurnoPeloLog`).
    */
@@ -653,7 +645,13 @@ export function SessionPage({
 
   async function handleSend() {
     const text = draft.trim();
-    if (!text || streaming || session?.status !== 'active') return;
+    if (!text || session?.status !== 'active') return;
+    // RN-673: com turno em curso a mensagem a um agente ENTRA NA FILA dele —
+    // sem armar um turno novo na tela (o em curso segue sendo o acompanhado).
+    if (streaming) {
+      if (destinatario && !precisaEscolherDestinatario) await enfileirar(text, destinatario);
+      return;
+    }
     // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
     // O botão já está travado; isto cobre o Enter.
     if (precisaEscolherDestinatario) return;
@@ -934,6 +932,7 @@ export function SessionPage({
             setDraft={setDraft}
             handleComposerKeyDown={handleComposerKeyDown}
             streaming={streaming}
+            podeEnfileirar={streaming && !!destinatario}
             handleSend={handleSend}
             handleCancel={handleCancel}
             criativoActive={criativoActive}
@@ -944,10 +943,6 @@ export function SessionPage({
             arquiteturaJaDeclarada={arquiteturaJaDeclarada}
             handleArchitectureReadiness={handleArchitectureReadiness}
             hasPromotedStory={hasPromotedStory}
-            necessidadeJaValidada={necessidadeJaValidada}
-            validandoNecessidade={validandoNecessidade}
-            handleValidateNecessity={handleValidateNecessity}
-            hasProductBrief={hasProductBrief}
             handleActivate={handleActivate}
             podeReabrir={podeReabrir}
             reabrindo={reabrindo}

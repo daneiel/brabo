@@ -82,7 +82,7 @@ describe('prAbertaDaAcao / jaHaMergeDaPr (AT-266)', () => {
   });
 });
 
-function montar(podeDecidir = true) {
+function montar(podeDecidir = true, gatePendente: string | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -91,6 +91,7 @@ function montar(podeDecidir = true) {
         sessionId="s-1"
         pr={{ pullRequestId: '7', sourceBranch: 'feature/x', targetBranch: 'dev', title: 'feat: x' }}
         podeDecidir={podeDecidir}
+        gatePendente={gatePendente}
       />
     </QueryClientProvider>,
   );
@@ -129,6 +130,24 @@ describe('MergearNoChat (AT-266)', () => {
         expect.objectContaining({ message: 'PR já mergeada.', tone: 'danger' }),
       ),
     );
+  });
+
+  it('gate pendente é AVISO (AT-249, RN-663): o texto nomeia o gate e o botão segue ativo', async () => {
+    proposeAction.mockResolvedValue({});
+    montar(true, 'qa-verificada');
+
+    expect(screen.getByTestId('aviso-gate-pendente')).toHaveTextContent(
+      'O gate qa-verificada ainda está pendente',
+    );
+    const botao = screen.getByRole('button', { name: 'Mergear' });
+    expect(botao).toBeEnabled();
+    fireEvent.click(botao);
+    await waitFor(() => expect(proposeAction).toHaveBeenCalled());
+  });
+
+  it('sem gate pendente, nenhum aviso', () => {
+    montar(true, null);
+    expect(screen.queryByTestId('aviso-gate-pendente')).toBeNull();
   });
 
   it('papel abaixo de developer: botão inerte, com o motivo em texto', () => {

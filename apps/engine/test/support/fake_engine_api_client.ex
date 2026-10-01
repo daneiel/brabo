@@ -644,8 +644,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
+  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta, opts) do
     notify({:llm_turn_stream, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
     # chamada SSE de verdade presa no meio do stream. Existe só para provar
@@ -704,8 +707,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn(_project_id, _session_id, agent, messages, tools) do
+  def llm_turn(_project_id, _session_id, agent, messages, tools, opts) do
     notify({:llm_turn, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     cond do
       # Transporte quebrado (provider fora/timeout) — o ToolLoop guarda isso
@@ -713,6 +719,25 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       # parou sozinho" pra quem consome o desfecho.
       reason = Process.get(:fake_llm_turn_error) ->
         {:error, reason}
+
+      # `:fake_llm_turns_por_agente` — `%{agente => [resp, ...]}`: uma fila
+      # PRÓPRIA para um agente, consumida antes de `:fake_llm_always` e da
+      # fila única. Existe desde o ADR 0192 (RN-674): o `QaLeadServer` roda a
+      # QA-estratégia ANTES das subespecialidades no MESMO processo, e sem
+      # fila própria o plano comeria os turnos que cada teste escreveu para a
+      # Automação. Fila declarada e vazia devolve a resposta final — nunca
+      # cai na fila única de outro agente.
+      Map.has_key?(Process.get(:fake_llm_turns_por_agente, %{}), agent) ->
+        filas = Process.get(:fake_llm_turns_por_agente)
+
+        case Map.fetch!(filas, agent) do
+          [resp | rest] ->
+            Process.put(:fake_llm_turns_por_agente, Map.put(filas, agent, rest))
+            {:ok, resp}
+
+          [] ->
+            {:ok, final_response()}
+        end
 
       resp = Process.get(:fake_llm_always) ->
         {:ok, resp}

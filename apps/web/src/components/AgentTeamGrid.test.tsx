@@ -22,7 +22,7 @@ function renderGrid(autonomyRules: AgentAutonomyRule[]) {
       roster={[DEV]}
       groups={[{ kind: 'solo', entry: DEV }]}
       events={[]}
-      bindingQueries={[]}
+      bindingDoAgente={() => undefined}
       allModels={[]}
       autonomyRules={autonomyRules}
       progressByAgent={new Map()}

@@ -57,6 +57,185 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
+  [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),
+  [RN-674](docs/business-rules.md#rn-674); decisão do dono em 01/10). A
+  QA-estratégia deixa o design: no uso real de 29/09 ela esgotou duas vezes o
+  teto de 8 iterações (`toolloop.limit_reached` sem `emit_plano_de_teste`)
+  procurando um código que ainda não existia. Agora ela é o primeiro passo do
+  ciclo de revisão do `qa-verificada` — lê o worktree do dev a partir dos
+  arquivos que a entrega tocou, grava `artifact.plano_de_teste` (que passa a
+  exigir `taskId`) uma vez por task, e o plano chega à Automação como insumo,
+  sem mudar a régua do veredito nem segurar a revisão quando falha. O
+  `assess_implementability` do Dev Lead (gate `implementavel`) propõe o parecer
+  na PRIMEIRA chamada, sobre a história e o `module_map`, sem plano no payload.
+  O teto continua 8.
+- **engine/api**: **o handoff ao Dev Lead sai da Infra, e só com o container
+  `running`** (AT-262, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-672](docs/business-rules.md#rn-672)). "Confirmar arquitetura pronta"
+  passa a oferecer só à Infra — o handoff duplo do Arquiteto sai, com a rota
+  interna `POST /internal/sessions/:id/agent/offer-dev-handoff` do engine. Quem
+  oferece o Dev Lead é o servidor do Infra Lead, sem depender do modelo, quando
+  o container do projeto está registrado `running`: no fim de cada turno dele e
+  quando o `container.running` chega pelo outbox (aprovação posterior,
+  `/containers`, modo `runner`). Oferta pendente não se repete, e Dev Lead já
+  ativo não é falha. A segunda porta do repositório no aceite ao Dev Lead
+  (RN-582) continua.
+- **engine/api**: **a Infra sobe o container sozinha ao receber o handoff**
+  (AT-260, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-671](docs/business-rules.md#rn-671)). Aceitar o handoff da Infra passa a
+  semear `container_start: auto_approve` (decisão do dono, 01/10 — revisa o
+  "nunca semeado" do ADR 0133), e o kickoff do Infra Lead, ANTES da primeira ida
+  ao modelo, elege a candidata do roteamento do Arquiteto (a de mais módulos; no
+  empate, a primeira) e propõe a subida pelo MESMO caminho da tool — com as
+  recusas por modo e estado (RN-566/RN-610) e o 409 sem broker (RN-591)
+  intactos. Em projeto `container`/`mounted` com roteamento o container sobe sem
+  clique; `runner` segue pelo `container_start_via_runner` com aprovação, e
+  `container_remove` segue no teto absoluto. O kickoff diz ao modelo o que JÁ
+  aconteceu, e o fecho da RN-668 deixa de dizer "não foi proposta" quando o
+  servidor propôs. Uma proposta NEGADA pela política (sessão aberta por quem
+  não é `maintainer`) passa a contar como recusa, não como proposta. **Para
+  subir com clique de novo**, troque a regra `container_start` da Infra: o
+  toggle manual/auto do card escreve a curinga, e a regra específica vence.
+- **engine**: **a mensagem enviada com turno em curso entra numa fila e é lida
+  no fim do turno** (AT-267,
+  [ADR 0191](docs/adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md),
+  [RN-673](docs/business-rules.md#rn-673)). Até aqui ela era 409
+  `turno_em_andamento` e ficava gravada sem ser lida. Agora, nos sete agentes
+  conversacionais, ela entra na fila do agente (`chat.message_queued`), e no
+  fim do turno as pendentes são lidas JUNTAS, na ordem, num turno só
+  (`chat.message_delivered`). Teto de 10 por agente e sessão (acima disso, 409
+  `fila_de_mensagens_cheia`). A fila mora no event log e sobrevive a restart
+  do engine. Quem enviou pode cancelar a mensagem enquanto ela espera
+  (`POST …/agents/:agent/messages/:messageId/cancel`, `chat.message_cancelled`).
+  Na tela, o composer não trava mais durante o turno de um agente (o botão
+  vira "Pôr na fila"), e a mensagem pendente aparece "na fila" com o botão de
+  cancelar. O turno do Dev Lead suspenso em aprovação continua recusando.
+  A resposta de `POST …/agents/:agent/message` ganha `mensagemId`, `entrega`
+  (`lida` | `enfileirada`) e `posicao`.
+- **api, engine, web**: **aprovar o plano do Dev Lead é o que ativa a execução**
+  (AT-263, [RN-677](docs/business-rules.md#rn-677),
+  [ADR 0194](docs/adr/0194-aprovar-o-plano-ativa-a-execucao.md)). Aceitar o
+  handoff ao Dev Lead deixou de encadear `POST .../execution/activate` (revisa
+  a RN-161): ele só entra para PLANEJAR. Aprovar (ou auto-aprovar) o
+  `propose_execution_plan` agora grava o módulo das tarefas e chama a MESMA
+  ativação do botão — o 409 sem repositório, o 409 de sessão consultiva e a
+  reativação na sessão de execução vigente continuam iguais. A ação termina
+  `executed` (com a sessão de execução) ou `failed` (com o motivo), e o Dev
+  Lead diz qual foi ao retomar. O botão "Ativar execução" do card e o da Visão
+  Geral continuam, como gesto explícito.
+- **api, engine**: **a tarefa pertence a um módulo, e só o dev dele a pega**
+  (AT-274, [RN-678](docs/business-rules.md#rn-678)). Coluna `tasks.module`
+  (migração `0068_modulo_da_tarefa`), atribuída pelo Dev Lead no plano
+  (`tarefas: [{ taskId, modulo }]`); o kickoff dele lista as tarefas pendentes
+  com o `task_id`. Tarefa sem módulo ou com módulo fora do `module_map` vigente
+  recusa o plano com 400 `plano_de_execucao_invalido`, nomeando a tarefa. O
+  claim passa a ser pelo módulo da TAREFA; tarefa sem módulo só é pegável
+  quando a história tem um módulo só.
+- **api**: **o custo que o provider cobra vira o número do metering** (AT-270,
+  [ADR 0188](docs/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md),
+  [RN-665](docs/business-rules/custo.md#rn-665)). Quando a resposta traz o
+  custo real — no OpenRouter, `usage.cost` —, ele é o `cost_micros` gravado, o
+  que o turno devolve ao engine, o que os budgets somam e o que a aba Gastos
+  mostra; o preço de catálogo (ADR 0042) continua sendo o número onde a
+  resposta não diz o custo. A linha marca `price_implicit` (a coluna do Jev: o
+  preço gravado é `custo ÷ tokens`) e ganha, pela migration 0067,
+  `catalog_cost_micros` (o que o catálogo teria cobrado), `resolved_model_name`
+  (o modelo que a resposta diz ter servido) e `generation_id` (o `gen-…` para
+  conferir a cobrança).
+  Chamada BYOK cai no catálogo. **Budgets calibrados sobre o preço de catálogo
+  podem cruzar os limiares antes**: o uso real de 29/09 custou 1,85× a
+  estimativa.
+- **api**: **o metering lê o cache e o raciocínio** (AT-272,
+  [RN-666](docs/business-rules/custo.md#rn-666)). Cada linha de `token_usage`
+  grava `cached_input_tokens` (`prompt_tokens_details.cached_tokens`) e
+  `reasoning_tokens` (`completion_tokens_details.reasoning_tokens`) — partes
+  dos totais, nunca somadas a eles, `null` quando o provider não disse — e o
+  `medir-execucao.ts` passa a mostrar, por agente, quanto da entrada foi cache
+  lido, quanto da saída foi raciocínio e em quantas chamadas o custo é o real.
+- **api, engine**: o laço **pergunta ao Jev qual ferramenta** e o modelo do usuário
+  vê só o menu que sobra (AT-238, [RN-625](docs/business-rules.md#rn-625),
+  [ADR 0179](docs/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md),
+  migration 0066). Só com provider OpenRouter, com duas ou mais ferramentas, e
+  **ligado por padrão** por workspace (`PUT workspaces/:id/tool-router`). A política é
+  a P3 da medição de 2026-09-29: menu = {escolha do Jev, ferramenta anterior da
+  execução}; `responder_sem_ferramenta` ou nenhuma anterior deixa o catálogo
+  inteiro. Critério de adoção baixado de 90% para **80%** por decisão do dono
+  (cobertura de menu 91%, 85,1–94%; top-1 do Jev 73%) — a validação real é a
+  AT-239. O Jev não aprova, não nega e não escolhe modelo; erro, timeout (2 s) ou
+  resposta inesperada caem no catálogo inteiro, com o motivo no evento
+  `tool_router.decided`. O gasto do Jev entra em `token_usage` (`estimated = false`,
+  custo real da resposta, preço implícito) no orçamento do próprio agente. Se o
+  menu restrito deixa o modelo sem ferramenta, o passo repete uma vez com o
+  catálogo inteiro. Novo: `TOOL_ROUTER_TIMEOUT_MS`. A tela ainda não mostra o passo.
+- **api/web**: **`developer` também reabre sessão encerrada** (AT-337,
+  [ADR 0184](docs/adr/0184-reabrir-sessao-decisoes-do-dono.md),
+  [RN-650](docs/business-rules.md#rn-650)). O dono decidiu os três padrões
+  provisórios do ADR 0183: `POST /projects/:projectId/sessions/:sessionId/reopen`
+  passa de `maintainer` para `developer` — o mesmo papel que encerra a sessão —,
+  e a tela libera "Reabrir sessão" a partir de `developer` (abaixo disso, o
+  `viewer` vê o botão inerte e o motivo em texto). Sem prazo e a recusa de
+  sessão com execução (409 `sessao_com_execucao`) ficam CONFIRMADOS.
+- **api/web**: **o fio da sessão nomeia quem entra no projeto pelo papel de
+  workspace** (AT-335, [RN-655](docs/business-rules.md#rn-655),
+  [RN-652](docs/business-rules.md#rn-652)). Nasce `GET
+  /workspaces/:workspaceId/members` (`viewer`, só id, nome, e-mail e papel), e
+  a Sessão compõe as duas listas, a de projeto antes da de workspace: a pessoa
+  que antes aparecia como "Outro membro" aparece pelo nome.
+- **api/web**: **cada cartão da aba Aprovações mostra o próprio motivo da
+  política** (AT-336, [RN-656](docs/business-rules.md#rn-656),
+  [RN-614](docs/business-rules.md#rn-614)). A leitura de eventos da sessão
+  ganha o filtro `actionId`, e a ação que o log carregado não cobre lê o
+  `proposed_action.created` dela, na sessão que a propôs — uma vez, porque
+  evento não muda. A nota única do topo da fila sobra só para a leitura que
+  falha.
+- **web**: **os cartões das pendências de outras sessões no chat também
+  mostram o motivo da política** (AT-340, [RN-656](docs/business-rules.md#rn-656)),
+  pela mesma leitura por ação e o mesmo cache da aba Aprovações — a ação que
+  uma das duas telas já leu não custa nada à outra. Só os cartões desenhados
+  pedem; a leitura que falha é dita uma vez, no topo do bloco. O painel
+  "precisa de você" continua sem requisição, por decisão.
+- **api/web**: **projeto novo nasce com promoção de histórias automática**
+  (AT-313, [RN-659](docs/business-rules.md#rn-659)). O default de
+  `projects.story_promotion` passa a `auto` (migration `0065`, só o DEFAULT da
+  coluna): cada história completa do PO já nasce pronta, sem um clique por
+  história. Projeto que já existe NÃO muda — quem nasceu `manual` continua
+  `manual`. O passo Confirmar da criação diz o valor e onde mudá-lo, e a seção
+  de Configurações diz que projeto novo nasce em Automática.
+
+- **api/engine/web**: **o handoff do PO ao Arquiteto é aceito sem clique
+  quando o backlog está coberto** (AT-314,
+  [ADR 0186](docs/adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md),
+  [RN-660](docs/business-rules.md#rn-660)). Com ao menos uma regra de negócio e
+  nenhuma sem história, repositório `local` (ou ainda por nascer) e nenhuma
+  conexão de git no projeto, o sistema aceita a oferta em nome de quem abriu a
+  sessão: o repositório nasce como sempre, antes de o Arquiteto entrar, e o fio
+  diz por que ele entrou. O aceite fica no log com o ator de sistema e o
+  critério; falha vira o evento novo `handoff.auto_accept_failed`, e a oferta
+  segue com o botão. Repositório remoto ou com credencial continua pedindo o
+  clique.
+
+- **web**: **o modo automático é oferecido em lote para o time no início da
+  execução** (AT-315, [RN-661](docs/business-rules.md#rn-661)). A aba Executores
+  ganha um cartão que liga o modo automático para os agentes escolhidos de uma
+  vez — o mesmo curinga e o mesmo endpoint do toggle por agente, só com o
+  clique, e com o desfecho por agente. O cartão diz o que o modo automático
+  NÃO libera (merge em branch protegida, push/PR/deploy, `sudo`/`doas`,
+  remover container, mudar instrução de agente, paralelizar); desligar segue no
+  card de cada agente.
+- **api/web**: **um clique só leva do Criativo ao PO** (AT-311/AT-312,
+  [ADR 0185](docs/adr/0185-estou-pronto-fecha-os-dois-gates.md),
+  [RN-657](docs/business-rules.md#rn-657), [RN-658](docs/business-rules.md#rn-658)).
+  O botão do Criativo passa a se chamar "Estou pronto — a necessidade está
+  validada" (en: "I'm ready — the need is validated") e fecha, no mesmo POST, a
+  prontidão e o gate `necessidade-validada` (`necessity.validated` com o
+  `product_brief` ainda por vir) — o botão separado "Confirmar necessidade
+  validada" sai da tela. E o handoff ao PO que o Criativo oferecer em seguida é
+  aceito em nome de quem clicou: os mesmos `handoff.accepted`/`agent.activated`
+  do card, com a pessoa como ator e a marca `implicito` no payload. Sessões com
+  "Estou pronto" anterior a esta versão seguem com o card de aceite; a rota
+  `validate-necessity` continua na api, sem consumidor na tela.
+
 - **api/engine/web**: **a sessão encerrada pode ser reaberta, com tudo o que
   ela já tinha** (AT-071, [ADR 0183](docs/adr/0183-reabrir-sessao-encerrada.md),
   [RN-649](docs/business-rules.md#rn-649), [RN-650](docs/business-rules.md#rn-650)).
@@ -173,6 +352,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   DIFERENTES, e trocou o modelo default: o antigo devolvia o mesmo upstream
   para qualquer critério e não provava nada.
 
+- **ci**: os `services:` dos workflows deixam de ter imagem literal, e o
+  Dependabot passa a propor a subida das imagens de terceiro (AT-246,
+  [ADR 0197](docs/adr/0197-a-imagem-dos-workflows-vem-do-compose.md), sobre os
+  ADRs 0159 e 0178). O pgvector de `ci.yml` e o pgvector/ollama dos dois
+  golden-sets são lidos de `docker/docker-compose.yml` por um workflow
+  reutilizável novo, `imagens-do-compose.yml` (`scripts/ci/imagens-do-compose.ts`),
+  e chegam por `${{ needs.imagens.outputs.<imagem> }}` — uma fonte só de
+  digest, e o PR do bot nunca precisa tocar `.github/workflows/`. O
+  `imagens-pinadas.ts` passa a reprovar, num workflow, imagem literal (mesmo
+  presa por digest), expressão que não seja exatamente essa (literal na
+  expressão, `||`, `env.`, `vars.`, `format()`) e `needs` de um job que não
+  chama o reutilizável. Com isso o `.github/dependabot.yml` liga `docker-compose`
+  (`/docker`) e `docker` (`/docker/*` e `/deploy/k8s/**`), agrupados, uma PR
+  semanal por ecossistema, com `target-branch: dev`. `Testes do engine
+  (ExUnit)` e os shards de api passam a esperar o job `imagens`, com
+  `if: !cancelled()` para nunca virarem `skipped` (que conta como verde).
+  Segue manual, declarado: `neo4j` e `ollama` também moram em
+  `deploy/k8s/base/`, e uma re-publicação da MESMA tag faz as duas PRs nascerem
+  vermelhas até alguém juntá-las; o `imageName` do CNPG e a
+  `IMAGEM_DO_GOLDEN_SET_QA`.
 - **ci/docker/k8s**: a imagem de terceiro passa a levar a TAG dentro da
   referência, antes do digest — `neo4j:5.26-community@sha256:…`, e
   `FROM node:24.11.1-alpine3.21@sha256:… AS deps` no Dockerfile (AT-139,
@@ -469,6 +668,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Desempenho
 
+- **api/web**: os modelos vigentes de todos os agentes e áreas vêm numa
+  leitura só (AT-334, [RN-654](docs/business-rules.md#rn-654)). Rota nova
+  `GET /projects/:projectId/model-bindings/resolved?agents=…&areas=…`
+  (`viewer`, como as rotas individuais), que devolve para cada chave
+  exatamente o que `GET .../agent-bindings/:slug` ou
+  `GET .../area-bindings/:key` devolveria — a mesma cascata, reusada chave a
+  chave. Chave malformada ou mais de 64 chaves é 400. As seções de modelo por
+  agente, por área e de melhores modelos da aba Configurações leem o lote por
+  uma chave só: a carga da aba cai de 49 para 30 requisições. A falha da
+  leitura aparece uma vez por seção, com a frase da api e "Tentar de novo", e
+  as linhas dizem "não lido" (ou "lendo…"), nunca "sem modelo".
+- **web**: a Visão geral e a aba Executores também leem os modelos do time
+  pelo lote (AT-339, [RN-654](docs/business-rules.md#rn-654)), em vez de uma
+  requisição por agente: os agentes do catálogo pela mesma chave da aba
+  Configurações — voltar de Configurações não busca binding nenhum — e os
+  `dev-<modulo>` numa leitura em lote a mais. A carga das duas abas cai de 29
+  e 33 para 27 e 31 requisições com o time base, e mais com time e módulos;
+  os tetos de `duas-abas.orcamento.test.tsx` descem aos números medidos.
 - **web**: code-splitting por rota (AT-300). As catorze telas passam a ser
   chunks próprios (`lazyRouteComponent` do TanStack, com o `.preload` que o
   router espera antes de trocar de tela — sem flash de fallback na navegação,
@@ -512,6 +729,135 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner/engine**: o `git fetch` AUTENTICADO em modo `runner` passa a
+  funcionar com o container do projeto de pé (AT-116, prova AT-111,
+  [ADR 0193](docs/adr/0193-git-credenciado-no-host-do-runner.md),
+  [RN-676](docs/business-rules.md#rn-676)). Até aqui ele terminava sempre na
+  recusa nomeada da RN-558 (`credencial-nao-atravessa-o-container`) — que era
+  justamente o caminho comum. Agora o engine marca esse fetch
+  (`gitCredenciado: true` no `exec`) e o runner o executa no HOST, onde a
+  credencial chega; os comandos do dev agent continuam no `docker exec`, que
+  segue sem campo de `env`. Um `env` sem a marca continua recusado com
+  container ativo. **Runner antigo:** um `brabo-runner` anterior a esta versão
+  não lê a marca e segue recusando — a mensagem passa a dizer para atualizá-lo.
+- **api/web**: **"Sempre permitir" grava verbo + subcomando, um padrão por
+  segmento** (AT-257, que fecha a AT-170;
+  [RN-675](docs/business-rules.md#rn-675), ponto 6 do ADR 0055 decidido no
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md)). Até aqui o clique gravava
+  o comando inteiro, byte a byte — o próximo quase nunca era igual (173
+  cliques no uso real de 29/09) — e o composto virava um padrão que só casava
+  o primeiro segmento. Agora `cd src/app && npm test` grava `Terminal(cd)` e
+  `Terminal(npm test)`, e `cd lib/core && npm test -- --coverage` passa.
+  Verbo + flag (`ls -la`) fica exato, e a unidade que seria prefixo de um teto
+  da RN-418 (`git remote`, `gh pr`) também; o clique sobre push/PR/deploy/
+  `sudo` continua recusado inteiro. O `permission.granted` passa a levar
+  `patterns` (a lista gravada), e a nota do botão diz a unidade.
+- **api/web**: **o modo automático vira piloto automático, e "Sempre
+  permitir" não o desliga mais** (AT-259, AT-255,
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md),
+  [RN-670](docs/business-rules.md#rn-670)). Decisão do dono de 01/10: a
+  RN-603 fica — a curinga `*: auto_approve` aprova tudo, inclusive comando
+  composto sem regra, caminho fora da pasta, `git commit` e branch LOCAL —,
+  menos os tetos absolutos (push/PR/merge/deploy, `sudo`/`doas`, merge em
+  branch protegida, `container_remove`, `instruction_patch`, paralelismo), e
+  `deny` continua vencendo. O defeito medido no uso real de 29/09: o "Sempre
+  permitir" de dev agent gravava `terminal: auto_approve`, que sombreava a
+  curinga e fazia o composto e o escopo voltarem a pedir (97 + 37 pedidos com
+  o modo aceso na tela). Agora essa específica resolve como a curinga, e as
+  linhas já gravadas também se corrigem; com o toggle em manual, ela volta a
+  valer sozinha, com o escopo. A tela diz o que o piloto libera e o que não
+  libera, com a MESMA lista no cartão de lote dos Executores, no
+  `ApprovalCard` e no toggle do card do agente. A contenção que sustenta a
+  decisão (o container monta uma pasta só, em `/work`, abaixo da raiz do
+  broker) ganha prova ponta a ponta no broker; o que ela NÃO cobre está
+  declarado no ADR.
+- **api**: **o escopo de caminho compara com a pasta onde o comando roda**
+  (AT-258, [RN-669](docs/business-rules.md#rn-669)). Com container `running`
+  num projeto `container` ou `mounted`, a raiz é `/work` (a pasta e os
+  `.worktrees` do projeto) mais o `/tmp` do container, com o `cwd` de host
+  traduzido para `/work` como o engine traduz; sem container, a pasta do
+  projeto no host, com o `/tmp` do host fora. Vale para a regra específica
+  `terminal` — antes, `/work/...` e `/tmp` pediam aprovação por "escopo" com o
+  comando rodando justamente ali. `runner` fica como estava.
+- **api/web**: a curadoria de modelos **recusa o alias de roteamento livre do
+  OpenRouter** (`~…`, como `~deepseek/deepseek-flash-latest`) (AT-271,
+  [RN-679](docs/business-rules/custo.md#rn-679)). O catálogo publica para ele
+  um preço de vitrine, e quem cobra é o upstream que atender cada chamada;
+  decisão do dono (01/10): só entra modelo com upstream fixo. Ativar um alias é
+  422 `alias_de_roteamento_livre`, o lote inteiro, com a frase nomeando os
+  modelos — e a tela de catálogo a mostra num toast próprio. A linha do alias
+  ganha o selo "alias de roteamento livre" e o motivo em texto
+  (`freeRoutingAlias` na leitura da curadoria). O alias que já estava ativo
+  **segue ativo** (bindings intactos, nada apagado), sai marcado e pode ser
+  desligado; desligado, não volta.
+- **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
+  e do PO) deixa de sair em português para quem escolheu outro idioma de
+  resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
+  ferramenta mandava escrever as perguntas "em pt-BR" — uma segunda orientação
+  de idioma, fixa, que competia com a da RN-622: a validação paga da AT-167
+  achou, com autor `en`, prosa em inglês e formulário em português em 8 de 15
+  respostas do DeepSeek. Agora ela diz "no idioma da sua resposta" e não nomeia
+  idioma nenhum; a orientação efêmera fica byte a byte (zero token a mais nos
+  50 de teto), e a descrição custa +23/+19 tokens (cl100k/o200k). Um teste
+  reprova qualquer descrição de ferramenta do harness que volte a fixar idioma.
+  A medição paga do "depois" segue pendente do dono (comando na RN).
+- **engine/api**: a PR do dev agent mira **`dev`**, não `main` (AT-250,
+  [RN-664](docs/business-rules.md#rn-664)). O `pr_open` leva
+  `targetBranch: "dev"` e a api, sem o campo, completa com `dev` em vez da
+  branch default; a PR de ADR do Arquiteto nasce de `dev` e mira `dev`. Junto,
+  por decisão do dono, o working tree do projeto abre `dev`, o worktree de cada
+  dev agent nasce de `dev` (workspace antigo, parado na default, ganha a `dev`
+  local a partir de `origin/dev`) e o gate calcula o diff contra `dev` — o
+  contexto do QA diz "branch de trabalho dev". Repositório SEM `dev` (adotado
+  sem bootstrap) não cai para `main`: o working tree, o worktree, o diff e a
+  PR falham NOMEANDO a ausência — antes o working tree criava uma `dev` vazia
+  e a marcava pronta. A PR de infra (`open_infra_pr`) não mudou.
+- **engine**: o Infra Lead não anuncia mais subida de container que não fez
+  (AT-264, [RN-668](docs/business-rules.md#rn-668)). No uso real de 29/09 ele
+  disse que subiria o container "em paralelo" e nenhum `tool.call` de subida
+  veio depois. Duas causas no código: `propose_infra_pr` encerra o turno e
+  cortava o lote da resposta no meio — uma `propose_container_start` pedida na
+  MESMA resposta, depois da PR, sumia sem rastro —, e nada dizia no fio que a
+  subida não tinha acontecido. Agora o lote inteiro é despachado antes do
+  encerramento, e o turno que termina pela PR sem subida proposta (ou em que a
+  subida foi tentada, recusada e não refeita) fecha com uma frase do SERVIDOR
+  dizendo que a subida NÃO foi proposta, salvo container já registrado de pé.
+  O kickoff e a descrição de `propose_infra_pr` passam a dizer que a subida vem
+  antes da PR ou na mesma resposta. A subida continua proposta pelo modelo e
+  decidida por humano.
+
+- **docker**: as imagens de produção de `api`, `web` e `broker` saem do Alpine
+  3.21, que reprovava o Trivy por `CVE-2026-75804` em `libssl3`/`libcrypto3`
+  `3.3.7-r1` (corrigido em `3.3.7-r2`, que o mirror do 3.21 ainda não
+  publicou — o `apk upgrade` do build não alcançava a correção). A base Node
+  passa de `node:24.11.1-alpine3.21` para **`node:24.21.0-alpine3.23`**
+  (OpenSSL `3.5.8-r0` já na base) e o runtime do web, que era
+  `nginx:1.27.5-alpine` (Alpine 3.21), para **`nginx:1.30.5-alpine`** (Alpine
+  3.24, OpenSSL `3.5.8-r0`), as duas por digest do ÍNDICE com a tag inline
+  (ADR 0178). Medido com Trivy 0.70.0 e as flags do `ci.yml`, sem exceção
+  nova: a base Node nova não tem nenhum HIGH/CRITICAL de SO com correção; a do
+  nginx tem um só, `libexpat` `2.8.4-r0` (`CVE-2026-93990`, corrigido em
+  `2.8.5-r0`), que depende do `apk upgrade` que o Dockerfile já roda. O Node
+  da imagem sobe de `24.11.1` para `24.21.0` (mesma linha maior); o
+  `NODE_VERSION` dos workflows segue em `24.11.1`. Nenhum pacote `apk` mudou
+  de nome (`git`, `docker-cli`).
+
+- **deps**: fecha os HIGH publicados em 30/09 que reprovavam o Trivy das
+  imagens de produção, só por `overrides` (nenhum código muda). **Produto**
+  (`pnpm-workspace.yaml`): `fast-uri` 3.1.6 → **3.1.8** (GHSA-qw65-cvwx-89v3,
+  GHSA-58mr-gqgx-xq4g) e `undici` 7.29.0 → **7.29.1** (GHSA-rfgv-xxqx-mfg5,
+  GHSA-w293-vg96-wgc3) sobem de TETO na faixa que já existia; entram
+  `brace-expansion` nas três linhas maiores da árvore (1.1.21, 2.1.7, 5.0.12 —
+  GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p) e `@grpc/grpc-js` **1.14.5**
+  (GHSA-m9gg-hp2v-232j). Dos quatro, só o `@grpc/grpc-js` chega à imagem da
+  api (`@opentelemetry/sdk-node` o arrasta); os outros três são de
+  desenvolvimento. Os alvos fecham também as moderadas da MESMA linha que
+  saíram junto. **Website** (lockfile próprio, ADR 0117): as mesmas faixas de
+  `fast-uri`, `undici` 7 e `brace-expansion` 1.x, mais `undici` 6 (**6.28.1**),
+  `joi` (**17.13.7**, GHSA-6h2x-m376-mqjq) e `image-size` (**2.0.4**) — este
+  era o HIGH "sem versão corrigida" declarado em `website/pnpm-workspace.yaml`,
+  e a 2.0.3 saiu em 14/09. Segue aberto, e escrito, só o `@faker-js/faker`.
+  `pnpm audit --audit-level high` fica limpo no produto.
 - **runner**: no macOS, rodar o runner sob Node (pelo fonte ou por
   `npm install -g @brabo/runner`) deixa de falhar com `posix_spawnp failed` no
   primeiro terminal (AT-114). O `node-pty@1.1.0` chega com o `spawn-helper` do
@@ -782,7 +1128,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   vezes no uso real de 29/09). Idempotente: merge repetido não move de novo nem
   duplica o evento `backlog.task_status_changed`. O merge continua sendo do
   humano (AT-275, [RN-628](docs/business-rules.md#rn-628), [RN-418](docs/business-rules.md#rn-418));
-  a recusa de PR já mergeada (AT-249) fica de fora.
+  a recusa de PR já mergeada (AT-249) veio depois, na RN-663 (abaixo).
+
+- **api**: o merge de PR deixa de repetir. Propor `git_merge` de uma PR que já
+  foi mergeada responde 409 `pr_ja_mergeado`, e de uma PR com merge já proposto
+  e ainda sem desfecho, 409 `merge_ja_proposto` — nada é criado, e a tela mostra
+  a frase da api. Aprovar um merge pendente cuja PR outra proposta já mergeou
+  também é 409 `pr_ja_mergeado`, e a ação fica pendente para ser negada. O
+  provider `local` passa a recusar o merge repetido como o GitHub. Gate de
+  QA/SecOps pendente NÃO recusa: a aba PRs e o "Mergear" do chat avisam em
+  texto qual gate falta, e o botão segue ativo. O merge em branch protegida
+  continua manual (AT-249, [RN-663](docs/business-rules.md#rn-663),
+  [RN-418](docs/business-rules.md#rn-418)).
 
 - **engine**: o QA Lead não cai mais quando o `qa-automacao` suspende uma
   SEGUNDA vez esperando aprovação na retomada (AT-248,
@@ -1791,6 +2148,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/explanation/documentation-workflow.md`.
 
 ### Testes
+
+- **e2e**: **o ciclo de um turno chega pelo canal da sessão numa terceira
+  origem** (AT-338, `e2e/testes/turno-pelo-canal.spec.ts`). Decisão do dono:
+  provar o canal com um turno que FALHA por falta de credencial — sem LLM e sem
+  custo. A semeadura vincula ao workspace um modelo de nuvem com tool calling
+  de um provider sem credencial do dono; o spec abre a sessão criativa com um
+  login próprio, envia uma mensagem ao Criativo e asserta os FRAMES do
+  WebSocket do tópico `session:<id>`: `agent.status: working`, `agent.error`
+  com origem `politica` e "Nenhuma credencial cadastrada", e `idle`, nessa
+  ordem; e a bolha de falha aparece pelo seletor estrutural novo
+  (`data-testid="falha-de-turno"`, `data-origem`). O `agent.delta` segue
+  declarado fora (`e2e/README.md`). A execução passa a gastar 4 logins, não 3.
 
 - **e2e**: **a aprovação inline ganha E2E de navegador** (AT-068,
   `e2e/testes/aprovacao-inline.spec.ts`). Uma `write_file` com ator `user`

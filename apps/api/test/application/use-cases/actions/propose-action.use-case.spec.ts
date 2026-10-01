@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import {
@@ -134,6 +138,7 @@ const proposeAction = new ProposeActionUseCase(
   appendSessionEvent,
   obterCicloDeVidaDoContainer,
   { configurado: () => true } as never, // brokerPort
+  undefined as never, // executeExecutionPlan — não exercitado aqui
 );
 
 let workspacesRoot: string;
@@ -218,6 +223,7 @@ describe('ProposeActionUseCase', () => {
       appendSessionEvent,
       obterCicloDeVidaDoContainer,
       { configurado: () => false } as never,
+      undefined as never, // executeExecutionPlan — não exercitado aqui
     );
 
     it.each(['container_start', 'container_stop', 'container_remove'])(
@@ -250,6 +256,69 @@ describe('ProposeActionUseCase', () => {
         payload: {},
       });
 
+      expect(action.status).toBe('pending');
+    });
+  });
+
+  // AT-274 (RN-678): o plano do Dev Lead com tarefa sem módulo é recusado na
+  // PROPOSTA — 400 nomeado, sem criar a ação, e o texto chega ao Dev Lead.
+  describe('plano de execução (RN-678)', () => {
+    function comPlano(recusa: string | null) {
+      return new ProposeActionUseCase(
+        unitOfWork,
+        sessionRepo,
+        projectRepo,
+        proposedActionRepo,
+        agentAutonomyRepo,
+        permissionsFileStore,
+        outboxRepo,
+        resolveEffectiveRole,
+        executeTerminalAction,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        undefined as never,
+        appendSessionEvent,
+        obterCicloDeVidaDoContainer,
+        { configurado: () => true } as never,
+        { recusaNaProposta: () => Promise.resolve(recusa) } as never,
+      );
+    }
+
+    it('tarefa sem módulo: 400 `plano_de_execucao_invalido`, sem proposta', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const proposta = comPlano('A tarefa t1 está sem módulo').execute(
+        project.id,
+        session.id,
+        {
+          actionType: 'propose_execution_plan',
+          actor: { kind: 'agent', id: 'dev-lead' },
+          payload: { resumo: 'r', modulos: [], tarefas: [{ taskId: 't1' }] },
+        },
+      );
+      await expect(proposta).rejects.toBeInstanceOf(BadRequestException);
+      await expect(proposta).rejects.toMatchObject({
+        response: {
+          code: 'plano_de_execucao_invalido',
+          message: 'A tarefa t1 está sem módulo',
+        },
+      });
+      expect(
+        await proposedActionRepo.listByProjectAndType(
+          project.id,
+          'propose_execution_plan',
+        ),
+      ).toHaveLength(0);
+    });
+
+    it('plano válido nasce pending (aprovar é o que ativa)', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const action = await comPlano(null).execute(project.id, session.id, {
+        actionType: 'propose_execution_plan',
+        actor: { kind: 'agent', id: 'dev-lead' },
+        payload: { resumo: 'r', modulos: [], tarefas: [] },
+      });
       expect(action.status).toBe('pending');
     });
   });
@@ -559,6 +628,97 @@ describe('ProposeActionUseCase', () => {
 
     expect(action.resolvedPolicy).toBe('require_approval');
     expect(action.status).toBe('pending');
+  });
+
+  describe('git_merge da mesma PR (AT-249, RN-663)', () => {
+    const PAYLOAD = {
+      pullRequestId: 'pr-6',
+      sourceBranch: 'feature/task-a1b2c3d4',
+      targetBranch: 'dev',
+      title: 'feat: x',
+    };
+
+    it('uma segunda proposta com a primeira ainda viva é 409 `merge_ja_proposto`, sem criar outra', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const primeira = await proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      expect(primeira.status).toBe('pending');
+
+      const segunda = proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      await expect(segunda).rejects.toBeInstanceOf(ConflictException);
+      await expect(segunda).rejects.toMatchObject({
+        response: { code: 'merge_ja_proposto' },
+      });
+      expect(
+        await proposedActionRepo.listByProjectAndType(project.id, 'git_merge'),
+      ).toHaveLength(1);
+    });
+
+    it('PR já mergeada por uma execução anterior é 409 `pr_ja_mergeado`', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const feita = await proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      await proposedActionRepo.updateDecision(feita.id, {
+        status: 'approved',
+        decidedBy: session.createdBy,
+        decidedAt: new Date(),
+      });
+      await proposedActionRepo.updateExecutionResult(feita.id, {
+        status: 'executed',
+        executionResult: {
+          kind: 'git_merge',
+          pullRequestId: 'pr-6',
+          state: 'merged',
+          targetBranch: 'dev',
+        },
+      });
+
+      const outra = proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      await expect(outra).rejects.toMatchObject({
+        response: { code: 'pr_ja_mergeado' },
+      });
+    });
+
+    it('proposta anterior NEGADA não impede propor de novo, e outra PR não colide', async () => {
+      const { project, session } = await setupSession('maintainer');
+      const negada = await proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      await proposedActionRepo.updateDecision(negada.id, {
+        status: 'denied',
+        decidedBy: session.createdBy,
+        decidedAt: new Date(),
+      });
+
+      const denovo = await proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: PAYLOAD,
+      });
+      const outraPr = await proposeAction.execute(project.id, session.id, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: session.createdBy },
+        payload: { ...PAYLOAD, pullRequestId: 'pr-7' },
+      });
+      expect(denovo.status).toBe('pending');
+      expect(outraPr.status).toBe('pending');
+    });
   });
 
   it('rejeita tipo de ação desconhecido', async () => {
@@ -1010,5 +1170,79 @@ describe('ProposeActionUseCase — a raiz do escopo no event log (RN-609)', () =
     const payload = await eventoCriado(session.id, 'acao-antiga');
     expect(payload).not.toHaveProperty('scopeRoot');
     expect(payload.reason).toBe('default (sem regra aplicável)');
+  });
+});
+
+/**
+ * A raiz do escopo é a pasta REAL de execução (RN-669, ADR 0189, AT-258): com
+ * container `running` registrado, `container` E `mounted` comparam com `/work`
+ * + `/tmp` do container; sem ele, com a pasta do projeto no host. O PISO de
+ * auto-aprovação (RN-493) continua só do modo `container`.
+ */
+describe('ProposeActionUseCase — escopo na pasta real de execução (RN-669)', () => {
+  const baseOriginal = process.env.BRABO_PROJECTS_BASE;
+  afterEach(() => {
+    if (baseOriginal === undefined) delete process.env.BRABO_PROJECTS_BASE;
+    else process.env.BRABO_PROJECTS_BASE = baseOriginal;
+  });
+
+  async function projetoMontado() {
+    process.env.BRABO_PROJECTS_BASE = '/home/usuario/brabo';
+    const ctx = await setupSession();
+    const [project] = await db
+      .update(projects)
+      .set({
+        executionMode: 'mounted',
+        workspacePath: '/home/usuario/brabo/loja',
+      })
+      .where(eq(projects.id, ctx.project.id))
+      .returning();
+    await agentAutonomyRepo.upsert(
+      project.id,
+      'dev-api',
+      'terminal',
+      'auto_approve',
+    );
+    return { ...ctx, project };
+  }
+
+  function terminal(projectId: string, sessionId: string, command: string) {
+    return proposeAction.execute(projectId, sessionId, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command, cwd: '/home/usuario/brabo/loja/.worktrees/dev-api' },
+    });
+  }
+
+  it('mounted com container de pé: `/work` e `/tmp` estão dentro, para a regra específica', async () => {
+    const { project, session } = await projetoMontado();
+    await marcarContainerRunning(project.id);
+
+    for (const command of ['ls /work/src', 'npm test > /tmp/saida.txt']) {
+      const action = await terminal(project.id, session.id, command);
+      expect(action.resolvedPolicy).toBe('auto_approve');
+    }
+  });
+
+  it('mounted SEM container: `/tmp` e `/work` seguem fora (a raiz é a pasta do host)', async () => {
+    const { project, session } = await projetoMontado();
+
+    for (const command of ['ls /tmp', 'ls /work/src']) {
+      const action = await terminal(project.id, session.id, command);
+      expect(action.resolvedPolicy).toBe('require_approval');
+      expect(action.status).toBe('pending');
+    }
+  });
+
+  it('mounted com container de pé NÃO ganha o piso do modo container (RN-493)', async () => {
+    const { project, session } = await projetoMontado();
+    await marcarContainerRunning(project.id);
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'qa-automacao' },
+      payload: { command: 'npm test' },
+    });
+    expect(action.resolvedPolicy).toBe('require_approval');
   });
 });

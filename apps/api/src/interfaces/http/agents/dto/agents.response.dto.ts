@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
 import type { Handoff } from '../../../../domain/sessions/handoff.entity';
 import type { OfertaDeHandoff } from '../../../../application/use-cases/agents/create-handoff.use-case';
@@ -75,10 +75,64 @@ export const _chavesOferta: MesmasChaves<
   OfertaDeHandoff
 > = true;
 
+/** The criteria that let the SYSTEM accept the handoff (RN-660, ADR 0186). */
+export class CriterioDoAceiteResponseDto {
+  @ApiProperty({ example: 4, description: 'Business rules in the project.' })
+  regras!: number;
+
+  @ApiProperty({
+    example: 4,
+    description: 'Rules cited by at least one story — equal to `regras`.',
+  })
+  cobertas!: number;
+
+  @ApiProperty({
+    enum: ['local', 'a_provisionar_local'],
+    example: 'a_provisionar_local',
+    description:
+      '`local`: the project already had a `local` repository. ' +
+      '`a_provisionar_local`: none yet — the accept provisions a `local` one.',
+  })
+  repositorio!: 'local' | 'a_provisionar_local';
+}
+
+/** Whether the offer was accepted without a click, and why not (RN-660). */
+export class AceiteAutomaticoResponseDto {
+  @ApiProperty({ example: true })
+  aceito!: boolean;
+
+  @ApiPropertyOptional({ type: CriterioDoAceiteResponseDto })
+  criterio?: CriterioDoAceiteResponseDto;
+
+  @ApiPropertyOptional({
+    enum: [
+      'nao_e_po_para_arquiteto',
+      'oferta_nao_pendente',
+      'sem_regras_de_negocio',
+      'regras_sem_historia',
+      'repositorio_nao_local',
+      'credencial_de_git_no_projeto',
+      'autor_sem_papel',
+      'falhou',
+    ],
+    example: 'regras_sem_historia',
+    description:
+      'Why a person still has to click. `falhou`: the system tried and the ' +
+      'accept failed — `handoff.auto_accept_failed` is in the event log.',
+  })
+  motivo?: string;
+}
+
+/** The engine's offer route: the offer plus the automatic accept (RN-660). */
+export class OfertaInternaDeHandoffResponseDto extends OfertaDeHandoffResponseDto {
+  @ApiProperty({ type: AceiteAutomaticoResponseDto })
+  aceiteAutomatico!: AceiteAutomaticoResponseDto;
+}
+
 /** Why a target of the architecture confirmation was not triggered again. */
 export class AlvoJaAtendidoResponseDto {
-  @ApiProperty({ enum: ['infra', 'dev-lead'], example: 'infra' })
-  toAgent!: 'infra' | 'dev-lead';
+  @ApiProperty({ enum: ['infra'], example: 'infra' })
+  toAgent!: 'infra';
 
   @ApiProperty({ enum: ['oferta_pendente', 'agente_ativo'] })
   motivo!: 'oferta_pendente' | 'agente_ativo';
@@ -92,9 +146,11 @@ export class ConfirmacaoDeArquiteturaResponseDto {
   @ApiProperty({
     enum: ['confirmado', 'ja_oferecido'],
     description:
-      '`confirmado`: at least one target was triggered. `ja_oferecido`: both ' +
-      'targets already had a pending offer or were active in the project — ' +
-      'nothing was recorded nor asked of the engine (double click, second tab).',
+      '`confirmado`: the Infra was triggered. `ja_oferecido`: it already had a ' +
+      'pending offer or was active in the project — nothing was recorded nor ' +
+      'asked of the engine (double click, second tab). The Dev Lead is no ' +
+      'longer a target here: the Infra offers it once the container is ' +
+      '`running` (RN-672).',
   })
   desfecho!: ResultadoDaConfirmacaoDeArquitetura['desfecho'];
 
@@ -109,4 +165,43 @@ export class AgenteAtivadoResponseDto {
 
   @ApiProperty({ example: 'active', enum: ['active'] })
   status!: 'active';
+}
+
+/**
+ * O aceite de uma mensagem ao agente (RN-673, ADR 0191): com turno em curso a
+ * mensagem não é mais recusada — entra na fila do agente e é lida no fim dele.
+ */
+export class MensagemAoAgenteResponseDto {
+  @ApiProperty({
+    example: true,
+    description: 'Always `true`; failure becomes an HTTP error.',
+  })
+  ok!: true;
+
+  @ApiProperty({
+    example: '01JC4Z0000EVENTO000000000001',
+    description:
+      'Id of the `chat.message` event recorded for this message — the id that ' +
+      'cancels it while it waits in the queue.',
+  })
+  mensagemId!: string;
+
+  @ApiProperty({
+    enum: ['lida', 'enfileirada'],
+    example: 'enfileirada',
+    description:
+      '`lida`: the agent started a turn with it right away. `enfileirada`: the ' +
+      'agent was mid-turn, so the message joined its queue and will be read, ' +
+      'together with any others queued, in ONE turn when the current one ends ' +
+      '(RN-673). The session log carries `chat.message_queued` / ' +
+      '`chat.message_delivered` / `chat.message_cancelled`.',
+  })
+  entrega!: 'lida' | 'enfileirada';
+
+  @ApiPropertyOptional({
+    example: 2,
+    description:
+      'Position in the queue (1 = next). Present only when `entrega` is `enfileirada`.',
+  })
+  posicao?: number;
 }

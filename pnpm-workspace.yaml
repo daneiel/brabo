@@ -123,7 +123,14 @@ overrides:
   # DEV-ONLY no produto: `pnpm why fast-uri --prod -r` devolve VAZIO. Entra por
   # `ajv` ← `@angular-devkit/core` ← `@nestjs/schematics` ← `@nestjs/cli`, que
   # é `devDependency`. Não chega a imagem nenhuma.
-  fast-uri@>=3.0.0 <3.1.6: 3.1.6
+  #
+  # Teto subiu de novo, 3.1.6 → 3.1.8 (30/09): 2 HIGH · GHSA-qw65-cvwx-89v3
+  # (`>=3.0.0 <3.1.7`) e GHSA-58mr-gqgx-xq4g (`=3.1.6` — a versão que este
+  # override FIXAVA), mais a MODERATE GHSA-hrr3-gc8f-f4qj (`>=3.0.0 <3.1.8`).
+  # O alvo é a 3.1.8 e não a 3.1.7 porque a moderada da mesma linha fecha no
+  # mesmo passo, sem major nova. `pnpm why fast-uri -r`: `@nestjs/cli` →
+  # `@angular-devkit/core` → `ajv`/`ajv-formats` (DEV-ONLY, igual acima).
+  fast-uri@>=3.0.0 <3.1.8: 3.1.8
   # MISTA — já era o exemplo canônico de override que serve aos dois lados
   # (ADR 0117 mantém a duplicação em `website/package.json`).
   #
@@ -132,7 +139,14 @@ overrides:
   # `website`) e por `jsdom` — devDependency direta de `apps/web` para o
   # ambiente de teste do vitest. Ambos pedem `undici` em faixa `^7.x`, então
   # 7.29.0 satisfaz os dois sem tocar o `jsdom` em si.
-  undici@>=7.0.0 <7.29.0: 7.29.0
+  #
+  # Teto subiu, 7.29.0 → 7.29.1 (30/09): 2 HIGH · GHSA-rfgv-xxqx-mfg5
+  # (`>=7.0.0 <7.29.1`) e GHSA-w293-vg96-wgc3 (`>=7.24.1 <7.29.1`), mais seis
+  # moderadas/baixas da mesma linha que fecham na mesma versão. A 7.29.0 que
+  # este override fixava virou a vulnerável. `pnpm why undici -r`: `jsdom` ←
+  # `vitest` em `apps/api`, `apps/broker` e `apps/web` — DEV-ONLY no produto
+  # (`pnpm why undici --prod -r` devolve VAZIO).
+  undici@>=7.0.0 <7.29.1: 7.29.1
   # MISTA (ADR 0117) — duplicada em `website/package.json`. `@docusaurus/core`
   # declara `lodash` DIRETO, então o `website` também precisa da correção, não
   # só a api via `@nestjs/swagger` que o comentário original citava.
@@ -248,6 +262,36 @@ overrides:
   # `multer@2.2.0` fecharia o buraco de hoje e o reabriria em silêncio no dia
   # em que o Nest pedisse 2.1.x.
   multer@>=2.0.0 <2.3.0: 2.3.0
+  # PRODUTO — três linhas maiores do MESMO pacote, disjuntas, cada uma presa à
+  # própria (disciplina 2); a 3.x não aparece na árvore e não entra. Nenhuma
+  # existe no `website/` além da 1.x, que tem entrada própria lá.
+  #
+  # 2 HIGH · GHSA-qhr7-859c-m2p7 e GHSA-6j4f-fj2g-mc7p (30/09), mais a
+  # MODERATE GHSA-q2hr-2g5m-vwhr, que nas três linhas fecha UM patch depois do
+  # HIGH — daí os alvos 1.1.21, 2.1.7 e 5.0.12, e não 1.1.20/2.1.6/5.0.11.
+  #
+  # `pnpm why brace-expansion -r` (DEV-ONLY: com `--prod` devolve VAZIO):
+  #   · 1.1.18 ← `minimatch@3` ← `eslint`/`@eslint/eslintrc`/
+  #     `fork-ts-checker-webpack-plugin` (`@nestjs/cli`), em `apps/api`;
+  #   · 2.1.4 ← `minimatch@5` ← `@redocly/openapi-core` ← `openapi-typescript`,
+  #     em `apps/web`;
+  #   · 5.0.9 ← `minimatch@10` ← `glob` (`@nestjs/cli`) e
+  #     `@typescript-eslint/typescript-estree`, em `apps/api`.
+  # Os três `minimatch` pedem faixa `^` da própria linha, então o patch cabe.
+  brace-expansion@<1.1.21: 1.1.21
+  brace-expansion@>=2.0.0 <2.1.7: 2.1.7
+  brace-expansion@>=4.0.0 <5.0.12: 5.0.12
+  # PRODUTO-EXCLUSIVA, e ALCANÇA PRODUÇÃO: `pnpm why @grpc/grpc-js --prod -r`
+  # mostra `@opentelemetry/otlp-grpc-exporter-base@0.221.0` ←
+  # `exporter-{logs,metrics,trace}-otlp-grpc` ← `@opentelemetry/sdk-node`, que é
+  # `dependency` de `apps/api` — então chega à imagem da api, e o Trivy a
+  # acusa lá. O exporter que o produto USA é o de HTTP/JSON (ver o
+  # `protobufjs: false` em `allowBuilds`), mas o `sdk-node` arrasta os de gRPC
+  # do mesmo jeito.
+  #
+  # HIGH · GHSA-m9gg-hp2v-232j (30/09), mais a LOW GHSA-f596-whhp-79r4 da mesma
+  # faixa, as duas `>=1.14.0 <1.14.5`. O pai pede `^1.14.x`; a 1.14.5 é patch.
+  '@grpc/grpc-js@>=1.14.0 <1.14.5': 1.14.5
 
 
 # O default do pnpm ("install") roda um `pnpm install` do workspace INTEIRO,

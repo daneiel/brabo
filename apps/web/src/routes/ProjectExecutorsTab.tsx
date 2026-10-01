@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useActiveExecutionSession,
   useArchitecture,
@@ -14,7 +15,6 @@ import {
   useSessionTokenUsage,
 } from '../lib/hooks';
 import {
-  getAgentModelBinding,
   listAgentAutonomy,
   listModels,
   rearmDevAgent,
@@ -27,6 +27,7 @@ import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-v
 import { rotuloDaSessao } from '../lib/session-label';
 import { roleAtLeast } from '../lib/roles';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
+import { ModoAutomaticoDoTime } from '../components/ModoAutomaticoDoTime';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -78,6 +79,10 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   // WORKSPACE que a tela de Sessão lê, com a mesma lacuna declarada (RN-471).
   const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
   const podeDecidir = roleAtLeast(workspaceComPapel?.role, 'developer');
+  // RN-661 (AT-315): ligar o modo automático pede `maintainer` no endpoint
+  // (`PUT .../agent-autonomy`, RN-153) — o mesmo papel de WORKSPACE, com a
+  // mesma lacuna declarada, e a tela diz isso em texto.
+  const podeLigarModoAutomatico = roleAtLeast(workspaceComPapel?.role, 'maintainer');
   const executionSessionQuery = useActiveExecutionSession(projectId);
   const executionSession = executionSessionQuery.session;
   const sessionId = executionSession?.id;
@@ -145,12 +150,12 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const allModels = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
-  const bindingQueries = useQueries({
-    queries: roster.map((r) => ({
-      queryKey: ['agent-binding', projectId, r.id],
-      queryFn: () => getAgentModelBinding(projectId, r.id),
-    })),
-  });
+  // RN-654 (AT-339): os bindings do roster saem do LOTE, não de uma rota por
+  // agente — os do catálogo pela mesma chave da aba Configurações.
+  const bindingDoAgente = useBindingsDosAgentes(
+    projectId,
+    roster.map((r) => r.id),
+  );
   const { data: autonomyRules } = useQuery({
     queryKey: ['agent-autonomy', projectId],
     queryFn: () => listAgentAutonomy(projectId),
@@ -296,6 +301,18 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             podeDecidir={podeDecidir}
           />
 
+          {/* RN-661 (AT-315): no início da execução, a oferta de ligar o
+              modo automático para o time de uma vez. Some quando todos já
+              estão em automático; desligar segue no card de cada um. */}
+          {executorRoster.length > 0 && (
+            <ModoAutomaticoDoTime
+              projectId={projectId}
+              agentes={executorRoster.map((r) => r.id)}
+              autonomyRules={autonomyRules}
+              podeLigar={podeLigarModoAutomatico}
+            />
+          )}
+
           {/* `executionActivated` vem do resumo agregado — os três estados
               da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO
               (o resumo ainda não chegou) fica indistinguível do vazio real. */}
@@ -316,7 +333,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
               roster={roster}
               groups={executorGroups}
               events={events}
-              bindingQueries={bindingQueries}
+              bindingDoAgente={bindingDoAgente}
               allModels={allModels}
               tokenUsage={tokenUsage}
               autonomyRules={autonomyRules}

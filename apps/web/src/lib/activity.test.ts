@@ -470,3 +470,27 @@ describe('classifyEvent — reabertura de sessão (ADR 0183, RN-649)', () => {
     expect(c.text).toBe('sessão reaberta');
   });
 });
+
+describe('classifyEvent — aceite automático do handoff (RN-660)', () => {
+  it('o aceite pelo sistema é narrado como automático, não como oferta', () => {
+    const c = classifyEvent(
+      ev('handoff.accepted', 'handoff-auto-accept', {
+        toAgent: 'arquiteto',
+        automatico: true,
+      }),
+    );
+    expect(c.text).toContain('aceito automaticamente');
+    expect(c.text).not.toContain('ofereceu');
+  });
+
+  it('a falha do aceite automático é ruim e diz o erro', () => {
+    const c = classifyEvent(
+      ev('handoff.auto_accept_failed', 'handoff-auto-accept', {
+        toAgent: 'arquiteto',
+        error: 'engine fora',
+      }),
+    );
+    expect(c.bad).toBe(true);
+    expect(c.text).toContain('engine fora');
+  });
+});

@@ -15,7 +15,7 @@ import i18n from '../lib/i18n';
  * `handleReadiness`. Até o ADR 0163 a rede era "a chamada síncrona
  * resolveu"; desde ele (RN-578) `confirmReadiness` resolve no ACEITE, e a
  * rede passou a ser a leitura da cauda do log (`agent.status` persistido do
- * Criativo). Sem ela, clicar em "Estou pronto para produzir" e o canal nunca
+ * Criativo). Sem ela, clicar em "Estou pronto — a necessidade está validada" e o canal nunca
  * entregar `onAgentDone` deixava a bolha do agente presa vazia pra sempre.
  */
 
@@ -179,11 +179,11 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
     fireEvent.click(botao);
 
-    const campo = await screen.findByPlaceholderText(
+    await screen.findByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
     await waitFor(() => expect(cauda).toHaveBeenCalled());
@@ -193,7 +193,7 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     await act(async () => {
       await vi.advanceTimersByTimeAsync(4000);
     });
-    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Parar' })).not.toBeNull();
 
     // O canal registrou os handlers, mas o teste NUNCA chama onAgentDone.
     expect(canalHandlers?.onAgentDone).toBeTypeOf('function');
@@ -207,7 +207,10 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
       await vi.advanceTimersByTimeAsync(4000);
     });
 
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    // RN-673 (ADR 0191): o campo NÃO trava mais com turno em curso — a mensagem
+    // a um agente entra na fila dele. O sinal de turno em curso que este teste
+    // lê passou a ser o botão "Parar", que só existe enquanto há turno.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('CASO DE FALHA: 422 sem regra de negócio mostra a frase do engine e libera a tela', async () => {
@@ -221,16 +224,16 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Estou pronto para produzir' }),
+      await screen.findByRole('button', { name: 'Estou pronto — a necessidade está validada' }),
     );
 
     expect(
       await screen.findByText('Nenhuma regra de negócio foi capturada nesta conversa.'),
     ).toBeInTheDocument();
-    const campo = await screen.findByPlaceholderText(
+    await screen.findByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
   it('CASO DE FALHA: erro ao confirmar prontidão limpa o streaming e avisa o usuário', async () => {
@@ -239,14 +242,14 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
     fireEvent.click(botao);
 
-    const campo = await screen.findByPlaceholderText(
+    await screen.findByPlaceholderText(
       'Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)',
     );
-    await waitFor(() => expect(campo).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
     expect(await screen.findByText('Erro')).toBeInTheDocument();
   });
 });

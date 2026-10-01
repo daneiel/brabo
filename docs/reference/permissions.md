@@ -121,7 +121,13 @@ containers page (`/containers`) proposes when someone clicks "Stop" or
 "Remove" on a project's row — always a human, never an agent. Both are
 `maintainer`, same as `container_start`: whoever is accountable for the
 project's infra decides. `container_stop` follows `container_start`'s
-calibration exactly — it CAN be configured `auto_approve` (never seeded).
+calibration — it CAN be configured `auto_approve` — except for the seed:
+`container_stop` is never seeded, while `container_start` is seeded
+`auto_approve` for the Infra agent when its handoff is accepted (ADR 0190,
+[RN-671](../business-rules.md#rn-671)). That seed is what lets the start the
+Infra Lead's SERVER proposes on that accept run without a second click; the
+`maintainer` minimum, the mode/state refusals and the no-broker 409 all still
+apply before it.
 `container_remove` cannot: it discards the container and forces a full
 reprovision, and is in the absolute-caps block below, same treatment as
 external-effect git/privileged commands.
@@ -348,6 +354,15 @@ of the same PR does not move it again or record a second
 `backlog.task_status_changed` event ([RN-628](../business-rules.md#rn-628)). The
 merge itself is never automated ([RN-418](../business-rules.md#rn-418)).
 
+A `git_merge` is REFUSED before it is created when the same PR was already
+merged by an earlier execution (409 `pr_ja_mergeado`) or already has a live
+proposal — pending, approved or auto-approved (409 `merge_ja_proposto`); a
+denied or failed one does not block trying again. Approving a pending merge
+whose PR another proposal already merged is also 409 `pr_ja_mergeado`, and the
+action stays `pending`. A QA/SecOps gate still pending is NOT a refusal: the
+PRs tab and the chat only WARN, naming the gate, and the button stays enabled
+([RN-663](../business-rules.md#rn-663)).
+
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
 reuses the manual/auto toggle the agent card already had in
@@ -414,7 +429,7 @@ back.
 The historical reason for the `deny` was concrete: "always allow" writes
 the pattern into `allow`, and a single click would be enough to reopen the
 door forever. That gap was closed AT THE SOURCE, not worked around:
-`ApproveAlwaysActionUseCase`/`patternForAction`
+`ApproveAlwaysActionUseCase`/`patternsForAction`
 (`apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`)
 REFUSE to write a pattern into `allow` for a terminal action with git
 external effect or a privileged command — the user still approves the
@@ -453,8 +468,9 @@ one above: it isn't a `terminal` command matched by token, it's its own
 for that type — no pattern is ever written, and the user approves the
 specific instance through the normal flow instead. `container_start` and
 `container_stop` are NOT refused this way: they can be configured
-`auto_approve` (never seeded), same calibre as `open_adr_pr`/
-`open_infra_pr`.
+`auto_approve`, same calibre as `open_adr_pr`/`open_infra_pr` —
+`container_stop` is never seeded, and `container_start` is seeded for the
+Infra agent on its handoff accept since ADR 0190.
 
 **Order of an "always allow" click ([RN-642](../business-rules.md#rn-642)).**
 The approval and the pattern are recorded in the SAME transaction: the
@@ -481,6 +497,23 @@ approval card hides the button for the same list (a copy checked against
 this one by test). This does NOT change `decide()` nor what activating
 execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
 each `dev-<module>` (see "What activating execution seeds").
+
+**The unit of the recorded pattern: verb + subcommand, one per segment
+([RN-675](../business-rules.md#rn-675), owner decision 01/10).** "Always
+allow" no longer records the whole command byte by byte: each segment of
+the command (split on `&&`, `||`, `;`, `|`, `&`, as `decide()` splits it)
+becomes one pattern — the verb plus its subcommand when the second token is
+a word (`npm test`, `git status`, `mix test`, `npx vitest`), the verb alone
+when it is an argument that is not a word (`cat src/x.ts` → `Terminal(cat)`,
+`cd ../lib` → `Terminal(cd)`), and the EXACT segment when the second token is
+a flag (`ls -la src`) or when the unit would be a prefix of an RN-418 cap
+(`git remote -v`, `gh pr list` stay exact). A segment that is a cap prefix
+even when exact (`git` alone) records nothing. `cd src/app && npm test`
+records `Terminal(cd)` and `Terminal(npm test)`, and the next
+`cd lib/core && npm test -- --coverage` runs without asking. Matching is
+still by token prefix, the caps still run after the file in `decide()`, and
+the path scope still applies outside auto mode. A module dev agent's click
+still goes to `agent_autonomy`, not to a pattern ([RN-509](../business-rules.md#rn-509)).
 
 ## Path scope
 
@@ -655,7 +688,7 @@ event** in `session_events`, with the real actor
 |---|---|---|
 | `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied`; `payload.reason` says which rule of `decide()` produced it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | the **user** who clicked | only on manual approval (including `approve_always`) |
-| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.pattern`, or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
+| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.patterns` (the patterns recorded, one per segment, [RN-675](../business-rules.md#rn-675)) and `payload.pattern` (the same list joined by ", "), or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
 | `proposed_action.denied` | the **user** who refused | with `payload.reason` |
 | `action.executed` / `action.failed` | `system` | execution outcome |
 

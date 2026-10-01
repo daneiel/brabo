@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 179 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 191 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -109,13 +109,15 @@ BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
-behaviour with six callbacks (PR QA and SecOps, QA-strategy, the two
-deterministic infra gates, and design AppSec) whose only job is to start the
+behaviour with five callbacks (PR QA and SecOps, the two deterministic infra
+gates, and design AppSec — the QA-strategy one left with
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md), when the test plan
+became the first step of PR QA itself) whose only job is to start the
 per-project GenServer if needed and cast into it. The indirection exists for
 the callers' tests: `Engine.Agents.DevLeadTools` is exercised by a LIGHT test
 with no Ecto sandbox, and starting a real GenServer there just to prove a gate
 was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
-six, `run_appsec_design/2`, closed the last gate that was actionable with no
+five, `run_appsec_design/2`, closed the last gate that was actionable with no
 production caller: `assess_implementability` now asks for the story's design
 threat model IN PARALLEL — the verdict never waits for it, and the ask happens
 only once per story ([RN-539](business-rules.md#rn-539),

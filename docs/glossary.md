@@ -249,15 +249,20 @@ spinning forever. The subagent inherits the base agent's ceiling
 
 **`implementavel` (implementable) gate** — a PRE-DEV gateway, before a dev
 agent or worktree exists: the Dev Lead assesses whether a story is
-implementable from the **test plan** that QA-strategy produces.
-`dono: dev-lead`, `aprovacao_humana: true`, `severidade: warn`
+implementable from the story itself and the current `module_map` (until
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md) the input was the
+QA-strategy test plan). `dono: dev-lead`, `aprovacao_humana: true`,
+`severidade: warn`
 ([ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 **QA-strategy** — the `qa-lead` in a second MOMENT (same process, a
 deliverable separate from the PR verdict): it produces the **test plan**
-(synthesis, executable criteria, automation strategy) for ONE story,
-before the dev agent writes any code. Never suspends — none of its tools
-go through the action pipeline.
+(synthesis, executable criteria, automation strategy) for ONE task's
+DELIVERY, AFTER the dev agent delivered — the first step of the
+`qa-verificada` review, as input to it, never a verdict of its own
+([RN-674](business-rules.md#rn-674),
+[ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md)). Never suspends —
+none of its tools go through the action pipeline.
 
 **AppSec** — the `secops` in a second MOMENT, the same shape QA-strategy has
 over `qa-lead`: the SAME process (`SecOpsAgentServer.run_design/2`) produces a

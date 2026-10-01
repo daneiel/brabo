@@ -1,4 +1,10 @@
-import type { Actor, ProjectMemberWithUser } from './api-types';
+import type { Actor, ProjectMemberWithUser, WorkspaceMemberWithUser } from './api-types';
+
+/**
+ * Uma linha que a tela sabe nomear — de projeto ou de workspace: as duas têm
+ * id, nome, e-mail e papel (AT-335).
+ */
+export type MembroNomeavel = ProjectMemberWithUser | WorkspaceMemberWithUser;
 
 /**
  * Quem ESCREVEU uma mensagem do fio da sessão (RN-652, AT-329).
@@ -12,11 +18,10 @@ import type { Actor, ProjectMemberWithUser } from './api-types';
  * - `voce` — o ator é quem vê; o nome vem da linha de membro, senão do e-mail
  *   da sessão, e só na falta dos dois cai no rótulo "Você";
  * - `membro` — outra pessoa que a tela sabe nomear (nome, senão e-mail);
- * - `outroMembro` — outra pessoa que a tela NÃO sabe nomear. É LACUNA
- *   declarada: a tela só alcança `project_members` (`GET
- *   projects/:id/members`, mínimo `viewer`), e quem entra no projeto só pelo
- *   papel de WORKSPACE não tem linha ali — não há rota de leitura de membros
- *   de workspace, e nenhuma foi inventada para isto;
+ * - `outroMembro` — outra pessoa que a tela NÃO sabe nomear: nem linha de
+ *   projeto nem de workspace (`GET projects/:id/members` e, desde a AT-335,
+ *   `GET workspaces/:id/members`, as duas `viewer`), ou as duas leituras ainda
+ *   não chegaram ou falharam;
  * - `agente` — o id é o do agente, e o nome sai de `nomeDoAgente`;
  * - `desconhecido` — ator ausente, sem id, ou de espécie que não é pessoa nem
  *   agente. Tem texto PRÓPRIO e NUNCA vira "você".
@@ -33,11 +38,14 @@ export interface ContextoDeAutoria {
   meuId: string | null;
   /** E-mail do access token — `null` quando não decodifica. */
   meuEmail: string | null;
-  /** `project_members` do projeto; `undefined` enquanto não chegou (ou falhou). */
-  membros: ProjectMemberWithUser[] | undefined;
+  /**
+   * Os membros que a tela sabe nomear — os do projeto antes dos do workspace
+   * (`comporMembros`, AT-335); `undefined` enquanto nenhuma leitura chegou.
+   */
+  membros: readonly MembroNomeavel[] | undefined;
 }
 
-function nomeDoMembro(m: ProjectMemberWithUser): string {
+function nomeDoMembro(m: MembroNomeavel): string {
   return m.name && m.name.trim() !== '' ? m.name : m.email;
 }
 

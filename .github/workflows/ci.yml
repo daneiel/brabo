@@ -76,6 +76,13 @@ env:
   TRIVY_SHA256: '8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9'
 
 jobs:
+  # As imagens de terceiro dos `services:` abaixo (pgvector) NÃO são literais
+  # neste arquivo: vêm do compose de dev, lidas por este job (ADR 0197). Uma
+  # fonte só de digest — o PR do Dependabot que sobe a imagem no compose já
+  # roda este CI contra a imagem nova, sem precisar tocar `.github/workflows/`.
+  imagens:
+    uses: ./.github/workflows/imagens-do-compose.yml
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -136,7 +143,9 @@ jobs:
       # para `image:`, e nenhuma das 37 referências de terceiro do repositório
       # estava por digest — inclusive DUAS aqui neste arquivo, como `services:`
       # de `test-api`/`test-engine`, que é literalmente o runner que o passo de
-      # cima existe para proteger. Ver docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      # cima existe para proteger. Desde o ADR 0197 elas nem são mais literais
+      # aqui (vêm do job `imagens`), e o check reprova o literal que voltar.
+      # Ver docs/explanation/cadeia-de-suprimentos-do-ci.md.
       #
       # Antes do `pnpm install`, como o vizinho: o script só usa `node:fs`.
       - name: Imagens de terceiro presas por digest
@@ -242,11 +251,20 @@ jobs:
   # dois e confere o piso UMA vez, com os números de `apps/api/vitest.config.ts`.
   test-api-shard:
     name: Testes TS (api) — shard ${{ matrix.shard }}/2
+    needs: imagens
+    # `!cancelled()` e não o padrão: se `imagens` falhar, o padrão PULARIA
+    # este job, e check pulado conta como verde na proteção de branch. Assim
+    # ele roda, o `services:` recebe imagem vazia e o job reprova.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     # Medido no run 33970169946 (job `test-ts`, antes da divisão): api sozinha
-    # (setup + testes + typecheck) ficava por volta de 180s. 8min é folga real
-    # sem ser bobeira — e o shard faz metade disso.
-    timeout-minutes: 8
+    # (setup + testes + typecheck) ficava por volta de 180s. Os 8min de antes
+    # NÃO bastaram: no run 36784186753 o shard 2 levou 6min só de testes (a
+    # divisão por arquivo não equilibra — os specs de banco caem juntos) e
+    # mais ~2min de setup num runner lento, e o teto o CANCELOU já na
+    # limpeza, com todos os passos verdes. 15min é o teto do job irmão de
+    # imagens; o sinal de lentidão real continua sendo a duração no log.
+    timeout-minutes: 15
     strategy:
       # Os dois até o fim: o agregador precisa saber de CADA um.
       fail-fast: false
@@ -255,8 +273,9 @@ jobs:
     services:
       postgres:
         # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
-        # Postgres sem ela falha na primeira migration.
-        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+        # Postgres sem ela falha na primeira migration. A referência é a do
+        # serviço `postgres` de docker/docker-compose.yml (ADR 0197).
+        image: ${{ needs.imagens.outputs.pgvector }}
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -577,11 +596,15 @@ jobs:
 
   test-engine:
     name: Testes do engine (ExUnit)
+    needs: imagens
+    # `!cancelled()`: ver `test-api-shard` — pulado contaria como verde.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
       postgres:
-        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+        # O serviço `postgres` de docker/docker-compose.yml (ADR 0197).
+        image: ${{ needs.imagens.outputs.pgvector }}
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo

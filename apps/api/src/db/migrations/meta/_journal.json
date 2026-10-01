@@ -456,6 +456,34 @@
       "when": 1790742127919,
       "tag": "0064_ciclo_de_vida_do_handoff",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790795212024,
+      "tag": "0065_default_de_promocao_auto",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1790801711650,
+      "tag": "0066_roteamento_pelo_jev",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1790809923733,
+      "tag": "0067_custo_real_no_metering",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1790815344427,
+      "tag": "0068_modulo_da_tarefa",
+      "breakpoints": true
     }
   ]
 }

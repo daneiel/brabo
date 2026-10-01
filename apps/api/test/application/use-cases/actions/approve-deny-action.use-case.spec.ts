@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import { eq } from 'drizzle-orm';
 import {
@@ -122,6 +122,7 @@ const proposeAction = new ProposeActionUseCase(
   appendSessionEvent,
   obterCicloDeVidaDoContainer,
   { configurado: () => true } as never, // brokerPort
+  undefined as never, // executeExecutionPlan — não exercitado aqui
 );
 const approveAction = new ApproveActionUseCase(
   unitOfWork,
@@ -144,6 +145,7 @@ const approveAction = new ApproveActionUseCase(
   undefined as never, // executeInstructionPatch — não exercitado aqui,
   new BraboMetrics(),
   appendSessionEvent,
+  undefined as never, // executeExecutionPlan — não exercitado aqui
 );
 const denyAction = new DenyActionUseCase(
   unitOfWork,
@@ -152,6 +154,7 @@ const denyAction = new DenyActionUseCase(
   outboxRepo,
   new BraboMetrics(),
   appendSessionEvent,
+  undefined, // executeExecutionPlan — não exercitado aqui
 );
 
 let workspacesRoot: string;
@@ -390,6 +393,71 @@ describe('ApproveActionUseCase', () => {
     expect(approved.decidedAt).not.toBeNull();
   });
 
+  // AT-263 (RN-677, ADR 0194): aprovar o plano do Dev Lead deixa de ser uma
+  // aprovação sem consumidor — vai ao executor que atribui módulos e ATIVA a
+  // execução, e o desfecho dele é o que o Dev Lead recebe.
+  it('aprovar `propose_execution_plan` chama o executor do plano e avisa o Dev Lead com o desfecho dele', async () => {
+    const { user, project, session } = await setupPendingAction();
+    const plano = await proposedActionRepo.create({
+      projectId: project.id,
+      sessionId: session.id,
+      actionType: 'propose_execution_plan',
+      payload: { resumo: 'r', modulos: [], tarefas: [] },
+      status: 'pending',
+      resolvedPolicy: 'require_approval',
+      actor: { kind: 'agent', id: 'dev-lead' },
+    });
+    const chamadas: string[] = [];
+    const comExecutor = new ApproveActionUseCase(
+      unitOfWork,
+      sessionRepo,
+      proposedActionRepo,
+      outboxRepo,
+      executeTerminalAction,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      new BraboMetrics(),
+      appendSessionEvent,
+      {
+        execute: (
+          _p: string,
+          _s: string,
+          a: { id: string; status: string },
+        ) => {
+          chamadas.push(a.id);
+          return Promise.resolve({ ...a, status: 'executed' });
+        },
+      } as never,
+    );
+
+    const out = await comExecutor.execute(
+      project.id,
+      session.id,
+      plano.id,
+      user.id,
+    );
+
+    expect(chamadas).toEqual([plano.id]);
+    expect(out.status).toBe('executed');
+    const [aviso] = await db
+      .select()
+      .from(outboxEvents)
+      .where(eq(outboxEvents.eventType, 'task.action_settled'));
+    expect(aviso.payload).toMatchObject({
+      agentId: 'dev-lead',
+      actionType: 'propose_execution_plan',
+      status: 'executed',
+    });
+  });
+
   it('rejeita aprovar uma ação já decidida', async () => {
     const { user, project, session, action } = await setupPendingAction();
     await approveAction.execute(project.id, session.id, action.id, user.id);
@@ -409,6 +477,51 @@ describe('ApproveActionUseCase', () => {
         user.id,
       ),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('merge de PR que OUTRA proposta já mergeou é 409 `pr_ja_mergeado`, e a ação segue pending (AT-249, RN-663)', async () => {
+    const { user, project, session } = await setupPendingAction();
+    // Duas pendentes da mesma PR, como as que nasciam antes da RN-663 — a
+    // proposta de hoje já recusa a segunda, então elas entram direto.
+    const nova = () =>
+      proposedActionRepo.create({
+        projectId: project.id,
+        sessionId: session.id,
+        actionType: 'git_merge',
+        payload: { pullRequestId: 'pr-6', targetBranch: 'dev' },
+        status: 'pending',
+        resolvedPolicy: 'require_approval',
+        actor: { kind: 'user', id: user.id },
+      });
+    const primeira = await nova();
+    const segunda = await nova();
+
+    // A irmã VIVA não impede decidir a primeira.
+    await approveAction.execute(project.id, session.id, primeira.id, user.id);
+    await proposedActionRepo.updateExecutionResult(primeira.id, {
+      status: 'executed',
+      executionResult: {
+        kind: 'git_merge',
+        pullRequestId: 'pr-6',
+        state: 'merged',
+        targetBranch: 'dev',
+      },
+    });
+
+    const aprovar = approveAction.execute(
+      project.id,
+      session.id,
+      segunda.id,
+      user.id,
+    );
+    await expect(aprovar).rejects.toBeInstanceOf(ConflictException);
+    await expect(aprovar).rejects.toMatchObject({
+      response: { code: 'pr_ja_mergeado' },
+    });
+    const [depois] = (
+      await proposedActionRepo.listByProjectAndType(project.id, 'git_merge')
+    ).filter((a) => a.id === segunda.id);
+    expect(depois.status).toBe('pending');
   });
 
   it('404 pra ação inexistente', async () => {

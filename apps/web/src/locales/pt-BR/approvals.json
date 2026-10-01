@@ -115,7 +115,7 @@
       "modulesCount_one": "{{count}} módulo",
       "modulesCount_other": "{{count}} módulos",
       "reasonSuffix": ": \"{{summary}}\"",
-      "note": " Você ainda decide quando ativar a execução."
+      "note": " e ATIVA a execução: os dev agents sobem e começam a gastar."
     },
     "assessImplementability": {
       "verb": "avalia a implementabilidade de uma story",
@@ -141,7 +141,7 @@
       "autoMode": "Modo automático"
     },
     "notes": {
-      "alwaysAllow": "Sempre permitir: grava a regra em .brabo/permissions.json do projeto.",
+      "alwaysAllow": "Sempre permitir: grava em .brabo/permissions.json do projeto uma regra por segmento do comando, por verbo + subcomando (ex.: \"npm test\", \"git status\") — o próximo comando com o mesmo verbo e subcomando roda sem perguntar.",
       "alwaysAllowScoped": "Sempre permitir: libera este tipo de ação só para {{agent}}, não para os outros agentes do projeto.",
       "autoMode": "Modo automático: {{actor}} roda qualquer comando sem perguntar, inclusive fora da pasta do projeto. Continuam pedindo sua decisão git push, PR, deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
       "obsolete": "A ação já foi decidida por outro caminho; este card se atualiza sozinho."
@@ -223,14 +223,13 @@
       "loadingQueue": "Carregando a fila…",
       "queueError": "Não foi possível carregar a fila de aprovações.",
       "empty": "Nenhuma aprovação pendente. O time está fluindo.",
-      "motivoForaDoRecorte": {
-        "porque": "a aba lê o log de uma sessão só, e o motivo mora no log da sessão que propôs a ação.",
-        "todas_zero": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
-        "todas_one": "O motivo da política desta ação não está entre os eventos que esta tela carregou: {{porque}}",
-        "todas_other": "O motivo da política destas {{count}} ações não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_zero": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_one": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}",
-        "algumas_other": "O motivo da política de {{count}} das {{total}} ações abaixo não está entre os eventos que esta tela carregou: {{porque}}"
+      "motivoNaoLido": {
+        "todas_zero": "Não foi possível ler o motivo da política destas {{count}} ações: a leitura do log da sessão que as propôs falhou.",
+        "todas_one": "Não foi possível ler o motivo da política desta ação: a leitura do log da sessão que a propôs falhou.",
+        "todas_other": "Não foi possível ler o motivo da política destas {{count}} ações: a leitura do log da sessão que as propôs falhou.",
+        "algumas_zero": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que as propôs falhou.",
+        "algumas_one": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que a propôs falhou.",
+        "algumas_other": "Não foi possível ler o motivo da política de {{count}} das {{total}} ações abaixo: a leitura do log da sessão que as propôs falhou."
       }
     },
     "devPrs": {
@@ -276,7 +275,8 @@
     "mergeErrorTitle": "Não consegui propor o merge",
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate bloqueado — corrija antes de propor o merge.",
-    "mergeNoSession": "Sem sessão no projeto para propor a ação."
+    "mergeNoSession": "Sem sessão no projeto para propor a ação.",
+    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
   },
   "politica": {
     "motivo": "A política decidiu por: {{motivo}}",

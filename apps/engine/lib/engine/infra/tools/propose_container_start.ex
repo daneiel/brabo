@@ -9,8 +9,9 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   Diferente de `propose_infra_pr`, `InfraLeadServer.dispatch_calls/2`
   intercepta esta tool também, mas NÃO consolida com o `WorkflowsAgent`: é
   ação independente, despachada inline (`propose_action(..., "container_start",
-  ...)`), sem HALT — o turno continua e o modelo pode chamar `propose_infra_pr`
-  antes, depois, ou nunca chamar esta.
+  ...)`), sem HALT — o turno continua. `propose_infra_pr` é que encerra o
+  turno, então esta vem ANTES dela ou na MESMA resposta (o lote inteiro é
+  despachado antes do HALT desde a RN-668); depois dela, só num turno novo.
 
   Desde a RN-566, `InfraLeadServer.dispatch_container_start/2` CONSULTA
   LOCALMENTE (`Project.get/1`, sem HTTP) o `execution_mode` do projeto ANTES
@@ -23,6 +24,11 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
   a RN-610 ela recusa também quando o container já está REGISTRADO
   `running`/`provisioning` — elegeria uma imagem que o container de pé, com a
   versão congelada, não usaria.
+
+  Desde o ADR 0190 (RN-671) o kickoff não depende desta tool: o servidor
+  elege e propõe a subida antes da primeira ida ao modelo, pelo mesmo
+  caminho, e a proposta nasce auto-aprovada pela autonomia que o aceite do
+  handoff semeia (`container_start: auto_approve`).
 
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado
@@ -38,8 +44,9 @@ defmodule Engine.Infra.Tools.ProposeContainerStart do
       description:
         "Propõe subir o container real do projeto, elegendo UMA das imagens candidatas " <>
           "que o Arquiteto roteou por módulo (`route_modules_to_infra`, ADR 0131) — nunca " <>
-          "inventando uma imagem fora dessa lista. Diferente de `propose_infra_pr`, esta " <>
-          "ação exige aprovação humana explícita, sempre.",
+          "inventando uma imagem fora dessa lista. No aceite do handoff o servidor já " <>
+          "propõe a subida sozinho; use esta para eleger de novo numa conversa. Nasce " <>
+          "auto-aprovada pela autonomia da Infra, a menos que o usuário a tenha desligado.",
       parameters: %{
         "type" => "object",
         "properties" => %{
