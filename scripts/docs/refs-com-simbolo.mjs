@@ -163,6 +163,27 @@ export function resolverCaminho(caminho, raiz, versionados) {
 }
 
 /**
+ * O veredito da aferição, em `block` desde a AT-122 (01/10):
+ *
+ * - `CEGO` — ZERO refs extraídas: a sintaxe das RNs mudou ou o extrator
+ *   quebrou, e um check cego fica verde para sempre dizendo que conferiu o que
+ *   não olhou. Reprova.
+ * - `reprova` — ao menos uma ref não bate (símbolo fora da janela) ou não
+ *   resolve a um arquivo só (o arquivo saiu, mudou de nome, ou o sufixo ficou
+ *   ambíguo). As duas são a mesma deriva: a RN aponta para onde o código não
+ *   está. Reprova.
+ * - `ok` — tudo que casa o padrão bate.
+ *
+ * @param {{total: number, naoBatem: object[], naoResolvidas: object[]}} resultado
+ * @returns {'ok' | 'CEGO' | 'reprova'}
+ */
+export function veredito({ total, naoBatem, naoResolvidas }) {
+  if (total === 0 && naoResolvidas.length === 0) return 'CEGO';
+  if (naoBatem.length > 0 || naoResolvidas.length > 0) return 'reprova';
+  return 'ok';
+}
+
+/**
  * Afere todas as refs com símbolo dos arquivos de RN.
  * @returns {{total: number, batem: number, naoBatem: object[], naoResolvidas: object[]}}
  */

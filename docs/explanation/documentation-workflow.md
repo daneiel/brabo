@@ -202,13 +202,14 @@ are too many to fix one by one inside this change, and the nearest
 occurrence is not always the definition. The list is what `pnpm
 docs:check` prints.
 
-**Severity: `warn`.** It reports and doesn't fail, because a `block`
-would stop every PR that touches an RN file over debt someone else left.
-There is one exception, the house rule: if the check extracts **zero**
-references, that is `CEGO` and **fails**. Zero means the RN syntax
-changed or the extractor broke, and a blind check stays green forever.
+**Severity at birth: `warn`.** It reported and didn't fail, because a
+`block` would have stopped every PR that touched an RN file over debt
+someone else left. There was one exception, the house rule: if the check
+extracts **zero** references, that is `CEGO` and **fails**. Zero means
+the RN syntax changed or the extractor broke, and a blind check stays
+green forever.
 
-**When to promote it to `block`:** once the list is **empty**, and
+**The original criterion for `block`** (PR #593): once the list is **empty**, and
 after **four consecutive weeks** of `docs:check` on `dev` with no new
 wrong references in RNs touched during those weeks. At that point every
 new wrong reference is the current PR's fault, and the PR can fix it.
@@ -229,8 +230,53 @@ Those two now point at the body line. The window stayed at ±3. The
 bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
 their unchecked neighbouring references re-read in the same pass. After
 that, **273 references match the pattern, 273 are correct, and 0 are
-wrong**. The four weeks start when that change reaches `dev`. The
-severity stays `warn` until then.
+wrong**. The four weeks were to start when that change reached `dev`.
+
+**Promoted to `block` on 2026-10-01** (AT-122), by the maintainer's
+decision, without waiting out the four weeks. Five days after the list
+went empty, `dev` had **140** wrong references again, out of 896 that
+match the pattern: the `warn` didn't hold the drift back, because a
+warning nobody has to act on is a warning nobody reads. The 140 were
+re-read by symbol in the same change that promoted the check, never by
+adding a delta, and the window stayed at ±3. None was a false positive
+of the pattern, and no symbol was missing from its file. What the pass
+found besides line drift:
+
+- **Merge leftovers.** Three bullets had been duplicated by conflict
+  resolution, one copy with older numbers next to one with newer ones
+  (RN-120's `Where`, RN-547's `Código` and RN-626's `SessionPage.tsx`
+  line). The stale copy was removed, which is why the total went from 896
+  to **883**.
+- **One reference whose subject changed (state drift, not line drift).**
+  RN-587 cited the test for an `infra` message; since RN-617 the Infra
+  Lead converses, and the test now uses `qa` as the roster agent without
+  a conversation. The reference now says so. The RN's rule did not
+  change.
+- Unchecked neighbours in the bullets with the worst drift (RN-547,
+  RN-567, RN-587, RN-609, RN-663, RN-566) were re-read in the same pass
+  where the test or clause they name could be identified.
+
+After that, **883 references match the pattern, 883 are correct, and 0
+are wrong**.
+
+**Severity now: `block`.** A reference that doesn't match, **or** whose
+path no longer resolves to a single tracked file, fails `docs:check`.
+Both are the same drift: the RN points where the code isn't. Zero
+references is still `CEGO` and still fails. The verdict is `veredito` in
+`refs-com-simbolo.mjs`, proved by mutation in the spec next to it: a
+reference moved out of the window fails, a symbol that left the file
+fails, a path that no longer resolves fails, and text rewritten until
+extraction yields zero is `CEGO`, never `ok`. When it fails, fix the
+reference **by the symbol** (the output names the nearest line where it
+appears, which is a hint, not a fix). Don't widen the window, and don't
+narrow the pattern to make a real reference disappear; narrow it only
+for a real false positive, with the case in the spec.
+
+The pt-BR translations of the three RN files under `website/i18n/` are
+**not** checked. They carry few references (23 match the pattern, 15 of
+them wrong on 2026-10-01), and the translation is behind the English
+source anyway; checking a copy nobody keeps in step would fail every PR
+over the translation's lag.
 
 ### Every RN heading carries its anchor
 
