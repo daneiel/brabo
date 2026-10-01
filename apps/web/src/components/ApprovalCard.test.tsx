@@ -137,7 +137,31 @@ describe('ApprovalCard', () => {
     );
     expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
     expect(screen.getByText(/git push, PR, deploy, sudo\/doas/)).toBeInTheDocument();
-    expect(screen.getByText(/paralelismo/)).toBeInTheDocument();
+    // Dentro da NOTA: a lista do piloto (RN-670), logo abaixo, também fala de
+    // paralelismo, e o que este teste cobra é a frase da nota.
+    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(/paralelismo/);
+  });
+
+  it('com o botão do modo automático, traz a lista do piloto — a MESMA dos Executores (RN-670)', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('piloto-detalhe')).toBeInTheDocument();
+    expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git commit e criar branch LOCAL');
+    expect(screen.getByTestId('modo-automatico-nao-libera')).toHaveTextContent('container_remove');
+  });
+
+  it('CASO DE FALHA: sem o botão (sem papel), a lista do piloto também não aparece', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+    );
+    expect(screen.queryByTestId('piloto-detalhe')).toBeNull();
   });
 
   it('mostra a nota do "Modo automático" também na variante queue (RN-603)', () => {

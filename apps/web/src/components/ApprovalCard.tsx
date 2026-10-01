@@ -23,6 +23,7 @@ import {
   TrashIcon,
 } from './ui/icons';
 import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
+import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -420,12 +421,18 @@ export function ApprovalCard({
             </p>
           )}
           {/* A nota do modo automático sai onde o botão sai (RN-603): é a
-              única frase que diz, antes do clique, o que o botão libera. */}
+              única frase que diz, antes do clique, o que o botão libera. Desde
+              a RN-670 (ADR 0189) a lista inteira — o que o piloto libera e o
+              que não libera — vem junto, a MESMA dos Executores e do card do
+              agente. */}
           {onActivateAutoMode && (
-            <p className={styles.note} data-testid="nota-modo-automatico">
-              <AlertIcon size={14} className={styles.noteIcon} />
-              <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
-            </p>
+            <>
+              <p className={styles.note} data-testid="nota-modo-automatico">
+                <AlertIcon size={14} className={styles.noteIcon} />
+                <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
+              </p>
+              <OQueOPilotoLibera recolhido />
+            </>
           )}
         </>
       ) : (

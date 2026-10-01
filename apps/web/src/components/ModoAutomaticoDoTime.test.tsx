@@ -80,6 +80,18 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     expect(nao).toHaveTextContent('container_remove');
     expect(nao).toHaveTextContent('instruction_patch');
     expect(nao).toHaveTextContent('paralelizar');
+    expect(nao).toHaveTextContent('deny');
+  });
+
+  it('diz o que o PILOTO libera — commit e branch local, composto sem regra, e que "Sempre permitir" não o desliga (RN-670)', () => {
+    montar();
+    const libera = screen.getByTestId('piloto-libera');
+    expect(libera).toHaveTextContent('mesmo com caminho fora da pasta do projeto');
+    expect(libera).toHaveTextContent('comando composto com segmento sem regra');
+    expect(libera).toHaveTextContent('git commit e criar branch LOCAL');
+    expect(libera).toHaveTextContent('"Sempre permitir" neste agente não desliga o piloto');
+    // A MESMA lista, sem um segundo texto: aqui ela vem aberta.
+    expect(screen.queryByTestId('piloto-detalhe')).toBeNull();
   });
 
   it('CASO DE FALHA: a api recusa um agente — o desfecho diz quantos passaram e quem ficou em manual', async () => {

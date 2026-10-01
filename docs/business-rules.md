@@ -472,7 +472,7 @@ previous one. `deny` at any stage returns immediately.
 Before any policy, IAM: each `ActionType` requires a minimum effective
 role. Without it, `deny` with an explicit reason.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:100` (`MIN_ROLE_FOR_ACTION_TYPE`)
+- **Where:** `apps/api/src/domain/actions/decide.ts:108` (`MIN_ROLE_FOR_ACTION_TYPE`)
 - **Test:** `test/domain/actions/decide.spec.ts`
 
 ### RN-006 — Ceiling: merge into a protected branch is never auto-approvable {#rn-006}
@@ -489,7 +489,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:426` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:453` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -13685,11 +13685,11 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:213`
-  (`reason` no payload do evento de sessão), `:176` (o comentário do outbox
-  sem o campo), `:184` (o payload do outbox, intacto), `:300` (o
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:240`
+  (`reason` no payload do evento de sessão), `:203` (o comentário do outbox
+  sem o campo), `:207` (o payload do outbox, intacto), `:327` (o
   `rejectionReason`, que continua só no `deny`);
-  `apps/api/src/domain/actions/decide.ts:256` (`Decision`, a fonte da string)
+  `apps/api/src/domain/actions/decide.ts:276` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:742`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
   `:765` (`require_approval` pelo default e pelo teto da trava de merge),
@@ -15872,9 +15872,9 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:248`
   (`scopeRoot` só em `terminal`);
-  `apps/api/src/domain/actions/decide.ts:532` (`terminalNoEscopo`, o único
+  `apps/api/src/domain/actions/decide.ts:559` (`terminalNoEscopo`, o único
   consumidor do escopo)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:889`
   (`container`), `:904` (`mounted`), `:920` (`runner`), `:935` (o caminho
@@ -18986,6 +18986,103 @@ depende de decisão do dono.
   frase), `:1190` (turno sem subida: sem frase), `:1199` (segunda
   `propose_infra_pr` no lote é recusada)
 - **Origem:** AT-264 (uso real de 2026-09-29, item A18 da análise)
+
+### RN-669 — O escopo de caminho compara com a pasta REAL de execução: `/work` e o `/tmp` do container quando ele está de pé {#rn-669}
+
+O teto de escopo do ADR 0055 comparava todo comando com a pasta do projeto no
+HOST, inclusive quando o comando roda DENTRO do container (RN-492/RN-502). No
+uso real de 29/09, os 37 pedidos "escopo" eram `/work/...` e `/tmp`
+comparados com `/home/<usuario>/projetos-brabo/<projeto>` (AT-258).
+
+Com um container `running` REGISTRADO num projeto `container` ou `mounted`, a
+raiz do escopo é `/work` — o ponto de montagem, onde moram a pasta e os
+`.worktrees` do projeto — mais o `/tmp` do PRÓPRIO container. O `cwd` chega
+como caminho de host e é traduzido para `/work` pela mesma regra do engine
+(`cwd_para_container/2`): a raiz vira `/work`, o que está sob ela vira
+`/work/...`, o que está fora segue como veio e fica fora. Em `mounted` a
+tradução é bijetiva. Sem container, a raiz continua a pasta do projeto no host,
+e o `/tmp` do host fica FORA.
+
+Vale para quem não está no piloto (a regra específica `terminal`): o piloto não
+passa pelo escopo ([RN-603](business-rules/autenticacao.md#rn-603), mantida
+pela [RN-670](#rn-670)). `projectScopeRoot` não muda nem se une a
+`permissionsFilePath` ([RN-478](#rn-478)); o PISO de auto-aprovação continua só
+do modo `container` ([RN-493](#rn-493)). `runner` fica fora, de propósito: a api
+não sabe se o runner vai rotear para o container ou para o host (RN-558).
+Argumento de comando com caminho de HOST passa a contar como fora quando há
+container — o engine traduz só o `cwd`, e dentro do container esse caminho não
+existe.
+
+- **Código:** `apps/api/src/domain/actions/path-scope.ts:153` (`cwdNoContainer`),
+  `:174` (`comandoNoEscopoDoContainer`), `:112` (`comandoNoEscopo`, agora com
+  várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
+  `apps/api/src/domain/actions/decide.ts:273` (`execucaoNoContainer`), `:571`
+  (`execucaoNoContainer`, em `terminalNoEscopo`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:150`
+  (`containerExecutionActive`, separado de `execucaoNoContainer`)
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts:1274` (com container
+  `/work`, `.worktrees`, `/tmp` e `..` dentro — caminho feliz; `/etc`, outro
+  projeto, `/workspace`, `/tmp/../etc` fora; sem container `/tmp` e `/work`
+  fora — casos de falha); `apps/api/test/domain/actions/path-scope.spec.ts:216`
+  (e a cópia de `/work` travada contra `packages/docker-port`);
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1113`
+  (o modo `mounted` com e sem container, e sem o piso)
+- **Origem:** AT-258 (item A12 da análise do uso real de 29/09), decisão do
+  dono de 01/10, [ADR 0189](adr/0189-o-piloto-automatico.md)
+
+### RN-670 — O modo automático é o PILOTO AUTOMÁTICO, e "Sempre permitir" não o desliga {#rn-670}
+
+Decisão do dono de 01/10 ([ADR 0189](adr/0189-o-piloto-automatico.md)): a
+[RN-603](business-rules/autenticacao.md#rn-603) NÃO é revogada. A curinga
+`*: auto_approve` aprova TUDO, inclusive o composto sintetizado do
+`permissions.json`, caminho fora da pasta, `git commit` e criação de branch
+LOCAL. Seguem fora, nunca auto-aprováveis: push/PR/merge/deploy pelo terminal
+e `sudo`/`doas` ([RN-418](#rn-418)), merge em branch protegida,
+`container_remove`, `instruction_patch` e paralelismo. `deny` explícito vence, e
+`ask` escrito no arquivo pede. A garantia de que isso não alcança o código do
+Brabo é a contenção do container — uma pasta só, em `/work`, estritamente
+abaixo da raiz do broker, sem socket do Docker nem privilégio —, provada em
+`apps/broker/src/contencao-do-brabo.spec.ts`; o que a prova NÃO cobre está
+declarado no ADR 0189.
+
+**"Sempre permitir" não desliga o piloto (AT-255).** O clique de dev agent
+grava `terminal: auto_approve` ([RN-509](#rn-509)), e o repositório devolvia
+essa específica ANTES da curinga, com origem `especifica` — `decide()` deixava
+de reconhecer o modo automático (97 + 37 pedidos no uso real de 29/09, com o
+modo aceso na tela). Agora a específica `auto_approve` sob a curinga
+`auto_approve` resolve como a CURINGA. Específica que diz outra coisa
+(`require_approval`, `deny`) continua vencendo, e com o toggle de volta em
+manual a específica gravada pelo clique volta a valer sozinha, com o escopo. O
+clique continua gravando a específica; quem decide se ela já existe é o campo
+`especifica` da resolução, nunca o modo resolvido.
+
+**A tela diz o que o piloto libera e o que não libera**, com UMA lista nos três
+lugares onde o modo é ligado: o cartão de lote dos Executores
+([RN-661](#rn-661), aberta), o `ApprovalCard` e o toggle do card do agente
+(recolhida). O "não libera" é o texto que a RN-661 já tinha, reusado.
+
+- **Código:** `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
+  (`resolve`), `:67` (`modoEspecifico`, a exceção do piloto);
+  `apps/api/src/application/ports/agent-autonomy-repository.port.ts:5`
+  (`AutonomiaResolvida`, com `especifica`);
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:263`
+  (`especifica`); `apps/api/src/domain/actions/decide.ts:293`
+  (`modoAutomaticoDoAgente`); `apps/web/src/components/OQueOPilotoLibera.tsx:16`
+  (`OQueOPilotoLibera`); `apps/web/src/components/ApprovalCard.tsx:434`,
+  `apps/web/src/components/AgentCard.tsx:164`,
+  `apps/web/src/components/ModoAutomaticoDoTime.tsx:134`
+- **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts:850`
+  (o cenário medido: curinga + "Sempre permitir" segue sem pedido — caminho
+  feliz; toggle em manual volta ao escopo — caso de falha);
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts:115`;
+  `apps/api/test/domain/actions/decide.spec.ts:1210` (commit e branch local
+  livres; push, merge, PR, deploy e `doas` seguem pedindo);
+  `apps/broker/src/contencao-do-brabo.spec.ts:105` (a contenção);
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:86`,
+  `apps/web/src/components/ApprovalCard.test.tsx:145`,
+  `apps/web/src/components/AgentCard.test.tsx:81`
+- **Origem:** AT-259 e AT-255 (itens A9 e A13 da análise do uso real de 29/09),
+  decisão do dono de 01/10
 
 ### RN-663 — O merge de PR recusa a PR já mergeada e a proposta repetida; gate pendente é só aviso {#rn-663}
 

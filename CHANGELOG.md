@@ -634,6 +634,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api/web**: **o modo automático vira piloto automático, e "Sempre
+  permitir" não o desliga mais** (AT-259, AT-255,
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md),
+  [RN-670](docs/business-rules.md#rn-670)). Decisão do dono de 01/10: a
+  RN-603 fica — a curinga `*: auto_approve` aprova tudo, inclusive comando
+  composto sem regra, caminho fora da pasta, `git commit` e branch LOCAL —,
+  menos os tetos absolutos (push/PR/merge/deploy, `sudo`/`doas`, merge em
+  branch protegida, `container_remove`, `instruction_patch`, paralelismo), e
+  `deny` continua vencendo. O defeito medido no uso real de 29/09: o "Sempre
+  permitir" de dev agent gravava `terminal: auto_approve`, que sombreava a
+  curinga e fazia o composto e o escopo voltarem a pedir (97 + 37 pedidos com
+  o modo aceso na tela). Agora essa específica resolve como a curinga, e as
+  linhas já gravadas também se corrigem; com o toggle em manual, ela volta a
+  valer sozinha, com o escopo. A tela diz o que o piloto libera e o que não
+  libera, com a MESMA lista no cartão de lote dos Executores, no
+  `ApprovalCard` e no toggle do card do agente. A contenção que sustenta a
+  decisão (o container monta uma pasta só, em `/work`, abaixo da raiz do
+  broker) ganha prova ponta a ponta no broker; o que ela NÃO cobre está
+  declarado no ADR.
+- **api**: **o escopo de caminho compara com a pasta onde o comando roda**
+  (AT-258, [RN-669](docs/business-rules.md#rn-669)). Com container `running`
+  num projeto `container` ou `mounted`, a raiz é `/work` (a pasta e os
+  `.worktrees` do projeto) mais o `/tmp` do container, com o `cwd` de host
+  traduzido para `/work` como o engine traduz; sem container, a pasta do
+  projeto no host, com o `/tmp` do host fora. Vale para a regra específica
+  `terminal` — antes, `/work/...` e `/tmp` pediam aprovação por "escopo" com o
+  comando rodando justamente ali. `runner` fica como estava.
 - **engine**: o formulário estruturado (`ask_structured_questions`, do Criativo
   e do PO) deixa de sair em português para quem escolheu outro idioma de
   resposta (AT-282, [RN-667](docs/business-rules.md#rn-667)). A descrição da
