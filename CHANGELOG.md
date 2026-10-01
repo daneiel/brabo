@@ -57,6 +57,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine/api**: **o handoff ao Dev Lead sai da Infra, e só com o container
+  `running`** (AT-262, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
+  [RN-672](docs/business-rules.md#rn-672)). "Confirmar arquitetura pronta"
+  passa a oferecer só à Infra — o handoff duplo do Arquiteto sai, com a rota
+  interna `POST /internal/sessions/:id/agent/offer-dev-handoff` do engine. Quem
+  oferece o Dev Lead é o servidor do Infra Lead, sem depender do modelo, quando
+  o container do projeto está registrado `running`: no fim de cada turno dele e
+  quando o `container.running` chega pelo outbox (aprovação posterior,
+  `/containers`, modo `runner`). Oferta pendente não se repete, e Dev Lead já
+  ativo não é falha. A segunda porta do repositório no aceite ao Dev Lead
+  (RN-582) continua.
 - **engine/api**: **a Infra sobe o container sozinha ao receber o handoff**
   (AT-260, [ADR 0190](docs/adr/0190-a-infra-sobe-o-container-no-aceite.md),
   [RN-671](docs/business-rules.md#rn-671)). Aceitar o handoff da Infra passa a

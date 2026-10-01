@@ -13161,8 +13161,7 @@
           "toAgent": {
             "type": "string",
             "enum": [
-              "infra",
-              "dev-lead"
+              "infra"
             ],
             "example": "infra"
           },
@@ -14975,7 +14974,7 @@
               "confirmado",
               "ja_oferecido"
             ],
-            "description": "`confirmado`: at least one target was triggered. `ja_oferecido`: both targets already had a pending offer or were active in the project — nothing was recorded nor asked of the engine (double click, second tab)."
+            "description": "`confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672)."
           },
           "jaAtendidos": {
             "type": "array",

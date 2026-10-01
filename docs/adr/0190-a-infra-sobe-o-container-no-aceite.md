@@ -1,4 +1,4 @@
-# 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada
+# 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada, e é ela quem entrega ao Dev Lead
 
 ## Status
 
@@ -12,6 +12,13 @@ página de containers do
 [ADR 0136](0136-pagina-global-de-containers.md) sem editar nenhum dos dois: o
 caminho de eleição, os tetos e as recusas que eles puseram continuam; o que
 muda é QUEM dispara a primeira subida e se ela espera um clique.
+
+Na mesma rodada, e pela mesma decisão de 01/10 (AT-262, RN-672): *"o Dev Lead
+é oferecido pela Infra, só com o container `running`; o handoff duplo do
+Arquiteto sai"*. Isso muda a relação entre papéis que o
+[ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) pôs (o Dev Lead nasce
+do Arquiteto) e que o [ADR 0085](0085-fluxo-como-registro-declarativo.md)
+registrou em `docs/fluxo.yml`, sem editá-los — a decisão 7 abaixo.
 
 ## Context
 
@@ -91,6 +98,17 @@ Medido no código de `dev` em 2026-10-01, antes de mudar:
    nos casos em que a subida não cabia ao servidor (sem roteamento, `runner`)
    e o modelo não a propôs.
 
+7. **O Dev Lead é oferecido pela Infra, com o container `running` (RN-672).**
+   "Confirmar arquitetura pronta" passa a oferecer só à Infra: o
+   `offerDevHandoff`, a rota `offer-dev-handoff` do engine e o
+   `:offer_dev_handoff`/`handoff_dev_pendente` do Arquiteto saem. O servidor do
+   Infra Lead oferece `infra → dev-lead` (modo `if_absent`, ADR 0182) quando o
+   container do projeto está REGISTRADO `running`, perguntando no fim de cada
+   turno dele e quando o `container.running` do outbox chega — o segundo
+   consumidor desse evento, ao lado do wake dos dev agents (RN-502). A segunda
+   porta do repositório no aceite ao Dev Lead (RN-582) continua: o aceite é o
+   mesmo, só mudou quem oferece.
+
 ## Consequences
 
 - **A promessa vira verdadeira por construção no caso comum.** Projeto
@@ -120,6 +138,18 @@ Medido no código de `dev` em 2026-10-01, antes de mudar:
   há roteamento a eleger; o kickoff degrada como antes e a subida volta a
   depender do modelo naquele turno. A subida do servidor também só acontece no
   kickoff: correção de gate e mensagem do composer não a repetem.
+- **O Dev Lead deixa de ser aceitável sem container.** A cadeia passa a ser
+  Arquiteto → Infra → (container `running`) → Dev Lead → execução, e o
+  `docs/fluxo.yml` diz isso: a saída `handoff-duplo` do Arquiteto vira um
+  handoff só, à Infra, e a Infra ganha duas saídas para o Dev Lead (o
+  container e o handoff). Projeto cujo container nunca sobe não chega ao Dev
+  Lead por este caminho; o handoff manual a um agente à escolha (ADR
+  0109) continua existindo.
+- **O aviso do outbox é at-most-once**, como o `Engine.Dev.Wake`: sem Infra
+  Lead de pé quando o `container.running` chega (sessão fechada, engine
+  reiniciando), a oferta espera o fim do próximo turno da Infra. Projeto
+  `runner` depende desse aviso, porque a subida dele nunca acontece dentro de
+  um turno da Infra.
 - **O comentário de `decide.ts`** que diz *"não está semeado em
   `INFRA_AUTONOMY_SEEDS`"* fica desatualizado nesta mudança, porque o arquivo
   é de outra frente em curso na mesma rodada; a regra em si (`container_start`

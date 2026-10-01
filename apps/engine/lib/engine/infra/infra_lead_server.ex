@@ -66,6 +66,18 @@ defmodule Engine.Infra.InfraLeadServer do
   (a PR de infra e as duas subidas de container, com as recusas locais das
   RN-566/RN-610/RN-577 intactas).
 
+  ## O Dev Lead é oferecido pela Infra, com o container de pé (RN-672)
+
+  Desde a AT-262 (ADR 0190) o handoff ao Dev Lead sai DAQUI, e não mais da
+  confirmação de arquitetura do Arquiteto: no fim de cada turno (`concluir/1`)
+  e quando o container do projeto chega em `running` fora de um turno
+  (`{:container_running, project_id}`, por `Engine.Workers.InfraOfereceDevLeadWorker`
+  a partir do `container.running` do outbox), o servidor pergunta se o
+  container está REGISTRADO `running` e, só então, oferece `infra → dev-lead`
+  no modo "só se ninguém recebeu ainda" (`create_handoff_if_absent/5`, ADR
+  0182). É passo de servidor, não ferramenta: o modelo não decide quando o
+  Dev Lead entra.
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -194,6 +206,11 @@ defmodule Engine.Infra.InfraLeadServer do
     # antes do aceite; agora ele passa pelo MESMO `TurnoAssincrono` dos outros.
     _ = TurnoOrfao.fechar_ao_subir(project_id, session_id, @agent)
 
+    # RN-672: o aviso de que o container do projeto subiu chega por PubSub
+    # (cluster-wide — o job do outbox roda em QUALQUER réplica, e o Registry
+    # da sessão é local ao nó; a mesma razão de `Engine.Dev.Wake`).
+    Phoenix.PubSub.subscribe(Engine.PubSub, topico_do_container(project_id))
+
     history = Reidratacao.historico(project_id, session_id, @agent)
 
     {:ok,
@@ -291,13 +308,27 @@ defmodule Engine.Infra.InfraLeadServer do
     end)
   end
 
+  # RN-672: o container do projeto chegou em `running` (o `container.running`
+  # do outbox, entregue por `Engine.Workers.InfraOfereceDevLeadWorker`). Com
+  # turno em curso não se faz nada aqui: o fecho dele (`concluir/1`) faz a
+  # MESMA pergunta, lendo o registro, e oferecer dos dois lados só geraria a
+  # segunda chamada que o modo `if_absent` responderia "já oferecido".
+  @impl true
+  def handle_info({:container_running, project_id}, %{project_id: project_id} = state) do
+    case state.turno_assincrono do
+      nil -> {:noreply, oferecer_ao_dev_lead(state)}
+      _em_curso -> {:noreply, state}
+    end
+  end
+
+  def handle_info({:container_running, _outro_projeto}, state), do: {:noreply, state}
+
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
       # A fila vem do state ANTERIOR à mensagem: o `novo_state` é o que a Task
       # devolveu, e ela capturou o state do INÍCIO do turno — antes de a
-      # correção chegar e entrar na fila (o mesmo raciocínio do
-      # `handoff_dev_pendente` do Arquiteto).
+      # correção chegar e entrar na fila.
       {:ok, novo_state} ->
         pendentes = Map.get(state, :correcoes_pendentes, [])
 
@@ -973,10 +1004,64 @@ defmodule Engine.Infra.InfraLeadServer do
   # visível pelo `dev.error` que `aplicar/2` emite.
   defp concluir({:proposed, title, files, state}) do
     {_status, state} = finalize(state, title, files)
-    fechar_subida(state, :pr_encerrou_o_turno)
+
+    state
+    |> fechar_subida(:pr_encerrou_o_turno)
+    |> oferecer_ao_dev_lead()
   end
 
-  defp concluir({:done, state}), do: fechar_subida(state, :turno_terminou)
+  defp concluir({:done, state}) do
+    state
+    |> fechar_subida(:turno_terminou)
+    |> oferecer_ao_dev_lead()
+  end
+
+  # --- O handoff ao Dev Lead sai da Infra (RN-672, ADR 0190) ---
+
+  @doc "Tópico em que o aviso de container `running` do projeto chega (RN-672)."
+  def topico_do_container(project_id), do: "infra:container_running:" <> project_id
+
+  # Só com o container REGISTRADO `running` (a decisão do dono): é ele que os
+  # dev agents exigem para trabalhar (RN-502), e oferecer o Dev Lead antes
+  # deixava aceitável uma execução sem onde rodar. A leitura é a mesma de
+  # `container_registrado_de_pe?/1`, local e sem HTTP — só que `running`, e
+  # não `provisioning`.
+  #
+  # `create_handoff_if_absent/5` (ADR 0182, RN-636): oferta pendente ao Dev Lead
+  # em qualquer sessão do projeto volta como está, e Dev Lead já ATIVO é 409
+  # `agente_ja_ativo` — nenhuma das duas é falha, e é isso que deixa este passo
+  # rodar no fim de TODO turno sem empilhar ofertas. Outra recusa vira
+  # `agent.error` durável com origem (RN-116), sem derrubar o turno.
+  defp oferecer_ao_dev_lead(state) do
+    if ProjectContainerLifecycle.status_registrado(state.project_id) == "running" do
+      case EngineApiClient.create_handoff_if_absent(
+             state.project_id,
+             state.session_id,
+             @agent,
+             "dev-lead",
+             nil
+           ) do
+        {:ok, _handoff} -> state
+        {:error, {409, %{"reason" => "agente_ja_ativo"}}} -> state
+        {:error, reason} -> emit_falha_do_handoff_ao_dev_lead(state, reason)
+      end
+    else
+      state
+    end
+  end
+
+  defp emit_falha_do_handoff_ao_dev_lead(state, reason) do
+    origem = FalhaDeTurno.origem(reason)
+
+    mensagem =
+      "O container do projeto está de pé, mas não consegui oferecer o handoff " <>
+        "ao dev-lead: #{inspect(reason)}. O fim de cada turno meu tenta de " <>
+        "novo — me mande uma mensagem para eu repetir a oferta."
+
+    emit(state, "agent.error", %{origem: origem, mensagem: mensagem, reason: inspect(reason)})
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
 
   # --- O que o turno fez com a subida do container (RN-668) ---
   #

@@ -1484,6 +1484,91 @@ defmodule Engine.Infra.InfraLeadServerTest do
     end
   end
 
+  # --- RN-672 (AT-262, ADR 0190): o Dev Lead é oferecido PELA INFRA ---
+
+  describe "o handoff ao Dev Lead sai da Infra, com o container `running` (RN-672)" do
+    test "turno que termina com o container REGISTRADO `running`: oferece ao Dev Lead, no modo if_absent",
+         %{state: state, session_id: session_id} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "running")
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert_received {:handoff_if_absent, _, ^session_id, "infra", "dev-lead", nil}
+      # Nunca pelo `create_handoff` comum, que substituiria a oferta pendente.
+      refute_received {:handoff_created, _, _, _, "dev-lead", _}
+    end
+
+    test "container ainda não `running` (provisioning, ou nenhum): NÃO oferece", %{state: state} do
+      insert_project!(state.project_id, "container")
+      registrar_container!(state.project_id, "provisioning")
+      contexto_sem_modulos()
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      refute_received {:handoff_if_absent, _, _, _, "dev-lead", _}
+    end
+
+    test "o aviso de container `running` fora de turno oferece; de OUTRO projeto, não", %{
+      state: state,
+      session_id: session_id
+    } do
+      registrar_container!(state.project_id, "running")
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, Ecto.UUID.generate()}, state)
+
+      refute_received {:handoff_if_absent, _, _, _, _, _}
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      assert_received {:handoff_if_absent, _, ^session_id, "infra", "dev-lead", nil}
+    end
+
+    test "o aviso com turno em curso não oferece — o fecho do turno faz a mesma pergunta", %{
+      state: state
+    } do
+      registrar_container!(state.project_id, "running")
+      em_curso = %{state | turno_assincrono: %{task: :qualquer}}
+
+      assert {:noreply, ^em_curso} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, em_curso)
+
+      refute_received {:handoff_if_absent, _, _, _, _, _}
+    end
+
+    test "Dev Lead já ativo (409) não é falha; outra recusa vira agent.error durável", %{
+      state: state,
+      session_id: session_id
+    } do
+      registrar_container!(state.project_id, "running")
+
+      Process.put(:fake_handoff_if_absent, %{
+        "dev-lead" => {:error, {409, %{"reason" => "agente_ja_ativo"}}}
+      })
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      refute_received {:event_appended, _, _, %{type: "agent.error"}}
+
+      Process.put(:fake_handoff_if_absent, %{
+        "dev-lead" => {:error, {500, %{"message" => "erro interno"}}}
+      })
+
+      assert {:noreply, _} =
+               InfraLeadServer.handle_info({:container_running, state.project_id}, state)
+
+      assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+      assert payload.origem == "infra"
+      assert payload.mensagem =~ "não consegui oferecer o handoff ao dev-lead"
+    end
+  end
+
   describe "o turno pelo TurnoAssincrono (RN-617)" do
     test "aceite imediato: responde :ok com o turno AINDA rodando, e o working já gravado",
          %{state: state} do

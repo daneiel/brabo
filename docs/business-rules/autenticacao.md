@@ -348,7 +348,7 @@ interpolam id em URL, não só os que o CodeQL reportou:
 
 - dentro de `postCommand`, que a maioria dos métodos já usa
   (`startAgent`, `sendAgentMessage`, `confirmReadiness`, `cancelAgentTurn`,
-  `offerInfraHandoff`, `offerDevHandoff`, `invalidateInstructions`,
+  `offerInfraHandoff`, `invalidateInstructions`,
   `startExecution`, `acceptParallelization`, `rearmDevAgent`,
   `reviseStory`) — o chamador lista as tuplas `(nome, valor)` que já
   interpolou no `path`, e `postCommand` valida TODAS antes de montar a

@@ -354,7 +354,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:337`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:332`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -3296,7 +3296,8 @@ por completo. `OfferInfraHandoffUseCase.execute` agora consulta
 `StoryRepository.findByProject(projectId)` e recusa com `BadRequestException`
 quando NENHUMA história do projeto tem `status !== 'draft'` — a checagem vem
 ANTES de gravar `architecture.readiness_confirmed` e ANTES de qualquer
-chamada ao engine (`offerInfraHandoff`/`offerDevHandoff`): uma recusa não
+chamada ao engine (`offerInfraHandoff`; o `offerDevHandoff` saiu na
+[RN-672](#rn-672)): uma recusa não
 pode deixar rastro de handoff meio-ofertado no event log, que é imutável.
 `StoryRepository` foi escolhido (e não `ListBacklogUseCase`) por ser mais
 leve — não precisa montar a árvore épico→história→tarefa para responder
@@ -9627,7 +9628,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:339`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:336`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:66` (`derrubar/3`);
@@ -13539,7 +13540,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:355` (o
-  dispatch de `container_start` consultando antes de propor), `:572`
+  dispatch de `container_start` consultando antes de propor), `:604`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14259,7 +14260,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:500`
+  `propose_infra_pr` perguntando antes do HALT), `:532`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14418,7 +14419,8 @@ o [ADR 0086](adr/0086-dev-lead-plano-suspende-para-aprovacao.md)):**
 5. **O handoff ao Dev Lead continua nascendo DEPOIS do de Infra.** O
    `:offer_dev_handoff` que chega com o turno de fechamento do Arquiteto em
    curso fica pendente e roda quando o turno fecha — sucesso, falha, crash ou
-   cancelamento.
+   cancelamento. *(Superado pela [RN-672](#rn-672): o Arquiteto não oferece
+   mais ao Dev Lead, e a pendência deixou de existir.)*
 
 **O que esta regra NÃO fecha:** o `chat.message` que a api grava antes de
 perguntar ao engine continua no log quando o engine recusa (agora explicado pelo
@@ -14677,7 +14679,8 @@ o engine — olhava o estado da sessão antes de gravar.
    desde a [RN-578](#rn-578) (ADR 0163) quem disparou o turno já recebeu `:ok`
    no aceite. Pelo mesmo motivo o `offer_dev_handoff` que o Arquiteto guardou
    para o fecho do turno NÃO roda quando o fecho é o da sessão — o handoff
-   seria recusado. O Infra Lead, que roda o turno dentro do `handle_call`, é
+   seria recusado (desde a [RN-672](#rn-672) não há mais o que guardar: o
+   handoff ao Dev Lead sai da Infra). O Infra Lead, que roda o turno dentro do `handle_call`, é
    morto se não sair em 5s.
 10. **A recusa nunca é calada no engine.** Quase todo chamador de
     `append_event/3` descarta o retorno; o cliente registra o 409
@@ -15233,8 +15236,8 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:419`
-  (`recusar_mensagem/5`) e `:420` (`registrar_recusa_de_mensagem/3`)
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:414`
+  (`recusar_mensagem/5`) e `:415` (`registrar_recusa_de_mensagem/3`)
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:124`
   (`infra`: o `agent.error` com a frase e o motivo), `:147` (nome desconhecido
   não vira ator), `:163`, `:178`, `:193` (sem sessão: nada gravado — caso de
@@ -15434,7 +15437,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:713`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:745`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:202`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15528,7 +15531,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:270`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:623`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:951`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:983`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:260` (a
   suspensão não grava), `:332` (a retomada grava o texto que o modelo leu),
@@ -15967,10 +15970,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:798`
-  (`recusa_local_de_subida`), `:851` (`recusa_por_estado`), `:875`
-  (`recusa_ja_de_pe`), `:893` (`recusa_sem_imagem_decidida`), `:910`
-  (`recusa_pasta_nunca_confirmada`), `:921` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:830`
+  (`recusa_local_de_subida`), `:883` (`recusa_por_estado`), `:907`
+  (`recusa_ja_de_pe`), `:925` (`recusa_sem_imagem_decidida`), `:942`
+  (`recusa_pasta_nunca_confirmada`), `:953` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16390,21 +16393,21 @@ manual endereça; o Infra Lead é lead de área e continua fora dela, e
 nem leitura de backlog — conversar com ele é conversar com o que o kickoff lhe
 deu e com as quatro ferramentas.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:175`
-  (`user_message`), `:195` (`TurnoOrfao.fechar_ao_subir`), `:231`
-  (`handle_cast(:kickoff`), `:253` (`handle_cast({:correct`, a fila), `:263`
-  (`handle_cast(:cancel`), `:279` (`handle_call({:user_message`), `:295`
-  (`handle_info`), `:314` (`drenar_correcao_pendente`), `:361`
-  (`toolloop.limit_reached`), `:974` (`concluir`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:187`
+  (`user_message`), `:207` (`TurnoOrfao.fechar_ao_subir`), `:248`
+  (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
+  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:327`
+  (`handle_info`), `:346` (`drenar_correcao_pendente`), `:393`
+  (`toolloop.limit_reached`), `:1006` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:464`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:459`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1590` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1675` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -16751,7 +16754,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   `apps/engine/lib/engine/sessions/engine_api_client.ex:609`
   (`IdiomaDaResposta`), `:679` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:404`
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:399`
   (`idioma_da_resposta`);
   `apps/engine/lib/engine/agents/criativo_server.ex:123` (`handle_call`, e a
   MESMA cláusula nos outros seis);
@@ -17616,7 +17619,7 @@ Duas leituras da tela de Sessão deixavam o handoff obsoleto (AT-293, AT-294):
 Nenhuma mudança de api nem de engine.
 
 - **Onde:** `apps/web/src/lib/session-handoffs.ts:41` (`origemDoHandoff`),
-  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:191`
+  `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:192`
   (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:140`
   (`useAtivosNoProjeto`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
@@ -17774,7 +17777,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:291`
   (`substituirOfertasAoAtivar`);
-  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:101`
+  `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
   `apps/engine/lib/engine/harness/tools/offer_handoff.ex:58`
   (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
@@ -18982,9 +18985,9 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:420`
-  (`dispatch_calls`), `:466` (`recusa_pr_repetida_no_lote`), `:1005`
-  (`registrar_subida`), `:1013` (`fechar_subida`), `:1031`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:452`
+  (`dispatch_calls`), `:498` (`recusa_pr_repetida_no_lote`), `:1091`
+  (`registrar_subida`), `:1099` (`fechar_subida`), `:1117`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19088,9 +19091,9 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (`handle_cast`),
-  `:571` (`propor_container_start`), `:634` (`subir_no_aceite`), `:676`
-  (`eleger_candidata`), `:1171` (`passo_da_subida`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:268` (`handle_cast`),
+  `:603` (`propor_container_start`), `:666` (`subir_no_aceite`), `:708`
+  (`eleger_candidata`), `:1257` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
@@ -19100,3 +19103,61 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
   (negada pela política), `:1469` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
+
+### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
+
+Decisão do dono em 01/10 ([ADR 0190](adr/0190-a-infra-sobe-o-container-no-aceite.md),
+AT-262). Até aqui "Confirmar arquitetura pronta" oferecia DOIS handoffs — à
+Infra e ao Dev Lead (FASE 14d, `handoff-duplo` em `docs/fluxo.yml`) —, e o Dev
+Lead podia ser aceito antes de existir o container em que os dev agents
+trabalham ([RN-502](#rn-502)). No uso real de 29/09 os dois nasceram da mesma
+confirmação (sessão `be70`, seq 252/254).
+
+1. **A confirmação de arquitetura oferece só à Infra.** `OfferInfraHandoffUseCase`
+   tem um destino (`infra`); o `offerDevHandoff` da porta do engine, a rota
+   `POST /internal/sessions/:id/agent/offer-dev-handoff` e o
+   `:offer_dev_handoff`/`handoff_dev_pendente` do Arquiteto deixaram de
+   existir. `ja_oferecido` passa a significar "a Infra já tinha oferta ou estava
+   ativa".
+2. **Quem oferece o Dev Lead é o servidor do Infra Lead**, por
+   `create_handoff_if_absent/5` (`infra → dev-lead`, ADR 0182): oferta pendente
+   em qualquer sessão do projeto volta como está, e Dev Lead já ativo (409
+   `agente_ja_ativo`) não é falha. Não é ferramenta: o modelo não decide quando
+   o Dev Lead entra.
+3. **Só com o container REGISTRADO `running`** (a leitura local de
+   `ProjectContainerLifecycle`). A pergunta é feita em dois momentos: no fim de
+   todo turno da Infra (`concluir`) — o caso comum, porque a subida do servidor
+   no aceite ([RN-671](#rn-671)) executa dentro do kickoff — e quando o
+   `container.running` do outbox chega fora de um turno (aprovação posterior,
+   `/containers`, `container_start_via_runner`): o `Engine.Outbox.Drain`
+   passa a enfileirar também o `Engine.Workers.InfraOfereceDevLeadWorker`, que
+   avisa por PubSub o Infra Lead do projeto.
+4. **Falha que não é "já atendido" é `agent.error` durável** com origem
+   ([RN-116](business-rules/custo.md#rn-116)), sem derrubar o turno; o fim do
+   próximo turno da Infra tenta de novo.
+
+Fica como estava: a segunda porta do repositório no aceite ao Dev Lead
+([RN-582](#rn-582)) — o aceite é o mesmo, só mudou quem oferece — e a
+ativação de execução encadeada no aceite (RN-161). Declarado: o aviso do
+outbox é at-most-once, como o `Engine.Dev.Wake`; sem Infra Lead de pé naquele
+instante, a oferta espera o fim do próximo turno dele.
+
+- **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
+  (`ALVOS_DA_CONFIRMACAO`);
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1036` (`oferecer_ao_dev_lead`),
+  `:1006` (`concluir`), `:317` (`handle_info`), `:1023`
+  (`topico_do_container`);
+  `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
+  `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1490`
+  (container `running` no fim do turno: oferece — caminho feliz), `:1504`
+  (sem `running`: não oferece — caso de falha), `:1515` (o aviso fora de
+  turno), `:1532` (o aviso com turno em curso), `:1544` (409 não é falha; 500
+  vira `agent.error`);
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs:256` (o Arquiteto
+  não oferece mais ao Dev Lead);
+  `apps/engine/test/engine/workers/infra_oferece_dev_lead_worker_test.exs:9`;
+  `apps/engine/test/engine/outbox/drain_test.exs:266`;
+  `apps/api/test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts:104`,
+  `:147`
+- **Origem:** AT-262 (item A16 da análise do uso real de 29/09)
