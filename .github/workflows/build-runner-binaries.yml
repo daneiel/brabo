@@ -459,6 +459,14 @@ jobs:
           # que está sendo assinado aqui.
           cp "${GITHUB_WORKSPACE}/install.sh" .
 
+          # A oferta escrita de fonte (AT-120): o binário standalone embute o
+          # runtime do Bun e as dependências do runner, e quem o baixa da
+          # Release não tem o repositório. O MESMO `THIRD_PARTY_NOTICES.md` que
+          # as cinco imagens levam em `/usr/share/doc/brabo/` viaja aqui como
+          # asset, no MESMO manifesto assinado dos binários. Do checkout desta
+          # tag, pelo motivo do `install.sh` acima.
+          cp "${GITHUB_WORKSPACE}/THIRD_PARTY_NOTICES.md" .
+
           # Os arquivos que o `install.sh` baixa para SUBIR a instalação
           # (ADR 0160, RN-570): o compose e o que ele monta. Entram no MESMO
           # manifesto, e é isso que dá a eles a mesma cadeia do binário — o
@@ -493,7 +501,7 @@ jobs:
           # por linha, e nenhum nome tem espaço (o script recusa a tabela que
           # tiver).
           # shellcheck disable=SC2086
-          sha256sum brabo-runner-* install.sh $ASSETS_DO_INSTALADOR > checksums.txt
+          sha256sum brabo-runner-* install.sh THIRD_PARTY_NOTICES.md $ASSETS_DO_INSTALADOR > checksums.txt
           echo "cobre:${presentes}" >&2
           if [ -n "${faltando# }" ]; then
             echo "::warning::o manifesto NÃO cobre:${faltando} — esses alvos não têm binário anexado a $TAG."
@@ -526,5 +534,5 @@ jobs:
           # contrário do binário, cujo passo é idempotente porque o mesmo
           # arquivo não muda.
           # shellcheck disable=SC2086
-          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh $ASSETS_DO_INSTALADOR --clobber
-          echo "anexados: checksums.txt, checksums.txt.bundle, install.sh e os assets do instalador -> $TAG"
+          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh THIRD_PARTY_NOTICES.md $ASSETS_DO_INSTALADOR --clobber
+          echo "anexados: checksums.txt, checksums.txt.bundle, install.sh, THIRD_PARTY_NOTICES.md e os assets do instalador -> $TAG"

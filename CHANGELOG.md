@@ -114,6 +114,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   confirmação de revogar em Configurações e na Conta troca o "outro runner
   seu também cai" por "só cai o que se conectou com ESTA chave". Sem ação do
   operador: a migration roda no job de sempre.
+- **release**: **a oferta escrita de fonte viaja em TODO artefato publicado**
+  (AT-120, BRB-017; decisão do mantenedor em 01/10). Até aqui só a imagem do
+  engine carregava o `THIRD_PARTY_NOTICES.md` (AT-020). Agora as imagens
+  `brabo-api`, `brabo-web`, `brabo-broker` e `brabo-backup` o copiam na MESMA
+  forma — `/usr/share/doc/brabo/THIRD_PARTY_NOTICES.md`, do root, `0644`, antes
+  do `USER` —, e o job `checksums` de `build-runner-binaries.yml` o anexa à
+  Release dos binários do runner, dentro do mesmo `checksums.txt` assinado
+  (RN-524). Conservador: nenhum artefato é declarado dispensado. O `ci.yml` lê
+  o arquivo de volta de cada uma das cinco imagens que constrói e o compara
+  com o do checkout; `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` guarda o
+  `COPY` no estágio final de cada Dockerfile e o asset da Release. Achado no
+  caminho e corrigido junto: na imagem do ENGINE a oferta existia mas não se
+  LIA — o BuildKit aplica o `--chmod=0644` também à pasta que o `COPY` cria, e
+  `/usr/share/doc/brabo` nascia sem o bit de execução, então o comando de
+  conferência documentado (`docker run … cat`, como o `USER` da imagem) dava
+  "Permission denied" (medido). A pasta agora nasce antes, por
+  `RUN install -d -m 0755`, nas cinco.
 
 - **engine**: **o plano de teste nasce DEPOIS da entrega do dev** (AT-269,
   [ADR 0192](docs/adr/0192-plano-de-teste-depois-da-entrega.md),

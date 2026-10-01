@@ -4256,7 +4256,7 @@ binaries — macOS notarization and Windows Authenticode. Those need a paid
 signing identity and are a separate backlog item; the OS will still warn on
 first run.
 
-### The written offer of source, inside the engine image {#oferta-de-fonte-na-imagem}
+### The written offer of source, inside every published artifact {#oferta-de-fonte-na-imagem}
 
 Signing answers *"is this what the pipeline published?"*. A second question
 travels with the same image and has a different answer: **where is the source
@@ -4278,10 +4278,33 @@ docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:vX.Y.Z \
 ```
 
 It names every component, its exact version and its licence, which is what
-lets anyone reach the upstream release of each one. If that file is missing
-from an image, the image should not be distributed — `scripts/ci/oferta-de-fonte-na-imagem.spec.ts`
-keeps the `COPY` from being removed by accident, but only a real tag proves the
-published artifact.
+lets anyone reach the upstream release of each one.
+
+Since AT-120 the same file, in the same path and the same form (root-owned,
+`0644`, copied before the `USER`), ships inside **every** published image —
+`brabo-api`, `brabo-web`, `brabo-broker` and `brabo-backup` as well as
+`brabo-engine` — and next to the runner binaries as the
+`THIRD_PARTY_NOTICES.md` asset of the Release, covered by the same signed
+`checksums.txt` (RN-524). That was the maintainer's decision, and it is the
+conservative one: no artifact is declared exempt. Swap `brabo-engine` for any
+of the other four in the command above. Before AT-120 that command failed with
+"Permission denied" on the engine image: BuildKit applies `COPY --chmod=0644`
+to the directory the `COPY` creates too, so `/usr/share/doc/brabo` had no
+execute bit and the image's non-root user could not traverse it. Each
+Dockerfile now creates the directory `0755` first. For the runner:
+
+```bash
+gh release download vX.Y.Z --repo daneiel/brabo \
+  --pattern THIRD_PARTY_NOTICES.md --pattern checksums.txt
+sha256sum -c --ignore-missing checksums.txt
+```
+
+If that file is missing from an artifact, the artifact should not be
+distributed. `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps each `COPY`
+and the Release asset from being removed by accident, and the
+`A oferta de fonte está dentro das cinco imagens` step of `ci.yml` reads the
+file back out of each image it builds and compares it with the checkout — but
+only a real tag proves the published artifact.
 
 The file also records what is **not** settled: separating the scanners into
 their own sidecar, leaving the engine image free of copyleft, stays open as an
@@ -4548,6 +4571,6 @@ workflow in **schedule** does not have the trigger the cell claims
 | Install | [Installing](#instalando) | `.github/workflows/install-e2e.yml` (clean machine) and `scripts/dev/install*.spec.ts`; the migration path end to end: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the specs) |
 | Turn the installation's broker on or off | [The container broker in an installation](#broker-na-instalacao) | at install: `scripts/dev/install-broker.spec.ts` and `.github/workflows/install-e2e.yml`; turning it on later by hand, and off: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the spec); manual (later, and off) |
 | Verify a published artifact | [Verifying a published artifact](#verificar-artefato-publicado) | the publishing workflows verify what they signed, in the same run: `.github/workflows/release.yml` (`cosign verify`) and `.github/workflows/build-runner-binaries.yml` (`cosign verify-blob`) | every tag `.github/workflows/release.yml` `.github/workflows/build-runner-binaries.yml` |
-| Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps the `COPY`; the published image carrying the file: none | every PR `.github/workflows/ci.yml` (the spec); manual (the published image) |
+| Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps each `COPY` and the Release asset; the five images built from the PR, read back by `.github/workflows/ci.yml`; the published artifacts carrying the file: none | every PR `.github/workflows/ci.yml` (the spec and the built images); manual (the published artifacts) |
 | Bump a third-party image | [Bumping a third-party image](#subindo-imagem-de-terceiro) | `scripts/ci/imagens-pinadas.ts`, `scripts/ci/imagens-pinadas.spec.ts` and `scripts/ci/imagens-do-compose.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Add a compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) | steps 2–4: `apps/api/test/contract/llm-provider.contract.ts`, run by each provider's contract spec; step 6, with a real credential: none in CI — the smoke specs skip without a key | every PR `.github/workflows/ci.yml` (steps 2–4); manual (step 6) |
