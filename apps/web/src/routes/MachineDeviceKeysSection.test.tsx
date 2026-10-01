@@ -19,8 +19,9 @@ import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
  * ela deixa de SINCRONIZAR:
  *
  * 1. **O alcance.** Revogar uma de máquina derruba o agente local em TODOS os
- *    projetos do dono em modo runner; a confirmação tem de dizer isso antes
- *    do clique.
+ *    projetos do dono em modo runner em que ele se conectou com ELA — e, desde
+ *    o ADR 0201, só o que se conectou com ela; a confirmação tem de dizer isso
+ *    antes do clique.
  * 2. **Os vazios.** Carregando, falhou, vazio, revogada e nunca usada são
  *    cinco estados com cinco textos (RN-088/RN-470), e "ativa" nunca vira
  *    "conectada".
@@ -144,7 +145,9 @@ describe('MachineDeviceKeysSection (RN-611)', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Revoke thinkpad-do-dani' }));
     expect(screen.getByText(/drops the local agent in EVERY project/)).toBeInTheDocument();
-    expect(screen.getByText(/reaches \{project, user\}/)).toBeInTheDocument();
+    // ADR 0201 (RN-685): o alvo é a CHAVE — a frase do alvo antigo não volta.
+    expect(screen.getByText(/^Only what connected with THIS key falls/)).toBeInTheDocument();
+    expect(screen.queryByText(/\{project, user\}/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
 

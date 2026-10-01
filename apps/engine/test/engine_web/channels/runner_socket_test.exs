@@ -45,4 +45,41 @@ defmodule EngineWeb.RunnerSocketTest do
     assert {:error, %{reason: "unauthorized"}} =
              connect(EngineWeb.RunnerSocket, %{"ticket" => bruto})
   end
+
+  describe "a credencial no socket (ADR 0201, RN-685)" do
+    test "ticket com credencial: ela vai para o assign, e o id do socket a carrega" do
+      project_id = Ecto.UUID.generate()
+      user_id = Ecto.UUID.generate()
+      chave = Ecto.UUID.generate()
+      credencial = SocketTicket.credencial("device_key", chave)
+      {:ok, %{ticket: bruto}} = SocketTicket.emitir(project_id, user_id, "runner", credencial)
+
+      assert {:ok, socket} = connect(EngineWeb.RunnerSocket, %{"ticket" => bruto})
+
+      assert socket.assigns.credencial == %{kind: "device_key", id: chave}
+
+      assert EngineWeb.RunnerSocket.id(socket) ==
+               "runner_socket:runner:#{project_id}:#{user_id}:device_key:#{chave}"
+    end
+
+    test "duas credenciais do MESMO usuário no MESMO projeto têm ids DIFERENTES — o disconnect de uma não alcança a outra" do
+      a = EngineWeb.RunnerSocket.socket_id("runner", "p", "u", %{kind: "device_key", id: "k1"})
+      b = EngineWeb.RunnerSocket.socket_id("runner", "p", "u", %{kind: "pat", id: "t1"})
+
+      refute a == b
+    end
+
+    test "sem credencial (terminal, legado do rollout) o id é o de antes" do
+      project_id = Ecto.UUID.generate()
+      user_id = Ecto.UUID.generate()
+      {:ok, %{ticket: bruto}} = SocketTicket.emitir(project_id, user_id, "terminal")
+
+      assert {:ok, socket} = connect(EngineWeb.RunnerSocket, %{"ticket" => bruto})
+
+      assert socket.assigns.credencial == nil
+
+      assert EngineWeb.RunnerSocket.id(socket) ==
+               "runner_socket:terminal:#{project_id}:#{user_id}"
+    end
+  end
 end

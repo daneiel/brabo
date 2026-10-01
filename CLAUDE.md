@@ -190,6 +190,8 @@ estado lido do repositório e não da conversa.
 | O chat decide o que os agentes propuseram noutra sessão, retoma o turno do log e propõe o merge (AT-256/268/265/266) | RN-626 |
 | O container do projeto roda com o dono da pasta, medido pela api e revalidado pelo broker (AT-247) | ADR 0180, RN-627 |
 | A Infra sobe o container com o menor recurso elegível, derivado do `module_map` (AT-261) | ADR 0199, RN-683 |
+| O contrato entre módulos vira artefato do Arquiteto, e o dev o lê em vez do worktree alheio (AT-276) | ADR 0200, RN-684 |
+| A oferta de fonte em todo artefato publicado — as cinco imagens e a Release do runner (AT-120, BRB-017) | runbook, The written offer of source |
 | O plano de teste nasce depois da entrega do dev, e o `implementavel` se julga sem ele (AT-269) | ADR 0192, RN-674 |
 | O git credenciado roda no host do runner, o código no container (AT-116, prova AT-111) | ADR 0193, RN-676 |
 | A mensagem com turno em curso entra numa fila persistida no log e é lida no fim do turno (AT-267) | ADR 0191, RN-673 |
@@ -240,6 +242,9 @@ estado lido do repositório e não da conversa.
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
 | A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
+| O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
+| A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
+| O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |
 
 ## Estado atual e aberto
 
@@ -613,12 +618,19 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   invalidar só a própria deixa o painel anunciando a revogada. Segue aberto: a
   rota que CRIA chave de máquina só serve instalação de UMA pessoa (409 com
   duas ou mais), então instalação com time não tem por onde criar chave de
-  máquina — declarado, não acaso. (2) O ALVO da revogação continua sendo
-  `{projeto, usuário}` e NUNCA `{chave}` (RN-520): a tela DIZ isso na
-  confirmação e não muda: outro runner seu no mesmo projeto cai junto, mesmo
-  com PAT ou outra chave, e reconecta se a credencial ainda valer. Mudar o
-  alvo exige coluna nova em `runner_socket_tickets` e contrato novo de auth —
-  frente própria, com ADR. (3) A visão de `maintainer` (listar/revogar de
+  máquina — declarado, não acaso. (2) O ALVO da revogação deixou de ser
+  `{projeto, usuário}` e passou a ser a CHAVE (RN-685, ADR 0201, revisando a
+  RN-520): `runner_socket_tickets` guarda QUAL credencial pediu o ticket
+  (`credential_kind`/`credential_id`, nuláveis — `terminal` e ticket de api
+  anterior não têm), o socket a guarda em `assigns` e no `id`, e a revogação
+  de chave ou de PAT pede `POST /internal/runner/disconnect-credential`, que
+  anula os tickets pendentes dela e pergunta a TODO runner do cluster se nasceu
+  dela — outro runner seu, com PAT ou outra chave, fica de pé, e a confirmação
+  da tela diz isso. NÃO apague as duas peças de transição: a conexão LEGADA
+  (ticket sem credencial) cai pelo par nos projetos que a api manda, e engine
+  sem a rota faz a revogação de chave voltar ao par — sem elas a revogação
+  deixaria de derrubar o que derrubava (RN-519). O par
+  `runner/disconnect` continua, como alvo da remoção de membro (RN-615). (3) A visão de `maintainer` (listar/revogar de
   qualquer usuário) segue FORA por DECISÃO da RN-519, não por omissão.
   Desde a RN-548 o web também CONSOME essa
   listagem para outra pergunta — `RunnerOnboardingPanel` reconhece máquina já
@@ -736,32 +748,41 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
   prova. Não "ligue de passagem"
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- Binário standalone: DOIS dos QUATRO alvos chegam à Release. `v4.0.1` e
-  `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
-  `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
-  `v4.0.0` FOI corrigida, com espera de teto 600s em
-  `build-runner-binaries.yml`. O que falta são os outros dois, e são DUAS
-  causas distintas: `win32-x64` e `darwin-arm64` reprovam no BUILD por motivo
-  próprio de plataforma (o `.node` do `node-pty` fora de `build/Release`;
-  `--self-test-pty` com `posix_spawnp failed`), e as duas correções JÁ ESTÃO
-  na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca exercitadas — o que
-  falta aí é uma TAG, não uma sessão. Não medido, mas o issue do Bun
-  (oven-sh/bun#25822, o `onData` do `node-pty` que nunca dispara) foi aberto
-  em darwin ARM64: é provável que o `darwin-arm64` esbarre nele depois do
-  conserto do `spawn-helper`, e aí "falta uma TAG" não bastaria. O quinto
-  alvo, `darwin-x64` (Mac Intel), SAIU por decisão do mantenedor (ADR 0174,
-  AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse bug do Bun
-  que reprova, com a MESMA prova passando sob Node — e ali só com `chmod +x`
-  no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a AT-114 o
-  runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
+- Binário standalone: TRÊS alvos na matriz desde o ADR 0187, os três PROVADOS
+  em ensaio, e DOIS chegando à Release. `v4.0.1` e `v5.0.0` anexam
+  `brabo-runner-linux-x64` e `-linux-arm64` (medido com `gh release view`) — a
+  corrida com o `release.yml` que derrubava o anexo na `v4.0.0` FOI corrigida,
+  com espera de teto 600s em `build-runner-binaries.yml`. O `darwin-arm64`
+  CONSTRÓI e passa o smoke em ensaio (`workflow_dispatch` com tag vazia, runs
+  36779817686 e 36805241339): o que o derrubava era o oven-sh/bun#25822, MEDIDO —
+  sob o Bun o `tty.ReadStream` com que o `node-pty` lê o PTY morre no primeiro
+  `EAGAIN` do fd não-bloqueante, e o terminal do binário parava depois do
+  primeiro pedaço nas três plataformas Unix (o Linux passava na prova por sorte
+  de tempo). Sob o Bun o runner lê o PTY com leitor próprio
+  (`apps/runner/src/leitor-de-pty.ts`, RN-688), e o `--self-test-pty` faz uma
+  segunda volta depois de uma pausa, que reprova o leitor antigo também no
+  Linux — falta só uma TAG para ele chegar à Release. O `win32-x64` SAIU por
+  decisão do mantenedor (ADR 0187, AT-343), no molde do Mac Intel: quatro
+  ensaios (36775746724, 36779817686, 36780804339, 36781729045) o levaram até
+  carregar o `node-pty` (o caminho virtual `B:/~BUN/root/`, também sem os
+  dois-pontos, reconhecido em `apps/runner/src/binario-compilado.ts` — fica,
+  é o ponto de partida da volta), e a SONDA do auto-teste mediu que sob o Bun
+  o pipe de saída do ConPTY termina depois do primeiro pedaço: até
+  `cmd.exe /c echo` morre com 0xC000013A. O `darwin-x64` (Mac Intel) saiu antes
+  (ADR 0174, AT-065): `macos-13` não tem runner e no `macos-15-intel` é esse
+  bug do Bun que reprova, com a MESMA prova passando sob Node — e ali só com
+  `chmod +x` no `spawn-helper`, que o `node-pty@1.1.0` traz em `0644`; desde a
+  AT-114 o runner acrescenta esse bit sozinho ao carregar o `node-pty` sob Node
   (`apps/runner/src/spawn-helper.ts`, só darwin, erro nomeado se falta ou o
-  `chmod` é recusado), provado por teste e NUNCA num macOS real. O Mac Intel usa
-  `npm install -g @brabo/runner`: o `install.sh` diz isso sem baixar, o proxy
-  recusa `darwin-x64` com 400 próprio e o navegador nem pede o download. Os
+  `chmod` é recusado), provado por teste e NUNCA num macOS real. Mac Intel e
+  Windows usam `npm install -g @brabo/runner`: o proxy recusa os dois com 400
+  próprio (`SEM_BINARIO_POR_DECISAO`, nome e ADR por plataforma), o navegador
+  nem pede o download, o `install.sh` diz isso sem baixar no Mac Intel e, no
+  Windows, na recusa que ele já fazia da instalação inteira (ADR 0150). Os
   quatro lugares que enumeram alvos (matriz, `PLATAFORMAS` da api, o `case` do
   `install.sh`, a lista do web) são amarrados por
-  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel é ADR novo,
-  depois de o Bun corrigir, nunca só trocar o label
+  `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel ou o Windows é ADR
+  novo, depois de o Bun corrigir, nunca só devolver as linhas da matriz
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
   fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
   primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
@@ -1875,6 +1896,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
   na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
   atores externos) vem do tool call.
+- O CONTRATO entre módulos também é artefato do ARQUITETO
+  (`artifact.module_contracts`, versionado, sem tabela, o vigente substitui —
+  RN-684, ADR 0200), e é SEPARADO do `module_map` de propósito: não o
+  transforme em campo do mapa. Por módulo ele diz só o que o módulo EXPÕE; o
+  que ele consome é o `dependsOn` do mapa, derivado na leitura. O dev agent o
+  lê por `listar_contratos_de_modulos` (sem parâmetro, `ctx.module`), e o
+  kickoff dele diz que a interface de outro módulo NÃO se lê no worktree alheio.
 - `decision_record` é o outro polo do mesmo espectro: reusa o padrão
   GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
   `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —
@@ -2501,6 +2529,14 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o runbook em inglês tem a tabela: a tradução pt-BR está atrás (AT-209) e uma
   segunda cópia sem conferência seria a cópia que a tabela existe para
   substituir.
+- O índice de ADR é agrupado por TEMA, e o tema mora FORA do ADR (ADR 0202,
+  AT-137): `docs/adr/temas.yml` tem a lista fechada (15 temas) e UM tema por
+  ADR. ADR novo ganha a linha dele ali e a linha do índice na seção do tema, em
+  ordem numérica, no MESMO PR — o `docs:check`
+  (`scripts/docs/temas-de-adr.mjs`, `block`) reprova ADR sem tema, tema fora
+  da lista ou sem ADR, e linha na seção errada. O índice é CONFERIDO, nunca
+  gerado (as frases são curadas). Tema novo é mudança da lista, justificada no
+  PR; passar de 15 exige ADR.
 - Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
   operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
   fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de

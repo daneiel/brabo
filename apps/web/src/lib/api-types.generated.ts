@@ -501,6 +501,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/module-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The contracts between modules, for a dev agent to read (RN-684)
+         * @description One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.
+         */
+        get: operations["InternalProjectsController_moduleContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/product-metrics": {
         parameters: {
             query?: never;
@@ -916,6 +936,26 @@ export interface paths {
          * @description Refuses to propose a cap equal to or lower than the current one: the Anamnesis runs periodically, and would re-propose the same thing every round, filling with noise a queue the user needs to read.
          */
         post: operations["InternalSessionsController_maxParallelProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/module-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declares a new version of the contracts between modules
+         * @description The artifact IS the `artifact.module_contracts` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Each call carries the WHOLE list and replaces the previous version. What a module consumes is not written here: it is the current module_map's `dependsOn`.
+         */
+        post: operations["InternalSessionsController_moduleContracts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2364,7 +2404,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga um Personal Access Token próprio
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.
          */
         delete: operations["PersonalAccessTokensController_revokePat"];
         options?: never;
@@ -2384,7 +2424,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga o Personal Access Token de QUALQUER usuário no projeto
-         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.
+         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.
          */
         delete: operations["PersonalAccessTokensController_revokePatAsMaintainer"];
         options?: never;
@@ -2648,7 +2688,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -3393,7 +3433,7 @@ export interface paths {
         };
         /**
          * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
+         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
         put?: never;
@@ -3540,7 +3580,7 @@ export interface paths {
         post?: never;
         /**
          * Revokes one of the authenticated user’s own MACHINE device keys
-         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the caller’s local agent in EVERY project in runner mode they reach (RN-520/RN-543). The target is `{project, user}`, never `{key}`: another runner of the same user in those projects falls too, and reconnects if its credential is still valid. With no project yet, it only records the revocation. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
+         * @description Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the LIVE connections opened with this key, in EVERY project (RN-520/RN-543). Since RN-685 (ADR 0201) the target is the KEY: another runner of the same user, connected with a PAT or with another key, stays up. The key’s still-unused tickets are voided. With no project yet there is no connection to drop. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.
          */
         delete: operations["MachineDeviceKeysController_revokeMachineDeviceKey"];
         options?: never;
@@ -5414,6 +5454,55 @@ export interface components {
              */
             imagemVersao: number;
         };
+        ContratoDeModuloInternalDto: {
+            /**
+             * @description Module name — must exist in the current module_map.
+             * @example board-engine
+             */
+            modulo: string;
+            /** @description What the module exposes to whoever depends on it. 1 to 40. */
+            expoe: components["schemas"]["ItemDeContratoInternalDto"][];
+        };
+        ContratoDeModuloResponseDto: {
+            /** @example board-engine */
+            modulo: string;
+            expoe: components["schemas"]["ItemDeContratoResponseDto"][];
+        };
+        ContratoLidoDeModuloResponseDto: {
+            /** @example game-session */
+            modulo: string;
+            /**
+             * @description The current module_map's `dependsOn`: what this module CONSUMES.
+             * @example [
+             *       "board-engine",
+             *       "scoring"
+             *     ]
+             */
+            dependeDe: string[];
+            /** @description What it exposes. `null` = the Architect declared no contract for this module (different from exposing nothing). */
+            expoe: components["schemas"]["ItemDeContratoResponseDto"][] | null;
+        };
+        ContratosDeclaradosResponseDto: {
+            contratos: components["schemas"]["ContratoDeModuloResponseDto"][];
+            /** @example 1 */
+            version: number;
+        };
+        ContratosDoProjetoResponseDto: {
+            /** @enum {string} */
+            status: "sem_contratos" | "declarados";
+            /**
+             * @description 0 when there is no contract.
+             * @example 2
+             */
+            version: number;
+            /** @description One per module of the CURRENT module_map, in map order. */
+            modulos: components["schemas"]["ContratoLidoDeModuloResponseDto"][];
+            /**
+             * @description Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.
+             * @example []
+             */
+            contratosForaDoMapa: string[];
+        };
         ConvertExecutionModeDto: {
             /**
              * @description O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.
@@ -5896,6 +5985,12 @@ export interface components {
              */
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
+        DeclareModuleContractsInternalDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** @description The WHOLE contract list: each call is a new version that replaces the previous one. What a module CONSUMES is not here — it is derived from the current module_map's `dependsOn` when read. */
+            contratos: components["schemas"]["ContratoDeModuloInternalDto"][];
         };
         DelegationResponseDto: {
             /**
@@ -6660,6 +6755,32 @@ export interface components {
              * @example brb_9f8a...
              */
             token: string;
+        };
+        ItemDeContratoInternalDto: {
+            /**
+             * @description How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.
+             * @example funcao
+             * @enum {string}
+             */
+            tipo: "funcao" | "rota" | "evento" | "dado";
+            /**
+             * @description How another module uses it. Up to 300 characters.
+             * @example placePiece(board: Board, piece: Piece, pos: Pos): Board
+             */
+            assinatura: string;
+            /** @example Returns a new board; never mutates the one passed in. */
+            descricao?: string;
+        };
+        ItemDeContratoResponseDto: {
+            /**
+             * @example funcao
+             * @enum {string}
+             */
+            tipo: "funcao" | "rota" | "evento" | "dado";
+            /** @example placePiece(board: Board, piece: Piece, pos: Pos): Board */
+            assinatura: string;
+            /** @example Returns a new board; never mutates the one passed in. */
+            descricao: string;
         };
         JwksResponseDto: {
             /** @description Active public Ed25519 keys. Two during a rotation. */
@@ -11007,6 +11128,34 @@ export interface operations {
             };
         };
     };
+    InternalProjectsController_moduleContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContratosDoProjetoResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalProjectsController_productMetrics: {
         parameters: {
             query?: never;
@@ -11975,6 +12124,52 @@ export interface operations {
                 };
             };
             /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_moduleContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclareModuleContractsInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContratosDeclaradosResponseDto"];
+                };
+            };
+            /** @description Empty list, repeated module, module outside the current module_map (or no module_map), a module with an empty or oversized `expoe`, an item with an unknown `tipo`, or a missing/oversized `assinatura`. */
             400: {
                 headers: {
                     [name: string]: unknown;

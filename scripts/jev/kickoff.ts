@@ -20,7 +20,7 @@ import type { Historia, Modulo, Tarefa } from './dados.ts';
 const lista = (itens: readonly string[]): string => (itens.length === 0 ? '(nenhum declarado)' : itens.map((i) => `- ${i}`).join('\n'));
 const listaOuNenhum = (itens: readonly string[]): string => (itens.length === 0 ? '(nenhum)' : itens.map((i) => `- ${i}`).join('\n'));
 
-/** `apps/engine/lib/engine/dev/dev_agent_server.ex:481` (`initial_message/2`). */
+/** `apps/engine/lib/engine/dev/dev_agent_server.ex:484` (`initial_message/2`). */
 export function kickoffDoDev(tarefa: Pick<Tarefa, 'title'>, historia: Pick<Historia, 'title'> | null): string {
   return (
     `Implemente a task "${tarefa.title}" da story "${historia?.title ?? ''}". ` +
@@ -30,7 +30,10 @@ export function kickoffDoDev(tarefa: Pick<Tarefa, 'title'>, historia: Pick<Histo
     'IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código ' +
     'nem JSON na sua resposta em texto, e não explique o que pretende fazer — ' +
     'chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. ' +
-    'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.'
+    'Toda resposta sua deve conter pelo menos uma chamada de ferramenta.\n\n' +
+    'A interface de OUTRO módulo (o que ele expõe e de quais o seu depende) é o ' +
+    'contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, ' +
+    'nunca no worktree ou no código de outro dev agent.'
   );
 }
 

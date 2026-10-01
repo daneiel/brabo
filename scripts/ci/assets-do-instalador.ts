@@ -86,6 +86,9 @@ export const NOMES_QUE_A_RELEASE_JA_USA: readonly string[] = [
   'checksums.txt',
   'checksums.txt.bundle',
   'images.json',
+  // A oferta escrita de fonte (AT-120), anexada pelo job `checksums` ao lado
+  // dos binários do runner.
+  'THIRD_PARTY_NOTICES.md',
 ];
 export const PREFIXOS_QUE_A_RELEASE_JA_USA: readonly string[] = ['brabo-runner-'];
 

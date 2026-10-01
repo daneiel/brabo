@@ -943,6 +943,115 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  describe "revogação por CREDENCIAL (ADR 0201, RN-685)" do
+    defp conectar_com_credencial!(project_id, user_id, credencial) do
+      {:ok, %{ticket: bruto}} = SocketTicket.emitir(project_id, user_id, "runner", credencial)
+
+      socket =
+        socket_com_assigns(%{
+          ticket: bruto,
+          project_id: project_id,
+          user_id: user_id,
+          kind: "runner",
+          credencial: credencial
+        })
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      # Mesmo motivo do describe acima: em produção o transporte MONITORA o
+      # canal, não há link que mate o processo de teste junto.
+      Process.unlink(joined.channel_pid)
+      Process.monitor(joined.channel_pid)
+      joined
+    end
+
+    test "a conexão aberta COM a chave revogada cai, e a presença no Registry é liberada" do
+      project_id = Ecto.UUID.generate()
+      dono = Ecto.UUID.generate()
+      chave = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      joined = conectar_com_credencial!(project_id, dono, chave)
+
+      assert {:ok, %{derrubados: 1}} = Revogacao.derrubar_credencial(chave, dono, [project_id])
+
+      assert_receive {:DOWN, _ref, :process, pid, _motivo}, 1_000
+      assert pid == joined.channel_pid
+      wait_until(fn -> not Registry.connected?(project_id) end)
+    end
+
+    test "CASO DE FALHA do alvo antigo: runner do MESMO usuário no MESMO projeto, aberto com PAT, NÃO cai" do
+      project_id = Ecto.UUID.generate()
+      dono = Ecto.UUID.generate()
+      pat = SocketTicket.credencial("pat", Ecto.UUID.generate())
+      chave_revogada = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      joined = conectar_com_credencial!(project_id, dono, pat)
+
+      assert {:ok, %{derrubados: 0, legados: 0}} =
+               Revogacao.derrubar_credencial(chave_revogada, dono, [project_id])
+
+      refute_receive {:DOWN, _ref, :process, _pid, _motivo}, 100
+      assert Process.alive?(joined.channel_pid)
+      assert Registry.connected?(project_id)
+    end
+
+    test "chave de MÁQUINA: cai em TODO projeto em que abriu conexão, sem a api listar nenhum" do
+      dono = Ecto.UUID.generate()
+      maquina = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      [p1, p2] = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+      conectar_com_credencial!(p1, dono, maquina)
+      conectar_com_credencial!(p2, dono, maquina)
+
+      # Lista de projetos VAZIA de propósito: a credencial é perguntada a todo
+      # runner do cluster, não aos projetos que a api soube listar.
+      assert {:ok, %{derrubados: 2}} = Revogacao.derrubar_credencial(maquina, dono, [])
+
+      wait_until(fn -> not Registry.connected?(p1) and not Registry.connected?(p2) end)
+    end
+
+    test "conexão LEGADA (ticket sem credencial, do rollout) do mesmo dono cai pelo par — e só nos projetos listados" do
+      dono = Ecto.UUID.generate()
+      chave = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      [listado, fora] = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+      conectar_com_credencial!(listado, dono, nil)
+      fora_joined = conectar_com_credencial!(fora, dono, nil)
+
+      assert {:ok, %{derrubados: 0, legados: 1}} =
+               Revogacao.derrubar_credencial(chave, dono, [listado])
+
+      wait_until(fn -> not Registry.connected?(listado) end)
+      assert Process.alive?(fora_joined.channel_pid)
+    end
+
+    test "o ticket pedido ANTES da revogação e ainda não usado não entra depois dela" do
+      project_id = Ecto.UUID.generate()
+      dono = Ecto.UUID.generate()
+      chave = SocketTicket.credencial("device_key", Ecto.UUID.generate())
+      {:ok, %{ticket: bruto}} = SocketTicket.emitir(project_id, dono, "runner", chave)
+
+      assert {:ok, %{tickets_anulados: 1}} =
+               Revogacao.derrubar_credencial(chave, dono, [project_id])
+
+      socket =
+        socket_com_assigns(%{
+          ticket: bruto,
+          project_id: project_id,
+          user_id: dono,
+          kind: "runner",
+          credencial: chave
+        })
+
+      assert {:error, %{reason: "unauthorized"}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+    end
+
+    test "credencial fora de forma não mira nada e não levanta" do
+      assert {:ok, %{derrubados: 0, tickets_anulados: 0}} =
+               Revogacao.derrubar_credencial(%{kind: "outra", id: "x"}, nil, [])
+
+      assert {:ok, %{derrubados: 0}} = Revogacao.derrubar_credencial(nil, nil, nil)
+    end
+  end
+
   defp wait_until(fun, tentativas \\ 50)
 
   defp wait_until(_fun, 0), do: flunk("condição não ficou verdadeira a tempo")

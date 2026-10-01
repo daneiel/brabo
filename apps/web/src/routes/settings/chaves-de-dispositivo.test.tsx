@@ -258,8 +258,12 @@ describe('chaves de dispositivo — revogar diz o ALCANCE antes de agir', () => 
     expect(
       screen.getByText(/^Esta é uma chave de MÁQUINA/),
     ).toBeInTheDocument();
-    // E o custo colateral da RN-520, que vale para as duas espécies.
-    expect(screen.getByText(/\{projeto, usuário\}/)).toBeInTheDocument();
+    // E a PRECISÃO do ADR 0201 (RN-685), que vale para as duas espécies: o
+    // alvo é a chave, e a frase antiga ("{projeto, usuário}") não pode voltar.
+    expect(
+      screen.getByText(/^Só cai o que se conectou com ESTA chave/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\{projeto, usuário\}/)).not.toBeInTheDocument();
 
     // Nada saiu antes de confirmar: o modal é a confirmação, não um aviso
     // depois do fato.

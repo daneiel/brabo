@@ -4,8 +4,8 @@ name: Build runner binaries
 # build --compile)"), até agora fora de escopo. Workflow PRÓPRIO, disparado
 # pela MESMA tag final de `release.yml`/`publish-runner.yml` — mesma
 # disciplina do ADR 0030 ("workflow PRÓPRIO disparado pela tag... nada a
-# religar aqui"). Quatro binários (um por plataforma — o Mac Intel saiu no
-# ADR 0174 e fica com o pacote npm), cada um construído no seu runner
+# religar aqui"). Três binários (um por plataforma — o Mac Intel saiu no
+# ADR 0174 e o Windows no ADR 0187, os dois com o pacote npm), cada um construído no seu runner
 # NATIVO — nunca cross-compila addon nativo — e anexado à MESMA GitHub
 # Release que `release.yml` cria (`gh release upload`, nunca `create`).
 #
@@ -24,14 +24,15 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        # VAZIA = ENSAIO: constrói e roda o smoke nas quatro plataformas a
+        # VAZIA = ENSAIO: constrói e roda o smoke nas três plataformas a
         # partir da branch escolhida, e NÃO anexa nada a Release nenhuma.
         #
         # Existe porque estes binários só eram construídos numa tag, e foi
         # assim que duas falhas de plataforma ficaram invisíveis até o corte:
         # `darwin-arm64` no `--self-test-pty` (o `spawn-helper` não era
         # embutido) e `win32-x64` no `build:bin` (o `.node` está no prebuild,
-        # não em `build/Release`). Nenhuma das duas aparece no Linux.
+        # não em `build/Release`). Nenhuma das duas aparece no Linux. Foi
+        # também por ele que o `win32-x64` saiu (ADR 0187): quatro ensaios.
         description: 'Tag final a (re)construir (ex.: v1.2.0). VAZIA = ensaio, sem anexar nada.'
         required: false
         type: string
@@ -43,7 +44,7 @@ env:
   NODE_VERSION: '24.11.1'
   PNPM_VERSION: '11.3.0'
   # `oven-sh/setup-bun` aceita "latest", mas fixar a versão evita que uma
-  # release do Bun quebre os quatro builds ao mesmo tempo sem aviso — mesmo
+  # release do Bun quebre os três builds ao mesmo tempo sem aviso — mesmo
   # raciocínio que já vale para NODE_VERSION/PNPM_VERSION no resto do repo.
   BUN_VERSION: '1.4.0'
 
@@ -58,7 +59,7 @@ jobs:
     name: Binário (${{ matrix.target }})
     strategy:
       # `fail-fast: false` — uma plataforma falhando não deve impedir as
-      # outras três de publicar o binário delas. O ADR 0112 documenta
+      # outras duas de publicar o binário delas. O ADR 0112 documenta
       # exatamente qual plataforma foi validada de ponta a ponta neste
       # sandbox (só linux-x64) e quais dependem só desta matriz para a
       # primeira prova real.
@@ -85,17 +86,22 @@ jobs:
           # novo, depois de o Bun corrigir — não é trocar o label.
           - target: darwin-arm64
             os: macos-14
-          - target: win32-x64
-            os: windows-latest
+          # `win32-x64` SAIU da matriz por decisão (ADR 0187, AT-343). Os
+          # ensaios por `workflow_dispatch` (runs 36775746724, 36779817686,
+          # 36780804339, 36781729045) levaram o binário até carregar o
+          # node-pty, e aí o ConPTY entrega só as sequências iniciais: sob o
+          # Bun o `net.Socket` do pipe nomeado de saída dá `end,close` depois
+          # do primeiro pedaço, o node-pty fecha o pseudoconsole e o filho
+          # morre com 0xC000013A. Sob Node o mesmo node-pty é o do VS Code, e o
+          # Windows fica com `npm install -g @brabo/runner`. Religar é ADR
+          # novo, com prova em ensaio — não é devolver estas duas linhas.
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     defaults:
       run:
-        # O default do windows-latest é `pwsh` — os passos abaixo são bash
-        # de propósito (mesma sintaxe `set -euo pipefail` do resto do repo),
-        # e o `windows-latest` do GitHub já traz um bash utilizável (Git
-        # Bash) sob `C:\Program Files\Git\bin\bash.exe`, que é o que
-        # `shell: bash` resolve.
+        # Bash de propósito (mesma sintaxe `set -euo pipefail` do resto do
+        # repo). Enquanto o `windows-latest` estava na matriz (até o ADR 0187)
+        # isto também tirava dele o default `pwsh`.
         shell: bash
     steps:
       # Mesma restrição de `publish-runner.yml`/`release.yml`: quem
@@ -129,7 +135,7 @@ jobs:
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] && [ -z "$ENTRADA" ]; then
             # ENSAIO: constrói a partir do que foi escolhido no dispatch e não
-            # anexa nada. Sem isto, a única forma de exercitar as quatro
+            # anexa nada. Sem isto, a única forma de exercitar as três
             # plataformas era cortar uma tag — e uma falha de plataforma só
             # aparecia com a Release já publicada.
             echo 'ensaio=true' >> "$GITHUB_OUTPUT"
@@ -271,8 +277,8 @@ jobs:
   # anexaram — e é por isso que este job baixa os assets da Release em vez de
   # ler `dist-bin/`, que aqui está vazio.
   #
-  # Quatro assinaturas separadas seriam quatro jeitos de a verificação ficar
-  # pela metade: quem verifica três e esquece o quarto não tem como saber
+  # Três assinaturas separadas seriam três jeitos de a verificação ficar
+  # pela metade: quem verifica duas e esquece a terceira não tem como saber
   # que esqueceu. Um manifesto assinado cobre o conjunto com uma verificação
   # só, e é o formato que qualquer consumidor sabe ler.
   #
@@ -320,12 +326,13 @@ jobs:
       contents: write # anexar o manifesto e o bundle à Release
       id-token: write # assinar keyless (a identidade é ESTE workflow)
     env:
-      # Os quatro alvos da matriz acima (o `darwin-x64` saiu no ADR 0174).
+      # Os três alvos da matriz acima (o `darwin-x64` saiu no ADR 0174 e o
+      # `win32-x64` no ADR 0187).
       # Escrito aqui de novo, de propósito: é contra ESTA lista que a ausência é declarada, e uma lista derivada do
       # que foi baixado nunca acusaria falta nenhuma. No JOB e não no passo
       # porque agora são DOIS passos que a leem — quem espera e quem declara —,
       # e duas cópias divergiriam no dia em que a matriz mudasse.
-      ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-arm64 win32-x64'
+      ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-arm64'
     steps:
       - name: Qual tag
         id: alvo
@@ -382,7 +389,7 @@ jobs:
       #    `release.yml` leva).
       # 2. Os binários. Ausência aqui é ESPERADA e não é erro: é justamente o
       #    caso que o manifesto sabe declarar. O laço PARA cedo quando os
-      #    quatro chegam — que é o caminho feliz e o mais rápido — e desiste no
+      #    três chegam — que é o caminho feliz e o mais rápido — e desiste no
       #    teto quando algum não chega.
       #
       # O teto dos binários é 1200s = os `timeout-minutes: 20` do próprio job
@@ -459,6 +466,14 @@ jobs:
           # que está sendo assinado aqui.
           cp "${GITHUB_WORKSPACE}/install.sh" .
 
+          # A oferta escrita de fonte (AT-120): o binário standalone embute o
+          # runtime do Bun e as dependências do runner, e quem o baixa da
+          # Release não tem o repositório. O MESMO `THIRD_PARTY_NOTICES.md` que
+          # as cinco imagens levam em `/usr/share/doc/brabo/` viaja aqui como
+          # asset, no MESMO manifesto assinado dos binários. Do checkout desta
+          # tag, pelo motivo do `install.sh` acima.
+          cp "${GITHUB_WORKSPACE}/THIRD_PARTY_NOTICES.md" .
+
           # Os arquivos que o `install.sh` baixa para SUBIR a instalação
           # (ADR 0160, RN-570): o compose e o que ele monta. Entram no MESMO
           # manifesto, e é isso que dá a eles a mesma cadeia do binário — o
@@ -486,14 +501,14 @@ jobs:
             exit 1
           fi
 
-          # O manifesto DIZ o que cobre. Um checksums que lista três e cala
-          # sobre o quarto é pior que nenhum: quem verifica os três conclui
+          # O manifesto DIZ o que cobre. Um checksums que lista dois e cala
+          # sobre o terceiro é pior que nenhum: quem verifica os dois conclui
           # que verificou a release.
           # `$ASSETS_DO_INSTALADOR` sem aspas de propósito: é uma lista, um nome
           # por linha, e nenhum nome tem espaço (o script recusa a tabela que
           # tiver).
           # shellcheck disable=SC2086
-          sha256sum brabo-runner-* install.sh $ASSETS_DO_INSTALADOR > checksums.txt
+          sha256sum brabo-runner-* install.sh THIRD_PARTY_NOTICES.md $ASSETS_DO_INSTALADOR > checksums.txt
           echo "cobre:${presentes}" >&2
           if [ -n "${faltando# }" ]; then
             echo "::warning::o manifesto NÃO cobre:${faltando} — esses alvos não têm binário anexado a $TAG."
@@ -526,5 +541,5 @@ jobs:
           # contrário do binário, cujo passo é idempotente porque o mesmo
           # arquivo não muda.
           # shellcheck disable=SC2086
-          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh $ASSETS_DO_INSTALADOR --clobber
-          echo "anexados: checksums.txt, checksums.txt.bundle, install.sh e os assets do instalador -> $TAG"
+          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh THIRD_PARTY_NOTICES.md $ASSETS_DO_INSTALADOR --clobber
+          echo "anexados: checksums.txt, checksums.txt.bundle, install.sh, THIRD_PARTY_NOTICES.md e os assets do instalador -> $TAG"

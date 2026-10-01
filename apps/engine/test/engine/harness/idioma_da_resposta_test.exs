@@ -233,6 +233,7 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
       Tools.ChooseProjectImage.spec(),
       Tools.CreateC4Diagram.spec(),
       Tools.RouteModulesToInfra.spec(),
+      Tools.DeclareModuleContracts.spec(),
       Tools.ProposeAdr.spec(),
       Tools.EmitInsight.spec(),
       DevLeadTools.spec(),

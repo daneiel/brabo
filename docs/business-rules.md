@@ -5639,7 +5639,7 @@ tocado. Os quatro corrigidos passam a emitir `toolloop.limit_reached`
 (mesmo evento do PO, mesmo payload `iteration`/`max_iterations`) antes de
 retornar — nenhuma mudança na estrutura de `dispatch_tool` de cada um.
 
-- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:193`,
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:195`,
   `dev_lead_server.ex:244`, `ux_designer_server.ex:121`,
   `staff_server.ex:113`
 - **Teste:** `apps/engine/test/engine/agents/{arquiteto,dev_lead,
@@ -8551,7 +8551,7 @@ sessão — o segundo não é a versão "séria" do primeiro, é outra ferrament
 para outra escala de decisão.
 
 **Wiring nos cinco conversacionais que ainda não tinham `emit_artifact`** —
-PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:102`), Dev Lead
+PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:103`), Dev Lead
 (`dev_lead_server.ex:153`), UX Designer (`ux_designer_server.ex:94`) e Staff
 (`staff_server.ex:94`); o Criativo já tinha a ferramenta desde a Fase 3b, só
 ganhou o tipo novo (é o `known/0` compartilhado quem decide, sem mudança no
@@ -9587,6 +9587,15 @@ ALCANCE ([RN-520](#rn-520)), não amplitude.
 ---
 
 ### RN-520 — Revogar deixa de só impedir ticket NOVO e passa a derrubar a conexão VIVA; o alvo é `{projeto, usuário}` e nunca `{chave}`, e derrubar nunca derruba a revogação {#rn-520}
+
+> **Revisada pela [RN-685](#rn-685) ([ADR 0201](adr/0201-revogacao-por-chave.md)):**
+> o ticket do socket passou a guardar QUAL credencial o pediu, e a revogação de
+> chave (e a de PAT) derruba só as conexões abertas COM ELA — outro runner do
+> mesmo usuário, com outra chave ou com PAT, fica de pé. O "custo declarado"
+> abaixo deixou de valer. O par `{projeto, usuário}` sobrevive como o alvo da
+> remoção de membro ([RN-615](#rn-615)), como o da conexão LEGADA (ticket sem
+> credencial) durante o rollout, e como o plano B quando o engine não conhece a
+> rota por credencial.
 
 A outra metade do **ponto 6** do
 [ADR 0147](adr/0147-agente-local-com-capacidades.md). Revogar uma chave de
@@ -13666,9 +13675,11 @@ pode depender dela — é justamente por depender dela que ele não saía.
   antes de anexar, `id-token: write`, o `install.sh` no manifesto). É ESTÁTICO,
   e o limite é declarado no topo do arquivo: o job só se prova numa tag final,
   e nunca rodou em nenhuma
-- **Lacuna DECLARADA:** a matriz é de quatro alvos desde o ADR 0174 e a Release
-  continua recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na
-  `dev` nunca exercitada. O manifesto vai nascer cobrindo dois e vai
+- **Lacuna DECLARADA:** a matriz é de TRÊS alvos desde o
+  [ADR 0187](adr/0187-runner-sem-binario-win32-x64.md) (o `win32-x64` saiu pelo
+  mesmo molde do ADR 0174, e `ALVOS_ESPERADOS` acompanhou) e a Release
+  continua recebendo **dois** — o `darwin-arm64` está provado em ensaio
+  ([RN-688](#rn-688)) e só falta uma tag final exercitá-lo. O manifesto vai nascer cobrindo dois e vai
   **dizer** isso, que é a diferença entre parcial e silencioso. E, com a matriz
   falhando inteira, o job gasta as duas esperas antes de recusar
 - **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)
@@ -14384,9 +14395,9 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:983`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
-  `arquiteto_server.ex:86`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
+  `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
   `staff_server.ex:86`; as leituras por tipo — `criativo_server.ex:435`,
-  `po_server.ex:352`, `arquiteto_server.ex:311`, `dev_lead_server.ex:431`,
+  `po_server.ex:352`, `arquiteto_server.ex:313`, `dev_lead_server.ex:431`,
   `ux_designer_server.ex:246`;
   `apps/api/src/interfaces/http/internal/leitura-interna-de-eventos.ts:24`,
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:306`,
@@ -14471,7 +14482,7 @@ handoff).
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:241`
   (202), `:243`/`:253`/`:263` (409/409/422);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:211`;
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:158` (adiar), `:200`
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:160` (adiar), `:202`
   (drenar); `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:591`,
   `:612`; `apps/web/src/lib/session-turno.ts:33` (`turnoTerminouNoLog`),
   `:349` (`acompanharTurnoPeloLog`), `:316`;
@@ -17097,7 +17108,7 @@ a decisão de adoção, com os números, também.
    `ToolLoop` põe na frente (`apps/engine/lib/engine/harness/tool_loop.ex:98`,
    `system_msg`, montada por `system_prompt/1` em `:316`); `pedido` = a última
    mensagem `user` — nos agentes de execução a mensagem inicial do laço
-   (`apps/engine/lib/engine/dev/dev_agent_server.ex:481`, `initial_message/2`,
+   (`apps/engine/lib/engine/dev/dev_agent_server.ex:484`, `initial_message/2`,
    ou a de correção em `:523`), nos conversacionais a fala da pessoa; e
    `passos_recentes` = as 6 últimas chamadas de ferramenta depois dessa
    mensagem, uma entrada por chamada, argumento e resultado cortados em 500
@@ -19890,3 +19901,228 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx:177`
 - **Origem:** AT-254 (item A8 da análise do uso real de 2026-09-29), decisão do
   dono de 01/10
+
+### RN-684 — O contrato entre módulos é artefato versionado do Arquiteto, e o dev agent o lê pela ferramenta, nunca no worktree de outro dev {#rn-684}
+
+Decisão do dono (01/10), registrada no
+[ADR 0200](adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md). No uso
+real de 29/09, `dev-board-engine` gastou 5 dos seus 24 passos com ferramenta
+lendo o worktree de outros módulos para descobrir a interface deles: o
+`module_map` diz quem depende de quem, nunca o que um módulo expõe. Aplica a
+[RN-164](business-rules/autenticacao.md#rn-164) aos dev agents.
+
+1. **O artefato é `artifact.module_contracts`**, sem tabela, como o
+   `module_routing` e o `c4_diagram`: o vigente é o de maior `version`, com
+   desempate por `seq`. Cada declaração leva a lista INTEIRA e SUBSTITUI a
+   anterior; mudar contrato é versão nova do Arquiteto.
+2. **Por módulo, só o que ele EXPÕE**: `{modulo, expoe: [{tipo, assinatura,
+   descricao}]}`, `tipo` em `funcao | rota | evento | dado`, `assinatura`
+   obrigatória (até 300 caracteres), de 1 a 40 itens. O que ele CONSOME é o
+   `dependsOn` do `module_map` vigente, derivado na leitura — nunca redigitado.
+3. **A api recusa com 400 e o motivo inteiro** (que volta ao modelo, RN-061):
+   lista vazia, módulo repetido, módulo fora do `module_map` vigente (listando
+   os válidos) ou sem `module_map`, `expoe` vazio ou acima de 40, `tipo`
+   desconhecido, `assinatura` vazia ou acima de 300. Nada é gravado.
+4. **Artefato SEPARADO do `module_map`**, nunca um campo dele: revisar um não
+   reemite o outro.
+5. **O dev lê por `listar_contratos_de_modulos`**, `:direct`, no registro de
+   `Engine.Dev.Tools`: escopo do projeto pela rota, NENHUM parâmetro, o módulo
+   do dev vindo de `ctx.module`. Mostra por inteiro o dele e os que ele
+   consome; quem o consome e os demais, só pelo nome; teto de 120 itens com o
+   corte dito. Contrato de módulo que saiu do mapa é DITO, nunca atribuído.
+6. **O kickoff do dev diz onde ler a interface de outro módulo**, e que não é
+   no worktree de outro dev agent. Sem contrato para um módulo mostrado, a
+   ferramenta manda implementar pelo que a story e a task dizem e, se faltar
+   interface, `report_blocked` nomeando o módulo — nunca reler o worktree.
+
+- **Código:** `apps/api/src/domain/architecture/module-contracts.ts:110`
+  (`validarContratos`);
+  `apps/api/src/application/use-cases/architecture/declare-module-contracts.use-case.ts:55`
+  (`execute`), `:80` (`missingModules`);
+  `apps/api/src/application/use-cases/architecture/get-module-contracts.use-case.ts:23`
+  (`execute`);
+  `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
+  (`execute`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:622`
+  (`moduleContracts`);
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
+  (`moduleContracts`);
+  `apps/engine/lib/engine/harness/tools/declare_module_contracts.ex:91` (`run`);
+  `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
+  (`run`), `:66` (`renderizar`);
+  `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:434` (`module`), `:501`;
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
+- **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
+  (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
+  (módulo fora do mapa — caso de falha), `:222` (sem `module_map`), `:123`
+  (as recusas de domínio), `:239` e `:257` (a leitura do dev);
+  `apps/engine/test/engine/harness/tools/declare_module_contracts_test.exs:26`,
+  `:65` (recusa da api); `apps/engine/test/engine/harness/tools/listar_contratos_de_modulos_test.exs:71`,
+  `:76`, `:97`, `:109`, `:128`; `scripts/jev/kickoff.spec.ts:19`. Os testes
+  ExUnit não rodaram pelo `mix` neste ambiente (`repo.hex.pm` 403; rodaram
+  num harness avulso com os módulos compilados à mão); o CI os prova.
+- **Origem:** AT-276 (item A30 da análise do uso real de 2026-09-29), decisão
+  do dono de 01/10
+
+### RN-685 — Revogar uma credencial derruba só as conexões abertas COM ELA: o ticket do socket guarda a credencial, e o alvo deixa de ser `{projeto, usuário}` {#rn-685}
+
+Revisa a [RN-520](#rn-520). Até aqui, revogar uma chave de dispositivo derrubava
+a conexão viva do runner pelo par `{projeto, usuário}`, porque a identidade da
+credencial morria no `PatAuthGuard`: um runner do MESMO usuário conectado com
+PAT ou com outra chave caía junto, e a chave de MÁQUINA
+([RN-543](#rn-543)) multiplicava isso por projeto. Revogar um PAT não derrubava
+nada.
+
+**O ticket guarda QUAL credencial o pediu.** `runner_socket_tickets` (tabela do
+engine) ganha `credential_kind` (`device_key` | `pat`) e `credential_id` (o
+`kid`, que é o id do registro — [RN-475](#rn-475) —, ou o id do PAT), as duas
+NULÁVEIS: o ticket de `terminal` é da aba da web e não tem credencial de
+dispositivo, e o de `runner` emitido por uma api anterior chega sem ela. O
+`PatAuthGuard` anota a credencial DEPOIS de autorizar
+(`request.credencialDeDispositivo`), o ticket de `runner` a leva ao engine e o
+de `terminal` nunca leva; par incompleto ou espécie desconhecida vira AUSENTE,
+nunca uma credencial inventada.
+
+**O socket guarda a credencial, e o id dele também.** `connect/3` põe
+`assigns.credencial`, e o id passa a ser
+`runner_socket:<kind>:<projectId>:<userId>:<espécie>:<id>` quando ela existe —
+o `disconnect` que o canal difunde para o próprio id alcança só aquela
+credencial.
+
+**A revogação de UMA credencial:**
+
+1. **anula os tickets PENDENTES dela** — o pedido feito segundos antes da
+   revogação não entra depois dela (`consumed_at`, o mesmo estado de "já
+   usado", nenhum estado novo);
+2. **pergunta a TODO runner do cluster** se ele nasceu desta credencial — só o
+   canal sabe —, e só quem nasceu dela cai. A chave de máquina é UM pedido, e
+   cai em todo projeto em que abriu conexão, inclusive num que a api não
+   listaria;
+3. responde um BALANÇO (`derrubados`, `legados`, `intocados`, `semResposta`,
+   `ticketsAnulados`) — zero derrubados é o caso normal da chave órfã
+   ([RN-519](#rn-519)).
+
+Vale para as três revogações: a de chave (por projeto e pela Conta,
+[RN-611](#rn-611)) e as duas de PAT (a do dono, [RN-426](#rn-426),
+e a do `maintainer`, [RN-427](#rn-427)).
+Revoga PRIMEIRO, derruba depois, e derrubar continua sendo efeito colateral que
+só LOGA — o `DELETE` segue 204 e idempotente.
+
+**O que já caía continua caindo** (a proibição da AT-013). A conexão LEGADA —
+ticket sem credencial — do mesmo dono, num dos projetos que a revogação de
+CHAVE manda como alcance (o da linha, ou os candidatos da máquina), cai pelo
+par como antes; o PAT não ganha alcance legado, porque não derrubava nada. E se
+o engine não conhece a rota por credencial (404 de um engine anterior), a
+revogação de chave volta ao par, `disconnectRunnerOfUser`, projeto a projeto.
+
+**O par `{projeto, usuário}` continua, com outro dono:** é o alvo da remoção de
+membro ([RN-615](#rn-615)), que tira a PESSOA, com a credencial que for.
+
+**A tela diz a precisão** ([RN-561](#rn-561)): a confirmação de revogar — chaves
+de dispositivo em Configurações e chaves de máquina na Conta — troca *"outro
+runner seu também cai"* por *"só cai o que se conectou com ESTA chave"*. Muda o
+rótulo, não o comportamento.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:151`
+  (`credencialDeDispositivo`, o PAT), `:236` (`credencialDeDispositivo`, a
+  chave);
+  `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts:67`
+  (`runnerTicket`);
+  `apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts:55`
+  (`execute`);
+  `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:71`
+  (`execute`), `:109` (`derrubarConexoesDaChave`);
+  `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
+  (`derrubarConexoesDoPat`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:599`
+  (`disconnectRunnerCredential`);
+  `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
+  (`anular_pendentes_da_credencial`);
+  `apps/engine/lib/engine/runners/revogacao.ex:131` (`derrubar_credencial`);
+  `apps/engine/lib/engine/runners/registry.ex:64` (`todos`);
+  `apps/engine/lib/engine_web/channels/runner_socket.ex:81` (`socket_id`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:772`
+  (`handle_info`), `:879` (`desfecho_da_revogacao_por_credencial`);
+  `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:58`
+  (`disconnect_credential`);
+  `apps/engine/priv/repo/migrations/20261001120000_add_credential_to_runner_socket_tickets.exs`;
+  `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:346`,
+  `apps/web/src/routes/MachineDeviceKeysSection.tsx:202`
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (`describe "o alvo da queda é a CHAVE"` — caminho feliz; `describe "CASO DE
+  FALHA: o engine não atende o pedido por chave"` — o plano B pelo par; a
+  máquina num pedido só);
+  `apps/api/test/application/use-cases/auth/machine-device-keys.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token.use-case.spec.ts`
+  e `revoke-personal-access-token-as-maintainer.use-case.spec.ts`;
+  `apps/api/test/interfaces/pat-auth.guard.spec.ts` (a credencial anotada nos
+  dois caminhos, e não anotada na recusa);
+  `apps/api/test/interfaces/http/runner/runner-tickets.guards.integration.spec.ts`
+  (o PAT real até o pedido ao engine);
+  `apps/api/test/application/use-cases/runner/request-runner-ticket.use-case.spec.ts`
+  (o `terminal` nunca leva credencial);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (`describe "o alvo é a CREDENCIAL"`, inclusive o 404 que LANÇA);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "revogação por CREDENCIAL"` — o canal real que cai, o PAT do mesmo
+  usuário que fica de pé, a máquina em dois projetos sem lista, o legado pelo
+  par, o ticket pendente anulado);
+  `apps/engine/test/engine/runners/socket_ticket_test.exs`,
+  `apps/engine/test/engine_web/channels/runner_socket_test.exs`,
+  `apps/engine/test/engine_web/controllers/runner_connection_command_controller_test.exs`
+  (200 com balanço, 400 de credencial fora de forma);
+  `apps/web/src/routes/settings/chaves-de-dispositivo.test.tsx`,
+  `apps/web/src/routes/MachineDeviceKeysSection.test.tsx` (a frase da precisão,
+  e a do alvo antigo que não volta)
+- **ADR:** [0201](adr/0201-revogacao-por-chave.md)
+- **Origem:** AT-013 (HS-008, EP-003), decisão do dono em 01/10. Fica
+  declarado e NÃO feito: o ticket SEM credencial (de api anterior) não é
+  anulado na revogação — não há o que comparar, e a janela é de 30 s, só no
+  rollout; e os testes ExUnit só rodam no CI (`repo.hex.pm` dá 403 no ambiente
+  em que foram escritos)
+
+### RN-688 — O binário do runner lê o PTY com leitor próprio sob o Bun, e o auto-teste prova a SEGUNDA leitura {#rn-688}
+
+Sob o Bun (o binário do `bun build --compile`, [ADR 0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)),
+o `tty.ReadStream` com que o `node-pty` lê o lado mestre do PTY é um
+`fs.ReadStream`, e a primeira leitura sem dados do fd não-bloqueante SOBE como
+`EAGAIN`: o stream se destrói, fecha o fd, e nenhum `onData` chega depois disso
+(oven-sh/bun#25822). O terminal interativo do binário parava depois do primeiro
+pedaço de saída nas TRÊS plataformas Unix; o Linux passava na prova só porque a
+primeira leitura já trazia o eco e a resposta juntos.
+
+**A regra:** sob o Bun e fora do Windows, o `spawn` do `node-pty` roda com o
+`tty.ReadStream` trocado por um leitor próprio que lê o MESMO fd com `fs.read`
+e, no `EAGAIN`, ESPERA e tenta de novo (de 4 ms, dobrando até 32 ms, voltando
+ao mínimo a cada dado); `EIO` ou zero bytes é fim. A troca vale só DURANTE o
+`spawn` e é restaurada mesmo quando ele lança; sob o Node o módulo volta
+INTACTO. O fd e o processo filho continuam os de verdade — nada simula saída.
+E o `--self-test-pty` faz DUAS voltas, a segunda depois de uma pausa sem nada a
+ler: é a pausa que força a leitura a passar por um `EAGAIN`, e é por ela que o
+leitor antigo reprova também no Linux. Quando reprova, o auto-teste diz por quê
+(pedaços, saída do filho, uma sonda num segundo PTY e os eventos do stream) — o
+veredito não muda.
+
+Foi a sonda que mediu o Windows: lá o lado de leitura é o pipe nomeado do
+ConPTY, aberto pelo `node-pty` como `net.Socket`, sem fd que o leitor possa
+assumir, e o pipe termina depois do primeiro pedaço — por isso o `win32-x64`
+saiu da matriz ([ADR 0187](adr/0187-runner-sem-binario-win32-x64.md)) em vez de
+ganhar contorno.
+
+- **Onde:** `apps/runner/src/leitor-de-pty.ts:60` (`precisaDoLeitorProprio`),
+  `:70` (`LeitorDeFdNaoBloqueante`), `:115` (`agendar`), `:152`
+  (`comLeitorDePtyProprio`); `apps/runner/src/native-pty-loader.ts:114`
+  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1268`
+  (`PAUSA_ENTRE_VOLTAS_MS`), `:1291` (`sondarPty`), `:1346`
+  (`rodarAutoTestePty`)
+- **Teste:** `apps/runner/src/leitor-de-pty.spec.ts:14` (só sob o Bun e fora do
+  Windows), `:23` (fora dele, o MESMO módulo), `:28` (troca só durante o
+  `spawn`, restaura quando ele lança — caso de falha), `:48` (as duas voltas de
+  um `cat` real, com `EAGAIN` entre elas); a prova de ponta a ponta é o
+  `smoke:bin` da matriz, verde em `darwin-arm64`, `linux-x64` e `linux-arm64`
+  no ensaio `36779817686`
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md),
+  [0187](adr/0187-runner-sem-binario-win32-x64.md)
+- **Origem:** AT-342, AT-343

@@ -198,7 +198,8 @@ export function MachineDeviceKeysSection() {
             {t('modal.body', { name: aRevogar.name })}
           </p>
           <p className={styles.sectionSubtitle}>{t('modal.alcance')}</p>
-          <p className={styles.sectionSubtitle}>{t('modal.colateral')}</p>
+          {/* Desde o ADR 0201 (RN-685) o alvo é a CHAVE: a tela diz a precisão, não mais um colateral. */}
+          <p className={styles.sectionSubtitle}>{t('modal.precisao')}</p>
           <div className={styles.acoes}>
             <Button variant="secondary" onClick={() => setARevogar(null)}>
               {t('modal.cancel')}

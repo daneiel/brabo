@@ -636,6 +636,27 @@ rate) — the PO's tool (`listar_metricas_de_produto`) names the three
 by name in the TEXT it returns to the model, never letting it conclude by
 omission that there is no gap.
 
+### What the dev agent reads: the contracts between modules
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/module-contracts` (**not** session-scoped) |
+
+The dev agent's read of the Architect's contracts
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)), so
+that it stops reading another module's worktree to discover an interface.
+Same design as the PO's reads: no parameter beyond the project, constant cost
+(the current `module_map` and one read by event type). The response has one
+entry per module of the CURRENT `module_map` — `modulo`, `dependeDe` (the
+map's `dependsOn`: what it consumes) and `expoe` (the current contract's
+items, or `null` when the Architect declared none) — plus
+`contratosForaDoMapa`, the contracts of modules the map no longer has, said
+and never attached to anything. `status: sem_contratos` with `version: 0` is a
+legitimate answer, not an error. The engine tool (`listar_contratos_de_modulos`)
+renders in full only the dev's own module and the ones it consumes, with a
+120-item cap that states what was cut.
+
 ### Where the project's workspace lives — and why READING still isn't a route
 
 The project's `execution_mode` ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
@@ -928,6 +949,7 @@ instead of inventing an image outside it.
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
 | POST | `/module-routing` |
+| POST | `/module-contracts` |
 | POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
@@ -984,6 +1006,22 @@ that exists in the current `module_map` — an unknown name, an empty list, or
 a repeated module all return `400` naming what's wrong. The Architect only
 CANDIDATES: electing among the candidates (or refusing all of them) is a
 later step, owned by Infra.
+
+`/module-contracts` is the Architect's `declare_module_contracts` tool
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)): per
+module of the CURRENT `module_map`, what it EXPOSES to whoever depends on it.
+Same caliber as `/module-routing` — the artifact IS the
+`artifact.module_contracts` event, with no table, versioned, and each call
+carries the WHOLE list and replaces the previous version. The body carries
+`contratos: [{modulo, expoe: [{tipo, assinatura, descricao}]}]`, `tipo` in
+`funcao | rota | evento | dado`. What a module CONSUMES is not in the body: it
+is the current `module_map`'s `dependsOn`, derived when read. An empty list, a
+repeated module, a module outside the current `module_map` (or none), an
+empty or oversized `expoe` (1 to 40 items), an unknown `tipo`, or a missing
+or oversized `assinatura` (300 characters) all return `400` naming the module
+and the item. It is a SEPARATE artifact from the `module_map`, never a field
+of it.
 
 **With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
 body: the use case returns `null` and NestJS serializes that as `content-length: 0`.
@@ -1318,7 +1356,8 @@ Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyS
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
-| POST | `/projects/:id/runner/disconnect` | drops the LIVE connection of that user's runner in the project ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — called when a device key is revoked; always `200`, with `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+| POST | `/projects/:id/runner/disconnect` | drops the LIVE connection of that user's runner in the project, whatever credential it used ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — since [ADR 0201](../adr/0201-revogacao-por-chave.md) called by member removal ([RN-615](../business-rules.md#rn-615)) and as the fallback of a key revocation; always `200`, with `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+| POST | `/runner/disconnect-credential` | drops every runner connection opened WITH one credential, in any project, and voids its pending tickets ([RN-685](../business-rules.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — called when a device key or a PAT is revoked. Body: `credentialKind` (`device_key` \| `pat`), `credentialId`, and, only for a LEGACY connection (ticket without a credential), `userId` + `projectIds`. `200` with the tally `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` only for a malformed credential |
 
 **`runner/disconnect` is the other half of a revocation, and it is the api that
 owns the decision.** `RevokeRunnerDeviceKeyUseCase` writes the revocation
@@ -1327,11 +1366,20 @@ runner falls and reconnects with the key still valid. The engine does NOT read
 the device-key table: it only reaches the channel pid
 (`Engine.Runners.Registry.whereis/1`), compares the `user_id` of that
 connection, drops the transport and stops. And the api does NOT talk to the
-channel. The target is `{project, user}` and never `{key}`, because
-`runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing else —
-the declared cost is in [RN-520](../business-rules.md#rn-520). Every outcome is
-a `200`: from the caller's side the `DELETE` is 204 and idempotent, and a
-revocation cannot fail because nobody happened to be connected.
+channel. Every outcome is a `200`: from the caller's side the `DELETE` is 204
+and idempotent, and a revocation cannot fail because nobody happened to be
+connected.
+
+**Since [ADR 0201](../adr/0201-revogacao-por-chave.md) the revocation's target
+is the CREDENTIAL, and `runner/disconnect-credential` is its route.**
+`runner_socket_tickets` records which credential asked for each ticket
+(`credential_kind`/`credential_id`, sent by the api as
+`credentialKind`/`credentialId` on `runner-tickets`), the socket keeps it in
+`assigns` and in its `id`, and the engine asks EVERY registered runner whether
+it was born from the revoked credential — a machine key has no project to
+address. Another runner of the same user, on a PAT or another key, stays up.
+The `{project, user}` route stays for member removal, and as the api's fallback
+when the engine answers the credential route with a 404.
 
 **The three `containers/*` routes are the mirror of `container-exec` below, in
 the opposite direction.** `container-exec` is the ENGINE asking the api to run

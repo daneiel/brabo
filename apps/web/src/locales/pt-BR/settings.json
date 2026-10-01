@@ -523,9 +523,9 @@
     "modal": {
       "title": "Revogar chave de dispositivo",
       "body": "Revogar “{{name}}” é definitivo: ela para de autenticar o agente local, e criar outra é um fluxo novo.",
-      "alcanceMaquina": "Esta é uma chave de MÁQUINA: ela atende todos os seus projetos em modo runner, e revogá-la derruba o agente local em todos eles — não só neste projeto.",
-      "alcanceProjeto": "Esta é uma chave de PROJETO: revogá-la derruba o agente local no projeto dela.",
-      "colateral": "Derrubar alcança {projeto, usuário} e nunca uma chave em particular: outro runner seu no mesmo projeto também cai, mesmo autenticado por outra credencial — e reconecta sozinho se a credencial dele ainda valer.",
+      "alcanceMaquina": "Esta é uma chave de MÁQUINA: ela atende todos os seus projetos em modo runner, e revogá-la derruba o agente local que se conectou com ela em todos eles — não só neste projeto.",
+      "alcanceProjeto": "Esta é uma chave de PROJETO: revogá-la derruba o agente local que se conectou com ela, no projeto dela.",
+      "precisao": "Só cai o que se conectou com ESTA chave: outro runner seu no mesmo projeto, autenticado por outra chave ou por um token, continua conectado. Um pedido de conexão feito com ela e ainda não usado também deixa de valer.",
       "cancel": "Cancelar",
       "confirm": "Revogar"
     }

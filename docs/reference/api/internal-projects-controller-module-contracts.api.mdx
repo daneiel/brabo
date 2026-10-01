@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-module-contracts
+title: "The contracts between modules, for a dev agent to read (RN-684)"
+description: "One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`."
+sidebar_label: "The contracts between modules, for a dev agent to read (RN-684)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"The contracts between modules, for a dev agent to read (RN-684)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/projects/{projectId}/module-contracts"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-module-contracts.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-module-contracts.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-module-contracts.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
