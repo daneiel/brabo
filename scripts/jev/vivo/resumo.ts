@@ -25,6 +25,21 @@ export const gastoDe = (rs: readonly RegistroDeExecucao[]): number => rs.reduce(
 /** Execução interrompida pelo teto de gasto não entra na tabela: ela não terminou por motivo do braço. */
 export const contaNaTabela = (r: RegistroDeExecucao): boolean => r.fim !== 'teto_de_gasto';
 
+/**
+ * Falha da CONTA ou da REDE no chat (chave sem limite, proxy que recusa,
+ * transporte que caiu): não é desfecho do braço, é a medição que não aconteceu.
+ * O `vivo.ts` NÃO grava essa execução — gravada, ela entraria na tabela como
+ * "a task não saiu" e a retomada nunca a repetiria (medido em 2026-10-01: com o
+ * limite da chave esgotado, as duas execuções do ensaio terminaram `erro` no
+ * primeiro passo com `HTTP 403` e foram contadas). Erro do PROVIDER com corpo
+ * 200 (`error` no JSON) segue sendo desfecho do modelo, como no engine.
+ */
+export const ERRO_DE_INFRA = /^(HTTP (401|402|403|407|429)\b|transporte:)/;
+export function falhaDeInfra(e: Pick<Execucao, 'passos'>): string | null {
+  for (const p of e.passos) if (p.erro && ERRO_DE_INFRA.test(p.erro)) return `passo ${p.iteracao}: ${p.erro}`;
+  return null;
+}
+
 const mediana = (xs: readonly number[]): number | null => percentil(xs, 50);
 const media = (xs: readonly number[]): number | null => (xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length);
 
