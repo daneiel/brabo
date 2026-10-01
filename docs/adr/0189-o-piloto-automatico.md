@@ -1,9 +1,10 @@
-# 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, e o escopo compara com a pasta real de execução
+# 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e "Sempre permitir" grava verbo + subcomando
 
 ## Status
 
-**Accepted.** 2026-10-01 (AT-259, AT-255 e AT-258, história HS-066, épico
-EP-030, rodada 35; decisão do dono de 01/10, escrita nas três atividades).
+**Accepted.** 2026-10-01 (AT-259, AT-255, AT-258 e AT-257 — esta fecha a
+AT-170 —, história HS-066, épico EP-030, rodada 35; decisão do dono de 01/10,
+escrita nas atividades).
 Referencia o [ADR 0167](0167-modo-automatico-libera-o-escopo-de-caminho.md)
 (o modo automático libera o escopo de caminho) e o
 [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) (o escopo de
@@ -125,6 +126,21 @@ chamada ao Docker. Somado às guardas que impedem a raiz de conter o checkout
 `scripts/dev/base-de-projetos.spec.ts`) e à recusa de executar sem container
 (RN-502/RN-507), o comando do piloto não alcança o checkout do Brabo.
 
+### 6. A unidade do "Sempre permitir": verbo + subcomando, por segmento
+
+Decisão do dono de 01/10 (AT-257, que fecha a AT-170 — o ponto 6 do ADR 0055,
+deixado aberto lá): o clique deixa de gravar o comando inteiro, byte a byte, e
+grava UM padrão por SEGMENTO do comando, na unidade VERBO + SUBCOMANDO
+(`npm test`, `git status`); argumento que não é palavra generaliza para o
+verbo (`cat src/x.ts` → `cat`); verbo + flag fica EXATO (é a forma, onde os
+achados Z/AD dizem que verbo e invocação divergem); e unidade que é prefixo de
+um teto da RN-418 (`git remote`, `gh pr`) fica exata, ou some se até o exato o
+for. As quatro sub-perguntas da AT-170 ficam respondidas: a unidade é esta; ela
+NÃO herda o allowlist de verbos (nenhuma lista de verbos nasce, e a dúvida entre
+argumento e subcomando cai do lado estreito); quem grava é o mesmo papel de
+hoje; e a precedência com a curinga é a do ponto 2. Detalhe na
+[RN-675](../business-rules.md#rn-675).
+
 ## Consequences
 
 - O cenário medido em 29/09 deixa de pedir aprovação: curinga + "Sempre
@@ -160,6 +176,11 @@ chamada ao Docker. Somado às guardas que impedem a raiz de conter o checkout
   5. A rede `egress` é `bridge`: o container alcança as portas que a máquina
      publica, inclusive as da api e do engine. Arquivos não; serviços, sim —
      atrás de autenticação.
+- "Sempre permitir" num composto passa a liberar os PRÓXIMOS compostos com os
+  mesmos verbos e subcomandos — inclusive, para verbo sem subcomando (`cat`,
+  `rm`, `cd`), o verbo com QUALQUER argumento. É a expansão que a AT-170
+  pedia que fosse decidida e não deduzida; fora do piloto o escopo de caminho
+  continua limitando onde, e os tetos continuam rodando depois do arquivo.
 - `git_push` e `pr_open` TIPADOS não são teto em `decide()`: a ativação semeia
   `auto_approve` para eles por `dev-<modulo>` (ADR 0053) e a curinga também os
   aprova; o que os segura é "Sempre permitir" recusar gravá-los (AT-320) e o

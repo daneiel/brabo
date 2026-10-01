@@ -423,7 +423,7 @@ back.
 The historical reason for the `deny` was concrete: "always allow" writes
 the pattern into `allow`, and a single click would be enough to reopen the
 door forever. That gap was closed AT THE SOURCE, not worked around:
-`ApproveAlwaysActionUseCase`/`patternForAction`
+`ApproveAlwaysActionUseCase`/`patternsForAction`
 (`apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`)
 REFUSE to write a pattern into `allow` for a terminal action with git
 external effect or a privileged command — the user still approves the
@@ -490,6 +490,23 @@ approval card hides the button for the same list (a copy checked against
 this one by test). This does NOT change `decide()` nor what activating
 execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
 each `dev-<module>` (see "What activating execution seeds").
+
+**The unit of the recorded pattern: verb + subcommand, one per segment
+([RN-675](../business-rules.md#rn-675), owner decision 01/10).** "Always
+allow" no longer records the whole command byte by byte: each segment of
+the command (split on `&&`, `||`, `;`, `|`, `&`, as `decide()` splits it)
+becomes one pattern — the verb plus its subcommand when the second token is
+a word (`npm test`, `git status`, `mix test`, `npx vitest`), the verb alone
+when it is an argument that is not a word (`cat src/x.ts` → `Terminal(cat)`,
+`cd ../lib` → `Terminal(cd)`), and the EXACT segment when the second token is
+a flag (`ls -la src`) or when the unit would be a prefix of an RN-418 cap
+(`git remote -v`, `gh pr list` stay exact). A segment that is a cap prefix
+even when exact (`git` alone) records nothing. `cd src/app && npm test`
+records `Terminal(cd)` and `Terminal(npm test)`, and the next
+`cd lib/core && npm test -- --coverage` runs without asking. Matching is
+still by token prefix, the caps still run after the file in `decide()`, and
+the path scope still applies outside auto mode. A module dev agent's click
+still goes to `agent_autonomy`, not to a pattern ([RN-509](../business-rules.md#rn-509)).
 
 ## Path scope
 
@@ -664,7 +681,7 @@ event** in `session_events`, with the real actor
 |---|---|---|
 | `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied`; `payload.reason` says which rule of `decide()` produced it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | the **user** who clicked | only on manual approval (including `approve_always`) |
-| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.pattern`, or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
+| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.patterns` (the patterns recorded, one per segment, [RN-675](../business-rules.md#rn-675)) and `payload.pattern` (the same list joined by ", "), or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
 | `proposed_action.denied` | the **user** who refused | with `payload.reason` |
 | `action.executed` / `action.failed` | `system` | execution outcome |
 

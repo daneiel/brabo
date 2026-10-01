@@ -4089,7 +4089,7 @@ por `permissions.json`.
 
 A condição que torna isto seguro — sem a qual o teto seria decorativo —
 é a metade que fecha "sempre permitir" NA FONTE:
-`ApproveAlwaysActionUseCase`/`patternForAction` recusam gravar padrão em
+`ApproveAlwaysActionUseCase`/`patternsForAction` recusam gravar padrão em
 `allow` pra ação de terminal com efeito externo git ou comando
 privilegiado. A instância específica ainda pode ser aprovada pelo fluxo
 normal (`ApproveActionUseCase`); só o clique que gravaria um padrão pra
@@ -19083,6 +19083,59 @@ lugares onde o modo é ligado: o cartão de lote dos Executores
   `apps/web/src/components/AgentCard.test.tsx:81`
 - **Origem:** AT-259 e AT-255 (itens A9 e A13 da análise do uso real de 29/09),
   decisão do dono de 01/10
+
+### RN-675 — "Sempre permitir" grava VERBO + SUBCOMANDO, um padrão por segmento do comando {#rn-675}
+
+Decisão do dono de 01/10 (AT-257, que fecha a AT-170 — o ponto 6 do ADR 0055,
+a unidade da generalização; [ADR 0189](adr/0189-o-piloto-automatico.md)). Até
+aqui o clique gravava o comando INTEIRO, byte a byte (`Terminal(<comando>)`):
+o próximo comando quase nunca era igual — 173 cliques no uso real de 29/09 —, e
+o composto virava UM padrão cujo conteúdo só casava o PRIMEIRO segmento, então
+`cd src && npm test` liberava só `cd src`.
+
+Agora cada SEGMENTO do comando (o mesmo corte de `decide()`: `&&`, `||`, `;`,
+`|`, `&`) vira um padrão, e a unidade é:
+
+- o verbo sozinho (`ls`) → o verbo;
+- verbo + palavra (`npm test`, `git status`, `mix test`, `npx vitest`) → os
+  dois. "Palavra" é letra no começo, sem `/`, `.`, `=`, glob nem flag; um
+  argumento que parece palavra (`cd src`) fica como subcomando — o lado
+  ESTREITO da dúvida, porque distinguir os dois exigiria uma lista de verbos,
+  que é o espaço que os achados Z/AD dizem não convergir;
+- verbo + argumento que não é palavra (`cat src/x.ts`, `cd ../lib`) → o verbo;
+- verbo + FLAG (`ls -la src`, `git -C /x status`) → o segmento EXATO: a forma
+  com flag é onde verbo e invocação divergem, e generalizar ali seria escolher
+  uma forma de dentro do código;
+- unidade que é PREFIXO de um teto da [RN-418](#rn-418) (`git remote`,
+  `gh pr`) → o segmento EXATO; e se até o exato é prefixo (`git` sozinho),
+  nenhum padrão para aquele segmento.
+
+O casamento continua o de sempre (prefixo de tokens), o clique sobre comando
+com efeito externo ou privilegiado continua recusado inteiro antes
+(`motivoDeRecusaDoSempreAprovar`, 400 `teto_do_sempre_permitir`), o teto de
+`decide()` roda depois do arquivo, e o escopo de caminho segue limitando ONDE
+fora do piloto ([RN-669](#rn-669)). Quem pode gravar é quem já podia (o papel
+do endpoint, inalterado); a precedência com o modo automático é a da
+[RN-670](#rn-670). O "Sempre permitir" de dev agent de módulo continua indo
+para `agent_autonomy` ([RN-509](#rn-509)), sem padrão. Só os padrões que
+FALTAM são gravados e narrados; o `permission.granted` leva `patterns` (a lista
+gravada) e `pattern` (a mesma lista unida por vírgula, para a timeline).
+
+- **Código:** `apps/api/src/domain/actions/pattern-for-action.ts:22`
+  (`patternsForAction`), `:62` (`unidadeDoSegmento`), `:43` (`SUBCOMANDO`);
+  `apps/api/src/domain/actions/external-effect.ts:237` (`padraoAlcancaTeto`);
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:277`
+  (`faltam`), `:315` (`patternsForAction`)
+- **Teste:** `apps/api/test/domain/actions/pattern-for-action.spec.ts:18`
+  (a unidade, caminho feliz), `:103` (segmento que é prefixo de teto não grava
+  nada — caso de falha); `apps/api/test/domain/actions/external-effect.spec.ts:11`
+  (`padraoAlcancaTeto`);
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts:936`
+  (o clique num composto libera o próximo com os mesmos verbos; outro
+  subcomando continua pedindo; composto que empurra segue recusado);
+  `apps/web/src/components/ApprovalCard.test.tsx:253` (a nota diz a unidade)
+- **Origem:** AT-257 (item A11 da análise do uso real de 29/09) e AT-170
+  (EP-025), decisão do dono de 01/10
 
 ### RN-663 — O merge de PR recusa a PR já mergeada e a proposta repetida; gate pendente é só aviso {#rn-663}
 

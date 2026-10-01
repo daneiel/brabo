@@ -634,6 +634,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api/web**: **"Sempre permitir" grava verbo + subcomando, um padrão por
+  segmento** (AT-257, que fecha a AT-170;
+  [RN-675](docs/business-rules.md#rn-675), ponto 6 do ADR 0055 decidido no
+  [ADR 0189](docs/adr/0189-o-piloto-automatico.md)). Até aqui o clique gravava
+  o comando inteiro, byte a byte — o próximo quase nunca era igual (173
+  cliques no uso real de 29/09) — e o composto virava um padrão que só casava
+  o primeiro segmento. Agora `cd src/app && npm test` grava `Terminal(cd)` e
+  `Terminal(npm test)`, e `cd lib/core && npm test -- --coverage` passa.
+  Verbo + flag (`ls -la`) fica exato, e a unidade que seria prefixo de um teto
+  da RN-418 (`git remote`, `gh pr`) também; o clique sobre push/PR/deploy/
+  `sudo` continua recusado inteiro. O `permission.granted` passa a levar
+  `patterns` (a lista gravada), e a nota do botão diz a unidade.
 - **api/web**: **o modo automático vira piloto automático, e "Sempre
   permitir" não o desliga mais** (AT-259, AT-255,
   [ADR 0189](docs/adr/0189-o-piloto-automatico.md),

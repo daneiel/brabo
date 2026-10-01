@@ -250,6 +250,13 @@ describe('ApprovalCard', () => {
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
   });
 
+  it('a nota de "sempre permitir" diz a unidade do padrão: verbo + subcomando, por segmento (RN-675)', () => {
+    render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+    expect(screen.getByTestId('nota-sempre-permitir')).toHaveTextContent(
+      'uma regra por segmento do comando, por verbo + subcomando',
+    );
+  });
+
   // RN-509 (Frente 2): "sempre permitir" de um Dev Agent de módulo escopa
   // `agent_autonomy` POR AGENTE, e a nota do card deve dizer isso — não
   // prometer o `permissions.json` de projeto inteiro que não é mais o
