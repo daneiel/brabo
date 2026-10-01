@@ -12,7 +12,9 @@
     "semTitulo": "(no title)",
     "verNoBacklog": "View in Backlog",
     "voce": "You",
-    "agenteGenerico": "agent"
+    "agenteGenerico": "agent",
+    "outroMembro": "Another member",
+    "autorDesconhecido": "Unknown author"
   },
   "topbar": {
     "voltarAoProjeto": "Back to project",
@@ -24,7 +26,12 @@
     "iniciarIdeacao": "Start ideation",
     "iniciarIdeacaoTitulo": "Brings the Creative in to lead this session's ideation — it hasn't joined yet",
     "encerrar": "Close",
-    "alternarPainel": "Toggle context panel"
+    "alternarPainel": "Toggle context panel",
+    "fecharPainel": "Close context panel",
+    "ajustes": "Model and language",
+    "ajustesAria": "Model, response language and budget for this session",
+    "perguntaDeIdiomaPendente": "there is a question about the response language",
+    "encerrarSessao": "Close the session"
   },
   "convite": {
     "criativa": {
@@ -46,22 +53,28 @@
     "placeholder": "Write a message… (Enter sends, Shift+Enter for a new line)",
     "enviar": "Send",
     "parar": "Stop",
-    "prontoParaProduzir": "I'm ready to build",
+    "prontoParaProduzir": "I'm ready — the need is validated",
+    "prontoParaProduzirExplica": "Closes readiness and the need validation, and calls the PO: it joins on its own once the Creative finishes the product brief",
     "prontoParaProduzirDesabilitado": "Capture at least one business rule with the Creative before confirming readiness",
     "confirmarArquitetura": "Confirm architecture ready",
     "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
-    "confirmarNecessidade": "Confirm need validated",
-    "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need"
+    "destinatarioLabel": "To",
+    "destinatarioPlaceholder": "Choose the agent…",
+    "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
+    "semAgente": "No agent in this session: the message goes to the model, without an agent."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
     "naoAtivada": "Session not activated yet.",
     "ativarSessao": "Activate session",
-    "statusGenerico": "Session {{status}} — can't send messages."
+    "statusGenerico": "Session {{status}} — can't send messages.",
+    "reabrir": "Reopen session",
+    "reabrirExplicacao": "Reopening brings the session back to active with everything it already had: the conversation, the business rules, the answered questions and the offers between agents. The previous closing stays on record.",
+    "reabrirExigeDeveloper": "Reopening the session requires the developer role in this workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Gathering information...",
-    "respostaVazia": "Empty response — event predating RN-059, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
+    "respostaVazia": "Empty response — event from an older version, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
     "modeloGerador": "Model that generated this response: {{modelName}}",
     "modeloNaoGravado": "This response was recorded without the model's name",
     "modeloNaoRegistrado": "model not recorded",
@@ -80,6 +93,8 @@
     "semMotivo": "no reason given"
   },
   "handoff": {
+    "aceiteAutomatico": "Accepted automatically: the backlog covers all {{regras}} business rules and the repository is local, so {{agente}} joined without a click.",
+    "aceiteAutomaticoFalhou": "The automatic accept of the handoff to {{agente}} failed: {{erro}}. Accept it from the offer card.",
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
@@ -90,7 +105,10 @@
     "infraBotao": "Accept the Infra handoff",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
-    "manualBotao": "Address handoff"
+    "manualBotao": "Address handoff",
+    "manualOrigem": "Manual handoff",
+    "foraDaJanelaTitulo": "{{de}} handed off to {{para}}",
+    "foraDaJanelaDetalhe": "This offer's event has already left the last 200 in the thread, so its button lives here."
   },
   "backlog": {
     "criouEpico": "created the epic",
@@ -114,8 +132,7 @@
     "erroIniciarIdeacao": "Could not start the ideation",
     "erroConfirmarProntidao": "Could not confirm readiness",
     "erroConfirmarArquitetura": "Could not confirm the architecture",
-    "necessidadeValidada": "Need validated",
-    "erroValidarNecessidade": "Could not validate the need",
+    "prontoRegistrado": "Need validated. The PO joins once the product brief is ready",
     "erroAceitarHandoff": "Could not accept the handoff",
     "handoffManualEnviado": "Handoff sent",
     "erroHandoffManual": "Could not send the handoff",
@@ -135,7 +152,9 @@
     "erroEnviarMensagem": "Could not send the message",
     "erroCancelarTurno": "Could not cancel the turn",
     "erroNoChat": "Chat error",
-    "aviso": "Warning"
+    "aviso": "Warning",
+    "levandoAExecucao": "Taking you to the execution session.",
+    "erroReabrirSessao": "Could not reopen the session"
   },
   "modal": {
     "devolverTitulo": "Return \"{{titulo}}\" to the PO?",
@@ -159,11 +178,13 @@
     "teto": "This panel reads the <b>{{lidos}}</b> events already loaded for this session. There are <b>{{anteriores}}</b> older ones — “Load older”, in the Event log, brings more, and the other sections grow along with it.",
     "regrasDeNegocio": "Business rules",
     "nadaAinda": "Nothing yet.",
-    "origemRefs": "origin: {{count}} ref(s)",
+    "origemRefs_one": "origin: {{count}} ref",
+    "origemRefs_other": "origin: {{count}} refs",
     "paginaAnterior": "Previous page of business rules",
     "proximaPagina": "Next page of business rules",
     "paginaDe": "{{atual}} of {{total}}",
     "artefatosGerados": "Artifacts generated",
+    "artefatosVazio": "No PR or backlog item in this session yet.",
     "arquivosTocados": "Files touched",
     "logDeEventos": "Event log",
     "eventoCitado": "Cited event",
@@ -175,5 +196,40 @@
     "passosDoTurno": "Turn steps",
     "passosCount_one": "{{count}} step",
     "passosCount_other": "{{count}} steps"
+  },
+  "pendencias": {
+    "titulo": "Pending decisions from other sessions in this project",
+    "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
+    "filas": {
+      "aprovacoes": "Approvals",
+      "merges": "PR merges"
+    },
+    "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
+    "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
+    "recorte": "Showing {{mostradas}} of {{total}} — the rest are in the Approvals tab.",
+    "semPapel": "Deciding here needs the developer role on the project. You can see the item, but someone else decides.",
+    "motivoNaoLido": {
+      "todas_one": "The policy reason for this card could not be read: reading the log of the session that proposed the action failed.",
+      "todas_other": "The policy reason for these {{count}} cards could not be read: reading the log of the session that proposed the actions failed.",
+      "algumas_one": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the action failed.",
+      "algumas_other": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the actions failed."
+    }
+  },
+  "mergearNoChat": {
+    "botao": "Merge",
+    "propondo": "Proposing…",
+    "semPapel": "Merging here needs the developer role on the project.",
+    "nota": "Proposes the merge in this session; you confirm it on the card that appears — merging stays manual.",
+    "erroTitulo": "Could not propose the merge",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
+  },
+  "fio": {
+    "historico": {
+      "titulo_one": "Before the last message",
+      "titulo_other": "Before the last {{count}} messages",
+      "outrasCount_one": "{{count}} other entry",
+      "outrasCount_other": "{{count}} other entries",
+      "conteudoComOutras": "{{mensagens}} · {{outras}}"
+    }
   }
 }

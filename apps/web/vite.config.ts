@@ -5,6 +5,45 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rolldownOptions: {
+      output: {
+        /*
+         * Vendors grandes em chunks próprios (AT-300). É o `manualChunks` do
+         * Rollup com o nome que o Vite 8 usa: sob o Rolldown, `manualChunks`
+         * está DEPRECADO e vira exatamente isto por baixo (ver a doc de
+         * `output.manualChunks` no rolldown).
+         *
+         * O ganho não é o primeiro acesso — o bundle inicial carrega os três
+         * de qualquer jeito — e sim o SEGUNDO: estes pacotes mudam quando uma
+         * dependência sobe, não a cada PR, então o hash deles sobrevive a um
+         * deploy de código da app e o navegador não os baixa de novo.
+         *
+         * A lista é de PERMITIDOS e fecha só o que TODA tela usa. Um grupo
+         * genérico `node_modules` puxaria `mermaid`, `@xterm/*`, `katex` e
+         * `cytoscape` — que hoje só chegam por `import()` dinâmico — para
+         * dentro de um chunk importado pela entrada, desfazendo o isolamento
+         * dos ADRs 0068/0103.
+         */
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor-react',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            {
+              name: 'vendor-tanstack',
+              test: /[\\/]node_modules[\\/]@tanstack[\\/]/,
+            },
+            {
+              name: 'vendor-i18n',
+              test: /[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

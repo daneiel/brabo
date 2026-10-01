@@ -195,7 +195,8 @@ function GastoDoWorkspace({ projectId }: { projectId: string }) {
               rotulo={t('workspace.totalLabel', { dias: DIAS })}
               valor={formatarUsd(relatorio.data.totalMicros)}
               detalhe={t('workspace.callsDetail', {
-                count: numberFmt.format(relatorio.data.chamadas),
+                count: relatorio.data.chamadas,
+                n: numberFmt.format(relatorio.data.chamadas),
               })}
             />
             <Destaque
@@ -307,7 +308,8 @@ function MeuConsumo({ projectId }: { projectId: string }) {
               rotulo={t('member.estimatedLabel', { dias: DIAS })}
               valor={formatarUsd(meu.data.totalMicros)}
               detalhe={t('member.callsDetail', {
-                count: numberFmt.format(meu.data.chamadas),
+                count: meu.data.chamadas,
+                n: numberFmt.format(meu.data.chamadas),
               })}
             />
             <Destaque

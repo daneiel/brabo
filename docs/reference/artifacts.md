@@ -120,6 +120,13 @@ become a real repository document.
 Validatable, but **not** emittable by tool. The Creative server emits it only
 after you confirm readiness — never through a model tool call.
 
+Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the click
+that asks for it — "I'm ready — the need is validated" — also records
+`necessity.validated` with `productBriefId: null`: the brief is the next
+`product_brief` after that `readiness.confirmed`, and the handoff that carries
+it to the PO is accepted on behalf of whoever clicked
+([RN-657](../business-rules.md#rn-657), [RN-658](../business-rules.md#rn-658)).
+
 ### `task_blocked` — server
 
 | field | required |
@@ -239,6 +246,13 @@ choose to emit, the server emits when the loop ends.
 `riscos` is left out of the required fields: an empty list is a valid answer
 (not every story carries residual risk) and the tool already guarantees the KEY
 exists — there's no "forgotten" to distinguish from "none".
+
+The artifact is always recorded, but the HANDOFFS that carry it are not: since
+[RN-636](../business-rules.md#rn-636) AppSec offers it only to a target
+(`arquiteto`, `dev-lead`, `infra`) that has no pending offer and is not active
+in the project. The threat model of a second story stays in the log without an
+offer of its own — the first offer, still pending, is not replaced
+([ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)).
 
 ## Artifacts that don't go through here
 

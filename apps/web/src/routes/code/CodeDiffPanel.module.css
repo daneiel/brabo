@@ -23,7 +23,7 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -39,7 +39,7 @@
 }
 
 .tituloDiffTexto {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -54,31 +54,9 @@
   color: var(--text-muted);
 }
 
+/* O filtro por estado é `ui/SegmentedControl` (AT-327); aqui só o espaço. */
 .filtros {
-  display: flex;
-  gap: 4px;
   margin-bottom: 10px;
-}
-
-.filtro {
-  height: 26px;
-  padding: 0 10px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.filtro:hover {
-  color: var(--text-secondary);
-}
-
-.filtroAtivo {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
 }
 
 .listaPr {
@@ -139,7 +117,7 @@
 }
 
 .itemPrTitulo {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,7 +140,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
 }
 
@@ -220,7 +198,7 @@
 
 .estado {
   padding: 10px 2px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-muted);
   max-width: 480px;
 }
@@ -229,7 +207,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--danger);
 }
 
@@ -274,7 +252,7 @@
   letter-spacing: 0.05em;
   color: var(--text-muted);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
 }
 
@@ -298,7 +276,7 @@
   background: var(--code-bg);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   overflow-x: auto;
 }
 

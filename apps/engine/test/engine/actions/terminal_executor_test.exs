@@ -51,6 +51,8 @@ defmodule Engine.Actions.TerminalExecutorTest do
       )
 
     {_, 0} = System.cmd("git", ["push", "origin", "HEAD:main"], cd: clone_dir)
+    # A `dev` do bootstrap: é a branch que o working tree abre (RN-664).
+    {_, 0} = System.cmd("git", ["push", "origin", "HEAD:dev"], cd: clone_dir)
     File.rm_rf!(clone_dir)
     bare_dir
   end

@@ -599,6 +599,10 @@ export class DockerViaCli extends DockerPort {
       String(spec.pidsLimit),
       '--cap-drop',
       'ALL',
+      // ADR 0180: o dono da pasta montada, composto pelo broker a partir do que
+      // a api mediu. `HOME` constante junto, porque uid sem entrada em
+      // `/etc/passwd` recebe `HOME=/` e `npm` morre em `//.npm`.
+      ...argsDeUsuario(spec.usuario),
       spec.imagem,
       // Mantém o container vivo sem processo próprio: quem trabalha aqui são
       // os `exec`, e um container que sai assim que o `Cmd` termina não teria
@@ -607,6 +611,11 @@ export class DockerViaCli extends DockerPort {
       'infinity',
     ];
   }
+}
+
+function argsDeUsuario(usuario: EspecificacaoDeContainer['usuario']): string[] {
+  if (usuario === undefined || usuario === null) return [];
+  return ['--user', `${usuario.uid}:${usuario.gid}`, '--env', 'HOME=/tmp'];
 }
 
 /** `/brabo-x,/outro` → `['brabo-x', 'outro']` — o `Names` do `ps` é string, não lista. */

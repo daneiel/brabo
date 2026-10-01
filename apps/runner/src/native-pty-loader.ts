@@ -42,9 +42,11 @@
 
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { NodePtyModule } from './pty.ts';
+import { garantirSpawnHelperExecutavel } from './spawn-helper.ts';
 
 /**
  * `true` só dentro de um binário compilado pelo `bun build --compile` — o
@@ -92,6 +94,16 @@ export async function carregarNodePty(): Promise<NodePtyModule> {
   if (!rodandoComoBinarioCompilado()) {
     // Caminho de sempre — idêntico ao `import * as nodePty from 'node-pty'`
     // estático que existia antes, só que dinâmico (permite este `if`).
+    //
+    // Antes, no macOS, o `spawn-helper` do `node-pty` ganha o bit de execução
+    // que o `pnpm install`/`npm install` não lhe dá (AT-114, ver
+    // `spawn-helper.ts`). Fora de darwin não toca o disco; falha nomeada em
+    // vez de um `posix_spawnp failed` no primeiro PTY.
+    const raizDoNodePty = dirname(createRequire(import.meta.url).resolve('node-pty/package.json'));
+    const desfecho = garantirSpawnHelperExecutavel({ raizDoNodePty });
+    if (desfecho.tipo === 'corrigido') {
+      console.error(`spawn-helper sem bit de execução — corrigido: ${desfecho.caminho}`);
+    }
     return (await import('node-pty')) as unknown as NodePtyModule;
   }
 

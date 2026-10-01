@@ -10,6 +10,7 @@ import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * O teto de GASTO de cada área, opcional (ADR 0110, RN-443).
@@ -40,6 +41,7 @@ export function BudgetSection({ projectId }: { projectId: string }) {
   const { data: areas } = useQuery({
     queryKey: ['agent-areas', projectId],
     queryFn: () => listAgentAreas(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
   const secao = useSecaoSalvavel<AgentArea, number | null>({

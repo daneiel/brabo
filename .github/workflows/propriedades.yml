@@ -12,6 +12,16 @@ name: Provas de propriedade (agendado)
 #   make test-reprojecao-k8s  deploy/k8s/test-reprojecao.sh  o grafo apagado é
 #                             reconstruído do event log, dentro do cluster
 #
+# E, desde a AT-198, a irmã dele para a pasta `docs/` dos artefatos (RN-590):
+#
+#   make test-reprojecao-artefatos-k8s  deploy/k8s/test-reprojecao-artefatos.sh
+#
+# E, desde a AT-146 (BRB-010), o ENSAIO da rotação da chave mestra, que nunca
+# tinha rodado em ambiente real — o ÚLTIMO alvo, porque troca um segredo e
+# reinicia a api:
+#
+#   make test-rotacao-chave-mestra-k8s  deploy/k8s/test-rotacao-chave-mestra.sh
+#
 # E, desde a AT-126 (BRB-009), a prova DA prova: `make test-restore-mutacao`
 # quebra o restore de propósito (a origem ganha uma tabela que o dump não tem) e
 # reprova se o restore NÃO reprovar — "um verde não diz que a prova ainda
@@ -42,7 +52,9 @@ name: Provas de propriedade (agendado)
 # Falha vira ISSUE, uma por alvo, e a segunda falha do mesmo alvo vira
 # COMENTÁRIO na issue aberta — senão isto seria "um workflow vermelho por dia
 # que ninguém lia" (`.github/dependabot.yml`), e enxurrada de issues idênticas
-# ensina a ignorar (`tag-release.yml`).
+# ensina a ignorar (`tag-release.yml`). Desde a AT-212 a primeira rodada em que
+# o alvo PASSA fecha a issue dele, e só a rodada do ramo PADRÃO toca issue: a de
+# um `workflow_dispatch` numa branch reprova no próprio run e para aí.
 #
 # Desde a AT-195, um SEGUNDO job, `restore-compose`, roda noutro runner
 # `make test-restore-compose` contra o compose de produção (a instalação sem
@@ -59,10 +71,16 @@ on:
     - cron: '0 4 * * 0'
   workflow_dispatch:
 
-# Duas rodadas nunca disputam o mesmo runner... mas disputariam as MESMAS
-# issues: a segunda veria a issue que a primeira ainda está abrindo.
+# O grupo é POR REF (AT-212). Duas rodadas no MESMO ref seguem em fila —
+# disputariam as MESMAS issues: a segunda veria a issue que a primeira ainda
+# está abrindo. Em refs DIFERENTES não há o que disputar: só a rodada do ramo
+# padrão toca issue (`scripts/ci/alarmar-prova.sh`), e cada uma sobe o próprio
+# cluster no próprio runner. Com o grupo global, um `workflow_dispatch` numa
+# branch ficava pendente atrás do de outra e um TERCEIRO cancelava o pendente
+# (o Actions guarda um só na fila por grupo) — medido nas rodadas 1 e 2 do
+# Plano de entrega. No mesmo ref isso continua valendo, e é o desejado.
 concurrency:
-  group: propriedades
+  group: propriedades-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -306,6 +324,37 @@ jobs:
           echo "| test-reprojecao-k8s | $((SECONDS - inicio))s | ${saida} |" >> "$GITHUB_STEP_SUMMARY"
           exit "${saida}"
 
+      # AT-198: a irmã do grafo, para a pasta `docs/` dos artefatos (RN-590).
+      # Mesmo desenho: projeto próprio, só fala com a `api`, não depende de
+      # outro alvo. O arquivo reconstruído tem de ter o MESMO sha256 do que o
+      # projetor vivo escreveu.
+      - name: make test-reprojecao-artefatos-k8s
+        id: reprojecao_artefatos
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' }}
+        timeout-minutes: 10
+        run: |
+          set -uo pipefail
+          inicio=$SECONDS
+          make test-reprojecao-artefatos-k8s; saida=$?
+          echo "| test-reprojecao-artefatos-k8s | $((SECONDS - inicio))s | ${saida} |" >> "$GITHUB_STEP_SUMMARY"
+          exit "${saida}"
+
+      # AT-146 (BRB-010): os três passos da rotação de `CREDENTIALS_MASTER_KEY`
+      # do runbook, pela fonte do `ExternalSecret`, com restart da api e o
+      # `rewrap-deks.js` da imagem. POR ÚLTIMO de propósito: troca a chave
+      # mestra do cluster e reinicia a api, e nenhum alvo deveria herdar isso.
+      # Não depende do verde dos outros, só do bootstrap.
+      - name: make test-rotacao-chave-mestra-k8s
+        id: rotacao_chave_mestra
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' }}
+        timeout-minutes: 15
+        run: |
+          set -uo pipefail
+          inicio=$SECONDS
+          make test-rotacao-chave-mestra-k8s; saida=$?
+          echo "| test-rotacao-chave-mestra-k8s | $((SECONDS - inicio))s | ${saida} |" >> "$GITHUB_STEP_SUMMARY"
+          exit "${saida}"
+
       - name: Estado do cluster (só em falha)
         if: failure()
         run: |
@@ -334,8 +383,11 @@ jobs:
       # O bootstrap também tem título próprio: com o cluster fora, os três alvos
       # ficam `skipped`, e skipped num run agendado é o silêncio que isto existe
       # para quebrar.
-      - name: Abrir ou atualizar issue por alvo que falhou
-        if: ${{ !cancelled() && failure() }}
+      #
+      # Roda também no VERDE (AT-212): é o verde que fecha a issue do alvo que
+      # voltou a passar. Numa branch, `alarmar` não toca issue nenhuma.
+      - name: Abrir, atualizar ou fechar a issue de cada alvo
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
           URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -346,6 +398,8 @@ jobs:
           RESTORE: ${{ steps.restore.outcome }}
           MUTACAO: ${{ steps.mutacao.outcome }}
           REPROJECAO: ${{ steps.reprojecao.outcome }}
+          REPROJECAO_ARTEFATOS: ${{ steps.reprojecao_artefatos.outcome }}
+          ROTACAO_CHAVE_MESTRA: ${{ steps.rotacao_chave_mestra.outcome }}
         run: |
           set -euo pipefail
           source scripts/ci/alarmar-prova.sh
@@ -357,6 +411,8 @@ jobs:
           alarmar 'make test-restore' "${RESTORE}" "${cluster}"
           alarmar 'make test-restore-mutacao' "${MUTACAO}" "${cluster}"
           alarmar 'make test-reprojecao-k8s' "${REPROJECAO}" "${cluster}"
+          alarmar 'make test-reprojecao-artefatos-k8s' "${REPROJECAO_ARTEFATOS}" "${cluster}"
+          alarmar 'make test-rotacao-chave-mestra-k8s' "${ROTACAO_CHAVE_MESTRA}" "${cluster}"
 
   # AT-195: a MESMA prova do `make test-restore`, contra a instalação por
   # COMPOSE (ADR 0152) — `make test-restore-compose` dispara um backup real,
@@ -462,8 +518,8 @@ jobs:
           docker compose -f docker/docker-compose.prod.yml logs --tail=60 || true
           df -h / || true
 
-      - name: Abrir ou atualizar issue por alvo que falhou
-        if: ${{ !cancelled() && failure() }}
+      - name: Abrir, atualizar ou fechar a issue de cada alvo
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
           URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

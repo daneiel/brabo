@@ -9,7 +9,10 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
   ...)` (a chamada que vivia aqui, agora em `InfraLeadServer.abrir_pr/3`) —
   uma vez, com a UNIÃO dos arquivos dos dois delegados.
 
-  `spec/0` continua igual: o modelo não percebe diferença nenhuma. `run/2`
+  `spec/0` continua igual no formato: o modelo não percebe a consolidação.
+  Desde a RN-668 a descrição DIZ que chamar esta tool encerra o turno — é o
+  que o código faz, e uma subida de container pedida "depois" dela nunca
+  chega ao modelo para ser chamada. `run/2`
   fica só como salvaguarda de behaviour (`@behaviour Engine.Harness.Tool`
   exige as três callbacks) — NUNCA deveria ser chamado de verdade, porque o
   servidor intercepta antes.
@@ -24,7 +27,9 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
       description:
         "Propõe a PR de infra: commita os arquivos de infra (Dockerfiles/compose) numa " <>
           "branch e abre uma PR real no repo do projeto, junto com o pipeline de CI que o " <>
-          "Workflows gera.",
+          "Workflows gera. Chamá-la ENCERRA o seu turno: se for propor a subida do " <>
+          "container (`propose_container_start`/`container_start_via_runner`), chame-a " <>
+          "ANTES desta ou na MESMA resposta.",
       parameters: %{
         "type" => "object",
         "properties" => %{

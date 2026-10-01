@@ -25,14 +25,23 @@ defmodule Engine.Dev.WorktreeManager do
   Cria (ou recria) o worktree do agente numa branch nova `feature/<slug>`.
   Idempotente por agente: remove um worktree anterior do mesmo agente antes.
   Retorna `{:ok, %{path, branch}}` ou `{:error, reason}`.
+
+  A branch nasce da de TRABALHO (`dev`, RN-664) — a mesma que a PR do agente
+  mira e que o gate usa no diff. A base é EXPLÍCITA, e não o HEAD do working
+  tree, por causa dos workspaces inicializados antes da RN-664: eles estão
+  parados na `default_branch` (a marca de pronto impede re-inicializar), e
+  nascer do HEAD deles faria o agente trabalhar sobre `main` com a PR indo
+  para `dev`.
   """
   def create(project_id, agent_id, task_slug) do
+    base = ProjectRepository.branch_de_trabalho()
+
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
       if runner?(project_id) do
-        RunnerGit.add_worktree(project_id, work_dir, agent_id, task_slug)
+        RunnerGit.add_worktree(project_id, work_dir, agent_id, task_slug, base)
       else
-        add_worktree(work_dir, agent_id, task_slug)
+        add_worktree(work_dir, agent_id, task_slug, base)
       end
     end
   end
@@ -51,6 +60,63 @@ defmodule Engine.Dev.WorktreeManager do
   agente (remove um anterior antes).
   """
   def add_worktree(work_dir, agent_id, task_slug) do
+    criar_worktree(work_dir, agent_id, task_slug, [])
+  end
+
+  @doc """
+  Como `add_worktree/3`, mas a branch nasce de `base` (RN-664) e não do HEAD
+  do `work_dir`. A `base` local é garantida antes: workspace de antes da
+  RN-664 tem só `origin/<base>` (buscada no `fetch` da inicialização), e ganha
+  a local a partir dela — sem `fetch` novo, a mesma política de "sem
+  auto-pull" do workspace.
+
+  Sem `base` local nem `origin/<base>`, recusa NOMEADA
+  (`ProjectRepository.mensagem_sem_branch_de_trabalho/1`), nunca o HEAD de
+  plano B. A única exceção é o repositório sem commit nenhum com o HEAD já
+  apontando para `base` (o bare vazio que `Engine.Actions.Workspace` inicializa
+  com a branch local vazia): ali a base É o HEAD, e o caminho é o de sempre.
+  """
+  def add_worktree(work_dir, agent_id, task_slug, base) do
+    case garantir_base(work_dir, base) do
+      {:ok, ponto_de_partida} -> criar_worktree(work_dir, agent_id, task_slug, ponto_de_partida)
+      {:error, _} = erro -> erro
+    end
+  end
+
+  defp garantir_base(work_dir, base) do
+    cond do
+      ref?(work_dir, "refs/heads/#{base}") ->
+        {:ok, [base]}
+
+      ref?(work_dir, "refs/remotes/origin/#{base}") ->
+        case git(work_dir, ["branch", base, "origin/#{base}"]) do
+          {:ok, _} -> {:ok, [base]}
+          {:error, _} = erro -> erro
+        end
+
+      head_vazio_em?(work_dir, base) ->
+        {:ok, []}
+
+      true ->
+        {:error,
+         ProjectRepository.mensagem_sem_branch_de_trabalho(
+           "nem #{base} nem origin/#{base} no working tree"
+         )}
+    end
+  end
+
+  defp ref?(work_dir, ref),
+    do: match?({:ok, _}, git(work_dir, ["rev-parse", "--verify", "--quiet", ref]))
+
+  # HEAD aponta para `base` e ainda não tem commit (branch "unborn").
+  defp head_vazio_em?(work_dir, base) do
+    case git(work_dir, ["symbolic-ref", "HEAD"]) do
+      {:ok, out} -> String.trim(out) == "refs/heads/#{base}" and not ref?(work_dir, "HEAD")
+      {:error, _} -> false
+    end
+  end
+
+  defp criar_worktree(work_dir, agent_id, task_slug, ponto_de_partida) do
     path = worktree_path(work_dir, agent_id)
     branch = "feature/#{task_slug}"
     _ = remove_worktree(work_dir, path)
@@ -67,7 +133,7 @@ defmodule Engine.Dev.WorktreeManager do
     # Redefinir é o certo aqui: o worktree anterior já foi removido, o trabalho
     # daquela tentativa não vale (a task voltou para a fila) e a branch tem que
     # renascer do ponto atual do work_dir.
-    case git(work_dir, ["worktree", "add", path, "-B", branch]) do
+    case git(work_dir, ["worktree", "add", path, "-B", branch] ++ ponto_de_partida) do
       {:ok, _} -> {:ok, %{path: path, branch: branch}}
       {:error, out} -> {:error, out}
     end

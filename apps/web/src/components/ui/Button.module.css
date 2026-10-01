@@ -5,9 +5,9 @@
   gap: var(--space-2);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-body);
   border-radius: var(--radius-md);
-  padding: 9px 16px;
+  padding: 9px var(--space-3);
   cursor: pointer;
   border: 1px solid transparent;
   transition:
@@ -27,6 +27,28 @@
   padding: 0 16px;
   font-size: 14px;
   letter-spacing: 0.01em;
+}
+
+/* Botão denso (28px): linha de tabela, painel lateral, barra de idioma. */
+.sm {
+  height: 28px;
+  padding: 0 calc(var(--space-2) + 2px);
+  font-size: var(--fs-sm);
+  gap: var(--space-1);
+}
+
+/* Só ícone: quadrado, raio de botão de ícone do handoff (`--r-sm`, 7px). A
+   altura do `md` é a do botão de texto (9px + linha + 9px ≈ 36px). */
+.icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--r-sm);
+}
+
+.icon.sm {
+  width: 28px;
+  height: 28px;
 }
 
 .button:focus-visible {
@@ -49,26 +71,17 @@
   border-color: var(--accent-hover);
 }
 
-.primary:disabled {
-  background: var(--surface-2);
-  color: var(--text-muted);
-  border-color: var(--surface-2);
-  opacity: 0.6;
-}
 
+/* Contorno `--border-strong` (AT-327): com `--border`, "Sempre permitir" no
+   card de aprovação quase sumia contra a superfície do card no tema claro. */
 .secondary {
   background: var(--surface-2);
   color: var(--text-primary);
-  border-color: var(--border);
-}
-
-.secondary:hover:not(:disabled) {
   border-color: var(--border-strong);
 }
 
-.secondary:disabled {
-  background: transparent;
-  opacity: 0.5;
+.secondary:hover:not(:disabled) {
+  border-color: var(--text-muted);
 }
 
 .ghost {
@@ -82,17 +95,25 @@
 }
 
 .ghost:disabled {
-  opacity: 0.5;
+  color: var(--text-muted);
 }
 
 .danger {
   background: transparent;
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  border-color: var(--danger-line);
 }
 
 .danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: var(--danger-soft);
+}
+
+/* Era a única variante SEM estado desabilitado: um "Remover" inerte saía em
+   vermelho cheio, igual ao ativo, e parecia oferecer remover o que não existe
+   (AT-324). Desde a AT-327 perde o vermelho em vez de ganhar opacidade. */
+.danger:disabled {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
 }
 
 .success {
@@ -100,16 +121,34 @@
   /* Era `#fff` — o único hex solto do arquivo. `--on-accent` (#f7eee2) é o
      token do texto sobre preenchimento de marca, o mesmo que `.primary` usa, e
      acompanha o tema em vez de ficar branco puro sobre o teal escuro do claro.
-     O contraste do par não muda de faixa (2,24:1 → 2,07:1 no escuro; ambos
-     abaixo de 4,5:1) — é o mesmo status já registrado para `--on-accent` sobre
-     `--accent` em `design-contraste.test.ts`, rótulo compacto de UI e não
-     texto de leitura. */
+     Desde o ADR 0181 o `--on-accent` do escuro é o preto neutro, e o par
+     passa o AA nos dois temas (7,65:1 no escuro, 5,33:1 no claro) — medido em
+     `design-contraste.test.ts`. */
   color: var(--on-accent);
   border-color: var(--success);
 }
 
 .success:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+
+/*
+ * O desabilitado LEGÍVEL (AT-327, achado CL1 da auditoria de 30/09): texto
+ * `--text-muted` sobre `--surface-2`, SEM `opacity`, e contorno
+ * `--border-strong` para a forma do botão continuar lá. Com `opacity: 0.5`/
+ * `0.6` por cima de `--text-muted`, "Converter" inerte virava bege sobre bege
+ * no tema claro — o par sem opacidade passa o AA nos dois temas e é medido em
+ * `design-contraste.test.ts` ("botão desabilitado"). Vale para toda variante
+ * com fundo; `ghost` fica sem fundo, só com o texto apagado, e `danger` perde
+ * o vermelho (inerte não pode parecer oferecer remover).
+ */
+.primary:disabled,
+.secondary:disabled,
+.success:disabled {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  filter: none;
 }
 
 /*

@@ -279,7 +279,10 @@ vez de fechar uma.
   `apps/web/src/lib/api-client.ts:773` (`getSessionModelBinding`, o
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:147`
   (`getSessionBinding`, `@Query('agentId')`)
-- **Teste:** `apps/web/src/routes/SessionPage.agente-mais-recente.test.tsx`,
+- **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
+  (antes `SessionPage.agente-mais-recente.test.tsx`; desde a
+  [RN-631](pathname://../business-rules#rn-631) o destinatário é ESCOLHIDO, não
+  "o mais recente"),
   `apps/web/src/routes/SessionPage.modelo-do-agente-ativo.test.tsx`,
   `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
 - **Borda:** Infra Lead não participa do roteamento do composer nem da
@@ -2910,7 +2913,7 @@ intocados).
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:266`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`

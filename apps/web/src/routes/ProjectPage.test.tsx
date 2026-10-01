@@ -69,6 +69,7 @@ const PROJETO: Project = {
   workspacePath: null,
   workspaceVerifiedAt: null,
   mirrorPath: null,
+  language: 'pt-BR',
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
@@ -163,7 +164,8 @@ describe('ProjectPage — falha de carga não vira tela branca', () => {
     montar();
 
     expect(await screen.findByText('Checkout')).toBeInTheDocument();
-    expect(screen.getByText('aba visão geral')).toBeInTheDocument();
+    // O painel é um chunk sob demanda (AT-300): chega depois do cabeçalho.
+    expect(await screen.findByText('aba visão geral')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

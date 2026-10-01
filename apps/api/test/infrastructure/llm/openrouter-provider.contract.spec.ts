@@ -6,6 +6,7 @@ import {
   OPENROUTER_BASE_URL,
   OpenRouterProvider,
   campoDeRoteamentoOpenRouter,
+  extrairCustoRealOpenRouter,
   openrouterConfig,
   parseCatalogoOpenRouter,
   parseErrorFrameOpenRouter,
@@ -129,7 +130,9 @@ describe('OpenRouterProvider — quirks (Fase 11a)', () => {
       // Nenhum smoke com credencial provou o `/embeddings` deste provider
       // (ADR 0075) — a base sabe falar o dialeto, o provider nao declara.
       embeddings: false,
-      routingPreference: false,
+      // Provada contra a API real em 2026-09-29
+      // (`openrouter-provider.roteamento.smoke.spec.ts`, AT-158).
+      routingPreference: true,
     });
     expect(OPENROUTER_BASE_URL).toBe('https://openrouter.ai/api/v1');
   });
@@ -196,16 +199,22 @@ describe('OpenRouterProvider — quirks (Fase 11a)', () => {
 
 describe('OpenRouterProvider — preferência de roteamento (ADR 0166, RN-583)', () => {
   /**
-   * A config de PRODUÇÃO com a capability LIGADA — é o estado que o smoke com
-   * credencial real autoriza, e o único jeito de exercitar o fio enquanto a
-   * flag de produção continua `false` (não provada).
+   * A config de PRODUÇÃO, que declara a capability desde a prova de
+   * 2026-09-29 (AT-158). `semCapability` é a mesma config com a flag
+   * DESLIGADA à força — o estado de antes da prova, e o de qualquer provider
+   * que não a declare.
    */
-  const comCapability = (baseUrl: string) => {
+  const comCapability = (baseUrl: string) =>
+    new OpenAICompatibleProvider(
+      openrouterConfig(baseUrl),
+      new GptTokenizerEstimator(),
+    );
+  const semCapability = (baseUrl: string) => {
     const base = openrouterConfig(baseUrl);
     return new OpenAICompatibleProvider(
       {
         ...base,
-        capabilities: { ...base.capabilities, routingPreference: true },
+        capabilities: { ...base.capabilities, routingPreference: false },
       },
       new GptTokenizerEstimator(),
     );
@@ -249,13 +258,10 @@ describe('OpenRouterProvider — preferência de roteamento (ADR 0166, RN-583)',
     expect(corpo).not.toHaveProperty('provider');
   });
 
-  it('a config de PRODUÇÃO (capability não provada) IGNORA a preferência em vez de mandá-la', async () => {
+  it('com a capability DESLIGADA, a preferência é IGNORADA em vez de mandada', async () => {
     const servidor = await subirServidorFalso(dialetoOpenRouter);
     const corpo = await pedido(
-      new OpenAICompatibleProvider(
-        openrouterConfig(servidor.baseUrl),
-        new GptTokenizerEstimator(),
-      ),
+      semCapability(servidor.baseUrl),
       servidor,
       'throughput',
     );
@@ -280,6 +286,166 @@ describe('OpenRouterProvider — preferência de roteamento (ADR 0166, RN-583)',
     expect(campoDeRoteamentoOpenRouter('latency')).toEqual({
       provider: { sort: 'latency' },
     });
+  });
+});
+
+/**
+ * RESPOSTA GRAVADA de um stream do OpenRouter (ADR 0188, RN-665). A forma de
+ * `usage` — `cost` em USD, `is_byok`, `prompt_tokens_details.cached_tokens`,
+ * `completion_tokens_details.reasoning_tokens` — é a que as chamadas REAIS da
+ * medição de idioma leram (`scripts/idioma/validar.ts`, AT-163, gasto somado
+ * por `usage.cost`); `id`/`model`/`provider` vêm em todo frame. Sem chave
+ * nesta máquina, a prova em stream com credencial é o smoke
+ * (`openrouter-provider.smoke.spec.ts`, manual).
+ */
+const FRAMES_GRAVADOS = {
+  primeiro: {
+    id: 'gen-1790809000-Xy7kQ2',
+    provider: 'DeepInfra',
+    model: 'deepseek/deepseek-v3.2-exp',
+    object: 'chat.completion.chunk',
+    choices: [{ index: 0, delta: { role: 'assistant', content: 'Oi' } }],
+  },
+  ultimo: {
+    id: 'gen-1790809000-Xy7kQ2',
+    provider: 'DeepInfra',
+    model: 'deepseek/deepseek-v3.2-exp',
+    object: 'chat.completion.chunk',
+    choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+    usage: {
+      prompt_tokens: 20_133,
+      completion_tokens: 1_056,
+      total_tokens: 21_189,
+      cost: 0.00304161,
+      is_byok: false,
+      prompt_tokens_details: { cached_tokens: 18_944 },
+      cost_details: { upstream_inference_cost: null },
+      completion_tokens_details: { reasoning_tokens: 311 },
+    },
+  },
+};
+
+async function usageDoStream(
+  ultimo: Record<string, unknown>,
+  config: (
+    baseUrl: string,
+  ) => ReturnType<typeof openrouterConfig> = openrouterConfig,
+) {
+  const servidor = await subirServidorFalso((_cenario, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.write(`data: ${JSON.stringify(FRAMES_GRAVADOS.primeiro)}\n\n`);
+    res.write(`data: ${JSON.stringify(ultimo)}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  });
+  const provider = new OpenAICompatibleProvider(
+    config(servidor.baseUrl),
+    new GptTokenizerEstimator(),
+  );
+  const chunks: ChatStreamChunk[] = [];
+  for await (const chunk of provider.chat([{ role: 'user', content: 'oi' }], {
+    model: '~deepseek/deepseek-flash-latest',
+  })) {
+    chunks.push(chunk);
+  }
+  await servidor.fechar();
+  return chunks.find((c) => c.type === 'usage');
+}
+
+describe('OpenRouterProvider — custo real, modelo resolvido e id (ADR 0188, RN-665)', () => {
+  it('resposta gravada: `usage.cost` vira `costMicros`, `model` vira o resolvido e `id` o da geração', async () => {
+    const usage = await usageDoStream(FRAMES_GRAVADOS.ultimo);
+
+    expect(usage).toMatchObject({
+      type: 'usage',
+      inputTokens: 20_133,
+      outputTokens: 1_056,
+      estimated: false,
+      upstreamProvider: 'DeepInfra',
+      // US$ 0,00304161 → 3 041,61 micros, arredondado.
+      costMicros: 3_042,
+      resolvedModel: 'deepseek/deepseek-v3.2-exp',
+      generationId: 'gen-1790809000-Xy7kQ2',
+      // RN-666: PARTES da entrada e da saída, nunca somadas a elas.
+      cachedInputTokens: 18_944,
+      reasoningTokens: 311,
+    });
+  });
+
+  it('RN-666: `usage` sem os detalhes — sem cache nem raciocínio, e "não disse" nunca vira 0', async () => {
+    const {
+      prompt_tokens_details: _p,
+      completion_tokens_details: _c,
+      ...semDetalhes
+    } = FRAMES_GRAVADOS.ultimo.usage;
+    const usage = await usageDoStream({
+      ...FRAMES_GRAVADOS.ultimo,
+      usage: semDetalhes,
+    });
+
+    expect(usage).not.toHaveProperty('cachedInputTokens');
+    expect(usage).not.toHaveProperty('reasoningTokens');
+    expect(usage).toMatchObject({ inputTokens: 20_133, costMicros: 3_042 });
+  });
+
+  it('RN-666: contagem que não é inteiro não negativo é ignorada; zero informado é zero', async () => {
+    const usage = await usageDoStream({
+      ...FRAMES_GRAVADOS.ultimo,
+      usage: {
+        ...FRAMES_GRAVADOS.ultimo.usage,
+        prompt_tokens_details: { cached_tokens: -3 },
+        completion_tokens_details: { reasoning_tokens: 0 },
+      },
+    });
+
+    expect(usage).not.toHaveProperty('cachedInputTokens');
+    expect(usage).toMatchObject({ reasoningTokens: 0 });
+  });
+
+  it('`is_byok: true`: o custo NÃO é lido — é a taxa do hub, não a inferência', async () => {
+    const usage = await usageDoStream({
+      ...FRAMES_GRAVADOS.ultimo,
+      usage: { ...FRAMES_GRAVADOS.ultimo.usage, is_byok: true },
+    });
+
+    expect(usage).not.toHaveProperty('costMicros');
+    // O resto do que a resposta disse continua valendo.
+    expect(usage).toMatchObject({
+      resolvedModel: 'deepseek/deepseek-v3.2-exp',
+    });
+  });
+
+  it('`usage` sem `cost`: sem custo real, e o catálogo decide depois', async () => {
+    const { cost: _cost, ...semCusto } = FRAMES_GRAVADOS.ultimo.usage;
+    const usage = await usageDoStream({
+      ...FRAMES_GRAVADOS.ultimo,
+      usage: semCusto,
+    });
+
+    expect(usage).not.toHaveProperty('costMicros');
+    expect(usage).toMatchObject({ generationId: 'gen-1790809000-Xy7kQ2' });
+  });
+
+  it('provider SEM o hook (a base, como a OpenAI): `usage.cost` é ignorado mesmo presente', async () => {
+    const usage = await usageDoStream(FRAMES_GRAVADOS.ultimo, (baseUrl) => ({
+      ...openrouterConfig(baseUrl),
+      extrairCustoReal: undefined,
+    }));
+
+    expect(usage).not.toHaveProperty('costMicros');
+  });
+
+  it.each([
+    ['string', { cost: '0.003' }],
+    ['negativo', { cost: -0.001 }],
+    ['não finito', { cost: Number.NaN }],
+    ['ausente', {}],
+  ])('custo %s é "não disse", nunca zero', (_rotulo, usage) => {
+    expect(extrairCustoRealOpenRouter(usage)).toBeUndefined();
+  });
+
+  it('custo zero (modelo gratuito) é custo real', () => {
+    expect(extrairCustoRealOpenRouter({ cost: 0, is_byok: false })).toBe(0);
   });
 });
 

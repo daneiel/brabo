@@ -49,7 +49,7 @@
     "title": "Best models by capability",
     "eyebrow": "curation · real usage · cost",
     "subtitle": {
-      "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (ADR 0042: curation is always manual); mark the uses in the ",
+      "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (curation is always manual); mark the uses in the ",
       "link": "Model catalog",
       "after": ", further below."
     },
@@ -93,7 +93,7 @@
       "intro": "Origin shows where the value is resolved:",
       "mostSpecificWins": "The most specific wins.",
       "areaWord": "area",
-      "areaExplain": "is the default that the lead and subagents share (RN-102) — set it in",
+      "areaExplain": "is the default that the lead and subagents share — set it in",
       "areaLink": "Model by area",
       "below": ", further below.",
       "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting."
@@ -320,7 +320,8 @@
     "card": {
       "title": "Who promotes",
       "hintManual": "The PO leaves the completed story waiting for you in the Backlog. None of its tasks are pickable until then.",
-      "hintAuto": "The PO promotes on its own once a story is complete — this was the previous behavior before Phase 12c, kept as an option."
+      "hintAuto": "The PO promotes on its own once a story is complete.",
+      "defaultNote": "A new project starts on Automatic. Changing it here only affects this project; projects created earlier keep the mode they had."
     },
     "selectAria": "Who promotes stories",
     "optionManual": "Manual — I promote",
@@ -329,6 +330,26 @@
       "manual": "Manual promotion: you decide what's done",
       "auto": "Automatic promotion: the PO promotes on its own",
       "error": "Could not save"
+    }
+  },
+  "projectLanguage": {
+    "title": "Project language",
+    "eyebrow": "no human author",
+    "subtitle": "The language of what nobody typed: shared artifacts (product brief, business rules, ADRs) and turns with no author (agents' opening, dev agents, gates, commit messages, PR bodies). What an agent answers YOU follows your response language, on the Account page.",
+    "artifactsNote": "That includes what an agent writes as a shared artifact while talking to a person (business rules, stories, ADRs…): the answer is in that person's language, the artifact in this one.",
+    "card": {
+      "title": "Language",
+      "hint": "Today: {{idioma}}."
+    },
+    "selectAria": "Project language",
+    "otherCode": "Other code…",
+    "otherLabel": "Language code (BCP-47)",
+    "otherHint": "E.g. pt-PT, es-MX, fr-CA. The API refuses a code that is not a language.",
+    "save": "Save",
+    "readOnly": "Only a project maintainer or owner changes its language. You see the value, and the control stays inert.",
+    "toast": {
+      "saved": "Project language saved",
+      "error": "Could not save the project language"
     }
   },
   "credentials": {
@@ -410,7 +431,7 @@
   },
   "personalAccessTokens": {
     "title": "Access tokens",
-    "eyebrow": "Local runner · ADR 0105",
+    "eyebrow": "Local runner",
     "subtitle": {
       "before": "A Personal Access Token authenticates ",
       "after": " on this machine, scoped to just this project — revocable at any time, and the raw value never shows up again once issued."
@@ -438,6 +459,22 @@
       "removeTitle": "Revoke"
     },
     "emptyMessage": "No access token issued for this project.",
+    "admin": {
+      "title": "All project tokens",
+      "eyebrow": "maintainer",
+      "subtitle": "Incident response — revoke any user's token in this project, not just your own.",
+      "emptyMessage": "No access token issued for this project.",
+      "table": {
+        "name": "Name",
+        "owner": "Owner",
+        "created": "Created",
+        "status": "Status",
+        "statusRevoked": "revoked",
+        "statusActive": "active",
+        "removeAria": "Revoke {{name}} ({{email}})",
+        "removeTitle": "Revoke"
+      }
+    },
     "modal": {
       "title": "Token generated",
       "bodyBefore": "Copy it now — this token can't be recovered after closing this window. Use it in ",
@@ -450,7 +487,7 @@
   },
   "runnerDeviceKeys": {
     "title": "Device keys",
-    "eyebrow": "Local runner · RN-519 · RN-561",
+    "eyebrow": "Local runner",
     "subtitle": "A device key authenticates brabo-runner without a hand-typed token: the Ed25519 pair is born on your machine or in your browser, and only the public half ever reaches here. This lists YOUR keys that serve this project, revoked ones included — dropping the row would make this screen claim the key never existed.",
     "subtitleAlcance": "A MACHINE key serves every project of yours in runner mode, which is why it shows up in all of their lists: revoking it drops the local agent in all of them, not just this one.",
     "subtitleNaoEBatimento": "A registered key is not a running agent: it proves the device was paired once, never that the agent is up right now — what knows about right now is the project terminal.",
@@ -519,5 +556,12 @@
     "toast": {
       "saveError": "Could not save the routing preference"
     }
+  },
+  "resolvedBindings": {
+    "readError": "Could not read the current models: {{reason}}",
+    "readErrorFallback": "the request failed",
+    "retry": "Try again",
+    "cellLoading": "reading…",
+    "cellUnread": "not read"
   }
 }

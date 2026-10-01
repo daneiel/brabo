@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /**
  * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
@@ -85,7 +86,11 @@ export function CredentialsSection() {
   const { t, i18n } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { data: credentials } = useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
+  const { data: credentials } = useQuery({
+    queryKey: ['credentials'],
+    queryFn: listCredentials,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   // Qual provider está com uma chamada em voo — `null` quando nenhum. Um id

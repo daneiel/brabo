@@ -84,6 +84,17 @@ defmodule Engine.Infra.InfraLeadServer do
   Workflows, consolida, e só então chama a api (uma vez, com a união dos
   arquivos). O SPEC da tool não muda — o modelo não percebe diferença
   nenhuma.
+
+  ## A subida que se anuncia é a que o código fez (RN-668)
+
+  O HALT de `propose_infra_pr` é o único ponto em que o código corta o laço
+  com o modelo querendo continuar. Desde a RN-668 o lote inteiro da resposta
+  é despachado ANTES dele (uma subida pedida na mesma resposta não some mais
+  calada), e o fecho do turno (`fechar_subida/2`) diz no fio, com frase do
+  SERVIDOR, quando a subida do container não foi proposta — em vez de a
+  última palavra ser um "subo em paralelo" do modelo que nenhum `tool.call`
+  cumpriu. A subida continua sendo proposta pelo modelo e decidida por
+  humano; nada aqui a faz sozinho (essa é a AT-260).
   """
 
   use GenServer, restart: :temporary
@@ -108,6 +119,7 @@ defmodule Engine.Infra.InfraLeadServer do
   # alias sem `as:` teria sombreado essa referência sem erro de compilação
   # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
   alias Engine.Runners.Registry, as: RunnerRegistry
+  alias Engine.Harness.IdiomaDaResposta
   alias Engine.Sessions.EngineApiClient
 
   @agent "infra"
@@ -142,8 +154,11 @@ defmodule Engine.Infra.InfraLeadServer do
   # mesmo número dos outros seis conversacionais, e deixou de competir com os
   # 225 s do `propose_action` de container (RN-605), que agora corre DENTRO da
   # Task, sem ninguém esperando síncrono.
-  def user_message(session_id, text),
-    do: GenServer.call(via(session_id), {:user_message, text}, 180_000)
+  #
+  # `idioma` é o idioma da resposta do AUTOR desta mensagem, resolvido pela api
+  # (RN-622); `nil` = sem orientação neste turno.
+  def user_message(session_id, text, idioma \\ nil),
+    do: GenServer.call(via(session_id), {:user_message, text, idioma}, 180_000)
 
   @doc "Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova."
   def correct(session_id, findings), do: GenServer.cast(via(session_id), {:correct, findings})
@@ -235,6 +250,16 @@ defmodule Engine.Infra.InfraLeadServer do
   def terminate(_reason, state) do
     TurnoAssincrono.abandonar(state)
     :ok
+  end
+
+  # RN-622: o idioma do AUTOR vale para o turno que esta mensagem sobe, e só
+  # para ele — `IdiomaDaResposta.com_idioma_do_autor/2` o põe no dicionário
+  # durante o `handle_call` (a Task do turno o herda) e o tira ao sair.
+  @impl true
+  def handle_call({:user_message, text, idioma}, from, state) do
+    IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
+      handle_call({:user_message, text}, from, state)
+    end)
   end
 
   @impl true
@@ -361,17 +386,34 @@ defmodule Engine.Infra.InfraLeadServer do
     end
   end
 
+  # O lote INTEIRO de uma resposta é despachado antes de qualquer HALT
+  # (RN-668). Até ali, `propose_infra_pr` parava o `reduce_while` no meio do
+  # lote: uma `propose_container_start` escrita DEPOIS dela, na mesma
+  # resposta, era descartada sem `tool.call`, sem `tool.result` e sem aviso —
+  # o modelo dizia "subo o container em paralelo", pedia as duas, e o código
+  # executava uma. É a forma do Dev Lead (`propose_execution_plan`): o lote
+  # roda todo, e só DEPOIS o sucesso encerra o turno.
+  #
+  # A PR aceita fica guardada e o HALT acontece no fim do lote; uma segunda
+  # `propose_infra_pr` na MESMA resposta é recusada com motivo (a primeira é
+  # a que consolida), nunca somada nem descartada calada.
   defp dispatch_calls(calls, state, remaining) do
     calls
-    |> Enum.reduce_while({:cont, state}, fn call, {:cont, st} ->
+    |> Enum.reduce({nil, state}, fn call, {pr, st} ->
       case Map.get(call, "name") do
         "propose_infra_pr" ->
           args = Map.get(call, "arguments", %{})
           title = Map.get(args, "title", "Dockerfiles e compose de dev")
           files = Map.get(args, "files", [])
 
-          case recusa_de_infra_pr(call, title, files, st) do
-            nil ->
+          cond do
+            pr != nil ->
+              {pr, recusa_pr_repetida_no_lote(call, title, files, st)}
+
+            st_recusado = recusa_de_infra_pr(call, title, files, st) ->
+              {nil, st_recusado}
+
+            true ->
               st =
                 append(st, %{
                   "role" => "tool",
@@ -382,26 +424,41 @@ defmodule Engine.Infra.InfraLeadServer do
                   :pinned => false
                 })
 
-              {:halt, {:proposed, title, files, st}}
-
-            st_recusado ->
-              {:cont, {:cont, st_recusado}}
+              {{title, files}, st}
           end
 
         "propose_container_start" ->
-          {:cont, {:cont, dispatch_container_start(call, st)}}
+          {pr, dispatch_container_start(call, st)}
 
         "container_start_via_runner" ->
-          {:cont, {:cont, dispatch_container_start_via_runner(call, st)}}
+          {pr, dispatch_container_start_via_runner(call, st)}
 
         _ ->
-          {:cont, {:cont, dispatch_tool(call, st)}}
+          {pr, dispatch_tool(call, st)}
       end
     end)
     |> case do
-      {:proposed, _title, _files, _state} = result -> result
-      {:cont, state} -> run_turn(state, remaining - 1)
+      {{title, files}, state} -> {:proposed, title, files, state}
+      {nil, state} -> run_turn(state, remaining - 1)
     end
+  end
+
+  defp recusa_pr_repetida_no_lote(call, title, files, state) do
+    caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+    emit(state, "tool.call", %{
+      tool: "propose_infra_pr",
+      args: %{title: title, paths: caminhos}
+    })
+
+    registrar_resultado(
+      state,
+      Map.get(call, "id"),
+      "propose_infra_pr",
+      {:error,
+       "`propose_infra_pr` já foi chamada nesta mesma resposta — só a primeira " <>
+         "chamada é consolidada com o Workflows, e esta não foi proposta."}
+    )
   end
 
   # `propose_infra_pr` sem repositório (RN-577) — `nil` quando o projeto TEM
@@ -496,7 +553,9 @@ defmodule Engine.Infra.InfraLeadServer do
           {:error, motivo}
       end
 
-    registrar_resultado(state, id, "propose_container_start", resultado)
+    state
+    |> registrar_resultado(id, "propose_container_start", resultado)
+    |> registrar_subida("propose_container_start", resultado)
   end
 
   # A instalação sem broker (`BROKER_URL` vazia) não é legível localmente — o
@@ -557,7 +616,9 @@ defmodule Engine.Infra.InfraLeadServer do
           {:error, motivo}
       end
 
-    registrar_resultado(state, id, "container_start_via_runner", resultado)
+    state
+    |> registrar_resultado(id, "container_start_via_runner", resultado)
+    |> registrar_subida("container_start_via_runner", resultado)
   end
 
   # `nil` quando a tool PODE propor; mensagem NOMEADA quando não pode — a
@@ -766,10 +827,75 @@ defmodule Engine.Infra.InfraLeadServer do
   # visível pelo `dev.error` que `aplicar/2` emite.
   defp concluir({:proposed, title, files, state}) do
     {_status, state} = finalize(state, title, files)
-    state
+    fechar_subida(state, :pr_encerrou_o_turno)
   end
 
-  defp concluir({:done, state}), do: state
+  defp concluir({:done, state}), do: fechar_subida(state, :turno_terminou)
+
+  # --- O que o turno fez com a subida do container (RN-668) ---
+  #
+  # A RN-163 na Infra: o que o turno ANUNCIA sobre a subida é decidido aqui,
+  # pelo código, depois de o laço acabar — sabendo se alguma proposta de
+  # subida foi ACEITA pela api neste turno —, e não pelo texto que o modelo
+  # escreveu (be70 seq 282: "subo o container em paralelo", sem `tool.call`
+  # de subida depois). O modelo pode prometer o que quiser; a última palavra
+  # do fio é do servidor, na forma do desfecho consolidado do Criativo
+  # (`encerrar/2`), e só quando o que foi feito contradiz o que podia ter sido
+  # prometido:
+  #
+  # - `:pr_encerrou_o_turno` — `propose_infra_pr` encerra o turno sem nova ida
+  #   ao modelo. É o ÚNICO ponto em que o CÓDIGO corta o laço com o modelo
+  #   querendo continuar, e é onde a promessa "em paralelo" morre. Se nenhuma
+  #   subida foi proposta e o container não está REGISTRADO de pé, o fio diz.
+  # - `:turno_terminou` — o modelo parou sozinho. Só se fala da subida se ela
+  #   foi TENTADA e recusada sem nenhuma proposta aceita depois: aí o turno
+  #   mexeu na subida e ela não aconteceu. Turno que nunca tocou na subida
+  #   (uma pergunta, uma correção de gate) não ganha frase nenhuma.
+  #
+  # Nada disto sobe container nem propõe nada: a subida continua sendo
+  # `proposed_action` com decisão humana (RN-491). O campo vive só dentro da
+  # Task do turno e sai do `state` aqui.
+  defp registrar_subida(state, _tool, {:ok, _texto}),
+    do: Map.put(state, :subida_do_turno, :proposta)
+
+  defp registrar_subida(%{subida_do_turno: :proposta} = state, _tool, {:error, _}), do: state
+
+  defp registrar_subida(state, tool, {:error, _texto}),
+    do: Map.put(state, :subida_do_turno, {:recusada, tool})
+
+  defp fechar_subida(state, como) do
+    subida = Map.get(state, :subida_do_turno)
+
+    with false <- subida == :proposta,
+         frase when is_binary(frase) <- desfecho_da_subida(subida, como),
+         false <- container_registrado_de_pe?(state.project_id) do
+      emit_response(state, frase)
+    end
+
+    Map.delete(state, :subida_do_turno)
+  end
+
+  # O container já REGISTRADO de pé não deve subida nenhuma: dizer "nada vai
+  # subir" sobre ele seria o fio afirmando o que não leu. A leitura é a mesma
+  # de `recusa_ja_de_pe/2`, local e sem HTTP.
+  defp container_registrado_de_pe?(project_id),
+    do: ProjectContainerLifecycle.status_registrado(project_id) in ~w(running provisioning)
+
+  defp desfecho_da_subida({:recusada, tool}, _como),
+    do:
+      "Fechando o turno: a subida do container NÃO foi proposta nele — a " <>
+        "tentativa por `#{tool}` foi recusada, com o motivo no resultado da " <>
+        "ferramenta. Nenhum container vai subir sem uma proposta aprovada: " <>
+        "peça de novo numa próxima mensagem ou use a página Containers."
+
+  defp desfecho_da_subida(nil, :pr_encerrou_o_turno),
+    do:
+      "Fechando o turno: propor a PR de infra encerra o meu turno, e nele a " <>
+        "subida do container NÃO foi proposta. Nenhum container vai subir " <>
+        "sem uma proposta aprovada: peça a subida numa próxima mensagem ou " <>
+        "use a página Containers."
+
+  defp desfecho_da_subida(nil, :turno_terminou), do: nil
 
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
@@ -937,19 +1063,22 @@ defmodule Engine.Infra.InfraLeadServer do
     1. Para cada módulo do module_map abaixo, gere um Dockerfile adequado ao stack.
     2. Gere um compose de desenvolvimento (docker-compose.yml) integrando os módulos.
     3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
-    4. Chame `propose_infra_pr` (title + files) com o que é seu — a consolidação
-       com o pipeline de CI acontece depois, automaticamente.
-    5. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
        para o container do projeto e chame `propose_container_start` (imagem +
        network + resources + rationale dizendo por que ESTA candidata, nunca
-       inventando uma imagem fora da lista). Este passo é INDEPENDENTE dos
-       anteriores — pode acontecer antes, depois, ou nunca (sem roteamento
-       vigente, pule-o; o container do projeto segue como está).
-    6. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+       inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
+       container do projeto segue como está.
+    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
        bind-mount pro servidor), `propose_container_start` não serve — chame
        `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
        sobe a imagem já decidida). Se você não souber o modo, tente
        `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
+    6. Por último, chame `propose_infra_pr` (title + files) com o que é seu — a
+       consolidação com o pipeline de CI acontece depois, automaticamente.
+       `propose_infra_pr` ENCERRA o seu turno: a subida do container (passos 4
+       e 5) só acontece se for chamada ANTES dela ou na MESMA resposta. Não
+       diga que vai subir o container "depois" ou "em paralelo" sem chamar a
+       ferramenta — o que não foi chamado não acontece.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
 

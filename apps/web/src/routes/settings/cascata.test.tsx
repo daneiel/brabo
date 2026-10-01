@@ -14,6 +14,7 @@ import type { Project } from '../../lib/api-types';
 import { AreaModelsSection } from './AreaModelsSection';
 import { ModelsSection } from './ModelsSection';
 import { herdouDoCriativo, montarCadeia } from './cascata';
+import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
  * A cascata de modelo como CADEIA VISÍVEL (`settings/cascata.tsx`).
@@ -53,6 +54,9 @@ vi.mock('../../lib/api-client', async () => {
     // produção enquanto o smoke do OpenRouter não rodar.
     listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     setAgentModelBinding: vi.fn(),
     clearAgentModelBinding: vi.fn(),
     getAreaModelBinding: (...args: unknown[]) => getAreaModelBinding(...args),
@@ -79,6 +83,7 @@ function project(): Project {
     workspacePath: null,
     workspaceVerifiedAt: null,
     mirrorPath: null,
+    language: 'pt-BR',
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
   };

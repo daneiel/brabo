@@ -10,9 +10,11 @@
   },
   "compartilhado": {
     "semTitulo": "(sem título)",
-    "verNoBacklog": "Ver no Backlog",
+    "verNoBacklog": "Ver em Histórias",
     "voce": "Você",
-    "agenteGenerico": "agente"
+    "agenteGenerico": "agente",
+    "outroMembro": "Outro membro",
+    "autorDesconhecido": "Autor desconhecido"
   },
   "topbar": {
     "voltarAoProjeto": "Voltar ao projeto",
@@ -24,7 +26,12 @@
     "iniciarIdeacao": "Iniciar ideação",
     "iniciarIdeacaoTitulo": "Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou",
     "encerrar": "Encerrar",
-    "alternarPainel": "Alternar painel de contexto"
+    "alternarPainel": "Alternar painel de contexto",
+    "fecharPainel": "Fechar painel de contexto",
+    "ajustes": "Modelo e idioma",
+    "ajustesAria": "Modelo, idioma das respostas e orçamento desta sessão",
+    "perguntaDeIdiomaPendente": "há uma pergunta sobre o idioma das respostas",
+    "encerrarSessao": "Encerrar a sessão"
   },
   "convite": {
     "criativa": {
@@ -46,22 +53,28 @@
     "placeholder": "Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)",
     "enviar": "Enviar",
     "parar": "Parar",
-    "prontoParaProduzir": "Estou pronto para produzir",
+    "prontoParaProduzir": "Estou pronto — a necessidade está validada",
+    "prontoParaProduzirExplica": "Fecha a prontidão e a validação da necessidade, e chama o PO: ele entra sozinho quando o Criativo terminar o resumo do produto",
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
-    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
-    "confirmarNecessidade": "Confirmar necessidade validada",
-    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
+    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
+    "destinatarioLabel": "Para",
+    "destinatarioPlaceholder": "Escolha o agente…",
+    "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
+    "semAgente": "Nenhum agente nesta sessão: a mensagem vai ao modelo, sem agente."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
     "naoAtivada": "Sessão ainda não ativada.",
     "ativarSessao": "Ativar sessão",
-    "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens."
+    "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens.",
+    "reabrir": "Reabrir sessão",
+    "reabrirExplicacao": "Reabrir volta a sessão a ativa com tudo o que ela já tinha: a conversa, as regras de negócio, as perguntas respondidas e as ofertas entre agentes. O encerramento anterior fica registrado.",
+    "reabrirExigeDeveloper": "Reabrir a sessão exige o papel developer neste workspace."
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",
-    "respostaVazia": "Resposta vazia — evento anterior à RN-059, quando falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
+    "respostaVazia": "Resposta vazia — evento de uma versão antiga, em que falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
@@ -73,6 +86,7 @@
     "promover": "Promover",
     "devolver": "Devolver",
     "aprovarTodas": "Aprovar todas",
+    "aguardandoPromocao_zero": "{{count}} histórias aguardando promoção",
     "aguardandoPromocao_one": "{{count}} história aguardando promoção",
     "aguardandoPromocao_other": "{{count}} histórias aguardando promoção",
     "devolveuAoPo": "devolveu ao PO",
@@ -80,6 +94,8 @@
     "semMotivo": "sem motivo"
   },
   "handoff": {
+    "aceiteAutomatico": "Aceito automaticamente: o backlog cobre as {{regras}} regras de negócio e o repositório é local, então {{agente}} entrou sem clique.",
+    "aceiteAutomaticoFalhou": "O aceite automático do handoff a {{agente}} falhou: {{erro}}. Aceite pelo card da oferta.",
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
@@ -90,7 +106,10 @@
     "infraBotao": "Aceitar handoff da Infra",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
-    "manualBotao": "Endereçar handoff"
+    "manualBotao": "Endereçar handoff",
+    "manualOrigem": "Handoff manual",
+    "foraDaJanelaTitulo": "{{de}} passou o bastão ao {{para}}",
+    "foraDaJanelaDetalhe": "O evento desta oferta já saiu dos últimos 200 do fio, e por isso o botão mora aqui."
   },
   "backlog": {
     "criouEpico": "criou o épico",
@@ -114,8 +133,7 @@
     "erroIniciarIdeacao": "Não foi possível iniciar a ideação",
     "erroConfirmarProntidao": "Não foi possível confirmar prontidão",
     "erroConfirmarArquitetura": "Não foi possível confirmar a arquitetura",
-    "necessidadeValidada": "Necessidade validada",
-    "erroValidarNecessidade": "Não foi possível validar a necessidade",
+    "prontoRegistrado": "Necessidade validada. O PO entra quando o resumo do produto ficar pronto",
     "erroAceitarHandoff": "Não foi possível aceitar o handoff",
     "handoffManualEnviado": "Handoff enviado",
     "erroHandoffManual": "Não foi possível enviar o handoff",
@@ -125,6 +143,7 @@
     "erroModoAutomatico": "Não foi possível ligar o modo automático",
     "erroPromover": "Não foi possível promover",
     "historiaPromovida": "História promovida",
+    "historiasPromovidas_zero": "{{count}} histórias promovidas",
     "historiasPromovidas_one": "História promovida",
     "historiasPromovidas_other": "{{count}} histórias promovidas",
     "promovidasParcial": "{{promovidas}} de {{total}} promovidas",
@@ -135,7 +154,9 @@
     "erroEnviarMensagem": "Não foi possível enviar a mensagem",
     "erroCancelarTurno": "Não foi possível cancelar o turno",
     "erroNoChat": "Erro no chat",
-    "aviso": "Aviso"
+    "aviso": "Aviso",
+    "levandoAExecucao": "Levando você à sessão de execução.",
+    "erroReabrirSessao": "Não foi possível reabrir a sessão"
   },
   "modal": {
     "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",
@@ -151,6 +172,7 @@
     "historias": "histórias",
     "tarefas": "tarefas",
     "itens": "itens",
+    "mensagensCount_zero": "{{count}} mensagens",
     "mensagensCount_one": "{{count}} mensagem",
     "mensagensCount_other": "{{count}} mensagens"
   },
@@ -159,11 +181,14 @@
     "teto": "Este painel lê os <b>{{lidos}}</b> eventos já carregados desta sessão. Há <b>{{anteriores}}</b> anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e as outras seções crescem junto.",
     "regrasDeNegocio": "Regras de negócio",
     "nadaAinda": "Nada ainda.",
-    "origemRefs": "origem: {{count}} ref(s)",
+    "origemRefs_zero": "origem: {{count}} referências",
+    "origemRefs_one": "origem: {{count}} referência",
+    "origemRefs_other": "origem: {{count}} referências",
     "paginaAnterior": "Página anterior de regras de negócio",
     "proximaPagina": "Próxima página de regras de negócio",
     "paginaDe": "{{atual}} de {{total}}",
     "artefatosGerados": "Artefatos gerados",
+    "artefatosVazio": "Nenhuma PR nem item de backlog nesta sessão ainda.",
     "arquivosTocados": "Arquivos tocados",
     "logDeEventos": "Log de eventos",
     "eventoCitado": "Evento citado",
@@ -173,7 +198,48 @@
   "turno": {
     "pensando": "Pensando…",
     "passosDoTurno": "Passos do turno",
+    "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",
     "passosCount_other": "{{count}} passos"
+  },
+  "pendencias": {
+    "titulo": "Pendências de outras sessões deste projeto",
+    "nota": "Atalho para a decisão: os mesmos cards e os mesmos endpoints da aba Aprovações. Nenhum teto muda — merge em branch protegida segue manual.",
+    "filas": {
+      "aprovacoes": "Aprovações",
+      "merges": "Merges de PR"
+    },
+    "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
+    "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
+    "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
+    "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
+    "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa.",
+    "motivoNaoLido": {
+      "todas_zero": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "todas_one": "Não foi possível ler o motivo da política deste card: a leitura do log da sessão que propôs a ação falhou.",
+      "todas_other": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_zero": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou.",
+      "algumas_one": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs a ação falhou.",
+      "algumas_other": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou."
+    }
+  },
+  "mergearNoChat": {
+    "botao": "Mergear",
+    "propondo": "Propondo…",
+    "semPapel": "Mergear aqui exige o papel developer no projeto.",
+    "nota": "Propõe o merge nesta sessão; quem confirma é você, no card que aparece — o merge segue manual.",
+    "erroTitulo": "Não foi possível propor o merge",
+    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
+  },
+  "fio": {
+    "historico": {
+      "titulo_zero": "Antes das últimas {{count}} mensagens",
+      "titulo_one": "Antes da última mensagem",
+      "titulo_other": "Antes das últimas {{count}} mensagens",
+      "outrasCount_zero": "{{count}} outras entradas",
+      "outrasCount_one": "{{count}} outra entrada",
+      "outrasCount_other": "{{count}} outras entradas",
+      "conteudoComOutras": "{{mensagens}} · {{outras}}"
+    }
   }
 }

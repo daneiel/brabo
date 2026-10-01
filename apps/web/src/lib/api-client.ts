@@ -53,6 +53,7 @@ import type {
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  WorkspaceMemberWithUser,
   ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
@@ -62,6 +63,7 @@ import type {
   BootstrapPlanEstado,
   RepoBootstrapStatus,
   ResolvedBinding,
+  BindingsResolvidosEmLote,
   RoutingPreference,
   ProviderCapabilities,
   PromoteStoriesResult,
@@ -79,6 +81,7 @@ import type {
   UserCredentialMetadata,
   UserLocale,
   UserPreferences,
+  SessionResponseLanguage,
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
@@ -360,6 +363,8 @@ export const updateProject = (
   input: {
     maxConsecutiveBlocked?: number;
     storyPromotion?: StoryPromotionMode;
+    // O idioma do projeto (RN-619) — `maintainer`, pela mesma rota.
+    language?: string;
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
@@ -377,6 +382,12 @@ export const convertProjectExecutionMode = (
 
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
+/**
+ * Os membros do WORKSPACE (AT-335, `viewer`): quem entra num projeto só pelo
+ * papel de workspace não tem linha em `listProjectMembers`.
+ */
+export const listWorkspaceMembers = (workspaceId: string) =>
+  get<WorkspaceMemberWithUser[]>(`/workspaces/${workspaceId}/members`);
 export const addProjectMember = (
   projectId: string,
   input: { userId: string; role: Role },
@@ -618,10 +629,19 @@ export const transitionSession = (
   sessionId: string,
   status: 'active' | 'closing' | 'closed' | 'closed_abnormally',
 ) => post<Session>(`/projects/${projectId}/sessions/${sessionId}/transition`, { status });
+/**
+ * Reabre uma sessão `closed`/`closed_abnormally` (ADR 0183, RN-649/650). Rota
+ * própria, e não a de transição: pede `developer` (ADR 0184) e grava
+ * `session.reopened`.
+ */
+export const reopenSession = (projectId: string, sessionId: string) =>
+  post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number; latest?: boolean } = {},
+  // `actionId` (AT-336): só os eventos daquela ação — o motivo da política
+  // mora no `proposed_action.created` dela, e a ação não o guarda.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; actionId?: string } = {},
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
@@ -704,15 +724,6 @@ export const confirmArchitectureReadiness = (
 ) =>
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
-  );
-// Gate `necessidade-validada` (RN-406, ADR 0095) — confirmação humana de
-// que o `product_brief` do Criativo reflete a necessidade de negócio.
-// Endpoint dedicado: não reaproveita `confirmReadiness` (que só exige
-// regra capturada, RN-142) nem o aceite do handoff pelo PO (estrutural,
-// sem julgar conteúdo).
-export const validateNecessity = (projectId: string, sessionId: string) =>
-  post<{ ok: true }>(
-    `/projects/${projectId}/sessions/${sessionId}/agents/criativo/validate-necessity`,
   );
 // RN-162: submissão do formulário de `chat.structured_question` — grava
 // `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
@@ -939,7 +950,8 @@ export const proposeAction = (
 export const listActions = (
   projectId: string,
   sessionId: string,
-  opts: { afterSeq?: number; limit?: number } = {},
+  // `latest`/`status` (AT-296, RN-637): a CAUDA da sessão e só as pendentes.
+  opts: { afterSeq?: number; limit?: number; latest?: boolean; status?: 'pending' } = {},
 ) =>
   get<Page<ProposedAction>>(
     `/projects/${projectId}/sessions/${sessionId}/actions${qs(opts)}`,
@@ -1090,6 +1102,24 @@ export const setSessionModelBinding = (
     { modelId },
   );
 
+/**
+ * Os bindings RESOLVIDOS de vários agentes e áreas numa requisição só (RN-654,
+ * AT-334). Cada chave volta com EXATAMENTE o que a rota individual responderia
+ * (`getAgentModelBinding`/`getAreaModelBinding`) — a cascata é a mesma, no
+ * servidor. É o que as seções de modelo de Configurações leem: eram 20
+ * requisições por carga, contra o teto de 300/min do USUÁRIO (RN-579).
+ */
+export const getResolvedModelBindings = (
+  projectId: string,
+  agents: readonly string[],
+  areas: readonly string[],
+) =>
+  get<BindingsResolvidosEmLote>(
+    `/projects/${projectId}/model-bindings/resolved${qs({
+      agents: agents.length > 0 ? agents.join(',') : undefined,
+      areas: areas.length > 0 ? areas.join(',') : undefined,
+    })}`,
+  );
 export const getAgentModelBinding = (projectId: string, agentSlug: string) =>
   get<ResolvedBinding | null>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
 export const setAgentModelBinding = (
@@ -1131,8 +1161,42 @@ export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
 // esperar o próximo refresh, nunca como fonte primária.
 export const getMyPreferences = () =>
   get<UserPreferences>('/users/me/preferences');
-export const updateMyPreferences = (input: { locale: UserLocale }) =>
-  patch<UserPreferences>('/users/me/preferences', input);
+// Os dois campos são independentes na api (RN-618): mandar só `locale` não
+// toca o idioma das respostas, e vice-versa.
+export const updateMyPreferences = (input: {
+  locale?: UserLocale;
+  responseLanguage?: string;
+}) => patch<UserPreferences>('/users/me/preferences', input);
+// A resposta à pergunta da detecção (RN-624): `confirm` grava o detectado
+// CONFIRMADO; `decline` grava a recusa, e o mesmo idioma não é perguntado de
+// novo. 409 `deteccao_mudou` quando as mensagens já não apontam o idioma.
+export const answerDetectedLanguage = (
+  language: string,
+  answer: 'confirm' | 'decline',
+) =>
+  post<UserPreferences>('/users/me/preferences/detected-language', {
+    language,
+    answer,
+  });
+
+// O idioma das respostas de quem chama, numa sessão (RN-618). `language:
+// null` solta o override e volta a herdar da Conta.
+export const getSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+) =>
+  get<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+  );
+export const setSessionResponseLanguage = (
+  projectId: string,
+  sessionId: string,
+  language: string | null,
+) =>
+  put<SessionResponseLanguage>(
+    `/projects/${projectId}/sessions/${sessionId}/response-language`,
+    { language },
+  );
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

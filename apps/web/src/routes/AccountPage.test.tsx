@@ -43,6 +43,16 @@ vi.mock('../lib/api-client', async (importOriginal) => {
   return {
     ...original,
     listMachineDeviceKeys: () => Promise.resolve([]),
+    // A seção do idioma das RESPOSTAS (RN-618) também monta aqui; o que ela
+    // prova mora em `ResponseLanguageSection.test.tsx`.
+    getMyPreferences: () =>
+      Promise.resolve({
+        locale: 'pt-BR',
+        responseLanguage: 'automatico',
+        detectedLanguage: null,
+        detectedLanguageConfirmedAt: null,
+        effectiveResponseLanguage: { language: 'pt-BR', origin: 'interface' },
+      }),
   };
 });
 

@@ -84,7 +84,7 @@ describe('AttachLocalFolderModal', () => {
       makeFile('meu-projeto/logo.png', 'não é texto de verdade'),
     ]);
 
-    expect(await screen.findByText(/2 arquivo\(s\) de/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 arquivos de .*, 1 pulado \(/)).toBeInTheDocument();
     expect(screen.getByText(/1 pulado/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Anexar 2 arquivo/ }));

@@ -69,7 +69,7 @@ function focaveisDe(raiz: HTMLElement | null): HTMLElement[] {
  * anuncia PRESENÇA (um ponto) e não quantidade.
  *
  * E ele não executa nada. As duas filas acionáveis aqui (`aprovacoes`, `prs`)
- * renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`
+ * renderizam o MESMO `ApprovalCard` da aba de Aprovações (uma variante só, AT-322)
  * — os botões chamam os mesmos endpoints de decisão, que continuam passando
  * pelo pipeline inteiro. Isso importa em especial para `git_merge`: merge em
  * branch protegida é rebaixado a `require_approval` INCONDICIONALMENTE
@@ -171,18 +171,27 @@ export function PainelPrecisaDeVoce({
 
   async function aprovar(item: ItemDaFila) {
     if (!item.acao) return;
-    await approveAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await approveAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
   }
   async function negar(item: ItemDaFila) {
     if (!item.acao) return;
-    await denyAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await denyAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
   }
   async function semprePermitir(item: ItemDaFila) {
     if (!item.acao) return;
-    await approveAlwaysAction(projectId, item.acao.sessionId, item.acao.id);
-    invalidar(item.acao.sessionId);
+    try {
+      await approveAlwaysAction(projectId, item.acao.sessionId, item.acao.id);
+    } finally {
+      invalidar(item.acao.sessionId);
+    }
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -289,10 +298,10 @@ export function PainelPrecisaDeVoce({
                       <div key={item.id} className={styles.linhaDeCard}>
                         <ApprovalCard
                           action={item.acao}
-                          variant="queue"
-                          onApprove={() => void aprovar(item)}
-                          onDeny={() => void negar(item)}
-                          onAlwaysAllow={() => void semprePermitir(item)}
+                          detalheRecolhido
+                          onApprove={() => aprovar(item)}
+                          onDeny={() => negar(item)}
+                          onAlwaysAllow={() => semprePermitir(item)}
                         />
                         <div className={styles.rodapeDoCard}>{tempo(item)}</div>
                       </div>

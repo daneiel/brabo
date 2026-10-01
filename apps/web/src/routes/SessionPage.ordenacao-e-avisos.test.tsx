@@ -96,7 +96,10 @@ vi.mock('../lib/session-channel', () => ({
   },
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -783,7 +786,7 @@ describe('RN-156 — indicador de 5s', () => {
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'criativo' },
-          payload: { toAgent: 'po' },
+          payload: { handoffId: 'handoff-1', toAgent: 'po' },
           createdAt: '2026-08-10T12:00:00.000Z',
         },
       ],
@@ -799,7 +802,7 @@ describe('RN-156 — indicador de 5s', () => {
     montar();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     act(() => {
       botaoAceitar.click();
@@ -848,7 +851,7 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     // alimenta —, e um `getByText` sem escopo bateria nos dois.
     expect(within(pill).getByText('PO')).toBeInTheDocument();
 
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 
@@ -877,7 +880,7 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     expect(
       await screen.findByText('criou a história "Login com e-mail e senha"'),
     ).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /Ver no Backlog/ });
+    const link = screen.getByRole('link', { name: /Ver em Histórias/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
   });
 });

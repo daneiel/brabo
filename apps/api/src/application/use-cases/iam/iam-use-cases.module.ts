@@ -27,16 +27,21 @@ import { GetProjectPermissionsUseCase } from './get-project-permissions.use-case
 import { SetProjectPermissionsUseCase } from './set-project-permissions.use-case';
 import { ListProjectsForWorkspaceUseCase } from './list-projects-for-workspace.use-case';
 import { ListProjectMembersUseCase } from './list-project-members.use-case';
+import { ListWorkspaceMembersUseCase } from './list-workspace-members.use-case';
 import { GetWorkspaceSummaryUseCase } from './get-workspace-summary.use-case';
 import { GetProjectsStatusForWorkspaceUseCase } from './get-projects-status-for-workspace.use-case';
 import { GetProjectsSummaryForWorkspaceUseCase } from './get-projects-summary-for-workspace.use-case';
 import { GetUnreadEventsForWorkspaceUseCase } from './get-unread-events-for-workspace.use-case';
 import { GetUserPreferencesUseCase } from './get-user-preferences.use-case';
 import { UpdateUserPreferencesUseCase } from './update-user-preferences.use-case';
+import { ResolverIdiomaDaRespostaUseCase } from './resolver-idioma-da-resposta.use-case';
+import { IdiomaDaRespostaNaSessaoUseCase } from './idioma-da-resposta-na-sessao.use-case';
+import { DetectarIdiomaDoAutorUseCase } from './detectar-idioma-do-autor.use-case';
 // Provider direto, e não `imports: [AgentsUseCasesModule]`: o seeding só
 // depende do repositório de áreas (DrizzleModule é global), e importar o
 // módulo de agentes traria sessões e o cliente do engine junto — aresta nova
 // entre IAM e agentes por causa de uma classe sem estado.
+import { SetWorkspaceToolRouterUseCase } from './set-workspace-tool-router.use-case';
 import { SeedAgentAreasUseCase } from '../agents/seed-agent-areas.use-case';
 
 const USE_CASES = [
@@ -49,6 +54,7 @@ const USE_CASES = [
   AddWorkspaceMemberUseCase,
   RemoveWorkspaceMemberUseCase,
   TransferWorkspaceOwnershipUseCase,
+  SetWorkspaceToolRouterUseCase,
   CreateProjectUseCase,
   ConfirmProjectWorkspaceUseCase,
   ConvertProjectExecutionModeUseCase,
@@ -65,12 +71,16 @@ const USE_CASES = [
   SetProjectPermissionsUseCase,
   ListProjectsForWorkspaceUseCase,
   ListProjectMembersUseCase,
+  ListWorkspaceMembersUseCase,
   GetWorkspaceSummaryUseCase,
   GetProjectsStatusForWorkspaceUseCase,
   GetProjectsSummaryForWorkspaceUseCase,
   GetUnreadEventsForWorkspaceUseCase,
   GetUserPreferencesUseCase,
   UpdateUserPreferencesUseCase,
+  ResolverIdiomaDaRespostaUseCase,
+  IdiomaDaRespostaNaSessaoUseCase,
+  DetectarIdiomaDoAutorUseCase,
 ];
 
 @Module({

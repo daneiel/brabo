@@ -444,6 +444,37 @@ rules:
     docs: ["docs/runbook.md"]
     severity: warn
 
+  # O instrumento de idioma da AT-160: a heurística, os dois corpora e os
+  # números que saíram do sintético moram numa página só. Mudar a heurística,
+  # o corpus ou a régua de acerto muda o que a página afirma.
+  - id: medicao-do-idioma
+    watch:
+      - "scripts/idioma/**"
+      # Desde a AT-163 (RN-624) a heurística mora na api e o instrumento a
+      # reexporta: mudar os marcadores, a limpeza ou os parâmetros provisórios
+      # muda o que a página afirma tanto quanto mudar o instrumento.
+      - "apps/api/src/domain/iam/heuristica-de-idioma.ts"
+    docs: ["docs/explanation/medicao-do-idioma.md"]
+    severity: warn
+
+  # O replay do Jev da AT-237: o instrumento (passos, state, curva) e os
+  # números que ele produziu moram numa página só. Mudar a fronteira de passo,
+  # o state ou a régua de acerto muda o que a página afirma.
+  - id: medicao-do-jev
+    watch:
+      - "scripts/jev/**"
+    docs: ["docs/explanation/medicao-do-jev.md"]
+    severity: warn
+
+  # A auditoria visual da AT-290: os números do "antes" e do "depois" saíram do
+  # verificador de layout rodado em cada tela. Mudar o que ele conta como
+  # achado muda o que a página compara.
+  - id: auditoria-visual
+    watch:
+      - "scripts/dev/validacao-visual.js"
+    docs: ["docs/explanation/auditoria-visual-rodada-29.md"]
+    severity: warn
+
   - id: scripts
     watch:
       - "package.json"

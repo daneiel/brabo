@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -22,6 +30,7 @@ import { ProposeActionDto } from './dto/propose-action.dto';
 import { DenyActionDto } from './dto/deny-action.dto';
 import { BEARER } from '../../../infrastructure/openapi/documento';
 import {
+  ApproveAlwaysResponseDto,
   PaginaDeAcoesResponseDto,
   ProposedActionResponseDto,
 } from './dto/actions.response.dto';
@@ -71,20 +80,45 @@ export class ActionsController {
   @RequireRole('developer')
   @ApiOperation({
     summary: 'Paginates the proposed actions in the session',
-    description: 'Ordered by `seq`; use `nextCursor` as `afterSeq`.',
+    description:
+      'Ordered by `seq`; use `nextCursor` as `afterSeq`. `latest=true` fetches ' +
+      'the TAIL instead (the newest `limit` actions, still ascending) and ' +
+      'ignores `afterSeq`. `status=pending` keeps only the actions waiting for ' +
+      'a decision — with `latest`, the newest pending ones, so a session with ' +
+      'more than 200 actions does not push a new pending one out of the window ' +
+      '(RN-637).',
   })
   @ApiQuery({ name: 'afterSeq', required: false, example: 6 })
   @ApiQuery({ name: 'limit', required: false, example: 50 })
+  @ApiQuery({
+    name: 'latest',
+    required: false,
+    example: 'true',
+    description: 'Fetches the tail of the session; ignores `afterSeq`.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    example: 'pending',
+    description: 'Only `pending` is supported.',
+  })
   @ApiOkResponse({ type: PaginaDeAcoesResponseDto })
   list(
     @Param('projectId') projectId: string,
     @Param('sessionId') sessionId: string,
     @Query('afterSeq') afterSeq?: string,
     @Query('limit') limit?: string,
+    @Query('latest') latest?: string,
+    @Query('status') status?: string,
   ) {
+    if (status !== undefined && status !== 'pending') {
+      throw new BadRequestException('Só "status=pending" é suportado hoje.');
+    }
     return this.listProposedActions.execute(projectId, sessionId, {
       afterSeq: afterSeq !== undefined ? Number(afterSeq) : undefined,
       limit: limit !== undefined ? Number(limit) : undefined,
+      latest: latest === 'true',
+      status,
     });
   }
 
@@ -116,11 +150,16 @@ export class ActionsController {
     description:
       'Besides releasing this action, it adds the corresponding pattern to ' +
       "the project's `allow` list — future matching actions come out " +
-      '`auto_approved` without asking. A pattern already in `deny` stays blocked.',
+      '`auto_approved` without asking. A pattern already in `deny` stays blocked. ' +
+      'The approval and the pattern are recorded in the same transaction. ' +
+      'Clicking an action that was already APPROVED is idempotent success ' +
+      '(`desfecho: ja_aprovada`), recording the pattern only if it is missing.',
   })
-  @ApiCreatedResponse({ type: ProposedActionResponseDto })
+  @ApiCreatedResponse({ type: ApproveAlwaysResponseDto })
   @ApiConflictResponse({
-    description: 'The action was already decided or executed.',
+    description:
+      'The action was already DENIED (`reason: acao_ja_recusada`); no pattern ' +
+      'is recorded.',
   })
   approveAlways(
     @Param('projectId') projectId: string,

@@ -14,6 +14,7 @@ import {
   unique,
   uniqueIndex,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { projects, users } from './iam';
@@ -39,7 +40,9 @@ export const sessionKindEnum = pgEnum('session_kind', [
 export const actorKindEnum = pgEnum('actor_kind', ['user', 'agent', 'system']);
 
 // Handoff entre agentes (Fase 3b): offered → accepted | rejected; accepted →
-// completed. Um agente só pode ser ativado numa sessão com um handoff
+// completed; offered → superseded (ADR 0182, RN-635: o destino foi ativado por
+// outro caminho, ou uma oferta nova ao mesmo destino no projeto a substituiu).
+// Um agente só pode ser ativado numa sessão com um handoff
 // `accepted` endereçado a ele (ver domain/sessions/agent-activation.ts) — o
 // Criativo é a exceção (inicia por comando do usuário). Cada transição de
 // status também vira um session_event `handoff.*` imutável.
@@ -48,6 +51,7 @@ export const handoffStatusEnum = pgEnum('handoff_status', [
   'accepted',
   'completed',
   'rejected',
+  'superseded',
 ]);
 
 export const sessions = pgTable(
@@ -108,6 +112,34 @@ export const sessions = pgTable(
   ],
 );
 
+// O idioma das respostas FIXADO por uma pessoa numa sessão (RN-618, ADR
+// 0177; AT-168 resposta 1). Vale só para ESTA pessoa NESTA sessão — é por
+// isso que a chave é o PAR, e não a sessão: dois usuários na mesma sessão
+// fixam idiomas diferentes sem um tocar o do outro. A ausência da linha é o
+// estado normal ("vale a escolha da conta").
+//
+// Tabela de CONFIGURAÇÃO, não de evento: trocar de novo é UPDATE (upsert) e
+// voltar a herdar é DELETE. A sessão apagada leva as linhas junto.
+export const sessionLanguageOverrides = pgTable(
+  'session_language_overrides',
+  {
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Código BCP-47 CANÔNICO, pela MESMA régua de `users.response_language`
+    // (`normalizarIdiomaBcp47`). Nunca "automático": fixar o automático numa
+    // sessão é apagar a linha.
+    language: text('language').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.sessionId, table.userId] })],
+);
+
 export const sessionEvents = pgTable(
   'session_events',
   {
@@ -124,7 +156,20 @@ export const sessionEvents = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [unique().on(table.sessionId, table.seq)],
+  (table) => [
+    unique().on(table.sessionId, table.seq),
+    // A detecção de idioma do AUTOR (AT-163, RN-624) lê as últimas mensagens
+    // de UMA pessoa em TODAS as sessões — o detectado é por usuário, global
+    // (AT-168 resposta 6). Sem índice por ator essa leitura varre o event
+    // log inteiro a cada consulta da barra de idioma. PARCIAL: só os dois
+    // tipos que são evidência e só ator `user`, então ele não cresce com o
+    // resto do log (respostas de agente, ferramentas, status).
+    index('session_events_evidencia_de_idioma_idx')
+      .on(table.actorId, table.createdAt)
+      .where(
+        sql`${table.actorKind} = 'user' AND ${table.type} IN ('chat.message', 'chat.structured_question_answered')`,
+      ),
+  ],
 );
 
 export const outboxEvents = pgTable(

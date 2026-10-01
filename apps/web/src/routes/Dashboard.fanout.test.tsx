@@ -65,6 +65,7 @@ function projeto(i: number): Project {
   workspacePath: null,
   workspaceVerifiedAt: null,
   mirrorPath: null,
+  language: 'pt-BR',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -87,6 +88,7 @@ function resumo(i: number): ProjectCardSummary {
       moduleNames: ['api', 'web'],
       gatesEverOpened: true,
       delegatedSubagents: ['qa-automacao'],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,

@@ -60,6 +60,17 @@ const PARES: { texto: string; fundo: string; piso: number; onde: string }[] = [
   { texto: '--violet', fundo: '--surface-1', piso: AA_NAO_TEXTO, onde: 'acento de agente em card' },
   { texto: '--violet', fundo: '--surface-2', piso: AA_NAO_TEXTO, onde: 'acento de agente em cabeçalho' },
   { texto: '--violet', fundo: '--code-bg', piso: AA_TEXTO_NORMAL, onde: 'número/decorator no código' },
+  // As três cores de agente sem contraparte semântica viraram token por tema
+  // no ADR 0181 (eram hex soltos em `lib/agents.ts`, calibrados só contra o
+  // escuro). O papel delas é o do `--violet`: dot, badge, avatar — ELEMENTO.
+  ...['--agent-leve', '--agent-frontend', '--agent-secops'].flatMap((texto) =>
+    ['--surface-0', '--surface-1', '--surface-2'].map((fundo) => ({
+      texto,
+      fundo,
+      piso: AA_NAO_TEXTO,
+      onde: 'cor de agente (dot, badge, avatar)',
+    })),
+  ),
 ];
 
 describe.each(TEMAS)('contraste dos tokens — tema %s', (_nome, tokens) => {
@@ -140,59 +151,32 @@ describe.each(TEMAS)(
 );
 
 /**
- * A dívida de contraste, MEDIDA e registrada.
+ * A dívida de contraste do tema escuro ACABOU, e isso vira piso.
  *
- * Estes pares estão em uso e NÃO atingem 4,5:1 para texto normal. Não os
- * escondo passando o piso para 3, nem quebro o CI por uma decisão que é do
- * design system (`design/tokens.css` é a fonte, e mexer na paleta é escolha do
- * dono). O teste trava o valor ATUAL: se alguém melhorar, ele avisa; se
- * piorar, ele reprova. É a diferença entre dívida conhecida e defeito novo.
- */
-describe('dívida de contraste conhecida (tema escuro)', () => {
-  const DIVIDA: { texto: string; fundo: string; razao: number; onde: string }[] = [
-    { texto: '--text-muted', fundo: '--surface-1', razao: 3.89, onde: 'legenda dentro de card' },
-    { texto: '--text-muted', fundo: '--surface-2', razao: 3.1, onde: 'cabeçalho de tabela' },
-    { texto: '--accent', fundo: '--surface-1', razao: 3.88, onde: 'link dentro de card' },
-    { texto: '--danger', fundo: '--surface-1', razao: 3.88, onde: 'erro dentro de card' },
-    { texto: '--success', fundo: '--surface-2', razao: 4.41, onde: 'selo em cabeçalho' },
-  ];
-
-  for (const d of DIVIDA) {
-    it(`${d.texto} sobre ${d.fundo} (${d.onde}) continua em ${d.razao}:1`, () => {
-      const razao = razaoDeContraste(
-        resolverToken(d.texto, dark)!,
-        resolverToken(d.fundo, dark)!,
-      );
-      expect(Number(razao.toFixed(2))).toBeCloseTo(d.razao, 1);
-      // O piso que eles CUMPREM: servem como elemento de interface, não como
-      // texto corrido. Cair abaixo de 3 seria defeito novo, não dívida.
-      expect(razao).toBeGreaterThanOrEqual(AA_NAO_TEXTO);
-    });
-  }
-});
-
-/**
- * O tema CLARO não tem dívida — e isso é afirmação, não silêncio.
+ * Do ADR 0074 ao ADR 0181 estes cinco pares estavam em uso abaixo de 4,5:1 no
+ * escuro (azul-petróleo), e o teste travava o valor ATUAL de cada um — dívida
+ * conhecida, não defeito novo. A paleta neutra do ADR 0181 foi calibrada até
+ * eles PASSAREM (a medição decidiu o `--text-muted` #86868f em vez do #71717a
+ * do rascunho, que repetia a dívida com outra cor). Travar o número antigo
+ * deixou de fazer sentido: o que se cobra agora é o PISO, nos DOIS temas, e a
+ * próxima mudança de paleta que devolver a dívida reprova aqui em vez de ser
+ * "registrada".
  *
- * Os cinco pares que no escuro são dívida conhecida PASSAM os 4,5:1 no claro
- * desde o ADR 0074, e não por sorte: os acentos do claro foram calibrados
- * contra `--code-bg`, que é a superfície mais exigente do tema (papel, a um
- * passo dos fundos), então quem fecha lá fecha em todo o resto. O bloco existe
- * para que a próxima mudança de paleta não devolva a dívida ao claro achando
- * que ela sempre esteve lá.
+ * No claro eles já passavam desde o ADR 0074; o bloco que afirmava isso
+ * separado virou este.
  */
-describe('o tema claro fecha os cinco pares que no escuro são dívida', () => {
+describe.each(TEMAS)('a antiga dívida de contraste agora é piso (tema %s)', (_nome, tokens) => {
   for (const d of [
-    { texto: '--text-muted', fundo: '--surface-1' },
-    { texto: '--text-muted', fundo: '--surface-2' },
-    { texto: '--accent', fundo: '--surface-1' },
-    { texto: '--danger', fundo: '--surface-1' },
-    { texto: '--success', fundo: '--surface-2' },
+    { texto: '--text-muted', fundo: '--surface-1', onde: 'legenda dentro de card' },
+    { texto: '--text-muted', fundo: '--surface-2', onde: 'cabeçalho de tabela' },
+    { texto: '--accent', fundo: '--surface-1', onde: 'link dentro de card' },
+    { texto: '--danger', fundo: '--surface-1', onde: 'erro dentro de card' },
+    { texto: '--success', fundo: '--surface-2', onde: 'selo em cabeçalho' },
   ]) {
-    it(`${d.texto} sobre ${d.fundo} atinge 4,5:1 no claro`, () => {
+    it(`${d.texto} sobre ${d.fundo} (${d.onde}) atinge 4,5:1`, () => {
       const razao = razaoDeContraste(
-        resolverToken(d.texto, claro)!,
-        resolverToken(d.fundo, claro)!,
+        resolverToken(d.texto, tokens)!,
+        resolverToken(d.fundo, tokens)!,
       );
       expect(
         Number(razao.toFixed(2)),
@@ -200,6 +184,20 @@ describe('o tema claro fecha os cinco pares que no escuro são dívida', () => {
       ).toBeGreaterThanOrEqual(AA_TEXTO_NORMAL);
     });
   }
+
+  it('o --text-muted continua um degrau ABAIXO do --text-secondary — a hierarquia não virou um cinza só', () => {
+    // Fechar a dívida clareando o muted até o secondary resolveria o número e
+    // apagaria a diferença entre os dois papéis. A régua: o muted passa o piso
+    // e o secondary continua mais legível que ele nas três superfícies.
+    for (const fundo of ['--surface-0', '--surface-1', '--surface-2']) {
+      const muted = razaoDeContraste(resolverToken('--text-muted', tokens)!, resolverToken(fundo, tokens)!);
+      const secundario = razaoDeContraste(
+        resolverToken('--text-secondary', tokens)!,
+        resolverToken(fundo, tokens)!,
+      );
+      expect(secundario, `--text-secondary sobre ${fundo}`).toBeGreaterThan(muted);
+    }
+  });
 });
 
 /**
@@ -218,7 +216,7 @@ describe('o tema claro fecha os cinco pares que no escuro são dívida', () => {
  * sombra, fonte, espaçamento e radius não têm contraparte clara.
  */
 describe('paridade de tokens entre os dois temas', () => {
-  const RAMPA = /^--(terracota|teal|petroleo|areia)-\d+$/;
+  const RAMPA = /^--(terracota|teal|petroleo|areia|neutro)-\d+$/;
   const semanticosDeCor = Object.keys(dark).filter(
     (nome) => !RAMPA.test(nome) && resolverToken(nome, dark) !== null,
   );
@@ -231,6 +229,11 @@ describe('paridade de tokens entre os dois temas', () => {
     // um deles nascer só no escuro, o bloco abaixo é quem pega.
     expect(semanticosDeCor).toContain('--syntax-keyword');
     expect(semanticosDeCor).toContain('--syntax-text');
+    // As cores de agente do ADR 0181 também — nasceram token para mudar com o
+    // tema, e é aqui que a promessa é cobrada.
+    expect(semanticosDeCor).toContain('--agent-leve');
+    // A escala neutra é paleta BRUTA (fonte, não semântica): fica fora.
+    expect(semanticosDeCor).not.toContain('--neutro-900');
   });
 
   for (const nome of semanticosDeCor) {

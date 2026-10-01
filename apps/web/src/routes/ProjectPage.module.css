@@ -97,14 +97,9 @@
 }
 
 /* `github · privado` — o que o repositório É, ao lado do nome. */
+/* `ui/Badge square size="md"` (AT-287); aqui só o comportamento na linha do
+   título. */
 .repoChip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 7px;
-  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -184,4 +179,23 @@
   padding: 0;
   overflow: hidden;
   display: flex;
+}
+
+/* Layout móvel (RN-643, AT-316): a barra do trilho fica ACIMA do painel (o
+   corpo vira coluna) e os respiros laterais caem para os 16px de uma tela de
+   telefone. `.movel` vem da mesma consulta que o trilho lê (`useLayoutMovel`). */
+.movel .corpo {
+  flex-direction: column;
+}
+
+.movel .headerTop {
+  padding: 12px 16px;
+}
+
+.movel .body {
+  padding: 16px;
+}
+
+.movel .body.bodyRente {
+  padding: 0;
 }

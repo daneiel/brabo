@@ -594,6 +594,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/model-bindings-controller-get-resolved-bindings",
+          label: "Resolves the model of several agents and areas in one read",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/models-controller-list",
           label: "Lists the models active IN THE PROJECT's WORKSPACE",
           className: "api-method get",
@@ -1218,6 +1224,24 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/sessions-controller-reopen",
+          label: "Reopens a closed session, keeping everything it had",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/session-response-language-controller-get",
+          label: "The language agents answer YOU in, in this session",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/session-response-language-controller-set",
+          label: "Fixes (or releases) YOUR response language in this session",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/sessions-controller-issue-socket-ticket",
           label: "Issues an opaque, single-use ticket for the session's socket",
           className: "api-method post",
@@ -1351,14 +1375,20 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/user-preferences-controller-get",
-          label: "Reads the authenticated user's language preference",
+          label: "Reads the authenticated user's interface language and agent response language",
           className: "api-method get",
         },
         {
           type: "doc",
           id: "docs/reference/api/user-preferences-controller-update",
-          label: "Writes the authenticated user's language preference",
+          label: "Writes the authenticated user's interface language and/or agent response language",
           className: "api-method patch",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/user-preferences-controller-answer-detected",
+          label: "Answers the detected-language question",
+          className: "api-method post",
         },
       ],
     },
@@ -1395,6 +1425,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-remove",
           label: "Removes the workspace",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-members",
+          label: "Lists the workspace's members",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -1455,6 +1491,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-get-summary",
           label: "Aggregated workspace summary",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-set-tool-router",
+          label: "Turns the Jev tool routing on or off for the workspace",
+          className: "api-method put",
         },
         {
           type: "doc",

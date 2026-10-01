@@ -10,6 +10,7 @@ import {
 } from '../lib/api-client';
 import { useBacklog, useLatestSession, useProjectPendingActions } from '../lib/hooks';
 import { userIdDaSessao } from '../lib/auth';
+import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import type { CodePullRequestSummary, Epic, ProposedAction, Task } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline } from '../components/PrGateTimeline';
@@ -115,16 +116,25 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   }
 
   async function aprovar(acao: ProposedAction) {
-    await approveAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await approveAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
   }
   async function negar(acao: ProposedAction) {
-    await denyAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await denyAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
   }
   async function sempreAprovar(acao: ProposedAction) {
-    await approveAlwaysAction(projectId, acao.sessionId, acao.id);
-    invalidateMergeActions();
+    try {
+      await approveAlwaysAction(projectId, acao.sessionId, acao.id);
+    } finally {
+      invalidateMergeActions();
+    }
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
   }
 
@@ -145,30 +155,42 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
 
       <PrListAndDiff
         projectId={projectId}
+        superficie="prs"
         renderItemExtra={(pr) => {
           if (pr.state !== 'open') return null;
+
+          const task = taskDaBranch(backlogQuery.data, pr.sourceBranch);
+          // AT-249 (RN-663): gate pendente é AVISO, nunca trava — o botão e o
+          // card seguem ativos, e o texto diz qual gate falta.
+          const gatePendente = gatePendenteNoMerge(task);
+          const aviso = gatePendente ? (
+            <p className={styles.avisoDeGate} data-testid="aviso-gate-pendente">
+              {t('prsTab.gatePendente', { gate: gatePendente })}
+            </p>
+          ) : null;
 
           const acaoPendente = acaoDeMergeParaPr(mergeActionsQuery.data, pr);
           if (acaoPendente) {
             return (
               <div className={styles.decisaoInline}>
+                {aviso}
                 <ApprovalCard
                   action={acaoPendente}
-                  variant="queue"
-                  onApprove={() => void aprovar(acaoPendente)}
-                  onDeny={() => void negar(acaoPendente)}
-                  onAlwaysAllow={() => void sempreAprovar(acaoPendente)}
+                  detalheRecolhido
+                  onApprove={() => aprovar(acaoPendente)}
+                  onDeny={() => negar(acaoPendente)}
+                  onAlwaysAllow={() => sempreAprovar(acaoPendente)}
                 />
               </div>
             );
           }
 
-          const task = taskDaBranch(backlogQuery.data, pr.sourceBranch);
           const bloqueado = task?.blocked === true;
 
           return (
             <div className={styles.extraLinha}>
               {task && <PrGateTimeline task={task} verdicts={[]} />}
+              {aviso}
               <Button
                 variant="primary"
                 disabled={!latestSession || bloqueado}

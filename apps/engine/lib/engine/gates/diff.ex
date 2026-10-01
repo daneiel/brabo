@@ -1,25 +1,31 @@
 defmodule Engine.Gates.Diff do
   @moduledoc """
-  `git diff` entre a branch default do projeto e o HEAD do worktree
+  `git diff` entre a branch de TRABALHO do projeto e o HEAD do worktree
   (Fase 4a — QA/SecOps olham o que o DevAgent mudou). Não existia nenhum
   cálculo de diff no engine antes disso.
+
+  Desde a RN-664 (AT-250) o lado esquerdo é `dev`
+  (`ProjectRepository.branch_de_trabalho/1`), não mais a `default_branch` do
+  provider: é para `dev` que a PR do dev agent vai, e o worktree nasce de
+  `dev`. Julgar contra `main` seria julgar um diff que não é o da PR.
   """
 
   alias Engine.Actions.GitCmd
   alias Engine.Projects.ProjectRepository
 
   @doc """
-  `{:ok, diff_text}` — diff unificado de `<default_branch>...HEAD` rodado
+  `{:ok, diff_text}` — diff unificado de `dev...HEAD` rodado
   dentro de `worktree_path`. `{:error, reason}` se o projeto não tiver
   repositório local resolvível ou o comando falhar.
   """
   def compute(project_id, worktree_path) do
-    # `default_branch/1` e não `get_local_repo_path/1`: o diff só precisa do
-    # NOME da branch, e pedir o caminho do bare repo fazia este gate parar em
-    # provider remoto sem nunca ter precisado do caminho (ADR 0056).
-    case ProjectRepository.default_branch(project_id) do
-      {:ok, default_branch} ->
-        GitCmd.run(worktree_path, ["diff", "#{default_branch}...HEAD"])
+    # Só o NOME da branch, nunca `get_local_repo_path/1`: pedir o caminho do
+    # bare repo fazia este gate parar em provider remoto sem nunca ter
+    # precisado do caminho (ADR 0056). Sem a branch `dev` no repositório, o
+    # `git diff` falha NOMEANDO a revisão — nunca cai para a default (RN-664).
+    case ProjectRepository.branch_de_trabalho(project_id) do
+      {:ok, base} ->
+        GitCmd.run(worktree_path, ["diff", "#{base}...HEAD"])
 
       {:error, reason} ->
         {:error, reason}

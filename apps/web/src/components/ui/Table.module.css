@@ -57,3 +57,51 @@
   color: var(--text-muted);
   font-size: 13px;
 }
+
+/*
+ * Layout móvel (AT-330, RN-643): a linha vira CARTÃO empilhado e cada célula
+ * leva o rótulo da coluna numa coluna estreita à esquerda. Só geometria — as
+ * cores e a tipografia do rótulo são as do cabeçalho do desktop.
+ */
+.pilha .cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.pilha .cartao + .cartao {
+  border-top: 1px solid var(--border);
+}
+
+.campo {
+  display: grid;
+  grid-template-columns: minmax(72px, 32%) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.campoLargo {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.campoRotulo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.campoValor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

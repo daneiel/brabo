@@ -416,6 +416,7 @@ preflight because it runs on the host, and the api can only compare against
 | `DEFAULT_CONTEXT_WINDOW` | `8192` | used when the model doesn't declare its window |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
 | `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | ceiling for a terminal command |
 | `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/custo.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
 | `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
@@ -572,8 +573,9 @@ strangely. The symptom table is in
 
 > **The `ollama` image version is not a variable — it is a digest.** Like every
 > third-party image in `docker/`, it is pinned as
-> `ollama/ollama@sha256:…  # 0.33.1`
-> ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md)), and the same
+> `ollama/ollama:0.33.1@sha256:…`
+> ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), tag inline since
+> [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), and the same
 > digest is used by `ci.yml`/`golden-set-rag.yml`, because the RAG golden-set
 > floor is keyed by model rather than by environment
 > ([ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)). So an
@@ -767,6 +769,39 @@ environment, not a unit test beside it (AT-124).
 | `E2E_USER` | `owner@brabo.dev` | the account the suite logs in with |
 | `E2E_PASSWORD` | the seed password hardcoded in `e2e/suporte/api.ts` | that account's password. It's the password of a **local seed**, never a real one — it isn't repeated here so that the only copy stays the one in the code |
 
+
+### Local cluster and scheduled proofs — `deploy/k8s/`
+
+The bootstrap (`make deploy-local`) and the property proofs that
+`.github/workflows/propriedades.yml` runs weekly read these from the
+environment. All have defaults; none belongs in an installation's `.env`. The
+inventory scans every `deploy/k8s/*.sh` and matches only the expansion with a
+default (`${X:-…}`), which is how a shell script reads a variable from outside
+(AT-212).
+
+| variable | default | what it changes |
+|---|---|---|
+| `BRABO_CLUSTER_NAME` | `brabo` | the name of the k3d/kind cluster the bootstrap creates or reuses |
+| `BRABO_CLUSTER_TOOL` | `k3d` | `kind` switches the bootstrap to kind — which ignores NetworkPolicy in silence, hence k3d as the default |
+| `BRABO_KEEP_CLUSTER` | unset | `1` reuses an existing cluster with the same name instead of deleting and recreating it |
+| `BRABO_SKIP_BUILD` | unset | `1` skips building the production images and uses the ones already in the Docker daemon |
+| `BRABO_SKIP_OBSERVABILITY` | unset | `1` skips Tempo, Loki, Collector, Alloy and Grafana (Prometheus and the adapter stay: the engine's HPA reads them). Only `propriedades.yml` sets it (AT-177) |
+| `TAG` | unset | a release tag (`vX.Y.Z-qa.N`) for the bootstrap to check out and deploy instead of the working tree; requires a clean tree |
+| `BRABO_NAMESPACE` | `brabo` | the namespace every proof script talks to |
+| `API_URL` / `ENGINE_URL` / `WEB_URL` | `http://localhost:3000` / `:4000` / `:8088` | where the proof scripts reach the cluster's services — the ports the k3d load balancer publishes. Same names as the product variables above, a different reader: here they are only the scripts' target |
+| `SMOKE_USER` | `owner@brabo.dev` | the account the smoke and the proofs log in with |
+| `BRABO_SMOKE_PASSWORD` | the seed's local password, hardcoded in the scripts | that account's password — also what the bootstrap passes to the seed pod as `BRABO_SEED_PASSWORD` |
+| `HPA_JOBS` | `60` | how many probe jobs `make hpa-test` enqueues to make the engine scale |
+| `HPA_TIMEOUT` | `240` | seconds `make hpa-test` waits for the scale-up |
+| `ROLLOUT_SESSIONS` | `5` | how many sessions `make rollout-test` opens before the rollout |
+| `ROLLOUT_CONVERGENCE_SECONDS` | `120` | the ceiling for every session to be adopted or drained after the rollout. Do not raise it to turn a red run green (see the orphan-session gap in `CLAUDE.md`) |
+| `ROLLOUT_EVIDENCE_DIR` | a `mktemp -d` | where `make rollout-test` writes the evidence (pod logs, events, replica samples); `propriedades.yml` sets it and uploads the folder |
+| `EVIDENCIA_INTERVALO` | `2` | seconds between the evidence collectors' samples; the spec shortens it (AT-174) |
+| `RESTORE_MUTACAO` | unset | `tabela-faltando` turns `make test-restore` into `make test-restore-mutacao`, the deliberate break it must catch (AT-126) |
+| `RESTORE_KEEP_JOB` | unset | `1` keeps the backup/restore Jobs after `make test-restore`, for inspection |
+| `PROJECT_WORKSPACES_ROOT_NO_POD` | `/data/project-workspaces` | where `make test-reprojecao-artefatos-k8s` looks for the artifact folder inside the api pod |
+| `KUBE_VERSION` | `1.31.0` | the Kubernetes version `make k8s-validate` validates the rendered overlays against |
+
 ---
 
 ## Full inventory
@@ -780,7 +815,7 @@ anyone noticing.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Inventory extracted from the code: **158 variables** read at runtime. All have a description in the tables above.
+Inventory extracted from the code: **180 variables** read at runtime. All have a description in the tables above.
 
 Each source is marked **product** — what whoever operates the installation sets in the deployment `.env` — or **tooling**, read only by CI and by whoever develops the product. A tooling variable never belongs in an operator's `.env`.
 
@@ -959,6 +994,31 @@ Each source is marked **product** — what whoever operates the installation set
 - `E2E_PASSWORD` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_USER` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_WEB_URL` <sub>(e2e/playwright.config.ts)</sub>
+
+**deploy/k8s** — 22 variables · tooling
+
+- `API_URL` <sub>(deploy/k8s/rollout-test.sh)</sub>
+- `BRABO_CLUSTER_NAME` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `BRABO_CLUSTER_TOOL` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `BRABO_KEEP_CLUSTER` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `BRABO_NAMESPACE` <sub>(deploy/k8s/hpa-test.sh)</sub>
+- `BRABO_SKIP_BUILD` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `BRABO_SKIP_OBSERVABILITY` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `BRABO_SMOKE_PASSWORD` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `ENGINE_URL` <sub>(deploy/k8s/smoke.sh)</sub>
+- `EVIDENCIA_INTERVALO` <sub>(deploy/k8s/rollout-evidencia.sh)</sub>
+- `HPA_JOBS` <sub>(deploy/k8s/hpa-test.sh)</sub>
+- `HPA_TIMEOUT` <sub>(deploy/k8s/hpa-test.sh)</sub>
+- `KUBE_VERSION` <sub>(deploy/k8s/validate.sh)</sub>
+- `PROJECT_WORKSPACES_ROOT_NO_POD` <sub>(deploy/k8s/test-reprojecao-artefatos.sh)</sub>
+- `RESTORE_KEEP_JOB` <sub>(deploy/k8s/test-restore.sh)</sub>
+- `RESTORE_MUTACAO` <sub>(deploy/k8s/test-restore.sh)</sub>
+- `ROLLOUT_CONVERGENCE_SECONDS` <sub>(deploy/k8s/rollout-test.sh)</sub>
+- `ROLLOUT_EVIDENCE_DIR` <sub>(deploy/k8s/rollout-test.sh)</sub>
+- `ROLLOUT_SESSIONS` <sub>(deploy/k8s/rollout-test.sh)</sub>
+- `SMOKE_USER` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `TAG` <sub>(deploy/k8s/bootstrap.sh)</sub>
+- `WEB_URL` <sub>(deploy/k8s/smoke.sh)</sub>
 <!-- END:GENERATED:env-inventario -->
 
 ---

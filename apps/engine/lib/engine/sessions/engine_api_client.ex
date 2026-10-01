@@ -4,6 +4,9 @@ defmodule Engine.Sessions.EngineApiClient do
   `Application.get_env(:engine, :engine_api_client, ...)`, sem Mox.
   """
 
+  alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Harness.RoteamentoDeFerramenta
+
   @callback report_termination(
               project_id :: String.t(),
               session_id :: String.t(),
@@ -72,7 +75,8 @@ defmodule Engine.Sessions.EngineApiClient do
               agent :: String.t(),
               messages :: [map()],
               tools :: [map()],
-              on_delta :: (String.t() -> any())
+              on_delta :: (String.t() -> any()),
+              opts :: keyword()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -109,6 +113,24 @@ defmodule Engine.Sessions.EngineApiClient do
   product_brief. Retorna `{:ok, handoff_map}` ou `{:error, term}`.
   """
   @callback create_handoff(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              from_agent :: String.t(),
+              to_agent :: String.t(),
+              artifact_id :: String.t() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Mesmo `create_handoff/5`, no modo "só se ninguém recebeu ainda" (ADR 0182,
+  RN-636): com oferta pendente ao destino em QUALQUER sessão do projeto, a api
+  devolve a existente (`"desfecho" => "ja_oferecido"`) em vez de substituí-la;
+  com o destino já ativo no projeto, recusa com 409 `agente_ja_ativo`. É o
+  modo do AppSec, que oferece um parecer por história aos mesmos destinos. A
+  decisão mora na api, sob o lock do destino — perguntar antes, daqui, seria
+  corrida com outra oferta.
+  """
+  @callback create_handoff_if_absent(
               project_id :: String.t(),
               session_id :: String.t(),
               from_agent :: String.t(),
@@ -438,7 +460,8 @@ defmodule Engine.Sessions.EngineApiClient do
               session_id :: String.t(),
               agent :: String.t(),
               messages :: [map()],
-              tools :: [map()]
+              tools :: [map()],
+              opts :: keyword()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -575,8 +598,40 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
-  def llm_turn(project_id, session_id, agent, messages, tools),
-    do: impl().llm_turn(project_id, session_id, agent, messages, tools)
+  # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
+  # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
+  # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
+  # chamou: é efêmera por construção. As `tools` vão junto porque é por elas
+  # que a orientação sabe se o agente pode gravar artefato do projeto (RN-623).
+  #
+  # RN-625 (ADR 0179): a MESMA fachada narra o passo em que o Jev escolheu a
+  # ferramenta (`tool_router.decided`) e, se o menu restrito fez o modelo
+  # responder sem chamar ferramenta, repete o passo UMA vez com o catálogo
+  # inteiro (`opts: [catalogo_completo: true]`). Ver `RoteamentoDeFerramenta`.
+  def llm_turn(project_id, session_id, agent, messages, tools) do
+    enviadas = IdiomaDaResposta.anexar(messages, project_id, agent, tools)
+
+    impl().llm_turn(project_id, session_id, agent, enviadas, tools, [])
+    |> repetir_com_catalogo_inteiro(tools, fn ->
+      impl().llm_turn(project_id, session_id, agent, enviadas, tools, catalogo_completo: true)
+    end)
+    |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+  end
+
+  # O menu restrito errou (o modelo não chamou ferramenta nenhuma)? Uma volta
+  # a mais com o catálogo inteiro. Falha da segunda volta mantém a primeira.
+  defp repetir_com_catalogo_inteiro({:ok, resp} = primeira, tools, repetir) do
+    if RoteamentoDeFerramenta.repetir_com_catalogo_inteiro?(resp, tools) do
+      case repetir.() do
+        {:ok, segunda} -> {:ok, RoteamentoDeFerramenta.mesclar_repeticao(resp, segunda)}
+        _ -> primeira
+      end
+    else
+      primeira
+    end
+  end
+
+  defp repetir_com_catalogo_inteiro(outro, _tools, _repetir), do: outro
 
   def propose_action(project_id, session_id, action_type, actor, payload),
     do:
@@ -620,8 +675,29 @@ defmodule Engine.Sessions.EngineApiClient do
   def list_events(project_id, session_id, opts),
     do: impl().list_events(project_id, session_id, opts)
 
-  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta),
-    do: impl().llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta)
+  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
+    enviadas = IdiomaDaResposta.anexar(messages, project_id, agent, tools)
+
+    impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta, [])
+    |> repetir_stream_sem_texto(tools, fn ->
+      impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta,
+        catalogo_completo: true
+      )
+    end)
+    |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+  end
+
+  # No stream só se repete quando NADA foi escrito para a pessoa: um delta já
+  # entregue não se desfaz, e duplicar texto é pior que o menu errado.
+  defp repetir_stream_sem_texto({:ok, %{"message" => message} = resp} = primeira, tools, repetir) do
+    if Map.get(message, "content") in [nil, ""] do
+      repetir_com_catalogo_inteiro({:ok, resp}, tools, repetir)
+    else
+      primeira
+    end
+  end
+
+  defp repetir_stream_sem_texto(outro, _tools, _repetir), do: outro
 
   def session_pending_work(session_id), do: impl().session_pending_work(session_id)
 
@@ -630,6 +706,11 @@ defmodule Engine.Sessions.EngineApiClient do
   def create_handoff(project_id, session_id, from_agent, to_agent, artifact_id),
     do:
       impl().create_handoff(project_id, session_id, from_agent, to_agent, artifact_id)
+      |> avisar_canal(session_id, "handoff.offered", from_agent)
+
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id),
+    do:
+      impl().create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id)
       |> avisar_canal(session_id, "handoff.offered", from_agent)
 
   def create_epic(project_id, session_id, fields),
@@ -950,6 +1031,17 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       fromAgent: from_agent,
       toAgent: to_agent,
       artifactId: artifact_id
+    })
+  end
+
+  @impl true
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id) do
+    post_returning("/internal/sessions/#{session_id}/handoffs", %{
+      projectId: project_id,
+      fromAgent: from_agent,
+      toAgent: to_agent,
+      artifactId: artifact_id,
+      seAusente: true
     })
   end
 
@@ -1377,8 +1469,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
-    body = %{projectId: project_id, agentId: agent, messages: messages, tools: tools}
+  def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta, opts) do
+    body =
+      %{projectId: project_id, agentId: agent, messages: messages, tools: tools}
+      |> com_catalogo_completo(opts)
+
     key = {__MODULE__, :sse, make_ref()}
     Process.put(key, %{buffer: "", final: nil})
 
@@ -1459,7 +1554,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
-  def llm_turn(project_id, session_id, agent, messages, tools) do
+  def llm_turn(project_id, session_id, agent, messages, tools, opts) do
     # Timeout generoso e configurável: um turno de LLM não é uma chamada de
     # API comum. Com modelo local (Ollama), o PRIMEIRO turno ainda carrega
     # vários GB de pesos na memória antes de gerar o primeiro token — no
@@ -1478,12 +1573,15 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         result =
           post_returning(
             "/internal/sessions/#{session_id}/llm-turn",
-            %{
-              projectId: project_id,
-              agentId: agent,
-              messages: messages,
-              tools: tools
-            },
+            com_catalogo_completo(
+              %{
+                projectId: project_id,
+                agentId: agent,
+                messages: messages,
+                tools: tools
+              },
+              opts
+            ),
             receive_timeout: llm_turn_timeout_ms()
           )
 
@@ -1494,6 +1592,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         result
       end
     )
+  end
+
+  # ADR 0179: o engine repete o passo pedindo o catálogo INTEIRO (a api não
+  # consulta o Jev). Só isso: nunca uma ferramenta que o agente não tinha.
+  defp com_catalogo_completo(body, opts) do
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: Map.put(body, :catalogoCompleto, true),
+      else: body
   end
 
   defp annotate_llm_turn({:ok, %{"usage" => %{"costMicros" => cost}} = resp}) do

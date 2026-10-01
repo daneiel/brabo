@@ -295,6 +295,24 @@ export function segmentoDeProjetoValidado(segmento: unknown): string {
  * para `HostConfig`/`NetworkingConfig` acontece do lado de dentro. Um chamador
  * que queira `privileged` não tem onde escrever isso.
  */
+export interface UsuarioDoContainer {
+  readonly uid: number;
+  readonly gid: number;
+}
+
+/** Faixa aceita para uid/gid: 0 (root) fica de fora — ausente é o jeito de dizer "como sempre". */
+export const UID_MINIMO = 1;
+export const UID_MAXIMO = 2_147_483_647;
+
+export function idDeUsuarioValido(valor: unknown): valor is number {
+  return (
+    typeof valor === 'number' &&
+    Number.isInteger(valor) &&
+    valor >= UID_MINIMO &&
+    valor <= UID_MAXIMO
+  );
+}
+
 export interface EspecificacaoDeContainer {
   /**
    * `workspace_dir_name` (RN-109): `<slug>-<8 do id>`, congelado na criação e
@@ -333,6 +351,16 @@ export interface EspecificacaoDeContainer {
    * parâmetro" vale para o que AFROUXA.
    */
   readonly pidsLimit: number;
+  /**
+   * Com QUEM o processo do container roda (`--user uid:gid`, ADR 0180). É o
+   * dono da pasta montada, MEDIDO pela api — nunca escrito por um chamador do
+   * broker e nunca `0`: `undefined`/`null` é "como sempre" (root sem
+   * capacidades). Existe porque `--cap-drop ALL` tira `CAP_DAC_OVERRIDE`, e
+   * root sem ela não escreve em pasta de outro uid. Não afrouxa nada: o
+   * processo passa a ter MENOS poder sobre a pasta, não mais. `exec` herda o
+   * usuário do container, então não há campo equivalente no `PedidoDeExec`.
+   */
+  readonly usuario?: UsuarioDoContainer | null;
 }
 
 export interface ContainerIniciado {

@@ -342,6 +342,21 @@ merge, `instruction_patch`, parallelism and `container_remove` never
 auto-approve. A SPECIFIC rule (`terminal: auto_approve` or
 `terminal: require_approval`) is not auto mode and keeps the scope cap.
 
+When a `git_merge` the human approved EXECUTES and the provider reports the PR
+as `merged`, the task that PR came from moves to `done` — once: a repeated merge
+of the same PR does not move it again or record a second
+`backlog.task_status_changed` event ([RN-628](../business-rules.md#rn-628)). The
+merge itself is never automated ([RN-418](../business-rules.md#rn-418)).
+
+A `git_merge` is REFUSED before it is created when the same PR was already
+merged by an earlier execution (409 `pr_ja_mergeado`) or already has a live
+proposal — pending, approved or auto-approved (409 `merge_ja_proposto`); a
+denied or failed one does not block trying again. Approving a pending merge
+whose PR another proposal already merged is also 409 `pr_ja_mergeado`, and the
+action stays `pending`. A QA/SecOps gate still pending is NOT a refusal: the
+PRs tab and the chat only WARN, naming the gate, and the button stays enabled
+([RN-663](../business-rules.md#rn-663)).
+
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
 reuses the manual/auto toggle the agent card already had in
@@ -449,6 +464,32 @@ specific instance through the normal flow instead. `container_start` and
 `container_stop` are NOT refused this way: they can be configured
 `auto_approve` (never seeded), same calibre as `open_adr_pr`/
 `open_infra_pr`.
+
+**Order of an "always allow" click ([RN-642](../business-rules.md#rn-642)).**
+The approval and the pattern are recorded in the SAME transaction: the
+pattern (in `allow`, or in `agent_autonomy` for a module dev agent) and its
+`permission.granted` event are written only after the transition out of
+`pending` is valid, and a pattern that fails to write undoes the approval.
+The `permissions.json` is a file and cannot join the transaction — the
+residual window is the commit failing after the file was written, declared.
+Clicking an action that already left `pending` by an APPROVAL (a double
+click, the same pending action shown in two panels) is idempotent success,
+`desfecho: "ja_aprovada"`, which records the pattern only if it is missing;
+clicking a DENIED action is still `409` with `reason: "acao_ja_recusada"`
+and writes nothing. The caps above are checked before any of this, even for
+an action that was already approved.
+
+**The TYPED half of the cap (AT-320).** Until 30/09 only the typed-in
+`git push` command was refused; a typed `git_push` action went through and
+wrote `GitPush()` into `allow`. "Always allow" now refuses, by type, the
+single list `TIPOS_SEM_SEMPRE_PERMITIR`
+(`apps/api/src/domain/actions/sempre-permitir.ts`): `git_push`, `pr_open`,
+`git_merge`, `container_remove`, `instruction_patch`, `parallelize` and
+`raise_max_parallel` — `400` with `reason: "teto_do_sempre_permitir"`. The
+approval card hides the button for the same list (a copy checked against
+this one by test). This does NOT change `decide()` nor what activating
+execution seeds: `git_commit`/`git_push`/`pr_open` stay `auto_approve` for
+each `dev-<module>` (see "What activating execution seeds").
 
 ## Path scope
 
@@ -623,6 +664,7 @@ event** in `session_events`, with the real actor
 |---|---|---|
 | `proposed_action.created` | the **agent** that proposed it | always, before any execution. `payload.status` says how the action was born: `pending`, `auto_approved`, or `denied`; `payload.reason` says which rule of `decide()` produced it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | the **user** who clicked | only on manual approval (including `approve_always`) |
+| `permission.granted` | the **user** who clicked "always allow" | only when the click actually recorded a pattern — `payload.pattern`, or `payload.agentId`/`actionType` for a module dev agent ([RN-642](../business-rules.md#rn-642)) |
 | `proposed_action.denied` | the **user** who refused | with `payload.reason` |
 | `action.executed` / `action.failed` | `system` | execution outcome |
 

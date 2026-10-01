@@ -165,7 +165,16 @@ Source: each package's `package.json` and the root `Makefile`.
 | command | runs |
 |---|---|
 | `pnpm --filter scripts test` | `vitest run` |
-| `pnpm --filter scripts typecheck` | `tsc --noEmit` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma` |
+| `pnpm --filter scripts idioma:medir` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts` |
+| `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
+| `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
+| `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
+| `pnpm --filter scripts jev:analise` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts` |
+| `pnpm --filter scripts jev:menu` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts` |
+| `pnpm --filter scripts idioma:validar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts` |
+| `pnpm --filter scripts idioma:diagnosticar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/diagnostico-haiku.ts` |
+| `pnpm --filter scripts idioma:revisar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/revisao.ts` |
 
 ## Makefile
 
@@ -183,10 +192,12 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
 | `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
 | `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
+| `make test-reprojecao-artefatos-k8s` | Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first) |
+| `make test-rotacao-chave-mestra-k8s` | Rehearses the master key rotation (three runbook steps) inside the local cluster (needs `make deploy-local` first; leaves the cluster on a new key) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-124 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+135 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

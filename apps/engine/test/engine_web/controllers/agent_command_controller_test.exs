@@ -379,6 +379,51 @@ defmodule EngineWeb.AgentCommandControllerTest do
     end
   end
 
+  # RN-622 (AT-164): o idioma do AUTOR, resolvido pela api, viaja no comando e
+  # chega ao modelo como a última mensagem de cada chamada do turno.
+  describe "idiomaDaResposta no comando (RN-622)" do
+    defp mandar_ao_criativo(conn, project_id, session_id, extra) do
+      {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
+
+      AgentCommandController.message(
+        conn,
+        Map.merge(
+          %{
+            "sessionId" => session_id,
+            "projectId" => project_id,
+            "agent" => "criativo",
+            "text" => "oi"
+          },
+          extra
+        )
+      )
+    end
+
+    test "o idioma do autor chega ao fim do que vai ao modelo", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn = mandar_ao_criativo(conn, project_id, session_id, %{"idiomaDaResposta" => "en"})
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
+    end
+
+    test "campo ausente ou que não é texto: a mensagem é aceita, sem orientação", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn = mandar_ao_criativo(conn, project_id, session_id, %{"idiomaDaResposta" => 42})
+
+      assert conn.status == 202
+      assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
+      assert %{"role" => "user"} = List.last(enviado)
+    end
+  end
+
   # O kickoff do PO sobe um turno no start FRESCO; espera ele fechar para o
   # teste partir de um agente ocioso.
   defp drenar_kickoff(pid) do

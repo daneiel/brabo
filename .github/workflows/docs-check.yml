@@ -56,6 +56,11 @@ jobs:
     name: Drift, gerados e build
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    # AT-306: sem teto, um passo pendurado (build do site, render da
+    # referência da API) segurava o runner pelas 6h do default do GitHub.
+    # Medido: 53s frio, 51s quente (docs/reference/rulesets.md) — 15min é
+    # folga de sobra sem deixar um travamento custar horas.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -281,6 +286,8 @@ jobs:
     name: Links externos (semanal)
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    # AT-306: site de terceiro lento não pode prender o runner por 6h.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2

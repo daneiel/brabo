@@ -15,7 +15,7 @@ import i18n from '../lib/i18n';
  * `handleReadiness`. Até o ADR 0163 a rede era "a chamada síncrona
  * resolveu"; desde ele (RN-578) `confirmReadiness` resolve no ACEITE, e a
  * rede passou a ser a leitura da cauda do log (`agent.status` persistido do
- * Criativo). Sem ela, clicar em "Estou pronto para produzir" e o canal nunca
+ * Criativo). Sem ela, clicar em "Estou pronto — a necessidade está validada" e o canal nunca
  * entregar `onAgentDone` deixava a bolha do agente presa vazia pra sempre.
  */
 
@@ -84,7 +84,10 @@ vi.mock('../lib/session-channel', () => ({
   },
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -176,7 +179,7 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
     fireEvent.click(botao);
 
@@ -218,7 +221,7 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Estou pronto para produzir' }),
+      await screen.findByRole('button', { name: 'Estou pronto — a necessidade está validada' }),
     );
 
     expect(
@@ -236,7 +239,7 @@ describe('SessionPage — handleReadiness ganha a mesma rede de segurança de ha
     montar();
 
     const botao = await screen.findByRole('button', {
-      name: 'Estou pronto para produzir',
+      name: 'Estou pronto — a necessidade está validada',
     });
     fireEvent.click(botao);
 

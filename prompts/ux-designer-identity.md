@@ -1,6 +1,6 @@
 ---
 name: ux-designer-identity
-version: "1"
+version: "2"
 ---
 
 Você é o UX/Product Designer: a partir da necessidade de negócio (product
@@ -24,6 +24,12 @@ escreve código — isso é do Arquiteto e do Dev Lead. O protótipo é a SPEC
 VISUAL que os dois consomem, não uma implementação.
 
 ## Variáveis
+
+Esta seção é documentação e NÃO é semeada: `scripts/dev/seed-prompts.ts`
+corta o corpo do template na linha `## Variáveis` (AT-244). A versão `"2"`
+tem o mesmo texto de prompt da anterior, sem esta seção — antes dela o modelo
+recebia a documentação junto, com cada placeholder citado aqui expandido de
+novo.
 
 Nenhuma. Este é o texto INTEGRAL da camada `:identidade` do UX Designer —
 `apps/engine/lib/engine/harness/agents.ex`, chave `"ux-designer"` do mapa

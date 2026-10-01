@@ -58,6 +58,10 @@ defmodule Engine.Agents.FalhaDeTurno do
   # `indeterminada` é para o que não se sabe, não para o que ninguém escreveu.
   def origem(:aborted), do: "infra"
 
+  # A api recusou a oferta de handoff porque o destino já está ativo no projeto
+  # (ADR 0182, RN-635): não há defeito de código, há uma regra de produto.
+  def origem({409, %{"reason" => "agente_ja_ativo"}}), do: "politica"
+
   # A api recusou a chamada. 5xx é dela; 4xx é do que o engine mandou.
   def origem({status, _corpo}) when is_integer(status) and status >= 500, do: "infra"
   def origem({status, _corpo}) when is_integer(status) and status >= 400, do: "codigo"

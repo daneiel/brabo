@@ -1861,16 +1861,18 @@ A guarda continua **inalterada e deliberada**: só rola quem já está a menos d
 120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
 a conversa, não sequestra a leitura.
 
-No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
-inteiros da coluna: ganha teto de 560px e fica centralizado, como
+No mesmo fio, o card de aprovação deixa de ocupar os 780px inteiros da
+coluna: ganha teto de 560px e fica centralizado, como
 `.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
 errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
-fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
-a coluna do grid.
+fila da aba Aprovações não muda: lá o card DEVE preencher a coluna do grid.
+Desde a AT-322 o card é UM só em toda superfície e preenche o contêiner —
+quem aplica o teto e a centralização no fio é o contêiner dele
+(`.acaoNoFio`), não mais uma variante do card.
 
 - **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
   efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
-  (`.card.chat`)
+  (`.card`) e `apps/web/src/routes/SessionPage.module.css` (`.acaoNoFio`)
 - **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
   (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
   ter rolado para cima)

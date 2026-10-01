@@ -35,9 +35,11 @@ const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
+const getResolvedModelBindings = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
+const getProjectPendingActions = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -51,10 +53,17 @@ vi.mock('../lib/api-client', async () => {
     getArchitecture: (...args: unknown[]) => getArchitecture(...args),
     getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    // A rota por agente segue na api; a aba não a lê mais (RN-654, AT-339), e
+    // o dublê existe para o teste PROVAR isso.
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    getResolvedModelBindings: (...args: unknown[]) => getResolvedModelBindings(...args),
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
+    getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
+    approveAction: vi.fn(),
+    denyAction: vi.fn(),
+    approveAlwaysAction: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
   };
@@ -173,6 +182,7 @@ function resumo(over: Partial<ProjectCardSummary['roster']> = {}): ProjectCardSu
       moduleNames: ['Backend'],
       gatesEverOpened: true,
       delegatedSubagents: [],
+      activatedAgents: [],
       infraActive: false,
       uxDesignerActive: false,
       staffActive: false,
@@ -203,6 +213,7 @@ beforeEach(async () => {
   getSessionTokenUsage.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
+  getResolvedModelBindings.mockResolvedValue({ agents: [], areas: [] });
   listAgentAutonomy.mockResolvedValue([]);
   listWorkspaces.mockResolvedValue([
     {
@@ -218,6 +229,7 @@ beforeEach(async () => {
     },
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
+  getProjectPendingActions.mockResolvedValue([]);
 });
 
 // Restaura o default do app depois deste arquivo — a instância é o
@@ -236,7 +248,9 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
     // árvore, que reusa o mesmo rótulo) — `getAllByText` prova que o lead
     // está lá sem fixar QUANTAS vezes o nome se repete na tela.
     expect(screen.getAllByText('QA').length).toBeGreaterThan(0);
-    expect(screen.getByText('QA de Automação')).toBeInTheDocument();
+    // O nome do membro também aparece na oferta de modo automático para o
+    // time (RN-661), que lista os mesmos executores — daí `getAllByText`.
+    expect(screen.getAllByText('QA de Automação').length).toBeGreaterThan(0);
 
     // Criativo, SecOps (o `pr.gate_changed` da fixture traz os dois, QA e
     // SecOps, juntos — Fase 4a) e Infra estão na sessão, mas não são
@@ -250,8 +264,10 @@ describe('ProjectExecutorsTab (FASE 27 — RN-121)', () => {
     montar();
 
     await screen.findByText('dev-backend');
-    // dev-backend + qa (lead) + qa-automacao (membro) = 3 agentes.
-    expect(screen.getByText(/3 agentes/)).toBeInTheDocument();
+    // dev-backend + qa (lead) + qa-automacao (membro) = 3 agentes. O `·`
+    // prende a frase ao CABEÇALHO: o botão da oferta de modo automático
+    // (RN-661) também conta agentes.
+    expect(screen.getByText(/3 agentes ·/)).toBeInTheDocument();
   });
 
   it('sem dev/QA na sessão, mostra o estado vazio em vez de grid em branco', async () => {
@@ -390,7 +406,8 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
 
     montar();
 
-    expect(await screen.findByText('QA de Automação')).toBeInTheDocument();
+    // `findAll`: o nome aparece no card e na oferta de modo automático (RN-661).
+    expect((await screen.findAllByText('QA de Automação')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('QA').length).toBeGreaterThan(0);
   });
 
@@ -445,5 +462,101 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
       await screen.findByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
     ).toBeInTheDocument();
     expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectExecutorsTab — o que destrava a execução vem de OUTRA sessão (AT-298)', () => {
+  const containerStartNoChat = {
+    id: 'cs-1',
+    projectId: 'proj-1',
+    sessionId: 'sess-chat',
+    seq: 3,
+    actionType: 'container_start',
+    payload: { imagem: 'node:22' },
+    status: 'pending',
+    resolvedPolicy: 'require_approval',
+    actor: { kind: 'agent', id: 'infra' },
+    decidedBy: null,
+    decidedAt: null,
+    rejectionReason: null,
+    executionResult: null,
+    createdAt: '2026-08-10T10:05:00.000Z',
+    updatedAt: '2026-08-10T10:05:00.000Z',
+  };
+
+  it('o `container_start` pendente do chat aparece na aba da execução', async () => {
+    getProjectPendingActions.mockResolvedValue([containerStartNoChat]);
+    montar();
+
+    expect(await screen.findByTestId('pendencias-de-outras-sessoes')).toBeInTheDocument();
+  });
+
+  it('CASO DE CONTRASTE: pendente da PRÓPRIA execução não vira bloco (o roster a marca)', async () => {
+    getProjectPendingActions.mockResolvedValue([{ ...containerStartNoChat, sessionId: 'sess-1' }]);
+    montar();
+
+    await screen.findByText('dev-backend');
+    await waitFor(() => expect(getProjectPendingActions).toHaveBeenCalled());
+    expect(screen.queryByTestId('pendencias-de-outras-sessoes')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * AT-339 (RN-654) — a aba Executores lê os bindings no LOTE: os agentes do
+ * catálogo pela chave da aba Configurações, e os `dev-<modulo>` que o
+ * catálogo não conhece numa segunda leitura em lote — nunca uma por agente.
+ */
+describe('ProjectExecutorsTab — bindings em lote (AT-339)', () => {
+  const MODELO = {
+    id: 'm-2',
+    provider: 'openrouter',
+    name: 'modelo-dois',
+    displayName: 'Modelo Dois',
+  };
+  const PAGAMENTOS: Architecture = {
+    ...ARQUITETURA,
+    moduleMap: {
+      ...ARQUITETURA.moduleMap!,
+      modules: [{ name: 'Pagamentos', stack: 'NestJS', responsibility: 'API', dependsOn: [] }],
+    },
+  };
+
+  it('o dev de módulo fora do catálogo vem de uma leitura em lote própria, sem rota por agente', async () => {
+    getArchitecture.mockResolvedValue(PAGAMENTOS);
+    getProjectsSummary.mockResolvedValue([resumo({ moduleNames: ['Pagamentos'] })]);
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockImplementation(async (_p: string, agents: string[]) => ({
+      agents: agents.map((key) => ({
+        key,
+        binding:
+          key === 'dev-pagamentos'
+            ? { modelId: 'm-2', origin: 'agent', routingPreference: null, skipped: [] }
+            : null,
+      })),
+      areas: [],
+    }));
+    montar();
+
+    expect(await screen.findByText(/Modelo Dois/)).toBeInTheDocument();
+    // Duas leituras: o catálogo (com as áreas) e os extras — só `dev-pagamentos`.
+    expect(getResolvedModelBindings).toHaveBeenCalledTimes(2);
+    expect(getResolvedModelBindings).toHaveBeenCalledWith('proj-1', ['dev-pagamentos'], []);
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('CASO DE FALHA: os extras recusados deixam o cartão sem modelo, e não caem na rota por agente', async () => {
+    getArchitecture.mockResolvedValue(PAGAMENTOS);
+    getProjectsSummary.mockResolvedValue([resumo({ moduleNames: ['Pagamentos'] })]);
+    listModels.mockResolvedValue({ local: {}, cloud: { geral: [MODELO] } });
+    getResolvedModelBindings.mockImplementation(async (_p: string, agents: string[]) => {
+      if (agents.includes('dev-pagamentos')) throw new ApiError(500, 'falhou');
+      return { agents: [], areas: [] };
+    });
+    montar();
+
+    expect((await screen.findAllByText('dev-pagamentos')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/Modelo Dois/)).not.toBeInTheDocument();
+    expect(getAgentModelBinding).not.toHaveBeenCalled();
   });
 });

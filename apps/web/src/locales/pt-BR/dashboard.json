@@ -15,7 +15,10 @@
     "noSearchResults": "Nenhum projeto encontrado para \"{{search}}\"."
   },
   "activity": {
-    "none": "Sem atividade ainda"
+    "noSession": "Nenhuma sessão ainda",
+    "latestSessionEmpty": "Sem atividade na sessão mais recente ainda",
+    "loading": "carregando atividade…",
+    "unavailable": "atividade indisponível"
   },
   "gitError": {
     "title": "Não foi possível provisionar o repositório",
@@ -28,13 +31,19 @@
     "columns": {
       "service": "Serviço",
       "status": "Status",
-      "lastCheck": "Último check"
+      "lastCheck": "Última verificação"
     },
     "services": {
       "api": "api (NestJS)",
       "engine": "engine (Elixir/Phoenix)"
     },
-    "back": "Voltar"
+    "back": "Voltar",
+    "noTimestamp": "não informado",
+    "state": {
+      "ok": "no ar",
+      "error": "fora do ar",
+      "checking": "verificando"
+    }
   },
   "projectCard": {
     "provider": {

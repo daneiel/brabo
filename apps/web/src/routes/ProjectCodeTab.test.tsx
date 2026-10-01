@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import codePtBR from '../locales/pt-BR/code.json';
+import navPtBR from '../locales/pt-BR/nav.json';
 // `ErroDeCarregamento` (namespace `ui`) é filho deste componente — sem o
 // namespace aqui, `t('erroDeCarregamento.retry')` cai na chave crua.
 import uiPtBR from '../locales/pt-BR/ui.json';
@@ -16,11 +17,11 @@ import type { EstadoDoContainer } from '../lib/api-types';
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
-    resources: { 'pt-BR': { code: codePtBR, ui: uiPtBR } },
+    resources: { 'pt-BR': { code: codePtBR, ui: uiPtBR, nav: navPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'code',
-    ns: ['code', 'ui'],
+    ns: ['code', 'ui', 'nav'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -124,7 +125,7 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
     montar();
 
     expect(
-      await screen.findByText(/Não consegui verificar se a aba Code está liberada/),
+      await screen.findByText(/Não consegui verificar se a aba Código está liberada/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/shell aberto/)).not.toBeInTheDocument();
   });
@@ -135,7 +136,7 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
     montar();
 
     expect(
-      await screen.findByText('A aba Code ainda não está liberada'),
+      await screen.findByText('A aba Código ainda não está liberada'),
     ).toBeInTheDocument();
     expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
     expect(screen.queryByText(/shell aberto/)).not.toBeInTheDocument();
@@ -164,7 +165,7 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
       montar();
 
       expect(
-        await screen.findByText('A aba Code ainda não está liberada'),
+        await screen.findByText('A aba Código ainda não está liberada'),
       ).toBeInTheDocument();
       expect(screen.queryByText(/shell aberto/)).not.toBeInTheDocument();
       expect(getContainerState).toHaveBeenCalledWith('proj-1');

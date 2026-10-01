@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 172 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 184 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -493,7 +493,10 @@ port under `application/ports/`.
 table. `session_events` has `unique(session_id, seq)` and `seq` is dense per
 session — the restore test verifies there's no gap. State that needs to
 change (a hypothesis's lifecycle, a handoff's status) lives in its own
-mutable table, alongside the events.
+mutable table, alongside the events. A handoff offer that stops being the current one
+becomes `superseded` in that table and gets its own `handoff.superseded` event
+— never an edit of the `handoff.offered` that announced it ([ADR
+0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 **3. No LLM call outside the Harness.** It's not a convention: the engine
 has no LLM client. It asks the api, which does the metering.
@@ -702,9 +705,33 @@ erDiagram
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
   projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
+  sessions ||--o{ session_language_overrides : "response language pinned per person (RN-618)"
+  users ||--o{ detected_language_declines : "detected language the person said no to (RN-624)"
 ```
 
-54 tables in total. The most recent is `project_mirror_states`
+56 tables in total. The most recent is `detected_language_declines`
+([RN-624](business-rules.md#rn-624)): one row per person and language the
+person DECLINED when asked "we noticed you write in X — use X for the
+answers?", with the date. Its presence is what keeps the same question from
+coming back; confirming that language later deletes the row. The detection
+itself keeps no state — the sample is read from `session_events` through the
+partial index `session_events_evidencia_de_idioma_idx` (user actor, the two
+evidence types) and the hysteresis is recomputed —, so this table and the
+confirmed pair in `users` are all it writes, and only when the person answers.
+Before it, the most recent was `session_language_overrides`
+([RN-618](business-rules.md#rn-618),
+[ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): the
+response language one person pinned in one session, keyed by the
+`{session_id, user_id}` PAIR so two participants never touch each other. It is
+configuration, not an event — pinning again is an upsert, releasing is a
+`DELETE`. The same ADR adds `users.response_language` (`NULL` is "automatic")
+and the confirmed-detection pair `users.detected_language` /
+`detected_language_confirmed_at`, bound by a CHECK; `users.locale` stays the
+interface language, closed to `pt-BR`/`en`. And `projects.language`
+([RN-619](business-rules.md#rn-619)) is the language of what has no human
+author — shared artifacts and turns nobody typed —, always a concrete
+BCP-47 code. Before it, the most recent was
+`project_mirror_states`
 ([RN-517](business-rules.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
 project, `project_id` unique, holding what the LAST mirror round did — the last
@@ -811,4 +838,4 @@ Derived from history's hotspots and the ADRs that record open state.
 | `TerminalExecutor` runs the managed project's suite **inside** the engine's image | [ADR 0024](adr/0024-fase5-imagens-producao-ci.md) | doesn't scale to arbitrary stacks; the way out is per-project sandboxing |
 | ~~Images aren't published to a registry; the production overlay points at `ghcr.io/OWNER/*`~~ | [ADR 0027](adr/0027-fase5-backup-hardening-release.md) → **closed by** [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) | the four images publish to GHCR on every final tag and the overlay pins by digest from `.release/images.json`. What remains is NOT this debt: nothing deploys automatically, and the images are neither signed nor attested |
 | ~~`SessionPage.tsx` was 169 KiB with 25 test files importing it; `ProjectSettingsTab.tsx` was 90 KiB~~ | [ADR 0122](adr/0122-sessionpage-dividido-em-cinco-prs.md) + [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md) + [ADR 0125](adr/0125-projectsettingstab-dividido-por-secao.md) — **this row CLOSES on both halves** | ADR 0122's five mechanical PRs merged first: PR 1 extracted the pure timeline/turn helpers to `apps/web/src/lib/session-timeline.ts`, PR 2 extracted `StorySlide` to `apps/web/src/routes/StorySlide.tsx`, PR 3 extracted `StructuredQuestionCard` (plus its private helper `permiteOutra`) to `apps/web/src/routes/StructuredQuestionCard.tsx`, PR 4 extracted the backlog-tree helpers (`urlDaPr`, `vinculoDeBacklog`, `montarArvoreDeBacklog`, `totalDeDescendentes`) to `apps/web/src/lib/session-backlog-tree.ts` and `ItemDeBacklog` + `ContextAside` (the whole right-hand sidebar) to `apps/web/src/routes/ContextAside.tsx`, and PR 5 extracted the six readiness derivations (`criativoActive`, `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`, `hasProductBrief`, `activeAgent`) to a `useSessionReadiness` hook in `apps/web/src/lib/session-readiness.ts` — `SessionPage.tsx` went from 3 807 to 2 661 lines, explicitly leaving the turn-channel state cluster (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) out of scope for its own future ADR. ADR 0124 is that ADR: a mechanical dedup PR first made `handleSend`/`handleReadiness`/`handleArchitectureReadiness` call the pre-existing `iniciarTurnoDoAgente`/`finalizarTurnoDoAgente` pair instead of duplicating their arm inline, then a second PR extracted the state, the `connectSessionHeartbeat` channel effect, and the three lifecycle functions into a `useTurnoDoAgente` hook (`apps/web/src/lib/session-turno.ts`). `SessionPage.tsx` is now 2 479 lines; the 25 (24 after PR 1's migration) `SessionPage.*.test.tsx` files passed unedited through all seven PRs across the two ADRs. ADR 0125 closes the OTHER half, in one PR rather than five: `ProjectSettingsTab.tsx` splits into one file per section under `apps/web/src/routes/settings/` (17 sections + a two-symbol `settings/shared.ts` holding only `ORIGIN_TONE` and `formatarCustoMicros`, the two helpers with more than one caller), going from 2 532 to 77 lines while STAYING at its path as the entry and barrel — load-bearing, because `ProjectSettingsTab.test.tsx` imports 11 names from it and `ProjectPage.test.tsx`/`project-tabs.test.tsx` both `vi.mock` it BY PATH. One PR and not five because this file was never shaped like `SessionPage.tsx`: the parent held no state at all (17 JSX children, no hook, no query, no role check), no section took more than `{projectId}`, and 11 of the 17 were already exported. `ProjectSettingsTab.module.css` stays one shared stylesheet with 15 importers (same answer ADR 0122 gave for `SessionPage.module.css`). The full web suite — 142 files, 1 537 tests — passed with ZERO test files edited |
-| `SessionPage.tsx` grew back after its row closed: **2 559 lines** (116 KiB, 26 `SessionPage.*.test.tsx` files), measured on `dev` at `b61bc49cd` on **2026-09-13** — the row above closed it at **2 479** | `git show --numstat` on the two commits that touched it since [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md): `62eebad55` (+8, the "fit for agents" model picker) and `a26ddd84d` (+72, the actionable Infra handoff card, RN-499) | the closed row above is right for `ProjectSettingsTab.tsx` (now a 96-line bar and barrel) and **no longer right for `SessionPage.tsx`**. Nobody did anything wrong — each addition was a legitimate feature — which is exactly why a debt closed **by a number** needs the number re-measured: without it, regression is the sum of correct decisions. This row **declares**, it does not decompose: splitting further is a program with its own ADR, in the mould of 0122/0125. There is no size gate in CI, on purpose — a ratchet on a file nobody is decomposing only produces red PRs. The closed row stays as history |
+| ~~`SessionPage.tsx` grew back after its row closed: **2 559 lines** (116 KiB, 26 `SessionPage.*.test.tsx` files), measured on `dev` at `b61bc49cd` on **2026-09-13** — the row above closed it at **2 479**~~ | `git show --numstat` on the two commits that touched it since [ADR 0124](adr/0124-hook-do-canal-de-turno-do-sessionpage.md): `62eebad55` (+8, the "fit for agents" model picker) and `a26ddd84d` (+72, the actionable Infra handoff card, RN-499) | the closed row above is right for `ProjectSettingsTab.tsx` (now a 96-line bar and barrel) and **no longer right for `SessionPage.tsx`**. Nobody did anything wrong — each addition was a legitimate feature — which is exactly why a debt closed **by a number** needs the number re-measured: without it, regression is the sum of correct decisions. This row **declares**, it does not decompose: splitting further is a program with its own ADR, in the mould of 0122/0125. There is no size gate in CI, on purpose — a ratchet on a file nobody is decomposing only produces red PRs. The closed row stays as history. **The program now exists:** [ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md) (AT-138, 2026-09-28) re-measured **2 637 lines** on `dev` at `018b8cd24c` and declares ten stacked mechanical PRs down to 834, with the size gate born only in the last one. **Closed** by the last PR of that program: the file is **834 lines**, and `apps/web/src/routes/SessionPage.teto.test.ts` fails it at 1 000 or more — the size gate this row refused on a file nobody was decomposing exists now that someone did |

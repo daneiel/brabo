@@ -148,6 +148,29 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # ADR 0182 (RN-636): o modo do AppSec. A resposta por destino é scriptável
+  # via `Process.put(:fake_handoff_if_absent, %{"infra" => resposta})`, onde
+  # `resposta` é o `{:ok, mapa}`/`{:error, motivo}` devolvido; destino ausente
+  # do mapa responde como oferta criada.
+  @impl true
+  def create_handoff_if_absent(project_id, session_id, from_agent, to_agent, artifact_id) do
+    notify({:handoff_if_absent, project_id, session_id, from_agent, to_agent, artifact_id})
+
+    Process.get(:fake_handoff_if_absent, %{})
+    |> Map.get(
+      to_agent,
+      {:ok,
+       %{
+         "id" => "ho-#{to_agent}",
+         "fromAgent" => from_agent,
+         "toAgent" => to_agent,
+         "artifactId" => artifact_id,
+         "status" => "offered",
+         "desfecho" => "criado"
+       }}
+    )
+  end
+
   @impl true
   def create_epic(_project_id, _session_id, fields) do
     notify({:epic_created, fields})
@@ -621,8 +644,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta) do
+  def llm_turn_stream(_project_id, _session_id, agent, messages, tools, on_delta, opts) do
     notify({:llm_turn_stream, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     # `:fake_llm_turn_stream_hang` — o turno FICA parado aqui, como uma
     # chamada SSE de verdade presa no meio do stream. Existe só para provar
@@ -681,8 +707,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
-  def llm_turn(_project_id, _session_id, agent, messages, tools) do
+  def llm_turn(_project_id, _session_id, agent, messages, tools, opts) do
     notify({:llm_turn, agent, messages, tools})
+
+    if Keyword.get(opts, :catalogo_completo, false),
+      do: notify({:llm_turn_catalogo_completo, agent})
 
     cond do
       # Transporte quebrado (provider fora/timeout) — o ToolLoop guarda isso

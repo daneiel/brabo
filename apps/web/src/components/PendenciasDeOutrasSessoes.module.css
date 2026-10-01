@@ -1,0 +1,94 @@
+/* AT-265: as pendências de outras sessões do projeto, acima do composer.
+   Tokens do design system; a altura é limitada para não empurrar o composer
+   para fora da tela quando há muitas.
+   AT-318: a MESMA medida da coluna do fio e do composer (780px, com o respiro
+   de 24px de cada lado, como `.infraHandoffRow` em `SessionPage.module.css`)
+   — antes ela ia de borda a borda e ficava mais larga que a coluna. */
+.wrapper {
+  flex-shrink: 0;
+  max-width: 780px;
+  width: calc(100% - 48px);
+  margin: 0 auto 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.disclosure {
+  padding: 0;
+}
+
+.cabecalho {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+}
+
+.nota {
+  margin: 0;
+  padding: 0 12px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.lista {
+  /* AT-318: ~60% do fio com 40vh e detalhe aberto. Com os cards compactos
+     cabem vários nesta altura, e o resto rola aqui dentro. */
+  max-height: 32vh;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filaTitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.contagem {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.presenca {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.origem {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.recorte {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}

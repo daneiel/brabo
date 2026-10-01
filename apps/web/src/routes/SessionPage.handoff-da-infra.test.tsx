@@ -74,7 +74,10 @@ vi.mock('../lib/session-channel', () => ({
   connectSessionHeartbeat: () => () => {},
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -162,7 +165,7 @@ describe('SessionPage — card acionável do handoff da Infra (RN-499)', () => {
     seq: 1,
     type: 'handoff.offered',
     actor: { kind: 'agent', id: 'arquiteto' },
-    payload: { toAgent: 'infra' },
+    payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
     createdAt: '2026-09-04T12:00:00.000Z',
   };
 
@@ -292,7 +295,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 1,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'infra' },
+          payload: { handoffId: 'handoff-infra', toAgent: 'infra' },
           createdAt: '2026-09-04T12:00:00.000Z',
         },
         {
@@ -300,7 +303,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
           seq: 2,
           type: 'handoff.offered',
           actor: { kind: 'agent', id: 'arquiteto' },
-          payload: { toAgent: 'dev-lead' },
+          payload: { handoffId: 'handoff-devlead', toAgent: 'dev-lead' },
           createdAt: '2026-09-04T12:00:01.000Z',
         },
       ],
@@ -310,7 +313,7 @@ describe('SessionPage — não-regressão: o card do Dev Lead segue como era (RN
 
     // O card do fio continua resolvendo pro DEV LEAD, não pro Infra.
     const botaoDevLead = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar dev-lead',
+      name: 'Aceitar handoff e iniciar Dev Lead',
     });
     // ...com o link de Executores que a RN-125 embutiu nele.
     expect(

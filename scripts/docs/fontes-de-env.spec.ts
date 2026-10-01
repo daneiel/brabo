@@ -91,4 +91,31 @@ describe('fontesDoInventarioDeEnv — contra o repositório de verdade', () => {
     const varridos = new Set(fonte(lista, 'api/scripts')[1]);
     expect(versionados.filter((f: string) => !varridos.has(f))).toEqual([]);
   });
+
+  // AT-212: os scripts do bootstrap e das provas agendadas leem do ambiente e
+  // ficavam fora do inventário.
+  it('todo .sh versionado em deploy/k8s/ é varrido, como ferramenta', () => {
+    const versionados = arquivos('deploy/k8s').filter((f: string) => f.endsWith('.sh'));
+    expect(versionados.length).toBeGreaterThan(0);
+    const [, caminhos, , escopo] = fonte(lista, 'deploy/k8s');
+    const varridos = new Set(caminhos);
+    expect(versionados.filter((f: string) => !varridos.has(f))).toEqual([]);
+    expect(escopo).toBe('ferramenta');
+  });
+});
+
+describe('fontesDoInventarioDeEnv — o padrão de deploy/k8s (AT-212)', () => {
+  const [, , padrao] = fonte(fontesDoInventarioDeEnv(() => []) as Fonte[], 'deploy/k8s');
+  const achar = (texto: string) => [...texto.matchAll(padrao)].map((m) => m[1]);
+
+  it('casa a expansão com default, que é como o shell lê variável de fora', () => {
+    expect(achar('NS="${BRABO_NAMESPACE:-brabo}"')).toEqual(['BRABO_NAMESPACE']);
+    expect(achar('[[ "${BRABO_KEEP_CLUSTER:-}" == "1" ]]')).toEqual(['BRABO_KEEP_CLUSTER']);
+    expect(achar(': "${OBRIGATORIA:?defina}"')).toEqual(['OBRIGATORIA']);
+  });
+
+  it('não casa a variável do próprio script, nem a minúscula', () => {
+    expect(achar('echo "${NS}" "${API}"')).toEqual([]);
+    expect(achar('printf "${onde:+; ${onde}}" "${1:-}"')).toEqual([]);
+  });
 });

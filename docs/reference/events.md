@@ -49,6 +49,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `session.draining` | the node hosting it is draining |
 | `session.closed` | normal termination |
 | `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
+| `session.reopened` | a `closed`/`closed_abnormally` session went back to `active` (ADR 0183) |
 
 **A terminal session no longer takes conversation ([RN-581](../business-rules.md#rn-581)).**
 Once a session is `closed` or `closed_abnormally`, appending a conversation
@@ -66,6 +67,15 @@ outlives the session. A session closed because the conversation sat idle past
 its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 `closed`, like `heartbeat_timeout`.
 
+**A closed session can be reopened ([RN-649](../business-rules.md#rn-649), ADR 0183).**
+`POST /projects/:projectId/sessions/:sessionId/reopen` (`developer`, ADR 0184) moves a
+`closed`/`closed_abnormally` session back to `active` and appends
+`session.reopened` with `{from, to, closedAt, terminationReason}` — the only
+record of the interval that was closed, since `closed_at` and
+`termination_reason` are cleared on the row. No earlier event is edited, and
+the session's `kind` does not change. A session that already has
+`execution.activated` is refused with 409 `sessao_com_execucao`.
+
 ### Chat and agents
 
 | type | when |
@@ -76,9 +86,12 @@ its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 | `agent.activated` | an agent took on work in the session |
 | `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules/autenticacao.md#rn-175)) |
 | `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
+| `tool_router.decided` | the step where the Jev chose the tool ([RN-625](../business-rules.md#rn-625), [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)): `menuAntes`/`menuDepois`, `escolha`, `confianca`, `segunda`, `anterior`, `aplicado` (the menu came out smaller than the catalog), `motivoDaQueda` + `origemDaQueda` (`infra`/`modelo`/`codigo`) when the Jev fell, `latenciaMs`, `custoMicros` (the REAL `usage.cost`) and `foraDoCardapio` (tools the model called that were not offered). Written by the engine facade for every agent; absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The measure of the gain (AT-239) is read from this event and from `token_usage`, never annotated |
 | `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the seven conversational agents (the Infra Lead since [RN-617](../business-rules.md#rn-617)), by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules.md#rn-589)). The same payload comes from the Infra Lead for every tool it dispatches inline, and from the Dev Lead when a suspended call is settled — never while it waits for approval ([RN-593](../business-rules.md#rn-593)) |
 | `handoff.offered` | one agent offered the work to another |
-| `handoff.accepted` | the recipient accepted |
+| `handoff.accepted` | the recipient accepted. Usually by a person (actor `user`). When the acceptance was implicit in the "I'm ready" click ([RN-658](../business-rules.md#rn-658)), the actor is still that person and the payload — and that of the `agent.activated` that follows — also carries `implicito: { via: "readiness.confirmed", readinessEventId }`. Since [RN-660](../business-rules.md#rn-660) ([ADR 0186](../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)) the PO's offer to the Architect can be accepted by the `system` actor `handoff-auto-accept`, and then the payload also carries `automatico: true`, `emNomeDe` (who opened the session — the repository is provisioned on their behalf) and `criterio` (`regras`, `cobertas`, `repositorio`) |
+| `handoff.auto_accept_failed` | the system decided to accept the PO's offer to the Architect ([RN-660](../business-rules.md#rn-660)) and the accept failed. Payload: `handoffId`, `toAgent`, `origem` (`infra`) and `error`. Actor `system` `handoff-auto-accept`. The offer keeps its button when it was not marked `accepted` |
+| `handoff.superseded` | an `offered` handoff stopped being the current one and can no longer be accepted ([RN-635](../business-rules.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — the target was activated by any path; `nova_oferta` — a newer offer to the same target in the project replaced it) and `substitutaId` (the offer that replaced it, `null` for `agente_ativado`). Recorded by the `system` actor `handoff-lifecycle` in the session of the OLD offer, which may be closed — it is bookkeeping, not conversation, so RN-581 lets it in. The row's `status` becomes `superseded`; the event is the history |
 | `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
 
 **What a conversational agent reads back ([RN-580](../business-rules.md#rn-580)).**
@@ -199,8 +212,8 @@ The schemas are closed: a missing field rejects the emission
 | type | when |
 |---|---|
 | `architecture.readiness_confirmed` | — |
-| `readiness.confirmed` | — |
-| `necessity.validated` | `necessidade-validada` gate (Creative → PO): the user confirms that the `product_brief` the Creative agent consolidated reflects the actual business need — a click separate from `readiness.confirmed`, never a model inference ([RN-406](../business-rules.md#rn-406), ADR 0095). `payload.productBriefId` references the validated `artifact.product_brief` |
+| `readiness.confirmed` | the user clicked "I'm ready — the need is validated" with the Creative. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the payload carries `necessidadeValidada: true` and `aceiteImplicitoDoPo: true`, the mark the implicit PO acceptance reads ([RN-658](../business-rules.md#rn-658)); older events carry `{}` |
+| `necessity.validated` | `necessidade-validada` gate (Creative → PO): a person — never a model inference — declares that the business need the Creative agent consolidated is right. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) it is recorded by the SAME click as `readiness.confirmed`, once the engine accepts the turn, with `productBriefId: null` (the brief comes from that turn), `via: "readiness.confirmed"` and `readinessEventId` ([RN-657](../business-rules.md#rn-657)). Events from the separate click of ADR 0095 ([RN-406](../business-rules.md#rn-406)) carry `productBriefId` pointing at the validated `artifact.product_brief` |
 
 ### Git and bootstrap
 
@@ -381,13 +394,13 @@ makes a new identifier show up here even if nobody wrote about it.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Extracted from the emission points: **92 identifiers**, of which **2** are not described above.
+Extracted from the emission points: **94 identifiers**, of which **2** are not described above.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
-- `agent.error` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
 - `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
@@ -418,7 +431,7 @@ Extracted from the emission points: **92 identifiers**, of which **2** are not d
 - `backlog.task_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub>
 - `backlog.task_claimed` <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub>
 - `backlog.task_created` <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub>
-- `backlog.task_status_changed` <sub>(apps/api/src/application/use-cases/execution/mark-task.use-case.ts)</sub>
+- `backlog.task_status_changed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `backlog.task_unblocked` <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub>
 - `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
@@ -442,12 +455,14 @@ Extracted from the emission points: **92 identifiers**, of which **2** are not d
 - `execution.parallelization_suggested` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
 - `gate.scanner` <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub>
 - `handoff.accepted` <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub>
+- `handoff.auto_accept_failed` <sub>(apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts)</sub>
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
+- `handoff.superseded` <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub>
 - `infra.artifact_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub>
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
-- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub>
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>

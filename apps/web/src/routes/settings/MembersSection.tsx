@@ -19,6 +19,7 @@ import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 
 /** Duas letras a partir do nome (ou do e-mail, quando não há nome). */
 function iniciaisDe(rotulo: string): string {
@@ -55,7 +56,11 @@ export function MembersSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { data: members } = useQuery({ queryKey: ['members', projectId], queryFn: () => listProjectMembers(projectId) });
+  const { data: members } = useQuery({
+    queryKey: ['members', projectId],
+    queryFn: () => listProjectMembers(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
   const [inviteUserId, setInviteUserId] = useState('');
   const [inviteRole, setInviteRole] = useState<Role>('developer');
 

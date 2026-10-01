@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProjectChatTab } from './ProjectSessionsTab';
 import { ProjectRagTab } from './ProjectRagTab';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
 import styles from './ProjectChatShell.module.css';
 
 type SegmentoDeChat = 'conversar' | 'buscar';
@@ -54,27 +55,12 @@ export function ProjectChatShell({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.shell}>
-      <div
-        className={styles.segmentado}
-        role="group"
-        aria-label={t('chatShell.ariaLabel')}
-      >
-        {ORDEM_DOS_SEGMENTOS.map((chave) => (
-          <button
-            key={chave}
-            type="button"
-            className={
-              segmento === chave
-                ? `${styles.pill} ${styles.pillAtivo}`
-                : styles.pill
-            }
-            aria-pressed={segmento === chave}
-            onClick={() => setSegmento(chave)}
-          >
-            {t(CHAVE_DO_SEGMENTO[chave])}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        rotulo={t('chatShell.ariaLabel')}
+        opcoes={ORDEM_DOS_SEGMENTOS.map((chave) => ({ valor: chave, rotulo: t(CHAVE_DO_SEGMENTO[chave]) }))}
+        valor={segmento}
+        onChange={setSegmento}
+      />
 
       <div className={styles.corpo}>
         {segmento === 'conversar' ? (

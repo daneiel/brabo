@@ -57,7 +57,7 @@
 
 .disclosureCabecalho {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-meta);
   /* `--text-secondary`, não `--text-muted` — ver o comentário de `.faixa`. */
   color: var(--text-secondary);
   padding: 2px 0 0;
@@ -76,7 +76,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--text-secondary);
 }

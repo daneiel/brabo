@@ -1612,8 +1612,8 @@ que não libera o escopo.
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:146`
-  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:105`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:172`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts` ("modo automático
@@ -2177,16 +2177,18 @@ A guarda continua **inalterada e deliberada**: só rola quem já está a menos d
 120px do fim. Quem subiu para reler o histórico não é arrastado — o fio segue
 a conversa, não sequestra a leitura.
 
-No mesmo fio, o card de aprovação da variante `chat` deixa de ocupar os 780px
-inteiros da coluna: ganha teto de 560px e fica centralizado, como
+No mesmo fio, o card de aprovação deixa de ocupar os 780px inteiros da
+coluna: ganha teto de 560px e fica centralizado, como
 `.handoffCard`/`.handoffDivider` já são. Recuar 45px como as bolhas seria
 errado — o card não é fala de ninguém, é uma decisão pedida ao usuário. A
-fila da aba Aprovações (`variant="queue"`) não muda: lá o card DEVE preencher
-a coluna do grid.
+fila da aba Aprovações não muda: lá o card DEVE preencher a coluna do grid.
+Desde a AT-322 o card é UM só em toda superfície e preenche o contêiner —
+quem aplica o teto e a centralização no fio é o contêiner dele
+(`.acaoNoFio`), não mais uma variante do card.
 
 - **Onde:** `apps/web/src/routes/SessionPage.tsx` (`acompanharOFim` e os dois
   efeitos que o chamam); `apps/web/src/components/ApprovalCard.module.css`
-  (`.card.chat`)
+  (`.card`) e `apps/web/src/routes/SessionPage.module.css` (`.acaoNoFio`)
 - **Teste:** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
   (describe "RN-173 — o fio acompanha o que cresce", com o caso de o usuário
   ter rolado para cima)
@@ -2397,13 +2399,17 @@ ninguém previu cai em `eventos` — nunca some, nunca inventa categoria.
 crescente (o mais novo junto do composer), então as 5 últimas entradas ficam
 abertas em baixo e o histórico recolhido fica no TOPO. O corte é sobre a lista
 já agrupada por agente ([RN-138](../business-rules.md#rn-138)) — quem conta é o que o usuário vê, e
-um colapso de doze mensagens é UMA entrada na tela.
+um colapso de doze mensagens é UMA entrada na tela. **Revista no fio pela
+[RN-644](../business-rules.md#rn-644):** lá o corte conta só MENSAGENS, recua
+até a abertura do turno e o histórico é UM bloco cronológico, não grupos por
+origem (que punham a resposta acima da pergunta). O painel de log segue como
+descrito aqui.
 
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/SessionPage.tsx:223` (o corte do fio), `:1459`
-  (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:507` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2436,7 +2442,7 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:98` (`REGRAS_POR_PAGINA`) e
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:104` (`REGRAS_POR_PAGINA`) e
   a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2510,8 +2516,8 @@ segundo observador da mesma chave com timer ligado ressuscitaria o poll que a
 tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
-- **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:359` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+- **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
+  `:388` (`baixados`); `apps/web/src/routes/ContextAside.tsx:149`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2539,7 +2545,7 @@ subagente, só a narrar o que o lead já registrou. A origem da falha viaja junt
 em `delegation.failed`, pela mesma razão da [RN-059](../business-rules/custo.md#rn-059) — é ela que diz
 se o próximo passo é trocar a chave, esperar o provider ou abrir um bug.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:1687`
+- **Onde:** `apps/web/src/routes/session-timeline-montagem.tsx:754`
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-181")
 - **Origem:** uso real no `exp001` — "quando houver uma nova tentativa e
@@ -2617,7 +2623,9 @@ superfícies), e quem fecha contra ele fecha contra o resto: `--accent`
 3,56 → 4,81, `--warning` 3,15 → 4,98, `--success` 3,89 → 5,12, `--violet`
 4,16 → 4,95, `--text-muted` 2,76 → 5,17, e `--accent-hover` seguiu o accent um
 degrau abaixo. O tema escuro **não mudou um valor**, e a dívida conhecida dele
-segue travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41).
+seguiu travada pelos mesmos cinco números (3,89 / 3,10 / 3,88 / 3,88 / 4,41)
+até a [RN-640](../business-rules.md#rn-640) (ADR 0181), que a fechou com a
+paleta neutra e a transformou em piso.
 
 O `--text-muted` do claro não era dívida: a 2,40:1 sobre `--surface-2` ele
 reprovava até o piso de **elemento de interface**, que é o mais baixo que

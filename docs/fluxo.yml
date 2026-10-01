@@ -28,7 +28,7 @@ camada_produto:
     saidas: [{ artefato: necessidade-de-negocio, destino: po, via: handoff }]
     ferramentas: [ask_structured_questions]        # RN-162/171
     gate_saida: { id: necessidade-validada, status: ativo,
-      aprovacao_humana: true, regra: RN-406 }       # ADR 0095
+      aprovacao_humana: true, regra: RN-657 }       # ADR 0095, revisto pelo 0185
     anti_padrao: solução disfarçada de problema
 
   - id: ux-designer

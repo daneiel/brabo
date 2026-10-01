@@ -329,8 +329,8 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--danger)',
       bad: true,
       text:
-        `${actorLabel} PAROU — circuit breaker` +
-        (n ? `: ${n} tasks bloqueadas seguidas` : '') +
+        `${actorLabel} PAROU — parada automática` +
+        (n ? `: ${n} ${n === '1' ? 'tarefa bloqueada seguida' : 'tarefas bloqueadas seguidas'}` : '') +
         '. Rearme no painel do time para retomar.',
     };
   }
@@ -628,6 +628,18 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
             : `atividade em ${actorLabel}`,
     };
   }
+  // ADR 0183 (RN-649): o fechamento anterior mora no payload, não numa linha
+  // apagada — a frase diz a causa quando ela foi gravada.
+  if (type === 'session.reopened') {
+    const causa = payloadField(payload, 'terminationReason');
+    return {
+      kind: 'session',
+      icon: StackIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `sessão reaberta${causa ? ` (tinha fechado por ${causa})` : ''}`,
+    };
+  }
   if (type === 'architecture.readiness_confirmed') {
     return {
       kind: 'session',
@@ -644,6 +656,26 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
       color: 'var(--accent)',
       bad: false,
       text: `${actorLabel} entrou na sessão`,
+    };
+  }
+  // RN-660 (ADR 0186): o aceite pelo SISTEMA diz que foi automático; o
+  // prefixo genérico abaixo diria "ofereceu" sobre um aceite.
+  if (type === 'handoff.accepted' && (payload as { automatico?: boolean } | null)?.automatico === true) {
+    return {
+      kind: 'generic',
+      icon: PrIcon,
+      color: 'var(--accent)',
+      bad: false,
+      text: `handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'} aceito automaticamente (backlog coberto, repositório local)`,
+    };
+  }
+  if (type === 'handoff.auto_accept_failed') {
+    return {
+      kind: 'generic',
+      icon: PrIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `aceite automático do handoff para ${payloadField(payload, 'toAgent') ?? 'outro agente'} falhou: ${payloadField(payload, 'error') ?? 'motivo não informado'}`,
     };
   }
   if (type.startsWith('handoff.')) {

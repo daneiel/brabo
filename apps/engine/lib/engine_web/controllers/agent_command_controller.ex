@@ -115,72 +115,110 @@ defmodule EngineWeb.AgentCommandController do
   # servidor já reconstrói o histórico do event log — faltava só quem o
   # chamasse. É a mesma garantia que a Fase 12b deu aos dev agents, aplicada
   # aos conversacionais.
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "po",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "po",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid, _origin} = PoSupervisor.start_agent(session_id, project_id)
     # A resposta é o ACEITE e chega antes do turno terminar (ADR 0163,
     # RN-578): `:ok` é 202, e a recusa ANTES de subir o turno (turno já em
     # curso) é 409 — ver `responder_ao_aceite/2`. O desfecho do turno segue
     # pelo canal e, quando é falha, pelo `agent.error` durável.
-    responder_ao_aceite(conn, PoServer.user_message(session_id, text))
+    responder_ao_aceite(conn, PoServer.user_message(session_id, text, idioma_da_resposta(params)))
   end
 
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "dev-lead",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "dev-lead",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid, _origin} = DevLeadSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, DevLeadServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      DevLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "arquiteto",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "arquiteto",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, ArquitetoServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      ArquitetoServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "ux-designer",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "ux-designer",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid, _origin} = UxDesignerSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, UxDesignerServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      UxDesignerServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "staff",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "staff",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid, _origin} = StaffSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, StaffServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      StaffServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
   # O Criativo tem cláusula PRÓPRIA desde a RN-584. Até lá ele era a cláusula
   # final, sem guarda de agente — e por isso o destinatário de QUALQUER nome
   # que não casasse acima: uma mensagem ao `infra` era lida pelo Criativo, e a
   # pessoa que escreveu para um agente via outro responder.
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "criativo",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "criativo",
+          "text" => text
+        } = params
+      ) do
     {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, CriativoServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      CriativoServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
   # O Infra Lead conversa desde a RN-617 (ADR 0175). Até ali esta cabeça era
@@ -189,16 +227,23 @@ defmodule EngineWeb.AgentCommandController do
   # "Parar". A cláusula só nasceu depois de o turno migrar para
   # `TurnoAssincrono`: a resposta é o ACEITE, como nos outros seis, e o que
   # ele faz com efeito externo continua nascendo `proposed_action`.
-  def message(conn, %{
-        "sessionId" => session_id,
-        "projectId" => project_id,
-        "agent" => "infra",
-        "text" => text
-      }) do
+  def message(
+        conn,
+        %{
+          "sessionId" => session_id,
+          "projectId" => project_id,
+          "agent" => "infra",
+          "text" => text
+        } = params
+      ) do
     # Start SEM kickoff: o kickoff é do handoff aceito (`start/2`); aqui o
     # agente só é reerguido se o engine reiniciou, e reidrata no `init/1`.
     {:ok, _pid, _origin} = InfraLeadSupervisor.start_agent(session_id, project_id)
-    responder_ao_aceite(conn, InfraLeadServer.user_message(session_id, text))
+
+    responder_ao_aceite(
+      conn,
+      InfraLeadServer.user_message(session_id, text, idioma_da_resposta(params))
+    )
   end
 
   def message(conn, %{"agent" => agent} = params) when agent in @agentes_de_conversa do
@@ -351,6 +396,16 @@ defmodule EngineWeb.AgentCommandController do
         "consolidar num resumo do produto ainda."
     )
   end
+
+  # RN-622: o idioma da resposta do AUTOR da mensagem, resolvido pela api. O
+  # campo é OPCIONAL — api antiga não o manda, e a resolução que falhou lá
+  # também não —, e ausente é turno sem orientação. Valor que não é string
+  # vira ausente: o engine nunca recusa a mensagem por causa do idioma.
+  defp idioma_da_resposta(%{"idiomaDaResposta" => idioma})
+       when is_binary(idioma) and idioma != "",
+       do: idioma
+
+  defp idioma_da_resposta(_params), do: nil
 
   # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
   # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o

@@ -19,10 +19,10 @@ import type { Epic, SessionEvent } from './api-types';
  *
  * `infra` entrou na RN-617 (ADR 0175), o sétimo: o turno do Infra Lead migrou
  * para o `TurnoAssincrono` do engine (aceite imediato, "Parar", turno órfão
- * fechado) e só DEPOIS ganhou cláusula de `message`. Ele vira o destinatário
- * quando é o agente ativado mais recentemente, pela mesma regra dos outros —
- * sem destinatário padrão. O aceite do handoff dele continua no card PRÓPRIO
- * (RN-499), fora do fio: `offeredHandoff` o exclui por nome. `qa` segue de
+ * fechado) e só DEPOIS ganhou cláusula de `message`. Ele é destinatário
+ * pela mesma regra dos outros (`session-destinatario.ts`, RN-631) — sem
+ * destinatário padrão. O aceite do handoff dele continua no card PRÓPRIO
+ * (RN-499), fora do fio: `ofertasAcionaveis` o exclui por nome. `qa` segue de
  * fora — lead de ÁREA sem cláusula de `message`.
  *
  * NÃO é gerada: `SOLO_CONVERSATIONAL_AGENTS` (gerada por `gerar:areas`) é a
@@ -30,9 +30,9 @@ import type { Epic, SessionEvent } from './api-types';
  * lead de área — não entra lá.
  *
  * Movida para cá na extração do hook `useSessionReadiness` (PR 5/5, ADR
- * 0122) porque o loop de `activeAgent` é quem a usa — `SessionPage.tsx`
- * importa de volta este mesmo símbolo pro `offeredHandoff` (que fica lá,
- * fora do escopo desta extração): uma fonte só, nunca cópia.
+ * 0122). Desde a RN-631 quem a usa é `session-destinatario.ts` (as opções do
+ * seletor do composer) e `session-handoffs.ts` (as ofertas acionáveis): uma
+ * fonte só, nunca cópia.
  */
 export const AGENTES_DE_CHAT = [
   'criativo',
@@ -49,14 +49,15 @@ export interface SessionReadiness {
   arquitetoActive: boolean;
   hasBusinessRule: boolean;
   hasPromotedStory: boolean;
-  hasProductBrief: boolean;
-  activeAgent: string | null;
 }
 
 /**
- * As seis derivações de "prontidão" da sessão (RN-160/RN-161) — os gates que
- * habilitam "Estou pronto para produzir", "Confirmar arquitetura pronta" e
- * "Validar necessidade", mais o agente que recebe a mensagem do composer.
+ * As derivações de "prontidão" da sessão (RN-160/RN-161) — os gates que
+ * habilitam "Estou pronto — a necessidade está validada" e "Confirmar
+ * arquitetura pronta". "Validar necessidade" saiu no ADR 0185: o primeiro
+ * botão a fecha (RN-657). O agente que recebe a mensagem do composer
+ * (`activeAgent`, "o último ativado") saiu daqui na RN-631: deixou de ser
+ * derivado do log e passou a ser escolhido (`session-destinatario.ts`).
  * Extraídas de `SessionPage.tsx` (PR 5/5, ADR 0122) — a única fatia do plano
  * que não é um move mecânico de arquivo: os seis `useMemo` liam direto do
  * closure do componente, então aqui viram um contrato explícito de
@@ -128,46 +129,10 @@ export function useSessionReadiness(
     [backlogData],
   );
 
-  // Gate `necessidade-validada` (Criativo → PO — auditoria fluxo.yml x
-  // código, achado B2, RN-406/ADR 0095): só faz sentido "validar" um
-  // `product_brief` que já existe — a consolidação que `confirm_readiness`
-  // já produziu. Por isso o botão de validação só habilita DEPOIS que o de
-  // "Estou pronto para produzir" já rodou, nunca antes dele.
-  const hasProductBrief = useMemo(
-    () => events.some((e) => e.type === 'artifact.product_brief'),
-    [events],
-  );
-
-  // O agente que recebe as mensagens do composer: o de `agent.activated`
-  // mais RECENTE (por `seq`) entre os `AGENTES_DE_CHAT` (achado 9-fix).
-  // Antes era uma cadeia de PRECEDÊNCIA fixa (arquiteto > po > criativo) que
-  // nunca "desligava" — uma vez que o Arquiteto atuasse, ele ficava com
-  // prioridade PARA SEMPRE, então mesmo depois de aceitar um handoff pro Dev
-  // Lead a mensagem seguinte continuava indo pro Arquiteto. `dev-lead` nem
-  // estava na cadeia; acrescentar mais um nome no fim só adiaria o mesmo bug
-  // pro próximo agente. "Mais recente vence" não precisa de ordem nenhuma.
-  const activeAgent = useMemo(() => {
-    let maisRecente: { agent: string; seq: number } | null = null;
-    for (const e of events) {
-      if (e.type !== 'agent.activated') continue;
-      const agent = (e.payload as { agent?: string })?.agent;
-      if (
-        !agent ||
-        !(AGENTES_DE_CHAT as readonly string[]).includes(agent)
-      ) {
-        continue;
-      }
-      if (!maisRecente || e.seq > maisRecente.seq) maisRecente = { agent, seq: e.seq };
-    }
-    return maisRecente?.agent ?? null;
-  }, [events]);
-
   return {
     criativoActive,
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
-    hasProductBrief,
-    activeAgent,
   };
 }

@@ -1,11 +1,16 @@
 {
   "projectCodeTab": {
     "loadProjectError": "Could not load this project.",
-    "checkGateError": "Could not check whether the Code tab is unlocked.",
+    "checkGateError": "Could not check whether the {{aba}} tab is unlocked.",
     "blocked": {
-      "title": "The Code tab isn't unlocked yet",
+      "title": "The {{aba}} tab isn't unlocked yet",
       "description": "The Architect hasn't decided which container image to use for this project yet. Without that decision the container doesn't start, and it's the container that isolates execution — there's nowhere to run the code this tab would show.",
       "note": "As soon as the Architect issues the image decision, this tab unlocks on its own — no need to reload the page manually."
+    },
+    "blockedPrs": {
+      "title": "The PR list isn't unlocked yet",
+      "description": "The PR list reads the repository through the same path as the {{abaCodigo}} tab, and that path only opens once the Architect decides which container image to use for this project. There's no failure to retry: that decision is what's missing.",
+      "note": "The same image decision unlocks both tabs, {{abaCodigo}} and {{abaPrs}}."
     }
   },
   "bottomPanel": {
@@ -25,9 +30,9 @@
     },
     "checkStateError": "Could not check the container status.",
     "since": "since",
-    "neverProvisioned": "Project container: never provisioned (RN-267).",
+    "neverProvisioned": "Project container: never provisioned.",
     "problemsEmpty": "There's no integrated lint or tests running over this project's code — no static analysis tool scans the managed repository today. Showing an error or warning count here would be decoration, not state: once that integration exists, this tab will start listing real diagnostics.",
-    "outputEmpty": "There's no AGGREGATED build or deploy command stream in this tab — the interactive terminal (Terminal tab) already has its own output, inside it. `git push`, PR and deploy don't go through the terminal anyway (RN-106): once there's a build or deploy pipeline separate from the terminal, its output will show up here."
+    "outputEmpty": "There's no AGGREGATED build or deploy command stream in this tab — the interactive terminal (Terminal tab) already has its own output, inside it. `git push`, PR and deploy don't go through the terminal anyway: once there's a build or deploy pipeline separate from the terminal, its output will show up here."
   },
   "branchPicker": {
     "noDefaultBranch": "no default branch",
@@ -135,6 +140,7 @@
       "closed": "Closed",
       "all": "All"
     },
+    "filtersAriaLabel": "Filter by state",
     "backToList": "Back to list",
     "loadingDiff": "Loading diff…",
     "diffErrorFallback": "Could not load this PR's diff.",

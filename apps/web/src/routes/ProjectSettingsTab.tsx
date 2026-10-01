@@ -1,5 +1,5 @@
 /**
- * A aba Configurações — ENTRADA e BARREL das 18 seções (ADR 0125).
+ * A aba Configurações — ENTRADA e BARREL das 19 seções (ADR 0125).
  *
  * As seções moram uma por arquivo em `./settings/`. Este arquivo continua
  * existindo neste CAMINHO, com os mesmos 11 nomes exportados, porque o caminho
@@ -18,7 +18,7 @@
  * O que ele passou a guardar é NAVEGAÇÃO, e só ela: `ProvedorDoSumario` mantém
  * quais seções estão montadas, qual está vigente na rolagem e como chegar a
  * uma delas. É o oposto do caso acima — a pergunta "que seções existem agora?"
- * não é respondível de dentro de nenhuma seção, e sete das 18 renderizam
+ * não é respondível de dentro de nenhuma seção, e oito das 19 renderizam
  * `null` em condição normal. A ordem de render abaixo é a MESMA de
  * `settings/sumario.ts`, e as duas não podem divergir: é ela que decide qual
  * entrada o sumário marca enquanto o leitor rola.
@@ -29,6 +29,7 @@ import { ExecutionModeSection } from './settings/ExecutionModeSection';
 import { ParallelismSection } from './settings/ParallelismSection';
 import { BudgetSection } from './settings/BudgetSection';
 import { PromotionSection } from './settings/PromotionSection';
+import { ProjectLanguageSection } from './settings/ProjectLanguageSection';
 import { MelhoresModelosPorCapacidadeSection } from './settings/MelhoresModelosPorCapacidadeSection';
 import { ModelsSection } from './settings/ModelsSection';
 import { AreaModelsSection } from './settings/AreaModelsSection';
@@ -46,7 +47,7 @@ import { SumarioDeConfiguracoes } from './settings/SumarioDeConfiguracoes';
 import styles from './settings/sumario.module.css';
 
 // Os 11 nomes que a aba já exportava antes da divisão — a superfície pública
-// não muda com o move. As outras 6 seções continuam sem reexport aqui: são
+// não muda com o move. As outras 7 seções continuam sem reexport aqui: são
 // exportadas pelo próprio arquivo só porque o barrel precisa compô-las.
 export { ExecutionSection } from './settings/ExecutionSection';
 export { ExecutionModeSection } from './settings/ExecutionModeSection';
@@ -77,6 +78,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
           <ParallelismSection projectId={projectId} />
           <BudgetSection projectId={projectId} />
           <PromotionSection projectId={projectId} />
+          <ProjectLanguageSection projectId={projectId} />
           <MelhoresModelosPorCapacidadeSection projectId={projectId} />
           <ModelsSection projectId={projectId} />
           <AreaModelsSection projectId={projectId} />

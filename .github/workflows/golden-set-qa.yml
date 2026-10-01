@@ -66,7 +66,7 @@ jobs:
       postgres:
         # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
         # ci.yml: as migrations criam a extensão.
-        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
+        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -81,7 +81,7 @@ jobs:
       ollama:
         # MESMA versão pinada de docker/docker-compose.yml — o piso de
         # `floor.json` é chaveado por MODELO, não por ambiente.
-        image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
+        image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
         ports:
           - 11434:11434
         # Os mesmos do compose de dev: o modelo fica carregado entre os

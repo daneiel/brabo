@@ -22,7 +22,13 @@
     "coverageError": "Não consegui carregar a cobertura do índice.",
     "loadingCoverage": "Carregando cobertura…",
     "reindexSuccessTitle": "Reindexação concluída",
-    "reindexSuccessMessage": "{{docsAdrChunks}} chunk(s) de docs/ADR · {{indexed}} de {{total}} sessão(ões){{embeddingSuffix}}",
+    "reindexSuccessMessage": "{{chunks}} · {{sessions}}{{embeddingSuffix}}",
+    "reindexChunks_zero": "{{count}} chunks de docs/ADR",
+    "reindexChunks_one": "{{count}} chunk de docs/ADR",
+    "reindexChunks_other": "{{count}} chunks de docs/ADR",
+    "reindexSessions_zero": "{{indexed}} de {{count}} sessões",
+    "reindexSessions_one": "{{indexed}} de {{count}} sessão",
+    "reindexSessions_other": "{{indexed}} de {{count}} sessões",
     "embeddingUnavailableSuffix": " · embedding indisponível, indexado só com o sinal léxico",
     "reindexErrorTitle": "Reindexação falhou",
     "reindexErrorDefaultMessage": "A api não respondeu. O índice não foi alterado.",
@@ -31,7 +37,9 @@
     "searchButton": "Buscar",
     "scopeFilterAriaLabel": "Filtrar por escopo",
     "allScopes": "todos os escopos",
-    "scopesMarked": "{{count}} escopo(s) marcado(s)",
+    "scopesMarked_zero": "{{count}} escopos marcados",
+    "scopesMarked_one": "{{count}} escopo marcado",
+    "scopesMarked_other": "{{count}} escopos marcados",
     "emptyPrompt": "Digite um termo e busque no índice do projeto.",
     "searching": "Buscando…",
     "searchError": "Não consegui buscar agora.",
@@ -44,15 +52,26 @@
       "chooseFolder": "Escolher pasta…",
       "reading": "Lendo arquivos…",
       "emptyFolder": "Nenhum arquivo elegível encontrado nesta pasta (texto/código reconhecido).",
-      "summary": "{{included}} arquivo(s) de “{{folderName}}”, {{skipped}} pulado(s) (grande demais ou binário)",
-      "summaryNoSkipped": "{{included}} arquivo(s) de “{{folderName}}”",
-      "tooManyFiles": "A pasta tem {{count}} arquivo(s) — o teto é {{limit}}. Escolha uma pasta menor.",
+      "summary": "{{files}}, {{skipped}} (grande demais ou binário)",
+      "skippedCount_zero": "{{count}} pulados",
+      "skippedCount_one": "{{count}} pulado",
+      "skippedCount_other": "{{count}} pulados",
+      "summaryNoSkipped_zero": "{{count}} arquivos de “{{folderName}}”",
+      "summaryNoSkipped_one": "{{count}} arquivo de “{{folderName}}”",
+      "summaryNoSkipped_other": "{{count}} arquivos de “{{folderName}}”",
+      "tooManyFiles_zero": "A pasta tem {{count}} arquivos — o teto é {{limit}}. Escolha uma pasta menor.",
+      "tooManyFiles_one": "A pasta tem {{count}} arquivo — o teto é {{limit}}. Escolha uma pasta menor.",
+      "tooManyFiles_other": "A pasta tem {{count}} arquivos — o teto é {{limit}}. Escolha uma pasta menor.",
       "tooManyBytes": "O conteúdo da pasta soma mais que o teto permitido. Escolha uma pasta menor.",
-      "confirmButton": "Anexar {{count}} arquivo(s)",
+      "confirmButton_zero": "Anexar {{count}} arquivos",
+      "confirmButton_one": "Anexar {{count}} arquivo",
+      "confirmButton_other": "Anexar {{count}} arquivos",
       "confirmButtonLoading": "Anexando…",
       "cancelButton": "Cancelar",
       "successTitle": "Pasta anexada",
-      "successMessage": "{{filesIndexed}} arquivo(s) indexado(s) de “{{folderName}}”{{embeddingSuffix}}",
+      "successMessage_zero": "{{count}} arquivos indexados de “{{folderName}}”{{embeddingSuffix}}",
+      "successMessage_one": "{{count}} arquivo indexado de “{{folderName}}”{{embeddingSuffix}}",
+      "successMessage_other": "{{count}} arquivos indexados de “{{folderName}}”{{embeddingSuffix}}",
       "errorTitle": "Falha ao anexar",
       "errorDefaultMessage": "A api não respondeu. Nada foi alterado."
     }
@@ -97,8 +116,12 @@
     "noLocalFolder": "nenhuma pasta anexada",
     "localFolder": "de “{{folderName}}”",
     "localAttachedAt": "anexado em {{date}}",
-    "chunksInIndex": "{{count}} chunk(s) no índice",
-    "chunksWithoutVector": "{{count}} sem vetor — indexado(s) só com o sinal léxico"
+    "chunksInIndex_zero": "{{count}} chunks no índice",
+    "chunksInIndex_one": "{{count}} chunk no índice",
+    "chunksInIndex_other": "{{count}} chunks no índice",
+    "chunksWithoutVector_zero": "{{count}} sem vetor — indexados só com o sinal léxico",
+    "chunksWithoutVector_one": "{{count}} sem vetor — indexado só com o sinal léxico",
+    "chunksWithoutVector_other": "{{count}} sem vetor — indexados só com o sinal léxico"
   },
   "sessionFailure": {
     "noMessage": "O turno falhou e o motivo não foi registrado. Tente de novo; se repetir, o log de eventos tem o payload bruto.",
@@ -131,13 +154,13 @@
     "kindCopy": {
       "criativa": {
         "title": "Criativo",
-        "openButton": "+ Nova ideação",
+        "openButton": "Nova ideação",
         "confirmButton": "Abrir sessão criativa",
         "empty": "Nenhuma ideação ainda. Abra uma para o Criativo levantar com você as regras de negócio do produto."
       },
       "consultiva": {
         "title": "Chat",
-        "openButton": "+ Nova conversa",
+        "openButton": "Nova conversa",
         "confirmButton": "Abrir sessão consultiva",
         "empty": "Nenhuma conversa ainda. Abra uma para perguntar e pedir contexto sem ativar agente nenhum."
       }
@@ -161,7 +184,19 @@
     },
     "openingButton": "Abrindo…",
     "filterGroupAriaLabel": "Filtrar sessões por status",
-    "summaryLine": "{{total}} ação(ões) proposta(s) nestas sessões · {{decided}} decidida(s) por você · {{autoApproved}} auto-aprovada(s) pela política · {{pending}} aguardando",
+    "contagem": {
+      "acoesPropostas_zero": "{{count}} ações propostas nestas sessões",
+      "acoesPropostas_one": "{{count}} ação proposta nestas sessões",
+      "acoesPropostas_other": "{{count}} ações propostas nestas sessões",
+      "decididasPorVoce_zero": "{{count}} decididas por você",
+      "decididasPorVoce_one": "{{count}} decidida por você",
+      "decididasPorVoce_other": "{{count}} decididas por você",
+      "autoAprovadas_zero": "{{count}} auto-aprovadas pela política",
+      "autoAprovadas_one": "{{count}} auto-aprovada pela política",
+      "autoAprovadas_other": "{{count}} auto-aprovadas pela política",
+      "aguardando": "{{count}} aguardando",
+      "auto": "{{count}} auto"
+    },
     "loadError": "Não foi possível carregar as sessões deste projeto.",
     "filterEmpty": "Nenhuma sessão neste filtro.",
     "renameInput": {
@@ -169,8 +204,6 @@
       "placeholder": "Sem nome — a sessão fica {{hashtag}}"
     },
     "rowTitle": "Sessão {{rotulo}} — clique para renomear",
-    "approvalsPending": "{{pending}} aguardando · {{decided}} decidida(s) por você",
-    "approvalsDecided": "{{decided}} decidida(s) por você · {{auto}} auto",
     "kpis": {
       "sessionsInProject": {
         "label": "Sessões no projeto",

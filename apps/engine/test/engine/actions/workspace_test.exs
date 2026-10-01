@@ -26,7 +26,10 @@ defmodule Engine.Actions.WorkspaceTest do
     "#{prefix}-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
   end
 
-  defp create_bare_repo!(with_commit?) do
+  # `branches` são as que o bare recebe, todas no MESMO commit. O default é o
+  # que o bootstrap do produto deixa (`main` e `dev`, RN-582); `["main"]` é o
+  # repositório ADOTADO sem bootstrap (RN-664).
+  defp create_bare_repo!(with_commit?, branches \\ ["main", "dev"]) do
     bare_dir = Path.join(System.tmp_dir!(), unique_tmp_name("brabo-bare") <> ".git")
     on_exit(fn -> File.rm_rf!(bare_dir) end)
 
@@ -46,11 +49,92 @@ defmodule Engine.Actions.WorkspaceTest do
           cd: clone_dir
         )
 
-      {_, 0} = System.cmd("git", ["push", "origin", "HEAD:main"], cd: clone_dir)
+      for branch <- branches do
+        {_, 0} = System.cmd("git", ["push", "origin", "HEAD:#{branch}"], cd: clone_dir)
+      end
+
       File.rm_rf!(clone_dir)
     end
 
     bare_dir
+  end
+
+  # Um commit a mais SÓ na `dev` do bare — para distinguir, pelo conteúdo, de
+  # qual branch o working tree nasceu.
+  defp commit_so_na_dev!(bare_dir) do
+    clone_dir = Path.join(System.tmp_dir!(), unique_tmp_name("brabo-clone-dev"))
+    {_, 0} = System.cmd("git", ["clone", "--branch", "dev", bare_dir, clone_dir])
+    File.write!(Path.join(clone_dir, "SO_NA_DEV.md"), "trabalho integrado")
+    {_, 0} = System.cmd("git", ["add", "."], cd: clone_dir)
+
+    {_, 0} =
+      System.cmd(
+        "git",
+        ["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "dev"],
+        cd: clone_dir
+      )
+
+    {_, 0} = System.cmd("git", ["push", "origin", "HEAD:dev"], cd: clone_dir)
+    File.rm_rf!(clone_dir)
+  end
+
+  defp branch_atual(dir) do
+    {branch, 0} = System.cmd("git", ["symbolic-ref", "--short", "HEAD"], cd: dir)
+    String.trim(branch)
+  end
+
+  describe "RN-664 (AT-250): o working tree abre a branch de TRABALHO, `dev`" do
+    test "sem branch explícita, abre `dev` — com o conteúdo da `dev`, não o da `main`" do
+      bare = create_bare_repo!(true)
+      commit_so_na_dev!(bare)
+      project_id = unique_project_id()
+
+      dir = Workspace.ensure!(project_id, bare)
+
+      assert branch_atual(dir) == "dev"
+      assert File.exists?(Path.join(dir, "SO_NA_DEV.md"))
+    end
+
+    test "ensure_remoto/2 ignora o `default_branch` do remoto para escolher a base" do
+      bare = create_bare_repo!(true)
+      commit_so_na_dev!(bare)
+      project_id = unique_project_id()
+
+      remoto = %{kind: :local, origin: bare, default_branch: "main", token: nil, username: nil}
+      assert {:ok, dir} = Workspace.ensure_remoto(project_id, remoto)
+
+      assert branch_atual(dir) == "dev"
+      assert File.exists?(Path.join(dir, "SO_NA_DEV.md"))
+    end
+
+    test "repositório SEM `dev` (adotado): recusa NOMEADA, sem cair na `main` e sem marcar pronto" do
+      bare = create_bare_repo!(true, ["main"])
+      project_id = Ecto.UUID.generate()
+      dir = Workspace.workspace_dir(project_id)
+
+      remoto = %{kind: :local, origin: bare, default_branch: "main", token: nil, username: nil}
+      assert {:error, mensagem} = Workspace.ensure_remoto(project_id, remoto)
+
+      assert mensagem =~ "não tem a branch `dev`"
+      assert mensagem =~ "RN-664"
+      refute File.exists?(Path.join(dir, ".git")), "o .git do init tem de ser desfeito"
+      refute File.regular?(Path.join(dir, ".brabo-workspace-pronto"))
+
+      # Criada a `dev` no repositório, a próxima tentativa inicializa normal.
+      {_, 0} = System.cmd("git", ["branch", "dev", "main"], cd: bare)
+
+      assert {:ok, ^dir} = Workspace.ensure_remoto(project_id, remoto)
+      assert branch_atual(dir) == "dev"
+    end
+
+    test "bare VAZIO continua criando a branch local vazia — agora `dev`" do
+      bare = create_bare_repo!(false)
+      project_id = unique_project_id()
+
+      dir = Workspace.ensure!(project_id, bare)
+
+      assert branch_atual(dir) == "dev"
+    end
   end
 
   defp unique_project_id, do: "project-#{System.unique_integer([:positive])}"

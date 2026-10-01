@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
@@ -7,16 +7,18 @@ import {
   useBacklog,
   useHypotheses,
   useLatestSession,
-  usePendingActions,
   useProjectPendingActions,
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
+import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { TokenMeter } from '../components/TokenMeter';
 import { PainelPrecisaDeVoce } from '../components/PainelPrecisaDeVoce';
 import { montarFilas } from '../lib/precisa-de-voce';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
+import { CarregandoRota } from '../components/CarregandoRota';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
@@ -28,6 +30,7 @@ import {
 } from './project-tabs';
 import { ContextoDeSecaoInicial } from './settings/secao-inicial';
 import type { ChaveDeSecao } from './settings/sumario';
+import { Badge } from '../components/ui/Badge';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
@@ -51,6 +54,9 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
   const [painelAberto, setPainelAberto] = useState(false);
+  // Layout móvel (RN-643): o trilho vira barra horizontal ACIMA do painel, e
+  // o corpo passa de linha a coluna — a mesma consulta que o trilho lê.
+  const movel = useLayoutMovel();
 
   // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
   // de DENTRO de um `ProjectPage` já montado (ex.: "Ver arquitetura
@@ -70,20 +76,30 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   const { data: budget } = useQuery({ queryKey: ['budget', projectId], queryFn: () => getProjectBudget(projectId) });
 
   const { latest: latestSession } = useLatestSession(projectId);
-  const pendingActionsQuery = usePendingActions(projectId, latestSession?.id);
-  const pendingCount = pendingActionsQuery.data?.items.filter((a) => a.status === 'pending').length ?? 0;
+  // Os cinco contadores do trilho são PERIFERIA de projeto (AT-278, RN-632):
+  // nenhum canal desta moldura avisa quando mudam, e a aba que mostra o dado
+  // como assunto mantém o poll curto dela. Ritmo de projeto aqui.
+  //
+  // As aprovações pendentes são as do PROJETO, em qualquer sessão (AT-297,
+  // RN-638). Era a sessão criada POR ÚLTIMO: uma ideação aberta depois da
+  // execução zerava o contador enquanto os dev agents esperavam decisão na
+  // sessão de execução. As telas que ouvem um canal de sessão invalidam esta
+  // chave no `proposed_action.*` (AT-299, `criarInvalidadorDoCanal`).
+  const pendingActionsQuery = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
+  const pendentesDoProjeto = pendingActionsQuery.data?.filter((a) => a.status === 'pending');
+  const pendingCount = pendentesDoProjeto?.length ?? 0;
 
   // Histórias esperando promoção do usuário (Fase 12c — RN-048). Contador
   // próprio, ao lado do de aprovações: são duas filas de decisão diferentes,
   // e somá-las esconderia qual delas está pedindo atenção.
-  const backlogQuery = useBacklog(projectId);
+  const backlogQuery = useBacklog(projectId, INTERVALO_DO_PROJETO_MS);
   const promocoesPendentes = aguardandoPromocao(backlogQuery.data).length;
 
   // Terceira fila de decisão do projeto: hipóteses do Psicólogo esperando
   // aceitar/descartar. Ficavam no fim da Visão geral, sem contador nenhum —
   // achado #15. Contador próprio pelo mesmo motivo do de promoções: somar
   // filas diferentes esconde qual delas está pedindo atenção.
-  const hypothesesQuery = useHypotheses(projectId);
+  const hypothesesQuery = useHypotheses(projectId, INTERVALO_DO_PROJETO_MS);
   const hipotesesPendentes = (hypothesesQuery.data ?? []).filter(
     (h) => h.status === 'proposed',
   ).length;
@@ -97,7 +113,7 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // validação cruzada entre história e módulo (mesmo campo que
   // `ArchitectureContent`/`ProjectArchitectureTab.tsx` já lista com badge
   // "Pendências de validação cruzada").
-  const architectureQuery = useArchitecture(projectId);
+  const architectureQuery = useArchitecture(projectId, INTERVALO_DO_PROJETO_MS);
   const arquiteturaPendente = architectureQuery.data?.pendencies.length ?? 0;
 
   // Onda 2 do PROGRAMA de abas agrupadas: `prsPendentes` deixou de ser o
@@ -105,8 +121,11 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // consulta que `ProjectPrsTab` usa) — `git_merge` pendente em qualquer
   // sessão, não só a mais recente, é a mesma correção que resolve o bug de
   // visibilidade da aba.
-  const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge');
-  const prsPendentes = mergeActionsQuery.data?.length ?? 0;
+  //
+  // Os `git_merge` saem da MESMA leitura de pendentes do projeto (AT-297):
+  // eram uma segunda consulta, com o mesmo conteúdo filtrado pelo servidor.
+  const merges = pendentesDoProjeto?.filter((a) => a.actionType === 'git_merge');
+  const prsPendentes = merges?.length ?? 0;
 
   const contagens: ContagensDeAba = {
     promocoesPendentes,
@@ -123,8 +142,8 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   // no chip, pelo mesmo motivo que os contadores do trilho seguem separados
   // (ADR 0126): somar apaga qual fila está pedindo atenção.
   const filasPrecisaDeVoce = montarFilas({
-    acoesDaSessao: pendingActionsQuery.data?.items,
-    merges: mergeActionsQuery.data,
+    acoesPendentes: pendentesDoProjeto,
+    merges,
     epicos: backlogQuery.data,
     pendenciasDeArquitetura: architectureQuery.data?.pendencies,
     hipoteses: hypothesesQuery.data,
@@ -198,7 +217,7 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
   );
 
   return (
-    <div className={styles.wrapper}>
+    <div className={[styles.wrapper, movel && styles.movel].filter(Boolean).join(' ')}>
       {/* O cabeçalho é uma faixa `surface-1` com uma única divisória embaixo
           (handoff, seção 4), e agora atravessa a largura inteira: a navegação
           saiu de dentro dele para o trilho vertical à esquerda (ADR 0126). */}
@@ -212,9 +231,9 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
               <div className={styles.titleRow}>
                 <h1 className={styles.name}>{project.name}</h1>
                 {repository && (
-                  <span className={styles.repoChip}>
+                  <Badge square size="md" className={styles.repoChip}>
                     {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
-                  </span>
+                  </Badge>
                 )}
               </div>
               <div className={styles.meta}>
@@ -278,7 +297,12 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
           <ContextoDeSecaoInicial.Provider value={initialSection}>
-            <PainelDaAba projectId={projectId} />
+            {/* Cada painel é um chunk próprio (AT-300): o `Suspense` fica AQUI,
+                em volta só do painel, para que trocar de aba nunca apague o
+                cabeçalho e o trilho enquanto o chunk chega. */}
+            <Suspense fallback={<CarregandoRota />}>
+              <PainelDaAba projectId={projectId} />
+            </Suspense>
           </ContextoDeSecaoInicial.Provider>
         </div>
       </div>

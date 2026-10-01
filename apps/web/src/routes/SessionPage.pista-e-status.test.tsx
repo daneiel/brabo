@@ -51,7 +51,7 @@ const HANDOFF_OFERECIDO_EVENT = {
   seq: 1,
   type: 'handoff.offered',
   actor: { kind: 'agent', id: 'criativo' },
-  payload: { toAgent: 'po' },
+  payload: { handoffId: 'handoff-1', toAgent: 'po' },
   createdAt: '2026-08-10T12:00:00.000Z',
 };
 
@@ -91,7 +91,10 @@ vi.mock('../lib/session-channel', () => ({
   },
 }));
 
-vi.mock('../lib/auth', () => ({ emailDaSessao: () => 'eu@brabo.dev' }));
+vi.mock('../lib/auth', () => ({
+  emailDaSessao: () => 'eu@brabo.dev',
+  userIdDaSessao: () => 'eu',
+}));
 
 vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
@@ -271,7 +274,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     montar();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     fireEvent.click(botaoAceitar);
 
@@ -309,7 +312,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     montar();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     fireEvent.click(botaoAceitar);
 
@@ -335,7 +338,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     montar();
 
     const botaoAceitar = await screen.findByRole('button', {
-      name: 'Aceitar handoff e iniciar po',
+      name: 'Aceitar handoff e iniciar PO',
     });
     fireEvent.click(botaoAceitar);
 

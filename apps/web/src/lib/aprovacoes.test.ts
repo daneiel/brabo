@@ -7,7 +7,14 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SEM_FRASE, descreverAcao, descreverHipotese, fraseDaAcao, verboDaAcao } from './aprovacoes';
+import {
+  SEM_FRASE,
+  descreverAcao,
+  descreverHipotese,
+  fraseDaAcao,
+  trechosDaFraseDaAcao,
+  verboDaAcao,
+} from './aprovacoes';
 import type { PsychologistHypothesis } from './api-types';
 
 /**
@@ -117,6 +124,54 @@ describe('frases derivadas do payload', () => {
     const frase = fraseDaAcao('git_push', { branch: { nome: 'feature/x' } })!;
     expect(frase).not.toContain('[object Object]');
     expect(frase).toContain('branch de trabalho');
+  });
+});
+
+describe('AT-322 — o código da frase sai em trecho próprio, sem aspas', () => {
+  it('o comando de terminal vira um trecho de código, e a frase em texto não tem aspas', () => {
+    const trechos = trechosDaFraseDaAcao('terminal', { command: 'pnpm test --filter reservas' })!;
+    expect(trechos).toEqual([
+      { texto: 'Executa ', codigo: false },
+      { texto: 'pnpm test --filter reservas', codigo: true },
+      { texto: ' no terminal do projeto.', codigo: false },
+    ]);
+    const frase = fraseDaAcao('terminal', { command: 'pnpm test --filter reservas' })!;
+    expect(frase).toBe('Executa pnpm test --filter reservas no terminal do projeto.');
+    expect(frase).not.toMatch(/["“”]/);
+  });
+
+  it('branch e caminho também são código; título de PR continua prosa entre aspas', () => {
+    const trechos = trechosDaFraseDaAcao('pr_open', {
+      sourceBranch: 'feature/x',
+      targetBranch: 'dev',
+      title: 'Reservas',
+    })!;
+    expect(trechos.filter((t) => t.codigo).map((t) => t.texto)).toEqual(['feature/x', 'dev']);
+    expect(trechos.at(-1)).toEqual({ texto: ': "Reservas".', codigo: false });
+  });
+
+  it('nenhuma marca interna vaza para a frase em texto, em tipo nenhum', () => {
+    const payload = {
+      command: 'ls',
+      branch: 'b',
+      path: 'p',
+      sourceBranch: 's',
+      targetBranch: 't',
+      branchName: 'n',
+      fromRef: 'r',
+      slug: 'x',
+      imagem: 'node:24',
+    };
+    for (const tipo of TIPOS) {
+      const frase = fraseDaAcao(tipo, payload)!;
+      expect(frase).not.toMatch(/[\u{E000}\u{E001}]/u);
+      expect(trechosDaFraseDaAcao(tipo, payload)!.map((t) => t.texto).join('')).toBe(frase);
+    }
+  });
+
+  it('caso de falha: tipo desconhecido não tem trechos, como não tem frase', () => {
+    expect(trechosDaFraseDaAcao('deploy_producao', { command: 'x' })).toBeNull();
+    expect(descreverAcao('deploy_producao').trechos).toBeNull();
   });
 });
 

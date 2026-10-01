@@ -78,7 +78,7 @@ describe('CodeBottomPanel', () => {
     const user = userEvent.setup();
     montar();
     await user.click(screen.getByRole('tab', { name: 'Saída' }));
-    expect(screen.getByText(/Não há stream de comando de build ou deploy/)).toBeInTheDocument();
+    expect(screen.getByText(/Não há saída de comando de build ou deploy/)).toBeInTheDocument();
   });
 
   it('Diff continua sendo a única aba com dado real', async () => {
@@ -93,7 +93,7 @@ describe('CodeBottomPanel', () => {
       getContainerLifecycle.mockResolvedValue(null);
       montar();
       expect(
-        await screen.findByText(/nunca provisionado \(RN-267\)/),
+        await screen.findByText(/nunca provisionado\./),
       ).toBeInTheDocument();
       expect(getContainerLifecycle).toHaveBeenCalledWith('p-1');
     });
@@ -138,7 +138,7 @@ describe('CodeBottomPanel', () => {
     it('trocar para outra aba não busca o ciclo de vida — só a Terminal pergunta', async () => {
       const user = userEvent.setup();
       montar();
-      await screen.findByText(/nunca provisionado \(RN-267\)/);
+      await screen.findByText(/nunca provisionado\./);
       const chamadasNaTerminal = getContainerLifecycle.mock.calls.length;
 
       await user.click(screen.getByRole('tab', { name: 'Problemas' }));

@@ -1,7 +1,8 @@
 {
   "tab": {
     "title": "Executors",
-    "summary": "{{count}} agents · {{working}} working · {{waiting}} waiting",
+    "summary_one": "{{count}} agent · {{working}} working · {{waiting}} waiting",
+    "summary_other": "{{count}} agents · {{working}} working · {{waiting}} waiting",
     "subtitle": "Dev agent and QA — who implements and who verifies. The rest of the team is in the Overview.",
     "sessionError": {
       "title": "Could not find this project's execution session."
@@ -45,7 +46,8 @@
   "agentStatus": {
     "circuitBreaker": {
       "default": "circuit breaker triggered",
-      "withCount": "circuit breaker: {{count}} consecutive blocked tasks"
+      "withCount_one": "circuit breaker: {{count}} consecutive blocked task",
+      "withCount_other": "circuit breaker: {{count}} consecutive blocked tasks"
     },
     "delegation": {
       "completed": "completed the delegation",
@@ -55,7 +57,8 @@
   },
   "timelineTree": {
     "empty": "No agent has taken action in this session yet.",
-    "newSinceLastVisit": "{{count}} new milestone(s) since last visit",
+    "newSinceLastVisit_one": "{{count}} new milestone since last visit",
+    "newSinceLastVisit_other": "{{count}} new milestones since last visit",
     "iteration": "iteration {{n}}",
     "marker": {
       "args": "arguments",
@@ -101,6 +104,30 @@
     },
     "detail": {
       "origin": "origin {{origem}}"
+    }
+  },
+  "autoModeTeam": {
+    "title": "Auto mode for the team",
+    "subtitle": "Execution has started. Turning on auto mode for the chosen agents lets their next commands run without asking for approval — including outside the project folder. It is an offer: nothing changes without the click below, and each agent keeps its own manual/auto toggle.",
+    "notReleased": {
+      "title": "Auto mode does NOT release — these still ask for your approval:",
+      "merge": "merge into a protected branch (dev, qa, main)",
+      "push": "git push, opening a PR and deploy",
+      "privileged": "sudo and doas",
+      "containerRemove": "removing a container (container_remove)",
+      "instructionPatch": "changing an agent's instructions (instruction_patch)",
+      "parallelize": "parallelizing or raising the parallelism ceiling",
+      "turnOff": "To turn it off, use the manual/auto toggle on each agent's card."
+    },
+    "noRole": "Turning on auto mode requires the maintainer role (read from the workspace; the project role is not checked here).",
+    "button_one": "Turn on for {{count}} agent",
+    "button_other": "Turn on for {{count}} agents",
+    "erroGenerico": "Could not turn on auto mode",
+    "result": {
+      "all_one": "Auto mode turned on for {{count}} agent.",
+      "all_other": "Auto mode turned on for all {{count}} agents.",
+      "none": "No agent had auto mode turned on: {{mensagem}}",
+      "some": "Turned on for {{ok}} of {{total}} agents. Still manual: {{falharam}}."
     }
   }
 }

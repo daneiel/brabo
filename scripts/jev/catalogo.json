@@ -1,0 +1,210 @@
+{
+  "agentes": {
+    "anamnese": [
+      "emit_proficiency",
+      "propose_instruction_patch",
+      "propose_max_parallel",
+      "skip_proficiency"
+    ],
+    "appsec": [
+      "read_file",
+      "search_workspace",
+      "rag_search",
+      "rag_feedback",
+      "emit_threat_model"
+    ],
+    "arquiteto": [
+      "create_module_map",
+      "assign_story_modules",
+      "choose_project_image",
+      "create_c4_diagram",
+      "route_modules_to_infra",
+      "propose_adr",
+      "emit_insight",
+      "emit_artifact"
+    ],
+    "criativo": [
+      "emit_artifact",
+      "ask_structured_questions"
+    ],
+    "dev-*": [
+      "read_file",
+      "search_workspace",
+      "write_file",
+      "terminal",
+      "rag_search",
+      "rag_feedback",
+      "report_done",
+      "report_blocked"
+    ],
+    "dev-lead": [
+      "propose_execution_plan",
+      "assess_implementability",
+      "emit_artifact"
+    ],
+    "infra": [
+      "validate_infra_file",
+      "propose_infra_pr",
+      "propose_container_start",
+      "container_start_via_runner"
+    ],
+    "infra-workflows": [
+      "validate_infra_file",
+      "emit_infra_delegation_result"
+    ],
+    "po": [
+      "listar_regras_de_negocio",
+      "listar_backlog",
+      "listar_metricas_de_produto",
+      "create_epic",
+      "create_story",
+      "create_task",
+      "ask_structured_questions",
+      "offer_handoff",
+      "emit_artifact"
+    ],
+    "psicologo": [
+      "emit_hypotheses"
+    ],
+    "psicologo-leve": [
+      "emit_hypotheses"
+    ],
+    "qa-automacao": [
+      "read_file",
+      "search_workspace",
+      "terminal",
+      "rag_search",
+      "rag_feedback",
+      "emit_qa_verdict"
+    ],
+    "qa-estrategia": [
+      "read_file",
+      "search_workspace",
+      "rag_search",
+      "rag_feedback",
+      "emit_plano_de_teste"
+    ],
+    "qa-performance-seguranca": [
+      "read_file",
+      "search_workspace",
+      "rag_search",
+      "rag_feedback",
+      "emit_perf_seguranca_verdict"
+    ],
+    "staff": [
+      "propose_rfc",
+      "emit_artifact"
+    ],
+    "ux-designer": [
+      "propose_prototype",
+      "emit_artifact"
+    ]
+  },
+  "ferramentas": {
+    "emit_threat_model": "Registra o threat model de design (checklist STRIDE-lite) e os requisitos de segurança derivados, antes de existir código/PR.",
+    "ask_structured_questions": "Emite um conjunto de perguntas ESTRUTURADAS pro usuário responder de uma\nvez só, num formulário — em vez de texto livre que ele teria que\nresponder item por item. Use quando for pedir VÁRIAS coisas na mesma\nresposta (ex.: nome do produto, público-alvo, problema que resolve).\n\n`questions` é uma lista de objetos com:\n- `id` (string, único dentro da lista) — identifica a pergunta na resposta\n- `label` (string) — o texto da pergunta, em pt-BR\n- `type` (opcional, default \"text\") — \"text\" (campo curto), \"textarea\"\n  (campo longo) ou \"select\" (lista de opções)\n- `options` (lista de strings) — OBRIGATÓRIO quando `type` é \"select\"\n- `allowOther` (booleano, opcional, default TRUE em \"select\") — o usuário\n  pode escrever uma resposta fora da lista. NÃO crie uma opção do tipo\n  \"Outro\"/\"Escreva você mesmo\" dentro de `options`: o formulário já\n  oferece o campo de texto livre sozinho. Só declare `allowOther: false`\n  quando a lista for genuinamente fechada (ex.: \"Sim\"/\"Não\").\n\nExemplo de chamada válida:\n{\"questions\": [\n  {\"id\": \"nome\", \"label\": \"Qual o nome do produto?\", \"type\": \"text\"},\n  {\"id\": \"usuarios\", \"label\": \"Quem são os usuários?\", \"type\": \"textarea\"},\n  {\"id\": \"plataforma\", \"label\": \"Qual plataforma?\", \"type\": \"select\",\n   \"options\": [\"Web\", \"Mobile\", \"Ambos\"]},\n  {\"id\": \"cobranca\", \"label\": \"Vai cobrar?\", \"type\": \"select\",\n   \"options\": [\"Sim\", \"Não\"], \"allowOther\": false}\n]}\n\nAs respostas voltam como uma mensagem normal do usuário, num próximo\nturno — esta chamada só confirma que as perguntas foram enviadas.\n",
+    "skip_proficiency": "Encerra a rodada SEM emitir perfil. Use quando a janela não tiver membro elegível, evidência suficiente ou nada de novo a registrar — é um desfecho legítimo, não uma falha. NÃO chame `emit_proficiency` com lista vazia: ela recusa, e repetir só gasta orçamento.",
+    "listar_metricas_de_produto": "Lê o funil de entrega e DORA parcial do PROJETO inteiro: quantas sessões\nproduziram commit / PR aberta / PR mergeada, o lead time real (primeiro\ncommit ao primeiro merge) e a deployment frequency real (merge em branch\nprotegida, por dia). Não recebe parâmetro nenhum — é o MESMO relatório\ndo script `analise:funil` (ADR 0089).\n\nUse para saber se o produto está de fato SAINDO, não só sendo\nespecificado: regra e história capturadas não bastam se nada chega a\ncommit/PR/merge. Três métricas NÃO aparecem aqui, de propósito — funil\nde produto completo (ideação → commit), evidência de adoção por feature\ne MTTR/change failure rate — o relatório sempre diz isso explicitamente;\nnão invente esses números por conta própria.\n",
+    "rag_feedback": "Diz se um trecho devolvido por `rag_search` serviu para responder o que você procurava. Use DEPOIS de ler o trecho, com o `id` que veio junto dele e o id da busca. Dois valores: \"util\" quando o trecho respondeu (mesmo em parte) e \"irrelevante\" quando não tinha nada a ver. Isto não muda nada no projeto — é o que permite calibrar a busca.",
+    "emit_hypotheses": "Registra as hipóteses da análise. TODA hipótese precisa de evidência apontando para ids de eventos REAIS do log desta sessão — hipótese sem evidência válida é rejeitada e precisa ser corrigida.",
+    "listar_backlog": "Lista o backlog do projeto em árvore: épicos, as histórias de cada um (com\nstatus, quantas tarefas e quais regras de negócio elas citam) e o total de\ntarefas. Não recebe parâmetro nenhum.\n\nUse para saber o que você JÁ escreveu antes de escrever mais — e para\nachar épico sem história, que é o estado que trava a execução: história é\no que gera tarefa, e tarefa é o que o dev agent pega.\n",
+    "create_c4_diagram": "Gera o diagrama C4 (Context + Container) da arquitetura deste projeto. O nível Container vem do module_map que você já definiu (create_module_map) — não descreva os módulos de novo aqui. Descreva só o sistema e os atores externos do nível Context (ex.: o usuário, um provedor de Git). Exige module_map vigente: sem ele, é recusado.",
+    "offer_handoff": "Oferece um handoff ao próximo agente (ex.: to_agent=\"arquiteto\"). O usuário aceita o handoff pra ativar o agente destino.",
+    "listar_regras_de_negocio": "Lista TODAS as regras de negócio já capturadas no projeto, com o id de cada\numa e se alguma história já a cobre. Não recebe parâmetro nenhum.\n\nUse ANTES de criar histórias e sempre que precisar saber o que ainda falta:\no id que volta aqui é exatamente o que vai em `business_rule_ids` no\n`create_story`, e as marcadas `[ ]` são as que ainda não viraram história.\n\nA lista é do PROJETO inteiro, não só desta conversa — regra capturada numa\nsessão anterior aparece aqui.\n",
+    "propose_max_parallel": "Propõe subir o teto de agentes simultâneos de uma área. Use SÓ quando as decisões da janela mostrarem que autorizar mais um agente virou rotina — várias aprovações do mesmo pedido, sem negação. O usuário decide; a proposta nunca se aprova sozinha. Propor um teto igual ou menor que o vigente é recusado.",
+    "validate_infra_file": "Valida a sintaxe de um arquivo de infra antes de propor a PR: hadolint pra Dockerfile, actionlint pra workflow do GitHub Actions. Use antes de `propose_infra_pr`/`emit_infra_delegation_result` pra cada arquivo gerado.",
+    "emit_qa_verdict": "Registra o parecer de QA (aprovado ou mudanças solicitadas) com a matriz de cobertura regra→testes. Só aceito aprovar com a suite verde (exit 0).",
+    "assess_implementability": "Avalia se uma story do backlog é IMPLEMENTÁVEL, a partir do plano de teste da QA-estratégia (docs/fluxo.yml). Se a story ainda não tem plano de teste, esta chamada DISPARA a avaliação e devolve erro pedindo para tentar de novo em instantes — não propõe decisão nenhuma nesse caso. Com o plano em mãos, propõe o parecer de implementabilidade: é uma decisão real, que o usuário aprova ou recusa em Aprovações (gate `implementavel`). Nos dois casos, se a story ainda não tem threat model, esta chamada também pede o de AppSec — que corre em paralelo e não atrasa o parecer.",
+    "terminal": "Executa um comando de shell no workspace do projeto (via pipeline de aprovação).",
+    "container_start_via_runner": "Propõe subir o container real do projeto NA MÁQUINA DO USUÁRIO, via `brabo-runner` — exclusivo de projeto no modo `runner`. Não elege imagem nenhuma: sobe a que já estiver decidida. Para `mounted`, use `propose_container_start` (o broker).",
+    "emit_artifact": "Emite um artefato tipado no event log.\n\nAs chaves do payload são estas, em INGLÊS e exatamente como escritas —\npayload com chave diferente é RECUSADO:\n\n- `note` — payload EXIGE: `title`, `body`\n- `business_rule` — payload EXIGE: `title`, `description`, `origin`\n- `decision_record` — payload EXIGE: `context`, `options`, `choice`, `consequences`\n\nExemplo de chamada válida:\n{\"type\": \"business_rule\", \"payload\": {\"title\": \"Saudação com nome\",\n\"description\": \"Quem chama pode se identificar e recebe a saudação com o\npróprio nome.\", \"origin\": [2, 6]}}\n\n`origin` é a rastreabilidade da regra até a conversa: uma LISTA NÃO-VAZIA\ncom os números (`seq`) das mensagens desta sessão que originaram a regra.\nTexto livre é RECUSADO — precisa ser lista.\n\n`business_rule` com título já registrado NESTE PROJETO é recusada, mesmo\nque tenha sido em outra conversa. Dizer isso aqui poupa o turno perdido:\no modelo não descobre a regra pelo erro.\n",
+    "assign_story_modules": "Vincula os módulos (nomes do module_map) que uma história realiza. Necessário pra a história passar na validação cruzada de arquitetura.",
+    "propose_instruction_patch": "Propõe reescrever o arquivo de instrução de um agente. Envie o CONTEÚDO COMPLETO já ajustado (não um diff) — a api calcula o diff. Use só quando o perfil sugerir um ajuste com valor real; um patch já negado antes é recusado.",
+    "report_blocked": "Sinaliza que não é possível concluir a task e registra o diagnóstico.",
+    "write_file": "Escreve conteúdo num arquivo do workspace. Fora da whitelist do agente, vira uma ação proposta pra aprovação.",
+    "choose_project_image": "Fixa a imagem de container em que o código deste projeto vai rodar. Enquanto você não decidir, o container do projeto NÃO sobe e a aba Code fica fechada. Use uma referência com TAG explícita (`latest` é recusado). `network` default é \"none\" (sem internet dentro do container); peça \"egress\" só quando a stack precisar baixar dependências, porque quem autoriza saída para a internet é o usuário.",
+    "create_story": "Cria uma história sob um épico, justificada pelas regras de negócio que a originaram. Preencha DoD, DoR, ao menos 1 RF e ao menos 1 business_rule_id para ela virar 'ready'.",
+    "create_epic": "Cria um épico do backlog. Retorna o id para usar como epic_id nas histórias.",
+    "emit_proficiency": "Registra os perfis de proficiência da rodada. SÓ competências do catálogo permitido (informado no contexto) — nunca inferir saúde, traços pessoais ou qualquer atributo sensível. Toda entrada precisa de evidência apontando para ids de eventos reais do log.",
+    "propose_prototype": "Registra o protótipo navegável: personas, jornadas, as telas do protótipo e um resumo. Use UMA vez, depois de ler a necessidade de negócio — a chamada já oferece o protótipo como handoff ao PO e ao Dev Lead.",
+    "create_module_map": "Define o mapa de módulos do projeto (rejeitado se tiver ciclo de dependência). Cada módulo: name, stack, responsibility, depends_on (nomes de outros módulos).",
+    "propose_adr": "Propõe um ADR (Architecture Decision Record) a ser commitado no repo do projeto via PR, sujeito à aprovação do usuário. `slug` vira docs/adr/<slug>.md e a branch feature/adr-<slug>. `content` é o markdown do ADR. `modules` lista os módulos do module_map a que a decisão se aplica — os dev agents desses módulos recebem o ADR no contexto. Omita (ou deixe vazio) quando a decisão for transversal ao projeto: aí ela vale pra todos os módulos.",
+    "emit_infra_delegation_result": "Sinaliza que terminou de gerar os arquivos desta delegação (Dockerfiles/compose ou pipeline de CI). Só aceito depois de validar cada arquivo com `validate_infra_file`.",
+    "emit_perf_seguranca_verdict": "Registra o parecer de Performance/Segurança (aprovado ou mudanças solicitadas). Só aceito aprovar depois de ter lido algo do workspace.",
+    "emit_insight": "Registra um insight de arquitetura: uma tensão entre as regras de negócio e a arquitetura proposta (ex.: um RNF sem módulo que o atenda).",
+    "emit_plano_de_teste": "Registra o plano de teste da story: síntese, critérios executáveis e estratégia de automação (nível de teste e onde — NUNCA escolha framework). Só aceito depois de ter lido algo do workspace.",
+    "rag_search": "Busca no RAG do projeto (docs/, ADRs e sessões já indexados — busca híbrida vetor+léxico) e devolve trechos citáveis, cada um com o caminho de origem. Use para fundamentar uma resposta em algo que já existe no projeto, em vez de inventar. Se a busca vier degradada (léxico-only, sem embedding), isso aparece no texto — trate o resultado como menos preciso nesse caso.",
+    "propose_execution_plan": "Propõe o plano de execução: quantos agentes por módulo e por quê. Use UMA vez, depois de avaliar o module_map e o backlog pegável. É uma decisão real, que o usuário aprova ou recusa em Aprovações — não sobe agente nenhum sozinho, e a conversa espera a decisão antes de continuar.",
+    "create_task": "Cria uma tarefa sob uma história (story_id).",
+    "search_workspace": "Busca uma substring nos arquivos do workspace do projeto.",
+    "route_modules_to_infra": "Roteia CADA módulo do module_map vigente para uma imagem de container CANDIDATA — um item por módulo, com uma referência OCI com TAG explícita (`latest` é recusado) e o porquê dessa imagem para ESTE módulo. Você candidata; quem elege entre as candidatas é a Infra, depois. Exige que create_module_map já tenha rodado nesta sessão: não há módulo sem module_map.",
+    "propose_rfc": "Propõe um RFC: o problema sistêmico, as opções consideradas (com trade-offs), a recomendação e o escopo de uma PoC DESCARTÁVEL para validar a recomendação antes de comprometer a arquitetura. Ao gravar, o RFC é devolvido ao Arquiteto por handoff — é ele quem decide o que entra na arquitetura. Use UMA vez.",
+    "propose_infra_pr": "Propõe a PR de infra: commita os arquivos de infra (Dockerfiles/compose) numa branch e abre uma PR real no repo do projeto, junto com o pipeline de CI que o Workflows gera.",
+    "report_done": "Sinaliza que a task está pronta pra abrir PR. Só aceito se o último comando `terminal` rodado (a suite de testes) tiver saído com exit 0.",
+    "propose_container_start": "Propõe subir o container real do projeto, elegendo UMA das imagens candidatas que o Arquiteto roteou por módulo (`route_modules_to_infra`, ADR 0131) — nunca inventando uma imagem fora dessa lista. Diferente de `propose_infra_pr`, esta ação exige aprovação humana explícita, sempre.",
+    "read_file": "Lê o conteúdo de um arquivo do workspace do projeto."
+  },
+  "definicoes": {
+    "emit_threat_model": 880,
+    "ask_structured_questions": 2104,
+    "skip_proficiency": 594,
+    "listar_metricas_de_produto": 879,
+    "rag_feedback": 794,
+    "emit_hypotheses": 1412,
+    "listar_backlog": 515,
+    "create_c4_diagram": 1082,
+    "offer_handoff": 297,
+    "listar_regras_de_negocio": 608,
+    "propose_max_parallel": 814,
+    "validate_infra_file": 393,
+    "emit_qa_verdict": 661,
+    "assess_implementability": 938,
+    "terminal": 215,
+    "container_start_via_runner": 467,
+    "emit_artifact": 1167,
+    "assign_story_modules": 358,
+    "propose_instruction_patch": 1041,
+    "report_blocked": 368,
+    "write_file": 281,
+    "choose_project_image": 1088,
+    "create_story": 656,
+    "create_epic": 242,
+    "emit_proficiency": 865,
+    "propose_prototype": 1588,
+    "create_module_map": 531,
+    "propose_adr": 708,
+    "emit_infra_delegation_result": 480,
+    "emit_perf_seguranca_verdict": 427,
+    "emit_insight": 319,
+    "emit_plano_de_teste": 752,
+    "rag_search": 631,
+    "propose_execution_plan": 900,
+    "create_task": 249,
+    "search_workspace": 227,
+    "route_modules_to_infra": 1073,
+    "propose_rfc": 1094,
+    "propose_infra_pr": 467,
+    "report_done": 324,
+    "propose_container_start": 993,
+    "read_file": 228
+  },
+  "identidades": {
+    "anamnese": "Você é a Anamnese: observa como o usuário interage com o time (linguagem, correções, o que aprova ou nega, nível das perguntas) e mantém o perfil de proficiência dele por competência técnica e de processo — SEMPRE com evidência, NUNCA inferindo atributos pessoais ou de saúde. Quando o perfil sugere um ajuste com valor, propõe um patch na instrução do agente alvo.",
+    "appsec": "Você é o agente appsec.",
+    "arquiteto": "Você é o Arquiteto: define decisões técnicas (ADRs) e o mapa de módulos do sistema.",
+    "criativo": "Você é o Criativo: conduz a ideação de produto com o usuário e emite regras de negócio.\n\nFRONTEIRA: você NÃO decide tecnologia, formato de resposta, método HTTP, nome de campo, biblioteca nem estrutura de código — isso é do Arquiteto, depois. Se o usuário trouxer esses assuntos, registre o que ele QUER que aconteça (o comportamento observável) e deixe o COMO para quem decide. Você também não escreve código nem sugere implementação.",
+    "dev-*": "Você é o agente dev-<modulo>.",
+    "dev-lead": "Você é o agente dev-lead.",
+    "infra": "Você é o Infra: cuida de provisionamento, deploy e ambientes.",
+    "infra-workflows": "Você é o agente infra-workflows.",
+    "po": "Você é o PO: transforma o brief em backlog (épicos, histórias, tarefas) com DoD e DoR.",
+    "psicologo": "Você é o Psicólogo: cuida do bem-estar e do alinhamento do time de agentes.",
+    "psicologo-leve": "Você é o Psicólogo (triagem leve): produz uma análise rápida e econômica de sessões triviais, com poucas hipóteses e alta objetividade.",
+    "qa-automacao": "Você é o agente qa-automacao.",
+    "qa-estrategia": "Você é o agente qa-estrategia.",
+    "qa-performance-seguranca": "Você é o agente qa-performance-seguranca.",
+    "staff": "Você é o agente staff.",
+    "ux-designer": "(identidade do grafo, não lida)"
+  },
+  "fonte": "apps/engine (spec/0 de cada ferramenta; Engine.Harness.Agents.identity/1)"
+}

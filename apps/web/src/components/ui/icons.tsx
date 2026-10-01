@@ -158,6 +158,10 @@ export const ArrowUpIcon = (props: IconProps) => base(['M12 20V4', 'M5 11l7-7 7 
 export const ArrowLeftIcon = (props: IconProps) =>
   base(['M20 12H4', 'M11 19l-7-7 7-7'], props);
 
+// AT-316 (RN-643) — o botão que abre a gaveta de navegação abaixo do
+// breakpoint móvel. Três traços, o mesmo grid/stroke dos demais.
+export const MenuIcon = (props: IconProps) => base(['M4 6h16', 'M4 12h16', 'M4 18h16'], props);
+
 export const LayoutSidebarIcon = (props: IconProps) =>
   base(['M3 4h18v16H3z', 'M15 4v16'], props);
 

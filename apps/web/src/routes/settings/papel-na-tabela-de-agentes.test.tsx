@@ -11,6 +11,7 @@ import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { roleAtLeast } from '../../lib/roles';
 import { ModelsSection } from './ModelsSection';
 import { AreaModelsSection } from './AreaModelsSection';
+import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
  * O PAPEL na tabela de Modelos por agente — quem pode editar, e quem só lê.
@@ -80,6 +81,9 @@ vi.mock('../../lib/api-client', async () => {
     // produção enquanto o smoke do OpenRouter não rodar.
     listProviderCapabilities: () => Promise.resolve([]),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
+    // O lote (RN-654) responde, por chave, o que os dublês por chave respondem.
+    getResolvedModelBindings: (p: string, a: readonly string[], ar: readonly string[]) =>
+      loteSobreLeiturasPorChave(getAgentModelBinding, getAreaModelBinding)(p, a, ar),
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
@@ -153,6 +157,7 @@ function project(): Project {
     workspacePath: null,
     workspaceVerifiedAt: null,
     mirrorPath: null,
+    language: 'pt-BR',
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
   };

@@ -42,7 +42,9 @@ vi.mock('../lib/api-client', async () => {
 
 const useBacklog = vi.fn(() => ({ data: [] as unknown[] }));
 const useHypotheses = vi.fn(() => ({ data: [] as unknown[] }));
-const usePendingActions = vi.fn(() => ({ data: undefined as unknown }));
+// AT-297 (RN-638): o contador de Aprovações e o de PRs saem da MESMA fila de
+// pendentes do PROJETO — não mais da sessão mais recente.
+const useProjectPendingActions = vi.fn(() => ({ data: undefined as unknown }));
 // `useArchitecture` (Onda 3) e `useProjectPendingActions` (Onda 2) — as duas
 // contagens novas que `ProjectPage.tsx` lê pra `arquiteturaPendente`/
 // `prsPendentes`. O que este arquivo prova é a moldura de abas, não o
@@ -53,9 +55,8 @@ vi.mock('../lib/hooks', () => ({
   useBacklog: () => useBacklog(),
   useHypotheses: () => useHypotheses(),
   useLatestSession: () => ({ latest: undefined }),
-  usePendingActions: () => usePendingActions(),
   useArchitecture: () => ({ data: undefined }),
-  useProjectPendingActions: () => ({ data: undefined }),
+  useProjectPendingActions: () => useProjectPendingActions(),
 }));
 
 // Cada painel vira uma frase única. É o que permite afirmar QUAL aba
@@ -117,6 +118,7 @@ const PROJETO: Project = {
   workspacePath: null,
   workspaceVerifiedAt: null,
   mirrorPath: null,
+  language: 'pt-BR',
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
@@ -140,7 +142,7 @@ beforeEach(async () => {
   getProjectBudget.mockResolvedValue(null);
   useBacklog.mockReturnValue({ data: [] });
   useHypotheses.mockReturnValue({ data: [] });
-  usePendingActions.mockReturnValue({ data: undefined });
+  useProjectPendingActions.mockReturnValue({ data: undefined });
 });
 
 // Restaura o default do app depois deste arquivo — a instância é o
@@ -187,8 +189,9 @@ describe('abas do projeto derivam de um registro só', () => {
         await screen.findByRole('tab', { name: new RegExp(`^${escapado}$`) }),
       ).toBeInTheDocument();
       // Ponto 4: o render. Uma cadeia de `&&` sem esta chave mostraria o
-      // cabeçalho do projeto e um corpo vazio.
-      expect(screen.getByText(`painel de ${key}`)).toBeInTheDocument();
+      // cabeçalho do projeto e um corpo vazio. `findBy` porque o painel é um
+      // chunk carregado sob demanda (AT-300) e chega depois do trilho.
+      expect(await screen.findByText(`painel de ${key}`)).toBeInTheDocument();
     },
   );
 
@@ -209,11 +212,11 @@ describe('abas do projeto derivam de um registro só', () => {
       'Executores',
       'Criativo',
       'Chat',
-      'Insights',
+      'Percepções',
       'Código',
       'PRs',
       'Aprovações',
-      'Backlog',
+      'Histórias',
       'Arquitetura',
       'Gastos',
       'Configurações',
@@ -252,8 +255,11 @@ describe('abas do projeto derivam de um registro só', () => {
   });
 
   it('o selo numérico de uma aba SOLTA sai do registro, e some quando a fila está vazia', async () => {
-    usePendingActions.mockReturnValue({
-      data: { items: [{ status: 'pending' }, { status: 'approved' }] },
+    useProjectPendingActions.mockReturnValue({
+      data: [
+        { status: 'pending', actionType: 'terminal' },
+        { status: 'approved', actionType: 'terminal' },
+      ],
     });
     useHypotheses.mockReturnValue({
       data: [{ status: 'proposed' }, { status: 'accepted' }],
@@ -280,8 +286,8 @@ describe('abas do projeto derivam de um registro só', () => {
   // atenção — a separação das cinco filas é decisão de produto, e agora ela
   // vale sem exceção nenhuma.
   it('cada fila mantém o selo PRÓPRIO, e o cabeçalho do grupo nunca soma as filhas', async () => {
-    usePendingActions.mockReturnValue({
-      data: { items: [{ status: 'pending' }] },
+    useProjectPendingActions.mockReturnValue({
+      data: [{ status: 'pending', actionType: 'terminal' }],
     });
     useHypotheses.mockReturnValue({
       data: [{ status: 'proposed' }],
@@ -292,9 +298,9 @@ describe('abas do projeto derivam de um registro só', () => {
 
     // Aprovações (1) e Insights (1) mostram cada uma o seu, lado a lado.
     expect(await screen.findByRole('tab', { name: /^Aprovações\s*1$/ })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /^Insights\s*1$/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Percepções\s*1$/ })).toBeInTheDocument();
     // Fila vazia continua sem selo: zero é ruído, não informação.
-    expect(screen.getByRole('tab', { name: 'Backlog' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Histórias' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Código' })).toBeInTheDocument();
     // E o cabeçalho do grupo é só o nome — nenhum número junto dele.
     expect(screen.getByText('Dev').textContent).toBe('Dev');

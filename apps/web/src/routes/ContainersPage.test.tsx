@@ -1,7 +1,7 @@
 import type React from 'react';
-import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { ContainersPage } from './ContainersPage';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type {
@@ -12,6 +12,7 @@ import type {
   Session,
 } from '../lib/api-types';
 import i18n from '../lib/i18n';
+import { simularLayoutMovel } from '../test/match-media';
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR');
@@ -212,6 +213,22 @@ describe('ContainersPage', () => {
     expect(screen.getByText('node:22-bookworm-slim')).toBeInTheDocument();
     expect(screen.getByText('v2')).toBeInTheDocument();
     expect(screen.getByText('rodando')).toBeInTheDocument();
+  });
+
+  it('AT-278 (RN-632): a linha lê a sessão mais recente SEM poll — uma por projeto a cada 5s estourava o teto', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item(), item({ projectId: 'proj-2', projectName: 'api', projectSlug: 'api' })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(useLatestSession).toHaveBeenCalledWith('proj-1', false);
+    expect(useLatestSession).toHaveBeenCalledWith('proj-2', false);
+    // Nenhuma linha pede o poll default (o segundo argumento ausente).
+    expect(useLatestSession.mock.calls.every((args) => args[1] === false)).toBe(true);
   });
 
   it('naoVerificado (teto atingido) NUNCA é confundido com naoObservado — texto próprio', () => {
@@ -639,5 +656,132 @@ describe('ContainersPage', () => {
     montar();
 
     expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeEnabled();
+  });
+});
+
+// AT-324 (RN-646): Parar/Remover sem container, e o motivo longo do broker.
+describe('ContainersPage — Parar/Remover sem container e o motivo curto (AT-324)', () => {
+  function comDados(dados: ContainerOverviewItem[]) {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: dados,
+      refetch: vi.fn(),
+    });
+  }
+
+  it('nunca provisionado: Parar e Remover inertes, com o motivo em TEXTO — clicar não propõe', () => {
+    comDados([item({ registrado: null, naoVerificado: 'sem_container_registrado' })]);
+
+    montar();
+
+    const remover = screen.getByRole('button', { name: 'Remover' });
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
+    expect(remover).toBeDisabled();
+    expect(
+      screen.getByText('Nunca provisionado: não há container para parar nem remover.'),
+    ).toBeInTheDocument();
+    fireEvent.click(remover);
+    expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('container removido: o motivo próprio, nunca o de "nunca provisionado"', () => {
+    comDados([item({ registrado: registro({ status: 'removed' }) })]);
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    expect(
+      screen.getByText('Container removido: não há o que parar nem remover.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nunca provisionado/)).toBeNull();
+  });
+
+  it('container de pé: nenhum motivo de "sem container" — o texto não vira ruído em linha saudável', () => {
+    comDados([item()]);
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeEnabled();
+    expect(screen.queryByText(/não há container para parar/)).toBeNull();
+    expect(screen.queryByText(/Container removido/)).toBeNull();
+  });
+
+  it('sem broker: UMA linha curta visível; o nome da variável só no detalhe, fechado', () => {
+    comDados([
+      item({
+        registrado: null,
+        brokerConfigurado: false,
+        naoVerificado: 'sem_container_registrado',
+      }),
+    ]);
+
+    const { container } = montar();
+
+    const resumo = screen.getByText(
+      /Sem broker de container nesta instalação: a subida só terminaria em falha\./,
+    );
+    expect(resumo.tagName).toBe('SUMMARY');
+    const detalhe = resumo.closest('details') as HTMLDetailsElement;
+    expect(detalhe.open).toBe(false);
+    // O texto longo (com BROKER_URL) mora DENTRO do <details>, e em mais
+    // lugar nenhum da linha.
+    expect(detalhe.textContent).toMatch(/BROKER_URL/);
+    const foraDoDetalhe = Array.from(container.querySelectorAll('p')).filter(
+      (p) => !p.closest('details'),
+    );
+    expect(foraDoDetalhe.some((p) => /BROKER_URL/.test(p.textContent ?? ''))).toBe(false);
+  });
+
+  it('sem broker com container parado: subir, parar e remover travados pelo MESMO fato viram UMA linha', () => {
+    comDados([item({ registrado: registro({ status: 'stopped' }), brokerConfigurado: false })]);
+
+    const { container } = montar();
+
+    expect(screen.getByText(/subir, parar e remover só terminariam em falha/)).toBeInTheDocument();
+    expect(container.querySelectorAll('details')).toHaveLength(1);
+    // Os dois detalhes continuam lá, atrás do mesmo <details>.
+    expect(screen.getByText(/Esta instalação não sobe container/)).toBeInTheDocument();
+    expect(screen.getByText(/para e remove os containers/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * AT-330 (achado N3 da auditoria da Rodada 29): em 390px as sete colunas
+ * espremidas sobrepunham os cabeçalhos e cortavam as ações à direita. No móvel
+ * cada projeto é um CARTÃO (`Table`, RN-643), com o rótulo de cada coluna junto
+ * do valor e as ações na largura inteira.
+ */
+describe('ContainersPage — layout estreito (AT-330)', () => {
+  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
+  afterEach(() => {
+    largura?.restaurar();
+    largura = null;
+  });
+
+  it('no móvel, a linha vira cartão com os rótulos e as ações na largura inteira', () => {
+    largura = simularLayoutMovel(true);
+    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+
+    montar();
+
+    const cartao = screen.getByTestId('linha-da-tabela');
+    const noCartao = within(cartao);
+    for (const rotulo of ['Projeto', 'Imagem', 'Registrado', 'Ações']) {
+      expect(noCartao.getByText(rotulo)).toBeInTheDocument();
+    }
+    expect(noCartao.getByText('node:22-bookworm-slim')).toBeInTheDocument();
+    const parar = noCartao.getByRole('button', { name: 'Parar' });
+    expect(parar.closest('[data-campo]')).toHaveAttribute('data-campo', 'actions');
+    expect(parar.closest('[data-campo]')).toHaveAttribute('data-largo');
+  });
+
+  it('no desktop, a tabela mantém um cabeçalho só — nenhum cartão', () => {
+    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+
+    montar();
+
+    expect(screen.queryByTestId('linha-da-tabela')).toBeNull();
+    expect(screen.getAllByText('Ações')).toHaveLength(1);
   });
 });

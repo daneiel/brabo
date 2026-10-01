@@ -126,7 +126,7 @@ Anthropic can't omit the count, because `usage` is mandatory in its
 protocol's `message_start`. The three responses are in
 [docs/reference/llm-providers.md](../reference/llm-providers.md#normalized-divergences).
 
-- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:167`
 - **Test:** `test/contract/llm-provider.contract.ts` (scenario
   `sem_usage`, run against the three providers)
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
@@ -144,9 +144,98 @@ In metrics the `upstream_provider` label repeats the provider itself when
 there's no hub, so `sum by (upstream_provider)` keeps summing the whole
 cost.
 
-- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:58`
+- **Where:** `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:73`
 - **Test:** `test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+
+### RN-666 — O metering grava quanto da entrada veio de cache e quanto da saída foi raciocínio {#rn-666}
+
+Cada linha de `token_usage` grava duas PARTES que o provider informa no
+`usage` do dialeto OpenAI: `cached_input_tokens`
+(`prompt_tokens_details.cached_tokens` — quantos dos `input_tokens` foram
+servidos de cache, cobrados a uma fração do preço) e `reasoning_tokens`
+(`completion_tokens_details.reasoning_tokens` — quantos dos `output_tokens`
+foram raciocínio).
+
+1. **Parte, nunca soma.** `input_tokens`/`output_tokens` continuam sendo os
+   totais que o provider disse, e já incluem as partes; nada é somado a eles
+   e nenhum custo é recalculado por elas — o número do custo é o da
+   [RN-665](#rn-665).
+2. **"Não disse" não é zero.** `null` = o provider não informou; 0 = informou
+   que não houve. Valor que não é inteiro não negativo é "não disse".
+3. **A medição diz quanto foi cache.** `medir-execucao.ts` passa a mostrar,
+   por agente, o cache lido e o raciocínio com a porcentagem do total, SÓ sobre
+   as chamadas que informaram (e em quantas, quando não foram todas), e
+   "não medido" quando nenhuma informou — além de em quantas chamadas o custo
+   é o real.
+4. **Lido para todo provider do dialeto**, porque os dois campos são da
+   própria OpenAI; quem não os manda fica com `null`. O Anthropic informa cache
+   no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
+   `null`, declarado; o Ollama não informa.
+
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:270` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:565` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
+  `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
+  `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
+- **Test:** `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
+  (resposta gravada com as duas partes; sem os detalhes; valor inválido e
+  zero), `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/scripts/medir-execucao.spec.ts` (`formatarParteMedida`)
+- **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+  (AT-272)
+
+### RN-665 — O custo real que o provider devolve é o número do metering; o catálogo fica onde ele não vem {#rn-665}
+
+Decisão do dono (30/09): **o custo real vira o número**. Quando a resposta de
+uma chamada de LLM diz quanto o provider cobrou — no OpenRouter, `usage.cost`
+no frame final do stream —, esse valor é o `token_usage.cost_micros` da linha,
+o que o turno devolve ao engine (e o laço soma ao orçamento local), o que
+incrementa os budgets de projeto, sessão e área, e o que os relatórios de
+gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
+[ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+
+1. **Uma regra, três caminhos.** `RunLlmTurnUseCase`, `StreamLlmTurnUseCase`
+   e `SendChatMessageUseCase` passam pela mesma `custoDaChamada`; não há
+   segunda régua.
+2. **Preço implícito, marcado.** Com custo real, as duas colunas de preço
+   gravam `custo ÷ tokens` (o mesmo valor: o provider devolve UM custo) e
+   `price_implicit = true` — o que mantém `tokens × preço = custo`
+   ([RN-044](#rn-044)) sem fingir um preço de tabela. Sem custo real,
+   `price_implicit = false` e as colunas são as do catálogo.
+3. **O catálogo ao lado.** `catalog_cost_micros` grava o que o preço de
+   catálogo teria cobrado, só nas linhas cujo número é o real (`null` nas
+   outras) — é a distância entre estimativa e fatura, por linha.
+4. **`estimated` segue falando dos TOKENS** ([RN-041](#rn-041)). A linha
+   com custo real tem `estimated = false` porque o custo só chega com o
+   `usage` do provider; quem marca o CUSTO como real é `price_implicit`.
+5. **O que a resposta disse sobre si é gravado.** `resolved_model_name` (o
+   `model` do frame — o alias resolvido) e `generation_id` (o `id`, `gen-…` no
+   OpenRouter), por todo provider do dialeto. `model_name` continua sendo o do
+   catálogo, a dimensão dos relatórios.
+6. **Só quem provou lê o custo.** O hook `extrairCustoReal` existe só no
+   OpenRouter; provider sem ele ignora um `usage.cost` presente. Custo que não
+   é número finito e não negativo é "não disse" (zero de verdade é custo real),
+   e com `is_byok: true` o custo NÃO é lido: é a taxa do hub, e a inferência é
+   cobrada por fora — a linha cai no catálogo.
+
+- **Where:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:199` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:216` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:266` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),
+  `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
+- **Test:** `test/domain/llm/custo-da-chamada.spec.ts`,
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
+  gravada: custo, modelo resolvido, id; BYOK; sem `cost`; provider sem o
+  hook), `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`,
+  `test/application/use-cases/llm/send-chat-message.use-case.spec.ts`; com
+  credencial, o smoke manual `openrouter-provider.smoke.spec.ts`
+- **Origin:** [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md)
+  (AT-270)
 
 ### RN-583 — O critério de roteamento do hub é do binding, viaja com ele, e congela no metering {#rn-583}
 
@@ -173,17 +262,27 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
    Mesma régua do preço congelado (ADR 0042).
 4. **Capability de PROVIDER, só com prova.**
    `LLMProviderCapabilities.routingPreference` é obrigatória nos nove, e é
-   `false` nos nove hoje — inclusive no OpenRouter, cujo fio (`provider: { sort
-   }`) está pronto mas não foi provado contra a API real (sem
-   `OPENROUTER_TEST_KEY` no ambiente). Enquanto for `false`, a feature é
-   DORMENTE: a rota recusa, a tela diz em texto que nenhum provider desta
-   instalação tem a opção provada, e nada muda no fio.
+   `true` SÓ no OpenRouter desde 2026-09-29 (AT-158): o smoke com credencial
+   real (`openrouter-provider.roteamento.smoke.spec.ts`) mostrou o critério
+   MUDANDO o upstream que serviu — em `meta-llama/llama-3.3-70b-instruct`,
+   `price` pousou na DeepInfra e `throughput` na Groq (`latency` foi Groq numa
+   medição e CoreWeave na outra), enquanto sem critério o hub alternou
+   Novita/DeepInfra. A prova é a DIFERENÇA, não o
+   aceite: o modelo do default antigo (`~deepseek/deepseek-v4-flash-latest`)
+   devolveu o MESMO upstream para os três critérios e sem critério, e isso não
+   distingue "o hub respeitou" de "não havia escolha". Os outros oito seguem
+   `false`, e para eles a feature continua DORMENTE: a rota recusa com 422, a
+   tela diz em texto que o provider não tem a opção provada, e nada muda no
+   fio. O que a prova NÃO afirma: qual upstream cada critério escolhe — isso
+   é decisão do hub e muda com o tempo.
 
 - **Where:** `apps/api/src/domain/llm/routing-preference.ts:56` (escrita),
   `apps/api/src/domain/llm/routing-preference.ts:75` (o que vai ao fio),
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
-  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:93`
-  (congela no metering)
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
+  (congela no metering),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:245` (`openrouterConfig`,
+  a capability provada)
 - **Test:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
   `test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
@@ -364,7 +463,7 @@ already exercised. A provider that declares `false` and still exposes
 the method **refuses the call** before touching the network.
 
 - **Where:** `apps/api/src/infrastructure/llm/ollama-provider.ts:73`,
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:302`
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:325`
 - **Test:** `test/contract/llm-provider.contract.ts`,
   `test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`,
   `test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts`
@@ -539,14 +638,16 @@ breaker with a click.
 `projects.story_promotion` chooses WHO promotes a story from `draft` to
 `ready`:
 
-- **`manual`** (new project's default): the PO leaves the story complete
+- **`manual`**: the PO leaves the story complete
   and it stays `draft` with `stories.proposed_ready = true`. **None of
   its tasks are claimable** — `claimNext` requires `story.status =
   'ready'` — and it's the user who promotes it, individually or in
   batch, from the Backlog.
-- **`auto`**: the PO promotes on its own upon finishing a complete story.
-  This is the behavior that predates Phase 12c, kept as an explicit
-  option.
+- **`auto`** (new project's default since [RN-659](../business-rules.md#rn-659)):
+  the PO promotes on its own upon finishing a complete story. This was
+  the behavior that predated Phase 12c; `manual` was the default from
+  12c until RN-659 (migration `0065`), which changed only the column
+  default — projects created in between keep `manual`.
 
 **The mode changes the trigger, not the criterion.** Both paths go
 through `assertPromotable` — readiness (RF/DoD/DoR/rule) and modules
@@ -2332,9 +2433,9 @@ continuam numa linha só. Quem quer a quebra por credencial tem a lista própria
 e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
 pergunta que as duas listas separadas já não respondam.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:123`
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:137`
   (`SpendDimension`),
-  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:245`
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:255`
   (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
@@ -2365,8 +2466,8 @@ chegar ao handler.
 nasce alcançável pelas duas audiências, e tirá-la do alcance do membro vira ato
 explícito **neste ponto** — nunca um esquecimento em outro arquivo.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:107`
-  (as duas sobrecargas), `:138` (`SpendDimensionDoAtor`), `:154`/`:164` (os dois
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:121`
+  (as duas sobrecargas), `:147` (`SpendDimensionDoAtor`), `:163`/`:173` (os dois
   escopos), `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
   `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
@@ -2493,10 +2594,10 @@ só numa seção seria pior que a lacuna.
   `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
   "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
   mudar de mínimo),
-  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:208` e `:236`
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` e `:301`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
-  `apps/web/src/routes/settings/ModelsSection.tsx:85` (`podeEditar`, e por que
+  `apps/web/src/routes/settings/ModelsSection.tsx:89` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
   que diz o motivo)
@@ -2636,11 +2737,11 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:157` (`cadeiaDoAgente`),
-  `:322` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:391` (`handleClearAgentBinding` — os
-  três desfechos, e por que o 404 tem o dele), `:352` (coluna Origem), `:422`
-  (`não há nível abaixo`), `:441` (`sem gasto ainda`),
+  `apps/web/src/routes/settings/ModelsSection.tsx:149` (`cadeiaDoAgente`),
+  `:329` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:385` (`handleClearAgentBinding` — os
+  três desfechos, e por que o 404 tem o dele), `:359` (coluna Origem), `:429`
+  (`não há nível abaixo`), `:448` (`sem gasto ainda`),
   `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o
   picker não guarda a escolha, e é por isso que a recusa não deixa valor
   fantasma na tela),

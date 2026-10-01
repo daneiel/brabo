@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useArchitecture,
   useBacklog,
@@ -9,6 +10,7 @@ import {
   useHandoffs,
   useLatestSession,
   usePendingActions,
+  useProjectPendingActions,
   useProjectsSummary,
   useSessionEventHistory,
   useSessionEvents,
@@ -18,7 +20,6 @@ import {
   activateExecution,
   mensagemDaApi,
   requestParallelization,
-  getAgentModelBinding,
   getRepository,
   listAgentAutonomy,
   listModels,
@@ -33,10 +34,12 @@ import {
 } from '../lib/agent-status';
 import { deriveExecutionProgress, formatMicros } from '../lib/execution';
 import { connectSessionHeartbeat } from '../lib/session-channel';
+import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { useLayoutMovel } from '../lib/layout-movel';
 import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -44,6 +47,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
+import { Card } from '../components/ui/Card';
+import { nomeDoAgente } from '../lib/agents';
 import styles from './ProjectOverviewTab.module.css';
 
 interface ProjectOverviewTabProps {
@@ -52,6 +57,9 @@ interface ProjectOverviewTabProps {
 
 export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const { t } = useTranslation('overview');
+  // Layout móvel (RN-643): as duas regiões EMPILHAM e rolam juntas — o
+  // trilho de 360px ao lado do time não cabe numa tela de telefone.
+  const movel = useLayoutMovel();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { latest: latestSession } = useLatestSession(projectId);
@@ -84,8 +92,15 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const executionActivated = projectSummary?.roster.executionActivated ?? false;
   // Agentes com ação pendente de aprovação entram como `aguardando` — antes
   // esse estado era inalcançável e o contador do header ficava sempre em 0.
+  //
+  // A fila é a do PROJETO (AT-297, RN-638), não a da sessão mais recente: um
+  // dev agent esperando decisão na sessão de execução segue `aguardando`
+  // mesmo com uma ideação aberta depois. Mesma chave do contador do trilho.
+  const pendentesDoProjeto = useProjectPendingActions(projectId, undefined, INTERVALO_DO_PROJETO_MS);
   const pendingActionAgentIds = new Set(
-    actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
+    (pendentesDoProjeto.data ?? [])
+      .filter((a) => a.status === 'pending')
+      .map((a) => a.actor.id),
   );
   // RN-568 — a presença de QA/SecOps (`gatesEverOpened`) e dos membros de
   // área (`delegatedSubagents`) sofria da MESMA classe de defeito acima: o
@@ -124,12 +139,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const allModels = modelsByCategory
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
-  const bindingQueries = useQueries({
-    queries: roster.map((r) => ({
-      queryKey: ['agent-binding', projectId, r.id],
-      queryFn: () => getAgentModelBinding(projectId, r.id),
-    })),
-  });
+  // RN-654 (AT-339): os bindings do roster saem do LOTE, não de uma rota por
+  // agente — os do catálogo pela mesma chave da aba Configurações.
+  const bindingDoAgente = useBindingsDosAgentes(
+    projectId,
+    roster.map((r) => r.id),
+  );
   const { data: autonomyRules } = useQuery({
     queryKey: ['agent-autonomy', projectId],
     queryFn: () => listAgentAutonomy(projectId),
@@ -149,8 +164,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
 
   // Agrupamento por área vem de `groupRosterByArea` (lib/agent-status.ts,
   // compartilhado com o card do dashboard) — devolve ENTRADAS, não índices;
-  // `bindingQueries`/`tokenUsage` seguem indexados pela roster inteira, daí
-  // o `roster.indexOf(...)` na hora de renderizar (roster é sempre pequena).
+  // a grade acha cada entrada na roster inteira por `roster.indexOf(...)` na
+  // hora de renderizar (roster é sempre pequena).
   const rosterGroups = groupRosterByArea(roster);
 
   // Fase 4a — painel do time ao vivo: qualquer evento persistido (Dev/QA/
@@ -158,18 +173,19 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // o refetch do polling — mesmo princípio de SessionPage.tsx.
   useEffect(() => {
     if (!sessionId || latestSession?.status !== 'active') return;
+    // AT-278 (RN-632): pelo MESMO invalidador da tela de Sessão (RN-579),
+    // com janela por alvo — invalidar por aviso sem janela troca poll por
+    // rajada. O backlog segue sendo invalidado a cada aviso (tasks bloqueadas
+    // vêm dele, não do event log), só que também com janela.
+    const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onEvent: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-        // O backlog também: tasks bloqueadas vêm dele, não do event log —
-        // sem isto o destaque de blocked só aparece no poll de 4s.
-        queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      },
-      onAgentStatus: () => {
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
+      onEvent: ({ type }) => invalidador.aoEvento(type, false, ['backlog']),
+      onAgentStatus: () => invalidador.aoEvento('agent.status', false),
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      invalidador.encerrar();
+    };
   }, [sessionId, latestSession?.status, projectId, queryClient]);
 
   // `setAgentAutonomy` existia no api-client desde a Fase 4a e nunca tinha
@@ -189,7 +205,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     } catch {
       showToast({
         title: t('team.autonomyErrorTitle'),
-        message: `${agentId} · ${actionType}`,
+        message: `${nomeDoAgente(agentId)} · ${actionType}`,
         tone: 'danger',
       });
     }
@@ -230,7 +246,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const waitingCount = overviewRoster.filter((r) => r.status === 'aguardando').length;
 
   return (
-    <div className={styles.layout}>
+    <div className={[styles.layout, movel && styles.layoutMovel].filter(Boolean).join(' ')}>
       <div className={styles.main}>
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
@@ -246,7 +262,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           roster={roster}
           groups={overviewGroups}
           events={events}
-          bindingQueries={bindingQueries}
+          bindingDoAgente={bindingDoAgente}
           allModels={allModels}
           tokenUsage={tokenUsage}
           autonomyRules={autonomyRules}
@@ -519,7 +535,7 @@ function ExecutionSection({
           ) : (
             <div className={styles.moduleGrid}>
               {[...agents.entries()].map(([agentId, a]) => (
-                <div key={agentId} className={styles.moduleCard}>
+                <Card key={agentId} radius="md" padding="sm">
                   <div className={styles.moduleName}>{agentId}</div>
                   <div className={styles.moduleStack}>
                     {t('executionSection.devAgentModule', { module: a.module })}
@@ -529,7 +545,7 @@ function ExecutionSection({
                       {t('executionSection.devAgentTask', { task: a.taskTitle })}
                     </div>
                   )}
-                  {a.branch && <div className={styles.depChip}>{a.branch}</div>}
+                  {a.branch && <Badge tone="neutral">{a.branch}</Badge>}
                   {a.iteration !== undefined && (
                     <div className={styles.moduleResp}>
                       {t('executionSection.devAgentProgress', {
@@ -538,7 +554,7 @@ function ExecutionSection({
                       })}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}

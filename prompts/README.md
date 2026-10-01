@@ -87,7 +87,12 @@ O corpo (tudo depois do segundo `---`) é o texto do prompt. Onde o
 sessão, projeto ou turno, não é texto fixo), o Markdown usa um
 placeholder `{{variavel}}` em vez de tentar reproduzir a interpolação.
 Cada arquivo documenta seus placeholders numa seção final "## Variáveis",
-explicando o que cada um representava no código original. **Esta frente
+explicando o que cada um representava no código original. **Essa seção
+NÃO é semeada**: o corpo do template termina na linha `## Variáveis`, e o
+seeder descarta dela em diante (AT-244). Ela cita os mesmos `{{placeholders}}`
+do corpo, e cada consumidor troca TODAS as ocorrências — semeada, o modelo
+recebia a documentação e o dado duas vezes. Texto de prompt nunca vai depois
+dela, e o corpo não usa esse título para outra coisa. **Esta frente
 só documenta os placeholders — a substituição real (motor de template
 lendo `{{variavel}}` e resolvendo contra o contexto do turno) é trabalho
 da onda que vai consumir isto, ainda não implementada.**
@@ -110,7 +115,8 @@ node scripts/dev/seed-prompts.ts
 O script (`scripts/dev/seed-prompts.ts`):
 
 1. Lê todo `prompts/*.md` (exceto este README), parseia o front-matter e
-   separa `name`/`version`/`body`.
+   separa `name`/`version`/`body` — o `body` vai do front-matter até a seção
+   `## Variáveis`, exclusive.
 2. Calcula `sha256` do `body` (`crypto.createHash('sha256')` do Node —
    sem lib nova).
 3. Chama `POST /internal/graph/prompt-templates` (`{ name, version, body,

@@ -1,6 +1,6 @@
 {
   "title": "Chaves de máquina",
-  "eyebrow": "Agente local · RN-611",
+  "eyebrow": "Agente local",
   "subtitle": "Uma chave de máquina autentica o agente local instalado numa máquina sua (o brabo-runner rodando como serviço). Ela nasce na máquina, na instalação, e só a metade pública chega aqui. A lista é a das SUAS chaves de máquina, inclusive as já revogadas — e funciona sem projeto nenhum, que é justamente quando a instalação cria uma. Chaves de projeto não estão aqui: elas moram nas Configurações de cada projeto.",
   "subtitleAlcance": "Uma chave de máquina atende todos os seus projetos em modo runner: revogá-la derruba o agente local em todos eles de uma vez.",
   "subtitleNaoEBatimento": "Chave registrada não é agente rodando: \"último uso\" é a última vez que o agente pediu acesso com ela, nunca prova de que ele está de pé agora — quem sabe do agora é o terminal de um projeto.",

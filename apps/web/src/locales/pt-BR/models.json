@@ -10,7 +10,7 @@
   "facets": {
     "toolCalling": {
       "label": "tool calling",
-      "help": "Só os que um agente consegue usar (RN-040)."
+      "help": "Só os que um agente consegue usar."
     },
     "vision": {
       "label": "lê imagem",
@@ -78,6 +78,7 @@
     },
     "missingCatalog": {
       "prefix": "Você tem credencial de ",
+      "middle_zero": " e nenhum modelo deles no catálogo. Cadastrar a chave não descobre modelo — clique em ",
       "middle_one": " e nenhum modelo dele no catálogo. Cadastrar a chave não descobre modelo — clique em ",
       "middle_other": " e nenhum modelo deles no catálogo. Cadastrar a chave não descobre modelo — clique em ",
       "suffix": " para buscá-los no provider."
@@ -92,9 +93,11 @@
       "usesUpdated": "Usos atualizados"
     },
     "empty": "Nenhum modelo no catálogo. Cadastre uma credencial de provider e atualize.",
+    "markedHidden_zero": "{{count}} marcados",
     "markedHidden_one": "{{count}} marcado",
     "markedHidden_other": "{{count}} marcados",
     "batchBar": {
+      "selectedCount_zero": "{{count}} selecionados",
       "selectedCount_one": "{{count}} selecionado",
       "selectedCount_other": "{{count}} selecionados",
       "activate": "Ativar",
@@ -108,7 +111,13 @@
       "skippedNoCapability": "sem listagem de catálogo",
       "skippedNoCredential": "sem credencial cadastrada",
       "failed": "falhou · origem {{origin}}",
-      "summary": "{{discovered}} novo(s) · {{reencountered}} de volta · {{missing}} sumido(s)"
+      "novos_zero": "{{count}} novos",
+      "novos_one": "{{count}} novo",
+      "novos_other": "{{count}} novos",
+      "deVolta": "{{count}} de volta",
+      "sumidos_zero": "{{count}} sumidos",
+      "sumidos_one": "{{count}} sumido",
+      "sumidos_other": "{{count}} sumidos"
     }
   },
   "picker": {
@@ -136,6 +145,7 @@
       "total": "TOTAL"
     },
     "credentialNotRegistered": "chave não cadastrada",
+    "callsCount_zero": "({{count}} chamadas)",
     "callsCount_one": "({{count}} chamada)",
     "callsCount_other": "({{count}} chamadas)",
     "currency": {

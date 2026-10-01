@@ -36,6 +36,7 @@ import { UpdateWorkspaceUseCase } from '../../../application/use-cases/iam/updat
 import { DeleteWorkspaceUseCase } from '../../../application/use-cases/iam/delete-workspace.use-case';
 import { AddWorkspaceMemberUseCase } from '../../../application/use-cases/iam/add-workspace-member.use-case';
 import { RemoveWorkspaceMemberUseCase } from '../../../application/use-cases/iam/remove-workspace-member.use-case';
+import { ListWorkspaceMembersUseCase } from '../../../application/use-cases/iam/list-workspace-members.use-case';
 import { TransferWorkspaceOwnershipUseCase } from '../../../application/use-cases/iam/transfer-workspace-ownership.use-case';
 import { CreateProjectUseCase } from '../../../application/use-cases/iam/create-project.use-case';
 import { ListProjectsForWorkspaceUseCase } from '../../../application/use-cases/iam/list-projects-for-workspace.use-case';
@@ -46,6 +47,8 @@ import { GetUnreadEventsForWorkspaceUseCase } from '../../../application/use-cas
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { SetToolRouterDto } from './dto/set-tool-router.dto';
+import { SetWorkspaceToolRouterUseCase } from '../../../application/use-cases/iam/set-workspace-tool-router.use-case';
 import { TransferOwnershipDto } from './dto/transfer-ownership.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UnreadEventsDto } from './dto/unread-events.dto';
@@ -62,6 +65,7 @@ import {
   ProjectResponseDto,
   ProjectsBaseResponseDto,
   WorkspaceComPapelResponseDto,
+  WorkspaceMemberComUsuarioResponseDto,
   WorkspaceMemberResponseDto,
   WorkspaceResponseDto,
   WorkspaceSummaryResponseDto,
@@ -94,6 +98,8 @@ export class WorkspacesController {
     private readonly broker: ContainerBrokerPort,
     private readonly removeWorkspaceMember: RemoveWorkspaceMemberUseCase,
     private readonly transferWorkspaceOwnership: TransferWorkspaceOwnershipUseCase,
+    private readonly setWorkspaceToolRouter: SetWorkspaceToolRouterUseCase,
+    private readonly listWorkspaceMembers: ListWorkspaceMembersUseCase,
   ) {}
 
   @Post()
@@ -190,6 +196,31 @@ export class WorkspacesController {
   }
 
   /**
+   * A LEITURA dos membros do workspace (AT-335, RN-652). `viewer`, o mínimo
+   * das leituras vizinhas (`GET :workspaceId`, `:workspaceId/projects`) e o
+   * de `GET projects/:projectId/members`, que ela completa: quem abre uma
+   * sessão precisa saber o nome de quem falou nela, e quem fala ali pode
+   * entrar só pelo papel de workspace. NÃO herda o `owner` das rotas de
+   * escrita logo abaixo — o mínimo é do ENDPOINT (RN-102), e ler a lista não
+   * é mantê-la. A forma é a da leitura de projeto: id, nome, e-mail, papel.
+   */
+  @Get(':workspaceId/members')
+  @RequireRole('viewer')
+  @ApiOperation({
+    summary: "Lists the workspace's members",
+    description:
+      'Who is associated with the WORKSPACE, with the workspace role — the ' +
+      'role every project inherits unless a project row overrides it. ' +
+      'Completes `GET projects/:projectId/members`, which lists only project ' +
+      'rows: whoever reaches a project through the workspace alone shows up ' +
+      'here and not there. Only id, name, e-mail and role.',
+  })
+  @ApiOkResponse({ type: [WorkspaceMemberComUsuarioResponseDto] })
+  listMembers(@Param('workspaceId') workspaceId: string) {
+    return this.listWorkspaceMembers.execute(workspaceId);
+  }
+
+  /**
    * A quinta porta da linha dos tetos (ADR 0173, RN-615). `owner`, o MESMO
    * mínimo do upsert logo acima: quem mexe na lista de membros é quem a
    * mantém. O teto (a si mesmo, nunca) e a cascata moram no caso de uso.
@@ -244,6 +275,30 @@ export class WorkspacesController {
    * remoção do titular manda fazer antes. `owner`, o mínimo das outras rotas
    * de membro; a regra do destino mora no caso de uso.
    */
+  /**
+   * O desligador do roteamento de ferramenta pelo Jev (ADR 0179, RN-625):
+   * `owner`, porque o gasto do Jev é da chave do titular (RN-058).
+   */
+  @Put(':workspaceId/tool-router')
+  @RequireRole('owner')
+  @ApiOperation({
+    summary: 'Turns the Jev tool routing on or off for the workspace',
+    description:
+      'On by default. When on AND the turn model is from OpenRouter, an agent ' +
+      'step with two or more tools first asks the Jev which tool fits, and the ' +
+      'chat model is offered only that tool and the previous one. The Jev never ' +
+      'approves or denies anything: an action that needs approval still does. ' +
+      'Any failure of the Jev falls back to the whole catalog. Turning it off ' +
+      'stops every call to the Jev, and its cost with them.',
+  })
+  @ApiOkResponse({ type: WorkspaceResponseDto })
+  setToolRouter(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: SetToolRouterDto,
+  ) {
+    return this.setWorkspaceToolRouter.execute(workspaceId, dto.enabled);
+  }
+
   @Put(':workspaceId/owner-of-record')
   @RequireRole('owner')
   @ApiOperation({
