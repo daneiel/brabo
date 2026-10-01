@@ -27,6 +27,10 @@ const FORMA_CERTA =
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-install-invocacao-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
+// O instalador é COPIADO para o `cwd` do `rodar` e rodado pelo nome RELATIVO —
+// `bash install.sh`, a FORMA_CERTA —, sem caminho absoluto no argv do shell
+// (CodeQL `js/shell-command-injection-from-environment`).
+fs.copyFileSync(SCRIPT, path.join(tmp, 'install.sh'));
 
 // Caminho de arquivo e conteúdo lido de disco NUNCA entram no argv de um
 // `-c`: vão pelo AMBIENTE (`BRABO_ALVO`/`BRABO_FONTE`) — AT-346 reaberta, o
@@ -89,14 +93,14 @@ describe('as formas erradas de rodar são recusadas COM NOME, antes de baixar qu
 
   it('`sh install.sh` com dash — o mesmo, com arquivo', (ctx) => {
     if (!dash) ctx.skip('sem dash nesta máquina');
-    const r = rodar(dash!, [SCRIPT]);
+    const r = rodar(dash!, ['install.sh']);
     expect(r.codigo).toBe(1);
     expect(r.stderr).toContain('script de bash');
     expect(r.stderr).not.toMatch(/Illegal option/);
   });
 
   it('os modos de impressão continuam funcionando por `bash install.sh` — o arquivo existe', () => {
-    const r = rodar('bash', [SCRIPT, '--print-plan']);
+    const r = rodar('bash', ['install.sh', '--print-plan']);
     expect(r.codigo, r.stderr).toBe(0);
     expect(r.stdout).toContain('apagar-base-de-projetos');
   });
