@@ -112,9 +112,9 @@ interface Rodada {
  */
 function rodar(comandos: string): Promise<Rodada> {
   return new Promise((resolver) => {
-    // Caminho vai como argumento posicional, nunca interpolado no `-c` (AT-346).
-    const processo = spawn('bash', ['-c', 'source "$1"\n' + comandos, 'bash', carregavel], {
-      env: { ...process.env, NO_COLOR: '1' },
+    // Caminho vai pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
+    const processo = spawn('bash', ['-c', 'source "$BRABO_ALVO"\n' + comandos], {
+      env: { ...process.env, NO_COLOR: '1', BRABO_ALVO: carregavel },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';

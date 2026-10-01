@@ -103,9 +103,9 @@ function rodar(
       fs.writeFileSync(arquivo, opcoes.entrada);
       entrada = fs.openSync(arquivo, 'r');
     }
-    // Caminho vai como argumento posicional, nunca interpolado no `-c` (AT-346).
-    const processo = spawn('bash', ['-c', 'source "$1"\n' + comandos, 'bash', carregavelAgora], {
-      env: { ...process.env, NO_COLOR: '1', ...opcoes.env },
+    // Caminho vai pelo AMBIENTE, nunca no argv do `bash -c` (AT-346 reaberta).
+    const processo = spawn('bash', ['-c', 'source "$BRABO_ALVO"\n' + comandos], {
+      env: { ...process.env, NO_COLOR: '1', ...opcoes.env, BRABO_ALVO: carregavelAgora },
       stdio: [entrada, 'pipe', 'pipe'],
     });
     // O filho herdou uma cópia do descritor; a deste processo já não serve.
