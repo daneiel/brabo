@@ -1110,12 +1110,6 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
-          id: "docs/reference/api/runner-device-keys-controller-register-device-key",
-          label: "Registra a chave pública de um dispositivo do runner local",
-          className: "api-method post",
-        },
-        {
-          type: "doc",
           id: "docs/reference/api/runner-device-keys-controller-revoke-device-key",
           label: "Revoga uma chave de dispositivo própria",
           className: "api-method delete",

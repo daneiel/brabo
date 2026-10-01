@@ -7577,66 +7577,6 @@
         "tags": [
           "projetos"
         ]
-      },
-      "post": {
-        "description": "A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.",
-        "operationId": "RunnerDeviceKeysController_registerDeviceKey",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRunnerDeviceKeyRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunnerDeviceKeyResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
-          },
-          "401": {
-            "description": "No token, expired token, or invalid signature."
-          },
-          "403": {
-            "description": "Papel insuficiente no projeto."
-          },
-          "404": {
-            "description": "Projeto não encontrado."
-          },
-          "429": {
-            "description": "Rate limit per user or per IP."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Registra a chave pública de um dispositivo do runner local",
-        "tags": [
-          "projetos"
-        ]
       }
     },
     "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
@@ -21558,25 +21498,6 @@
           "token"
         ]
       },
-      "RegisterRunnerDeviceKeyRequestDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "example": "laptop",
-            "description": "Nome pra você reconhecer este dispositivo depois — não é único."
-          },
-          "publicKeyJwk": {
-            "type": "string",
-            "example": "{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"…\"}",
-            "description": "JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador."
-          }
-        },
-        "required": [
-          "name",
-          "publicKeyJwk"
-        ]
-      },
       "RegistroDeContainerResponseDto": {
         "type": "object",
         "properties": {
@@ -22266,29 +22187,6 @@
           "createdAt",
           "revokedAt",
           "lastUsedAt"
-        ]
-      },
-      "RunnerDeviceKeyResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "01JC4Z0000CHAVE000000000001"
-          },
-          "name": {
-            "type": "string",
-            "example": "laptop"
-          },
-          "createdAt": {
-            "type": "string",
-            "example": "2026-08-27T12:00:00.000Z",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "createdAt"
         ]
       },
       "RunnerProjectResponseDto": {

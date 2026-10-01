@@ -5806,6 +5806,13 @@ ligada.
 
 ### RN-464 — Chave de dispositivo do runner: registro/revogação self-service; SEM visão de maintainer nesta rodada (corte declarado) {#rn-464}
 
+> **Revisada pela [RN-687](#rn-687) ([ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md), 01/10):**
+> o fluxo do navegador foi APOSENTADO, e o `POST .../runner-device-keys` saiu
+> com ele — junto com `RegisterRunnerDeviceKeyUseCase` e o teste dele, citados
+> abaixo como eram. Ficam `GET`/`DELETE` e a revogação self-service; a chave
+> nova nasce no terminal (RN-551) e quem a registra é o instalador (RN-552). As
+> chaves de projeto já registradas continuam valendo e revogáveis.
+
 `runner_device_keys` guarda só a chave PÚBLICA Ed25519 de um dispositivo do
 runner — gerada no navegador, nunca a privada. `POST/DELETE
 .../runner-device-keys` exigem papel mínimo `developer` e são autenticadas
@@ -5837,6 +5844,12 @@ vier a ser pedido.
 - **Origem:** pedido do dono do produto
 
 ### RN-465 — `POST .../runner-ticket` aceita PAT OU chave de dispositivo (Ed25519, TTL ≤60s) — segunda forma de credencial de DISPOSITIVO, nunca dual-auth com JWT de sessão (distinção da RN-439) {#rn-465}
+
+> **Revisada pela [RN-687](#rn-687) ([ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md), 01/10):**
+> nada desta RN mudou no guard — o `PatAuthGuard` continua aceitando o JWT de
+> uma chave de PROJETO, e é por isso que um runner configurado pelo navegador
+> antes do ADR 0203 não quebra. O que deixou de existir é criar uma chave de
+> projeto NOVA: o navegador não gera mais o par.
 
 `PatAuthGuard` ganhou um segundo caminho, ao lado do PAT (`brb_...`)
 inalterado: um bearer no formato de JWT compacto (três segmentos) é tratado
@@ -5880,6 +5893,13 @@ tudo que o papel dele permite no resto da api, estourando o escopo
 - **Origem:** pedido do dono do produto
 
 ### RN-466 — `brabo-runner` roda sem `--project`/`--dir`/`--token` quando a pasta tem config local gravada pelo navegador {#rn-466}
+
+> **Revisada pela [RN-687](#rn-687) ([ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md), 01/10):**
+> o navegador não grava mais esses arquivos — o fluxo foi aposentado. A
+> LEITURA continua inteira: uma pasta configurada antes do ADR 0203 segue
+> funcionando, e é também por `--dir` apontando para
+> `$XDG_CONFIG_HOME/brabo/` que a unit de máquina acha a chave criada no
+> terminal (RN-551).
 
 `apps/runner/src/device-key.ts` (módulo NOVO, separado de propósito de
 `auth.ts`) lê — nunca escreve — `brabo-runner.config.json`
@@ -6392,6 +6412,11 @@ frase da api que diz qual teto bateu.
 
 ### RN-473 — A configuração do runner pelo navegador começa pela PASTA, e a falha do binário nunca descarta o que já foi configurado {#rn-473}
 
+> **Revisada pela [RN-687](#rn-687) ([ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md), 01/10):**
+> o fluxo que esta RN ordena SAIU — `runner-bootstrap.ts` e o teste dele foram
+> removidos com o fluxo do navegador. O que sobrevive dela é a régua do passo
+> humano dito ANTES, que o painel aplica ao comando do instalador.
+
 O fluxo da [RN-464](#rn-464)..[466](#rn-466) rodava na ordem `chave → registro
 → binário → pasta` (`configurarPastaAutomaticamente`,
 `apps/web/src/lib/runner-bootstrap.ts`). Os quatro passos não têm o mesmo risco:
@@ -6524,6 +6549,12 @@ antes seria anunciado como recém-conectado no instante em que a tela abrisse.
 ## O `kid` é o vínculo, e a recusa tem nome (RN-475)
 
 ### RN-475 — A JWK privada gravada pelo navegador carrega o `kid` do registro; e o CLI distingue "não há chave" de "há chave e ela não serve" {#rn-475}
+
+> **Revisada pela [RN-687](#rn-687) ([ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md), 01/10):**
+> a metade do NAVEGADOR saiu com o fluxo (e o e2e que a provava num Chromium);
+> o `kid` carimbado continua valendo para a chave criada no terminal
+> (`device-key finish --id`, RN-551), e a metade do CLI — ausente × recusada —
+> continua inteira.
 
 O modo automático do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 ([RN-464](#rn-464)..[466](#rn-466)) **nunca autenticou nenhuma vez** desde que
@@ -10312,7 +10343,7 @@ duas devem.
   (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
   origens; `apps/web/src/components/EsperaDoRunner.tsx:91` (`onConfirmado`) e
   `:136` (o `ref` que a dispara uma vez);
-  `apps/web/src/components/RunnerOnboardingPanel.tsx:150` (`mostrarEspera`);
+  `apps/web/src/components/RunnerOnboardingPanel.tsx:131` (`mostrarEspera`);
   `apps/web/src/routes/NewProjectWizard.tsx:304` (`origemDoNavegador`, o
   transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
 - **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` (a lista
@@ -19684,3 +19715,62 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/engine/test/engine/agents/dev_lead_server_test.exs:131`
 - **Decisão arquitetural:** [ADR 0194](adr/0194-aprovar-o-plano-ativa-a-execucao.md)
 - **Origem:** AT-274 (item A28 / extra E5 da análise do uso real de 29/09)
+
+## O fluxo do runner pelo navegador é aposentado (RN-687, ADR 0203)
+
+### RN-687 — O painel do runner manda para o instalador; o navegador não gera chave, não baixa binário e não grava pasta {#rn-687}
+
+O fluxo do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+([RN-464](#rn-464)..[466](#rn-466)) foi APOSENTADO por decisão do dono
+(01/10, `BRB-031`): era o único caminho de instalação que terminava em
+`chmod +x` manual, e o `install.sh` já faz as três coisas dele do lado certo —
+baixa o binário conferido contra o `checksums.txt` assinado e o instala com
+`install -m 0755` ([RN-531](#rn-531)), e cria a chave NA MÁQUINA e a registra
+([RN-547](#rn-547), [RN-551](#rn-551), [RN-552](#rn-552)).
+
+**A regra:**
+
+1. **O `RunnerOnboardingPanel` mostra o comando do instalador**
+   (`curl -fsSLO …/install.sh && bash install.sh`, a MESMA frase do runbook e
+   do `install.sh`, [RN-526](#rn-526)), copiável, com o que ele faz dito em
+   texto, a ressalva de que ele serve a máquina da instalação, e a
+   `EsperaDoRunner` ([RN-474](#rn-474)) embaixo. O comando no web é uma CÓPIA,
+   e a cópia é conferida contra a constante do instalador.
+2. **Reconhecida uma chave ativa que serve o projeto** — de máquina
+   ([RN-548](#rn-548)) ou de projeto (AT-107) —, o bloco do instalador SAI e o
+   gesto é conferir o serviço. O comando manual com PAT (`--token`) fica sempre
+   no `<details>`, nomeado como o caminho de OUTRA máquina.
+3. **Não há botão de configurar pasta, de baixar arquivos, nem seletor de
+   plataforma**, e o web não chama mais Web Crypto, File System Access nem o
+   proxy do binário. `runner-bootstrap.ts` saiu inteiro.
+4. **A api não tem mais `POST /projects/:projectId/runner-device-keys`.** Ele
+   ficou sem chamador. `GET` e `DELETE` ficam (listar e revogar); a rota
+   interna de máquina (`POST /internal/machine-device-keys`) fica.
+5. **Chave de projeto JÁ registrada continua valendo e revogável**: nada no
+   banco muda, o `PatAuthGuard` segue aceitando-a ([RN-465](#rn-465)) e o CLI
+   segue lendo a pasta configurada ([RN-466](#rn-466)). O runner configurado
+   pelo navegador antes do ADR 0203 não quebra.
+
+Fica de fora, declarado: instalação com TIME perde o caminho sem PAT para
+parear uma segunda máquina (a rota de chave de máquina é 409 com duas ou mais
+pessoas), e passa a usar o comando manual; `GET /runner-releases/binary` fica
+sem consumidor de produção e NÃO foi removido — é decisão à parte.
+
+- **Onde:** `apps/web/src/components/RunnerOnboardingPanel.tsx:68`
+  (`COMANDO_DO_INSTALADOR`), `:124` (`RunnerOnboardingPanel`);
+  `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts:75`
+  (`RunnerDeviceKeysController`), `:96` (`listDeviceKeys`), `:119`
+  (`revokeDeviceKey`); `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:152`
+  (`autenticarChaveDeDispositivo`)
+- **Teste:** `apps/web/src/components/RunnerOnboardingPanel.test.tsx:91`
+  (caminho feliz: o comando do instalador, copiado, e a espera), `:119` (o
+  fluxo do navegador saiu: nenhum botão dele, nenhum `chmod`), `:134` (caso de
+  falha: clipboard recusado não quebra a tela), `:211` (chave de máquina ativa:
+  o instalador sai); `apps/api/test/interfaces/http/runner/runner-device-keys.controller.spec.ts:43`
+  (não há handler de `POST`); `apps/api/test/interfaces/pat-auth.guard.spec.ts:345`
+  (chave de projeto segue aceita); `scripts/dev/install-invocacao.spec.ts:162`
+  (o comando do painel é a frase do instalador);
+  `scripts/ci/alvos-do-runner.spec.ts:70` (a lista de alvos do navegador não
+  volta)
+- **Decisão arquitetural:** [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+- **Origem:** AT-014 (`BRB-031`), decisão do dono em 01/10

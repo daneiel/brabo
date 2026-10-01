@@ -85,7 +85,6 @@ import type {
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
-  RunnerDeviceKeySummary,
   RunnerDeviceKeyListItem,
   Workspace,
   WorkspaceSummary,
@@ -420,19 +419,6 @@ export const revokePersonalAccessTokenAsMaintainer = (
 ) =>
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
 
-/**
- * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
- * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
- * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
- */
-export const registerRunnerDeviceKey = (
-  projectId: string,
-  input: { name: string; publicKeyJwk: string },
-) =>
-  post<RunnerDeviceKeySummary>(
-    `/projects/${projectId}/runner-device-keys`,
-    input,
-  );
 /**
  * As chaves de dispositivo PRÓPRIAS que servem este projeto (RN-519) —
  * inclusive as de MÁQUINA (`especie: 'maquina'`), que servem todo projeto do

@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "9117bdab7bbf1d8524a2e8920837281c6b41ceff2fe9a888259e8ec257cb46b4",
+  "openapiSha256": "4efa59294df3c3a7797ad6d11db10bc13a45db1ec7bbaa7934954d83b621a37a",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -767,10 +767,6 @@
     "runner-device-keys-controller-list-device-keys.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "runner-device-keys-controller-list-device-keys.StatusCodes.json": "7e85a3ceb5ab696942bdee3ca1c942f31d9fe7f3c585ea88712c3291830d83d4",
     "runner-device-keys-controller-list-device-keys.api.mdx": "4b27b3e62233d360f06265a31131b4f3ff6dec239ee5a04a2f6ccb5c3801dbec",
-    "runner-device-keys-controller-register-device-key.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
-    "runner-device-keys-controller-register-device-key.RequestSchema.json": "c5a207d13c9f0e683e66557077de594fd6f80ea17d6eac57d07f889eb714ae69",
-    "runner-device-keys-controller-register-device-key.StatusCodes.json": "64c519e9177a35398b5cbc2bd189334df6284b41587f978585f71c1f5f18bcbe",
-    "runner-device-keys-controller-register-device-key.api.mdx": "38e3ce80b7647c02afba67a2092c557e46f6140433a3e8994b570da580e81b8d",
     "runner-device-keys-controller-revoke-device-key.ParamsDetails.json": "1c63c2042f89abde5a7f870b314a1d3c2fb909b7a08cc441fb753a6b566279c1",
     "runner-device-keys-controller-revoke-device-key.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "runner-device-keys-controller-revoke-device-key.StatusCodes.json": "ea6af478f669f76d518d40af45328ed04714943e89ae89a3f0ca2ead7bfe32b0",
@@ -839,7 +835,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "28c722c896f846850918fd40522b3b329dcf220f65f2ed07bee982d3adbcc3f7",
     "sessions-controller-transition.api.mdx": "c717389d42cd3b9dab8b296b8c21692257346197df60d7b38e22757cebc263dd",
-    "sidebar.ts": "b74b477534fcd0c5215ac6b960c61c6cb70cf0c676504791a18a2da7b8601b97",
+    "sidebar.ts": "4ab0d42d320b5da7994ad9bcfc358f0480ce262c5ca57c4683a8b0df2401513d",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",

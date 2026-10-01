@@ -25,29 +25,27 @@ que escolheu a implementação. Ver também a
 [ADR 0107](https://github.com/daneiel/brabo/blob/main/docs/adr/0107-navegacao-de-pasta-local-via-o-runner.md)
 para o argumento de segurança da navegação de pasta.
 
-## Modo automático (recomendado)
+## Pelo instalador (recomendado)
 
-Na tela do projeto (modo `runner`), use o botão **"Configurar pasta
-automaticamente"**: o navegador baixa, numa pasta escolhida por você, três
-arquivos já configurados — o binário (`brabo-runner`/`brabo-runner.exe`),
-`brabo-runner.config.json` (projeto + URL da api) e uma chave de dispositivo
-(`brabo-runner-device-key.jwk.json`). Com os três na mesma pasta, basta:
+O caminho é o instalador do Brabo — o mesmo comando que a tela do projeto
+(modo `runner`) mostra:
 
 ```sh
-# Linux/macOS
-chmod +x ./brabo-runner && ./brabo-runner
+curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh
 ```
 
-```powershell
-# Windows
-.\brabo-runner.exe
-```
+Ele baixa o binário, confere contra o `checksums.txt` assinado da release, o
+instala já executável (`install -m 0755`) e pareia a máquina pelo terminal
+(`device-key create`/`finish`, abaixo), instalando o agente de máquina como
+serviço (RN-547).
 
-Sem digitar id de projeto nem token — o CLI lê o config e a chave de
-dispositivo da própria pasta de onde ele é executado (duplo-clique no
-Windows Explorer já herda o `cwd` da pasta). `--project`, `--dir` e
-`--token` continuam existindo para os fluxos abaixo, e uma flag explícita
-sempre vence o arquivo local quando os dois aparecem.
+Até o ADR 0203 havia um **modo automático pelo navegador** (ADR 0118): a tela
+gravava numa pasta o binário, `brabo-runner.config.json` e uma chave de
+dispositivo. Ele foi **aposentado** — era o único caminho que terminava em
+`chmod +x` manual. Uma pasta configurada assim **continua funcionando**: o CLI
+segue lendo o config e a chave da própria pasta de onde é executado, sem id de
+projeto nem token, e uma flag explícita sempre vence o arquivo local quando os
+dois aparecem.
 
 ## Instalação
 
@@ -78,7 +76,7 @@ de Node, npm nem toolchain de compilação instalados:
 > constrói mas reprova no `--self-test-pty`, por um bug do Bun com o
 > `node-pty` no macOS (oven-sh/bun#25822). A MESMA prova passa sob Node, então
 > no Mac Intel o caminho é `npm install -g @brabo/runner` — e é isso que o
-> `install.sh` e o painel do navegador dizem em vez de baixar.
+> `install.sh` diz em vez de baixar.
 
 ```sh
 # Linux/macOS
@@ -231,7 +229,8 @@ brabo-runner --api-url https://brabo.exemplo
 ```
 
 O modo com `--project` **não mudou em nada** — ele continua sendo o caminho de
-quem usa o fluxo do navegador (ADR 0118) ou flags explícitas, com uma conexão
+quem tem uma pasta configurada pelo antigo fluxo do navegador (ADR 0118,
+aposentado no ADR 0203) ou usa flags explícitas, com uma conexão
 só. As **duas** condições do modo novo são obrigatórias e por motivos
 diferentes: a credencial de máquina é o que a rota aceita, e a base é de onde a
 pasta de cada projeto é derivada. Sem base, rodar sem `--project` cai no bloco
@@ -354,7 +353,7 @@ aberto, instale-o como **serviço de usuário** — `systemd --user` no Linux,
 `LaunchAgent` no macOS (ADR 0147, RN-518):
 
 ```sh
-# de dentro da pasta configurada pelo botão "Configurar pasta automaticamente"
+# de dentro de uma pasta com brabo-runner.config.json (o antigo fluxo do navegador)
 brabo-runner service install
 brabo-runner service status
 brabo-runner service uninstall
