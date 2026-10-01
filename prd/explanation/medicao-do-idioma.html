@@ -1,0 +1,843 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Measuring the language heuristic | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Measuring the language heuristic | Brabo"/><meta data-rh=true name=description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><meta data-rh=true property=og:description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><link data-rh=true rel=icon href=/brabo/prd/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/pt-BR/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/explanation/medicao-do-idioma","name":"Measuring the language heuristic","position":1}]}</script><link rel=stylesheet href=/brabo/prd/assets/css/styles.4b02629e.css /><script src=/brabo/prd/assets/js/runtime~main.1727e316.js defer></script><script src=/brabo/prd/assets/js/main.f028f1b6.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-c21")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/><div class=navbar__logo><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>prd</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/getting-started><span class=linkLabel_CzBh>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/reference/api/brabo-api><span class=categoryLinkLabel_jKch>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_JmCf"><div class=docItemContainer_GUvW><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/prd/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Measuring the language heuristic</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Measuring the language heuristic</h1></header>
+<blockquote>
+<p>AT-160 (EP-028, HS-053). The heuristic being measured is the one the AT-080
+specification proposed ("A — own heuristic, no dependency"). Since AT-163
+(<a class="" href=/brabo/prd/business-rules#rn-624>RN-624</a>) the product runs it: the api detects
+the author's language with it and ASKS before anything changes. The
+product's thresholds are <strong>provisional</strong> — see
+<a href=#the-products-provisional-thresholds class="">The product's provisional thresholds</a>.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-exists>What exists<a href=#what-exists class=hash-link aria-label="Direct link to What exists" title="Direct link to What exists" translate=no>​</a></h2>
+<p>The instrument lives in <code>scripts/idioma/</code> and runs with the repository's Node
+(type stripping, no build step). <strong>No new dependency</strong>: the heuristic is marker
+lists and regular expressions, and the extraction talks to Postgres through
+<code>psql</code> inside the database container.</p>
+<p>The heuristic itself lives in the <strong>api</strong> —
+<code>apps/api/src/domain/iam/heuristica-de-idioma.ts</code> — and <code>scripts/idioma/heuristica.ts</code>
+only re-exports it, so the instrument measures exactly the code the product
+runs. That direction is forced: the api reaches neither <code>scripts/</code> nor any
+runtime package without a build step, and <code>packages/shared</code> is types only. The
+file has no imports, so Node runs it from <code>scripts/</code> by type stripping (the
+<code>idioma:*</code> commands silence the "typeless package" warning that comes with it),
+and <code>scripts/idioma/</code> has its own <code>tsconfig.json</code> — the only difference is
+turning <code>verbatimModuleSyntax</code> off, which rejects every <code>export</code> of a CommonJS
+module such as the api's. A <code>.mts</code> file was tried first: it passed both
+typechecks and the build, and broke every <code>ts-node</code> script of the api. The rule
+of <em>what is evidence</em> (<code>evidenciasDoAutor</code>) moved with the heuristic, and the
+real-corpus extraction uses the same one.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>file<th>role<tbody><tr><td><code>heuristica.ts</code><td>re-exports the api's heuristic: cleaning, contrastive scoring, the candidate and the provisional parameters, the 10-message sample, the hysteresis and the evidence rule<tr><td><code>corpus-sintetico.jsonl</code><td>the <strong>versioned</strong> synthetic corpus — every line hand-written for the instrument, <code>origem: "sintetico"</code><tr><td><code>sequencias-sinteticas.json</code><td>synthetic conversations for the sample-and-hysteresis path<tr><td><code>medicao.ts</code> / <code>medir.ts</code><td>the instrument and its CLI<tr><td><code>extrair.ts</code><td>extracts the <strong>real</strong> corpus from the local event log, to a file outside git<tr><td><code>rotular.ts</code><td>assisted labeling of the real corpus, in the terminal</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-corpora-and-where-each-one-lives>The two corpora, and where each one lives<a href=#the-two-corpora-and-where-each-one-lives class=hash-link aria-label="Direct link to The two corpora, and where each one lives" title="Direct link to The two corpora, and where each one lives" translate=no>​</a></h2>
+<p>The maintainer's decision (AT-168, answer 5) is <strong>real + synthetic</strong>. They have
+opposite storage rules:</p>
+<ul>
+<li class=""><strong>Synthetic</strong> — versioned, reviewed like code. It covers the nine mandatory
+cases of AT-080 (typos, legitimate Spanish, English, mixed text, "ok", code,
+logs, quotations in another language) plus Portuguese full of English jargon,
+inline identifiers, and languages outside the three (French, Italian, German,
+Galician, Catalan, Dutch) — the language list is open (AT-168, answer 2).</li>
+<li class=""><strong>Real</strong> — the user's own messages from the <strong>local</strong> event log. It never
+enters git, a fixture, a CI log or a PR body. <code>extrair.ts</code> and <code>corpus.ts</code>
+refuse any destination inside the checkout, and the file is written with mode
+600 under <code>$XDG_CACHE_HOME/brabo/corpus-idioma/</code> (else <code>~/.cache/…</code>). The
+report never prints an item's text — only ids, labels and counts — so its
+output can be pasted into a PR.</li>
+</ul>
+<p>What the extraction takes as evidence follows the AT-080 cleaning: only events
+whose actor is the <strong>user</strong> (the agent's reply is never evidence, so a Spanish
+answer from the model cannot feed the detection back), and, for the structured
+form, only the <strong>answers</strong> — the concatenated <code>chat.message</code> the api writes right
+after it, whose labels are the agent's text, is skipped.</p>
+<p>The labeling assistant does <strong>not</strong> pre-fill the heuristic's guess: accepting it
+with ENTER would anchor the label on the thing the label exists to measure. ENTER
+accepts the language the owner declares with <code>--padrao</code>.</p>
+<p>Labels: a BCP-47 code (<code>pt-BR</code>, <code>es</code>, <code>fr</code>…), <code>und</code> (nothing to decide: "ok",
+only code, only a log) or <code>mul</code> (mixed, no dominant language). Scoring:
+<code>pt</code>/<code>es</code>/<code>en</code> must get their own language; <code>und</code>, <code>mul</code> and any other language
+must get <code>indeterminado</code> — the only correct answer a three-language heuristic can
+give them. An <code>indeterminado</code> on a decidable item is <strong>lost coverage</strong> (the known
+preference stays); a wrong language is an <strong>error</strong>, and <code>falso es</code> is counted
+apart because it is the defect the epic exists to remove.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it>Running it<a href=#running-it class=hash-link aria-label="Direct link to Running it" title="Direct link to Running it" translate=no>​</a></h2>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token comment" style="color:rgb(98, 114, 164)"># synthetic corpus (the default)</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:medir</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token comment" style="color:rgb(98, 114, 164)"># the owner's real corpus, on the owner's machine</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:extrair </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--container</span><span class="token plain"> brabo-dev-postgres-1</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:rotular </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--padrao</span><span class="token plain"> pt-BR</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:medir </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--real</span><br/></div></code></pre></div></div>
+<p><code>--container</code> runs <code>psql</code> inside that container with one read-only <code>SELECT</code> on
+<code>session_events</code> (<code>--usuario</code>/<code>--banco</code> default to the compose's <code>brabo</code>/<code>brabo</code>);
+<code>--database-url &lt;url></code> uses a host <code>psql</code> instead. Re-running the extraction keeps
+existing labels and appends new messages unlabeled.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=numbers-on-the-synthetic-corpus-2026-09-28>Numbers on the synthetic corpus (2026-09-28)<a href=#numbers-on-the-synthetic-corpus-2026-09-28 class=hash-link aria-label="Direct link to Numbers on the synthetic corpus (2026-09-28)" title="Direct link to Numbers on the synthetic corpus (2026-09-28)" translate=no>​</a></h2>
+<p>123 labeled items, 7 sequences, candidate parameters of AT-080 (20-word minimum,
+threshold 0.8, margin 0.3, 10 messages / 2,000 characters, hysteresis 2). Two
+marker lists: <code>at080</code> is the specification's list verbatim; <code>ampliada</code> is a
+larger list written by this instrument <strong>before</strong> it was run against the corpus
+(frequent function words absent from the other two languages). Same corpus, so
+<code>ampliada</code> is not validated by these numbers — the real corpus is what can tell.</p>
+<p>Per message, candidate parameters:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>label<th>n<th><code>at080</code> correct<th><code>at080</code> indeterminate<th><code>ampliada</code> correct<th><code>ampliada</code> indeterminate<tbody><tr><td>pt<td>56<td>26 (46.4%)<td>30<td>30 (53.6%)<td>26<tr><td>es<td>20<td>6 (30.0%)<td>14<td>7 (35.0%)<td>13<tr><td>en<td>14<td>6 (42.9%)<td>8<td>6 (42.9%)<td>8<tr><td>und<td>15<td>15 (100%)<td>0<td>15 (100%)<td>0<tr><td>mul<td>5<td>5 (100%)<td>0<td>5 (100%)<td>0<tr><td>other languages<td>13<td>10<td>0<td>9<td>0</table>
+<p>Wrong-language verdicts: <strong>none on a <code>pt</code>/<code>es</code>/<code>en</code> item</strong>, in either list. All of
+them are on languages outside the three — <code>at080</code>: French → pt (the <code>ê</code> of
+<em>arrêté</em>), <strong>Galician → es</strong> (the one <code>falso es</code>), Dutch → en; <code>ampliada</code>: French →
+es, German → pt and → en, Dutch → en.</p>
+<p>The cleaning removed more than half of the words of <strong>zero</strong> decidable items.</p>
+<p>All seven synthetic sequences end where expected with at most the allowed number
+of switches, in both lists — including Portuguese with a long Spanish quotation,
+one whole Spanish message in the middle of Portuguese, and Portuguese dense with
+English jargon.</p>
+<p>CPU on this machine: <code>at080</code> 11.7 µs per message and 49 µs per evaluation of the
+10-message sample; <code>ampliada</code> 16.8 µs and 60 µs. It varies with the machine; the
+order of magnitude is the point.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-numbers-say>What the numbers say<a href=#what-the-numbers-say class=hash-link aria-label="Direct link to What the numbers say" title="Direct link to What the numbers say" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>With the <code>at080</code> list, the threshold and the margin never bind.</strong> 66 of the
+67 items that score at all score for one language only (confidence = 1.0), so
+sweeping the threshold from 0.5 to 1.0 changes nothing. The word minimum is the
+only knob that acts: per message, decidable items reach their language 42.2%
+of the time at 20 words, 58.9% at 10 and 66.7% with no minimum — at 20 it
+throws away every short and typo message and most of the technical ones.</li>
+<li class=""><strong>Dropping the minimum lets mixed text decide.</strong> With no minimum, <code>at080</code> turns
+three of the five mixed messages into <code>en</code> or <code>pt</code>, and <code>ampliada</code> also decides
+two <code>und</code> items as <code>en</code> — unfenced code (<code>const total = itens.reduce(…)</code>) and
+pnpm output (<code>ELIFECYCLE  Test failed. See above for more details.</code>) pass the
+cleaning, which only knows fenced code and the log shapes AT-080 listed.</li>
+<li class=""><strong>The margin of 0.3 is redundant with the threshold of 0.8</strong> in any list: with
+three languages, a winner at ≥ 0.8 is at least 0.6 above the second.</li>
+<li class=""><strong>The unit that matters is the sample, not the message</strong> — in the sequences
+the 10-message window reaches the language with messages that alone would be
+<code>indeterminado</code>. A single Spanish message in a Portuguese window turns the
+sample <code>indeterminado</code> for as long as it stays in the window (sequence <code>q03</code>):
+no switch, but no confirmation either.</li>
+<li class=""><strong>The open language list is where the errors are.</strong> With three languages, a
+Galician or French user can be told they write Spanish or Portuguese. Under the
+AT-168 rule the detection only <em>asks</em>, and the user confirms, so the cost is a
+wrong question — but it is still the heuristic's only failure mode here.</li>
+</ul>
+<p>These are synthetic numbers: the corpus was written by the same hand that wrote
+the heuristic. The thresholds of AT-163 should come from the real corpus.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-products-provisional-thresholds>The product's provisional thresholds<a href=#the-products-provisional-thresholds class=hash-link aria-label="Direct link to The product's provisional thresholds" title="Direct link to The product's provisional thresholds" translate=no>​</a></h2>
+<p>AT-163 had to ship with <em>some</em> numbers before the real corpus exists, so the
+api reads <code>PARAMETROS_PROVISORIOS</code> — <strong>provisional, not calibrated</strong>, and
+declared so in <a class="" href=/brabo/prd/business-rules#rn-624>RN-624</a>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>parameter<th>provisional<th>AT-080 candidate<th>why<tbody><tr><td>marker list<td><code>at080</code><td>—<td><code>ampliada</code> gains 4 points in pt and gets German wrong twice; neither is validated by real data<tr><td>word minimum (over the sample)<td><strong>10</strong><td>20<td>coverage of decidable items 42.2% → 58.9% with the <strong>same</strong> three wrong verdicts (French, Galician, Dutch — languages outside the three); below 10, mixed text starts to decide<tr><td>threshold / margin<td>0.8 / 0.3<td>0.8 / 0.3<td>they never bind on the synthetic corpus, so there is no better number to pick yet<tr><td>sample<td>10 messages / 2,000 characters<td>same<td>—<tr><td>hysteresis<td>2<td>2<td>—</table>
+<p>The hysteresis is <strong>recomputed, never stored</strong>: the api reads the last 11
+pieces of evidence and asks whether the last two evaluations of the sample
+agree. CPU on this machine, synthetic corpus: 11.6 µs to clean and classify
+one message, 110 µs per detection (11 messages, two evaluations). The read is
+served by a partial index on <code>session_events</code>: 0.056 ms against 13.5 ms for a
+sequential scan, measured over 200,000 events.</p>
+<p>To recalibrate: run the real corpus (<code>idioma:medir --real</code>), then change
+<code>PARAMETROS_PROVISORIOS</code> in the api — it is the only place the product reads
+them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>Paid validation of the language orientation (AT-167, 2026-09-29)<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label="Direct link to Paid validation of the language orientation (AT-167, 2026-09-29)" title="Direct link to Paid validation of the language orientation (AT-167, 2026-09-29)" translate=no>​</a></h2>
+<blockquote>
+<p>The protocol is AT-082's, with the decisions of AT-169: budget US$ 5,
+5 rounds per case and arm, acceptance threshold "in the treated arm, <strong>zero</strong>
+Spanish answers where pt-BR is expected, and correct language <strong>≥ 95%</strong> in
+C01–C04 and C06–C15", model under test <code>deepseek/deepseek-v4.1-flash</code>,
+comparison model <code>anthropic/claude-haiku-4.5</code>, incremental cost ceiling
+50 input tokens per call. Code at <code>d48f99f8e</code> (the <code>dev</code> of 2026-09-29).</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>Where it runs, and what is (and is not) the product<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label="Direct link to Where it runs, and what is (and is not) the product" title="Direct link to Where it runs, and what is (and is not) the product" translate=no>​</a></h3>
+<p>A script outside the product, <code>scripts/idioma/validar.ts</code> (the pure part —
+matrix, judging, report — in <code>validacao.ts</code>, tested by <code>validacao.spec.ts</code>). It
+calls OpenRouter <strong>directly</strong> and writes nothing to the database. What the
+product sends to the model is <strong>read from the product's files at every run</strong>,
+never copied — the read throws, naming what it missed, if a file changes shape:</p>
+<ul>
+<li class="">the orientation (RN-622/623): <code>@textos</code>, the generic sentence, the artifact
+clause, <code>@forma_curta</code> and <code>@ferramentas_de_artefato</code> of
+<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code>, sent as the LAST
+message, <code>role: "system"</code>, in every call of a treated turn (tool iterations
+included) and never kept in the history;</li>
+<li class="">the summary prompt and its language sentence (RN-621) of
+<code>apps/engine/lib/engine/harness/context_manager.ex</code>;</li>
+<li class="">the Criativo persona (<code>CRIATIVO_INSTRUCTIONS</code>), its two tools with the real
+descriptions, and the tool results the product returns.</li>
+</ul>
+<p>Declared differences from the product: the system prompt is only the persona
+(no <code>ContextBuilder</code> layers); compaction is <strong>forced</strong> before the fifth turn
+of C04 (keeping the last two messages, the product's <code>keep_recent</code>), with the
+model under test as summarizer; resumption (C15) is the history rebuilt as
+text, the shape of <code>Engine.Agents.Reidratacao</code>; at most 4 model calls per
+turn (the Criativo allows 12); and <code>max_tokens</code> is capped at 4000 (the product
+sends none). The upstream provider was <strong>not</strong> fixed — recorded per call as a
+confounder. Baseline = the code before RN-621/622: no orientation <strong>and</strong> the
+old summary prompt (AT-169 answer 4: the validation measures the set, there is
+no isolated baseline of the old summary).</p>
+<p>The resolved language of each message's author is part of the case: <code>pt-BR</code>
+for Ana (C01–C05, C07–C11, C13–C15), <code>en</code> for Bob (C06 as a confirmed detected
+<code>en</code>, C12 as an explicit <code>en</code> preference writing Portuguese); project language
+<code>pt-BR</code>. C05 expects <strong>pt-BR</strong>: under AT-168 answer 4 detection only <em>asks</em>, so
+the author's resolved language stays pt-BR until confirmed.</p>
+<p>A first passo-zero run with <code>max_tokens</code> 1000 was <strong>discarded</strong>: DeepSeek's
+reasoning used the whole cap in 7 calls and the answer came back empty (two
+summaries became the product's fallback text). Its records are kept apart in
+the output folder; an empty answer now counts as <code>falha</code>, never
+<code>indeterminado</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>Step zero: not reproduced<a href=#step-zero-not-reproduced class=hash-link aria-label="Direct link to Step zero: not reproduced" title="Direct link to Step zero: not reproduced" translate=no>​</a></h3>
+<p>Baseline only, <code>deepseek/deepseek-v4.1-flash</code>, C01–C04, 5 rounds: <strong>0 Spanish
+answers in 35 judged answers</strong> (35 pt, 0 indeterminate). The 13/09 report
+(Spanish from Portuguese input) is <strong>not reproduced</strong>, so no improvement on
+<em>that</em> defect can be claimed from the treatment. The run continued because the
+AT-169 threshold is absolute on the treated arm and the other cases (C05, C06,
+C12, C16, C17) do show the baseline answering in the wrong language.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>Results by case × arm × model<a href=#results-by-case--arm--model class=hash-link aria-label="Direct link to Results by case × arm × model" title="Direct link to Results by case × arm × model" translate=no>​</a></h3>
+<p>First judge: the local classifier (<code>ampliada</code> list, candidate parameters) on
+the prose. "ok" = expected language; "wrong (es)" = another language (of which
+Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>case<th>DeepSeek baseline<th>DeepSeek treatment<th>Haiku baseline<th>Haiku treatment<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5, out of the 95% list)<td>1 ok, 4 wrong (4 es)<td>5 ok<td>0 ok, 5 wrong (5 es)<td>2 ok, 3 wrong (3 es)<tr><td>C06 (n=5)<td>2 ok, 2 wrong, 1 ind.<td>3 ok, 2 ind.<td>4 ok, 1 wrong<td>5 ok<tr><td>C07–C10 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C11 (n=10)<td>6 ok, 4 wrong<td>5 ok, 5 wrong<td>5 ok, 1 wrong, 4 ind.<td>6 ok, 4 wrong<tr><td>C12 (n=10)<td>0 ok, 10 wrong<td>4 ok, 6 ind.<td>0 ok, 10 wrong<td><strong>0 ok, 10 wrong</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14, C15 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C16 (n=20, out of the list)<td>10 ok, 10 wrong<td>19 ok, 1 ind.<td>10 ok, 10 wrong<td>18 ok, 2 wrong<tr><td>C17 (n=20, out of the list)<td>12 ok, 8 wrong<td>20 ok<td>16 ok, 4 wrong<td>20 ok</table>
+<p>C13 called <code>emit_artifact</code> in 20 of 20 conversations. No call failed.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>Against the threshold<a href=#against-the-threshold class=hash-link aria-label="Direct link to Against the threshold" title="Direct link to Against the threshold" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>model<th>Spanish where pt-BR expected (treated)<th>correct in C01–C04, C06–C15 (strict, classifier)<th>verdict by the classifier<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86.3%), 8 indeterminate<td><strong>does not pass</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3 (all C05)<td>81/95 (85.3%), 0 indeterminate<td><strong>does not pass</strong></table>
+<p>The 13 DeepSeek misses are two groups. The reading below was the agent's,
+made BEFORE the review; the review (<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="">next section</a>)
+corrected it — the 8 indeterminates are not all English prose:</p>
+<ul>
+<li class="">the 8 indeterminates (C06 ×2, C12 ×6) read as English prose — the <code>ampliada</code>
+list scores English poorly ("Great starting point — …");</li>
+<li class="">the 5 C11 misses answer the translation request with the <strong>English
+translation inside a Portuguese frame</strong>, which the orientation allows ("unless
+the user explicitly asks … in this message" covers the translation, not the
+frame). The protocol's "translation in en" does not say which of the two is
+right.</li>
+</ul>
+<p>If the review accepts both groups, DeepSeek reaches 95/95 and <strong>passes</strong>; if it
+rejects C11, 90/95 (94.7%) and fails by one answer. Haiku <strong>fails either way</strong>:
+with the explicit <code>en</code> preference and Portuguese messages (C12) it answered in
+Portuguese in 10 of 10 treated answers, and it answered 3 of 5 Spanish messages
+in Spanish (C05). A hypothesis, not measured: for Anthropic models OpenRouter
+lifts the trailing <code>system</code> message into the top system prompt, where it loses
+the recency it has at the end of the list. (Measured afterwards, and <strong>not
+confirmed</strong>: see the diagnosis below.)</p>
+<p>The answers to review (every indeterminate or divergent one, every C11
+translation, and a deterministic 1-in-10 sample of the concordant) are 146 of
+560, listed in <code>revisao.md</code> in the output folder.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>Incremental cost of the orientation<a href=#incremental-cost-of-the-orientation class=hash-link aria-label="Direct link to Incremental cost of the orientation" title="Direct link to Incremental cost of the orientation" translate=no>​</a></h3>
+<p>Paired <code>prompt_tokens</code> of the <strong>first</strong> call of each conversation (identical
+input in both arms but the orientation), from OpenRouter's <code>usage</code>, never an
+estimate:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>model<th>orientation<th>pairs<th>Δ input tokens<tbody><tr><td>DeepSeek<td>pt-BR (108 characters)<td>75<td>32 (every pair)<tr><td>DeepSeek<td>en + artifact clause (128 characters)<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + artifact clause<td>15<td>27</table>
+<p>All under the 50-token ceiling. At catalog input price that is about
+US$ 0.0000096 per call on DeepSeek and US$ 0.00003 on Haiku — an upper bound,
+since DeepSeek served most of the input from cache (cached tokens are
+returned; the per-call cost with cache is inside <code>usage.cost</code>, not separated
+per message). The orientation goes in every call of a turn, so a turn with
+tool iterations pays it once per iteration.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>Spend<a href=#spend class=hash-link aria-label="Direct link to Spend" title="Direct link to Spend" translate=no>​</a></h3>
+<p>The cost of the validation is the sum of <code>usage.cost</code> of each response, kept
+per call in <code>chamadas.jsonl</code>: <strong>US$ 2.3071</strong> in total — US$ 2.2629 in the
+counted runs (DeepSeek 0.1526 baseline + 0.2133 treatment; Haiku 0.9526 +
+0.9443; 865 calls), US$ 0.0281 in the discarded step zero and US$ 0.0162 in a
+one-case smoke. The <code>GET /api/v1/key</code> counter moved from 1.8301 to 4.1578
+(Δ 2.3277) over the same period, but the key is shared with other paid lanes
+running at the same time and the counter lags, so that delta is context, not
+this validation's spend. Generation ids were not recorded, so the per-call cost
+was not cross-checked against <code>GET /api/v1/generation</code>. The product's own
+metering (<code>token_usage</code>) was not involved: the script bypasses the api.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>Reproducing<a href=#reproducing class=hash-link aria-label="Direct link to Reproducing" title="Direct link to Reproducing" translate=no>​</a></h3>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token comment" style="color:rgb(98, 114, 164)"># the key file holds OPENROUTER_TEST_KEY=…; the key is never printed</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--modelos</span><span class="token plain"> deepseek/deepseek-v4.1-flash </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--bracos</span><span class="token plain"> baseline </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--casos</span><span class="token plain"> C01,C02,C03,C04   </span><span class="token comment" style="color:rgb(98, 114, 164)"># step zero</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --pular-existentes --teto-usd </span><span class="token number">2.5</span><span class="token plain">                                                 </span><span class="token comment" style="color:rgb(98, 114, 164)"># everything else</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:validar </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--relatorio</span><span class="token plain">                             </span><span class="token comment" style="color:rgb(98, 114, 164)"># report only</span><br/></div></code></pre></div></div>
+<p>Output goes to <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code> (else
+<code>~/.cache/…</code>), mode 600, and the script refuses a folder inside the checkout.
+<code>--teto-usd</code> stops before the call that would pass it, by the running sum of
+<code>usage.cost</code>.</p>
+<p>Not measured: cache savings as such, the product's full system prompt, real
+(threshold-triggered) compaction, a restart of the real engine, the tokenizer
+count of the artifact clause in Portuguese, and any fixed upstream.</p>
+<p>The 146 answers were reviewed by hand; the result, and the one decision that
+is still the owner's, are in the next section.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=human-review-and-the-haiku-diagnosis-at-167-follow-up>Human review and the Haiku diagnosis (AT-167 follow-up)<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class=hash-link aria-label="Direct link to Human review and the Haiku diagnosis (AT-167 follow-up)" title="Direct link to Human review and the Haiku diagnosis (AT-167 follow-up)" translate=no>​</a></h2>
+<p>Two offline-or-cheap follow-ups to the paid validation, both on the same run
+(<code>respostas.jsonl</code>, 560 judged answers): the human review of the 146 answers the
+classifier flagged (Part A, no spend), and the test of the "OpenRouter hoists the
+trailing <code>system</code> message" hypothesis for Haiku (Part B, US$ 0.1485). Neither
+changes the product.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-a--the-review-of-the-146>Part A — the review of the 146<a href=#part-a--the-review-of-the-146 class=hash-link aria-label="Direct link to Part A — the review of the 146" title="Direct link to Part A — the review of the 146" translate=no>​</a></h3>
+<p>Every one of the 146 answers in <code>revisao.md</code> was read, one by one, by the agent
+that wrote this section (not by a second human; the label file is kept for
+anyone who wants to contradict it). For each: the <strong>real</strong> language of the text
+the user reads, whether it is correct for the case, and a one-line reason. The
+files live outside git with the answers —
+<code>~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md</code> (the 146) and
+<code>amostra-lida.md</code> (the sample below). <code>pnpm --filter @brabo/scripts idioma:revisar</code> reads them and prints every table of this section; the labels
+are data, the arithmetic is code (<code>scripts/idioma/revisao.ts</code>, tested).</p>
+<p>The labels are four, because the reading found a fact the classifier cannot see:</p>
+<ul>
+<li class=""><code>sim</code> / <code>nao</code>: the answer is / is not in the expected language;</li>
+<li class=""><code>formulario</code>: the <strong>prose</strong> is in the expected language, but the questions of
+the structured form (<code>ask_structured_questions</code>, the substance of a first
+answer) came out in Portuguese for an author whose language is <code>en</code>;</li>
+<li class=""><code>c11</code>: a translation into English inside a Portuguese frame — the owner's
+decision, see below.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>of the 146<th>correct<th>incorrect<th>prose right, form in Portuguese<th>C11 (owner's decision)<tbody><tr><td>all<td>42<td>81<td>8<td>15<tr><td>baseline arm (89)<td>18<td>64<td>1<td>6<tr><td>treated arm (57)<td>24<td>17<td>7<td>9</table>
+<p>The 14 answers the classifier called <strong>indeterminate</strong> were, once read: 3
+English answers (Haiku's plain English translations of C11), 2 incorrect
+(DeepSeek C12, Portuguese and English sentences interleaved in the prose), 8
+English prose with the form in Portuguese, and 1 C11. So the agent's earlier
+sentence — "the 8 indeterminates read as English prose" — was half right: the
+prose was English, and so was <strong>not</strong> the form in 6 of the 8.</p>
+<p><strong>The classifier's error, measured.</strong> On the 118 definitive verdicts
+(<code>pt</code>/<code>es</code>/<code>en</code>) among the 146 read answers, the reading contradicted <strong>0</strong>. The
+classifier never called an answer right that was wrong, nor wrong that was right;
+its only failures are the 3 "indeterminate" that were plain English. For the 414
+answers that were <strong>not</strong> flagged (all concordant with the expectation), a sample
+was read: 60 drawn with <code>random.Random(20260929).sample(range(414), 60)</code> over the
+answers in <code>respostas.jsonl</code> order, plus the 14 unflagged C06/C12 answers with
+expected <code>en</code> that the draw missed (they decide the threshold, so they were read
+whole) — 74 read, <strong>0 divergent</strong> (Wilson 95% upper bound 4.9%). Together with
+the 39 concordant answers that the 1-in-10 hash had already flagged and were
+read too, the random part is 0 in 99 (upper bound 3.7%): at most ~15 of the 414
+could be wrong, and the sample suggests none. Two slips seen in the sample are
+one-word insertions (<code>"What falta for us…"</code>, <code>"reminders automáticos"</code>) that
+do not change the language of the answer.</p>
+<p>What the classifier <strong>cannot</strong> see is the form: <code>clf=en</code> on an English answer
+did not tell that its questions were in Portuguese (it flagged those answers as
+indeterminate only when the mix was heavy). That is why the sample read the
+C06/C12 answers whole, and why the two readings below exist.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threshold-recomputed-with-the-reviewed-labels>The threshold, recomputed with the reviewed labels<a href=#the-threshold-recomputed-with-the-reviewed-labels class=hash-link aria-label="Direct link to The threshold, recomputed with the reviewed labels" title="Direct link to The threshold, recomputed with the reviewed labels" translate=no>​</a></h3>
+<p>Treated arm, C01–C04 and C06–C15 (n = 95), Spanish counted on the <strong>real</strong> language
+of every treated answer where pt-BR is expected (C05 included). Wilson 95%
+interval. Two independent readings: <strong>C11</strong> (the owner's, open) and <strong>form</strong>
+(prose right, form in Portuguese — the agent resolved it as a fact about what
+the user reads, and shows the other side so it can be contradicted).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>model<th>C11 counts<th>form counts<th>hits<th>rate<th>95% interval<th>Spanish (pt expected)<th>verdict<tbody><tr><td>DeepSeek<td>yes<td>yes<td>93/95<td>97.9%<td>92.6–99.4%<td>0<td>passes<tr><td>DeepSeek<td><strong>yes</strong><td><strong>no</strong><td>87/95<td>91.6%<td>84.3–95.7%<td>0<td>does not pass<tr><td>DeepSeek<td>no<td>yes<td>88/95<td>92.6%<td>85.6–96.4%<td>0<td>does not pass<tr><td>DeepSeek<td>no<td>no<td>82/95<td>86.3%<td>78.0–91.8%<td>0<td>does not pass<tr><td>Haiku<td>yes<td>(any)<td>85/95<td>89.5%<td>81.7–94.2%<td>3 (C05)<td>does not pass<tr><td>Haiku<td>no<td>(any)<td>81/95<td>85.3%<td>76.8–91.0%<td>3 (C05)<td>does not pass</table>
+<p>The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:</p>
+<ul>
+<li class=""><strong>Haiku fails in every reading</strong>: 3 Spanish answers in C05 (the zero-Spanish
+clause alone) and, with everything accepted, 85/95.</li>
+<li class=""><strong>DeepSeek passes in exactly one cell</strong>: C11 accepted <strong>and</strong> English prose
+with a Portuguese form accepted. Reject either one and it fails — by 4
+answers if the form is rejected (87 of the 91 needed), by 3 if C11 is (88). Reject both and it
+is the classifier's number, 82.</li>
+<li class="">The C11 decision therefore only matters if the form is accepted. With the form
+counted as a miss, DeepSeek fails whatever C11 is, and the finding to act on
+is not C11 but the form: in the treated arm, 8 of DeepSeek's 15 C06+C12
+answers carry Portuguese text inside an English answer (6 form-only, 2
+interleaved), while 7 are clean English, forms included. The model can
+write the form in English — it does so about half of the time.
+<strong>Where it came from (AT-282, <a class="" href=/brabo/prd/business-rules#rn-667>RN-667</a>):</strong> the
+tool's own description told the model the <code>label</code> was "o texto da pergunta,
+<strong>em pt-BR</strong>" — a second, fixed language instruction outside the facade,
+competing with the trailing orientation in every call. It now says "no
+idioma da sua resposta" and names no language; the orientation itself is
+unchanged. The after-measurement was <strong>not run</strong> (no OpenRouter key on the
+machine that made the change) and is pending the owner — C06 and C12,
+treated arm, 5 rounds, with the budget cap in the RN.</li>
+</ul>
+<p>What C11 is, in the data. DeepSeek's 5 treated misses: 3 have the English
+translation quoted in a Portuguese frame ("Registrei a regra… A tradução que
+você pediu: > …"), and 2 have <strong>no translation in the recorded text</strong> — the run
+keeps only the last message of a turn, and these turns called <code>emit_artifact</code>
+first, so the translation was in an earlier message of the same turn (10 calls
+for 5 conversations, two per conversation), so the translation was presumably
+in an earlier message of the same turn, and was not kept. Both are counted as
+frame-only, i.e. as hits under "C11 counts". Haiku's 4 treated misses are an
+English translation with a Portuguese note or Portuguese alternatives around it.</p>
+<blockquote>
+<p><strong>TODO(humano):</strong> Does a translation into English inside a Portuguese frame
+count as correct in C11? It decides the C11 axis of the table above:
+<strong>accepted</strong> → DeepSeek 93/95 and passes (if English prose with a Portuguese
+form is also accepted; 87/95 if not); <strong>rejected</strong> → DeepSeek 88/95 (or 82/95)
+and fails. Haiku fails either way. Recommendation, in one sentence: accept it
+— the orientation's exception covers only the requested translation and the
+frame stays in the author's language, so rejecting it would penalise exactly
+the behaviour the orientation is meant to produce. (The second question, the
+form in Portuguese, is a product-scope question and is stated as a finding
+above; it was not put to the owner because the agent resolved it as a fact —
+what the user reads.)</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-b--is-it-the-position-of-the-orientation-at-279>Part B — is it the position of the orientation? (AT-279)<a href=#part-b--is-it-the-position-of-the-orientation-at-279 class=hash-link aria-label="Direct link to Part B — is it the position of the orientation? (AT-279)" title="Direct link to Part B — is it the position of the orientation? (AT-279)" translate=no>​</a></h3>
+<p>The hypothesis: for Anthropic models OpenRouter lifts the trailing <code>system</code>
+message into the top system prompt, losing its recency. Test: C12 (author
+preference <code>en</code>, messages in pt-BR), <code>anthropic/claude-haiku-4.5</code>, first turn,
+5 rounds per position, the orientation text <strong>read from the product</strong> (it was
+<code>Respond in English (en), unless the user explicitly asks for another language in this message. Write project artifacts in pt-BR.</code>), only its position varied:</p>
+<ol>
+<li class=""><code>ultima-system</code> — as today (<code>idioma_da_resposta.ex:231</code>, a trailing
+<code>role: "system"</code>);</li>
+<li class=""><code>system-fundido</code> — appended to the first <code>system</code> (persona + orientation);</li>
+<li class=""><code>sufixo-user</code> — suffix of the last <code>user</code> message, <strong>no</strong> <code>system</code> added;</li>
+<li class=""><code>ultima-system-e-sufixo-user</code> — the trailing <code>system</code> <strong>plus</strong> the same
+sentence as a suffix.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>position<th>classifier hits<th>read<tbody><tr><td>1 <code>ultima-system</code> (as today)<td>0/5<td>5 Portuguese, forms included<tr><td>2 <code>system-fundido</code><td>0/5<td>5 Portuguese<tr><td>3 <code>sufixo-user</code><td>0/5<td>5 Portuguese<tr><td>4 <code>ultima-system-e-sufixo-user</code><td>0/5<td>5 Portuguese<tr><td>control: 1, without the artifact clause<td>0/5<td>5 Portuguese<tr><td>control: 3, without the artifact clause<td>0/5<td>5 Portuguese</table>
+<p>The four positions were read in full and the two controls read in part, and all
+30 answers were also checked for English function words (none in any): all 30
+are Portuguese, prose and form. The
+position-1 defect is <strong>reproduced</strong> (0/5, as the 0/10 of the paid run), and
+<strong>no position corrects it</strong> — not even the one where the orientation is inside
+the user's own last message and there is no trailing <code>system</code> at all. The
+hypothesis is <strong>not confirmed</strong>. The prompt-token counts show the text reached
+the model in every position (2 426, 2 427, 2 427 and 2 454 input tokens: +1 for
+the two single placements and +28 for the double), so this is not a dropped
+message. The control also excludes the suspect second sentence: the artifact
+clause ("Write project artifacts in pt-BR.", RN-623) is not the cause either
+(0/10 without it).</p>
+<p>What this does not exclude, and was not measured: the second turn (only the
+first was run, for budget — the paid run had the second turn wrong 5/5 as well);
+a stronger wording (the sentence says "unless the user explicitly asks", and
+Portuguese input may be read as that); the language of the persona itself
+(<code>CRIATIVO_INSTRUCTIONS</code> is Portuguese); and the upstream (all 30 calls were
+served by Amazon Bedrock, so an upstream effect cannot be separated). DeepSeek
+follows the same orientation in the same case — its treated C12 answers were
+English prose in 8 of 10 — which points at the model, not at the placement.</p>
+<p><strong>Proposed change: none about position.</strong> The one place a position would be
+changed, if it had helped, is <code>Engine.Harness.IdiomaDaResposta.anexar/4</code>
+(<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex:231</code>, the <code>messages ++ [%{"role" => "system", …}]</code>), called from the two <code>llm_turn</code> paths of
+<code>apps/engine/lib/engine/sessions/engine_api_client.ex:609</code> and <code>:661</code>. It stays
+as it is. The next activity, if the owner wants Haiku to obey <code>en</code> over
+Portuguese input, is to test wording and persona language (the list above),
+with this same script.</p>
+<p><strong>Spend</strong> (sum of each response's <code>usage.cost</code>, never the <code>/key</code> counter): US$
+0.0980 for the four positions (20 calls) and US$ 0.0505 for the two controls
+(10 calls) — <strong>US$ 0.1485</strong> of the US$ 0.20 ceiling, 30 calls, none failed.</p>
+<p>To reproduce Part B (the key file holds <code>OPENROUTER_TEST_KEY=…</code>; it is never
+printed; the output goes outside the checkout):</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:diagnosticar </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--turnos</span><span class="token plain"> </span><span class="token number">1</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--rodadas</span><span class="token plain"> </span><span class="token number">5</span><span class="token plain"> --teto-usd </span><span class="token number">0.13</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--concorrencia</span><span class="token plain"> </span><span class="token number">4</span><span class="token plain">          </span><span class="token comment" style="color:rgb(98, 114, 164)"># the four positions</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:diagnosticar </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--turnos</span><span class="token plain"> </span><span class="token number">1</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--rodadas</span><span class="token plain"> </span><span class="token number">5</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--posicoes</span><span class="token plain"> ultima-system,sufixo-user --sem-clausula </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--saida</span><span class="token plain"> ~/.cache/brabo/validacao-idioma/</span><span class="token operator">&lt;</span><span class="token plain">date</span><span class="token operator">></span><span class="token plain">-diagnostico-haiku-sem-clausula </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --teto-usd </span><span class="token number">0.06</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--concorrencia</span><span class="token plain"> </span><span class="token number">4</span><span class="token plain">                                  </span><span class="token comment" style="color:rgb(98, 114, 164)"># the controls</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token function" style="color:rgb(80, 250, 123)">pnpm</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--filter</span><span class="token plain"> @brabo/scripts idioma:revisar                          </span><span class="token comment" style="color:rgb(98, 114, 164)"># Part A tables</span><br/></div></code></pre></div></div>
+<p><code>--turnos N</code> and <code>--sem-clausula</code> exist only for this diagnosis; the product
+never places the orientation anywhere but last, and <code>posicionar</code> in
+<code>validacao.ts</code> is not used by it.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-09-30T23:05:48.000Z itemprop=dateModified>Sep 30, 2026</time></b> by <b>Claude</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Measuring the Jev tool router</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">What exists</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">The two corpora, and where each one lives</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Running it</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Numbers on the synthetic corpus (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">What the numbers say</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">The product's provisional thresholds</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">Paid validation of the language orientation (AT-167, 2026-09-29)</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">Where it runs, and what is (and is not) the product</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">Step zero: not reproduced</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">Results by case × arm × model</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">Against the threshold</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">Incremental cost of the orientation</a><li><a href=#spend class="table-of-contents__link toc-highlight">Spend</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">Reproducing</a></ul><li><a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="table-of-contents__link toc-highlight">Human review and the Haiku diagnosis (AT-167 follow-up)</a><ul><li><a href=#part-a--the-review-of-the-146 class="table-of-contents__link toc-highlight">Part A — the review of the 146</a><li><a href=#the-threshold-recomputed-with-the-reviewed-labels class="table-of-contents__link toc-highlight">The threshold, recomputed with the reviewed labels</a><li><a href=#part-b--is-it-the-position-of-the-orientation-at-279 class="table-of-contents__link toc-highlight">Part B — is it the position of the orientation? (AT-279)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
