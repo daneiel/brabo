@@ -249,6 +249,7 @@ estado lido do repositório e não da conversa.
 | As refs `caminho:N` (`símbolo`) das RNs relidas pelo símbolo, e a aferição promovida a `block` (AT-122) | documentation-workflow.md |
 | O teto da RN-418 vale também para `git_push`/`pr_open` TIPADOS, e a ativação deixa de semeá-los (AT-347) | RN-689 |
 | A dica de abertura fica no fio até a primeira mensagem, e os campos da sessão não convidam o autofill (AT-353) | RN-693 |
+| Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
 
 ## Estado atual e aberto
 

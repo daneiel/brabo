@@ -20291,3 +20291,27 @@ E o composer e os campos de texto das perguntas estruturadas levam
   atributos do composer); `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx:201`
   (atributos dos campos das perguntas)
 - **Origem:** AT-353
+### RN-690 — O assistente guarda os `toolCalls` da resposta: o resultado da ferramenta não chega órfão ao provider {#rn-690}
+
+Os agentes conversacionais com laço próprio (Criativo, PO, Arquiteto, Dev Lead,
+UX Designer, Staff e Infra Lead) guardavam no histórico a mensagem do
+assistente SEM os `toolCalls` da resposta e, em seguida, a mensagem
+`role: "tool"` com o `toolCallId`. No fio, o provider recebia um resultado que
+respondia a chamada nenhuma e o descartava: o modelo nunca via o que a
+ferramenta devolveu e repetia a mesma chamada até o teto do laço (medido na
+v7.0.0: o PO chamou `listar_regras_de_negocio` 12 de 12 vezes em dois turnos).
+
+A mensagem do assistente passa a levar os `toolCalls` NATIVOS da resposta
+quando há algum — o mesmo formato que o `ToolLoop` já guardava e que o
+`ContextManager` agrupa na compactação —, montada num lugar só. Resposta sem
+`toolCalls` não ganha a chave. Chamada recuperada do texto (`ToolCallRecovery`,
+id nulo) fica de fora: não há id para casar. A api já repassava o campo aos
+providers (`toWireMessage` no OpenAI-compatível, `tool_use` no Anthropic); a
+reidratação continua trazendo ferramentas como texto.
+
+- **Onde:** `apps/engine/lib/engine/agents/mensagem_do_assistente.ex:17` (`de`);
+  `apps/engine/lib/engine/agents/po_server.ex:276`, e o mesmo ponto nos outros seis servidores
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:93` (a segunda
+  chamada leva o `assistant` com `toolCalls` logo antes do `tool` que o
+  responde; a resposta final, sem ferramenta, não ganha a chave — caso de falha)
+- **Origem:** AT-350
