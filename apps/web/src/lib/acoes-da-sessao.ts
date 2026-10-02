@@ -55,3 +55,25 @@ export async function buscarAcoesDaSessao(
   });
   return { items: juntarCaudaEPendentes(cauda.items, pendentes.items), nextCursor: null };
 }
+
+/**
+ * A chave E a função da leitura de ações de UMA sessão, juntas (AT-365).
+ *
+ * `['session-actions', projectId, sessionId]` é UMA entrada de cache, e quem
+ * a escreve tem de escrever a MESMA pergunta. A aba Sessões lia por ela a
+ * PRIMEIRA página crescente (`listActions({ limit: 200 })`, sem `latest`)
+ * enquanto o fio lia a cauda + pendentes: as duas telas trocavam o recorte
+ * uma da outra, e o fio podia passar a mostrar as 200 mais ANTIGAS — o
+ * defeito que a RN-637 fechou, reaberto pela porta do cache. Com o par num
+ * lugar só, não há como gravar a chave com outra consulta.
+ */
+export function chaveDasAcoesDaSessao(projectId: string | undefined, sessionId: string | undefined) {
+  return ['session-actions', projectId, sessionId] as const;
+}
+
+export function consultaDasAcoesDaSessao(projectId: string, sessionId: string) {
+  return {
+    queryKey: chaveDasAcoesDaSessao(projectId, sessionId),
+    queryFn: () => buscarAcoesDaSessao(projectId, sessionId),
+  };
+}

@@ -5,12 +5,12 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSession,
   getMySpend,
-  listActions,
   mensagemDaApi,
   renameSession,
   transitionSession,
 } from '../lib/api-client';
 import { useActiveExecutionSession, useProjectSessions } from '../lib/hooks';
+import { consultaDasAcoesDaSessao } from '../lib/acoes-da-sessao';
 import {
   resumirAcoes,
   somarResumos,
@@ -256,15 +256,19 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   // aqui, uma consulta por linha já listada. Sessões de um projeto são poucas,
   // e o TanStack Query as cacheia junto com as da aba de aprovações.
   //
+  // A leitura é a MESMA do fio (`consultaDasAcoesDaSessao` — cauda das 200 mais
+  // novas + pendentes que a cauda deixou de fora, RN-637), na MESMA chave
+  // (AT-365). Era `listActions({ limit: 200 })`, a primeira página crescente,
+  // gravada na chave do fio: abrir esta aba trocava o recorte do fio pelas 200
+  // ações mais ANTIGAS. O resumo também ganha — a pendente nova de uma sessão
+  // longa passa a contar em "aguardando".
+  //
   // O hook roda SEMPRE, mesmo em erro ou carregamento: com a lista vazia ele
   // não dispara consulta nenhuma, e é o que permite os três estados abaixo
   // serem render condicional em vez de `return` antecipado — `return` antes de
   // um hook muda a ordem dos hooks entre renders.
   const acoesPorSessao = useQueries({
-    queries: sorted.map((session) => ({
-      queryKey: ['session-actions', projectId, session.id],
-      queryFn: () => listActions(projectId, session.id, { limit: 200 }),
-    })),
+    queries: sorted.map((session) => consultaDasAcoesDaSessao(projectId, session.id)),
   });
   const resumoDe = (indice: number): ResumoDeAprovacoes =>
     resumirAcoes(acoesPorSessao[indice]?.data?.items);
