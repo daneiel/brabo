@@ -1,4 +1,5 @@
 import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
 import { addressableAgents, nomeDoAgente } from '../lib/agents';
@@ -331,6 +332,7 @@ export function SessionComposer({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleComposerKeyDown}
+            {...SEM_AUTOFILL}
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />

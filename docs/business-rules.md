@@ -5702,7 +5702,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:196` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:200` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -20262,6 +20262,35 @@ existe como destino da mensagem do comando de terminal.
   ("sempre permitir" recusado, 400 `teto_do_sempre_permitir`)
 - **Origem:** AT-347, decisão do dono em 01/10
 
+### RN-693 — Ativar o agente não é conversa: a dica de abertura fica no fio até a primeira mensagem, e os campos de texto da sessão não convidam o autofill {#rn-693}
+
+Medido no uso real da v7.0.0: "Iniciar ideação" grava `agent.activated` (e
+`agent.status`), o Criativo só fala depois da primeira mensagem, e o convite
+— com a dica "Comece contando o que você quer construir…" — sumia no clique,
+porque a pergunta "a conversa começou?" era `events.length > 0`. O fio ficava
+vazio por ~25 s.
+
+**A regra:** eventos de CICLO DE VIDA do agente (`agent.activated`,
+`agent.status`) não contam como conversa. Qualquer outro evento continua
+contando, para o convite não cobrir a sessão do git-bootstrap nem a de
+execução ([RN-131](#rn-131)). Com o Criativo ativo e sem mensagem, o convite
+fica sem o botão "Iniciar ideação" e com a dica; a primeira mensagem o tira.
+
+E o composer e os campos de texto das perguntas estruturadas levam
+`autocomplete="off"` e os atributos que os gerenciadores de senha respeitam
+(`data-1p-ignore`, `data-lpignore="true"`, `data-bwignore`,
+`data-form-type="other"`): cada foco abria o popup de autofill do navegador.
+
+- **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
+  `:24` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:437`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:335`
+  (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
+  (`SEM_AUTOFILL`)
+- **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
+  ativado sem mensagem mantém a dica; com mensagem ela some — caso de falha;
+  atributos do composer); `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx:201`
+  (atributos dos campos das perguntas)
+- **Origem:** AT-353
 ### RN-690 — O assistente guarda os `toolCalls` da resposta: o resultado da ferramenta não chega órfão ao provider {#rn-690}
 
 Os agentes conversacionais com laço próprio (Criativo, PO, Arquiteto, Dev Lead,
