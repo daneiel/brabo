@@ -177,6 +177,9 @@ defmodule Engine.Workers.AnamneseWorker do
       project_id: project_id,
       session_id: session_id,
       agent: Triage.agent(),
+      # RN-695 (AT-355): a análise é sobre a PESSOA, e não é conversa — fica
+      # fora do fio (`anamnese.analysis`), e o resultado mora no perfil.
+      response_event: "anamnese.analysis",
       tools: Tools.registry(),
       hooks: anamnese_hooks(),
       messages: [initial_message(context)],

@@ -104,3 +104,26 @@ describe('montarTimeline — o teto de iterações vira linha no fio (RN-698, AT
     expect(bolha?.textContent).toContain('teto de ? passos');
   });
 });
+
+// RN-695 (AT-355): a análise da Anamnese não entra no fio da sessão.
+describe('montarTimeline — a Anamnese fora do fio (AT-355)', () => {
+  function resposta(ator: string, id: string, texto: string): SessionEvent {
+    return {
+      id,
+      seq: Number(id.slice(1)),
+      type: 'agent.response',
+      actor: { kind: 'agent', id: ator },
+      payload: { content: texto },
+      createdAt: '2026-10-01T12:00:00.000Z',
+    } as SessionEvent;
+  }
+
+  it('não desenha a resposta da Anamnese, e desenha a do Criativo', () => {
+    const container = montar([
+      resposta('criativo', 'e1', 'ideia do criativo'),
+      resposta('anamnese', 'e2', 'Analisando a janela do log… usuário (09824667-aaaa)'),
+    ]);
+    expect(container.textContent).toContain('ideia do criativo');
+    expect(container.textContent).not.toContain('09824667');
+  });
+});

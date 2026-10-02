@@ -153,8 +153,10 @@ defmodule Engine.Harness.ToolLoop.Default do
         # `tool.call`/`tool.result`, e quem terminou sem tool call nem texto
         # decide o desfecho (e o evento durável correspondente) a partir de
         # `ctx.last_error`/`{:ok, ctx}` — ver `DevAgentServer.handle_outcome/4`.
+        # RN-695 (AT-355): quem não conversa com ninguém (a Anamnese) grava o
+        # texto com outro tipo, que o fio da sessão não desenha.
         if content != "" do
-          emit(ctx, "agent.response", %{
+          emit(ctx, Map.get(ctx, :response_event, "agent.response"), %{
             content: content,
             error: Map.get(resp, "error"),
             iteration: ctx.iteration,
