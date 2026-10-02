@@ -41,6 +41,8 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
 
   defp orientacao_enviada(messages) do
     case List.last(messages) do
+      # RN-711: o texto do fluxo do time não é orientação de idioma.
+      %{"role" => "system", "content" => "Fluxo de entrega" <> _} -> nil
       %{"role" => "system", "content" => texto} -> texto
       _ -> nil
     end

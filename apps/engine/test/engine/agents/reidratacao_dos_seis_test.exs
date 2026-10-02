@@ -139,7 +139,12 @@ defmodule Engine.Agents.ReidratacaoDosSeisTest do
   test "Arquiteto, Dev Lead e UX Designer leem o kickoff por tipo, pela cauda" do
     for {modulo, tipos} <- [
           {ArquitetoServer,
-           ["artifact.product_brief", "artifact.business_rule", "backlog.story_created"]},
+           [
+             "artifact.product_brief",
+             "artifact.business_rule",
+             "backlog.story_created",
+             "artifact.decision_record"
+           ]},
           {DevLeadServer, ["backlog.story_created"]},
           {UxDesignerServer, ["artifact.product_brief"]}
         ] do

@@ -1401,6 +1401,10 @@ defmodule Engine.Infra.InfraLeadServer do
        ferramenta — o que não foi chamado não acontece.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
+    Os arquivos vão SÓ na `propose_infra_pr`: não cole o conteúdo deles no chat. O
+    container do projeto sobe pelo SISTEMA (broker), não por esse compose, e não há
+    deploy neste fluxo — não o prometa. Com o container `running`, o SISTEMA oferece
+    o Dev Lead (RN-711).
 
     MÓDULOS:
     #{modules_text}

@@ -211,9 +211,10 @@ defmodule Engine.Agents.ArquitetoServer do
   defp executar_offer_infra_handoff(state) do
     instruction =
       user_msg(
-        "O usuário confirmou que a arquitetura está pronta. Finalize " <>
-          "quaisquer considerações pendentes — o handoff para o InfraAgent " <>
-          "será oferecido em seguida."
+        "O usuário JÁ confirmou que a arquitetura está pronta — não peça " <>
+          "essa confirmação de novo. Finalize quaisquer considerações " <>
+          "pendentes; o SISTEMA oferece em seguida o handoff à Infra, que " <>
+          "sobe o container do projeto (não prometa pipeline nem deploy)."
       )
 
     state =
@@ -355,7 +356,8 @@ defmodule Engine.Agents.ArquitetoServer do
     case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
            "artifact.product_brief",
            "artifact.business_rule",
-           "backlog.story_created"
+           "backlog.story_created",
+           "artifact.decision_record"
          ]) do
       {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Defina a arquitetura do produto (module_map, ADRs, insights)."
@@ -389,6 +391,18 @@ defmodule Engine.Agents.ArquitetoServer do
         p = Map.get(s, "payload", %{})
         "- story_id=#{Map.get(p, "storyId")} | #{Map.get(p, "title", "")}"
       end)
+
+    # RN-711 (AT-370): as restrições técnicas que o usuário declarou viram
+    # `decision_record` (o Criativo as registra); o Arquiteto as lê aqui.
+    restricoes =
+      events
+      |> Enum.filter(&(Map.get(&1, "type") == "artifact.decision_record"))
+      |> Enum.map_join("\n", fn r ->
+        p = Map.get(r, "payload", %{})
+        "- #{Map.get(p, "choice", "")} (contexto: #{Map.get(p, "context", "")})"
+      end)
+
+    restricoes = if restricoes == "", do: "(nenhuma registrada)", else: restricoes
 
     """
     Você recebeu o produto do PO. Defina a ARQUITETURA:
@@ -424,6 +438,11 @@ defmodule Engine.Agents.ArquitetoServer do
 
     HISTÓRIAS DO BACKLOG:
     #{stories}
+
+    RESTRIÇÕES E DECISÕES REGISTRADAS (decision_record — respeite-as; ex.: "um módulo só"
+    significa UM módulo no create_module_map. Se precisar contrariar alguma, diga QUAL e
+    POR QUÊ na `responsibility` do módulo e na sua resposta):
+    #{restricoes}
     """
   end
 
