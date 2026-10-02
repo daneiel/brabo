@@ -20986,3 +20986,32 @@ decisão, fechados juntos:
   ("módulos do plano"), `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts`,
   `apps/engine/test/engine/agents/dev_lead_tools_test.exs` (`resumo_do_plano/1`)
 - **Origem:** AT-371, AT-381
+
+### RN-716 — A Anamnese não grava nível sobre o que não observou, e aprovar não é dominar {#rn-716}
+
+- **Regra:** um perfil de proficiência só é gravado quando a evidência inclui
+  ao menos um evento escrito pela PRÓPRIA pessoa perfilada que não seja clique
+  de aprovação (`proposed_action.approved`, `handoff.accepted`,
+  `readiness.confirmed`). Evidência só de outros atores é "não observado" —
+  ausência de oportunidade, nunca pouco conhecimento —, e "não observado" é
+  estado próprio: o lote é recusado com motivo nomeado, nada é gravado e
+  nenhum `anamnese.profile_updated` nasce. Aprovação ao lado de uma interação
+  da pessoa continua aceita. A mensagem da pessoa que repara falha de agente é
+  desvio do AGENTE e não traço dela: o prompt diz isso, e o registro mora na
+  [RN-717](#rn-717).
+- **Medição (AT-376):** na loja-teste de 02/10, "Git → iniciante" e "Infra →
+  iniciante" sem a pessoa ter interagido com nenhum dos dois, e "aprova 2 ADRs
+  sem hesitar" como arquitetura avançada.
+- **Onde:** `apps/api/src/domain/anamnese/proficiency-validation.ts:53`
+  (`ehEvidenciaObservadaDaPessoa`), `apps/api/src/domain/anamnese/proficiency-validation.ts:74`
+  (`validateProficiencyBatch`), `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:155`
+  (`resolveKnownEventIds`), regras no kickoff (`prompts/anamnese-kickoff.md`
+  v3 e o fallback inline de `anamnese_worker.ex`)
+- **Teste:** `apps/api/test/domain/anamnese/proficiency-validation.spec.ts`
+  ("RN-716: aprovação ao lado de interação da pessoa passa"; falhas: "só
+  evidência de outro ator é \"não observado\"", "aprovação sem leitura não é
+  evidência"), `apps/api/test/application/use-cases/anamnese/record-proficiency.use-case.spec.ts`
+  ("evidência só de aprovação não grava perfil nem profile_updated")
+- **Lacuna declarada:** reconhecer a mensagem de REPARO no lote de perfil é do
+  modelo (prompt); o código não classifica texto de mensagem.
+- **Origem:** AT-376
