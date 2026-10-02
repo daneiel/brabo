@@ -2974,7 +2974,7 @@ chamador de verdade, em paralelo e uma vez só por story.
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:273`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:281`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
@@ -2992,7 +2992,7 @@ criados:** o destino que já tem oferta pendente ou já está ativo no projeto n
 recebe outra, e isso não é falha.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:273` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:281` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -17888,7 +17888,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
    jeito; o que deixa de nascer é a oferta repetida.
 
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:281`
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1115`
   (`create_handoff_if_absent`);
@@ -20747,12 +20747,37 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   ("JSON com results vira findings, inclusive com exit 1 (achou algo)"; caso
   de falha: "exit 1 com stdout vazio é falha de execução nomeada, não
   :invalid_output")
-- **Decisão aberta:** com o semgrep pulado, o SecOps continua APROVANDO
-  (`veredito: approved`, com o pulo no resumo). "Aprovar sem SAST" ou
-  "pendente" é decisão do dono, não tomada aqui.
-  > **TODO(humano):** o gate de SecOps deve aprovar quando o semgrep não rodou, ou ficar pendente?
+- **Decisão (revista pela [RN-714](#rn-714)):** a frase "o veredito do gate
+  NÃO muda" deixou de valer: o dono decidiu (02/10) que SAST que não rodou
+  deixa o gate PENDENTE e bloqueando.
 - **Origem:** AT-380
 
+
+
+### RN-714 — SAST que não rodou deixa o gate de SecOps pendente, nunca aprovado {#rn-714}
+
+- **Regra:** quando o semgrep do gate de SecOps não roda — binário ausente,
+  saída inválida (`:invalid_output`), `:sem_saida`, exceção ou teto de tempo
+  —, nenhum veredito é gravado: a PR continua em `awaiting_secops`, o gate
+  fica PENDENTE e bloqueia, e a PR não chega ao usuário como aprovada pela
+  SecOps. O motivo vai ao fio como `agent.error` de origem `infra`
+  ("SAST não rodou: <motivo> — … reexecute o gate depois de corrigir"). O
+  contrato externo não muda: continuam os dois vereditos de sempre
+  (`approved`/`changes_requested`), um por gate. O gitleaks ausente continua
+  só "pulado" no resumo.
+- **Reexecução:** o ciclo fica `in_progress` em `gate_states`, e o
+  `GateRescuer` o reexecuta no boot do engine e depois do limiar de staleness
+  (`gate_rescue_stale_after_seconds`, 15 min). Não há botão de reexecutar
+  gate na tela.
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:110`
+  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:149`
+  (`sast_nao_rodou`)
+- **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
+  ("sem achados (gitleaks e semgrep limpos): approved"; casos de falha:
+  "semgrep com saída inválida: gate pendente, sem veredito, motivo nomeado" e
+  "semgrep com binário ausente: gate pendente, sem veredito, motivo nomeado")
+- **Revisa:** [RN-707](#rn-707) ("o veredito do gate NÃO muda")
+- **Origem:** AT-380
 
 ### RN-702 — A compactação de contexto respeita a janela padrão de 128k e nunca troca turnos por um marcador vazio {#rn-702}
 

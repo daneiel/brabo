@@ -737,7 +737,7 @@ declared `uid=1000,gid=1000,mode=0700` — not a variable — because semgrep (t
 SecOps gate) writes `~/.semgrep` there; created as root, the scan returns
 nothing and the gate approves without static analysis
 ([RN-707](../business-rules.md#rn-707), runbook
-[The SecOps gate passes with "semgrep falhou"](../runbook.md#semgrep-do-gate)).
+[The SecOps gate is stuck on "SAST não rodou"](../runbook.md#semgrep-do-gate)).
 
 None of the six Dockerfiles uses corepack (Node 25+ no longer ships it,
 AT-360): the build installs pnpm from the registry tarball, checked against a
