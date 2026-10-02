@@ -12843,14 +12843,14 @@ de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
 TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
 existia, antes de qualquer escrita.
 
-- **Código:** `install.sh:1548` (`fechar_a_instalacao`, o encadeamento e o
-  "sempre 0"), `:1347` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
-  o teto), `:1447` (`parear_esta_maquina`, o `id` virando `--id`), `:1524`
-  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1250`
+- **Código:** `install.sh:1664` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:1463` (`perguntar_e_criar_a_conta`, o consentimento, o laço e
+  o teto), `:1563` (`parear_esta_maquina`, o `id` virando `--id`), `:1640`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:1366`
   (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600),
-  `:1291` (`criar_primeira_conta`) e `:1310` (`registrar_chave_de_maquina`) —
-  os vereditos das duas rotas —, `:1325` (`ler_sem_eco`), `:1229`
-  (`nome_da_maquina`), `:1511` (`avisar_chave_parcial`), `:1208`/`:1215`
+  `:1385` (`criar_primeira_conta`) e `:1426` (`registrar_chave_de_maquina`) —
+  os vereditos das duas rotas —, `:1441` (`ler_sem_eco`), `:1345`
+  (`nome_da_maquina`), `:1586` (`avisar_chave_parcial`), `:1208`/`:1215`
   (`escapar_json`/`sem_controle`), `:108` (`MARCADOR_SCHEMA=3`), `:1871` (a
   chamada, depois do runner e antes do marcador), `:1882` (o `ownerEmail`).
   Números relidos pelo símbolo em 18/09 (AT-096), em 27/09 (AT-065, que
@@ -13962,9 +13962,9 @@ que o serviço `backup` referencia, cuja falta recusava o arquivo inteiro com o
 profile ligado. Coberto por `scripts/dev/prova-de-restauracao-env.spec.ts`.
 
 - **Código:** `install.sh:128` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
-  `:573` (`ASSETS_DO_INSTALADOR`), `:575` (`destino_do_asset_do_instalador`, a
-  tabela do lado que baixa), `:600` (`baixar_e_verificar_os_arquivos_da_instalacao`),
-  `:607`/`:615`/`:617` (as três recusas), `:634`
+  `:587` (`ASSETS_DO_INSTALADOR`), `:589` (`destino_do_asset_do_instalador`, a
+  tabela do lado que baixa), `:614` (`baixar_e_verificar_os_arquivos_da_instalacao`),
+  `:607`/`:615`/`:617` (as três recusas), `:648`
   (`materializar_os_arquivos_da_instalacao`), `:1573` (a migração materializa
   antes do backup), `:1677` (a verificação logo depois da própria origem),
   `:1831` (a subida materializa antes do `up`);
@@ -14230,9 +14230,9 @@ no Linux. Docker rootless ou remoto não tem o socket em `/var/run/docker.sock`,
 que é o caminho que o compose monta, e cai na recusa do item 2 — ligar o broker
 ali não é oferecido por outro caminho.
 
-- **Código:** `install.sh:1002` (`consentir_broker`), `:954`
-  (`medir_gid_do_socket`), `:989` (`calcular_raiz_gerenciada`), `:1058`
-  (`conferir_o_broker`), `:778` (`escrever_env_do_broker`), `:855` (o broker no
+- **Código:** `install.sh:1050` (`consentir_broker`), `:1002`
+  (`medir_gid_do_socket`), `:1037` (`calcular_raiz_gerenciada`), `:1034`
+  (`conferir_o_broker`), `:792` (`escrever_env_do_broker`), `:855` (o broker no
   manifesto), `:1812` (a ordem: depois da base, antes do `.env`);
   `docker/docker-compose.install.yml` (o serviço `broker` e a rede `broker`)
 - **Teste:** `scripts/dev/install-broker.spec.ts:158` (sem terminal: desligado,
@@ -20451,3 +20451,62 @@ passos sem terminar o turno"); sem o número no payload a linha diz `?`.
   e `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:85`
   (a linha do teto; sem número, não inventa um)
 - **Origem:** AT-354
+## O instalador oferece os modelos locais, e não confunde o dev com uma instalação (RN-691, RN-692)
+
+### RN-691 — O `install.sh` PERGUNTA se liga os modelos locais (profile `llm`), mede a porta do Ollama antes de gravar, e compõe UMA linha de `COMPOSE_PROFILES` {#rn-691}
+
+Medido numa instalação real da v7.0.0 (AT-351): toda regra de negócio gravava
+`backlog.semantic_duplicate_check_skipped` com `getaddrinfo EAI_AGAIN ollama`,
+porque a instalação por Release sobe sem o profile `llm` e o instalador nunca
+perguntava; ligá-lo à mão esbarrava em `address already in use` na 11434, a
+porta de um Ollama NATIVO no host.
+
+**A regra:** depois da pergunta do broker ([RN-575](#rn-575)), o instalador diz
+o CUSTO (disco da imagem e dos modelos que o `ollama-model-loader` baixa, RAM
+com modelo carregado) e o que se PERDE sem ele (a checagem semântica de
+duplicata da [RN-681](business-rules/custo.md#rn-681) e modelo local para os agentes), e só um "s"
+digitado liga; sem terminal fica desligado DIZENDO isso. Ligar MEDE a porta do
+host antes de gravar qualquer coisa — a 11434, ou a primeira livre até a 11443,
+pelo `/dev/tcp` do próprio bash (3.2 incluso) — e a faixa inteira ocupada é
+recusa NOMEADA, sem nada gravado, nunca um `address already in use` na subida.
+O `.env` ganha `OLLAMA_PORT` e o profile `llm`; os profiles consentidos saem
+numa ÚNICA linha `COMPOSE_PROFILES` (`container-broker,llm`), porque duas
+linhas não somam — a última venceria e o broker sumiria calado.
+
+Fica FORA, declarado: a sessão dizer UMA vez que a checagem semântica foi
+pulada (lado da api, outra frente); e o E2E da tag responde NÃO (ligar
+baixaria GBs de modelo), então a subida com o profile `llm` não é provada ponta
+a ponta.
+
+- **Onde:** `install.sh:1128` (`consentir_llm`), `:1113`
+  (`escolher_porta_do_ollama`), `:1103` (`porta_em_uso`), `:800`
+  (`escrever_env_do_llm`), `:821` (`escrever_env_dos_profiles`)
+- **Teste:** `scripts/dev/install-llm.spec.ts` (sem terminal fica desligado
+  dizendo o custo; 11434 ocupada escolhe a próxima; faixa inteira ocupada falha
+  — caso de falha; um servidor escutando é medido como em uso; broker e modelos
+  numa linha só); `scripts/dev/install-e2e.spec.ts` (a resposta da pergunta nova
+  está na lista do driver de TTY, na ordem)
+- **Origem:** AT-351
+
+### RN-692 — Só o projeto compose `brabo` é instalação anterior, e a migração oferece reinstalar DO ZERO depois do backup provado {#rn-692}
+
+`detectar_por_sinais` casava `"Name":"brabo[^"]*"`, e o compose de DEV
+(`brabo-dev`, ADR 0170) contava como instalação anterior — o instalador
+oferecia migrar o ambiente de desenvolvimento. Agora casa só o nome EXATO
+`brabo`.
+
+E a confirmação da migração ganha uma terceira resposta: `z` reinstala DO
+ZERO. A ordem do ADR 0150 não muda — backup, PROVA, pergunta, apaga, instala —,
+mas os dados antigos NÃO são restaurados: o backup provado fica na pasta, e
+restaurá-lo depois é o `#restore` do runbook. `s` segue restaurando, e Enter
+continua não apagando nada.
+
+Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
+"continua existindo (ADR 0118)": esse fluxo saiu no ADR 0203 ([RN-687](#rn-687)).
+
+- **Onde:** `install.sh:370` (`detectar_por_sinais`), `:1694`
+  (`migrar_instalacao_anterior`)
+- **Teste:** `scripts/dev/install-llm.spec.ts` (`brabo-dev` não conta e `brabo`
+  conta; `z` apaga depois da prova e deixa `MIGRAR_DE` vazio; Enter não apaga —
+  caso de falha; a frase do ADR 0118 não volta)
+- **Origem:** AT-358

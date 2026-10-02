@@ -131,7 +131,7 @@ const ESPERA_DO_RUNNER = path.join(RAIZ, 'apps/runner/src/espera-de-projetos.ts'
  * de estado em runtime), mas dá para saber que o CONJUNTO mudou — e isso basta
  * para mandar alguém olhar o arquivo de respostas.
  */
-const PROMPTS_INTERATIVOS = 9;
+const PROMPTS_INTERATIVOS = 10;
 
 describe('o E2E do instalador não pode ser afrouxado para passar', () => {
   it('NÃO roda em `pull_request` — a porta de pular a verificação é a que o ADR 0150 recusa', () => {
@@ -259,13 +259,30 @@ describe('as respostas do TTY simulado acompanham os prompts do instalador', () 
     );
   });
 
+  it('a pergunta dos modelos locais vem DEPOIS do broker e o E2E responde NÃO (AT-351)', () => {
+    // NÃO porque ligar baixa a imagem do Ollama e GBs de modelo na tag, e o que
+    // o E2E mede é o instalador; a porta e o .env são provados em
+    // install-llm.spec.ts. Na lista, porque um prompt sem resposta desalinha os
+    // seguintes — a conta viraria a resposta do Ollama.
+    const lista = respostasDoWorkflow();
+    expect(lista[3]).toEqual({
+      espera: 'Ligar os modelos locais? [s/N] ',
+      resposta: '"n"',
+      segredo: false,
+    });
+    const texto = instalador();
+    expect(texto.indexOf('\n  consentir_llm\n')).toBeGreaterThan(
+      texto.indexOf('\n  consentir_broker\n'),
+    );
+  });
+
   it('cada pergunta que o driver espera EXISTE no install.sh, e as duas de senha são segredo', () => {
     // O driver espera o TRECHO da pergunta aparecer antes de responder. Um
     // trecho que o instalador deixou de imprimir não desalinha nada: ele faz o
     // driver esperar até o teto e parar com código 3, nomeando a pergunta — mas
     // só na tag. Aqui, em PR.
     const lista = respostasDoWorkflow();
-    expect(lista).toHaveLength(8);
+    expect(lista).toHaveLength(9);
     for (const { espera } of lista) {
       expect(instalador(), `o install.sh não imprime mais: ${espera}`).toContain(espera);
     }

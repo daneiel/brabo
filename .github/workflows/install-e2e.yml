@@ -253,6 +253,7 @@ jobs:
               {espera: "Gravar o marcador de instalação", resposta: "s"},
               {espera: "Base [", resposta: env.E2E_BASE},
               {espera: "Ligar o broker de container? [s/N] ", resposta: "s"},
+              {espera: "Ligar os modelos locais? [s/N] ", resposta: "n"},
               {espera: "Criar a primeira conta agora?", resposta: "s"},
               {espera: "E-mail: ", resposta: env.E2E_EMAIL},
               {espera: "Senha (não aparece na tela): ", resposta: env.E2E_SENHA, segredo: true},
