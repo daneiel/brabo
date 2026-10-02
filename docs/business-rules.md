@@ -16542,7 +16542,7 @@ resposta 4). A consequência é que a validação da AT-167 mede o CONJUNTO
   mede.
 
 - **Código:** `apps/engine/lib/engine/harness/context_manager.ex:214`
-  (`@instrucao_de_idioma`), `:220` (`prompt_inline`), `:177` (`prompt`, a
+  (`@instrucao_de_idioma`), `:276` (`prompt_inline`), `:233` (`prompt`, a
   escolha entre template e inline); `prompts/context-manager-summarize.md`
 - **Teste:** `apps/engine/test/engine/harness/context_manager_test.exs:417`
   (caminho feliz: o prompt enviado ao sumarizador tem a frase, antes dos
@@ -20510,3 +20510,31 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   conta; `z` apaga depois da prova e deixa `MIGRAR_DE` vazio; Enter não apaga —
   caso de falha; a frase do ADR 0118 não volta)
 - **Origem:** AT-358
+
+### RN-702 — A compactação de contexto respeita a janela padrão de 128k e nunca troca turnos por um marcador vazio {#rn-702}
+
+- **Regra:** sem `context_window` no contexto (os agentes conversacionais não o
+  declaram), a janela de compactação é `DEFAULT_CONTEXT_WINDOW`, cujo padrão
+  passou de 8 192 para 128 000, o mesmo valor que os agentes de gate e de dev
+  declaram. Quando o sumarizador (`context-manager`) falha ou devolve texto
+  vazio, o resumo é DETERMINÍSTICO (um trecho de até 300 caracteres de cada
+  turno substituído) e o `context.compacted` grava `summaryOrigin:
+  "deterministico"` e `falha` com `origem` e `motivo` (RN-059). Com o
+  sumarizador respondendo, `summaryOrigin: "modelo"` e `falha: null`.
+- **Medição (AT-366):** sessão 17d41c20, Arquiteto em
+  `anthropic/claude-haiku-4.5` (janela de 200k): 6 799 tokens passavam de
+  `0,7 × 8 192 = 5 734` e compactavam 35 turnos; o sumarizador falhou e o
+  resumo gravado foi o marcador `"(35 turnos anteriores omitidos)"`. No turno
+  seguinte o Arquiteto pediu de novo uma confirmação que já tinha recebido.
+- **Onde:** `apps/engine/lib/engine/harness/context_manager.ex:157` (`summarize`),
+  `apps/engine/lib/engine/harness/context_manager.ex:188` (`resumo_deterministico`),
+  `apps/engine/config/runtime.exs` (`default_context_window`)
+- **Teste:** `apps/engine/test/engine/harness/context_manager_test.exs`
+  ("sem context_window declarado: 6,8k tokens NÃO compactam"; "sumarizador
+  respondendo: summaryOrigin modelo, sem falha"; caso de falha: "sumarizador
+  falhando: falha NOMEADA com origem e resumo determinístico com o conteúdo")
+- **Lacuna declarada:** a janela continua não sendo lida do catálogo por
+  modelo (o engine não recebe o `context_window` do binding); 128k é o padrão
+  da instalação, ajustável por `DEFAULT_CONTEXT_WINDOW`.
+- **Origem:** AT-366
+

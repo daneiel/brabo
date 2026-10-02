@@ -37,11 +37,16 @@ defmodule Engine.Harness.ContextManager.Default do
   juntos para o mesmo lado do corte, ou o protocolo de tool-use do provider
   quebra (mensagem de resultado sem a chamada correspondente no histórico).
 
+  Sem `context_window` no contexto (os conversacionais não o declaram) a
+  janela é `:default_context_window`, 128 000 desde a RN-702 — o mesmo valor
+  que os agentes de gate/dev declaram. Era 8 192, e 70% disso (5 734 tokens)
+  compactava o Arquiteto com 6,8k num modelo de 200k (AT-366).
+
   O PROMPT de sumarização resolve o template versionado do grafo
   (`context-manager-summarize`, RN-413/RN-417) quando
   `:graph_templates_enabled?` está ligada, com o texto inline como FALLBACK
   obrigatório — ver `prompt/1`. O fallback determinístico de quando o MODELO
-  falha (`"(N turnos anteriores omitidos)"`) é outra coisa e não passa por
+  falha (`resumo_deterministico/1`, RN-702) é outra coisa e não passa por
   template nenhum.
   """
 
@@ -110,7 +115,7 @@ defmodule Engine.Harness.ContextManager.Default do
   defp assistant_with_tool_calls?(_), do: false
 
   defp compact(ctx, tokens_before, pinned, older, recent) do
-    summary = summarize(ctx, older)
+    {summary, origem_do_resumo, falha} = summarize(ctx, older)
 
     summary_msg = %{
       "role" => "system",
@@ -137,7 +142,12 @@ defmodule Engine.Harness.ContextManager.Default do
         tokensAfter: tokens_after,
         summary: summary,
         agent: Map.get(ctx, :agent),
-        messagesSummarized: length(older)
+        messagesSummarized: length(older),
+        # RN-702 (AT-366): de onde veio o resumo — `modelo` (o sumarizador
+        # respondeu) ou `deterministico` (ele falhou, e `falha` diz por quê,
+        # com origem). Nunca um marcador que finge ser resumo.
+        summaryOrigin: origem_do_resumo,
+        falha: falha
       }
     })
 
@@ -153,17 +163,63 @@ defmodule Engine.Harness.ContextManager.Default do
     messages = [%{"role" => "user", "content" => prompt(turnos)}]
 
     case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, @summarizer_agent, messages, []) do
-      {:ok, %{"message" => %{"content" => content}}} when is_binary(content) and content != "" ->
-        content
+      {:ok, %{"message" => %{"content" => content}}} when is_binary(content) ->
+        if String.trim(content) == "" do
+          {resumo_deterministico(older), "deterministico",
+           %{origem: "modelo", motivo: "o sumarizador devolveu resumo vazio"}}
+        else
+          {content, "modelo", nil}
+        end
 
-      _ ->
-        # Fallback determinístico se o sumarizador falhar: nunca perde o fio
-        # (mantém um resumo textual mínimo em vez de descartar tudo). Ele NÃO
-        # passa pelo template — é comportamento de código, não texto de prompt
-        # (o próprio `prompts/context-manager-summarize.md` declara isso).
-        "(#{length(older)} turnos anteriores omitidos)"
+      outro ->
+        # RN-702 (AT-366): o fallback era `"(N turnos anteriores omitidos)"` —
+        # um marcador que fingia ser resumo e apagava decisões e confirmações
+        # (medido na sessão 17d41c20: o Arquiteto pediu de novo o que acabara
+        # de receber). Agora a falha é NOMEADA, com origem, e o resumo é
+        # DETERMINÍSTICO: um trecho de cada turno substituído, sem LLM.
+        {resumo_deterministico(older), "deterministico", falha_do_sumarizador(outro)}
     end
   end
+
+  @trecho_por_turno 300
+
+  @doc false
+  # Exposta para o teste: o resumo de quando o sumarizador falha.
+  def resumo_deterministico(older) do
+    linhas =
+      Enum.map_join(older, "\n", fn m ->
+        "- #{Map.get(m, "role", "?")}: #{trecho(m)}"
+      end)
+
+    "Resumo determinístico (o sumarizador falhou; trecho de cada turno substituído):\n" <>
+      linhas
+  end
+
+  defp trecho(m) do
+    texto =
+      case Map.get(m, "content", "") do
+        c when is_binary(c) and c != "" -> c
+        _ -> tool_calls_json(m)
+      end
+      |> String.replace(~r/\s+/, " ")
+      |> String.trim()
+
+    if String.length(texto) > @trecho_por_turno,
+      do: String.slice(texto, 0, @trecho_por_turno) <> "…",
+      else: texto
+  end
+
+  defp falha_do_sumarizador({:error, :timeout}),
+    do: %{origem: "infra", motivo: "o sumarizador excedeu o tempo"}
+
+  defp falha_do_sumarizador({:error, %{"error" => %{"origin" => o} = e}}) when is_binary(o),
+    do: %{origem: o, motivo: Map.get(e, "message", "falha do sumarizador")}
+
+  defp falha_do_sumarizador({:error, motivo}),
+    do: %{origem: "infra", motivo: "o sumarizador falhou: #{inspect(motivo)}"}
+
+  defp falha_do_sumarizador(outro),
+    do: %{origem: "modelo", motivo: "resposta inesperada do sumarizador: #{inspect(outro)}"}
 
   # Grafo de conhecimento (ADR 0099/0101): resolve o template
   # `context-manager-summarize` do grafo quando a flag está ligada; qualquer
@@ -263,7 +319,7 @@ defmodule Engine.Harness.ContextManager.Default do
   defp window(ctx) do
     model_window =
       Map.get(ctx, :context_window) ||
-        Application.get_env(:engine, :default_context_window, 8192)
+        Application.get_env(:engine, :default_context_window, 128_000)
 
     min(model_window, transport_window_tokens())
   end

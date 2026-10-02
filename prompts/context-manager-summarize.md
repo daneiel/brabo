@@ -32,6 +32,8 @@ binding próprio), nunca o agente da sessão sendo compactada.
 
 Se a chamada ao modelo falhar ou devolver conteúdo vazio, o `.ex` original
 tem um fallback determinístico que NÃO passa por este template:
-`"(N turnos anteriores omitidos)"`, onde N é a contagem de turnos
-descartados. Esse fallback é comportamento de código, não texto de prompt
+`resumo_deterministico/1` (RN-702), com um trecho de cada turno
+substituído, e o `context.compacted` grava `summaryOrigin: "deterministico"`
+e a `falha` com origem. Até a RN-702 era o marcador
+`"(N turnos anteriores omitidos)"`, que fingia ser resumo. Esse fallback é comportamento de código, não texto de prompt
 — não foi extraído para cá.

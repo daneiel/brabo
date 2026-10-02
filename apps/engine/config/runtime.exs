@@ -211,7 +211,7 @@ config :engine,
   context_compaction_threshold:
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),
   # Janela de contexto assumida quando o modelo não informa uma.
-  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192")),
+  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "128000")),
   # Teto de TRANSPORTE (bytes do corpo HTTP de `POST .../llm-turn`), distinto
   # da janela do MODELO. A compactação deve disparar ANTES do corpo estourar
   # o limite HTTP da api — usar só `context_window` (128k tokens nos gates)
