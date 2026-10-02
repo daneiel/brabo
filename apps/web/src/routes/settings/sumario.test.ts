@@ -32,7 +32,7 @@ describe('registro de seções de Configurações', () => {
   });
 
   it('`ordemDaSecao` devolve a posição na ordem de render', () => {
-    expect(ordemDaSecao('repository')).toBe(0);
+    expect(ordemDaSecao('credentials')).toBe(0);
     expect(ordemDaSecao('key-spend')).toBe(SECOES_DE_CONFIGURACOES.length - 1);
   });
 

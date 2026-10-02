@@ -238,7 +238,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 
     // Avança sem digitar nada: é o comportamento de sempre.
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
     expect(createProject.mock.calls[0][1]).toEqual({
@@ -269,7 +269,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
       target: { value: '/home/voce/projetos/loja' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
     expect(createProject.mock.calls[0][1]).toEqual({
@@ -317,7 +317,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
       target: { value: '/home/voce/projetos/loja' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     expect(
       await screen.findByText(/não existe do lado de dentro da api/i),
@@ -387,7 +387,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(screen.getByText(/brabo-runner --project .*--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
     expect(createProject.mock.calls[0][1]).toEqual({
@@ -833,7 +833,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // destino+nome → confirm
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     // `createProject` já tinha sido chamado uma vez ao navegar — este
     // `waitFor` só confirma que o clique em "Provisionar" foi processado
@@ -909,7 +909,7 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
       target: { value: '  Loja  ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar projeto' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
     expect(createProject.mock.calls[0][1]).toEqual({
@@ -943,7 +943,7 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
     await ateWorkspace();
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    const provisionar = screen.getByRole('button', { name: 'Provisionar' });
+    const provisionar = screen.getByRole('button', { name: 'Criar projeto' });
     fireEvent.click(provisionar);
     fireEvent.click(provisionar);
 

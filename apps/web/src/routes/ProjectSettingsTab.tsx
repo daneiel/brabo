@@ -72,6 +72,11 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
         <SumarioDeConfiguracoes />
 
         <div className={styles.secoes}>
+          <CredentialsSection />
+          <CatalogoDeModelos projectId={projectId} />
+          <ModelsSection projectId={projectId} />
+          <AreaModelsSection projectId={projectId} />
+          <MelhoresModelosPorCapacidadeSection projectId={projectId} />
           <RepositorySection projectId={projectId} />
           <ExecutionSection projectId={projectId} />
           <ExecutionModeSection projectId={projectId} />
@@ -79,17 +84,12 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
           <BudgetSection projectId={projectId} />
           <PromotionSection projectId={projectId} />
           <ProjectLanguageSection projectId={projectId} />
-          <MelhoresModelosPorCapacidadeSection projectId={projectId} />
-          <ModelsSection projectId={projectId} />
-          <AreaModelsSection projectId={projectId} />
-          <CatalogoDeModelos projectId={projectId} />
           <MembersSection projectId={projectId} />
           <PersonalAccessTokensSection projectId={projectId} />
           <RunnerDeviceKeysSection projectId={projectId} />
           <ProficiencySection projectId={projectId} />
           <InstructionVersionsSection projectId={projectId} />
           <MatrixSection />
-          <CredentialsSection />
           <GastoDasChaves projectId={projectId} />
         </div>
       </div>

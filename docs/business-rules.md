@@ -6772,7 +6772,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:431`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:437`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -13275,9 +13275,9 @@ segunda conversão `runner → runner` que a próxima reconexão desfaria. Ofere
 botão seria um controle que não controla nada; a seção diz isso em texto
 ([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
 
-- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:285`
-  (`mostrarProximoPasso`), `:298` (`setConvertidoParaRunner`, a visita em que a
-  conversão salvou), `:452` (o bloco do próximo passo), `:466`
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:300`
+  (`mostrarProximoPasso`), `:313` (`setConvertidoParaRunner`, a visita em que a
+  conversão salvou), `:452` (o bloco do próximo passo), `:483`
   (`RunnerOnboardingPanel`, o mesmo da aba Código);
   `apps/web/src/locales/pt-BR/settings.json:249` e
   `apps/web/src/locales/en/settings.json:249` (`executionMode.nextStep.*`) e
@@ -17787,7 +17787,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:174` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:179` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -18052,7 +18052,7 @@ o do chat.
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:102` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:94` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
@@ -18301,7 +18301,7 @@ declarada no ADR 0126.
   (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:89`
   (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:59` (`movel`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:64` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
   (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
   fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
@@ -20402,7 +20402,7 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
   `apps/web/src/lib/models.ts:425` (`providersSemCatalogo`),
   `apps/web/src/lib/models.ts:441` (`algumModeloAtivo`),
-  `apps/web/src/components/ModelCatalogSection.tsx:313` (`ativarEAplicarAoTime`),
+  `apps/web/src/components/ModelCatalogSection.tsx:333` (`ativarEAplicarAoTime`),
   `apps/web/src/routes/settings/CredentialsSection.tsx:128` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
   (busca por id e sem resultado; ativar e aplicar, parcial, ativação recusada,
@@ -20753,3 +20753,34 @@ momento em que ele aparecer, antes de qualquer correção.
   ("RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0";
   o caso de falha evitado é o "alcançando o começo da sessão" ao lado)
 - **Origem:** AT-365
+
+### RN-708 — O projeto novo diz o próximo passo, derivado do que já se lê {#rn-708}
+
+A Visão geral de um projeto recém-criado não dizia o que fazer: sem chave de
+provedor, sem modelo e sem sessão, nada na tela apontava o caminho, e a
+credencial e o catálogo moravam no fim de Configurações (medido no teste real
+de 02/10, instalação nova). Desde a AT-372 a Visão geral abre com o cartão
+"Primeiros passos", com TRÊS passos, cada um com o link para o lugar exato:
+
+- **credencial** — a conta tem ao menos uma credencial de LLM (a mesma
+  leitura `['credentials']` da seção de Credenciais, com o frescor de
+  configuração e sem poll, RN-645). A Visão geral não fazia essa leitura, e a
+  carga dela tem orçamento: ela só roda quando o time ainda não tem modelo;
+  com modelo resolvido, o passo conta como coberto;
+- **modelo** — o binding resolvido do Criativo não é nulo (o lote da RN-654,
+  a mesma `queryKey` de Configurações);
+- **ideação** — o projeto tem ao menos uma sessão (a lista que a página já
+  polla).
+
+Nenhuma rota nova. Insumo ainda não lido (ou com erro) é "não sei" (RN-470), e
+o cartão NÃO aparece enquanto houver um — afirmar "falta credencial" sem ter
+lido seria a tela mentindo. Com os três feitos, ele some. Junto, a aba
+Configurações passou a abrir pelo grupo de modelos, com a credencial à frente,
+e o sumário acompanha a ordem.
+
+- **Onde:** `apps/web/src/lib/primeiros-passos.ts:37` (`derivarPrimeirosPassos`),
+  `apps/web/src/components/PrimeirosPassos.tsx:22` (`PrimeirosPassos`)
+- **Teste:** `apps/web/src/lib/primeiros-passos.test.ts` (caminho feliz e "insumo
+  não lido não vira pendente") e `apps/web/src/routes/ProjectOverviewTab.test.tsx`
+  ("primeiros passos (RN-708, AT-372)")
+- **Origem:** AT-372

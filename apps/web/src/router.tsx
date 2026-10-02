@@ -166,7 +166,10 @@ const loginRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/login',
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
-    oauthError: search.oauth_error === '1',
+    // `undefined`, nunca `false`: o router ESCREVE de volta na URL o que o
+    // `validateSearch` devolve, e `false` virava `?oauthError=false` na
+    // primeira tela de uma instalação nova, sem OAuth nenhum (AT-374).
+    oauthError: search.oauth_error === '1' ? true : undefined,
     proxima: typeof search.proxima === 'string' ? search.proxima : undefined,
   }),
   component: comCarga(LoginPageLazy, () => {

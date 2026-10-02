@@ -91,7 +91,10 @@
       "deactivated": "Models deactivated",
       "saveError": "Could not save",
       "usesUpdated": "Uses updated",
-      "aliasRefused": "Free-routing aliases cannot be curated"
+      "aliasRefused": "Free-routing aliases cannot be curated",
+      "syncCount_one": "{{count}} model came from the providers.",
+      "syncCount_other": "{{count}} models came from the providers.",
+      "syncActivateLink": "Activate a model →"
     },
     "empty": "No model in the catalog. Register a provider credential and update.",
     "freeRoutingAliasReason": "Showcase price: the bill comes from whichever upstream serves each call. A \"~\" alias cannot be activated — pick a model with a fixed upstream.",

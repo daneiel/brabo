@@ -92,7 +92,11 @@
       "deactivated": "Modelos desativados",
       "saveError": "Não foi possível salvar",
       "usesUpdated": "Usos atualizados",
-      "aliasRefused": "Alias de roteamento livre não entra na curadoria"
+      "aliasRefused": "Alias de roteamento livre não entra na curadoria",
+      "syncCount_zero": "Nenhum modelo veio dos provedores.",
+      "syncCount_one": "{{count}} modelo veio dos provedores.",
+      "syncCount_other": "{{count}} modelos vieram dos provedores.",
+      "syncActivateLink": "Ativar um modelo →"
     },
     "empty": "Nenhum modelo no catálogo. Cadastre uma credencial de provider e atualize.",
     "freeRoutingAliasReason": "Preço de vitrine: quem cobra é o upstream que atender cada chamada. Alias com \"~\" não pode ser ativado — escolha um modelo com upstream fixo.",

@@ -64,23 +64,27 @@
     "espelhoRessalvaErro": "O agente local reportou: {{erro}}",
     "espelhoDestinoTrocado": "O destino mudou depois desta rodada: ela escreveu em {{destino}}. Reconecte o brabo-runner para o novo valer.",
     "modelosLocais": "modelos locais",
-    "modelosLocaisNenhum": "nenhum modelo do Ollama ativo no workspace",
-    "modelosLocaisValor_zero": "{{count}} do Ollama, ativos no workspace",
-    "modelosLocaisValor_one": "{{count}} do Ollama, ativo no workspace",
-    "modelosLocaisValor_other": "{{count}} do Ollama, ativos no workspace"
+    "modelosLocaisNenhum": "nenhum modelo de conversa do Ollama ativo no workspace",
+    "modelosLocaisValor_zero": "{{count}} de conversa do Ollama, ativos no workspace",
+    "modelosLocaisValor_one": "{{count}} de conversa do Ollama, ativo no workspace",
+    "modelosLocaisValor_other": "{{count}} de conversa do Ollama, ativos no workspace",
+    "modelosLocaisEmbedding_zero": "{{count}} de embedding (só para a busca, não conversam)",
+    "modelosLocaisEmbedding_one": "{{count}} de embedding (só para a busca, não conversa)",
+    "modelosLocaisEmbedding_other": "{{count}} de embedding (só para a busca, não conversam)"
   },
   "activity": {
     "title": "Atividade",
     "count_zero": "{{count}} eventos",
     "count_one": "{{count}} evento",
     "count_other": "{{count}} eventos",
-    "loadErrorTitle": "Não foi possível carregar a atividade."
+    "loadErrorTitle": "Não foi possível carregar a atividade.",
+    "emptyNoSession": "Nenhuma atividade ainda: ela começa com a primeira sessão do projeto."
   },
   "executionSection": {
     "title": "Execução",
     "activationErrorTitle": "Não foi possível saber se a execução já foi ativada.",
     "introReady": "Ative a execução para os dev agents implementarem o backlog em paralelo.",
-    "introNeedsModuleMap": "Defina o module_map (Arquiteto) antes de ativar a execução.",
+    "introNeedsModuleMap": "Ainda não há o que ativar: o Arquiteto precisa definir os módulos do projeto antes.",
     "introNeedsRepository": "O projeto ainda não tem repositório, e sem ele os dev agents não têm onde trabalhar. Ele nasce quando você aceita o handoff ao Arquiteto — ou, se esse já foi aceito, o handoff ao Dev Lead.",
     "provisionNow": "Provisionar o repositório agora",
     "activate": "Ativar execução",
@@ -117,5 +121,25 @@
     "statusGenerated": "gerado",
     "statusPending": "pendente",
     "link": "Ver arquitetura completa →"
+  },
+  "primeirosPassos": {
+    "title": "Primeiros passos",
+    "progresso": "{{feitos}} de {{total}} feitos",
+    "feito": "Feito",
+    "credencial": {
+      "titulo": "Cadastrar uma chave de provedor de modelo",
+      "pendente": "Sem chave, os agentes não têm com o que conversar.",
+      "link": "Cadastrar a chave →"
+    },
+    "modelo": {
+      "titulo": "Ativar um modelo e aplicá-lo ao time",
+      "pendente": "Nenhum agente tem modelo ainda: ative um no catálogo e aplique a todos.",
+      "link": "Abrir o catálogo →"
+    },
+    "ideacao": {
+      "titulo": "Começar a primeira ideação",
+      "pendente": "Conte a ideia ao Criativo — é daí que saem as histórias.",
+      "link": "Abrir o Criativo →"
+    }
   }
 }

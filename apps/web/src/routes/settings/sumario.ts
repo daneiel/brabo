@@ -17,11 +17,10 @@
  * uma lista fora de ordem faria o sumário marcar uma seção enquanto a tela
  * mostra outra.
  *
- * Os quatro grupos (`projeto`, `modelos`, `pessoas`, `avancado`) caem
- * CONTÍGUOS sobre essa ordem — nenhuma seção mudou de lugar para caber num
- * grupo. Isso é deliberado: agrupar é uma leitura da ordem que já existia,
- * não uma reorganização da aba. Reordenar seção é mudança de produto, e não é
- * o que esta mudança faz.
+ * Os quatro grupos (`modelos`, `projeto`, `pessoas`, `avancado`) caem
+ * CONTÍGUOS sobre essa ordem. Desde a AT-372 `modelos` abre a aba, com a
+ * credencial do provedor à frente: é o que um projeto novo precisa antes de
+ * qualquer outra configuração (RN-708).
  *
  * ## O título tem UMA fonte
  *
@@ -33,7 +32,7 @@
  * aparecem em outras abas.
  */
 
-export const GRUPOS_DO_SUMARIO = ['projeto', 'modelos', 'pessoas', 'avancado'] as const;
+export const GRUPOS_DO_SUMARIO = ['modelos', 'projeto', 'pessoas', 'avancado'] as const;
 export type GrupoDoSumario = (typeof GRUPOS_DO_SUMARIO)[number];
 
 export interface DescricaoDeSecao {
@@ -47,6 +46,14 @@ export interface DescricaoDeSecao {
 }
 
 export const SECOES_DE_CONFIGURACOES = [
+  // AT-372: o que um projeto novo precisa PRIMEIRO — a chave do provedor e o
+  // modelo — abre a aba. A credencial deixou o grupo "avançado" para o de
+  // modelos: sem ela nenhum modelo de nuvem conversa.
+  { chave: 'credentials', grupo: 'modelos', ns: 'settings', titulo: 'credentials.title' },
+  { chave: 'model-catalog', grupo: 'modelos', ns: 'models', titulo: 'catalog.title' },
+  { chave: 'models', grupo: 'modelos', ns: 'settings', titulo: 'modelsSection.title' },
+  { chave: 'area-models', grupo: 'modelos', ns: 'settings', titulo: 'areaModels.title' },
+  { chave: 'best-models', grupo: 'modelos', ns: 'settings', titulo: 'bestModels.title' },
   { chave: 'repository', grupo: 'projeto', ns: 'settings', titulo: 'repository.title' },
   { chave: 'execution', grupo: 'projeto', ns: 'settings', titulo: 'execution.title' },
   { chave: 'execution-mode', grupo: 'projeto', ns: 'settings', titulo: 'executionMode.title' },
@@ -54,17 +61,12 @@ export const SECOES_DE_CONFIGURACOES = [
   { chave: 'budget', grupo: 'projeto', ns: 'settings', titulo: 'budget.title' },
   { chave: 'promotion', grupo: 'projeto', ns: 'settings', titulo: 'promotion.title' },
   { chave: 'project-language', grupo: 'projeto', ns: 'settings', titulo: 'projectLanguage.title' },
-  { chave: 'best-models', grupo: 'modelos', ns: 'settings', titulo: 'bestModels.title' },
-  { chave: 'models', grupo: 'modelos', ns: 'settings', titulo: 'modelsSection.title' },
-  { chave: 'area-models', grupo: 'modelos', ns: 'settings', titulo: 'areaModels.title' },
-  { chave: 'model-catalog', grupo: 'modelos', ns: 'models', titulo: 'catalog.title' },
   { chave: 'members', grupo: 'pessoas', ns: 'settings', titulo: 'members.title' },
   { chave: 'access-tokens', grupo: 'pessoas', ns: 'settings', titulo: 'personalAccessTokens.title' },
   { chave: 'device-keys', grupo: 'pessoas', ns: 'settings', titulo: 'runnerDeviceKeys.title' },
   { chave: 'proficiency', grupo: 'pessoas', ns: 'settings', titulo: 'proficiency.title' },
   { chave: 'instructions', grupo: 'avancado', ns: 'settings', titulo: 'instructionVersions.title' },
   { chave: 'approval-matrix', grupo: 'avancado', ns: 'settings', titulo: 'matrix.title' },
-  { chave: 'credentials', grupo: 'avancado', ns: 'settings', titulo: 'credentials.title' },
   { chave: 'key-spend', grupo: 'avancado', ns: 'models', titulo: 'spend.title' },
 ] as const satisfies readonly DescricaoDeSecao[];
 

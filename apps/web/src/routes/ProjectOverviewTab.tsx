@@ -41,6 +41,8 @@ import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
+import { PrimeirosPassos } from '../components/PrimeirosPassos';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -62,7 +64,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const movel = useLayoutMovel();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { latest: latestSession } = useLatestSession(projectId);
+  const sessoesQuery = useLatestSession(projectId);
+  const latestSession = sessoesQuery.latest;
   const sessionId = latestSession?.id;
   // ESTADO ATUAL — a cauda em poll, que alimenta a roster, a árvore e a
   // seção de execução. Continua `latest` de propósito: as três perguntam
@@ -248,6 +251,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   return (
     <div className={[styles.layout, movel && styles.layoutMovel].filter(Boolean).join(' ')}>
       <div className={styles.main}>
+        {/* RN-708: o próximo passo de um projeto novo, enquanto faltar. */}
+        <PrimeirosPassos
+          projectId={projectId}
+          temSessao={sessoesQuery.data ? !!latestSession : undefined}
+        />
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
           <span className={styles.sectionCount}>
@@ -324,6 +332,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             erro={historico.error}
             onTentarDeNovo={historico.refetch}
           />
+        ) : sessoesQuery.data && !sessionId ? (
+          // Sem sessão a consulta do histórico nem roda (`enabled: false`), e
+          // o `isPending` dela é eterno: o esqueleto ficava parado ao lado de
+          // "0 eventos". Sem sessão o vazio é um fato, e se diz (AT-372).
+          <EmptyState>{t('activity.emptyNoSession')}</EmptyState>
         ) : historico.isPending ? (
           <Skeleton height={180} />
         ) : (
@@ -519,13 +532,14 @@ function ExecutionSection({
               {t('executionSection.provisionNow')}
             </Link>
           )}
-          <Button
-            variant="primary"
-            onClick={handleActivate}
-            disabled={!hasModuleMap || semRepositorio}
-          >
-            {t('executionSection.activate')}
-          </Button>
+          {/* AT-372: sem mapa de módulos não há o que ativar — o botão some e
+              fica o motivo em texto, acima. Com o mapa e sem repositório ele
+              segue inerte ao lado do link que resolve. */}
+          {hasModuleMap && (
+            <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
+              {t('executionSection.activate')}
+            </Button>
+          )}
         </div>
       ) : (
         <>
