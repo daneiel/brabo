@@ -1155,9 +1155,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   quatro que a base do kustomize declara. A imagem de
   DEV instala as dependências no BUILD e NUNCA em runtime, e isso é
   consequência direta da rede: sem egress não há registry alcançável, e a
-  resposta a "o corepack/pnpm não baixa" é SEMPRE tirar o registry do caminho
-  quente (`COREPACK_HOME` preparado no build, com o dono do uid de runtime;
-  `pnpm install` como passo de build), NUNCA dar rede ao serviço. Os TRÊS
+  resposta a "o pnpm não baixa" é SEMPRE tirar o registry do caminho quente
+  (o pnpm instalado no build em `/usr/local/bin`, do tarball do registry
+  conferido contra o sha512 gravado no Dockerfile, na MESMA versão do
+  `packageManager` — sem corepack, que o Node 25+ não traz (AT-360); `pnpm
+  install` como passo de build), NUNCA dar rede ao serviço. Os TRÊS
   volumes nomeados de `node_modules` são montados por cima do que a imagem
   instalou, e o Docker só semeia volume VAZIO — então
   `docker/broker/entrypoint.sh` reconcilia os três contra uma cópia guardada
