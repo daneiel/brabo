@@ -6,11 +6,13 @@
 # existe (`bin/engine eval`), já que `mix ecto.migrate` não está disponível.
 
 # ---------------------------------------------------------------------------
-# Estágio 1: builder. Mesma base pinada do dev (Elixir 1.17.3 / OTP 27.1.2 /
-# Alpine 3.20.3) — a versão do Alpine tem que casar com a do runtime, porque o
+# Estágio 1: builder. Elixir 1.17.3 como o dev; OTP 27.3.4.18 / Alpine 3.24.2
+# (AT-361: o hexpm não publica OTP 27.1.2 sobre Alpine 3.24, então o OTP subiu
+# de patch DENTRO do 27, e o dev segue em 27.1.2/3.20.3). Builder e runtime
+# sobem JUNTOS — a versão do Alpine tem que casar com a do runtime, porque o
 # ERTS embarcado no release é linkado contra a musl desta imagem.
 # ---------------------------------------------------------------------------
-FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255 AS builder
+FROM hexpm/elixir:1.17.3-erlang-27.3.4.18-alpine-3.24.2@sha256:865b64a46c37e7f1e8daac25c108545550a02369ec180edf4730b30b5af501b2 AS builder
 
 # build-base: compilar as NIFs das deps nativas.
 # hadolint ignore=DL3018
@@ -38,7 +40,7 @@ RUN mix compile --warnings-as-errors && mix release
 # Estágio 2: runtime. Alpine puro — o ERTS vem no release, não precisa de
 # Erlang/Elixir instalados.
 # ---------------------------------------------------------------------------
-FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
+FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runtime
 
 # Versões PINADAS de todo binário externo. Os valores são os que já rodam no
 # container de dev hoje — não são escolhas novas.
