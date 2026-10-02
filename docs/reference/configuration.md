@@ -112,6 +112,18 @@ it writes four lines, together or not at all:
 `BRABO_PROJECTS_BASE`, as in the validation compose. Turning it on or off later
 is in the [runbook](../runbook.md#broker-na-instalacao).
 
+The **local models** (Ollama, the `llm` profile) are asked about right after
+the broker ([RN-691](../business-rules.md#rn-691)). Answering "s" measures a
+free host port first and writes:
+
+| variable | what `install.sh` writes |
+|---|---|
+| `OLLAMA_PORT` | `11434`, or the first free port up to `11443` when something (a native Ollama) already listens there; the whole range busy is a named refusal, nothing written |
+| `COMPOSE_PROFILES` | `llm`, joined with `container-broker` on ONE line when both were accepted (`container-broker,llm`) — two lines would not add up, the last one wins |
+
+Without them the semantic duplicate check is skipped. Turning them on later is
+in the [runbook](../runbook.md#modelos-locais-na-instalacao).
+
 
 ## api
 

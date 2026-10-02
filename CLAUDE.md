@@ -252,6 +252,7 @@ estado lido do repositório e não da conversa.
 | A dica de abertura fica no fio até a primeira mensagem, e os campos da sessão não convidam o autofill (AT-353) | RN-693 |
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
 | A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
+| O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
 
 ## Estado atual e aberto
 
