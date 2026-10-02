@@ -34,7 +34,7 @@
     "autonomy": {
       "manual": "manual",
       "auto": "auto",
-      "autoModeHint": "Auto mode: runs any command, even outside the project folder. Push, PR, deploy, sudo/doas and merges into a protected branch still ask for your approval."
+      "autoModeHint": "Auto mode: runs any command, even outside the project folder. git push and PR are released; deploy, sudo/doas and merges into a protected branch still ask for your approval."
     },
     "rearm": "rearm"
   },
@@ -115,12 +115,13 @@
       "commands": "any command inside the project's container, even with a path outside the project folder",
       "compound": "compound commands with a segment that has no rule in permissions.json",
       "commitBranch": "git commit and creating a LOCAL branch",
+      "pushPr": "git push and opening a PR",
       "alwaysAllow": "clicking \"Always allow\" on this agent does not turn the autopilot off"
     },
     "notReleased": {
       "title": "Auto mode does NOT release — these still ask for your approval:",
       "merge": "merge into a protected branch (dev, qa, main)",
-      "push": "git push, opening a PR and deploy",
+      "push": "deploy",
       "privileged": "sudo and doas",
       "containerRemove": "removing a container (container_remove)",
       "instructionPatch": "changing an agent's instructions (instruction_patch)",

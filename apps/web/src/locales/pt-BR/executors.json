@@ -35,7 +35,7 @@
     "autonomy": {
       "manual": "manual",
       "auto": "auto",
-      "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. Push, PR, deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
+      "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. git push e PR ficam liberados; deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
     },
     "rearm": "rearmar"
   },
@@ -119,12 +119,13 @@
       "commands": "qualquer comando dentro do container do projeto, mesmo com caminho fora da pasta do projeto",
       "compound": "comando composto com segmento sem regra no permissions.json",
       "commitBranch": "git commit e criar branch LOCAL",
+      "pushPr": "git push e abertura de PR",
       "alwaysAllow": "clicar \"Sempre permitir\" neste agente não desliga o piloto"
     },
     "notReleased": {
       "title": "O modo automático NÃO libera — estes continuam pedindo sua aprovação:",
       "merge": "merge em branch protegida (dev, qa, main)",
-      "push": "git push, abertura de PR e deploy",
+      "push": "deploy",
       "privileged": "sudo e doas",
       "containerRemove": "remover container (container_remove)",
       "instructionPatch": "mudar instrução de agente (instruction_patch)",

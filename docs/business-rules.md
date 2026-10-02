@@ -486,7 +486,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:472` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:498` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -4091,6 +4091,9 @@ relações em si.
 ---
 
 ### RN-418 — Efeito externo git e comando privilegiado (sudo/doas) viram teto absoluto, nunca `deny` {#rn-418}
+
+**Revisada pela [RN-713](#rn-713)** (AT-385, 02/10): com o modo automático
+(a curinga em `auto_approve`), push e PR são auto-aprovados.
 
 **Revisada pela [RN-689](#rn-689)** (AT-347, decisão do dono de 01/10): o teto
 abaixo vale também para as ações TIPADAS `git_push` e `pr_open`, que até ali
@@ -13764,8 +13767,8 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
   `apps/api/src/domain/actions/decide.ts:278` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:931` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:987` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
+  `:940` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:1039` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -15955,12 +15958,12 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
   (`segmentoSobABaseDeProjetos`, reusada);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:274`
   (`scopeRoot` só em `terminal`);
-  `apps/api/src/domain/actions/decide.ts:578` (`terminalNoEscopo`, o único
+  `apps/api/src/domain/actions/decide.ts:604` (`terminalNoEscopo`, o único
   consumidor do escopo)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1083`
-  (`container`), `:1098` (`mounted`), `:1114` (`runner`), `:1123` (o caminho
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1135`
+  (`container`), `:1115` (`mounted`), `:1114` (`runner`), `:1123` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
-  da base), `:1153` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
+  da base), `:1205` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
   campo), `:1183` (evento anterior, sem o campo, pela mesma leitura);
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
   (a função pura, nos três modos e nos três casos de `indisponivel`)
@@ -19100,7 +19103,7 @@ existe.
 - **Código:** `apps/api/src/domain/actions/path-scope.ts:153` (`cwdNoContainer`),
   `:174` (`comandoNoEscopoDoContainer`), `:112` (`comandoNoEscopo`, agora com
   várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
-  `apps/api/src/domain/actions/decide.ts:275` (`execucaoNoContainer`), `:590`
+  `apps/api/src/domain/actions/decide.ts:275` (`execucaoNoContainer`), `:616`
   (`execucaoNoContainer`, em `terminalNoEscopo`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:170`
   (`containerExecutionActive`, separado de `execucaoNoContainer`)
@@ -19261,12 +19264,12 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
-  (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
+  (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
 
   `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
-  (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
+  (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
   `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:473`;
   `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
@@ -20217,6 +20220,9 @@ sem consumidor de produção e NÃO foi removido — é decisão à parte.
 
 ### RN-689 — `git_push` e `pr_open` tipados nunca são auto-aprováveis: o teto da RN-418 vale para o comando E para a ação {#rn-689}
 
+**Revisada pela [RN-713](#rn-713)** (AT-385, 02/10): o modo automático (a
+curinga em `auto_approve`) passa a liberar `git_push` e `pr_open`.
+
 Revisa a [RN-418](#rn-418), por decisão do dono (01/10). Até aqui o teto de
 efeito externo de `decide()` só olhava `actionType === 'terminal'`: o
 `git push` DIGITADO virava `require_approval`, e a mensagem mandava usar a ação
@@ -20253,7 +20259,7 @@ bootstrap (`git_repo_create`/`git_branch_create`/`git_branch_protect`, que não
 passam por `decide()`); e `deploy`, que não é tipo de `proposed_action` — só
 existe como destino da mensagem do comando de terminal.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:406` (`ehAcaoTipadaComEfeitoExterno`);
+- **Onde:** `apps/api/src/domain/actions/decide.ts:414` (`ehAcaoTipadaComEfeitoExterno`);
   `apps/api/src/domain/actions/external-effect.ts:258`
   (`ACOES_TIPADAS_COM_EFEITO_EXTERNO`), `:266` (`ehAcaoTipadaComEfeitoExterno`),
   `:280` (`mensagemDoTetoDaAcaoTipada`);
@@ -21090,3 +21096,40 @@ decisão, fechados juntos:
 - **Lacuna declarada:** a api não confere que a evidência existe; a leitura é
   por consulta ao event log, sem tela ([ADR 0205](adr/0205-desvio-do-agente-como-sinal-do-produto.md)).
 - **Origem:** AT-356 (parte 2), decisão do dono de 02/10
+
+## O modo automático libera push e PR (RN-713)
+
+### RN-713 — Com o modo automático do agente, `git_push` e `pr_open` são auto-aprovados; só a curinga libera {#rn-713}
+
+Revisa a [RN-418](#rn-418) e a [RN-689](#rn-689), só na metade de push e PR,
+por decisão do dono (02/10, AT-385). Com a curinga `agent_autonomy`
+`actionType: "*"` em `auto_approve` (o modo automático,
+[RN-153](business-rules/autenticacao.md#rn-153), o piloto da [RN-670](#rn-670)),
+`git_push` e `pr_open` tipados e o mesmo efeito pelo comando de terminal
+(`git push`, `git remote add/set-url`, `gh pr create`, `glab mr create`) saem
+`auto_approve`, com o motivo "modo automático (RN-713)" no
+`proposed_action.created` ([RN-567](#rn-567)).
+
+Só a curinga libera: regra específica `auto_approve` sem ela, "Sempre
+permitir" (recusado na fonte, [RN-642](#rn-642)) e `allow` no `permissions.json`
+seguem no teto da RN-418, e a ativação continua semeando só `git_commit`.
+Seguem teto absoluto mesmo em modo automático: merge (tipado em branch
+protegida, e `git merge`/`gh pr merge` pelo terminal), deploy, `sudo`/`doas`,
+`container_remove`, `instruction_patch` e paralelismo. O toggle em manual
+restaura a aprovação.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts:296` (`modoAutomaticoDoAgente`),
+  `:311` (`decide`); `apps/api/src/domain/actions/external-effect.ts:294`
+  (`mensagemDoModoAutomaticoNoEfeitoExterno`);
+  `apps/web/src/components/OQueOPilotoLibera.tsx`
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts` (o piloto libera
+  `git push`/`gh pr create` e os tipados; `git merge`, `gh pr merge` e `sudo`
+  seguem `require_approval`; específica e `allow` sem curinga seguem no teto;
+  curinga em `require_approval` pede aprovação — casos de falha);
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  (com Postgres: auto-aprovados e executados, motivo no evento; específica
+  sozinha nasce `pending`); `apps/web/src/components/ModoAutomaticoDoTime.test.tsx`,
+  `AgentCard.test.tsx`, `ApprovalCard.test.tsx` (a tela diz que push e PR são
+  liberados)
+- **Decisão arquitetural:** [ADR 0204](adr/0204-modo-automatico-libera-push-e-pr.md)
+- **Origem:** AT-385, decisão do dono em 02/10

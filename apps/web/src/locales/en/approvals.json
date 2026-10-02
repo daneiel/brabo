@@ -138,8 +138,8 @@
       "alwaysAllow": "Always allow: records, in the project's .brabo/permissions.json, one rule per command segment, by verb + subcommand (e.g. \"npm test\", \"git status\") — the next command with the same verb and subcommand runs without asking.",
       "alwaysAllowTyped": "Always allow: records, in the project's .brabo/permissions.json, one rule for this action type — the next one of the same type runs without asking.",
       "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
-      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
-      "autoModeTyped": "Auto mode: {{actor}}'s next actions are approved without asking. git push, PR, deploy, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder, including git push and opening a PR. Deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoModeTyped": "Auto mode: {{actor}}'s next actions are approved without asking, including git push and opening a PR. Deploy, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."
     },
     "decided": {
