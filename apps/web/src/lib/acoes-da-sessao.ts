@@ -33,8 +33,14 @@ export function juntarCaudaEPendentes(
 ): ProposedAction[] {
   const porId = new Map<string, ProposedAction>();
   for (const acao of pendentes) porId.set(acao.id, acao);
-  // A cauda vence: se a mesma ação veio nas duas, a leitura mais completa é
-  // a da cauda (a de pendentes pode ter sido feita um instante antes).
+  // A cauda vence o empate, e NÃO por ser a leitura mais nova: ela é feita
+  // ANTES (`buscarAcoesDaSessao` só pergunta pelas pendentes depois de ver a
+  // cauda cheia). Vencer é inócuo porque o status só SAI de `pending`, nunca
+  // volta (AT-365): uma ação que aparece nas duas leituras estava `pending`
+  // na de pendentes, e portanto também estava `pending` na cauda, lida um
+  // instante antes — as duas cópias dizem o mesmo. Se a ação foi decidida
+  // entre as duas leituras, ela não vem nas pendentes e não há empate; a cauda
+  // a mostra ainda pendente, e o próximo poll corrige.
   for (const acao of cauda) porId.set(acao.id, acao);
   return [...porId.values()].sort((a, b) => a.seq - b.seq);
 }
