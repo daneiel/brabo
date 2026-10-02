@@ -1250,6 +1250,22 @@ the same way. Semgrep still fetches its rules from the
 registry: without egress the scan fails with `scan_failed`, which is a
 different cause.
 
+A `scan_failed` can also come from a semgrep **without `semgrep-core`**, the
+binary that does the scanning:
+
+```bash
+docker exec brabo-dev-engine-1 semgrep --version   # dev compose
+docker exec brabo-dev-engine-1 sh -c 'semgrep --config p/security-audit --json --quiet --metrics=off /tmp >/dev/null'
+# "Failed to find semgrep-core in PATH or in the semgrep package." (exit 2)
+```
+
+Semgrep 1.179.0 stopped publishing `musllinux` wheels, so on the Alpine engine
+image pip builds it from the sdist and the core binary is missing. Both engine
+Dockerfiles pin `SEMGREP_VERSION=1.171.0` (the dev one since 02/10, held equal
+to production by `scripts/ci/semgrep-do-engine.spec.ts`); a dev image built
+before that rebuilds with `docker compose -p brabo-dev up -d --build engine`.
+Raising the version needs a release that has a `musllinux` wheel on PyPI.
+
 ### CORS error {#erro-de-cors}
 
 The browser's message names the **destination** of the call, never the
