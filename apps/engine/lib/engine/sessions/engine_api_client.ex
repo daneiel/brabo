@@ -7,6 +7,7 @@ defmodule Engine.Sessions.EngineApiClient do
   alias Engine.Harness.IdiomaDaResposta
   alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.PerfilDoAutor
+  alias Engine.Harness.FluxoDoTime
   alias Engine.Harness.RoteamentoDeFerramenta
 
   @callback report_termination(
@@ -628,10 +629,15 @@ defmodule Engine.Sessions.EngineApiClient do
   #
   # RN-680 (ADR 0196): os fatos do perfil do AUTOR do turno entram pelo mesmo
   # lugar, ANTES do idioma — que continua sendo a última mensagem.
+  #
+  # RN-711: o fluxo do time (onde o conversacional está, o próximo passo e
+  # quem o dispara, `Engine.Harness.FluxoDoTime`) entra depois do ambiente e
+  # antes do perfil.
   def llm_turn(project_id, session_id, agent, messages, tools) do
     enviadas =
       messages
       |> AmbienteDoAgente.anexar(agent)
+      |> FluxoDoTime.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -703,6 +709,7 @@ defmodule Engine.Sessions.EngineApiClient do
     enviadas =
       messages
       |> AmbienteDoAgente.anexar(agent)
+      |> FluxoDoTime.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 

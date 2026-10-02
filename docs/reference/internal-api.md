@@ -328,6 +328,14 @@ Capped at 1 200 characters; a failed read leaves it out. The api treats it as
 any other system message and meters its tokens like the rest. The request
 body does not change.
 
+Since [RN-711](../business-rules.md#rn-711) the calls of the seven
+conversational agents carry ONE more ephemeral `role: "system"` message, after
+the environment one and BEFORE the author profile and the language guidance:
+the delivery flow, built by `Engine.Harness.FluxoDoTime` — the seven steps in
+order, where the agent is, the real next step and who triggers it (human or
+system). Same text for every turn of the same agent; never stored in the
+agent's history. The request body does not change.
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain

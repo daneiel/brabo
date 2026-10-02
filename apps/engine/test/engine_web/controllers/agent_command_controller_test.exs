@@ -458,7 +458,9 @@ defmodule EngineWeb.AgentCommandControllerTest do
 
       assert conn.status == 202
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
-      assert %{"role" => "user"} = List.last(enviado)
+      # RN-711: sem idioma, a última é o fluxo do time, logo depois da fala.
+      assert %{"role" => "system", "content" => "Fluxo de entrega" <> _} = List.last(enviado)
+      assert %{"role" => "user"} = Enum.at(enviado, -2)
     end
 
     # RN-680 (ADR 0196): os fatos do perfil do autor viajam no mesmo comando e
@@ -495,7 +497,8 @@ defmodule EngineWeb.AgentCommandControllerTest do
       assert conn.status == 202
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
       assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
-      assert %{"role" => "user"} = Enum.at(enviado, -2)
+      assert %{"role" => "system", "content" => "Fluxo de entrega" <> _} = Enum.at(enviado, -2)
+      assert %{"role" => "user"} = Enum.at(enviado, -3)
     end
   end
 

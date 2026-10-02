@@ -14412,7 +14412,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1059`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1050`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14621,7 +14621,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:928` (`avisar_canal`);
+  `:607`, `:630`, `:938` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14803,7 +14803,7 @@ fechada seguem mostrando a mensagem da api.
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1014`
-  (`narrar_recusa_de_sessao_encerrada`), `:1308` (`pendencia_da_resposta`);
+  (`narrar_recusa_de_sessao_encerrada`), `:1318` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15792,7 +15792,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1784` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1774` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15876,7 +15876,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1736` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1746` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16819,8 +16819,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:634`
-  (`IdiomaDaResposta`), `:704` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:642`
+  (`IdiomaDaResposta`), `:714` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16917,8 +16917,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:260` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:634`
-  (`IdiomaDaResposta`), `:704` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:642`
+  (`IdiomaDaResposta`), `:714` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17181,8 +17181,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:630`
-  (`llm_turn`), `:700` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:636`
+  (`llm_turn`), `:708` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17886,7 +17886,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:273`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1105`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1115`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -20562,6 +20562,47 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   conta; `z` apaga depois da prova e deixa `MIGRAR_DE` vazio; Enter não apaga —
   caso de falha; a frase do ADR 0118 não volta)
 - **Origem:** AT-358
+
+### RN-711 — O conversacional sabe onde está no fluxo, e a restrição técnica do usuário vira decision_record {#rn-711}
+
+- **Regra:** os sete agentes conversacionais (Criativo, PO, Arquiteto, Infra,
+  Dev Lead, UX Designer, Staff) recebem em toda chamada de LLM uma mensagem
+  `system` EFÊMERA com o fluxo de entrega — as sete etapas na ordem (Criativo →
+  PO → Arquiteto → Infra → Dev Lead → dev agents → QA/SecOps → merge manual),
+  ONDE o agente está, o PRÓXIMO passo real e QUEM o dispara (humano ×
+  sistema) —, pela fachada `EngineApiClient`, depois do ambiente (RN-706) e
+  antes do perfil (RN-680) e do idioma (RN-622, sempre o último). A fonte é
+  UMA, `Engine.Harness.FluxoDoTime`, conferida por teste contra
+  `docs/fluxo.yml`: todo papel citado existe ali como `active`, e o texto não
+  cita etapa fora dele (deploy, pipeline, Dockerfile, InfraAgent). O Criativo
+  registra restrição técnica EXPLÍCITA do usuário (linguagem, "nenhuma
+  dependência", "sem rede", "um módulo só") como `decision_record`
+  (`emit_artifact`, RN-505), sem sermão; o kickoff do Arquiteto lê os
+  `artifact.decision_record` da sessão (a mesma leitura por tipo, RN-580) e
+  manda respeitá-los, dizendo QUAL e POR QUÊ quando contrariar. O fechamento do
+  Arquiteto não pede de novo a confirmação já dada, e a Infra não cola os
+  arquivos no chat nem promete deploy.
+- **Medição (AT-369/AT-370, 02/10, loja-teste):** o Criativo anunciou o
+  Arquiteto como próximo (é o PO); o PO disse que o Arquiteto ia "implementar";
+  o Arquiteto, que "dev agents começam" após os ADRs, e pediu "Confirme:
+  Arquitetura pronta" depois da confirmação; a Infra despejou ~80 linhas de
+  compose no fio. O pedido "Node puro, nenhuma dependência, sem rede, um módulo
+  só" não virou artefato e o Arquiteto criou três módulos.
+- **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:636`
+  (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:367` (`build_kickoff`)
+- **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
+  ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
+  texto cita etapa/agente fora do fluxo"),
+  `apps/engine/test/engine/agents/arquiteto_server_test.exs` ("kickoff lê os
+  decision_record e manda respeitar \"um módulo só\""),
+  `apps/engine/test/engine/harness/agents_test.exs`
+- **Lacuna declarada:** a leitura de `decision_record` do Arquiteto é da
+  SESSÃO (como as regras e as histórias do kickoff), não do projeto inteiro; e
+  nada RECUSA um `create_module_map` que contrarie a restrição — a instrução
+  pede a justificativa, não a impõe.
+- **Origem:** AT-369, AT-370
 
 ### RN-706 — O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo {#rn-706}
 

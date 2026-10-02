@@ -244,6 +244,7 @@ estado lido do repositório e não da conversa.
 | O Workflows não é delegado sem CI que rode, e não pergunta a ninguém (AT-368) | RN-710 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
 | O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo (AT-379/AT-378) | RN-706 |
+| Os conversacionais dizem o fluxo real, e a restrição técnica do usuário vira decision_record (AT-369/AT-370) | RN-711 |
 | O merge do repositório local é merge de verdade, e conflito é recusa nomeada (AT-377) | RN-704 |
 | A recusa de merge aparece na aba PRs, a falha grava o tipo da ação e a PR local ganha autor (AT-383/AT-382) | RN-705 |
 | A compactação de contexto não troca turnos por um marcador vazio, e a janela padrão vai a 128k (AT-366) | RN-702 |
@@ -2167,6 +2168,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `/work/...` só com container `running`, imagem e rede do
   `artifact.project_image`, git só tipado, o módulo e seus contratos) para
   `dev-*` e `qa-*`. Não repita esses fatos em prompt de servidor.
+- O FLUXO do time chega aos sete conversacionais pelo MESMO caminho (RN-711),
+  depois do ambiente e antes do perfil e do idioma: `Engine.Harness.FluxoDoTime`
+  é a fonte ÚNICA (etapas, próximo passo, quem dispara), conferida por teste
+  contra `docs/fluxo.yml`. Não narre o fluxo em prompt de servidor; etapa nova
+  ou passagem que muda entra ali. Restrição técnica explícita do usuário vira
+  `decision_record` do Criativo, e o kickoff do Arquiteto a lê.
 - O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
   PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
   resposta `confirm` grava `users.detected_language`; `decline` grava em

@@ -308,6 +308,14 @@ rules:
     severity: warn
     note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
 
+  # RN-711 — o fluxo do time como mensagem efêmera dos conversacionais.
+  - id: fluxo-do-time
+    watch:
+      - "apps/engine/lib/engine/harness/fluxo_do_time.ex"
+    docs: ["docs/business-rules.md", "docs/reference/internal-api.md"]
+    severity: warn
+    note: "Mudou o fluxo que os conversacionais recebem: atualizar a RN-711 e a mensagem descrita na internal-api."
+
   - id: recusas-locais-de-proposta
     watch:
       - "apps/engine/lib/engine/infra/infra_lead_server.ex"
