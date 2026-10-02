@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   parseMarkdown,
@@ -26,6 +26,12 @@ const CLASSE_POR_TOKEN: Record<TokenKind, string> = {
  *  estética de `$ comando` que `ApprovalCard` já usa pra ação `terminal`
  *  (RN-158): fundo `--code-bg`, prompt `$` por linha não vazia. */
 const LINGUAGENS_DE_TERMINAL = new Set(['sh', 'bash']);
+
+/** RN-712: bloco de código acima disto nasce RECOLHIDO — um docker-compose de
+ *  80 linhas despejado no fio empurrava a conversa para fora da tela. */
+const LIMITE_DE_LINHAS_DO_BLOCO = 20;
+/** Quantas linhas o bloco recolhido ainda mostra. */
+const LINHAS_DO_BLOCO_RECOLHIDO = 8;
 
 function renderInline(nodes: MdInline[]): ReactNode {
   return nodes.map((n, i) => {
@@ -71,6 +77,10 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
   const terminal = LINGUAGENS_DE_TERMINAL.has(linguagem);
   const linhasFonte = content.split('\n');
   const linhasRealcadas = highlightFile(content, linguagem);
+  const longo = linhasFonte.length > LIMITE_DE_LINHAS_DO_BLOCO;
+  const [aberto, setAberto] = useState(false);
+  const visiveis =
+    longo && !aberto ? linhasRealcadas.slice(0, LINHAS_DO_BLOCO_RECOLHIDO) : linhasRealcadas;
 
   return (
     <div className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
@@ -79,7 +89,7 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
       </div>
       <pre className={styles.fencePre}>
         <code>
-          {linhasRealcadas.map((tokens, i) => (
+          {visiveis.map((tokens, i) => (
             <div key={i} className={styles.fenceLinha}>
               {terminal && (
                 <span className={styles.fencePrompt} aria-hidden="true">
@@ -98,6 +108,18 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
           ))}
         </code>
       </pre>
+      {longo && (
+        <button
+          type="button"
+          className={styles.fenceAlternar}
+          aria-expanded={aberto}
+          onClick={() => setAberto((a) => !a)}
+        >
+          {aberto
+            ? t('markdownMessage.codeFence.recolher')
+            : t('markdownMessage.codeFence.mostrarLinhas', { count: linhasFonte.length })}
+        </button>
+      )}
     </div>
   );
 }

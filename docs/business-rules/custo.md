@@ -328,7 +328,7 @@ signifique alguma coisa. A alternativa — preçar por upstream — foi recusada
   `apps/api/src/application/use-cases/llm/set-models-active.use-case.ts:59` (`AliasDeRoteamentoLivreError`),
   `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts:67` (`freeRoutingAlias`),
   `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:60` (`code`),
-  `apps/web/src/components/ModelCatalogSection.tsx:688` (`recusaDeAliasLivre`)
+  `apps/web/src/components/ModelCatalogSection.tsx:693` (`recusaDeAliasLivre`)
 - **Test:** `test/application/use-cases/llm/set-models-active.use-case.spec.ts`
   (lote recusado inteiro com código e ids; upstream fixo ativa; `~` fora do
   OpenRouter ativa; alias curado antes da regra segue ativo, marcado, desliga

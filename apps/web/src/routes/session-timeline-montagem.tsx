@@ -41,6 +41,7 @@ import { StorySlide } from './StorySlide';
 import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
 import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
+import { ecosDeRespostaEstruturada } from '../lib/eco-de-formulario';
 import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 import { estadosNaFila } from '../lib/fila-de-mensagens';
@@ -389,6 +390,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   // RN-673: o estado de cada mensagem na fila de um agente — derivado do log
   // UMA vez por montagem, como o engine o deriva.
   const filaDasMensagens = estadosNaFila(events);
+  // RN-712: a resposta de um formulário estruturado chega ao agente também
+  // como `chat.message` do usuário (a api reenvia as respostas como texto).
+  // O card respondido já as mostra — a bolha repetida sai do fio.
+  const ecosDeFormulario = ecosDeRespostaEstruturada(events);
 
   for (const event of events) {
     // RN-695 (AT-355): a Anamnese NÃO fala no fio. A análise dela é sobre a
@@ -417,7 +422,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         ...entry,
       });
 
-    if (event.type === 'chat.message') {
+    if (event.type === 'chat.message' && ecosDeFormulario.has(event.id)) {
+      continue;
+    } else if (event.type === 'chat.message') {
       const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
       // RN-652 (AT-329): o autor é o ATOR do evento — pessoa, agente ou
       // desconhecido —, nunca quem está vendo a tela.

@@ -17,6 +17,7 @@
     "autorDesconhecido": "Unknown author"
   },
   "topbar": {
+    "iniciadaAs": "started at {{hora}}",
     "voltarAoProjeto": "Back to project",
     "nomeDaSessao": "Session name",
     "semNomeFicaHashtag": "No name — the session stays {{hashtag}}",
@@ -106,6 +107,7 @@
     "infraTitulo": "{{de}} handed off to Infra",
     "infraDetalhe": "Accepting activates the Infra Lead and already authorizes starting the container: in a Container or Mounted folder project with the Architect's routing ready, it picks the image and starts the container without another click. Starting it in a Local runner project and merging the infra PR still wait for your decision.",
     "infraBotao": "Accept the Infra handoff",
+    "manualAbrir": "Address handoff to another agent…",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
     "manualBotao": "Address handoff",

@@ -111,6 +111,17 @@ rules:
     severity: warn
     note: "Os três passos, de onde cada um é derivado e quando o cartão some (RN-708); mudança aqui costuma mover o arquivo:linha dela."
 
+  # O que o fio da sessão mostra do que acabou de acontecer (RN-712).
+  - id: fio-da-sessao-legivel
+    watch:
+      - "apps/web/src/lib/texto-plano.ts"
+      - "apps/web/src/lib/eco-de-formulario.ts"
+      - "apps/web/src/lib/session-destinatario.ts"
+      - "apps/web/src/components/ui/MarkdownMessage.tsx"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Faixa sem Markdown, eco do formulário, destinatário que segue o handoff aceito e bloco de código recolhido (RN-712, RN-631); mudança aqui costuma mover o arquivo:linha delas."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que

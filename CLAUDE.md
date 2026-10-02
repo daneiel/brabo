@@ -243,6 +243,7 @@ estado lido do repositório e não da conversa.
 | A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 | O Workflows não é delegado sem CI que rode, e não pergunta a ninguém (AT-368) | RN-710 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
+| O fio da sessão legível: faixa sem Markdown cru, formulário respondido uma vez, "Para" que segue o handoff aceito, bloco de código longo recolhido (AT-375) | RN-712 |
 | O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo (AT-379/AT-378) | RN-706 |
 | Os conversacionais dizem o fluxo real, e a restrição técnica do usuário vira decision_record (AT-369/AT-370) | RN-711 |
 | O merge do repositório local é merge de verdade, e conflito é recusa nomeada (AT-377) | RN-704 |

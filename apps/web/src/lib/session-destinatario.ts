@@ -60,9 +60,24 @@ function lerEscolha(sessionId: string): string | null {
   }
 }
 
-function gravarEscolha(sessionId: string, agente: string): void {
+/** RN-712: a escolha feita no SELETOR do composer é manual e nunca é
+ *  sobrescrita; a que veio de um gesto (aceite, "Estou pronto") segue o
+ *  último handoff aceito. */
+const CHAVE_MANUAL = (sessionId: string) => `brabo.destinatario.${sessionId}.manual`;
+
+function lerManual(sessionId: string): boolean {
+  try {
+    return window.localStorage.getItem(CHAVE_MANUAL(sessionId)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function gravarEscolha(sessionId: string, agente: string, manual = false): void {
   try {
     window.localStorage.setItem(CHAVE(sessionId), agente);
+    if (manual) window.localStorage.setItem(CHAVE_MANUAL(sessionId), '1');
+    else window.localStorage.removeItem(CHAVE_MANUAL(sessionId));
   } catch {
     // Sem armazenamento a escolha vale só enquanto a tela está aberta.
   }
@@ -199,10 +214,27 @@ export function agentesEmConversa(
 export function resolverDestinatario(
   opcoes: readonly string[],
   escolhido: string | null,
+  seguir?: { manual: boolean; handoffs: readonly Handoff[] },
 ): string | null {
+  // RN-712: escolha que NÃO veio do seletor segue o agente do último handoff
+  // aceito (o PO que passou ao Arquiteto deixa de ser o "Para").
+  if (seguir && !seguir.manual && escolhido) {
+    const ultimo = ultimoHandoffAceito(seguir.handoffs);
+    if (ultimo && opcoes.includes(ultimo)) return ultimo;
+  }
   if (escolhido && opcoes.includes(escolhido)) return escolhido;
   if (opcoes.length === 1) return opcoes[0]!;
   return null;
+}
+
+/** O destino do handoff aceito mais recente (por `updatedAt`). */
+export function ultimoHandoffAceito(handoffs: readonly Handoff[]): string | null {
+  let ultimo: Handoff | null = null;
+  for (const h of handoffs) {
+    if (h.status !== 'accepted') continue;
+    if (!ultimo || h.updatedAt > ultimo.updatedAt) ultimo = h;
+  }
+  return ultimo?.toAgent ?? null;
 }
 
 export interface DestinatarioDoChat {
@@ -210,7 +242,8 @@ export interface DestinatarioDoChat {
   destinatario: string | null;
   /** Há mais de uma opção e ninguém foi escolhido: o envio fica travado. */
   precisaEscolher: boolean;
-  escolher: (agente: string) => void;
+  /** `manual` = escolhido no seletor do composer (RN-712). */
+  escolher: (agente: string, manual?: boolean) => void;
 }
 
 export function useDestinatarioDoChat({
@@ -232,21 +265,24 @@ export function useDestinatarioDoChat({
   );
   // Guardado junto com a sessão a que pertence: trocar de sessão sem
   // desmontar a tela não pode herdar a escolha da anterior.
-  const [escolha, setEscolha] = useState<{ sessionId: string; agente: string | null }>(
-    () => ({ sessionId, agente: lerEscolha(sessionId) }),
-  );
+  const [escolha, setEscolha] = useState<{
+    sessionId: string;
+    agente: string | null;
+    manual: boolean;
+  }>(() => ({ sessionId, agente: lerEscolha(sessionId), manual: lerManual(sessionId) }));
   const escolhido =
     escolha.sessionId === sessionId ? escolha.agente : lerEscolha(sessionId);
+  const manual = escolha.sessionId === sessionId ? escolha.manual : lerManual(sessionId);
 
   const escolher = useCallback(
-    (agente: string) => {
-      setEscolha({ sessionId, agente });
-      gravarEscolha(sessionId, agente);
+    (agente: string, manualmente = false) => {
+      setEscolha({ sessionId, agente, manual: manualmente });
+      gravarEscolha(sessionId, agente, manualmente);
     },
     [sessionId],
   );
 
-  const destinatario = resolverDestinatario(opcoes, escolhido);
+  const destinatario = resolverDestinatario(opcoes, escolhido, { manual, handoffs });
   return {
     opcoes,
     destinatario,

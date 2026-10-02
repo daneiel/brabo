@@ -124,7 +124,7 @@ export function SessionPage({
   highlightEvent,
   irParaSessao,
 }: SessionPageProps) {
-  const { t } = useTranslation('sessionPage');
+  const { t, i18n } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
@@ -801,7 +801,12 @@ export function SessionPage({
   const metaDaSessao = [
     project?.name ?? '…',
     hashtag,
-    session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : '',
+    // RN-712: o horário sozinho ("01:46:01") não dizia de quê; o rótulo diz.
+    session
+      ? t('topbar.iniciadaAs', {
+          hora: new Date(session.createdAt).toLocaleTimeString(i18n.language),
+        })
+      : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -827,6 +832,7 @@ export function SessionPage({
         sessaoCriativa={sessaoCriativa}
         criativoActive={criativoActive}
         conviteVisivel={conviteVisivel}
+        ideacaoComecou={handoffs.length > 0 || events.some((e) => e.actor.kind === 'agent')}
         handleStartIdeation={handleStartIdeation}
         handleClose={handleClose}
         asideOpen={asideOpen}
