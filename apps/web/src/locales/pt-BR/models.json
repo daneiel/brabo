@@ -116,6 +116,7 @@
       "activateForTeam_zero": "Ativar e aplicar aos {{count}} agentes",
       "activateForTeam_one": "Ativar e aplicar a {{count}} agente",
       "activateForTeam_other": "Ativar e aplicar aos {{count}} agentes",
+      "activateForTeamDetail": "Sobrescreve o modelo próprio de cada agente, uma chamada por agente.",
       "activateForTeamOwnerOnly": "Só o dono do workspace ativa modelos."
     },
     "syncReport": {

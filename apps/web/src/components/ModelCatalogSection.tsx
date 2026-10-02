@@ -500,11 +500,6 @@ export function ModelCatalogSection({
               >
                 {t('catalog.batchBar.activateForTeam', { count: AGENT_LIST.length })}
               </Button>
-              <span className={styles.rotuloDoLote}>
-                {podeAtivarParaOTime
-                  ? tSettings('modelsSection.bulk.detail')
-                  : t('catalog.batchBar.activateForTeamOwnerOnly')}
-              </span>
             </>
           )}
           <span className={styles.divisorDeFiltro} aria-hidden="true" />
@@ -539,6 +534,16 @@ export function ModelCatalogSection({
               ? t('catalog.batchBar.applyUses')
               : t('catalog.batchBar.clearUses')}
           </Button>
+          {/* A explicação do lote mora numa LINHA PRÓPRIA (AT-373): ao lado
+              dos botões ela virava coluna estreita e empurrava a barra além
+              da largura da página. */}
+          {projectId && nenhumAtivo && marcadoUnico && (
+            <span className={styles.explicacaoDoLote}>
+              {podeAtivarParaOTime
+                ? t('catalog.batchBar.activateForTeamDetail')
+                : t('catalog.batchBar.activateForTeamOwnerOnly')}
+            </span>
+          )}
         </div>
       )}
 
