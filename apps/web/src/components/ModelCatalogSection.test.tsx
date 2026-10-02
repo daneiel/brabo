@@ -23,6 +23,9 @@ vi.mock('../lib/api-client', () => ({
   syncModelCatalog: (...args: unknown[]) => syncModelCatalog(...args),
   listCredentials: (...args: unknown[]) => listCredentials(...args),
   setModelUses: (...args: unknown[]) => setModelUses(...args),
+  setAgentModelBinding: vi.fn(),
+  listWorkspaces: () => Promise.resolve([]),
+  mensagemDaApi: (_e: unknown, f?: string) => f ?? 'erro',
 }));
 
 function model(

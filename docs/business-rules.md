@@ -20376,6 +20376,39 @@ reidratação continua trazendo ferramentas como texto.
   responde; a resposta final, sem ferramenta, não ganha a chave — caso de falha)
 - **Origem:** AT-350
 
+### RN-694 — O catálogo de modelos tem busca, a credencial oferece o sync, e o primeiro modelo vai ao time num clique {#rn-694}
+
+Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
+
+1. **Busca.** O catálogo tem um campo de busca que casa o nome de exibição, o
+   `name` ou o `id` do modelo, sem diferenciar maiúsculas. Com termo, todo
+   grupo e subgrupo de hub com resultado abre sozinho; busca sem resultado DIZ
+   que nada casou, com o termo — nunca uma lista vazia muda.
+2. **Sync ao lado da credencial.** O card de credencial cujo provider tem chave
+   e NENHUM modelo no catálogo diz isso e oferece "Atualizar catálogo" — a
+   MESMA ação do catálogo (`POST .../models/sync`). O botão só aparece para
+   `owner` (o mínimo do endpoint, RN-102); ler o catálogo pede `maintainer`.
+   O predicado é UM só, `providersSemCatalogo`, também usado pelo aviso do
+   catálogo.
+3. **Ativar e aplicar ao time.** Quando NENHUM modelo está ativo e há UM
+   marcado, a barra do lote oferece "Ativar e aplicar aos N agentes": ativa
+   (`POST .../models/activate`) e, se a ativação passou, aplica a cada agente
+   pelo mesmo caminho da RN-476, com o aviso de sobrescrita dela e o relatório
+   parcial da RN-469. Ativação recusada não aplica nada. Só com o clique, nunca
+   sozinho, e só para `owner` (o maior dos dois mínimos); abaixo disso o
+   controle fica inerte e o motivo é dito em texto. A curadoria segue manual
+   (ADR 0042).
+
+- **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
+  `apps/web/src/lib/models.ts:425` (`providersSemCatalogo`),
+  `apps/web/src/lib/models.ts:441` (`algumModeloAtivo`),
+  `apps/web/src/components/ModelCatalogSection.tsx:313` (`ativarEAplicarAoTime`),
+  `apps/web/src/routes/settings/CredentialsSection.tsx:128` (`handleSync`)
+- **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
+  (busca por id e sem resultado; ativar e aplicar, parcial, ativação recusada,
+  abaixo de owner, com modelo já ativo; sync no card, com e sem catálogo, e a
+  falha)
+- **Origem:** AT-357
 ### RN-697 — O turno da prontidão do Criativo só sintetiza: sem ferramentas {#rn-697}
 
 O turno que `confirm_readiness` dispara consolida as regras num resumo e grava o

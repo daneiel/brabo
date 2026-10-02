@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **web**: o catálogo de modelos ganha busca por nome ou id (grupos com resultado abrem sozinhos; sem resultado, a tela diz); o card da credencial sem modelo no catálogo oferece "Atualizar catálogo" ali mesmo; e, sem nenhum modelo ativo, o modelo marcado pode ser ativado e aplicado aos agentes num clique, com o aviso de sobrescrita (AT-357, [RN-694](docs/business-rules.md#rn-694)).
+
 ### Correções
 
 - **engine/web:** a análise da Anamnese saiu do fio da sessão. O texto da rodada aparecia como bolha entre o Criativo e o PO, com o id cru do usuário; agora é gravado como `anamnese.analysis`, e o fio não desenha evento nenhum da Anamnese (inclusive os antigos). O resultado continua em Configurações › Perfil de proficiência (RN-695, AT-355).
@@ -95,6 +99,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **dev**: o compose de dev vira brabo-dev e recusa subir ao lado de uma instalação (AT-173) (64a12ef027)
 
 ### Novidades
+
 
 - **infra**: a Infra sobe o container com o MENOR recurso elegível, derivado
   do `module_map` (AT-261, [ADR 0199](docs/adr/0199-recurso-minimo-derivado-do-module-map.md),

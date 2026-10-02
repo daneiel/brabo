@@ -251,6 +251,7 @@ estado lido do repositório e não da conversa.
 | A análise da Anamnese sai do fio, e o nível de proficiência chega aos agentes (AT-355/AT-356) | RN-695, RN-696 |
 | A dica de abertura fica no fio até a primeira mensagem, e os campos da sessão não convidam o autofill (AT-353) | RN-693 |
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
+| O catálogo de modelos ganha busca, o sync ao lado da credencial e o "ativar e aplicar ao time" (AT-357) | RN-694 |
 | A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
 

@@ -380,7 +380,10 @@
       "testKeyAria": "Test key for {{label}}",
       "test": "Test",
       "removeKeyAria": "Remove key for {{label}}",
-      "remove": "Remove"
+      "remove": "Remove",
+      "updateCatalog": "Refresh catalog",
+      "updateCatalogAria": "Refresh the {{label}} model catalog",
+      "noModels": "No model from this provider in the catalog yet — saving the key does not discover models."
     },
     "toast": {
       "saved": "Credential saved",

@@ -323,3 +323,15 @@
   font-family: var(--font-mono);
   font-size: 11px;
 }
+
+/* Busca por nome/id (RN-694). */
+.busca {
+  width: 100%;
+  max-width: 420px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+}
