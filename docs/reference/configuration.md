@@ -739,6 +739,16 @@ nothing and the gate approves without static analysis
 ([RN-707](../business-rules.md#rn-707), runbook
 [The SecOps gate passes with "semgrep falhou"](../runbook.md#semgrep-do-gate)).
 
+None of the six Dockerfiles uses corepack (Node 25+ no longer ships it,
+AT-360): the build installs pnpm from the registry tarball, checked against a
+sha512 written in the Dockerfile itself — the build arguments `PNPM_VERSION`
+(`11.3.0`, the same as `packageManager` in `package.json`, so pnpm never tries
+to download another version at runtime) and `PNPM_SHA512`. They are build
+arguments, not runtime variables, and there is nothing to set in the `.env`:
+bumping pnpm means changing `packageManager`, the `PNPM_VERSION` of the
+workflows and both arguments in the six Dockerfiles in the same PR — see the
+runbook section on the broker image.
+
 ---
 
 ## Tooling variables (not product)
