@@ -418,6 +418,17 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   EFÊMERA (`Engine.Harness.PerfilDoAutor`, o caminho do idioma da RN-622;
   lida por `QueryUserContextUseCase`, escopada ao projeto, 5 fatos, teto de
   2 000 caracteres). Aceite de terceiro e recusa ficam só registrados.
+  Desde a RN-716 (AT-376) a Anamnese não grava nível sobre o que não
+  observou: perfil cuja evidência não inclui evento da PRÓPRIA pessoa, ou só
+  tem cliques de aprovação (`proposed_action.approved`, `handoff.accepted`,
+  `readiness.confirmed`), é recusado pela api como "não observado", sem
+  `profile_updated`. A regra é de CÓDIGO (`validateProficiencyBatch`), não só
+  de prompt; não a afrouxe para o lote passar. E o que a pessoa faz para
+  reparar falha de agente não é traço dela: desde a RN-717 (ADR 0205) vira
+  `anamnese.agent_deviation`, sinal do PRODUTO, com payload por lista de
+  permitidos (agente, tipo fechado, `eventId`s), sem texto livre nem dado
+  pessoal, e FORA do grafo do usuário — não o projete no
+  `GraphEventTranslator`.
 - Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
   aguardando spec — e a Anamnese esteve pausada junto até a RN-680. A pausa do
   Psicólogo segue valendo e a decisão de produto NÃO mudou — o que mudou na
