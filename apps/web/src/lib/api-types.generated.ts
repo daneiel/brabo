@@ -8904,6 +8904,11 @@ export interface components {
             routingPreference: "price" | "throughput" | "latency" | null;
             /** @description More specific scopes the cascade discarded before reaching `origin`. Empty on the normal path. */
             skipped: components["schemas"]["SkippedBindingResponseDto"][];
+            /**
+             * @description Present when the agent asked about had no model of its own (nor of its area or project) and inherited the RESOLVED binding of its area lead (RN-703). `origin` is then the origin of the lead binding.
+             * @example secops
+             */
+            herdadoDoLead?: string;
         };
         ResultadoPorProviderResponseDto: {
             /**
