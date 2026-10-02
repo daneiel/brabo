@@ -18,6 +18,7 @@ defmodule Engine.Agents.TextoDoTurno do
   """
 
   @chave {__MODULE__, :pedacos}
+  @chave_modelo {__MODULE__, :modelo}
 
   @doc "Guarda o texto de uma volta que ainda vai continuar (houve ferramenta)."
   @spec acumular(String.t() | nil) :: :ok
@@ -26,6 +27,30 @@ defmodule Engine.Agents.TextoDoTurno do
   def acumular(texto) when is_binary(texto) do
     Process.put(@chave, [texto | Process.get(@chave, [])])
     :ok
+  end
+
+  @doc """
+  Como `acumular/1`, guardando também o `modelName` da chamada de LLM que
+  escreveu a volta (AT-384): o turno que fecha SEM uma chamada final (entregou
+  um formulário, esgotou o teto) grava o texto com o modelo da última chamada
+  que houve, nunca com `nil`. `nil` não apaga o modelo já visto.
+  """
+  @spec acumular(String.t() | nil, String.t() | nil) :: :ok
+  def acumular(texto, modelo) do
+    if is_binary(modelo) and modelo != "", do: Process.put(@chave_modelo, modelo)
+    acumular(texto)
+  end
+
+  @doc """
+  Devolve `{texto, modelo}` e esvazia o acúmulo: o `modelo` é o da chamada que
+  fecha o turno, senão o da última volta acumulada, senão `nil` — sem chamada
+  de LLM no turno, nenhum modelo é inventado.
+  """
+  @spec descarregar_com_modelo(String.t() | nil, String.t() | nil) ::
+          {String.t(), String.t() | nil}
+  def descarregar_com_modelo(ultimo, modelo) do
+    visto = Process.delete(@chave_modelo)
+    {descarregar(ultimo), modelo || visto}
   end
 
   @doc """

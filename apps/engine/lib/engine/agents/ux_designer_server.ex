@@ -245,7 +245,7 @@ defmodule Engine.Agents.UxDesignerServer do
 
           calls ->
             # RN-698: o texto desta volta continua na próxima.
-            TextoDoTurno.acumular(content)
+            TextoDoTurno.acumular(content, model_name)
 
             {state, sucesso?} =
               Enum.reduce(calls, {state, false}, fn call, {st, sucesso_acumulado} ->
@@ -395,9 +395,9 @@ defmodule Engine.Agents.UxDesignerServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar(ultimo) do
-      "" -> :ok
-      texto -> emit_response(state, texto, model_name)
+    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
+      {"", _} -> :ok
+      {texto, modelo} -> emit_response(state, texto, modelo)
     end
   end
 

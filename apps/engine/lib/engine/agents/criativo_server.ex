@@ -314,7 +314,7 @@ defmodule Engine.Agents.CriativoServer do
           calls ->
             # RN-698: o texto desta volta continua na próxima — vira UMA
             # `agent.response` no fim do turno, nunca um fragmento por volta.
-            TextoDoTurno.acumular(content)
+            TextoDoTurno.acumular(content, model_name)
             {state, desfechos} = despachar(calls, state)
             continuar(state, acc, desfechos, remaining - 1)
         end
@@ -373,9 +373,9 @@ defmodule Engine.Agents.CriativoServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar(ultimo) do
-      "" -> :ok
-      texto -> emit_response(state, texto, model_name)
+    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
+      {"", _} -> :ok
+      {texto, modelo} -> emit_response(state, texto, modelo)
     end
   end
 

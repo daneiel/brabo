@@ -413,7 +413,7 @@ defmodule Engine.Agents.DevLeadServer do
 
           calls ->
             # RN-698: o texto desta volta continua na próxima.
-            TextoDoTurno.acumular(content)
+            TextoDoTurno.acumular(content, model_name)
             # `reduce_while` — não `reduce` — porque `:pending` precisa PARAR
             # o laço no meio da lista, sem processar as chamadas seguintes
             # nem recursar para a próxima iteração. Antes de ADR 0086 as três
@@ -716,9 +716,9 @@ defmodule Engine.Agents.DevLeadServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar(ultimo) do
-      "" -> :ok
-      texto -> emit_response(state, texto, model_name)
+    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
+      {"", _} -> :ok
+      {texto, modelo} -> emit_response(state, texto, modelo)
     end
   end
 
