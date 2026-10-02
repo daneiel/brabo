@@ -176,7 +176,9 @@
         "noDetails": "No additional details."
       },
       "empty": "This action carries no payload."
-    }
+    },
+    "actorYou": "You",
+    "actorOtherMember": "Another member"
   },
   "prGateTimeline": {
     "steps": {
@@ -265,7 +267,11 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
     "mergeNoSession": "No session in the project to propose the action.",
-    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours.",
+    "mergeRecusado": "The last merge attempt was refused: {{reason}}",
+    "mergeRecusadoArquivos_one": "Conflicting file: {{files}}",
+    "mergeRecusadoArquivos_other": "Conflicting files: {{files}}",
+    "mergeResolverAntes": "Resolve the conflict first (rebase the PR branch on dev), then merge again."
   },
   "politica": {
     "motivo": "Policy decided by: {{motivo}}",

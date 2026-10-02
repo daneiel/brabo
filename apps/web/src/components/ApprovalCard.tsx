@@ -1,4 +1,7 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useContext, useRef, useState, type CSSProperties } from 'react';
+import { QueryClientContext } from '@tanstack/react-query';
+import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
+import { autorDaMensagem } from '../lib/autor-da-mensagem';
 import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
@@ -241,6 +244,9 @@ export function ApprovalCard({
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
   const actorLabel = actor?.name ?? action.actor.id;
+  // RN-705: ator humano é nomeado pela leitura de membros (RN-655), nunca
+  // pelo UUID. Sem `QueryClient` (teste isolado do card) fica o id.
+  const temQueryClient = useContext(QueryClientContext) !== undefined;
   // Tipo que o web ainda não conhece não pode devolver `undefined` aqui: o
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
@@ -298,7 +304,13 @@ export function ApprovalCard({
               apagado. O verbo vem de `lib/aprovacoes.ts` — mesma fonte que a
               frase logo abaixo e que a aba Insights. */}
           <div className={styles.title}>
-            <span className={styles.actorName}>{actorLabel}</span>
+            <span className={styles.actorName}>
+              {temQueryClient && action.actor.kind === 'user' ? (
+                <NomeDoMembroAtor action={action} />
+              ) : (
+                actorLabel
+              )}
+            </span>
             <span className={styles.verb}>{verbo}</span>
           </div>
         </div>
@@ -792,4 +804,19 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
       <pre className={styles.payloadCru}>{JSON.stringify(payload, null, 2)}</pre>
     </div>
   );
+}
+
+/**
+ * O nome de quem propôs, quando é uma PESSOA (RN-705): a mesma leitura de
+ * membros do fio da sessão (RN-652/655). Quem a tela não sabe nomear vira
+ * "outro membro", nunca o UUID cru.
+ */
+function NomeDoMembroAtor({ action }: { action: ProposedAction }) {
+  const { t } = useTranslation('approvals');
+  const autoria = useAutoriaDaSessao(action.projectId);
+  const autor = autorDaMensagem(action.actor, autoria);
+  if (autor.tipo === 'voce') return <>{autor.nome ?? t('approvalCard.actorYou')}</>;
+  if (autor.tipo === 'membro') return <>{autor.nome}</>;
+  if (autor.tipo === 'outroMembro') return <>{t('approvalCard.actorOtherMember')}</>;
+  return <>{action.actor.id}</>;
 }

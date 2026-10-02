@@ -244,6 +244,7 @@ estado lido do repositório e não da conversa.
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
 | O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo (AT-379/AT-378) | RN-706 |
 | O merge do repositório local é merge de verdade, e conflito é recusa nomeada (AT-377) | RN-704 |
+| A recusa de merge aparece na aba PRs, a falha grava o tipo da ação e a PR local ganha autor (AT-383/AT-382) | RN-705 |
 | A compactação de contexto não troca turnos por um marcador vazio, e a janela padrão vai a 128k (AT-366) | RN-702 |
 | O PO não anuncia o handoff sem fazê-lo: o servidor oferece ao Arquiteto com regras cobertas e toda história com tarefa (AT-364) | RN-700 |
 | O Dev Lead lê o module_map vigente e relê o backlog quando o plano é recusado (AT-362/AT-363) | RN-699 |

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveAction,
   approveAlwaysAction,
   denyAction,
+  getProjectPendingActions,
   mensagemDaApi,
   proposeAction,
 } from '../lib/api-client';
@@ -56,6 +57,30 @@ function acaoDeMergeParaPr(
 }
 
 /**
+ * A última recusa de execução de merge DESTA PR (RN-705) — o conflito de merge
+ * do provider local, por exemplo. Lida da fila de ações FALHAS do projeto
+ * (`status=failed`), a mais recente por `updatedAt`. A recusa só vale enquanto
+ * não houver merge pendente: a nova tentativa toma o lugar dela.
+ */
+export function ultimaRecusaDeMerge(
+  falhas: ProposedAction[] | undefined,
+  pr: CodePullRequestSummary,
+): { motivo: string; arquivos: string[] } | undefined {
+  const daPr = (falhas ?? [])
+    .filter((a) => String((a.payload as { pullRequestId?: unknown }).pullRequestId ?? '') === pr.id)
+    .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const ultima = daPr[0];
+  if (!ultima) return undefined;
+  const r = (ultima.executionResult ?? {}) as { error?: unknown; conflictingFiles?: unknown };
+  return {
+    motivo: typeof r.error === 'string' ? r.error : '',
+    arquivos: Array.isArray(r.conflictingFiles)
+      ? r.conflictingFiles.filter((f): f is string => typeof f === 'string')
+      : [],
+  };
+}
+
+/**
  * Aba `prs` — PRs do projeto INTEIRO, direto do provider de git (Onda 2 do
  * programa de abas agrupadas).
  *
@@ -79,14 +104,25 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   const { latest: latestSession } = useLatestSession(projectId);
   const backlogQuery = useBacklog(projectId);
   const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge');
+  // RN-705: as recusas de merge (sob o MESMO prefixo da fila do projeto, então
+  // o aviso do canal que invalida a fila alcança esta leitura também).
+  const mergesFalhosQuery = useQuery({
+    queryKey: ['project-pending-actions', projectId, 'git_merge', 'failed'],
+    queryFn: () => getProjectPendingActions(projectId, { actionType: 'git_merge', status: 'failed' }),
+  });
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [propondo, setPropondo] = useState<string | null>(null);
 
   function invalidateMergeActions() {
+    // Por prefixo: alcança a fila pendente E a das recusas (RN-705).
     queryClient.invalidateQueries({
       queryKey: ['project-pending-actions', projectId, 'git_merge'],
     });
+    // O merge aprovado executa na hora: a lista de PRs muda (a PR sai de
+    // "Abertas") — sem isto ela seguia aberta com o botão até recarregar.
+    queryClient.invalidateQueries({ queryKey: ['code-pull-requests', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
   }
 
   async function proporMerge(pr: CodePullRequestSummary) {
@@ -170,6 +206,23 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           ) : null;
 
           const acaoPendente = acaoDeMergeParaPr(mergeActionsQuery.data, pr);
+          // RN-705: a recusa é AVISO em texto (como o gate pendente, RN-663) —
+          // o botão segue ativo, a decisão continua humana.
+          const recusa = acaoPendente ? undefined : ultimaRecusaDeMerge(mergesFalhosQuery.data, pr);
+          const avisoDeRecusa = recusa ? (
+            <div className={styles.avisoDeGate} data-testid="aviso-merge-recusado">
+              <p>{t('prsTab.mergeRecusado', { reason: recusa.motivo })}</p>
+              {recusa.arquivos.length > 0 && (
+                <p>
+                  {t('prsTab.mergeRecusadoArquivos', {
+                    count: recusa.arquivos.length,
+                    files: recusa.arquivos.join(', '),
+                  })}
+                </p>
+              )}
+              <p>{t('prsTab.mergeResolverAntes')}</p>
+            </div>
+          ) : null;
           if (acaoPendente) {
             return (
               <div className={styles.decisaoInline}>
@@ -191,6 +244,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
             <div className={styles.extraLinha}>
               {task && <PrGateTimeline task={task} verdicts={[]} />}
               {aviso}
+              {avisoDeRecusa}
               <Button
                 variant="primary"
                 disabled={!latestSession || bloqueado}

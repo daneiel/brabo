@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "1a3fd23569332fa2cb6ba2ff58219b61b76dedc5847d4a8f147c1116994aba24",
+  "openapiSha256": "74c02a832b4ba459d371f31a83384cf256c0616cb620a8610d71ac306a8d2a51",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -682,7 +682,7 @@
     "project-actions-controller-list.ParamsDetails.json": "8cfb0d58bc76041633880a766f1bbefe9eb6cf61aab7511bea26c73de729730f",
     "project-actions-controller-list.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "project-actions-controller-list.StatusCodes.json": "ccfbb7f1baad8557df2f60f3189bc0c5995bb06378ca9fcc41b7846ac59131a7",
-    "project-actions-controller-list.api.mdx": "e16c49618167216cfbb15d0e08acae4a81f6994eb3da05c766fe439871d6d7f3",
+    "project-actions-controller-list.api.mdx": "3cbe5c6323f34cc5b534b9c4be8597fb292469ba28e306f7ae1fad0ee3fdd96f",
     "projects-controller-add-member.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "projects-controller-add-member.RequestSchema.json": "1bbe70f2807ecef2f761a391e13e7283dc5f572200e5b801064db9eae7ab8123",
     "projects-controller-add-member.StatusCodes.json": "749174d0818ca9569785557580429983e7df3df7ef2d18bdfd02afa773e00553",

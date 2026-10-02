@@ -139,7 +139,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   // gateStatus setado (mesmo já tendo chegado a awaiting_user).
   const gateTasks: Task[] = (epics ?? []).flatMap((epic) =>
     epic.stories.flatMap((story) =>
-      story.tasks.filter((t) => t.gateStatus !== null || t.blocked),
+      // RN-705: tarefa `done` (PR mergeada) saiu da revisão — não espera mais ninguém.
+      story.tasks.filter((t) => t.status !== 'done' && (t.gateStatus !== null || t.blocked)),
     ),
   );
 
