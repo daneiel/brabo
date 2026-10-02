@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine/web:** a análise da Anamnese saiu do fio da sessão. O texto da rodada aparecia como bolha entre o Criativo e o PO, com o id cru do usuário; agora é gravado como `anamnese.analysis`, e o fio não desenha evento nenhum da Anamnese (inclusive os antigos). O resultado continua em Configurações › Perfil de proficiência (RN-695, AT-355).
+- **api:** o nível de proficiência por competência que a Anamnese derivou passa a chegar aos agentes que conversam com a pessoa, pelo mesmo texto efêmero dos fatos do perfil — só `competência: nível`, nunca o rationale —, para o Criativo e o PO calibrarem quantas perguntas fazem (RN-696, AT-356).
 - **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
 - **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
 
