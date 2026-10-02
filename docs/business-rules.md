@@ -20622,6 +20622,35 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   própria API (405/406), sem tradução para `GitMergeConflictError`.
 - **Origem:** AT-377
 
+### RN-707 — O semgrep do gate de SecOps tem `$HOME` gravável, e a falha sem saída é nomeada {#rn-707}
+
+- **Regra:** nos composes de produção e de instalação, o tmpfs `/home/engine`
+  do engine nasce com o dono do usuário da imagem
+  (`/home/engine:uid=1000,gid=1000,mode=0700`). O `SemgrepDetector.Live`
+  distingue o exit `1` com JSON (achados) do exit `0`/`1` com stdout vazio,
+  que vira `{:error, {:sem_saida, exit_code}}` em vez de `:invalid_output`.
+  O veredito do gate NÃO muda: scanner que não rodou continua "pulado" no
+  resumo do parecer.
+- **Medição (AT-380):** dentro de `brabo-engine-1` (imagem de produção,
+  `read_only: true`), o tmpfs `/home/engine` nascia `root` `2755`; o
+  `semgrep scan` do gate saía `1` com stdout vazio e
+  `PermissionError: '/home/engine/.semgrep'` no stderr, e o parser chamava
+  isso de `:invalid_output`. Com o tmpfs `uid=1000` o mesmo comando devolve o
+  JSON (exit 0). O Kubernetes não tinha o defeito (`fsGroup: 1000` no
+  `emptyDir`).
+- **Onde:** `apps/engine/lib/engine/actions/semgrep_detector.ex:73`
+  (`interpretar`), `docker/docker-compose.prod.yml`,
+  `docker/docker-compose.install.yml`
+- **Teste:** `apps/engine/test/engine/actions/semgrep_detector_test.exs`
+  ("JSON com results vira findings, inclusive com exit 1 (achou algo)"; caso
+  de falha: "exit 1 com stdout vazio é falha de execução nomeada, não
+  :invalid_output")
+- **Decisão aberta:** com o semgrep pulado, o SecOps continua APROVANDO
+  (`veredito: approved`, com o pulo no resumo). "Aprovar sem SAST" ou
+  "pendente" é decisão do dono, não tomada aqui.
+  > **TODO(humano):** o gate de SecOps deve aprovar quando o semgrep não rodou, ou ficar pendente?
+- **Origem:** AT-380
+
 
 ### RN-702 — A compactação de contexto respeita a janela padrão de 128k e nunca troca turnos por um marcador vazio {#rn-702}
 
