@@ -20563,6 +20563,32 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   caso de falha; a frase do ADR 0118 não volta)
 - **Origem:** AT-358
 
+### RN-704 — O merge do repositório local é merge de verdade, e conflito é recusa nomeada {#rn-704}
+
+- **Regra:** `mergePullRequest` do provider `local` faz fast-forward só quando
+  o alvo é ancestral da fonte; com os dois divergidos, monta um commit de merge
+  com os dois pais (`git merge-tree --write-tree` + `commit-tree`, sem
+  worktree, mensagem `Merge pull request #N from <branch>`, identidade `Brabo
+  Bot`). A ref do alvo é movida por `update-ref` com o valor antigo esperado,
+  então um merge concorrente falha em vez de sobrescrever. Conflito lança
+  `GitMergeConflictError` com os arquivos em conflito: a ref fica intacta, a PR
+  continua `open`, a ação `git_merge` termina `failed` com o motivo no
+  `action.failed`, e pela HTTP o erro é 409 `merge_conflict`.
+- **Medição (AT-377):** duas PRs do mesmo commit base (#3 e #4) mergeadas em
+  sequência: a `dev` ficou só com a #4, e os commits da #3 deixaram de ser
+  ancestrais dela. O `update-ref` antigo era um reset forçado.
+- **Onde:** `apps/api/src/infrastructure/git/local-git-provider.ts:769` (`mergeShas`),
+  `apps/api/src/domain/git/git-errors.ts:89` (`GitMergeConflictError`),
+  `apps/api/src/interfaces/http/shared/git-provider-error.filter.ts`
+- **Teste:** `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
+  ("duas PRs divergentes sem conflito: os dois commits ficam no alvo, por
+  commit de merge"; caso de falha: "conflito: recusa nomeada com os arquivos,
+  alvo intacto e PR aberta")
+- **Lacuna declarada:** GitHub e GitLab recusam o merge com conflito pela
+  própria API (405/406), sem tradução para `GitMergeConflictError`.
+- **Origem:** AT-377
+
+
 ### RN-702 — A compactação de contexto respeita a janela padrão de 128k e nunca troca turnos por um marcador vazio {#rn-702}
 
 - **Regra:** sem `context_window` no contexto (os agentes conversacionais não o

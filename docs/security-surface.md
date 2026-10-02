@@ -1208,6 +1208,13 @@ reason in the URL.
   nothing written. The RN-418 caps and `container_remove` are still refused
   with `400` before any state is read, so the idempotent path can never write
   a pattern the ceiling forbids.
+- **A git error got a new named answer: `409 merge_conflict`** — no route,
+  role or guard changed ([RN-704](business-rules.md#rn-704)).
+  `GitProviderErrorFilter` maps `GitMergeConflictError` (the local
+  repository's merge found a conflict) to `409` with the conflicting files in
+  the message; the target ref is untouched and the pull request stays open.
+  Through the approval pipeline the `git_merge` action ends `failed` with
+  that message, the same path as `GitPullRequestAlreadyMergedError`.
 
 ## Table
 

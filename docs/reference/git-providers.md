@@ -35,7 +35,7 @@ no UI consuming them yet):
 | `commitFiles` | `GitCommitResult` |
 | `getFileContent` | `string \| null` — `null` if the file (or the branch) doesn't exist |
 | `openPullRequest` | `GitPullRequest` |
-| `mergePullRequest` | `GitPullRequest` — a PR already merged is refused (`GitPullRequestAlreadyMergedError` in `local`; GitHub refuses the repeated merge itself), [RN-663](../business-rules.md#rn-663) |
+| `mergePullRequest` | `GitPullRequest` — a PR already merged is refused (`GitPullRequestAlreadyMergedError` in `local`; GitHub refuses the repeated merge itself), [RN-663](../business-rules.md#rn-663). In `local` it is a real merge: fast-forward when the target is an ancestor, otherwise a two-parent merge commit; a conflict throws `GitMergeConflictError` (files listed, target ref untouched, PR stays open, HTTP 409 `merge_conflict`). GitHub/GitLab refuse a conflicting merge through their own API, untranslated, [RN-704](../business-rules.md#rn-704) |
 | `commentOnPullRequest` | — (QA/SecOps verdict on the PR) |
 | `listTree` | `GitTree \| null` — `null` if the ref or the path don't exist |
 | `getPullRequestDiff` | `GitPullRequestDiff \| null` — `null` if the PR doesn't exist |
