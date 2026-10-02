@@ -35,20 +35,10 @@ interface LoginPageProps {
  * cliente o oráculo de enumeração que o servidor fecha — e não conseguiria,
  * porque a informação não chega aqui.
  *
- * O texto sobre a migração é FIXO e vive fora do card, num alerta próprio: ele
- * cobre o usuário migrado sem afirmar nada sobre a conta. É derivado de nenhum
- * sinal do servidor, então não vaza.
- *
- * ## Por que os dois alertas são irmãos e nunca aninhados
- *
- * O erro de credencial usa `role="alert"` — live region assertiva, em que o
- * leitor de tela interrompe para dizer que a tentativa falhou. O aviso de
- * migração não usa papel nenhum: é texto que já estava na tela quando ela abriu.
- *
- * Se ele caísse DENTRO do `role="alert"`, o anúncio da falha passaria a incluir
- * "a senha antiga não foi migrada" — exatamente a insinuação sobre a conta que o
- * 401 uniforme existe para evitar. `LoginPage.test.tsx` guarda essa separação
- * afirmando que o alerta não casa `/migrad|senha antiga/`.
+ * Até a AT-374 havia aqui um aviso FIXO sobre a senha antiga não migrada do
+ * Keycloak; o dono o removeu (02/10/2026) porque a migração já passou. O erro
+ * de credencial continua sem afirmar nada sobre a conta: `LoginPage.test.tsx`
+ * guarda que o alerta não casa `/migrad|senha antiga/`.
  *
  * ## Sem `aria-invalid` nos campos
  *
@@ -124,13 +114,6 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
             {t('loginPage.footer.createAccount')}
           </button>
         </>
-      }
-      abaixoDoCartao={
-        <Alert tone="warning">
-          {t('loginPage.migrationNotice.prefix')}
-          <strong>{t('loginPage.migrationNotice.strong')}</strong>
-          {t('loginPage.migrationNotice.suffix')}
-        </Alert>
       }
     >
       {erro && (
