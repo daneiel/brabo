@@ -271,6 +271,11 @@ PER PROJECT (`scope_id` composite, `<projectId>:<slug|chave>`) — before,
 `agent` was a global slug and the same binding held for every project
 ([RN-103](../business-rules/custo.md#rn-103), [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
 
+A subagent with no value in any level (or only the global workspace default)
+inherits the RESOLVED binding of its area lead, and the response carries
+`herdadoDoLead` naming the lead; `appsec` inherits from `secops` and
+`qa-estrategia` from `qa` ([RN-703](../business-rules/custo.md#rn-703)).
+
 ### Who schedules and who executes
 
 The engine schedules (an auto-rescheduled Oban worker, `MODEL_SYNC_INTERVAL_SECONDS`,
