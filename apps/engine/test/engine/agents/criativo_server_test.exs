@@ -692,6 +692,42 @@ defmodule Engine.Agents.CriativoServerTest do
     refute_received {:llm_turn_stream, "criativo", _, _}
   end
 
+  # AT-384: o turno que fecha entregando o formulário grava o texto com o
+  # modelo da chamada que o escreveu — antes saía `modelName: nil`.
+  test "turno que termina em formulário grava agent.response com modelName", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [
+      Map.put(structured_question_turn(), "modelName", "anthropic/claude-haiku-4.5")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{
+                         content: "Preciso entender melhor o produto.",
+                         modelName: "anthropic/claude-haiku-4.5"
+                       }
+                     }}
+  end
+
+  test "formulário sem modelName no frame: não inventa modelo", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [structured_question_turn()])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.response", payload: %{modelName: nil}}}
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "minha ideia é X"}},

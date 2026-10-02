@@ -25,4 +25,18 @@ defmodule Engine.Agents.TextoDoTurnoTest do
     assert TextoDoTurno.descarregar() == "a"
     assert TextoDoTurno.descarregar() == ""
   end
+
+  test "AT-384: o modelo da volta acumulada acompanha o texto quando o fecho não traz modelo" do
+    TextoDoTurno.acumular("Preciso entender.", "m/a")
+    assert TextoDoTurno.descarregar_com_modelo("", nil) == {"Preciso entender.", "m/a"}
+    # o modelo também esvazia com o acúmulo
+    assert TextoDoTurno.descarregar_com_modelo("", nil) == {"", nil}
+  end
+
+  test "AT-384: o modelo do fecho vence o acumulado; sem chamada nenhuma, nil" do
+    TextoDoTurno.acumular("a", "m/a")
+    assert TextoDoTurno.descarregar_com_modelo("b", "m/b") == {"a\n\nb", "m/b"}
+    TextoDoTurno.acumular("x", nil)
+    assert TextoDoTurno.descarregar_com_modelo("", nil) == {"x", nil}
+  end
 end

@@ -20444,13 +20444,22 @@ O `toolloop.limit_reached` dos conversacionais (RN-166) passa a ser uma linha
 no fio, na bolha de falha, origem `modelo`, dizendo o teto ("parou no teto de N
 passos sem terminar o turno"); sem o número no payload a linha diz `?`.
 
-- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:36` (`descarregar`);
-  `:54` (`juntar`); `apps/web/src/routes/session-timeline-montagem.tsx:881`
+A `agent.response` do turno leva o `modelName` (RN-146) em TODO desfecho, não
+só no fecho sem ferramenta: quando o turno fecha sem uma chamada final que o
+traga (entregou um formulário `ask_structured_questions`, esgotou o teto,
+falhou), vale o modelo da última volta acumulada. Sem chamada de LLM que tenha
+devolvido modelo, o campo fica `nil` — nunca um modelo inventado (AT-384; o
+Infra Lead não grava `modelName` em desfecho nenhum e segue fora).
+
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:61` (`descarregar`);
+  `:79` (`juntar`); `:51` (`descarregar_com_modelo`); `apps/web/src/routes/session-timeline-montagem.tsx:881`
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:207` (duas
   voltas, uma resposta inteira; nenhuma segunda), `apps/engine/test/engine/agents/texto_do_turno_test.exs`
   e `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:85`
-  (a linha do teto; sem número, não inventa um)
-- **Origem:** AT-354
+  (a linha do teto; sem número, não inventa um); o modelo no formulário em
+  `apps/engine/test/engine/agents/criativo_server_test.exs:697` (com modelo) e
+  `:718` (sem modelo, `nil`)
+- **Origem:** AT-354, AT-384
 
 ### RN-700 — O PO não anuncia o handoff ao Arquiteto sem fazê-lo, e história sem tarefa não é entregue {#rn-700}
 
