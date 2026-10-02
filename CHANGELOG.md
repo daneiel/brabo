@@ -9,6 +9,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- **sessão**: abrir a aba Sessões deixa de trocar as ações que o fio da Sessão mostra pelas 200 mais antigas — as duas telas passam a fazer a mesma leitura (a cauda mais as pendentes), e o resumo da aba passa a contar a pendente nova de uma sessão longa (AT-365, RN-718).
 - **gates**: o gate SecOps pendente por SAST que não rodou deixa de gravar um `agent.error` idêntico no fio a cada resgate do `GateRescuer`; o erro aparece uma vez por motivo, e motivo novo ou veredito no meio voltam a gravar (AT-386, RN-714).
 
 ### Documentação

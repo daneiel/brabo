@@ -5,7 +5,7 @@ import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
 import { FRESCOR_DA_CONFIGURACAO_MS, pollQueParaNoErro } from './query-policy';
-import { buscarAcoesDaSessao } from './acoes-da-sessao';
+import { buscarAcoesDaSessao, chaveDasAcoesDaSessao } from './acoes-da-sessao';
 // Com o canal da sessão VIVO, o poll da sessão vira fallback longo e quem diz
 // QUANDO buscar é o aviso do canal (RN-579, `canal-vivo.ts`).
 import { INTERVALO_DO_PROJETO_MS, intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
@@ -432,7 +432,9 @@ export function useSessionTokenUsage(
 export function usePendingActions(projectId: string | undefined, sessionId: string | undefined, intervalMs = 3000) {
   const canalVivo = useCanalDaSessaoVivo(sessionId);
   return useQuery({
-    queryKey: ['session-actions', projectId, sessionId],
+    // A chave sai do MESMO módulo da consulta (AT-365): a aba Sessões grava
+    // nesta entrada de cache, e as duas têm de fazer a mesma pergunta.
+    queryKey: chaveDasAcoesDaSessao(projectId, sessionId),
     queryFn: () => buscarAcoesDaSessao(projectId!, sessionId!),
     enabled: !!projectId && !!sessionId,
     refetchInterval: pollQueParaNoErro(intervaloDaSessao(intervalMs, canalVivo)),
