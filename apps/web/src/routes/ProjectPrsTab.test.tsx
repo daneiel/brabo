@@ -25,6 +25,7 @@ const proposeAction = vi.fn();
 const approveAction = vi.fn();
 const denyAction = vi.fn();
 const approveAlwaysAction = vi.fn();
+const getProjectPendingActions = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -36,6 +37,7 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     approveAction: (...args: unknown[]) => approveAction(...args),
     denyAction: (...args: unknown[]) => denyAction(...args),
     approveAlwaysAction: (...args: unknown[]) => approveAlwaysAction(...args),
+    getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
   };
 });
 
@@ -168,6 +170,7 @@ beforeEach(() => {
   useLatestSession.mockReturnValue({ latest: sessaoRecente() });
   useProjectPendingActions.mockReturnValue({ data: [] });
   getCodeDiff.mockResolvedValue({ pullRequestId: '', files: [], truncated: false });
+  getProjectPendingActions.mockResolvedValue([]);
 });
 
 describe('ProjectPrsTab — o bug de visibilidade não existe por desenho', () => {
@@ -404,5 +407,63 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
     expect(screen.queryByText('A lista de PRs ainda não está liberada')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectPrsTab — a recusa de merge aparece (RN-705)', () => {
+  it('conflito de merge: mostra motivo e arquivos, diz que é preciso resolver, e o Merge segue ativo', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    getProjectPendingActions.mockResolvedValue([
+      acaoDeMerge({
+        status: 'failed',
+        executionResult: {
+          kind: 'git_merge',
+          failed: true,
+          error: 'conflito de merge na PR pr-a: package.json',
+          pullRequestId: 'pr-a',
+          conflictingFiles: ['package.json'],
+        } as unknown as ProposedAction['executionResult'],
+      }),
+    ]);
+
+    montar();
+
+    const aviso = await screen.findByTestId('aviso-merge-recusado');
+    expect(aviso.textContent).toContain('conflito de merge na PR pr-a');
+    expect(aviso.textContent).toContain('Arquivo em conflito: package.json');
+    expect(aviso.textContent).toContain('Resolva o conflito antes');
+    expect(screen.getByRole('button', { name: 'Merge' })).not.toBeDisabled();
+    expect(getProjectPendingActions).toHaveBeenCalledWith('proj-1', {
+      actionType: 'git_merge',
+      status: 'failed',
+    });
+  });
+
+  it('recusa de OUTRA PR não aparece nesta', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    getProjectPendingActions.mockResolvedValue([
+      acaoDeMerge({
+        status: 'failed',
+        payload: { pullRequestId: 'pr-outra' },
+        executionResult: { kind: 'git_merge', failed: true, error: 'x' } as unknown as ProposedAction['executionResult'],
+      }),
+    ]);
+
+    montar();
+
+    await screen.findByRole('button', { name: 'Merge' });
+    expect(screen.queryByTestId('aviso-merge-recusado')).toBeNull();
+  });
+
+  it('aprovar o merge invalida a lista de PRs (a mergeada sai de Abertas sem recarregar)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+    approveAction.mockResolvedValue({});
+
+    montar();
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole('button', { name: /Aprovar/ }));
+
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(2));
   });
 });

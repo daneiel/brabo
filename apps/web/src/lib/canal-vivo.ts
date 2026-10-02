@@ -110,7 +110,8 @@ export type AlvoDoCanal =
   | 'pendenciasDoProjeto'
   | 'handoffs'
   | 'backlog'
-  | 'orcamento';
+  | 'orcamento'
+  | 'prs';
 
 /**
  * Tipo de evento → queries que ele invalida. Os prefixos são os tipos
@@ -136,6 +137,9 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
   if (type === 'dev.blocked_by_container') alvos.push('pendenciasDoProjeto');
   if (type.startsWith('handoff.')) alvos.push('handoffs');
   if (type.startsWith('backlog.')) alvos.push('backlog');
+  // RN-705: o merge executado (ou recusado) muda a lista de PRs do projeto —
+  // sem isto a PR mergeada seguia "aberta" com o botão até recarregar.
+  if (type === 'action.git_merge' || type === 'action.failed') alvos.push('prs');
   return alvos;
 }
 
@@ -154,6 +158,7 @@ export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
   handoffs: 2_000,
   backlog: 2_000,
   orcamento: 10_000,
+  prs: 2_000,
 };
 
 export interface InvalidadorDoCanal {
@@ -181,6 +186,7 @@ export function criarInvalidadorDoCanal(
     handoffs: ['session-handoffs', projectId, sessionId],
     backlog: ['backlog', projectId],
     orcamento: ['session-budget', projectId, sessionId],
+    prs: ['code-pull-requests', projectId],
   };
   const ultimo = new Map<AlvoDoCanal, number>();
   const pendentes = new Map<AlvoDoCanal, ReturnType<typeof setTimeout>>();

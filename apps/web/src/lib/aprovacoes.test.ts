@@ -109,6 +109,9 @@ describe('frases derivadas do payload', () => {
 
   it('a frase do merge cita a PR, e a do teto cita o salto', () => {
     expect(fraseDaAcao('git_merge', { pullRequestId: '42' })).toContain('#42');
+    // RN-705: o id `pr-N` do provider local vira o NÚMERO.
+    expect(fraseDaAcao('git_merge', { pullRequestId: 'pr-3' })).toContain('#3');
+    expect(fraseDaAcao('git_merge', { pullRequestId: 'pr-3' })).not.toContain('#pr-3');
     expect(fraseDaAcao('raise_max_parallel', { area: 'dev', atual: 2, proposto: 4 })).toContain(
       'de 2 para 4',
     );

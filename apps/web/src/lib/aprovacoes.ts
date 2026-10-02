@@ -265,7 +265,8 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   git_merge: (p) => {
     const pr = primeiro(p, 'pullRequestId');
     const destino = texto(p, 'targetBranch');
-    const qual = pr ? ` #${pr}` : '';
+    // RN-705: o provider local tem id `pr-N` — o que se mostra é o NÚMERO.
+    const qual = pr ? ` #${String(pr).replace(/^pr-/, '')}` : '';
     const onde = destino ? ` em ${codigo(destino)}` : '';
     return `Faz o merge da pull request${qual}${onde} no repositório do projeto.`;
   },

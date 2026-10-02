@@ -52,6 +52,8 @@ vi.mock('../lib/hooks', () => ({
 
 vi.mock('../lib/auth', () => ({
   userIdDaSessao: () => 'user-1',
+  // O card nomeia o ator humano pela leitura de membros (RN-705).
+  emailDaSessao: () => null,
 }));
 
 vi.mock('@tanstack/react-router', () => ({

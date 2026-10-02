@@ -524,6 +524,12 @@ export interface OpenPullRequestInput {
   title: string;
   body?: string;
   accessToken?: string;
+  /**
+   * Quem abre a PR (RN-705) — `<agente>[bot]` para dev agent. Só o provider
+   * local o GRAVA (não há usuário autenticado por trás de um repositório em
+   * disco); os remotos o ignoram, o autor ali é o dono do token.
+   */
+  author?: string;
 }
 
 export interface MergePullRequestInput {
