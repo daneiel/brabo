@@ -9895,7 +9895,7 @@ reabriria a rechamada por outra porta. A cláusula de args inválidos também n�
 dispara — ela não sabe qual é a story.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:425`
-  (`run_assessment/2`, a leitura única do histórico) e `:444`
+  (`run_assessment/2`, a leitura única do histórico) e `:455`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -19495,7 +19495,7 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:425` (`run_assessment`),
-  `:445` (`propor_parecer`);
+  `:421` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19763,7 +19763,7 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:180` (`module`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:322`
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:330`
   (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:200`
   (`erro_da_proposta`)
 - **Teste:** `apps/api/test/domain/execution/plano-de-execucao.spec.ts:22`
@@ -20507,8 +20507,8 @@ bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
 kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
 histórias em que chamou `assess_implementability`.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:321` (`module_map_vigente`);
-  `:306` (`spec_read_backlog`); `:322` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:308` (`module_map_vigente`);
+  `:282` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:545` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
@@ -20948,7 +20948,7 @@ decisão, fechados juntos:
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:116` (`execute`),
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:228` (`resumo_do_plano`)
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:219` (`resumo_do_plano`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
   estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
   `apps/web/src/components/ApprovalCard.test.tsx` ("open_adr_pr pendente"),
