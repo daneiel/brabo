@@ -93,6 +93,9 @@ updates:
     ignore:
       # `brabo-api:prod` e irmãs: imagens que o compose de produção CONSTRÓI.
       - dependency-name: 'brabo-*'
+      # Node 26 só quando virar LTS (~fim de out/2026, decisão do dono, AT-360).
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: chore
       include: scope
@@ -133,6 +136,9 @@ updates:
       # no kustomize base): não há registry de terceiro onde procurá-las, e
       # onde elas atravessam um registry o ADR 0119 já as resolve por digest.
       - dependency-name: 'brabo-*'
+      # Node 26 só quando virar LTS (~fim de out/2026, decisão do dono, AT-360).
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']
       - dependency-name: 'ghcr.io/*/brabo-*'
     commit-message:
       prefix: chore

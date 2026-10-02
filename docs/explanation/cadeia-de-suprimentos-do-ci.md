@@ -294,6 +294,9 @@ digest receives no security update until someone changes the digest — the same
 debt the action SHAs carry. `.github/dependabot.yml` enables `github-actions`
 for that reason and, since ADR 0197, `docker-compose` (`/docker`) and `docker`
 (`/docker/*` and `/deploy/k8s/**`), each grouped into one weekly PR into `dev`.
+Both image ecosystems temporarily ignore the `node` MAJOR (AT-360): the
+move to Node 26 waits for it to become LTS (around the end of October 2026),
+and the ignore comes out in that PR.
 Still manual, and declared in ADR 0197: `neo4j` and `ollama` also live in
 `deploy/k8s/base/`, the two ecosystems never share a PR, and a same-tag digest
 re-roll makes both PRs fail until a human joins them; the CloudNativePG
