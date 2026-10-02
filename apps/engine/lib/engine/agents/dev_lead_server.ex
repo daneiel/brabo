@@ -2,8 +2,9 @@ defmodule Engine.Agents.DevLeadServer do
   @moduledoc """
   Dev Lead conversacional (FASE 14d item 5, [ADR 0053]).
 
-  Ativado pelo handoff aceito do Arquiteto, consome o `module_map` e o backlog
-  e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
+  Ativado pelo handoff aceito do Arquiteto, lê o `module_map` VIGENTE do
+  projeto (a leitura de `get_infra_context`, RN-699 — nunca um evento da
+  sessão) e o backlog, relê os dois quando quiser por `read_backlog`, e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
   escreve código** — distribui trabalho e responde por ele.
 
   Desde o ADR 0090 ele também é dono do gate `implementavel`
@@ -176,7 +177,9 @@ defmodule Engine.Agents.DevLeadServer do
        tool_specs: [
          DevLeadTools.spec(),
          DevLeadTools.spec_assess_implementability(),
-         EmitArtifact.spec()
+         EmitArtifact.spec(),
+         # RN-699 (AT-363): leitura do backlog e do module_map vigente.
+         DevLeadTools.spec_read_backlog()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -418,13 +421,17 @@ defmodule Engine.Agents.DevLeadServer do
             # desfechos distintos, e só um deles (suspensão) precisa
             # interromper o `Enum.reduce`.
             resultado =
-              Enum.reduce_while(calls, {state, false}, fn call, {st, _planou} ->
+              Enum.reduce_while(calls, {state, false}, fn call, {st, planou} ->
                 case dispatch_tool(call, st) do
+                  # RN-699: só o PLANO bem-sucedido encerra o turno. Antes,
+                  # qualquer `:ok` da última chamada (uma leitura, um
+                  # `emit_artifact`) encerrava, e um `:error` depois de um
+                  # plano aceito apagava o encerramento.
                   {st2, :ok} ->
-                    {:cont, {st2, true}}
+                    {:cont, {st2, planou or Map.get(call, "name") == "propose_execution_plan"}}
 
                   {st2, :error} ->
-                    {:cont, {st2, false}}
+                    {:cont, {st2, planou}}
 
                   {st2, {:pending, action_id, tool_call_id, tool_name}} ->
                     {:halt, {:suspenso, st2, action_id, tool_call_id, tool_name}}
@@ -527,6 +534,9 @@ defmodule Engine.Agents.DevLeadServer do
   defp run_tool("assess_implementability", args, state),
     do: DevLeadTools.run_assessment(args, state)
 
+  # RN-699 (AT-363): leitura contida do backlog e do module_map do PROJETO.
+  defp run_tool("read_backlog", _args, state), do: DevLeadTools.run_read_backlog(state)
+
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
@@ -535,82 +545,29 @@ defmodule Engine.Agents.DevLeadServer do
   defp kickoff_instruction(state) do
     # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
     # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    #
+    # RN-699 (AT-362): o module_map NÃO vem do log da sessão. Esta leitura
+    # procurava `architecture.module_map_created`, tipo que NENHUM código emite
+    # — o kickoff dizia sempre "(sem module_map)". O mapa vigente vem da MESMA
+    # leitura de projeto que o AppSec usa (`get_infra_context`, `findCurrent`
+    # na api), que não depende da sessão em que o Arquiteto o gravou.
+    modulos = DevLeadTools.module_map_vigente(state.project_id, state.session_id)
+
     case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
-           "architecture.module_map_created",
            "backlog.story_created"
          ]) do
       {:ok, events, truncado?} ->
-        build_kickoff(events) <>
-          Reidratacao.aviso_de_recorte(truncado?) <> tarefas_do_backlog(state.project_id)
+        build_kickoff(modulos, events) <>
+          Reidratacao.aviso_de_recorte(truncado?) <>
+          DevLeadTools.tarefas_do_backlog(state.project_id)
 
       _ ->
-        "Proponha o plano de execução (propose_execution_plan)." <>
-          tarefas_do_backlog(state.project_id)
+        "Proponha o plano de execução (propose_execution_plan).\n\nMÓDULOS:\n" <>
+          modulos <> DevLeadTools.tarefas_do_backlog(state.project_id)
     end
   end
 
-  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
-  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
-  # nesta sessão (o PO pode ter escrito as tarefas noutra). Uma leitura por
-  # kickoff, pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica de
-  # fora (não há o que distribuir). Falha vira uma linha dita, nunca kickoff
-  # perdido: o plano sem `tarefas` é recusado pela api com motivo nomeado.
-  @max_tarefas_no_kickoff 200
-
-  defp tarefas_do_backlog(project_id) do
-    case EngineApiClient.list_backlog(project_id) do
-      {:ok, epicos} when is_list(epicos) ->
-        linhas =
-          for epico <- epicos,
-              historia <- Map.get(epico, "stories", []),
-              tarefa <- Map.get(historia, "tasks", []),
-              Map.get(tarefa, "status") != "done" do
-            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
-              "| história: #{Map.get(historia, "title")} " <>
-              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
-              modulo_atual(tarefa)
-          end
-
-        mostradas = Enum.take(linhas, @max_tarefas_no_kickoff)
-
-        corte =
-          case length(linhas) - length(mostradas) do
-            0 -> ""
-            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
-          end
-
-        """
-
-        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
-        — só o dev agent daquele módulo vai pegá-la):
-        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
-        """
-
-      _ ->
-        "\n\n(não consegui listar as tarefas do backlog agora — use os task_id que conhecer.)"
-    end
-  end
-
-  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
-    do: " [módulo atual: #{m}]"
-
-  defp modulo_atual(_tarefa), do: ""
-
-  defp build_kickoff(events) do
-    modulos =
-      events
-      |> Enum.filter(&(Map.get(&1, "type") == "architecture.module_map_created"))
-      |> List.last()
-      |> case do
-        %{"payload" => %{"modules" => mods}} when is_list(mods) ->
-          Enum.map_join(mods, "\n", fn m ->
-            "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
-          end)
-
-        _ ->
-          "(sem module_map)"
-      end
-
+  defp build_kickoff(modulos, events) do
     stories =
       events
       |> Enum.filter(&(Map.get(&1, "type") == "backlog.story_created"))
@@ -639,6 +596,12 @@ defmodule Engine.Agents.DevLeadServer do
     IMPLEMENTABILIDADE de uma story com `assess_implementability` — é
     OPCIONAL, use o julgamento: se uma história parece arriscada ou mal
     especificada, vale registrar o parecer antes de contar com ela no plano.
+    Só diga que avaliou as histórias em que você de fato chamou a ferramenta.
+
+    Use SÓ os task_id listados abaixo — nunca invente um. A lista é deste
+    momento: se o plano for recusado, ou se o backlog pode ter mudado, chame
+    `read_backlog` para reler as tarefas pendentes e o module_map vigente, e
+    proponha o plano corrigido.
 
     MÓDULOS:
     #{modulos}

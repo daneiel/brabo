@@ -55,6 +55,15 @@ defmodule Engine.Agents.DevLeadServerTest do
     }
   end
 
+  # As mensagens da ÚLTIMA chamada ao modelo no turno.
+  defp ultimas_mensagens_enviadas(ultima \\ nil) do
+    receive do
+      {:llm_turn_stream, "dev-lead", messages, _tools} -> ultimas_mensagens_enviadas(messages)
+    after
+      0 -> ultima || []
+    end
+  end
+
   defp propostas_de_plano do
     receber_propostas([])
   end
@@ -146,6 +155,97 @@ defmodule Engine.Agents.DevLeadServerTest do
     assert kickoff =~ "task_id=t-pendente | Loop de queda"
     assert kickoff =~ "board-engine, input-keyboard"
     refute kickoff =~ "t-feita"
+  end
+
+  # RN-699 (AT-362): o kickoff procurava `architecture.module_map_created`,
+  # tipo que NENHUM código emite — o Arquiteto grava o mapa pela api
+  # (`create_module_map` -> `findCurrent`), e o Dev Lead dizia "(sem
+  # module_map)". O mapa vem da leitura de PROJETO, a mesma do AppSec.
+  test "o kickoff lê o module_map vigente do projeto, não um evento da sessão", %{
+    state: state
+  } do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => %{
+        "modules" => [
+          %{"name" => "catalog-api", "stack" => "node", "responsibility" => "catálogo"}
+        ]
+      },
+      "adrs" => []
+    })
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+    sync_cast(DevLeadServer, :kickoff, state)
+
+    assert_received {:infra_context_fetched}
+    assert_received {:llm_turn_stream, "dev-lead", messages, _tools}
+    kickoff = messages |> Enum.map(&Map.get(&1, "content", "")) |> Enum.join("\n")
+    assert kickoff =~ "- catalog-api (node): catálogo"
+    refute kickoff =~ "(sem module_map)"
+
+    # O tipo que ninguém emite não volta a ser lido.
+    for opts <- Process.get(:fake_list_events_calls, []) do
+      refute "architecture.module_map_created" in List.wrap(opts[:types])
+    end
+  end
+
+  test "sem module_map vigente, o kickoff DIZ que não há — nunca inventa", %{state: state} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+    sync_cast(DevLeadServer, :kickoff, state)
+
+    assert_received {:llm_turn_stream, "dev-lead", messages, _tools}
+    kickoff = messages |> Enum.map(&Map.get(&1, "content", "")) |> Enum.join("\n")
+    assert kickoff =~ "sem module_map vigente"
+  end
+
+  # RN-699 (AT-363): o plano recusado por task_id inventado volta ao laço, e
+  # o Dev Lead tem `read_backlog` para reler as tarefas reais e corrigir.
+  test "plano recusado pela api -> read_backlog no mesmo turno, com as tarefas reais", %{
+    state: state
+  } do
+    Process.put(:fake_backlog, [
+      %{
+        "id" => "ep-1",
+        "stories" => [
+          %{
+            "id" => "st-1",
+            "title" => "Catálogo",
+            "moduleIds" => ["api"],
+            "tasks" => [%{"id" => "t-real", "title" => "Listar", "status" => "todo"}]
+          }
+        ]
+      }
+    ])
+
+    Process.put(
+      :fake_propose_action_erro,
+      {400,
+       %{
+         "code" => "plano_de_execucao_invalido",
+         "message" => "A tarefa task-catalog-01 não existe neste projeto."
+       }}
+    )
+
+    Process.put(:fake_llm_turns, [
+      plano_turn("inventado"),
+      FakeEngineApiClient.tool_call_response("read_backlog", %{}),
+      FakeEngineApiClient.final_response("reli o backlog")
+    ])
+
+    assert {:noreply, _} = sync_cast(DevLeadServer, :kickoff, state)
+
+    mensagens = ultimas_mensagens_enviadas()
+    texto = Enum.map_join(mensagens, "\n", &to_string(Map.get(&1, "content", "")))
+    assert texto =~ "plano recusado: A tarefa task-catalog-01 não existe"
+    assert texto =~ "Chame `read_backlog`"
+    assert texto =~ "task_id=t-real | Listar"
+  end
+
+  test "o menu do Dev Lead tem read_backlog, sem parâmetro livre" do
+    spec = Engine.Agents.DevLeadTools.spec_read_backlog()
+    assert spec.name == "read_backlog"
+    assert spec.parameters["properties"] == %{}
+    {:ok, state} = DevLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+    assert "read_backlog" in Enum.map(state.tool_specs, & &1.name)
   end
 
   test "o plano recusado NÃO encerra o turno — o modelo pode corrigir", %{

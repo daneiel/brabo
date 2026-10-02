@@ -140,7 +140,7 @@ defmodule Engine.Agents.ReidratacaoDosSeisTest do
     for {modulo, tipos} <- [
           {ArquitetoServer,
            ["artifact.product_brief", "artifact.business_rule", "backlog.story_created"]},
-          {DevLeadServer, ["architecture.module_map_created", "backlog.story_created"]},
+          {DevLeadServer, ["backlog.story_created"]},
           {UxDesignerServer, ["artifact.product_brief"]}
         ] do
       {:ok, state} = modulo.init({Ecto.UUID.generate(), Ecto.UUID.generate()})

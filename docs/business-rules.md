@@ -9894,8 +9894,8 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:303`
-  (`run_assessment/2`, a leitura única do histórico) e `:355`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:400`
+  (`run_assessment/2`, a leitura única do histórico) e `:419`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -15596,8 +15596,8 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:308`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:743`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:313`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:710`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1014`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -19490,8 +19490,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:303` (`run_assessment`),
-  `:374` (`propor_parecer`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:400` (`run_assessment`),
+  `:420` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19616,7 +19616,7 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:240` (`_mensagem_id`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:245` (`_mensagem_id`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:393`
   (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
@@ -19759,7 +19759,7 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:180` (`module`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:550`
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:330`
   (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:200`
   (`erro_da_proposta`)
 - **Teste:** `apps/api/test/domain/execution/plano-de-execucao.spec.ts:22`
@@ -20473,6 +20473,36 @@ PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
+
+### RN-699 — O Dev Lead lê o module_map vigente e o backlog do PROJETO, e relê os dois quando o plano é recusado {#rn-699}
+
+Medido no uso real (02/10): aceito o Dev Lead, ele respondeu que faltava o
+module_map — e o mapa existia. O kickoff procurava o evento
+`architecture.module_map_created`, que NENHUM código emite (o Arquiteto grava o
+mapa pela api), e caía sempre em "(sem module_map)". O mapa agora vem da MESMA
+leitura de projeto que o AppSec usa (`get_infra_context`, o vigente da api),
+nunca de evento da sessão; sem mapa, o kickoff diz que não há.
+
+No mesmo uso, as tarefas nasceram DEPOIS do kickoff, o Dev Lead inventou um
+`task_id`, a api recusou o plano e o turno acabou sem nova tentativa. Ele ganha
+`read_backlog`: leitura CONTIDA, sem parâmetro, escopada ao projeto (as tarefas
+pendentes pela mesma rota da `listar_backlog` do PO, teto de 200 linhas dizendo
+o total real, e o module_map vigente). A recusa da api volta ao laço dizendo
+para chamar `read_backlog` e corrigir; e só o `propose_execution_plan`
+bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
+última chamada (uma leitura, um `emit_artifact`) encerrava. A instrução do
+kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
+histórias em que chamou `assess_implementability`.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:307` (`module_map_vigente`);
+  `:281` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:545` (`kickoff_instruction`);
+  `:393` (`run_turn`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
+  mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
+  (sem mapa, diz que não há — caso de falha) e `:202` (plano recusado pela api →
+  `read_backlog` no mesmo turno, com as tarefas reais)
+- **Origem:** AT-362, AT-363
 ## O instalador oferece os modelos locais, e não confunde o dev com uma instalação (RN-691, RN-692)
 
 ### RN-691 — O `install.sh` PERGUNTA se liga os modelos locais (profile `llm`), mede a porta do Ollama antes de gravar, e compõe UMA linha de `COMPOSE_PROFILES` {#rn-691}
