@@ -447,7 +447,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
       {:ok, %{"message" => message}} ->
         content = Map.get(message, "content", "")
-        state = append(state, assistant_msg(content))
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
         if content != "", do: emit_response(state, content)
 
         case tool_calls(message, state.tool_specs) do
@@ -1403,9 +1403,6 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
-
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
 
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
