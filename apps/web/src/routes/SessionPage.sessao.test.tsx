@@ -286,3 +286,71 @@ describe('SessionPage — onde mora "Iniciar ideação"', () => {
     expect(screen.queryByText(/é este clique que o traz/)).toBeNull();
   });
 });
+
+/**
+ * RN-693 (AT-353) — ativar o Criativo grava `agent.activated`/`agent.status`
+ * e ele só fala depois da primeira mensagem. Esses eventos não são conversa:
+ * o convite com a dica de abertura continua no fio até haver mensagem.
+ */
+describe('SessionPage — fio vazio depois de "Iniciar ideação" (RN-693)', () => {
+  const ativacao = [
+    {
+      id: 'e1',
+      seq: 1,
+      type: 'agent.activated',
+      actor: { kind: 'agent', id: 'criativo' },
+      payload: { agent: 'criativo' },
+      createdAt: '2026-08-09T12:00:01.000Z',
+    },
+    {
+      id: 'e2',
+      seq: 2,
+      type: 'agent.status',
+      actor: { kind: 'agent', id: 'criativo' },
+      payload: { status: 'idle' },
+      createdAt: '2026-08-09T12:00:02.000Z',
+    },
+  ];
+  const DICA = /Comece contando o que você quer construir/;
+
+  it('caminho feliz: Criativo ativado e sem mensagem, a dica de abertura segue no fio', async () => {
+    eventos.mockReturnValue({ items: ativacao });
+    montar();
+    expect(await screen.findByText(DICA)).toBeTruthy();
+  });
+
+  it('CASO DE FALHA: com uma mensagem no fio, a dica some', async () => {
+    eventos.mockReturnValue({
+      items: [
+        ...ativacao,
+        {
+          id: 'e3',
+          seq: 3,
+          type: 'chat.message',
+          actor: { kind: 'user', id: 'user-1' },
+          payload: { text: 'oi' },
+          createdAt: '2026-08-09T12:00:03.000Z',
+        },
+      ],
+    });
+    montar();
+    await screen.findByText('oi');
+    expect(screen.queryByText(DICA)).toBeNull();
+  });
+
+  it('o composer não convida o autofill do navegador nem do gerenciador de senhas', async () => {
+    eventos.mockReturnValue({ items: ativacao });
+    montar();
+    await screen.findByText(DICA);
+    const campo = await vi.waitFor(() => {
+      const t = document.querySelector('textarea');
+      if (!t) throw new Error('sem composer');
+      return t;
+    });
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+    expect(campo.getAttribute('data-1p-ignore')).not.toBeNull();
+    expect(campo.getAttribute('data-lpignore')).toBe('true');
+    expect(campo.getAttribute('data-bwignore')).not.toBeNull();
+    expect(campo.getAttribute('data-form-type')).toBe('other');
+  });
+});
