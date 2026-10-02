@@ -62,6 +62,7 @@ defmodule Engine.Harness.ToolLoop.Default do
   }
 
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.Iteracoes
   alias Engine.Harness.RoteamentoDeFerramenta
   alias Engine.Sessions.EngineApiClient
@@ -81,7 +82,9 @@ defmodule Engine.Harness.ToolLoop.Default do
         "brabo.session_id" => Map.get(ctx, :session_id),
         "brabo.project_id" => Map.get(ctx, :project_id)
       },
-      fn -> ctx |> init() |> loop() end
+      # RN-706: o ambiente (pasta, imagem, rede, módulo) chega ao modelo pela
+      # fachada como mensagem efêmera — ver `Engine.Harness.AmbienteDoAgente`.
+      fn -> AmbienteDoAgente.com_ambiente(ctx, fn -> ctx |> init() |> loop() end) end
     )
   end
 
