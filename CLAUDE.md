@@ -1196,7 +1196,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   achou advisory que o painel ainda não tinha aberto — leia os dois, nessa
   ordem. Override que QUEBRA o consumidor não entra: mede-se e declara-se
   (`@faker-js/faker` tem correção e não sobe, porque `postman-collection@5.3.1`
-  o pina EXATO e usa a API da v5 — com o override, `pnpm docs:build` reprova)
+  o pina EXATO e usa a API da v5 — com o override, `pnpm docs:build` reprova;
+  remedido em 2026-10-02, AT-359: nenhuma versão do `postman-collection` nem
+  dos pais — plugin/tema `openapi-docs` 5.2.0 incluso — sai do faker 5.5.3, e
+  a saída é decisão do dono)
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
   (inalterada desde a Fase 1)
