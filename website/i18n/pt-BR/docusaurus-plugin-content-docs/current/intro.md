@@ -97,7 +97,7 @@ sequenceDiagram
   loop fechado
 - Auth first-party (argon2id, access Ed25519, rotação de refresh com revogação
   de família) — o Keycloak saiu inteiro; OpenAPI travada por tipo nos
-  controllers, com a [referência](reference/api/brabo-api.info.mdx) gerada
+  controllers, com a [referência](/reference/api/) gerada
 - Nove providers de LLM sobre uma base OpenAI-compatível única, catálogo com
   curadoria manual e preço congelado no metering
 - Imagens de produção non-root, deploy Kustomize com HPA por fila do Oban,

@@ -176,7 +176,7 @@ motivo na URL.
   Express, não como controller, e o teste enumera por `DiscoveryService` — ele
   estruturalmente não as vê. As duas só existem com `NODE_ENV !== 'production'`
   (`main.ts`), são públicas, e servem o mesmo documento que a
-  [referência gerada](reference/api/brabo-api) publica. Registrado aqui em vez
+  [referência gerada](/reference/api/) publica. Registrado aqui em vez
   de omitido: o que o teste não alcança precisa estar na prosa.
 - **`GET /projects/:projectId/agent-areas` passou a devolver dados de verdade,
   e a classificação não mudou** — continua `role:developer`, enquanto o `PATCH`

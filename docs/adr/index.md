@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 201 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 202 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -336,12 +336,13 @@ How documentation is generated, verified and published.
 | [0073](0073-o-caminho-publicado-nomeia-o-ambiente.md) | The published path names the ENVIRONMENT, not the branch. Revises [0071](0071-publicacao-simetrica-por-degrau.md): it put the three stages at `/brabo/<branch>/` by interpolating `$GITHUB_REF_NAME`, and with that the stable documentation ended up at `/brabo/main/` — `main` is a committer's word, and a reader is choosing maturity, not branch. `main` now publishes at `/brabo/prd/`; `qa` and `dev` coincide by accident, not by rule. The branch→path map now EXISTS in one place per process (the workflow step, the `docusaurus.config.ts` `DEGRAUS` table and the one in `landing.mjs`, the latter separating the tree's directory from the branch the version TAG comes from). `E_PRODUCAO` stays `DOCS_BRANCH === 'main'` — item 4 of 0071 exists precisely for the day the path changes, and this is that day. Two traps handled: `/brabo/main/` is published and vanishes with `keep_files: false`, so `404.html` REWRITES the prefix (its own case, not the generic redirect, which would produce `/brabo/prd/main/…`) and the anti-loop guard now only covers existing paths; and the transition seeds `/prd/` from `gh-pages:main`, otherwise `/brabo/prd/` would return 404 for days between `dev`'s first push and the next promotion |
 | [0117](0117-lockfile-proprio-para-o-website.md) | `website/` leaves the root `pnpm-workspace.yaml` and gets its own `pnpm-lock.yaml`, so `pnpm audit` at the root stops reporting Docusaurus's dependency tree, which never ships. Auditing all 13 root security overrides with `pnpm why <pkg> -r` (not by re-reading their comments) found most attributed to `website/` alone are actually MIXED — `mermaid`/`dompurify`/`uuid` also resolve through `apps/web`'s own runtime `mermaid` (ADR 0068), `postcss`/`nanoid` through `apps/web`'s `vite`, `js-yaml`/`fast-uri`/`lodash` through `apps/api`'s `eslint`/`ajv`/`@nestjs/swagger` chains — so those stay at the root AND get duplicated into a new `website/package.json` `pnpm.overrides` block; only `serialize-javascript` and the `yaml@1.x` range were truly website-exclusive and moved out entirely; `esbuild` stayed root-only, absent from `website/`'s tree. `pnpm --filter website` (root-only, requires workspace membership) becomes `pnpm --dir website` in every `docs:*` script and in `docs-deploy.yml`/`docs-check.yml`, which each gain a second, separate `pnpm install` step scoped to `website/` |
 | [0202](0202-o-indice-de-adr-por-tema.md) | The ADR index is grouped by THEME, with the theme OUTSIDE the ADR (AT-137, owner decision 01/10, finding `BRB-026`): `docs/adr/temas.yml` holds the closed list of 15 themes and one main theme per ADR, so no accepted ADR is edited, not even to gain frontmatter. The index is CHECKED, not generated — its one-line descriptions stay curated — and `docs:check` (`scripts/docs/temas-de-adr.mjs`, each rule proved by mutation) fails an ADR without a theme, a theme not in the list, a theme with no ADR, and an index row under the wrong section, outside any section or out of numeric order. The taxonomy comes from the product's fronts, not from the phases or the code folders, and is the lane's proposal for the owner to review; a new ADR's author picks its theme in the same PR, and going past 15 themes takes an ADR |
+| [0206](0206-referencia-da-api-numa-pagina-redoc.md) | The API reference becomes ONE server-rendered Redoc page (redocusaurus) at `/reference/api/`, revising the publishing half of [0033](0033-referencia-de-api-gerada-do-openapi.md): the OpenAPI plugin and theme dragged `postman-collection` → `@faker-js/faker@5.5.3` (High alert #43) with no fixable path. The per-operation pages, tag sidebar, per-operation URLs, playground and cURL snippets go away by owner decision; `api-render-check.mjs` now asserts the title and one SSR section per operation |
 
 ## The convention
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0206**.
+  is superseded — the next one is **0207**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

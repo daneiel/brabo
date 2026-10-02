@@ -847,7 +847,7 @@ reason in the URL.
   `DiscoveryService` — it structurally can't see them. Both only exist
   with `NODE_ENV !== 'production'` (`main.ts`), are public, and serve
   the same document the
-  [generated reference](reference/api/brabo-api) publishes. Recorded
+  [generated reference](/reference/api/) publishes. Recorded
   here instead of left out: what the test can't reach needs to be in
   the prose.
 - **`GET /projects/:projectId/agent-areas` started returning real data,

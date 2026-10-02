@@ -1,1 +1,0 @@
-{"responses":{"204":{"description":"Email verified; login already works."},"400":{"description":"Link invalid, expired, or already used — all three with the same response."}}}

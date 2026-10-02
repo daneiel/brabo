@@ -7,6 +7,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Mudanças
 
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
+### Documentação
+
+- **site**: a referência da API vira UMA página Redoc (redocusaurus, com SSR) em `/reference/api/`, no lugar das 235 páginas por operação do `docusaurus-plugin-openapi-docs`; as URLs por operação, a sidebar por tag, o playground e os snippets de cURL saem. Fecha o alerta High #43 (`@faker-js/faker@5.5.3`, GHSA-qxc2-j82w-r537) do `website/` (ADR 0206, AT-359).
 
 ### Manutenção
 
