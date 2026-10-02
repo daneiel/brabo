@@ -19257,10 +19257,10 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
-  (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
+  (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:977` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
   (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
