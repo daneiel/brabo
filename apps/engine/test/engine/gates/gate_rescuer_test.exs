@@ -45,6 +45,7 @@ defmodule Engine.Gates.GateRescuerTest do
       Application.delete_env(:engine, :semgrep_detector)
       Application.delete_env(:engine, :gitleaks_detector)
       Application.delete_env(:engine, :semgrep_fake_available)
+      Application.delete_env(:engine, :semgrep_fake_result)
       Application.delete_env(:engine, :gitleaks_fake_available)
     end)
 
@@ -238,7 +239,8 @@ defmodule Engine.Gates.GateRescuerTest do
       # dicionário de processo: quem varre é o processo NOVO.
       Application.put_env(:engine, :semgrep_detector, Engine.Actions.SemgrepDetector.Fake)
       Application.put_env(:engine, :gitleaks_detector, Engine.Actions.GitleaksDetector.Fake)
-      Application.put_env(:engine, :semgrep_fake_available, false)
+      Application.put_env(:engine, :semgrep_fake_available, true)
+      Application.put_env(:engine, :semgrep_fake_result, {:ok, []})
       Application.put_env(:engine, :gitleaks_fake_available, false)
 
       Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)

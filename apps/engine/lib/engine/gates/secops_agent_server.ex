@@ -131,10 +131,37 @@ defmodule Engine.Gates.SecOpsAgentServer do
           "diff indisponível (#{inspect(reason)})."
       end
 
-    {semgrep_findings, semgrep_note} = Scanner.run(semgrep(), worktree, "semgrep")
+    case Scanner.run(semgrep(), worktree, "semgrep") do
+      {_findings, semgrep_note} when is_binary(semgrep_note) ->
+        sast_nao_rodou(project_id, dev_state, task_id, semgrep_note)
+
+      {semgrep_findings, nil} ->
+        julgar(project_id, dev_state, task_id, worktree, diff_note, semgrep_findings)
+    end
+  end
+
+  # RN-714 (AT-380): a análise estática (semgrep) que NÃO rodou — binário
+  # ausente, saída inválida, exceção ou teto de tempo — não vira aprovação.
+  # Nenhum veredito é gravado: a PR fica em `awaiting_secops` (o gate segue
+  # PENDENTE e bloqueia), o contrato externo continua com os dois vereditos de
+  # sempre, e o motivo vai ao fio como `agent.error` de origem `infra`. A linha
+  # de `GateState` fica `in_progress` de propósito: é ela que faz o
+  # `GateRescuer` reexecutar o gate (no boot e depois do limiar de staleness),
+  # e é assim que corrigir o ambiente volta a julgar.
+  defp sast_nao_rodou(project_id, dev_state, task_id, nota) do
+    ArtifactEmitter.append(project_id, dev_state.session_id, "secops", "agent.error", %{
+      origem: "infra",
+      mensagem:
+        "SAST não rodou: #{nota} — o gate SecOps fica pendente e bloqueia a PR (task #{task_id}); " <>
+          "reexecute o gate depois de corrigir.",
+      reason: nota
+    })
+  end
+
+  defp julgar(project_id, dev_state, task_id, worktree, diff_note, semgrep_findings) do
     {gitleaks_findings, gitleaks_note} = Scanner.run(gitleaks(), worktree, "gitleaks")
     findings = semgrep_findings ++ gitleaks_findings
-    skipped_notes = Enum.filter([semgrep_note, gitleaks_note], & &1)
+    skipped_notes = Enum.filter([gitleaks_note], & &1)
 
     security_adrs = security_relevant_adrs(project_id, dev_state.session_id, task_id)
 

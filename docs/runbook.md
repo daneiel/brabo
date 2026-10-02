@@ -1218,11 +1218,16 @@ version and the image tag another means bundle caching in the browser or
 in nginx, not a wrong deploy — the bundle and the image come from the same
 build. Reload ignoring cache before suspecting the cluster.
 
-### The SecOps gate passes with "semgrep falhou" {#semgrep-do-gate}
+### The SecOps gate is stuck on "SAST não rodou" {#semgrep-do-gate}
 
-The SecOps verdict says `semgrep falhou (:invalid_output), pulado` (or, since
-[RN-707](business-rules.md#rn-707), `:sem_saida`) and the gate approves
-without static analysis. On the production and installation composes the
+The session thread shows a SecOps `agent.error` (origin `infra`) saying
+`SAST não rodou: semgrep falhou (:invalid_output), pulado` (or `:sem_saida`,
+or `indisponível`) and the PR stays in `awaiting_secops`. Since
+[RN-714](business-rules.md#rn-714) the gate never approves without static
+analysis: it stays pending and blocks the PR. After fixing the cause below,
+the gate runs again by itself — on the next engine restart, or once the
+`GateRescuer` finds the cycle stale (15 minutes). Before RN-714 the same
+failure approved the gate. On the production and installation composes the
 engine runs with `read_only: true` and a tmpfs at `/home/engine`; when that
 tmpfs is created `root:root`, the engine user (uid 1000) cannot create
 `/home/engine/.semgrep`, semgrep exits with an empty stdout, and the gate
@@ -1238,7 +1243,8 @@ The folder must belong to uid 1000. Both composes declare
 `/home/engine:uid=1000,gid=1000,mode=0700` since RN-707; an installation
 created before it keeps the old line until its compose is updated and the
 `engine` service is recreated (`docker compose ... up -d engine`). Kubernetes
-is not affected (`fsGroup: 1000`). Semgrep still fetches its rules from the
+is not affected (`fsGroup: 1000`). A missing `semgrep` binary blocks the gate
+the same way. Semgrep still fetches its rules from the
 registry: without egress the scan fails with `scan_failed`, which is a
 different cause.
 
