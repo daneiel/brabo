@@ -283,7 +283,7 @@ defmodule Engine.Agents.ArquitetoServer do
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
         if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
@@ -438,9 +438,6 @@ defmodule Engine.Agents.ArquitetoServer do
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
-
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
 
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 

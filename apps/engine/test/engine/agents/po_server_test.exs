@@ -87,6 +87,34 @@ defmodule Engine.Agents.PoServerTest do
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "épico criado"))
   end
 
+  # AT-350: sem os `toolCalls` na mensagem do assistente, o `tool` seguinte ia
+  # ao provider respondendo a NADA — o resultado era descartado e o modelo
+  # repetia a mesma chamada até o teto.
+  test "a chamada seguinte leva o assistant COM toolCalls antes do tool que o responde",
+       %{state: state} do
+    Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("create_epic", %{"title" => "Cadastro"}),
+      FakeEngineApiClient.final_response("ok")
+    ])
+
+    assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+    assert_received {:llm_turn_stream, _, _primeira, _}
+    assert_received {:llm_turn_stream, _, segunda, _}
+
+    idx = Enum.find_index(segunda, &(&1["role"] == "tool"))
+    assistente = Enum.at(segunda, idx - 1)
+    assert assistente["role"] == "assistant"
+    assert [%{"id" => "tc-create_epic"}] = assistente["toolCalls"]
+    assert Enum.at(segunda, idx)["toolCallId"] == "tc-create_epic"
+
+    # Resposta final sem ferramenta: o assistant NÃO ganha a chave.
+    final = List.last(Enum.filter(new_state.messages, &(&1["role"] == "assistant")))
+    refute Map.has_key?(final, "toolCalls")
+  end
+
   test "create_story com regra inválida vira tool-result de erro (não derruba o loop)", %{
     state: state
   } do

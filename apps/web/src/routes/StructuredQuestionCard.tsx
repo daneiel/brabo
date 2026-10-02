@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { answerStructuredQuestion, mensagemDaApi } from '../lib/api-client';
@@ -202,6 +203,7 @@ export function StructuredQuestionCard({
                 label={q.label}
                 value={value}
                 disabled={enviando}
+                {...SEM_AUTOFILL}
                 onChange={(e) => atualizar(e.target.value)}
               />
             );
@@ -260,7 +262,8 @@ export function StructuredQuestionCard({
                     value={value}
                     disabled={enviando}
                     autoFocus
-                    onChange={(e) => atualizar(e.target.value)}
+                    {...SEM_AUTOFILL}
+                onChange={(e) => atualizar(e.target.value)}
                   />
                 )}
               </div>
@@ -273,7 +276,8 @@ export function StructuredQuestionCard({
               label={q.label}
               value={value}
               disabled={enviando}
-              onChange={(e) => atualizar(e.target.value)}
+              {...SEM_AUTOFILL}
+                onChange={(e) => atualizar(e.target.value)}
             />
           );
         })}
