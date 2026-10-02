@@ -730,6 +730,15 @@ running as root from before this change needs a one-time `chown` of the
 `docker compose down -v` to let them be recreated) — see the note in
 [Getting started](../getting-started.md).
 
+The production and installation composes are different: the engine runs from
+its production image as the fixed `engine` user (uid/gid `1000`, no
+`DEV_UID`), with `read_only: true` and a tmpfs at `/home/engine`. That tmpfs is
+declared `uid=1000,gid=1000,mode=0700` — not a variable — because semgrep (the
+SecOps gate) writes `~/.semgrep` there; created as root, the scan returns
+nothing and the gate approves without static analysis
+([RN-707](../business-rules.md#rn-707), runbook
+[The SecOps gate passes with "semgrep falhou"](../runbook.md#semgrep-do-gate)).
+
 ---
 
 ## Tooling variables (not product)
