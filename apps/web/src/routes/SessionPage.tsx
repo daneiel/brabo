@@ -45,6 +45,7 @@ import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
+import { conversaComecou as conversaJaComecou } from '../lib/conversa-comecou';
 import {
   aberturasDeTurno,
   afundarDesfechos,
@@ -432,7 +433,8 @@ export function SessionPage({
   // cobria o histórico de execução inteiro. A pergunta certa não é "existe
   // MENSAGEM", é "esta sessão tem QUALQUER evento" — sessão nova é a única
   // que não tem nenhum.
-  const conversaComecou = events.length > 0;
+  // RN-693: ativar o agente (`agent.activated`/`agent.status`) não é conversa.
+  const conversaComecou = conversaJaComecou(events);
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });

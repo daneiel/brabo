@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web:** depois de "Iniciar ideação" o fio mantém a dica de abertura até a primeira mensagem — ativar o agente não conta mais como conversa —, e o composer e os campos das perguntas estruturadas deixam de abrir o autofill do navegador e dos gerenciadores de senha (RN-693, AT-353).
 - **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
 - **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
 
