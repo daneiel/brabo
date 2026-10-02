@@ -80,7 +80,8 @@
     "modeloGerador": "Model that generated this response: {{modelName}}",
     "modeloNaoGravado": "This response was recorded without the model's name",
     "modeloNaoRegistrado": "model not recorded",
-    "falhaOrigem": "failure · origin {{origem}}"
+    "falhaOrigem": "failure · origin {{origem}}",
+    "tetoDeIteracoes": "Stopped at the limit of {{max}} steps without finishing the turn. What was recorded so far is above; tell me how you'd like to continue."
   },
   "historia": {
     "pendente": "story \"{{titulo}}\" ready, awaiting your promotion",

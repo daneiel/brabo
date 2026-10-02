@@ -80,7 +80,8 @@
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
-    "falhaOrigem": "falha · origem {{origem}}"
+    "falhaOrigem": "falha · origem {{origem}}",
+    "tetoDeIteracoes": "Parou no teto de {{max}} passos sem terminar o turno. O que ficou registrado até aqui está acima; diga como prefere seguir."
   },
   "historia": {
     "pendente": "história \"{{titulo}}\" pronta, aguardando sua promoção",

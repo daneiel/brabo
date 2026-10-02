@@ -20,6 +20,7 @@ defmodule Engine.Agents.ArquitetoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -244,6 +245,8 @@ defmodule Engine.Agents.ArquitetoServer do
   # já aplicada ao PO: um Arquiteto que esgotasse as 14 iterações terminava
   # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    gravar_texto_do_turno(state, "", nil)
+
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
       max_iterations: @max_iterations
@@ -277,6 +280,7 @@ defmodule Engine.Agents.ArquitetoServer do
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, {:final, erro})
         state
 
@@ -284,13 +288,15 @@ defmodule Engine.Agents.ArquitetoServer do
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            gravar_texto_do_turno(state, content, model_name)
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
             run_turn(state, remaining - 1)
         end
@@ -300,6 +306,7 @@ defmodule Engine.Agents.ArquitetoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -464,6 +471,14 @@ defmodule Engine.Agents.ArquitetoServer do
   # default: o único call site aqui sempre passa os 3 argumentos.
   defp emit_response(state, content, model_name),
     do: emit(state, "agent.response", %{content: content, modelName: model_name})
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto, model_name)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.

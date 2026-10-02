@@ -46,6 +46,7 @@ defmodule Engine.Agents.CriativoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -217,11 +218,20 @@ defmodule Engine.Agents.CriativoServer do
           "de negócio levantadas nesta conversa num resumo executivo do produto."
       )
 
+    # RN-697 (AT-352): o turno da prontidão SÓ sintetiza. Sem catálogo de
+    # ferramentas, o modelo não registra regra nova nem abre formulário que
+    # ninguém responderia — o PO já entrou pelo aceite implícito (RN-658). O
+    # catálogo volta intacto para o próximo turno.
+    tool_specs = state.tool_specs
+
     {state, summary} =
       state
       |> append(instruction)
       |> compact()
+      |> Map.put(:tool_specs, ferramentas_da_prontidao())
       |> run_turn_capturing()
+
+    state = Map.put(state, :tool_specs, tool_specs)
 
     brief_id = emit_product_brief(state, summary)
 
@@ -242,6 +252,11 @@ defmodule Engine.Agents.CriativoServer do
       {:error, reason} -> emit_falha_handoff(state, "po", reason)
     end
   end
+
+  @doc false
+  # O catálogo do turno da prontidão: nenhum (RN-697). Função, e não `[]`
+  # literal, para o teste afirmar sobre a MESMA fonte que o turno usa.
+  def ferramentas_da_prontidao, do: []
 
   # --- Turno com laço bounded de tool use (RN-163) ---
 
@@ -281,6 +296,7 @@ defmodule Engine.Agents.CriativoServer do
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, {:final, erro})
         {state, acc.conteudo}
 
@@ -288,14 +304,17 @@ defmodule Engine.Agents.CriativoServer do
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content, model_name)
         acc = if content == "", do: acc, else: %{acc | conteudo: content}
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            gravar_texto_do_turno(state, content, model_name)
             {encerrar(state, acc), acc.conteudo}
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima — vira UMA
+            # `agent.response` no fim do turno, nunca um fragmento por volta.
+            TextoDoTurno.acumular(content)
             {state, desfechos} = despachar(calls, state)
             continuar(state, acc, desfechos, remaining - 1)
         end
@@ -305,6 +324,7 @@ defmodule Engine.Agents.CriativoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         {state, acc.conteudo}
     end
@@ -334,6 +354,7 @@ defmodule Engine.Agents.CriativoServer do
       # ferramenta que erra doze vezes seguidas acaba num silêncio idêntico ao
       # de um turno bem-sucedido.
       remaining <= 0 ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha_limite(state, acc)
         {state, acc.conteudo}
 
@@ -342,10 +363,19 @@ defmodule Engine.Agents.CriativoServer do
       # o modelo de novo aqui gastaria uma volta para ele reperguntar o que
       # acabou de perguntar.
       aguardando_usuario?(desfechos) ->
+        gravar_texto_do_turno(state, "", nil)
         {encerrar(state, acc), acc.conteudo}
 
       true ->
         run_turn_capturing(state, remaining, acc)
+    end
+  end
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto, model_name)
     end
   end
 
@@ -524,6 +554,10 @@ defmodule Engine.Agents.CriativoServer do
   # protocolo nativo. O ToolLoop já recuperava isso (ADR 0020), mas os agentes
   # conversacionais têm loop PRÓPRIO e ficaram de fora — o InfraAgent morria
   # com resposta vazia tendo escrito o `propose_infra_pr` certo em texto.
+  # Sem catálogo (o turno da prontidão, RN-697), nenhuma chamada é atendida —
+  # nem a que o modelo copie do histórico, onde as ferramentas aparecem.
+  defp tool_calls(_message, []), do: []
+
   defp tool_calls(message, tool_specs) do
     case Map.get(message, "toolCalls") || [] do
       [] ->
