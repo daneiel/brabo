@@ -225,6 +225,10 @@ Declarado, não corrigido:
   já estão no formato que o Dependabot espera, então ligá-lo é um arquivo
   de configuração — mas ele não existe hoje, e pin que ninguém atualiza é
   pin que envelhece até virar versão com vulnerabilidade conhecida.
+  (Esta tradução está atrás: o Dependabot existe hoje, inclusive para
+  imagens. Os dois ecossistemas de imagem ignoram temporariamente o MAJOR do
+  `node` — a ida ao Node 26 espera ele virar LTS, por volta do fim de outubro
+  de 2026, e o ignore sai nesse PR, AT-360.)
 - **Dependências npm/pnpm sem atestação.** O lockfile prende versão e
   hash de integridade, o que é real, mas não há checagem de proveniência
   (`npm audit signatures` ou equivalente) em job nenhum.
