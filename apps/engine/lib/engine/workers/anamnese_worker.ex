@@ -278,6 +278,16 @@ defmodule Engine.Workers.AnamneseWorker do
       com competência fora do catálogo são rejeitados.
     - Toda entrada precisa de evidência apontando para ids de eventos REAIS
       da janela, e de um `rationale` explicando o porquê do nível.
+    - NÃO OBSERVADO não é nível: se a pessoa não teve oportunidade de
+      interagir com uma competência (o agente fez o versionamento, a infra
+      subiu sozinha), não emita perfil dela — nem "iniciante". A evidência
+      tem de incluir um evento DA PRÓPRIA PESSOA (RN-716).
+    - Aprovar sem abrir o conteúdo é confiança (ou pressa), não domínio:
+      clique de aprovação sozinho não sustenta nível (RN-716).
+    - Mensagem da pessoa que REPARA falha de agente ("não vi o handoff,
+      pode passar?") é desvio do AGENTE, não traço da pessoa: registre-a
+      com `report_agent_deviation` (assim como laço de agente e cancelamento
+      pelo usuário), antes de fechar a rodada (RN-717).
     - Feche a rodada com UMA chamada de `emit_proficiency`.
     #{queued_instruction(context.queued_hypotheses)}
 
