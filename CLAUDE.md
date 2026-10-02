@@ -242,6 +242,7 @@ estado lido do repositório e não da conversa.
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
 | A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
+| A compactação de contexto não troca turnos por um marcador vazio, e a janela padrão vai a 128k (AT-366) | RN-702 |
 | O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
 | A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
 | O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |

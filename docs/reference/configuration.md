@@ -425,7 +425,7 @@ preflight because it runs on the host, and the api can only compare against
 | `TOOL_LOOP_MAX_ITERATIONS` | `8` | ceiling of loop turns for the **conversational** agent. Once exhausted, the agent ends with a blocking artifact |
 | `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` | `60` | ceiling for **dev agents**. Higher because they explore the repository before writing — and because `task_budget_micros` keeps spend in check underneath |
 | `TOOL_LOOP_MAX_ITERATIONS_GATE` | `60` | ceiling for **QA** subagents, for the same reason |
-| `DEFAULT_CONTEXT_WINDOW` | `8192` | used when the model doesn't declare its window |
+| `DEFAULT_CONTEXT_WINDOW` | `128000` | used when the model doesn't declare its window (the conversational agents never do); was `8192` until RN-702 |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
 | `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
