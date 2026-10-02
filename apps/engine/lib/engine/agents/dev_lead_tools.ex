@@ -198,7 +198,9 @@ defmodule Engine.Agents.DevLeadTools do
   # `module_map`, tarefa que não é do projeto. A frase vai ao modelo como está,
   # com o que fazer — é entrada do laço (RN-163), e ele corrige o plano.
   defp erro_da_proposta({400, %{"code" => "plano_de_execucao_invalido", "message" => motivo}}),
-    do: "plano recusado: #{motivo} Corrija `tarefas` e proponha o plano de novo."
+    do:
+      "plano recusado: #{motivo} Chame `read_backlog` para reler as tarefas e o " <>
+        "module_map, corrija `tarefas` e proponha o plano de novo."
 
   defp erro_da_proposta(reason),
     do: "não consegui propor o plano de execução: #{inspect(reason)}"
@@ -268,6 +270,103 @@ defmodule Engine.Agents.DevLeadTools do
   # --- assess_implementability (ADR 0090) --------------------------------
 
   @spec spec_assess_implementability() :: map()
+  # --- RN-699 (AT-362/AT-363): o que o Dev Lead LÊ ---
+
+  @doc """
+  Spec de `read_backlog`: leitura CONTIDA do backlog e do module_map vigente
+  do PROJETO (ADR 0060, RN-164/165). Sem parâmetro — não há onde o modelo
+  escreva o que quiser —, custo constante (duas leituras por chamada) e teto
+  de linhas que diz o total real quando corta.
+  """
+  def spec_read_backlog do
+    %{
+      name: "read_backlog",
+      description:
+        "Lê as tarefas pendentes do backlog do projeto (task_id, título, história, " <>
+          "módulos da história, módulo atual) e o module_map vigente. Use antes de " <>
+          "propor o plano e sempre que o plano for recusado: só os task_id daqui são válidos.",
+      parameters: %{"type" => "object", "properties" => %{}}
+    }
+  end
+
+  @spec run_read_backlog(map()) :: {:ok, String.t()}
+  def run_read_backlog(state) do
+    {:ok,
+     "MÓDULOS (module_map vigente):\n" <>
+       module_map_vigente(state.project_id, state.session_id) <>
+       tarefas_do_backlog(state.project_id)}
+  end
+
+  @doc """
+  O module_map VIGENTE do projeto, em texto. Lido pela MESMA rota que o
+  AppSec usa (`get_infra_context`, `findCurrent` na api) — e não por evento
+  da sessão: o kickoff procurava `architecture.module_map_created`, tipo que
+  nenhum código emite (AT-362).
+  """
+  @spec module_map_vigente(String.t(), String.t()) :: String.t()
+  def module_map_vigente(project_id, session_id) do
+    case EngineApiClient.get_infra_context(project_id, session_id) do
+      {:ok, %{"moduleMap" => %{"modules" => mods}}} when is_list(mods) and mods != [] ->
+        Enum.map_join(mods, "\n", fn m ->
+          "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
+        end)
+
+      {:ok, _} ->
+        "(sem module_map vigente — o Arquiteto ainda não gravou um)"
+
+      {:error, _} ->
+        "(não consegui ler o module_map agora — tente `read_backlog` de novo)"
+    end
+  end
+
+  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
+  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
+  # nesta sessão. Pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica
+  # de fora. Falha vira uma linha dita, nunca kickoff perdido.
+  @max_tarefas 200
+
+  @doc false
+  @spec tarefas_do_backlog(String.t()) :: String.t()
+  def tarefas_do_backlog(project_id) do
+    case EngineApiClient.list_backlog(project_id) do
+      {:ok, epicos} when is_list(epicos) ->
+        linhas =
+          for epico <- epicos,
+              historia <- Map.get(epico, "stories", []),
+              tarefa <- Map.get(historia, "tasks", []),
+              Map.get(tarefa, "status") != "done" do
+            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
+              "| história: #{Map.get(historia, "title")} " <>
+              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
+              modulo_atual(tarefa)
+          end
+
+        mostradas = Enum.take(linhas, @max_tarefas)
+
+        corte =
+          case length(linhas) - length(mostradas) do
+            0 -> ""
+            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
+          end
+
+        """
+
+        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
+        — só o dev agent daquele módulo vai pegá-la):
+        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
+        """
+
+      _ ->
+        "\n\n(não consegui listar as tarefas do backlog agora — chame `read_backlog` de novo; " <>
+          "não invente task_id.)"
+    end
+  end
+
+  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
+    do: " [módulo atual: #{m}]"
+
+  defp modulo_atual(_tarefa), do: ""
+
   def spec_assess_implementability do
     %{
       name: "assess_implementability",
