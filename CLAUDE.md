@@ -268,6 +268,7 @@ estado lido do repositório e não da conversa.
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
+| O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
 
 ## Estado atual e aberto
 
