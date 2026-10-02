@@ -3098,3 +3098,29 @@ cada uma tem seu próprio `actor_id` quando gasta tokens.
 - **Teste:** `test/application/use-cases/iam/get-workspace-summary.use-case.spec.ts`
 
 ---
+
+### RN-703 — Subagente sem modelo herda o modelo resolvido do lead da área {#rn-703}
+
+"Aplicar a todos os agentes" (RN-476) grava um binding por agente do catálogo
+de Configurações — 17 linhas —, e subagente que o engine roda fora dessa lista
+ficava sem modelo em nível nenhum: o `appsec` terminava com `agent.error`
+origem `infra` ("Nenhum modelo vinculado para esta sessão"), e o mesmo valia
+para todo `dev-<modulo>` além de `dev-backend`/`dev-frontend` e para a
+`qa-estrategia`. Quando a cascata de um SUBAGENTE não acha valor (ou só acha o
+default global do workspace, que ninguém escolheu para o projeto), ele usa o
+binding RESOLVIDO do lead da área dele: o lead da área do catálogo
+(`agent-areas.ts`), ou — para `appsec` → `secops` e `qa-estrategia` → `qa`, que
+o engine roda por dentro de um lead mas não recebem handoff — uma tabela ao
+lado, que só serve a esta herança. A resposta leva `herdadoDoLead` com o lead,
+e `origin` continua sendo a do binding dele (RN-470: a tela não afirma
+configuração própria). O filtro de tool calling (RN-040) vale na resolução do
+lead como na do subagente. Se ainda assim não há modelo, a mensagem de falha
+diz onde configurar.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts:76`
+  (`leadDoSubagente`); `apps/api/src/domain/agents/agent-areas.ts:123` (`leadDoSubagente`);
+  `apps/api/src/domain/llm/binding-resolver.ts:66` (`MENSAGEM_SEM_MODELO`)
+- **Teste:** `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
+  (`appsec` herda do `secops` e `dev-api` do `dev-lead`; lead também sem modelo
+  segue `null` — caso de falha)
+- **Origem:** AT-367
