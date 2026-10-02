@@ -8090,11 +8090,15 @@ cópia guardada fora de `/workspace`, carimbada com o sha256 do `pnpm-lock.yaml`
 do build — o mesmo carimbo que, comparado com o lockfile da árvore, avisa que a
 imagem está velha sem recusar subir. O compose de PRODUÇÃO não sofria disto:
 `Dockerfile.prod` já instalava em estágio de build, removia `corepack` da
-imagem final e já tinha `HEALTHCHECK`.
+imagem final e já tinha `HEALTHCHECK`. Desde a AT-360 nenhuma imagem usa
+`corepack` (o Node 25+ não o traz): o pnpm é instalado do tarball do registry,
+conferido contra um sha512 gravado no Dockerfile, em `/usr/local/bin`, e
+`COREPACK_HOME` saiu do broker de dev — com a versão igual à do `packageManager`
+não há cache a ler nem download a tentar no start (medido sob `--network none`).
 
 - **Onde:** `docker/docker-compose.yml` (serviço `broker`, sem `profiles`, com
   `healthcheck`) e `docker/docker-compose.prod.yml` (com `profiles`, e a nota
-  que impede uniformizar os dois); `docker/broker/Dockerfile` (`COREPACK_HOME`,
+  que impede uniformizar os dois); `docker/broker/Dockerfile` (o pnpm pinado por sha512,
   o `pnpm install` de build e a cópia em `/opt/broker-deps`);
   `docker/broker/entrypoint.sh` (a reconciliação dos três volumes e o aviso de
   lockfile); `scripts/dev/docker-gid.mjs` (`avaliarDockerGid`,

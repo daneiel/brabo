@@ -176,9 +176,16 @@ that reason would produce a restart loop that resolves nothing.
 optimization.** The broker's only network is `internal: true`, so there is no
 reachable registry at runtime: an image that ran `corepack`/`pnpm install` on
 start died with `getaddrinfo EAI_AGAIN registry.npmjs.org` and exited 1. The
-fix took the registry out of the runtime path (`COREPACK_HOME` prepared in the
-build and owned by the runtime uid, `pnpm install` as a build step) rather than
-opening the network — the network is the first of the five containment layers.
+fix took the registry out of the runtime path (`pnpm install` as a build step)
+rather than opening the network — the network is the first of the five
+containment layers. Since AT-360 no image uses corepack (Node 25+ no longer
+ships it): every Dockerfile installs pnpm from the registry tarball, checked
+against a sha512 recorded in the Dockerfile (`PNPM_SHA512`), into
+`/usr/local/bin`. Its version matches `packageManager` in `package.json`, so
+pnpm never tries to download anything at runtime — measured with the dev image
+under `--network none`: `pnpm --version` prints `11.3.0` and `/health`
+answers. Bumping pnpm means changing `packageManager`, `PNPM_VERSION` and
+`PNPM_SHA512` (`npm view pnpm@<v> dist.integrity`, in hex) together.
 
 Two consequences you will meet:
 
