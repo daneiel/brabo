@@ -14630,7 +14630,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:98`
-  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:170`
+  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:175`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
@@ -17272,7 +17272,7 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:224` (`decidir`, a
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:228` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
@@ -17432,7 +17432,7 @@ seguiram em `in_review` (AT-275).
    proposta repetida) veio depois, na [RN-663](#rn-663), antes de o merge
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:257`
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
   (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:311`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
@@ -17782,7 +17782,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:210` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:216` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -18993,7 +18993,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
-  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:138`
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:171`
   (`targetBranch`); `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:86`
   (`fromRef`), `:99` (`targetBranch`)
 - **Teste:** `apps/engine/test/engine/gates/diff_test.exs:64` (o diff é só a
@@ -19255,7 +19255,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:282` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:977` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
   (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
@@ -20596,6 +20596,50 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   decisão do dono.
 - **Origem:** AT-379, AT-378
 
+
+### RN-705 — A recusa de merge aparece na aba PRs, e a falha grava o tipo da ação {#rn-705}
+
+- **Regra:** a ação git que falha grava `execution_result` com o `kind` da
+  PRÓPRIA ação (`git_merge`, `pr_open`, `git_commit`, `git_push`), `failed:
+  true`, o `error` e, no `git_merge`, o `pullRequestId`; antes toda falha
+  gravava `{kind: 'git_push', branch: ''}`. O conflito de merge
+  (`GitMergeConflictError`, RN-704) grava também `conflictingFiles` e um evento
+  `backlog.task_merge_conflict` em cada tarefa da PR. `GET
+  projects/:projectId/actions` aceita `status=failed` (só com `actionType`), e
+  a aba PRs lê dali a última recusa de merge de cada PR aberta: o motivo, os
+  arquivos e a frase de que é preciso resolver o conflito antes. É AVISO em
+  texto, como o do gate pendente (RN-663): o botão "Merge" segue ativo e a
+  decisão continua humana. Aprovar o merge invalida a lista de PRs, e o aviso
+  `action.git_merge`/`action.failed` do canal também; a lista "PRs em revisão"
+  de Aprovações deixa de mostrar tarefa `done`. O card do merge nomeia o ator
+  humano pela leitura de membros (RN-655) e mostra o NÚMERO da PR (`#3`, não
+  `#pr-3`), e o provider local grava o autor da PR (`<agente>[bot]`).
+- **Medição (AT-383/AT-382, 02/10, loja-teste):** a #6 terminou `failed` com
+  o conflito em `package.json` e a aba PRs seguiu mostrando "ABERTA" com o botão
+  "Merge", sem texto nenhum; a ação gravou `kind: git_push`. Depois de um merge
+  executado, a PR seguia em "Abertas" até recarregar, o card mostrava o UUID do
+  usuário e `#pr-3`, e toda PR local era "autor desconhecido".
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:39` (`resultadoDaFalha`),
+  `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
+  `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
+  `apps/web/src/lib/canal-vivo.ts:124` (`alvosDoEvento`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  ("conflito de merge → kind git_merge, arquivos no resultado e evento na
+  tarefa"; caso de falha: "falha que não é conflito não grava arquivos nem
+  evento de conflito"), `apps/web/src/routes/ProjectPrsTab.test.tsx` ("conflito
+  de merge: mostra motivo e arquivos..."; "recusa de OUTRA PR não aparece
+  nesta"), `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
+  ("grava o autor ao abrir...")
+- **Lacuna declarada:** o conflito NÃO acorda o dev agent da tarefa para
+  rebasear e reenviar. O caminho que o QA usa (`DevAgentServer.correct/3`) só
+  age com o agente em `:awaiting_gate` NA MESMA tarefa, e no merge o gate já
+  terminou (`task.gate_resolved` com `done` leva o agente a `finish_task`, que
+  zera tarefa, worktree e branch e reivindica outra). Reaproveitá-lo exige
+  decidir como o agente readota uma tarefa `in_review` na branch existente e
+  se o gate roda de novo depois do rebase — decisão de desenho, não tomada
+  aqui. A tarefa segue `in_review`, com o `backlog.task_merge_conflict`
+  durável.
+- **Origem:** AT-383, AT-382
 
 ### RN-704 — O merge do repositório local é merge de verdade, e conflito é recusa nomeada {#rn-704}
 

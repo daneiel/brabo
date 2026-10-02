@@ -1215,6 +1215,15 @@ reason in the URL.
   the message; the target ref is untouched and the pull request stays open.
   Through the approval pipeline the `git_merge` action ends `failed` with
   that message, the same path as `GitPullRequestAlreadyMergedError`.
+- **`GET /projects/:projectId/actions` accepts `status=failed`** — same route,
+  same `developer` role ([RN-705](business-rules.md#rn-705)). Until now only
+  `pending` was accepted; `failed` lists the actions of the project whose
+  execution failed, and it REQUIRES `actionType` (`400` without it), so the
+  read is one type and never the whole history. It returns the same
+  `ProposedAction` shape the pending read returns; the failed git action now
+  carries its own `kind`, the error message and, on a merge conflict, the
+  conflicting file names — repository paths the same role already reads in
+  the diff.
 
 ## Table
 
