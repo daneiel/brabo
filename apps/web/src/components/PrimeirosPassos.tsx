@@ -28,16 +28,22 @@ export function PrimeirosPassos({
   temSessao: boolean | undefined;
 }) {
   const { t } = useTranslation('overview');
+  const bindings = useBindingsResolvidos(projectId);
+  const doCriativo = bindings.doAgente('criativo');
+  // A Visão geral não lê credenciais, e o orçamento da carga dela é contado
+  // (`duas-abas.orcamento.test.tsx`). Com modelo resolvido para o time o
+  // passo da credencial está coberto (o modelo já roda — local não pede
+  // chave), então a leitura só acontece quando o cartão realmente precisa
+  // dela: o time ainda sem modelo.
   const credenciais = useQuery({
     queryKey: ['credentials'],
     queryFn: listCredentials,
     staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+    enabled: doCriativo === null,
   });
-  const bindings = useBindingsResolvidos(projectId);
-  const doCriativo = bindings.doAgente('criativo');
 
   const passos = derivarPrimeirosPassos({
-    credenciais: credenciais.data?.length,
+    credenciais: doCriativo ? 1 : credenciais.data?.length,
     timeComModelo: doCriativo === undefined ? undefined : doCriativo !== null,
     temSessao,
   });

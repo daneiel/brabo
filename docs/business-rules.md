@@ -20764,7 +20764,9 @@ de 02/10, instalação nova). Desde a AT-372 a Visão geral abre com o cartão
 
 - **credencial** — a conta tem ao menos uma credencial de LLM (a mesma
   leitura `['credentials']` da seção de Credenciais, com o frescor de
-  configuração e sem poll, RN-645);
+  configuração e sem poll, RN-645). A Visão geral não fazia essa leitura, e a
+  carga dela tem orçamento: ela só roda quando o time ainda não tem modelo;
+  com modelo resolvido, o passo conta como coberto;
 - **modelo** — o binding resolvido do Criativo não é nulo (o lote da RN-654,
   a mesma `queryKey` de Configurações);
 - **ideação** — o projeto tem ao menos uma sessão (a lista que a página já
