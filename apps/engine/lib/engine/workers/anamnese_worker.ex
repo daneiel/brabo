@@ -285,7 +285,9 @@ defmodule Engine.Workers.AnamneseWorker do
     - Aprovar sem abrir o conteúdo é confiança (ou pressa), não domínio:
       clique de aprovação sozinho não sustenta nível (RN-716).
     - Mensagem da pessoa que REPARA falha de agente ("não vi o handoff,
-      pode passar?") é desvio do AGENTE, não traço da pessoa.
+      pode passar?") é desvio do AGENTE, não traço da pessoa: registre-a
+      com `report_agent_deviation` (assim como laço de agente e cancelamento
+      pelo usuário), antes de fechar a rodada (RN-717).
     - Feche a rodada com UMA chamada de `emit_proficiency`.
     #{queued_instruction(context.queued_hypotheses)}
 
