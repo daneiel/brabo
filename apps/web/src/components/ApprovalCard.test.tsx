@@ -136,7 +136,13 @@ describe('ApprovalCard', () => {
       />,
     );
     expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
-    expect(screen.getByText(/git push, PR, deploy, sudo\/doas/)).toBeInTheDocument();
+    // RN-713: o modo automático libera push e PR; deploy e sudo seguem com o usuário.
+    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(
+      /inclui git push e abertura de PR/,
+    );
+    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(
+      /deploy, sudo\/doas/,
+    );
     // Dentro da NOTA: a lista do piloto (RN-670), logo abaixo, também fala de
     // paralelismo, e o que este teste cobra é a frase da nota.
     expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(/paralelismo/);

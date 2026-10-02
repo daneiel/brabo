@@ -269,6 +269,7 @@ estado lido do repositório e não da conversa.
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
+| O modo automático libera push e PR de todo agente; merge protegido e sudo seguem manuais (AT-385) | ADR 0204, RN-713 |
 
 ## Estado atual e aberto
 
@@ -1672,16 +1673,20 @@ o RACIOCÍNIO da triagem, que continua valendo.
   mode ligado, e não têm exceção configurável em lugar nenhum — merge em
   branch protegida,
   `instruction_patch`, `parallelize`/`raise_max_parallel` (RN-154), e o
-  teto de efeito externo/comando privilegiado — git push/PR/deploy e
-  sudo/doas — que revisou a RN-106 (RN-418, ADR 0102): antes era `deny`
+  teto de efeito externo/comando privilegiado — deploy e sudo/doas (git
+  push e PR saíram dele PARA O MODO AUTOMÁTICO desde a RN-713/ADR 0204) —
+  que revisou a RN-106 (RN-418, ADR 0102): antes era `deny`
   incondicional, agora é `require_approval` incondicional, com a mesma
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
   recusa gravar padrão pra esses comandos). O teto vale pelas DUAS portas
   desde a RN-689: o COMANDO de terminal e as ações TIPADAS `git_push` e
-  `pr_open` — nem curinga, nem regra específica, nem `permissions.json` as
-  promovem, e por isso a ativação semeia só `git_commit` para os dev agents
-  (push e PR do dev passam pela sua aprovação, RN-050). `git_merge` tem o
+  `pr_open`. Desde a RN-713 (ADR 0204, decisão do dono de 02/10) a curinga
+  em `auto_approve` — e SÓ ela, o modo automático — promove `git_push`/
+  `pr_open`, tipados ou pelo terminal; regra específica, "sempre permitir" e
+  `permissions.json` não, e a ativação segue semeando só `git_commit` para
+  os dev agents (fora do modo automático, push e PR do dev passam pela sua
+  aprovação, RN-050). `git_merge` tem o
   teto próprio; `open_adr_pr`/`open_infra_pr` ficam fora por decisão. Desde a RN-661 a aba Executores
   OFERECE a curinga em lote para o time — mesmo endpoint, um PUT por agente,
   só com o clique, e dizendo o que o modo automático não libera; nunca a grave
@@ -1884,13 +1889,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o `brabo-runner`, na máquina do usuário (ADR 0137, RN-497). O que mudou
   aqui foi só a exigência de alguém ter decidido a imagem antes de abrir a
   leitura.
-  `git push`, abertura de PR e deploy NÃO saem pelo terminal, e as ações
-  TIPADAS `git_push`/`pr_open` também não se auto-aprovam (RN-689) — a regra é
+  Deploy e `sudo`/`doas` NÃO saem pelo terminal sem aprovação — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
-  RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
-  mesmo dentro do escopo do projeto, mesmo com auto mode ligado, mesmo com
-  "sempre permitir", que foi fechado na fonte pra não reabrir a porta).
-  `sudo`/`doas` entram na MESMA régua. O ciclo de vida do container tem
+  RN-418/ADR 0102: nunca auto-aprovável, mesmo dentro do escopo do projeto,
+  mesmo com auto mode ligado, mesmo com "sempre permitir", que foi fechado na
+  fonte). `git push` e abertura de PR seguem a mesma régua, EXCETO com o modo
+  automático do agente ligado (a curinga em `auto_approve`), que os
+  auto-aprova pelas duas portas — o terminal e as ações TIPADAS
+  `git_push`/`pr_open` (RN-713, ADR 0204, revisando a RN-689); "sempre
+  permitir" continua fechado na fonte para eles, e merge em branch protegida
+  segue sempre manual. O ciclo de vida do container tem
   TABELA de estado desde a Onda 4/frente F1 do PROGRAMA 28
   (`project_containers`, ADR 0081, RN-243..248) — e quem ESCREVE nela, desde o
   ADR 0130/0133, PODE chamar Docker de verdade: `container_start`

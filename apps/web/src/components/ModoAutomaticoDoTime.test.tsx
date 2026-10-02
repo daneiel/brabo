@@ -75,7 +75,12 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     montar();
     const nao = screen.getByTestId('modo-automatico-nao-libera');
     expect(nao).toHaveTextContent('merge em branch protegida');
-    expect(nao).toHaveTextContent('git push, abertura de PR e deploy');
+    // RN-713: push e PR passaram para o que o modo automático libera.
+    expect(nao).toHaveTextContent('deploy');
+    expect(nao).not.toHaveTextContent('git push');
+    expect(screen.getByTestId('piloto-libera')).toHaveTextContent(
+      'git push e abertura de PR',
+    );
     expect(nao).toHaveTextContent('sudo e doas');
     expect(nao).toHaveTextContent('container_remove');
     expect(nao).toHaveTextContent('instruction_patch');
