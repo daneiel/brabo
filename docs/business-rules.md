@@ -17986,7 +17986,7 @@ novas, não aparece no fio. Pendentes do PROJETO inteiro são outra leitura
   `:114` (a recusa de `status`);
   `apps/api/src/application/ports/proposed-action-repository.port.ts`
   (`ListProposedActionsOptions`);
-  `apps/web/src/lib/acoes-da-sessao.ts:42` (`buscarAcoesDaSessao`), `:30`
+  `apps/web/src/lib/acoes-da-sessao.ts:48` (`buscarAcoesDaSessao`), `:30`
   (`juntarCaudaEPendentes`); `apps/web/src/lib/hooks.ts:432`
   (`usePendingActions`)
 - **Teste:** `apps/api/test/infrastructure/persistence/proposed-action-latest.repository.spec.ts`
@@ -21143,3 +21143,42 @@ restaura a aprovação.
   liberados)
 - **Decisão arquitetural:** [ADR 0204](adr/0204-modo-automatico-libera-push-e-pr.md)
 - **Origem:** AT-385, decisão do dono em 02/10
+
+## Uma chave de cache, uma pergunta (RN-718)
+
+### RN-718 — Quem grava as ações de uma sessão no cache faz a MESMA leitura do fio {#rn-718}
+
+`['session-actions', projectId, sessionId]` é UMA entrada do cache do TanStack
+Query, e a aba Sessões gravava nela o resultado de outra pergunta: a PRIMEIRA
+página crescente (`listActions({ limit: 200 })`, sem `latest`), enquanto o fio
+da Sessão lê a cauda das 200 mais novas mais as pendentes que ela empurrou
+([RN-637](#rn-637)). As duas telas trocavam o recorte uma da outra — depois de
+abrir a aba, o fio podia desenhar as 200 ações mais ANTIGAS da sessão, o
+defeito que a RN-637 fechou, reaberto pela porta do cache (AT-365).
+
+**A regra:** a chave e a função andam juntas, em `consultaDasAcoesDaSessao`
+(`apps/web/src/lib/acoes-da-sessao.ts`). Quem LÊ as ações de uma sessão para
+pôr no cache usa esse par — `usePendingActions` e o resumo por sessão da aba
+Sessões. Chave própria para a aba foi considerada e descartada: pararia a troca
+de cache, mas manteria a aba resumindo o recorte errado. Com a mesma leitura, o
+resumo ganha — a pendente nova de uma sessão longa passa a contar em
+"aguardando". Quem só INVALIDA a chave (decisão nas telas de aprovação, o canal
+vivo) continua escrevendo a lista à mão: invalidar não grava dado.
+
+- **Onde:** `apps/web/src/lib/acoes-da-sessao.ts:76` (`chaveDasAcoesDaSessao`),
+  `:80` (`consultaDasAcoesDaSessao`); `apps/web/src/lib/hooks.ts:432`
+  (`usePendingActions`); `apps/web/src/routes/ProjectSessionsTab.tsx:270`
+  (`acoesPorSessao`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` (describe "a
+  leitura de ações é a mesma do fio": com o fio tendo gravado a cauda, montar a
+  aba deixa a cauda + pendente no cache e nenhuma chamada sem `latest` — falha
+  no código antigo, que gravava as 200 mais antigas; e a pendente empurrada
+  para fora da cauda conta em "aguardando")
+- **Lacuna declarada:** o cartão de uma ação cujo `proposed_action.created`
+  saiu da janela de 200 eventos ainda SALTA para o topo do fio
+  (`ordemDaAcaoNaTimeline` degrada para `createdAt` e ancora em 0.5) — fixado
+  como comportamento atual em
+  `apps/web/src/routes/SessionPage.acao-fora-da-janela.test.tsx`, cuja
+  correção é decisão separada. O mesmo teste prova que o cartão decidido não
+  volta a pedir decisão: o que pareceu "voltar" no AT-365 era OUTRA ação.
+- **Origem:** AT-365
