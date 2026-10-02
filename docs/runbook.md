@@ -4359,7 +4359,7 @@ reference from the dev compose through `imagens-do-compose.yml`
 the compose bumps the CI too:
 
 ```yaml
-image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
+image: neo4j:5.26-community@sha256:5eb12ad77fa46ab73e23df9ea1f43f5c0f2a79523435577648e046be042b9b93
 ```
 
 A **Dockerfile** takes the same shape on the `FROM` line — never a comment at
@@ -4368,7 +4368,7 @@ trailing one makes the build fail with *"FROM requires either one or three
 arguments"*:
 
 ```dockerfile
-FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runtime
 ```
 
 That is a **freeze**. Since ADR 0197 Dependabot's `docker-compose` (the

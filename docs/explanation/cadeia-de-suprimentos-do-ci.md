@@ -169,7 +169,7 @@ written **inside the reference**, before the digest — `image:tag@sha256:<index
 ([ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)):
 
 ```yaml
-image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
+image: neo4j:5.26-community@sha256:5eb12ad77fa46ab73e23df9ea1f43f5c0f2a79523435577648e046be042b9b93
 ```
 
 ```dockerfile

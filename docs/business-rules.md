@@ -7644,7 +7644,7 @@ rodar Ollama de verdade em um runner de CI. Esta RN fecha essa metade —
 só para o RAG, nunca para o QA — com um workflow dedicado
 (`.github/workflows/golden-set-rag.yml`, `schedule` + `workflow_dispatch`)
 que puxa `nomic-embed-text` num serviço Ollama real (mesma versão pinada
-`0.33.1` do resto do produto) e roda `mix golden_set.rag` de verdade.
+do resto do produto, hoje `0.34.4`) e roda `mix golden_set.rag` de verdade.
 
 **A diferença que torna isto tratável para o RAG e não para o QA:** o
 golden-set do RAG só chama o modelo de EMBEDDING — CPU, determinístico,
