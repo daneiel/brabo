@@ -197,7 +197,19 @@
   justify-content: space-between;
   margin-top: 20px;
   padding-top: 16px;
+  padding-bottom: 4px;
   border-top: 1px solid var(--border);
+  /* AT-374: o rodapé fica à vista quando o passo cresce além da altura do
+     modal — o "Continuar" não some abaixo da dobra. */
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-1);
+}
+
+.motivoBloqueio {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .stepLabel {

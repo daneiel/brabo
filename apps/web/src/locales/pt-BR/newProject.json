@@ -12,7 +12,7 @@
   "mode": {
     "create": {
       "label": "Criar novo",
-      "desc": "O Brabo cria o repositório no provider e roda o bootstrap de Gitflow."
+      "desc": "Um projeto novo. O repositório git nasce depois, quando você aceitar o handoff ao Arquiteto."
     },
     "adopt": {
       "label": "Adotar existente",
@@ -22,11 +22,11 @@
   "workspaceMode": {
     "container": {
       "label": "Container",
-      "desc": "O Brabo gerencia a pasta, dentro do volume compartilhado com o engine. É o padrão, e não exige nada de você."
+      "desc": "O Brabo gerencia a pasta, dentro do volume compartilhado com o engine. Não exige nada de você."
     },
     "mounted": {
       "label": "Pasta montada",
-      "desc": "O código mora numa pasta SUA, dentro da base de projetos da instalação (BRABO_PROJECTS_BASE). Ela é criada quando a Infra subir o container."
+      "desc": "O código mora numa pasta SUA, dentro da base de projetos desta instalação. Ela é criada quando a Infra subir o container."
     },
     "runner": {
       "label": "Runner local",
@@ -34,9 +34,18 @@
     }
   },
   "provider": {
-    "github": { "label": "GitHub", "desc": "Repositório via API do GitHub" },
-    "gitlab": { "label": "GitLab", "desc": "Repositório via API do GitLab" },
-    "local": { "label": "Local", "desc": "Repositório git local, sem provider externo" }
+    "github": {
+      "label": "GitHub",
+      "desc": "Repositório via API do GitHub"
+    },
+    "gitlab": {
+      "label": "GitLab",
+      "desc": "Repositório via API do GitLab"
+    },
+    "local": {
+      "label": "Local",
+      "desc": "Repositório git local, sem provider externo"
+    }
   },
   "credential": {
     "tokenValidated": "Token validado",
@@ -73,7 +82,7 @@
     "pathPlaceholder": "/home/voce/projetos/loja",
     "browseButton": "Procurar pasta...",
     "preparing": "Preparando…",
-    "hintMounted": "caminho absoluto, como ele aparece DENTRO do container",
+    "hintMounted": "caminho absoluto, dentro da base de projetos mostrada abaixo",
     "hintRunner": "caminho absoluto, como ele aparece na SUA máquina",
     "mountedUnderBase": "A pasta fica <strong>dentro da base de projetos</strong> desta instalação (<code>{{base}}</code>) — a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
     "mountedOutsideBase": "Este caminho está <strong>fora da base de projetos</strong> desta instalação (<code>{{base}}</code>), e a api <strong>recusa a criação</strong> de um projeto montado fora dela. Escolha uma pasta sob <code>{{base}}</code>.",
@@ -108,7 +117,9 @@
     "bootstrapStepsValue_zero": "{{count}} passos de Gitflow",
     "bootstrapStepsValue_one": "{{count}} passo de Gitflow",
     "bootstrapStepsValue_other": "{{count}} passos de Gitflow",
-    "unknownProvider": "—"
+    "unknownProvider": "—",
+    "localProvider": "local (o repositório git mora nesta instalação)",
+    "bootstrapCreateValue": "o repositório nasce quando você aceitar o handoff ao Arquiteto — só então roda o bootstrap de Gitflow"
   },
   "footer": {
     "back": "Voltar",
@@ -116,6 +127,12 @@
     "continue": "Continuar",
     "submitting": "Criando…",
     "viewPlan": "Ver o plano",
-    "provision": "Provisionar"
+    "provision": "Criar projeto",
+    "blocked": {
+      "mode": "Escolha criar um projeto novo ou adotar um existente para continuar.",
+      "provider": "Escolha onde o repositório está para continuar.",
+      "credential": "Escolha ou cadastre uma credencial de acesso para continuar.",
+      "details": "Preencha o nome (2 caracteres ou mais) e, se o modo pedir, um caminho absoluto para continuar."
+    }
   }
 }

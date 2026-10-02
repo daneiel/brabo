@@ -153,7 +153,7 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
         <Input
           label={t('loginPage.form.passwordLabel')}
           type="password"
-          placeholder="••••••••••"
+          placeholder={t('loginPage.form.passwordPlaceholder')}
           autoComplete="current-password"
           required
           preenchido

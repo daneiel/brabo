@@ -183,7 +183,7 @@ describe('AmbienteDoProjeto', () => {
     montar({}, ['llama3']);
 
     expect(
-      await screen.findByText('1 do Ollama, ativo no workspace'),
+      await screen.findByText('1 de conversa do Ollama, ativo no workspace'),
     ).toBeInTheDocument();
   });
 
@@ -191,7 +191,7 @@ describe('AmbienteDoProjeto', () => {
     montar({}, ['llama3', 'qwen3']);
 
     expect(
-      await screen.findByText('2 do Ollama, ativos no workspace'),
+      await screen.findByText('2 de conversa do Ollama, ativos no workspace'),
     ).toBeInTheDocument();
   });
 
@@ -202,7 +202,17 @@ describe('AmbienteDoProjeto', () => {
     montar({}, []);
 
     expect(
-      await screen.findByText('nenhum modelo do Ollama ativo no workspace'),
+      await screen.findByText('nenhum modelo de conversa do Ollama ativo no workspace'),
+    ).toBeInTheDocument();
+  });
+
+  it('modelo de embedding não conta como de conversa, e é dito à parte (AT-372)', async () => {
+    montar({}, ['nomic-embed-text']);
+
+    expect(
+      await screen.findByText(
+        'nenhum modelo de conversa do Ollama ativo no workspace · 1 de embedding (só para a busca, não conversa)',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -396,7 +406,7 @@ describe('AmbienteDoProjeto', () => {
       expect(screen.getByText('/vindo/do/cache')).toBeInTheDocument();
     });
     expect(
-      screen.getByText('1 do Ollama, ativo no workspace'),
+      screen.getByText('1 de conversa do Ollama, ativo no workspace'),
     ).toBeInTheDocument();
   });
 });

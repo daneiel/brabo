@@ -101,6 +101,16 @@ rules:
     severity: warn
     note: "O recorte do painel de contexto (RN-178, RN-180, RN-701); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
+  # O cartão de primeiros passos da Visão geral decide o que falta a um
+  # projeto novo a partir de leituras que já existem (RN-708).
+  - id: primeiros-passos-do-projeto
+    watch:
+      - "apps/web/src/lib/primeiros-passos.ts"
+      - "apps/web/src/components/PrimeirosPassos.tsx"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Os três passos, de onde cada um é derivado e quando o cartão some (RN-708); mudança aqui costuma mover o arquivo:linha dela."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que

@@ -24,7 +24,6 @@ import {
   type ModoDeRepositorio,
   type ModoDeWorkspace,
 } from '../lib/wizard';
-import { BOOTSTRAP_STEPS } from '../lib/bootstrap';
 import { CredentialStep } from '../components/wizard/CredentialStep';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
@@ -934,7 +933,12 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             value={
               PROVIDERS.find((p) => p.id === provider)
                 ? t(PROVIDERS.find((p) => p.id === provider)!.labelKey)
-                : t('confirm.unknownProvider')
+                : // Criar não pergunta provider (RN-541): o repositório nasce
+                  // `local` no aceite ao Arquiteto (RN-582). "—" parecia dado
+                  // faltando (AT-374).
+                  adotando
+                  ? t('confirm.unknownProvider')
+                  : t('confirm.localProvider')
             }
           />
           <SummaryRow
@@ -967,7 +971,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               />
               <SummaryRow
                 label={t('confirm.bootstrapLabel')}
-                value={t('confirm.bootstrapStepsValue', { count: BOOTSTRAP_STEPS.length })}
+                value={t('confirm.bootstrapCreateValue')}
               />
             </>
           )}
@@ -983,6 +987,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
       {erroDeCriacao && (
         <Alert tone="danger">{erroDeCriacao}</Alert>
+      )}
+
+      {/* AT-374: "Continuar" desabilitado diz POR QUÊ, em texto. */}
+      {currentStep !== 'confirm' && !canAdvance() && (
+        <p className={styles.motivoBloqueio} data-testid="motivo-do-continuar">
+          {t(`footer.blocked.${currentStep}`)}
+        </p>
       )}
 
       <div className={styles.footer}>
@@ -1002,7 +1013,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               {t('footer.continue')}
             </Button>
           ) : (
-            <Button variant="success" onClick={handleConfirm} disabled={submitting}>
+            <Button variant="primary" onClick={handleConfirm} disabled={submitting}>
               {submitting
                 ? t('footer.submitting')
                 : adotando

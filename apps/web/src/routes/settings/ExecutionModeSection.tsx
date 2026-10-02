@@ -6,6 +6,7 @@ import {
   getContainerLifecycle,
   getProject,
   getProjectsBase,
+  listSessions,
   mensagemDaApi,
 } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
@@ -242,6 +243,18 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
     retry: false,
   });
 
+  // AT-372: o aviso de conversão fala do trabalho dos agentes (o que fica na
+  // pasta antiga, o container removido). Num projeto sem sessão nenhuma não
+  // há agente nem trabalho, e o aviso amarelo era ruído — ele aparece quando
+  // há sessão, ou assim que a pessoa escolhe outro modo. Sem poll: a lista de
+  // sessões só importa aqui no momento de ler a seção.
+  // Mesma `queryKey` de `useProjectSessions` — o cache da página serve.
+  const sessoes = useQuery({
+    queryKey: ['sessions', projectId],
+    queryFn: () => listSessions(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+
   if (!project) return null;
 
   const condicionais = consequenciasCondicionais(project, containerParaOAviso(cicloQuery));
@@ -331,6 +344,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         uma live region assertiva aqui viraria interrupção sem causa (o mesmo
         motivo documentado em `Alert`).
       */}
+      {(!sessoes.data || sessoes.data.length > 0 || modo !== project.executionMode) && (
       <Alert tone="warning">
         <div>{t('executionMode.warning.refuses')}</div>
         <div style={{ marginTop: 6 }}>{t('executionMode.warning.carries')}</div>
@@ -365,6 +379,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
           </div>
         )}
       </Alert>
+      )}
 
       <div className={styles.ajusteCard} style={{ marginTop: 12 }}>
         <div className={styles.ajusteInfo}>

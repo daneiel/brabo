@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a Visão geral de um projeto novo abre com "Primeiros passos" — chave de provedor, modelo aplicado ao time e primeira ideação, cada um com o link para onde se faz, e o cartão some quando os três estão feitos. Configurações passa a abrir pela credencial e pelos modelos; o aviso de conversão de modo só aparece com sessão ou com outro modo escolhido; "Ativar execução" só aparece quando há o que ativar; a Atividade sem sessão diz isso em vez de um esqueleto parado; a linha de modelos locais separa embedding de conversa; e o toast do "Atualizar catálogo" diz quantos modelos vieram, com "Ativar um modelo →" (AT-372, [RN-708](docs/business-rules.md#rn-708)).
+- **web**: o login e o assistente de projeto ficam mais claros para quem chega numa instalação nova: a URL do login não ganha mais `?oauthError=false`, o campo de senha tem placeholder em texto, o "Continuar" desabilitado diz por quê, o rodapé do assistente fica à vista, o card "Container" não se diz mais "o padrão" ao lado de outro pré-selecionado, a tela não cita mais variável de operador, e a confirmação diz provider `local` e quando o repositório nasce, com o botão "Criar projeto" no acento (AT-374).
 - **web**: o catálogo de modelos ganha busca por nome ou id (grupos com resultado abrem sozinhos; sem resultado, a tela diz); o card da credencial sem modelo no catálogo oferece "Atualizar catálogo" ali mesmo; e, sem nenhum modelo ativo, o modelo marcado pode ser ativado e aplicado aos agentes num clique, com o aviso de sobrescrita (AT-357, [RN-694](docs/business-rules.md#rn-694)).
 
 ### Correções

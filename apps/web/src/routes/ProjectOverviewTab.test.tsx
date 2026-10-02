@@ -57,6 +57,7 @@ const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
 const activateExecutionMock = vi.fn();
 const getRepository = vi.fn();
+const listCredentials = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -80,6 +81,7 @@ vi.mock('../lib/api-client', async () => {
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
     activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
     getRepository: (...args: unknown[]) => getRepository(...args),
+    listCredentials: (...args: unknown[]) => listCredentials(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -225,6 +227,7 @@ function montar() {
 beforeEach(() => {
   vi.clearAllMocks();
   listSessions.mockResolvedValue([SESSAO]);
+  listCredentials.mockResolvedValue([{ id: 'c-1', provider: 'openrouter', createdAt: '', updatedAt: '' }]);
   listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
   listHandoffs.mockResolvedValue([HANDOFF_INFRA]);
   listActions.mockResolvedValue({ items: [], nextCursor: null });
@@ -500,5 +503,49 @@ describe('ProjectOverviewTab — bindings em lote (AT-339)', () => {
     await vi.waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalled());
     expect(grid.queryByText(/Modelo Um/)).not.toBeInTheDocument();
     expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+});
+
+describe('primeiros passos (RN-708, AT-372)', () => {
+  it('projeto novo: os três passos pendentes, com o link de cada um', async () => {
+    listSessions.mockResolvedValue([]);
+    listCredentials.mockResolvedValue([]);
+    getResolvedModelBindings.mockResolvedValue({ agents: [{ key: 'criativo', binding: null }], areas: [] });
+    montar();
+
+    const cartao = await screen.findByTestId('primeiros-passos');
+    expect(within(cartao).getByText('0 de 3 feitos')).toBeInTheDocument();
+    expect(within(cartao).getByText('Cadastrar a chave →')).toBeInTheDocument();
+    expect(within(cartao).getByText('Abrir o catálogo →')).toBeInTheDocument();
+    expect(within(cartao).getByText('Abrir o Criativo →')).toBeInTheDocument();
+    // Sem sessão, a coluna de atividade é um vazio de verdade, não um esqueleto parado.
+    expect(
+      await screen.findByText('Nenhuma atividade ainda: ela começa com a primeira sessão do projeto.'),
+    ).toBeInTheDocument();
+  });
+
+  it('tudo feito: o cartão não aparece', async () => {
+    getResolvedModelBindings.mockResolvedValue({
+      agents: [
+        {
+          key: 'criativo',
+          binding: { modelId: 'm-1', origin: 'project', routingPreference: null, skipped: [] },
+        },
+      ],
+      areas: [],
+    });
+    montar();
+
+    await screen.findAllByText(/Execução/);
+    expect(screen.queryByTestId('primeiros-passos')).toBeNull();
+  });
+
+  it('leitura de credenciais que falhou não vira "pendente": o cartão espera', async () => {
+    listSessions.mockResolvedValue([]);
+    listCredentials.mockRejectedValue(new Error('rede'));
+    montar();
+
+    await screen.findAllByText(/Execução/);
+    expect(screen.queryByTestId('primeiros-passos')).toBeNull();
   });
 });

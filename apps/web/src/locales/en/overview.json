@@ -62,21 +62,24 @@
     "espelhoRessalvaErro": "The local agent reported: {{erro}}",
     "espelhoDestinoTrocado": "The destination changed after this round: it wrote to {{destino}}. Reconnect brabo-runner so the new one takes effect.",
     "modelosLocais": "local models",
-    "modelosLocaisNenhum": "no Ollama model active in the workspace",
-    "modelosLocaisValor_one": "{{count}} from Ollama, active in the workspace",
-    "modelosLocaisValor_other": "{{count}} from Ollama, active in the workspace"
+    "modelosLocaisNenhum": "no Ollama chat model active in the workspace",
+    "modelosLocaisValor_one": "{{count}} Ollama chat model, active in the workspace",
+    "modelosLocaisValor_other": "{{count}} Ollama chat models, active in the workspace",
+    "modelosLocaisEmbedding_one": "{{count}} embedding model (search only, does not chat)",
+    "modelosLocaisEmbedding_other": "{{count}} embedding models (search only, do not chat)"
   },
   "activity": {
     "title": "Activity",
     "count_one": "{{count}} event",
     "count_other": "{{count}} events",
-    "loadErrorTitle": "Could not load the activity."
+    "loadErrorTitle": "Could not load the activity.",
+    "emptyNoSession": "No activity yet: it starts with the project's first session."
   },
   "executionSection": {
     "title": "Execution",
     "activationErrorTitle": "Could not tell if execution was already activated.",
     "introReady": "Activate execution for the dev agents to implement the backlog in parallel.",
-    "introNeedsModuleMap": "Define the module_map (Architect) before activating execution.",
+    "introNeedsModuleMap": "Nothing to activate yet: the Architect has to define the project's modules first.",
     "introNeedsRepository": "This project has no repository yet, and without one the dev agents have nowhere to work. It is created when you accept the handoff to the Architect — or, if that one was already accepted, the handoff to the Dev Lead.",
     "provisionNow": "Provision the repository now",
     "activate": "Activate execution",
@@ -111,5 +114,25 @@
     "statusGenerated": "generated",
     "statusPending": "pending",
     "link": "View full architecture →"
+  },
+  "primeirosPassos": {
+    "title": "First steps",
+    "progresso": "{{feitos}} of {{total}} done",
+    "feito": "Done",
+    "credencial": {
+      "titulo": "Add a model provider key",
+      "pendente": "Without a key, the agents have nothing to talk with.",
+      "link": "Add the key →"
+    },
+    "modelo": {
+      "titulo": "Activate a model and apply it to the team",
+      "pendente": "No agent has a model yet: activate one in the catalog and apply it to everyone.",
+      "link": "Open the catalog →"
+    },
+    "ideacao": {
+      "titulo": "Start the first ideation",
+      "pendente": "Tell the Creative agent your idea — that is where the stories come from.",
+      "link": "Open the Creative agent →"
+    }
   }
 }

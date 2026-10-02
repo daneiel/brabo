@@ -219,7 +219,27 @@ export function ModelCatalogSection({
     mutationFn: () => syncModelCatalog(workspaceId),
     onSuccess: (resultado) => {
       invalidar();
-      showToast({ title: t('catalog.toasts.syncSuccess'), tone: 'success' });
+      // AT-372: o toast diz QUANTOS modelos o sync trouxe e leva ao próximo
+      // passo — ativar um. "Sincronizado" sozinho não dizia se veio algo.
+      const vieram = resultado.porProvider.reduce(
+        (soma, r) => soma + r.descobertos + r.reencontrados,
+        0,
+      );
+      showToast({
+        title: t('catalog.toasts.syncSuccess'),
+        message: t('catalog.toasts.syncCount', { count: vieram }),
+        tone: 'success',
+        acao:
+          vieram > 0
+            ? {
+                rotulo: t('catalog.toasts.syncActivateLink'),
+                aoClicar: () =>
+                  document
+                    .getElementById('catalogo-de-modelos-lista')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              }
+            : undefined,
+      });
       return resultado;
     },
     onError: () =>
@@ -345,7 +365,7 @@ export function ModelCatalogSection({
   }
 
   return (
-    <div className={styles.section}>
+    <div className={styles.section} id="catalogo-de-modelos-lista">
       <div className={styles.header}>
         <div>
           <div className={styles.tituloLinha}>

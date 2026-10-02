@@ -12,7 +12,7 @@
   "mode": {
     "create": {
       "label": "Create new",
-      "desc": "Brabo creates the repository on the provider and runs the Gitflow bootstrap."
+      "desc": "A new project. The git repository is born later, when you accept the handoff to the Architect."
     },
     "adopt": {
       "label": "Adopt existing",
@@ -22,11 +22,11 @@
   "workspaceMode": {
     "container": {
       "label": "Container",
-      "desc": "Brabo manages the folder, inside the volume shared with the engine. It's the default, and requires nothing from you."
+      "desc": "Brabo manages the folder, inside the volume shared with the engine. It requires nothing from you."
     },
     "mounted": {
       "label": "Mounted folder",
-      "desc": "The code lives in a folder of YOURS, inside the installation's projects base (BRABO_PROJECTS_BASE). It's created when Infra starts the container."
+      "desc": "The code lives in a folder of YOURS, inside this installation's projects base. It is created when Infra starts the container."
     },
     "runner": {
       "label": "Local runner",
@@ -34,9 +34,18 @@
     }
   },
   "provider": {
-    "github": { "label": "GitHub", "desc": "Repository via the GitHub API" },
-    "gitlab": { "label": "GitLab", "desc": "Repository via the GitLab API" },
-    "local": { "label": "Local", "desc": "Local git repository, no external provider" }
+    "github": {
+      "label": "GitHub",
+      "desc": "Repository via the GitHub API"
+    },
+    "gitlab": {
+      "label": "GitLab",
+      "desc": "Repository via the GitLab API"
+    },
+    "local": {
+      "label": "Local",
+      "desc": "Local git repository, no external provider"
+    }
   },
   "credential": {
     "tokenValidated": "Token validated",
@@ -73,7 +82,7 @@
     "pathPlaceholder": "/home/you/projects/store",
     "browseButton": "Browse folder...",
     "preparing": "Preparing…",
-    "hintMounted": "absolute path, as it appears INSIDE the container",
+    "hintMounted": "absolute path, inside the projects base shown below",
     "hintRunner": "absolute path, as it appears on YOUR machine",
     "mountedUnderBase": "The folder sits <strong>inside this installation's projects base</strong> (<code>{{base}}</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
     "mountedOutsideBase": "This path is <strong>outside this installation's projects base</strong> (<code>{{base}}</code>), and the api <strong>refuses to create</strong> a mounted project outside it. Pick a folder under <code>{{base}}</code>.",
@@ -107,7 +116,9 @@
     "bootstrapAdoptValue": "nothing runs without your approval",
     "bootstrapStepsValue_one": "{{count}} Gitflow step",
     "bootstrapStepsValue_other": "{{count}} Gitflow steps",
-    "unknownProvider": "—"
+    "unknownProvider": "—",
+    "localProvider": "local (the git repository lives in this installation)",
+    "bootstrapCreateValue": "the repository is born when you accept the handoff to the Architect — only then does the Gitflow bootstrap run"
   },
   "footer": {
     "back": "Back",
@@ -115,6 +126,12 @@
     "continue": "Continue",
     "submitting": "Creating…",
     "viewPlan": "View the plan",
-    "provision": "Provision"
+    "provision": "Create project",
+    "blocked": {
+      "mode": "Choose to create a new project or adopt an existing one to continue.",
+      "provider": "Choose where the repository is to continue.",
+      "credential": "Choose or add an access credential to continue.",
+      "details": "Fill in the name (2 characters or more) and, if the mode asks, an absolute path to continue."
+    }
   }
 }
