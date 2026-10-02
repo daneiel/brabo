@@ -269,7 +269,7 @@ export function ApprovalCard({
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
-  const { verbo, trechos } = descreverAcao(action.actionType, payload);
+  const { verbo, trechos } = descreverAcao(action.actionType, payload, action.status);
   const temCorpoProprio = COM_CORPO_PROPRIO.has(action.actionType);
 
   /*
@@ -394,7 +394,7 @@ export function ApprovalCard({
                 maintainer e passou o callback; ausente some o botão em vez de
                 desabilitar sem explicar (action.actor.kind === 'user' também
                 cai aqui: não há AGENTE pra confiar). */}
-            {onActivateAutoMode && (
+            {onActivateAutoMode && podeSemprePermitir && (
               <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
                 {t('approvalCard.actions.autoMode')}
               </Button>
@@ -428,7 +428,9 @@ export function ApprovalCard({
               <span>
                 {ehAgenteDeModulo
                   ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
-                  : t('approvalCard.notes.alwaysAllow')}
+                  : action.actionType === 'terminal'
+                    ? t('approvalCard.notes.alwaysAllow')
+                    : t('approvalCard.notes.alwaysAllowTyped')}
               </span>
             </p>
           )}
@@ -437,11 +439,15 @@ export function ApprovalCard({
               a RN-670 (ADR 0189) a lista inteira — o que o piloto libera e o
               que não libera — vem junto, a MESMA dos Executores e do card do
               agente. */}
-          {onActivateAutoMode && (
+          {onActivateAutoMode && podeSemprePermitir && (
             <>
               <p className={styles.note} data-testid="nota-modo-automatico">
                 <AlertIcon size={14} className={styles.noteIcon} />
-                <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
+                <span>
+                  {action.actionType === 'terminal'
+                    ? t('approvalCard.notes.autoMode', { actor: actorLabel })
+                    : t('approvalCard.notes.autoModeTyped', { actor: actorLabel })}
+                </span>
               </p>
               <OQueOPilotoLibera recolhido />
             </>

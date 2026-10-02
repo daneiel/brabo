@@ -97,14 +97,14 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   terminal: 'quer executar comando',
   git_commit: 'propõe alteração',
   git_push: 'quer enviar alterações',
-  pr_open: 'abriu pull request',
+  pr_open: 'quer abrir pull request',
   spend: 'solicita gasto extra',
   git_repo_create: 'quer criar o repositório',
   git_branch_create: 'quer criar uma branch',
   git_branch_protect: 'quer proteger uma branch',
   write_file: 'propõe escrever um arquivo',
-  open_adr_pr: 'abriu pull request de ADR',
-  open_infra_pr: 'abriu pull request de infra',
+  open_adr_pr: 'quer abrir pull request de ADR',
+  open_infra_pr: 'quer abrir pull request de infra',
   git_merge: 'quer fazer merge',
   instruction_patch: 'propõe ajustar a instrução de um agente',
   parallelize: 'quer mais um agente em paralelo',
@@ -115,6 +115,17 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   container_stop: 'quer parar o container do projeto',
   container_remove: 'quer remover o container do projeto',
   container_start_via_runner: 'quer subir o container do projeto na sua máquina',
+};
+
+/**
+ * O verbo do que JÁ aconteceu (AT-371, RN-709). `VERBO_DA_ACAO` fala da
+ * proposta — o card pendente dizia "abriu pull request" antes de abrir. Só
+ * os tipos cujo verbo muda de tempo entram aqui; o resto mantém o da proposta.
+ */
+export const VERBO_DA_ACAO_EXECUTADA: Partial<Record<ActionType, string>> = {
+  pr_open: 'abriu pull request',
+  open_adr_pr: 'abriu pull request de ADR',
+  open_infra_pr: 'abriu pull request de infra',
 };
 
 type Payload = Record<string, unknown>;
@@ -378,7 +389,11 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
 };
 
 /** O verbo do tipo, ou um verbo neutro quando o web ainda não o conhece. */
-export function verboDaAcao(actionType: string): string {
+export function verboDaAcao(actionType: string, status?: string): string {
+  if (status === 'executed') {
+    const feito = VERBO_DA_ACAO_EXECUTADA[actionType as ActionType];
+    if (feito) return feito;
+  }
   return VERBO_DA_ACAO[actionType as ActionType] ?? VERBO_DESCONHECIDO;
 }
 
@@ -399,10 +414,14 @@ export function trechosDaFraseDaAcao(actionType: string, payload: Payload = {}):
   return marcada === null ? null : emTrechos(marcada);
 }
 
-export function descreverAcao(actionType: string, payload: Payload = {}): AcaoLegivelEmTrechos {
+export function descreverAcao(
+  actionType: string,
+  payload: Payload = {},
+  status?: string,
+): AcaoLegivelEmTrechos {
   const marcada = fraseMarcada(actionType, payload);
   return {
-    verbo: verboDaAcao(actionType),
+    verbo: verboDaAcao(actionType, status),
     frase: marcada === null ? null : semMarcas(marcada),
     trechos: marcada === null ? null : emTrechos(marcada),
   };

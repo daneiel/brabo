@@ -249,3 +249,15 @@ describe('a hipótese do Psicólogo fala a mesma língua', () => {
     expect(descreverHipotese(hipotese('dismissed')).frase).toContain('nada mudou');
   });
 });
+
+describe('AT-371 — o verbo segue o estado da ação', () => {
+  it.each(['pr_open', 'open_adr_pr', 'open_infra_pr'])('%s pendente propõe; executada abriu', (tipo) => {
+    expect(verboDaAcao(tipo)).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'pending').verbo).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'executed').verbo).toMatch(/^abriu/);
+  });
+
+  it('tipo sem verbo executado mantém o da proposta', () => {
+    expect(verboDaAcao('terminal', 'executed')).toBe(verboDaAcao('terminal'));
+  });
+});

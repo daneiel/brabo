@@ -353,7 +353,7 @@ describe('ApprovalCard', () => {
 
   // AT-320: a auditoria de 30/09 viu o botão (e a nota "libera este tipo de
   // ação só para dev-api") num `git_push` — a metade TIPADA do teto da RN-418.
-  it.each<ActionType>(['git_push', 'pr_open', 'git_merge'])(
+  it.each<ActionType>(['git_push', 'pr_open', 'git_merge', 'open_adr_pr', 'open_infra_pr'])(
     '%s de dev-api: não oferece "Sempre permitir" nem a nota do escopo',
     (actionType) => {
       render(
@@ -370,6 +370,38 @@ describe('ApprovalCard', () => {
       expect(screen.queryByText(/só para/)).toBeNull();
     },
   );
+
+  // AT-371 (RN-709): PR de ADR é teto da RN-418 — sem "Sempre permitir" e sem
+  // modo automático; e o cabeçalho pendente fala da PROPOSTA.
+  it('open_adr_pr pendente: "quer abrir", sem Sempre permitir nem modo automático', () => {
+    render(
+      <ApprovalCard
+        action={makeAction({ actionType: 'open_adr_pr', actor: { kind: 'agent', id: 'arquiteto' } })}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('quer abrir pull request de ADR')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Sempre permitir' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Modo automático' })).toBeNull();
+    expect(screen.queryByTestId('nota-modo-automatico')).toBeNull();
+  });
+
+  it('assess_implementability: as notas não falam de comando de terminal', () => {
+    render(
+      <ApprovalCard
+        action={makeAction({ actionType: 'assess_implementability', actor: { kind: 'agent', id: 'dev-lead' } })}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('nota-sempre-permitir').textContent).not.toMatch(/npm test|git status/);
+    expect(screen.getByTestId('nota-modo-automatico').textContent).not.toMatch(/qualquer comando/);
+  });
 
   describe('instruction_patch (Fase 4b)', () => {
     function patchAction(payload: Record<string, unknown> = {}) {
