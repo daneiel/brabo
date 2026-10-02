@@ -1,1 +1,0 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"reason":{"type":"string","example":"The command would delete the working directory.","description":"Stays in the event log alongside the denial. Optional, but recommended."}},"title":"DenyActionDto"}}}}}

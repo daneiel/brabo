@@ -506,7 +506,7 @@ one provider: each row carries `descobertos`, `reencontrados`,
 (`infra` | `modelo`) and `detalhe`. A skipped provider **does not deactivate anything**:
 "I don't know what's there" is not "there's nothing there"
 ([RN-043](../business-rules/custo.md#rn-043)). The full body is in the
-[generated OpenAPI](api/brabo-api) under the `internal` tag.
+[generated OpenAPI](/reference/api/) under the `internal` tag.
 
 Two things this route does **not** do, and that used to be different:
 
@@ -1534,14 +1534,14 @@ specific agent or to all `idle` agents in a module. See
 ## Where the contract lives
 
 Since FASE 7b there is **OpenAPI** for the engine → api direction: the 32 routes
-below are in the [generated reference](api/brabo-api), under the `internal` tag, with
+below are in the [generated reference](/reference/api/), under the `internal` tag, with
 request body, response body and error codes. The document is generated
 from the code by `pnpm docs:generate` and `docs:check` fails when it
 goes out of date.
 
 | side | source |
 |---|---|
-| api routes | the [generated OpenAPI](api/brabo-api) (contract) and [`security-surface.md`](../security-surface.md) (exposure) |
+| api routes | the [generated OpenAPI](/reference/api/) (contract) and [`security-surface.md`](../security-surface.md) (exposure) |
 | engine routes | `apps/engine/lib/engine_web/router.ex` |
 | shared types | `packages/shared/src/index.ts` (api ↔ web only) |
 | engine client | `apps/engine/lib/engine/sessions/engine_api_client.ex` |

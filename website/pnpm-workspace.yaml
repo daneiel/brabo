@@ -4,16 +4,14 @@
 #   - `@swc/core: true` — o `@docusaurus/faster` (auto-instalado como peer)
 #     usa o binding nativo de verdade para o modo rápido do build; sem o
 #     build, cai para um binário ausente, não para um fallback silencioso.
-#   - `@parcel/watcher: false`, `core-js: false`,
-#     `postman-code-generators: false` — nenhum dos três faz nada que o
-#     build ou o `docusaurus gen-api-docs` precise (watcher de modo
-#     watch-only, mensagem de patrocínio, `npm install` aninhado por
-#     gerador). Mesmo motivo de cada um na raiz.
+#   - `@parcel/watcher: false`, `core-js: false` — nenhum dos dois faz nada
+#     que o build precise (watcher de modo watch-only, mensagem de
+#     patrocínio). Mesmo motivo de cada um na raiz. (`postman-code-generators`
+#     saiu com o plugin OpenAPI, ADR 0206.)
 allowBuilds:
   '@parcel/watcher': false
   '@swc/core': true
   core-js: false
-  postman-code-generators: false
 # `website/` NÃO é membro do workspace da raiz (ADR 0117) — este arquivo faz
 # dele o PRÓPRIO root do pnpm (pacote único, sem `packages:`), com lockfile
 # independente. `pnpm install` de dentro de `website/` já resolve contra
@@ -30,12 +28,7 @@ allowBuilds:
 # qual caminho.
 overrides:
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
-  # `@nestjs/swagger`, e aqui via `@redocly/openapi-core`
-  # (`docusaurus-plugin-openapi-docs`).
-  js-yaml@>=5.0.0 <5.2.2: 5.2.2
-  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
-  # `eslint` → `@eslint/eslintrc`, e aqui via `openapi-to-postmanv2` /
-  # `@11ty/gray-matter` (subárvore do `docusaurus-theme-openapi-docs`).
+  # `eslint` → `@eslint/eslintrc`, e aqui via `@docusaurus/core`.
   #
   # Teto subiu de 4.3.1 para 4.3.2 (GHSA-2883-xcg3-v3hh), junto com o da raiz.
   # Alerta que o Dependabot ainda não abriu — quem o achou foi o
@@ -45,8 +38,7 @@ overrides:
   # runtime direta (ADR 0068), e aqui via `@docusaurus/theme-mermaid`.
   mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, via `vite`
-  # (`postcss: ^8.5.17`), e aqui via `postcss-preset-env` (transitivo do
-  # `docusaurus-theme-openapi-docs`).
+  # (`postcss: ^8.5.17`), e aqui via `postcss-preset-env` (transitivo do Docusaurus).
   postcss@<8.5.23: 8.5.23
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via `ajv` →
   # `@angular-devkit/core`, e aqui via `@redocly/ajv`.
@@ -77,14 +69,6 @@ overrides:
   # GHSA-rfgv-xxqx-mfg5 e GHSA-w293-vg96-wgc3, mais as moderadas/baixas da
   # mesma linha.
   undici@>=7.0.0 <7.29.1: 7.29.1
-  # WEBSITE-EXCLUSIVA — segunda linha maior do mesmo pacote, disjunta da de
-  # cima. `pnpm why undici`: `@apidevtools/json-schema-ref-parser@15.5.2` ←
-  # `docusaurus-plugin-openapi-docs`; a árvore da raiz não tem a 6.x.
-  #
-  # HIGH · GHSA-rfgv-xxqx-mfg5 (`>=6.7.0 <6.28.1`), mais a MODERATE
-  # GHSA-3wwx-pv8p-q78v e a LOW GHSA-r53p-7pc4-xj5r (`<6.28.1`, sem piso) —
-  # daí a faixa começar na linha 6 inteira (disciplina 2), não no 6.7.0.
-  undici@>=6.0.0 <6.28.1: 6.28.1
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
   # `@nestjs/swagger`, e aqui direto via `@docusaurus/core`.
   lodash@<4.18.0: 4.18.1
@@ -93,11 +77,11 @@ overrides:
   # daqui. Entra pelos plugins de webpack do Docusaurus.
   serialize-javascript@<7.0.5: 7.0.7
   # WEBSITE-EXCLUSIVA (ADR 0117): `pnpm why yaml -r` só mostrava a árvore
-  # `oas-linter`/`oas-validator`/`swagger2openapi`. Não confundir com a
+  # `oas-linter`/`oas-validator`/`swagger2openapi` (hoje sob `redoc`). Não confundir com a
   # `yaml` 2.x que o Docusaurus usa direto, fora desta faixa.
   yaml@>=1.0.0 <1.10.3: 1.10.3
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, via `mermaid`,
-  # e aqui via `postman-collection`/`sockjs` (dev-server do webpack).
+  # e aqui via `sockjs` (dev-server do webpack).
   uuid@<11.1.1: 11.1.1
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web` (o `nanoid` só
   # chega pelo `postcss` acima, dos dois lados).
@@ -107,8 +91,7 @@ overrides:
   dompurify@>=3.0.0 <3.4.13: 3.4.13
   # WEBSITE-EXCLUSIVA — a raiz também tem a 1.x, com entrada própria lá (e
   # outras duas linhas maiores que aqui não existem).
-  # `pnpm why brace-expansion`: `minimatch@3.1.5` ← `glob@7` ← `shelljs`
-  # (`postman-code-generators`) e ← `serve-handler` ← `@docusaurus/core`.
+  # `pnpm why brace-expansion`: `minimatch@3.1.5` ← `serve-handler` ← `@docusaurus/core`.
   #
   # 2 HIGH · GHSA-qhr7-859c-m2p7 e GHSA-6j4f-fj2g-mc7p (30/09), mais a
   # MODERATE GHSA-q2hr-2g5m-vwhr, que fecha na 1.1.21.
@@ -144,23 +127,6 @@ overrides:
 # quem roda `pnpm docs:build` —, nunca a instalação de ninguém. Isso reduz a
 # severidade real; não a zera, e por isso está escrito em vez de esquecido.
 #
-#   · `@faker-js/faker@5.5.3` — HIGH · GHSA-qxc2-j82w-r537 (alerta #43), com
-#     correção em 10.5.0. **Tem patch e mesmo assim não sobe**, e isso foi
-#     MEDIDO, não suposto: `postman-collection@5.3.1` pina `@faker-js/faker`
-#     em `5.5.3` EXATO (não é faixa) e usa a API da v5 que sumiu na v8
-#     (`faker.address`, `faker.random.*`, `faker.datatype.number`,
-#     `faker.phone.phoneNumberFormat`). Com o override aplicado, o
-#     `pnpm docs:build` REPROVA — `Docusaurus could not load module …
-#     docusaurus-plugin-openapi-docs/lib/index.js`, com
-#     `TypeError: Cannot read properties of undefined (reading 'city')` como
-#     causa, no `require` de `dynamic-variables.js`. São cinco majors de
-#     distância e o pai não tem versão nova; fechar o alerta custaria a
-#     documentação inteira.
-#     Remedido em 2026-10-02 (AT-359): `postman-collection@5.3.1` segue a
-#     última no npm (sem 5.3.2/6.x) e ainda pina `5.5.3`; quem a arrasta é
-#     `docusaurus-plugin-openapi-docs`/`-theme-openapi-docs` (5.1.2 aqui,
-#     5.2.0 a mais nova, ambas `postman-collection ^5.0.2`),
-#     `openapi-to-postmanv2@6.3.3` e `postman-code-generators@2.1.1` (as
-#     duas `^5.0.0`, ambas as mais novas). Nenhum pai sobe para fora do
-#     faker 5.5.3. Trocar/remover o plugin ou dispensar o alerta com
-#     justificativa é decisão do dono.
+#   · (vazio desde 2026-10-02) — o `@faker-js/faker@5.5.3` (GHSA-qxc2-j82w-r537,
+#     alerta #43) saiu da árvore com o plugin OpenAPI, trocado pelo
+#     Redocusaurus (ADR 0206).

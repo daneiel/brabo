@@ -598,16 +598,19 @@ piece of this mechanism:
 | hydration in the browser | ❌ the page gets wiped |
 
 In other words: **"the build passed" was never proof the page
-works.** `api-render-check.mjs` runs after `docs:build` and asserts,
-on every operation page, the structural marker only `ApiItem`
-produces (`openapi-left-panel__container` /
-`openapi-right-panel__container`, confirmed against the theme's
-source, not guessed at).
+works.**
 
-It catches **this class** of regression, not every hydration failure —
-catching all of them would require a headless browser, and that
-dependency isn't worth the residual risk. If another one slips through,
-that's where this conversation starts.
+Since ADR 0206 that plugin is gone: the reference is **one Redoc page**
+(redocusaurus, server-side rendered) at `/reference/api/`, and there is
+no `ApiItem` to forget. The lesson stays, so the guard stays too:
+`api-render-check.mjs` runs after `docs:build` and asserts, in both
+locales, that `reference/api.html` exists, carries the spec's
+`info.title`, and contains one server-rendered section per operation in
+`docs/reference/openapi.json` (Redoc's
+`data-section-id=tag/<tag>/operation/<id>`).
+
+It catches the page vanishing, rendering empty or losing operations —
+not a hydration failure, which would need a headless browser.
 
 The same episode produced the map's `site-e-publicacao` rule:
 `website/**` wasn't covered by any rule, and changing the site config

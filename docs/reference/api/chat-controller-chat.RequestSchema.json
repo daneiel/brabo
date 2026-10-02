@@ -1,1 +1,0 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"text":{"type":"string","example":"Summarize what we have already decided about checkout.","description":"The user's message. The response comes back as an SSE stream."}},"required":["text"],"title":"SendChatMessageDto"}}}}}

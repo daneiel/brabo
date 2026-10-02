@@ -100,7 +100,7 @@ sequenceDiagram
   Anamnesis with a closed loop
 - First-party auth (argon2id, Ed25519 access, refresh rotation with family
   revocation) — Keycloak is gone entirely; OpenAPI locked by type across
-  controllers, with the [reference](reference/api/brabo-api.info.mdx)
+  controllers, with the [reference](/reference/api/)
   generated
 - Nine LLM providers over a single OpenAI-compatible base, catalog with
   manual curation and price frozen at metering time

@@ -202,15 +202,18 @@ deste mecanismo:
 | `pnpm docs:build` | ✅ **verde** |
 | hidratação no navegador | ❌ a página é apagada |
 
-Ou seja: **"o build passou" nunca foi prova de que a página funciona.** O
-`api-render-check.mjs` roda depois do `docs:build` e afirma, em cada página de
-operação, a marca estrutural que só o `ApiItem` produz
-(`openapi-left-panel__container` / `openapi-right-panel__container`, conferidas na
-fonte do tema, não escolhidas por palpite).
+Ou seja: **"o build passou" nunca foi prova de que a página funciona.**
 
-Ele pega **esta classe** de regressão, não toda falha de hidratação — pegar todas
-exigiria navegador headless, e essa dependência não se paga para o risco que
-sobra. Se outra escapar, é aí que essa conversa começa.
+Desde o ADR 0206 esse plugin saiu: a referência é **uma página Redoc**
+(redocusaurus, renderizada no servidor) em `/reference/api/`, e não há mais
+`ApiItem` para esquecer. A lição fica, e a guarda também: o
+`api-render-check.mjs` roda depois do `docs:build` e afirma, nos dois idiomas,
+que `reference/api.html` existe, traz o `info.title` da spec e contém uma seção
+renderizada no servidor por operação de `docs/reference/openapi.json` (o
+`data-section-id=tag/<tag>/operation/<id>` do Redoc).
+
+Ela pega a página sumir, vir vazia ou perder operações — não falha de
+hidratação, que exigiria navegador headless.
 
 Do mesmo episódio saiu a regra `site-e-publicacao` do mapa: `website/**` não
 aparecia em regra nenhuma, e mexer no config do site não cobrava documentação.

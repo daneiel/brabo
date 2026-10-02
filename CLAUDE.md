@@ -1208,7 +1208,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
-  `package.json`: já são dezoito na raiz e dezessete no website, cada um com o
+  `package.json`: já são dezoito na raiz e quinze no website, cada um com o
   advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
   escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
   versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já
@@ -1217,12 +1217,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   resolver a faixa vulnerável em silêncio. O painel do Dependabot mede a
   branch DEFAULT (`main`); quem mede a `dev` é o `pnpm audit` local, e ele já
   achou advisory que o painel ainda não tinha aberto — leia os dois, nessa
-  ordem. Override que QUEBRA o consumidor não entra: mede-se e declara-se
-  (`@faker-js/faker` tem correção e não sobe, porque `postman-collection@5.3.1`
-  o pina EXATO e usa a API da v5 — com o override, `pnpm docs:build` reprova;
-  remedido em 2026-10-02, AT-359: nenhuma versão do `postman-collection` nem
-  dos pais — plugin/tema `openapi-docs` 5.2.0 incluso — sai do faker 5.5.3, e
-  a saída é decisão do dono)
+  ordem. Override que QUEBRA o consumidor não entra: mede-se e declara-se.
+  Foi o caso do `@faker-js/faker@5.5.3`, pinado EXATO pelo `postman-collection`
+  do plugin OpenAPI, sem versão de saída (medido na AT-359): a saída foi trocar
+  o plugin pelo Redocusaurus (ADR 0206), não forçar o override
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
   (inalterada desde a Fase 1)
