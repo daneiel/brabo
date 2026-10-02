@@ -167,6 +167,10 @@ function nomeDoAgente(id: string | undefined): string {
   return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
 }
 
+function dolares(micros: number): string {
+  return `US$ ${(micros / 1_000_000).toFixed(2).replace('.', ',')}`;
+}
+
 function plural(n: number, singular: string, pluralForma: string): string {
   return `${n} ${n === 1 ? singular : pluralForma}`;
 }
@@ -324,9 +328,16 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
       tarefas !== undefined && tarefas > 0
         ? ` Cada uma das ${plural(tarefas, 'tarefa', 'tarefas')} vai para o dev do módulo que o Dev Lead escolheu.`
         : '';
+    // AT-381 (RN-709): a api põe no payload o orçamento por tarefa VIGENTE (o
+    // mesmo que a ativação usa); a estimativa é tarefas × esse teto.
+    const orcamento = numero(p, 'orcamentoPorTarefaMicros');
+    const estimativa =
+      orcamento !== undefined && tarefas !== undefined && tarefas > 0
+        ? ` Estimativa: até ${dolares(orcamento * tarefas)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}) — é o teto por tarefa, não o preço.`
+        : '';
     // RN-677 (AT-263, ADR 0194): aprovar o plano É ativar a execução — sobe
     // os dev agents e começa o gasto. A frase diz isso antes do clique.
-    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}`;
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}${estimativa}`;
   },
 
   assess_implementability: (p) => {

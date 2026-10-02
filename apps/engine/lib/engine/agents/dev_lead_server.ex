@@ -665,7 +665,8 @@ defmodule Engine.Agents.DevLeadServer do
        }) do
     "plano aprovado e execução ATIVADA na sessão #{sessao}: " <>
       "#{Enum.join(Map.get(exec, "modulos", []), ", ")}; " <>
-      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído."
+      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído." <>
+      Engine.Agents.DevLeadTools.resumo_do_plano(exec)
   end
 
   defp texto_do_desfecho(%{

@@ -261,3 +261,18 @@ describe('AT-371 — o verbo segue o estado da ação', () => {
     expect(verboDaAcao('terminal', 'executed')).toBe(verboDaAcao('terminal'));
   });
 });
+
+describe('AT-381 — o plano mostra a estimativa de gasto', () => {
+  it('tarefas × orçamento por tarefa, dito como teto', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      tarefas: Array.from({ length: 18 }, (_, i) => ({ taskId: `t${i}`, modulo: 'api' })),
+      orcamentoPorTarefaMicros: 500_000,
+    });
+    expect(frase).toContain('até US$ 9,00 (18 tarefas × US$ 0,50)');
+    expect(frase).toContain('teto por tarefa, não o preço');
+  });
+
+  it('sem orçamento no payload, não inventa número', () => {
+    expect(fraseDaAcao('propose_execution_plan', { tarefas: [{ taskId: 't', modulo: 'api' }] })).not.toContain('US$');
+  });
+});

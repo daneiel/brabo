@@ -212,11 +212,36 @@ defmodule Engine.Agents.DevLeadTools do
   # executa na proposta e devolve o desfecho aqui; `"auto_approved"`/
   # `"approved"` seguem contando como sucesso para não chamar de erro uma ação
   # cujo desfecho ainda não chegou.
-  defp classificar("executed", _action, total, normalizados) do
+  defp classificar("executed", action, total, normalizados) do
     {:ok,
      "plano aprovado e execução ATIVADA: #{total} agente(s) em " <>
-       "#{length(normalizados)} módulo(s); cada tarefa vai para o dev do módulo atribuído."}
+       "#{length(normalizados)} módulo(s); cada tarefa vai para o dev do módulo atribuído." <>
+       resumo_do_plano(Map.get(action, "executionResult") || %{})}
   end
+
+  @doc """
+  O resumo CALCULADO pela api do plano aplicado (AT-381, RN-709): tarefas por
+  módulo e os módulos sem tarefa, que não ganharam agente. É o que o Dev Lead
+  cita ao narrar, em vez de recontar de memória. Vazio quando a api não o
+  mandou (plano sem `tarefas`).
+  """
+  def resumo_do_plano(%{"tarefasPorModulo" => por_modulo} = exec)
+      when is_map(por_modulo) and map_size(por_modulo) > 0 do
+    contagem =
+      por_modulo
+      |> Enum.sort()
+      |> Enum.map_join(" · ", fn {m, n} -> "#{m} #{n}" end)
+
+    sem =
+      case Map.get(exec, "modulosSemTarefa") do
+        [_ | _] = lista -> " Sem tarefa, sem agente: #{Enum.join(lista, ", ")}."
+        _ -> ""
+      end
+
+    " Tarefas por módulo (cite estes números): #{contagem}." <> sem
+  end
+
+  def resumo_do_plano(_), do: ""
 
   defp classificar(status, _action, total, normalizados)
        when status in ["auto_approved", "approved"] do
