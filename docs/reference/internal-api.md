@@ -317,6 +317,17 @@ in X." / "Artefatos do projeto: em X."). Still one message, still ephemeral,
 up to 42 tokens in the worst real pair measured. The request body does not
 change.
 
+Since [RN-706](../business-rules.md#rn-706) the calls of `dev-*` agents and
+QA subagents (the `ToolLoop`) may carry ONE more ephemeral `role: "system"`
+message BEFORE the author profile and the language guidance (the language one
+stays last): the agent's environment, built by `Engine.Harness.AmbienteDoAgente`
+— its real working folder (`/work/...` when a container is `running`), the
+image and network from the latest `artifact.project_image`, that git goes
+through the typed actions, and its module and the contracts it consumes.
+Capped at 1 200 characters; a failed read leaves it out. The api treats it as
+any other system message and meters its tokens like the rest. The request
+body does not change.
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
