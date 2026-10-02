@@ -878,6 +878,39 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           </div>
         ),
       });
+    } else if (event.type === 'toolloop.limit_reached') {
+      // RN-698 (AT-354): o teto de iterações era invisível no fio — o PO
+      // parava em 12/12 e a última coisa à mostra era um pedaço de resposta.
+      // Mesma bolha de falha do `agent.error`, origem `modelo` (o teto só se
+      // esgota quando o modelo segue pedindo ferramenta sem convergir, RN-166).
+      const max = (event.payload as { max_iterations?: unknown } | null)?.max_iterations;
+      empurrar({
+        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+        node: (
+          <div
+            className={styles.message}
+            key={event.id}
+            style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            data-testid="falha-de-turno"
+            data-origem="modelo"
+          >
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.messageHeader}>
+                <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
+                <span className={styles.messageMeta}>
+                  {t('mensagens.falhaOrigem', { origem: 'modelo' })}
+                </span>
+              </div>
+              <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
+                {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
+              </div>
+            </div>
+          </div>
+        ),
+      });
     } else if (event.type.startsWith('delegation.')) {
       // RN-181 — a área trabalha por dentro e o fio ficava mudo.
       //

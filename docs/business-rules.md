@@ -13599,7 +13599,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:861`
+  dispatch de `container_start` consultando antes de propor), `:875`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14321,7 +14321,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:559`
+  `propose_infra_pr` perguntando antes do HALT), `:573`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15505,7 +15505,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:776`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:790`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15597,7 +15597,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:308`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:736`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:743`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1014`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -16038,10 +16038,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:861`
-  (`recusa_local_de_subida`), `:914` (`recusa_por_estado`), `:938`
-  (`recusa_ja_de_pe`), `:925` (`recusa_sem_imagem_decidida`), `:973`
-  (`recusa_pasta_nunca_confirmada`), `:984` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:875`
+  (`recusa_local_de_subida`), `:928` (`recusa_por_estado`), `:938`
+  (`recusa_ja_de_pe`), `:937` (`recusa_sem_imagem_decidida`), `:987`
+  (`recusa_pasta_nunca_confirmada`), `:998` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16462,11 +16462,11 @@ nem leitura de backlog — conversar com ele é conversar com o que o kickoff lh
 deu e com as quatro ferramentas.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:187`
-  (`user_message`), `:207` (`TurnoOrfao.fechar_ao_subir`), `:248`
+  (`user_message`), `:211` (`TurnoOrfao.fechar_ao_subir`), `:248`
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
   (`handle_info`), `:373` (`drenar_correcao_pendente`), `:420`
-  (`toolloop.limit_reached`), `:1037` (`concluir`);
+  (`toolloop.limit_reached`), `:1051` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:592`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -19053,9 +19053,9 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:452`
-  (`dispatch_calls`), `:525` (`recusa_pr_repetida_no_lote`), `:1122`
-  (`registrar_subida`), `:1130` (`fechar_subida`), `:1148`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
+  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1134`
+  (`registrar_subida`), `:1144` (`fechar_subida`), `:1148`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19256,7 +19256,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:933` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:966` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
   (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19312,8 +19312,8 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
-  `:630` (`propor_container_start`), `:693` (`subir_no_aceite`), `:739`
-  (`eleger_candidata`), `:1288` (`passo_da_subida`)
+  `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:753`
+  (`eleger_candidata`), `:1302` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
@@ -19364,8 +19364,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1067` (`oferecer_ao_dev_lead`),
-  `:1037` (`concluir`), `:345` (`handle_info`), `:1054`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1062` (`oferecer_ao_dev_lead`),
+  `:1051` (`concluir`), `:345` (`handle_info`), `:1068`
   (`topico_do_container`);
   `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
   `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
@@ -19429,7 +19429,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:762`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:776`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -19695,7 +19695,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
   (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:334`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:224`
-  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:692`
+  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
   (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:301`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
@@ -20281,8 +20281,51 @@ providers (`toWireMessage` no OpenAI-compatível, `tool_use` no Anthropic); a
 reidratação continua trazendo ferramentas como texto.
 
 - **Onde:** `apps/engine/lib/engine/agents/mensagem_do_assistente.ex:17` (`de`);
-  `apps/engine/lib/engine/agents/po_server.ex:276`, e o mesmo ponto nos outros seis servidores
+  `apps/engine/lib/engine/agents/po_server.ex:280`, e o mesmo ponto nos outros seis servidores
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:93` (a segunda
   chamada leva o `assistant` com `toolCalls` logo antes do `tool` que o
   responde; a resposta final, sem ferramenta, não ganha a chave — caso de falha)
 - **Origem:** AT-350
+
+### RN-697 — O turno da prontidão do Criativo só sintetiza: sem ferramentas {#rn-697}
+
+O turno que `confirm_readiness` dispara consolida as regras num resumo e grava o
+`product_brief`. No uso real (v7.0.0, Haiku 4.5) ele levou 25 s e gravou mais
+quatro `artifact.business_rule` e um `chat.structured_question` que ninguém
+responderia: o PO já tinha entrado pelo aceite implícito (RN-658). O turno passa
+a ir ao modelo SEM catálogo de ferramentas, e nenhuma chamada é atendida nele —
+nem a que o modelo copie do histórico. O catálogo volta intacto no turno
+seguinte; o turno normal continua com `emit_artifact` e
+`ask_structured_questions`.
+
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:214` (`executar_confirm_readiness`);
+  `:259` (`ferramentas_da_prontidao`)
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:172` (o turno
+  vai com `tools: []` e não grava regra nem pergunta) e `:192` (regressão: o turno
+  normal mantém as duas ferramentas)
+- **Origem:** AT-352
+
+### RN-698 — O texto do turno vira UMA resposta, e o teto de iterações aparece no fio {#rn-698}
+
+Com ferramentas, o modelo escreve em pedaços — um trecho antes da chamada, outro
+na volta seguinte, muitas vezes continuando a mesma frase. Cada volta virava a
+sua `agent.response`, e o fio recolhe as anteriores em "Passos do turno": à
+mostra ficava só o último pedaço (" histórias e tarefas que cubram tudo.",
+começando com espaço). O transporte não perdia nada — o frame `final` da api
+leva o texto inteiro da VOLTA —; o que se partia era o TURNO. Nos sete
+conversacionais, o texto de uma volta com ferramenta é acumulado no processo do
+turno e gravado numa `agent.response` só quando o turno fecha (sem ferramenta,
+teto, falha, suspensão do Dev Lead, PR da Infra). Pedaço que começa ou termina
+com espaço entra como veio; dois pedaços colados viram parágrafos.
+
+O `toolloop.limit_reached` dos conversacionais (RN-166) passa a ser uma linha
+no fio, na bolha de falha, origem `modelo`, dizendo o teto ("parou no teto de N
+passos sem terminar o turno"); sem o número no payload a linha diz `?`.
+
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:36` (`descarregar`);
+  `:54` (`juntar`); `apps/web/src/routes/session-timeline-montagem.tsx:881`
+- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:207` (duas
+  voltas, uma resposta inteira; nenhuma segunda), `apps/engine/test/engine/agents/texto_do_turno_test.exs`
+  e `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:85`
+  (a linha do teto; sem número, não inventa um)
+- **Origem:** AT-354

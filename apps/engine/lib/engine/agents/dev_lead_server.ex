@@ -93,6 +93,7 @@ defmodule Engine.Agents.DevLeadServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -358,6 +359,8 @@ defmodule Engine.Agents.DevLeadServer do
   # já aplicada ao PO: um Dev Lead que esgotasse as 14 iterações terminava
   # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    gravar_texto_do_turno(state, "", nil)
+
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
       max_iterations: @max_iterations
@@ -391,6 +394,7 @@ defmodule Engine.Agents.DevLeadServer do
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, {:final, erro})
         state
 
@@ -398,13 +402,15 @@ defmodule Engine.Agents.DevLeadServer do
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            gravar_texto_do_turno(state, content, model_name)
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content)
             # `reduce_while` — não `reduce` — porque `:pending` precisa PARAR
             # o laço no meio da lista, sem processar as chamadas seguintes
             # nem recursar para a próxima iteração. Antes de ADR 0086 as três
@@ -427,6 +433,8 @@ defmodule Engine.Agents.DevLeadServer do
 
             case resultado do
               {:suspenso, st2, action_id, tool_call_id, tool_name} ->
+                gravar_texto_do_turno(st2, "", model_name)
+
                 # O `-1` documenta que a iteração suspensa CONTA contra o teto
                 # quando retomada — mesma vizinhança de raciocínio do
                 # comentário logo abaixo, sobre por que "bem-sucedido" encerra
@@ -451,6 +459,7 @@ defmodule Engine.Agents.DevLeadServer do
               # e o modelo nunca chega a corrigir. A primeira versão desta
               # guarda olhava só o nome da ferramenta e tinha esse defeito.
               {st2, true} ->
+                gravar_texto_do_turno(st2, "", model_name)
                 st2
 
               {st2, false} ->
@@ -463,6 +472,7 @@ defmodule Engine.Agents.DevLeadServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -740,6 +750,14 @@ defmodule Engine.Agents.DevLeadServer do
   # default: o único call site aqui sempre passa os 3 argumentos.
   defp emit_response(state, content, model_name),
     do: emit(state, "agent.response", %{content: content, modelName: model_name})
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto, model_name)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.

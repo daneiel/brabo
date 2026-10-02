@@ -40,6 +40,7 @@ defmodule Engine.Agents.UxDesignerServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao,
     UxDesignerTools
@@ -197,6 +198,8 @@ defmodule Engine.Agents.UxDesignerServer do
   # já aplicada ao PO: um UX Designer que esgotasse as 14 iterações terminava
   # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    gravar_texto_do_turno(state, "", nil)
+
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
       max_iterations: @max_iterations
@@ -226,6 +229,7 @@ defmodule Engine.Agents.UxDesignerServer do
       # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
       # `Map.put(resultado, :turno_assincrono, nil)`.
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, {:final, erro})
         state
 
@@ -233,13 +237,16 @@ defmodule Engine.Agents.UxDesignerServer do
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            gravar_texto_do_turno(state, content, model_name)
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content)
+
             {state, sucesso?} =
               Enum.reduce(calls, {state, false}, fn call, {st, sucesso_acumulado} ->
                 {st2, desfecho} = dispatch_tool(call, st)
@@ -262,6 +269,7 @@ defmodule Engine.Agents.UxDesignerServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -384,6 +392,14 @@ defmodule Engine.Agents.UxDesignerServer do
   # default: o único call site aqui sempre passa os 3 argumentos.
   defp emit_response(state, content, model_name),
     do: emit(state, "agent.response", %{content: content, modelName: model_name})
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto, model_name)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
