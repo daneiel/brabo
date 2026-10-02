@@ -29,6 +29,7 @@ defmodule Engine.Agents.PoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -234,6 +235,8 @@ defmodule Engine.Agents.PoServer do
   # fora. Mesmo tipo de evento e mesmo payload: quem lê o log não precisa
   # aprender um segundo nome para o mesmo fato.
   defp run_turn(state, remaining) when remaining <= 0 do
+    gravar_texto_do_turno(state, "", nil)
+
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
       max_iterations: @max_iterations
@@ -267,6 +270,7 @@ defmodule Engine.Agents.PoServer do
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, {:final, erro})
         state
 
@@ -274,13 +278,16 @@ defmodule Engine.Agents.PoServer do
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content, model_name)
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            gravar_texto_do_turno(state, content, model_name)
             encerrar_turno(state)
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima — vira UMA
+            # `agent.response` no fim do turno, nunca um fragmento por volta.
+            TextoDoTurno.acumular(content)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
             run_turn(state, remaining - 1)
         end
@@ -290,8 +297,17 @@ defmodule Engine.Agents.PoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
+    end
+  end
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto, model_name)
     end
   end
 

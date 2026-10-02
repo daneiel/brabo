@@ -82,6 +82,29 @@ describe('montarTimeline — a bolha de falha de turno (AT-338)', () => {
   });
 });
 
+describe('montarTimeline — o teto de iterações vira linha no fio (RN-698, AT-354)', () => {
+  it('toolloop.limit_reached do PO aparece como falha de origem modelo, com o teto', () => {
+    const container = montar([
+      {
+        ...falha({ iteration: 12, max_iterations: 12 }),
+        type: 'toolloop.limit_reached',
+        actor: { kind: 'agent', id: 'po' },
+      } as SessionEvent,
+    ]);
+    const bolha = container.querySelector('[data-testid="falha-de-turno"]');
+    expect(bolha?.getAttribute('data-origem')).toBe('modelo');
+    expect(bolha?.textContent).toContain('teto de 12 passos');
+  });
+
+  it('sem o número no payload, a linha existe e não inventa um teto', () => {
+    const container = montar([
+      { ...falha({}), type: 'toolloop.limit_reached' } as SessionEvent,
+    ]);
+    const bolha = container.querySelector('[data-testid="falha-de-turno"]');
+    expect(bolha?.textContent).toContain('teto de ? passos');
+  });
+});
+
 // RN-695 (AT-355): a análise da Anamnese não entra no fio da sessão.
 describe('montarTimeline — a Anamnese fora do fio (AT-355)', () => {
   function resposta(ator: string, id: string, texto: string): SessionEvent {

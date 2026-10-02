@@ -251,6 +251,7 @@ estado lido do repositório e não da conversa.
 | A análise da Anamnese sai do fio, e o nível de proficiência chega aos agentes (AT-355/AT-356) | RN-695, RN-696 |
 | A dica de abertura fica no fio até a primeira mensagem, e os campos da sessão não convidam o autofill (AT-353) | RN-693 |
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
+| A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
 
 ## Estado atual e aberto
 
