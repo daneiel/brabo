@@ -246,6 +246,7 @@ estado lido do repositório e não da conversa.
 | O PO não anuncia o handoff sem fazê-lo: o servidor oferece ao Arquiteto com regras cobertas e toda história com tarefa (AT-364) | RN-700 |
 | O Dev Lead lê o module_map vigente e relê o backlog quando o plano é recusado (AT-362/AT-363) | RN-699 |
 | Subagente sem modelo herda o do lead da área; o `appsec` deixa de falhar depois de "aplicar a todos" (AT-367) | RN-703 |
+| O painel de contexto não afirma 0 regras fora da janela de eventos (AT-365) | RN-701 |
 | O índice de ADR agrupado por tema, com o tema fora do ADR (AT-137) | ADR 0202 |
 | A revogação mira a CHAVE, e não o par `{projeto, usuário}` (AT-013) | ADR 0201, RN-685 |
 | O binário do runner lê o PTY sob o Bun, e o Windows sai da matriz de binários (AT-342/AT-343) | ADR 0187, RN-688 |

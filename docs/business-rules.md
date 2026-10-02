@@ -20590,3 +20590,29 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   da instalação, ajustável por `DEFAULT_CONTEXT_WINDOW`.
 - **Origem:** AT-366
 
+
+### RN-701 — O painel de contexto não afirma "0" sobre regras que saíram da janela {#rn-701}
+
+O painel "Contexto da sessão" lê os eventos já baixados (RN-180). Numa sessão
+com mais eventos do que a janela, as regras de negócio emitidas no começo ficam
+ANTES dela, e o contador dizia **0** com "Nada ainda." — afirmando sobre o que
+não leu (medido na sessão de 268 eventos de 02/10: 5 regras viraram 0). Com
+eventos anteriores à janela, o contador passa a dizer "N na janela · há mais
+antes" e a seção vazia diz que não há nenhuma NOS EVENTOS CARREGADOS. Sem
+leitura nova: o número de anteriores continua saindo da subtração sobre o
+`seq`.
+
+A outra metade do AT-365 — o cartão de aprovação já executado voltando a pedir
+decisão — NÃO foi corrigida aqui: o card do fio já decide pelo `status` da
+AÇÃO (`ApprovalCard`, `isPending`), e a leitura de ações é a cauda mais as
+pendentes (RN-637); o defeito não reproduz pelo código do web.
+
+> **TODO(humano):** medir a resposta de `GET .../actions?latest=true` da
+> sessão 17d41c20 para achar de onde vem a ação `pending` que reapareceu.
+
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:302` (`trailing`), `:311`
+  (`nadaNaJanela`)
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  ("RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0";
+  o caso de falha evitado é o "alcançando o começo da sessão" ao lado)
+- **Origem:** AT-365
