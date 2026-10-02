@@ -1,15 +1,18 @@
-import { useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   deleteCredential,
   listCredentials,
+  listModelCatalog,
   mensagemDaApi,
+  syncModelCatalog,
   testCredential,
   upsertCredential,
 } from '../../lib/api-client';
 import {
   CREDENCIAIS_DE_LLM,
+  providersSemCatalogo,
   type LlmCredentialProvider,
 } from '../../lib/models';
 import { Input } from '../../components/ui/Input';
@@ -18,6 +21,8 @@ import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
+import { roleAtLeast } from '../../lib/roles';
 
 /**
  * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
@@ -92,6 +97,52 @@ export function CredentialsSection() {
     staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  /**
+   * "Atualizar catálogo" AO LADO da credencial (RN-694): cadastrar a chave não
+   * descobre modelo, e o botão que descobre morava no fim da página. É a MESMA
+   * ação do catálogo (`POST .../models/sync`, `owner`) e só aparece no card
+   * cujo provider tem credencial e nenhum modelo no catálogo. Ler o catálogo
+   * pede `maintainer`; o botão pede `owner` — abaixo disso a nota fica e o
+   * controle não é oferecido (RN-102).
+   */
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const workspaceId = comPapel?.workspace?.id;
+  const podeLerCatalogo = roleAtLeast(comPapel?.role, 'maintainer');
+  const podeSincronizar = roleAtLeast(comPapel?.role, 'owner');
+  const { data: catalogo } = useQuery({
+    queryKey: ['model-catalog', workspaceId],
+    queryFn: () => listModelCatalog(workspaceId!),
+    enabled: !!workspaceId && podeLerCatalogo,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const semCatalogo = useMemo(
+    () =>
+      credentials && catalogo
+        ? new Set<string>(providersSemCatalogo(credentials, catalogo))
+        : new Set<string>(),
+    [credentials, catalogo],
+  );
+  const [sincronizando, setSincronizando] = useState(false);
+
+  async function handleSync() {
+    if (!workspaceId) return;
+    setSincronizando(true);
+    try {
+      await syncModelCatalog(workspaceId);
+      void queryClient.invalidateQueries({ queryKey: ['model-catalog', workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ['models'] });
+      showToast({ title: t('catalog.toasts.syncSuccess', { ns: 'models' }), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: t('catalog.toasts.syncErrorTitle', { ns: 'models' }),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   // Qual provider está com uma chamada em voo — `null` quando nenhum. Um id
   // só, e não um booleano por card: duas chamadas simultâneas aqui não fazem
@@ -238,6 +289,11 @@ export function CredentialsSection() {
                     })
                   : t('credentials.connector.noneSaved')}
               </div>
+              {existing && semCatalogo.has(id) && (
+                <div className={styles.conectorNota}>
+                  {t('credentials.connector.noModels')}
+                </div>
+              )}
 
               {/* O input fica SEMPRE visível: com credencial salva ele é o
                   caminho da troca, que antes só existia removendo primeiro. */}
@@ -290,6 +346,16 @@ export function CredentialsSection() {
                     >
                       {t('credentials.connector.remove')}
                     </Button>
+                    {semCatalogo.has(id) && podeSincronizar && (
+                      <Button
+                        variant="secondary"
+                        aria-label={t('credentials.connector.updateCatalogAria', { label })}
+                        disabled={sincronizando}
+                        onClick={() => void handleSync()}
+                      >
+                        {t('credentials.connector.updateCatalog')}
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

@@ -105,7 +105,10 @@
       "markAs": "mark as",
       "applyUsesTitle": "Replaces the uses of the marked models — doesn't add to what they already had",
       "applyUses": "Apply uses",
-      "clearUses": "Clear uses"
+      "clearUses": "Clear uses",
+      "activateForTeam_one": "Activate and apply to {{count}} agent",
+      "activateForTeam_other": "Activate and apply to all {{count}} agents",
+      "activateForTeamOwnerOnly": "Only the workspace owner activates models."
     },
     "syncReport": {
       "skippedNoCapability": "no catalog listing",
@@ -114,6 +117,11 @@
       "novos": "{{count}} new",
       "deVolta": "{{count}} back",
       "sumidos": "{{count}} gone"
+    },
+    "search": {
+      "aria": "Search the model catalog",
+      "placeholder": "Search by name or id (e.g. claude-haiku)",
+      "noMatch": "No catalog model matches “{{term}}”. Search looks at the name and the id; check the spelling or clear the search."
     }
   },
   "picker": {

@@ -387,7 +387,10 @@
       "testKeyAria": "Testar chave de {{label}}",
       "test": "Testar",
       "removeKeyAria": "Remover chave de {{label}}",
-      "remove": "Remover"
+      "remove": "Remover",
+      "updateCatalog": "Atualizar catálogo",
+      "updateCatalogAria": "Atualizar o catálogo de modelos de {{label}}",
+      "noModels": "Nenhum modelo deste provider no catálogo ainda — cadastrar a chave não descobre modelo."
     },
     "toast": {
       "saved": "Credencial salva",

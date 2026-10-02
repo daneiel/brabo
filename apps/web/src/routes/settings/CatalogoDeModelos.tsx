@@ -22,7 +22,7 @@ export function CatalogoDeModelos({ projectId }: { projectId: string }) {
   // aparece em mais de um lugar.
   return (
     <SecaoDeConfiguracoes chave="model-catalog" semMoldura>
-      <ModelCatalogSection workspaceId={project.workspaceId} />
+      <ModelCatalogSection workspaceId={project.workspaceId} projectId={projectId} />
     </SecaoDeConfiguracoes>
   );
 }

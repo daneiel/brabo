@@ -108,7 +108,11 @@
       "markAs": "marcar como",
       "applyUsesTitle": "Substitui os usos dos modelos marcados — não soma aos que já tinham",
       "applyUses": "Aplicar usos",
-      "clearUses": "Limpar usos"
+      "clearUses": "Limpar usos",
+      "activateForTeam_zero": "Ativar e aplicar aos {{count}} agentes",
+      "activateForTeam_one": "Ativar e aplicar a {{count}} agente",
+      "activateForTeam_other": "Ativar e aplicar aos {{count}} agentes",
+      "activateForTeamOwnerOnly": "Só o dono do workspace ativa modelos."
     },
     "syncReport": {
       "skippedNoCapability": "sem listagem de catálogo",
@@ -121,6 +125,11 @@
       "sumidos_zero": "{{count}} sumidos",
       "sumidos_one": "{{count}} sumido",
       "sumidos_other": "{{count}} sumidos"
+    },
+    "search": {
+      "aria": "Buscar modelo no catálogo",
+      "placeholder": "Buscar por nome ou id (ex.: claude-haiku)",
+      "noMatch": "Nenhum modelo do catálogo casa com “{{term}}”. A busca olha o nome e o id; confira a grafia ou limpe a busca."
     }
   },
   "picker": {

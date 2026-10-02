@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **web**: o catálogo de modelos ganha busca por nome ou id (grupos com resultado abrem sozinhos; sem resultado, a tela diz); o card da credencial sem modelo no catálogo oferece "Atualizar catálogo" ali mesmo; e, sem nenhum modelo ativo, o modelo marcado pode ser ativado e aplicado aos agentes num clique, com o aviso de sobrescrita (AT-357, [RN-694](docs/business-rules.md#rn-694)).
+
 ### Correções
 
 - **engine:** os agentes conversacionais deixam de repetir a mesma ferramenta até o teto. A mensagem do assistente guardada no histórico passa a levar os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar ao provider como resposta a chamada nenhuma, que ele descartava (RN-690, AT-350).
@@ -86,6 +90,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **dev**: o compose de dev vira brabo-dev e recusa subir ao lado de uma instalação (AT-173) (64a12ef027)
 
 ### Novidades
+
 
 - **infra**: a Infra sobe o container com o MENOR recurso elegível, derivado
   do `module_map` (AT-261, [ADR 0199](docs/adr/0199-recurso-minimo-derivado-do-module-map.md),
