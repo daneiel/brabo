@@ -10,6 +10,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine:** o turno da prontidão do Criativo vai ao modelo sem ferramentas e só sintetiza o resumo — não grava regra nova nem abre formulário depois do "Estou pronto" (RN-697, AT-352).
+- **engine/web:** o texto que um agente conversacional escreve ao longo das voltas de um turno vira UMA resposta no fio, em vez de um fragmento por volta; e o teto de iterações aparece no fio como falha de origem modelo (RN-698, AT-354).
 - **web:** depois de "Iniciar ideação" o fio mantém a dica de abertura até a primeira mensagem — ativar o agente não conta mais como conversa —, e o composer e os campos das perguntas estruturadas deixam de abrir o autofill do navegador e dos gerenciadores de senha (RN-693, AT-353).
 
 - **engine:** os agentes conversacionais deixam de repetir a mesma ferramenta até o teto. A mensagem do assistente guardada no histórico passa a levar os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar ao provider como resposta a chamada nenhuma, que ele descartava (RN-690, AT-350).

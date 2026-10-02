@@ -251,6 +251,7 @@ estado lido do repositório e não da conversa.
 | A dica de abertura fica no fio até a primeira mensagem, e os campos da sessão não convidam o autofill (AT-353) | RN-693 |
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
 | O catálogo de modelos ganha busca, o sync ao lado da credencial e o "ativar e aplicar ao time" (AT-357) | RN-694 |
+| A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
 
 ## Estado atual e aberto
 

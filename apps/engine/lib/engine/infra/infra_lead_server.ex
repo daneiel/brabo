@@ -154,6 +154,7 @@ defmodule Engine.Infra.InfraLeadServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -417,6 +418,8 @@ defmodule Engine.Infra.InfraLeadServer do
   # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
   # evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    gravar_texto_do_turno(state, "")
+
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
       max_iterations: @max_iterations
@@ -442,17 +445,23 @@ defmodule Engine.Infra.InfraLeadServer do
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "")
         emit_falha(state, {:final, erro})
         {:done, state}
 
       {:ok, %{"message" => message}} ->
         content = Map.get(message, "content", "")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
-        if content != "", do: emit_response(state, content)
 
         case tool_calls(message, state.tool_specs) do
-          [] -> {:done, state}
-          calls -> dispatch_calls(calls, state, remaining)
+          [] ->
+            gravar_texto_do_turno(state, content)
+            {:done, state}
+
+          calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content)
+            dispatch_calls(calls, state, remaining)
         end
 
       {:error, reason} ->
@@ -460,6 +469,7 @@ defmodule Engine.Infra.InfraLeadServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "")
         emit_falha(state, reason)
         {:done, state}
     end
@@ -517,8 +527,12 @@ defmodule Engine.Infra.InfraLeadServer do
       end
     end)
     |> case do
-      {{title, files}, state} -> {:proposed, title, files, state}
-      {nil, state} -> run_turn(state, remaining - 1)
+      {{title, files}, state} ->
+        gravar_texto_do_turno(state, "")
+        {:proposed, title, files, state}
+
+      {nil, state} ->
+        run_turn(state, remaining - 1)
     end
   end
 
@@ -1427,6 +1441,14 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp emit_response(state, content),
     do: emit(state, "agent.response", %{content: content})
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo) do
+    case TextoDoTurno.descarregar(ultimo) do
+      "" -> :ok
+      texto -> emit_response(state, texto)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
