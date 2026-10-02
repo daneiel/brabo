@@ -148,8 +148,53 @@ defmodule Engine.Gates.SecOpsAgentServer do
   # de `GateState` fica `in_progress` de propósito: é ela que faz o
   # `GateRescuer` reexecutar o gate (no boot e depois do limiar de staleness),
   # e é assim que corrigir o ambiente volta a julgar.
+  #
+  # AT-386: o resgate repete o ciclo enquanto o ambiente não muda, e cada
+  # repetição gravava um `agent.error` idêntico. Se o último evento do SecOps
+  # desta task (erro ou veredito) já é este erro com o MESMO motivo, nada é
+  # gravado — só Logger. Motivo novo, ou veredito no meio, grava de novo.
+  # Leitura ilegível não prova repetição: grava.
   defp sast_nao_rodou(project_id, dev_state, task_id, nota) do
+    if erro_ja_registrado?(project_id, dev_state.session_id, task_id, nota) do
+      Logger.info(
+        "secops: SAST segue sem rodar (#{nota}) na task #{task_id}; agent.error já no fio, não repetido"
+      )
+    else
+      gravar_sast_nao_rodou(project_id, dev_state, task_id, nota)
+    end
+  end
+
+  # Leitura CONTIDA (ADR 0060): só os dois tipos do SecOps, cauda com teto.
+  defp erro_ja_registrado?(project_id, session_id, task_id, nota) do
+    case Engine.Agents.Reidratacao.eventos_do_tipo(project_id, session_id, [
+           "agent.error",
+           "artifact.secops_verdict"
+         ]) do
+      {:ok, eventos, _truncado?} ->
+        eventos
+        |> Enum.filter(&do_secops_da_task?(&1, task_id))
+        |> List.last()
+        |> case do
+          %{"type" => "agent.error", "payload" => %{"reason" => ^nota}} -> true
+          _ -> false
+        end
+
+      {:error, _} ->
+        false
+    end
+  end
+
+  defp do_secops_da_task?(%{"actorId" => "secops", "type" => "agent.error"} = e, task_id),
+    do: get_in(e, ["payload", "taskId"]) == task_id
+
+  defp do_secops_da_task?(%{"type" => "artifact.secops_verdict"} = e, task_id),
+    do: get_in(e, ["payload", "taskId"]) == task_id
+
+  defp do_secops_da_task?(_, _), do: false
+
+  defp gravar_sast_nao_rodou(project_id, dev_state, task_id, nota) do
     ArtifactEmitter.append(project_id, dev_state.session_id, "secops", "agent.error", %{
+      taskId: task_id,
       origem: "infra",
       mensagem:
         "SAST não rodou: #{nota} — o gate SecOps fica pendente e bloqueia a PR (task #{task_id}); " <>
