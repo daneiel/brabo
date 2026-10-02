@@ -141,6 +141,11 @@ defmodule Engine.Agents.PoServer do
        # reconstruído do event log reabriria cobrança de épico antigo que o
        # usuário já resolveu de outro jeito.
        epicos_sem_historia: %{},
+       # RN-700: o handoff ao Arquiteto já foi oferecido (pelo modelo ou pelo
+       # servidor) NESTE processo. Não reidratado: depois de um restart a api
+       # deduplica a oferta pendente e recusa com 409 nomeado o destino já
+       # ativo, e as duas respostas só religam esta marca.
+       handoff_ao_arquiteto: false,
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -386,6 +391,9 @@ defmodule Engine.Agents.PoServer do
     }
   end
 
+  defp anotar_obrigacao(state, "offer_handoff", %{"to_agent" => "arquiteto"}, {:ok, _}),
+    do: %{state | handoff_ao_arquiteto: true}
+
   defp anotar_obrigacao(state, _name, _args, _result), do: state
 
   # O desfecho de todo turno que TERMINA (o modelo parou de pedir ferramenta,
@@ -397,10 +405,13 @@ defmodule Engine.Agents.PoServer do
   # o broadcast, para quem está com a aba aberta ver na hora. A lista é
   # esvaziada depois de reportada — a cobrança é por ocorrência, não um alarme
   # que repete a cada turno até alguém desligar.
-  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) when map_size(pendentes) == 0,
-    do: state
+  defp encerrar_turno(state), do: state |> cobrar_epicos_sem_historia() |> fechar_handoff()
 
-  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) do
+  defp cobrar_epicos_sem_historia(%{epicos_sem_historia: pendentes} = state)
+       when map_size(pendentes) == 0,
+       do: state
+
+  defp cobrar_epicos_sem_historia(%{epicos_sem_historia: pendentes} = state) do
     titulos = Map.values(pendentes)
 
     mensagem =
@@ -419,6 +430,97 @@ defmodule Engine.Agents.PoServer do
     broadcast(state, "agent.error", %{origem: "modelo", mensagem: mensagem})
 
     %{state | epicos_sem_historia: %{}}
+  end
+
+  # --- O handoff ao Arquiteto no fim do turno (RN-700) ---
+  #
+  # Medido no uso real (AT-364): o PO escreveu "Handoff ao Arquiteto" e
+  # encerrou o turno sem chamar `offer_handoff` — a RN-163 diz que agente não
+  # anuncia ação que o código não executa, e o fluxo parou até o usuário pedir.
+  # O critério de "pronto" é OBJETIVO (o `uncoveredCount` que a api devolve, a
+  # régua de cobertura do aceite automático da RN-660, mais toda história com
+  # ≥ 1 tarefa), então quem oferece é o SERVIDOR, no molde da Infra que propõe
+  # a subida sozinha (ADR 0190, RN-671/672). Fora do critério, o desfecho é
+  # explícito e nomeado — nunca só o texto do modelo. Backlog sem regra ou sem
+  # história não é julgado: o PO ainda não começou.
+  defp fechar_handoff(%{handoff_ao_arquiteto: true} = state), do: state
+
+  defp fechar_handoff(state) do
+    with {:ok, %{"rules" => [_ | _]} = regras} <-
+           EngineApiClient.list_business_rules(state.project_id),
+         {:ok, epicos} when is_list(epicos) <- EngineApiClient.list_backlog(state.project_id),
+         [_ | _] = historias <- Enum.flat_map(epicos, &Map.get(&1, "stories", [])) do
+      sem_tarefa = Enum.filter(historias, &(Map.get(&1, "tasks", []) == []))
+
+      cond do
+        Map.get(regras, "uncoveredCount", 0) > 0 ->
+          state
+
+        sem_tarefa != [] ->
+          titulos = Enum.map(sem_tarefa, &Map.get(&1, "title", "(sem título)"))
+
+          handoff_nao_oferecido(
+            state,
+            "modelo",
+            "Não ofereci o handoff ao Arquiteto: #{length(sem_tarefa)} história(s) sem " <>
+              "nenhuma tarefa — " <>
+              Enum.map_join(titulos, ", ", &"\"#{&1}\"") <>
+              ". História sem tarefa não é entregue: o Dev Lead não tem o que distribuir.",
+            %{storyIds: Enum.map(sem_tarefa, &Map.get(&1, "id")), storyTitles: titulos}
+          )
+
+        true ->
+          oferecer_handoff(state)
+      end
+    else
+      {:error, reason} ->
+        handoff_nao_oferecido(
+          state,
+          "infra",
+          "Não conferi se o backlog está pronto para o Arquiteto: #{inspect(reason)}.",
+          %{}
+        )
+
+      _ ->
+        state
+    end
+  end
+
+  defp oferecer_handoff(state) do
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "arquiteto",
+           nil
+         ) do
+      {:ok, _} ->
+        %{state | handoff_ao_arquiteto: true}
+
+      # O Arquiteto já está ativo: não há o que oferecer, e não é falha.
+      {:error, {409, %{"reason" => "agente_ja_ativo"}}} ->
+        %{state | handoff_ao_arquiteto: true}
+
+      {:error, reason} ->
+        handoff_nao_oferecido(
+          state,
+          "infra",
+          "O backlog está pronto, mas a oferta do handoff ao Arquiteto falhou: " <>
+            "#{inspect(reason)}.",
+          %{}
+        )
+    end
+  end
+
+  defp handoff_nao_oferecido(state, origem, mensagem, extra) do
+    emit(
+      state,
+      "backlog.handoff_not_offered",
+      Map.merge(%{origem: origem, mensagem: mensagem, toAgent: "arquiteto"}, extra)
+    )
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
   end
 
   # --- Kickoff: monta a instrução a partir do brief + regras do event log ---
@@ -473,9 +575,12 @@ defmodule Engine.Agents.PoServer do
     história completa vira 'ready' na hora ou fica aguardando a promoção do usuário — o
     retorno de create_story diz qual foi o caso, e AGUARDAR APROVAÇÃO NÃO É ERRO: não
     tente recriar nem "consertar" uma história que voltou como completa.
-    Adicione tarefas com create_task quando fizer sentido.
-    Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto, ofereça
-    um handoff ao arquiteto com offer_handoff(to_agent: "arquiteto").
+    Toda história precisa de ao menos UMA tarefa (create_task) — história sem tarefa não
+    conta como entregue: o Dev Lead distribui tarefas, não histórias.
+    Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto (toda
+    regra coberta, toda história com tarefa), ofereça um handoff ao arquiteto com
+    offer_handoff(to_agent: "arquiteto") — CHAME a ferramenta; nunca escreva que fez o
+    handoff sem chamá-la. Se você não chamar, o sistema oferece sozinho quando o critério fecha.
 
     #{obrigacoes()}
 

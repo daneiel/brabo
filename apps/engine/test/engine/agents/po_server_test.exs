@@ -575,4 +575,66 @@ defmodule Engine.Agents.PoServerTest do
       assert payload["choice"] == "validar domínio"
     end
   end
+
+  describe "RN-700: o handoff ao Arquiteto no fim do turno" do
+    defp regras_cobertas,
+      do: %{"rules" => [%{"id" => "evt-r1", "covered" => true}], "uncoveredCount" => 0}
+
+    defp backlog(tarefas),
+      do: [
+        %{
+          "id" => "ep-1",
+          "title" => "Cadastro",
+          "stories" => [%{"id" => "st-1", "title" => "Cadastrar usuário", "tasks" => tarefas}]
+        }
+      ]
+
+    test "coberto e com tarefas: o servidor oferece o handoff que o modelo só anunciou",
+         %{state: state} do
+      Process.put(:fake_business_rules, regras_cobertas())
+      Process.put(:fake_backlog, backlog([%{"id" => "tk-1"}]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Handoff ao Arquiteto")])
+
+      assert {:reply, :ok, new_state} = sync_call(PoServer, {:user_message, "pronto?"}, state)
+
+      assert_received {:handoff_created, _, _, "po", "arquiteto", nil}
+      refute_received {:event_appended, _, _, %{type: "backlog.handoff_not_offered"}}
+      assert new_state.handoff_ao_arquiteto
+
+      # Turno seguinte não oferece de novo.
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "e agora?"}, new_state)
+      refute_received {:handoff_created, _, _, _, _, _}
+    end
+
+    test "história sem tarefa: não oferece e nomeia as histórias", %{state: state} do
+      Process.put(:fake_business_rules, regras_cobertas())
+      Process.put(:fake_backlog, backlog([]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Handoff ao Arquiteto")])
+
+      assert {:reply, :ok, new_state} = sync_call(PoServer, {:user_message, "pronto?"}, state)
+
+      refute_received {:handoff_created, _, _, _, _, _}
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "backlog.handoff_not_offered",
+                         payload: %{origem: "modelo", storyIds: ["st-1"], mensagem: mensagem}
+                       }}
+
+      assert mensagem =~ "Cadastrar usuário"
+      refute new_state.handoff_ao_arquiteto
+    end
+
+    test "regra descoberta: nem oferece nem acusa", %{state: state} do
+      Process.put(:fake_business_rules, %{"rules" => [%{"id" => "r"}], "uncoveredCount" => 1})
+      Process.put(:fake_backlog, backlog([]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "x"}, state)
+
+      refute_received {:handoff_created, _, _, _, _, _}
+      refute_received {:event_appended, _, _, %{type: "backlog.handoff_not_offered"}}
+    end
+  end
 end

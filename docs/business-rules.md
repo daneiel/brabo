@@ -20451,6 +20451,28 @@ passos sem terminar o turno"); sem o número no payload a linha diz `?`.
   e `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:85`
   (a linha do teto; sem número, não inventa um)
 - **Origem:** AT-354
+
+### RN-700 — O PO não anuncia o handoff ao Arquiteto sem fazê-lo, e história sem tarefa não é entregue {#rn-700}
+
+No uso real o PO escreveu "Handoff ao Arquiteto" e encerrou o turno sem chamar
+`offer_handoff` (fere a RN-163), e entregou cinco histórias `ready` com zero
+tarefas — o Dev Lead não tinha o que distribuir. No fim de todo turno do PO,
+se o servidor ainda não registrou oferta ao Arquiteto naquele processo, ele lê
+as regras do projeto (`uncoveredCount`, a mesma cobertura do aceite automático
+da RN-660) e o backlog: com toda regra coberta e toda história com ≥ 1 tarefa,
+o SERVIDOR oferece o handoff (molde da Infra que propõe sozinha, ADR 0190,
+RN-671/672), e a RN-660 segue decidindo o aceite. Com regra coberta e história
+sem tarefa, não oferece e grava `backlog.handoff_not_offered` (origem `modelo`)
+nomeando as histórias; leitura ou oferta que falha grava o mesmo evento com
+origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgado.
+A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
+PO (decisão do agente principal na AT-364: ele já tem `create_task`).
+
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:448` (`fechar_handoff`);
+  `:489` (`oferecer_handoff`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
+  não repete), `:610` (história sem tarefa: não oferece, nomeia)
+- **Origem:** AT-364
 ## O instalador oferece os modelos locais, e não confunde o dev com uma instalação (RN-691, RN-692)
 
 ### RN-691 — O `install.sh` PERGUNTA se liga os modelos locais (profile `llm`), mede a porta do Ollama antes de gravar, e compõe UMA linha de `COMPOSE_PROFILES` {#rn-691}
