@@ -19,7 +19,11 @@
   },
   "markdownMessage": {
     "codeFence": {
-      "defaultLanguage": "texto"
+      "defaultLanguage": "texto",
+      "mostrarLinhas_zero": "Mostrar {{count}} linhas",
+      "mostrarLinhas_one": "Mostrar {{count}} linha",
+      "mostrarLinhas_other": "Mostrar as {{count}} linhas",
+      "recolher": "Recolher"
     },
     "table": {
       "emptyMessage": "Tabela sem linhas."

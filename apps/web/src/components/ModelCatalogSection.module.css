@@ -77,6 +77,9 @@
 
 .barraDeLote {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -316,6 +319,13 @@
   color: var(--warning);
   border-color: var(--warning-line);
   background: var(--warning-soft);
+}
+
+.explicacaoDoLote {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .rotuloDoLote {

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { corDoAgente } from '../lib/agents';
+import { textoPlanoDoMarkdown } from '../lib/texto-plano';
 import type { EstadoDaAtividadeDoTurno } from '../lib/atividade-do-turno';
 import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
@@ -43,14 +44,17 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
   // O corrente tem prioridade — é o dado mais recente, e RN-131 manda: texto
   // de verdade aparece na hora, nunca espera timer nenhum. Sem corrente,
   // degrada pra última linha arquivada (o que a ferramenta acabou de fazer).
-  const previa = estado.corrente !== '' ? estado.corrente : (ultimaLinha?.texto ?? null);
+  // RN-712: a faixa é PRÉVIA, nunca a resposta — Markdown cru (`**`, `##`,
+  // `|---|`) vira texto plano; a bolha renderizada chega no fim do turno.
+  const bruta = estado.corrente !== '' ? estado.corrente : (ultimaLinha?.texto ?? null);
+  const previa = bruta === null ? null : textoPlanoDoMarkdown(bruta);
 
   if (previa === null && !pensandoVisivel) return null;
 
   const linhasParaExpandir = [
     ...estado.linhas,
     ...(estado.corrente !== ''
-      ? [{ tipo: 'narracao' as const, texto: estado.corrente }]
+      ? [{ tipo: 'narracao' as const, texto: textoPlanoDoMarkdown(estado.corrente) }]
       : []),
   ];
 

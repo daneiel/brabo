@@ -19,7 +19,10 @@
   },
   "markdownMessage": {
     "codeFence": {
-      "defaultLanguage": "text"
+      "defaultLanguage": "text",
+      "mostrarLinhas_one": "Show {{count}} line",
+      "mostrarLinhas_other": "Show all {{count}} lines",
+      "recolher": "Collapse"
     },
     "table": {
       "emptyMessage": "Table has no rows."

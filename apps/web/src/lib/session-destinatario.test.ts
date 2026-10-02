@@ -69,6 +69,35 @@ describe('resolverDestinatario (RN-631)', () => {
   it('escolha que deixou de ser opção não vale', () => {
     expect(resolverDestinatario(['po', 'arquiteto'], 'staff')).toBeNull();
   });
+
+  const handoff = (fromAgent: string, toAgent: string, updatedAt: string) =>
+    ({
+      id: `${fromAgent}-${toAgent}`,
+      sessionId: 's',
+      projectId: 'p',
+      fromAgent,
+      toAgent,
+      artifactId: null,
+      status: 'accepted',
+      createdAt: updatedAt,
+      updatedAt,
+    }) as const;
+  const handoffs = [
+    handoff('criativo', 'po', '2026-10-02T10:00:00.000Z'),
+    handoff('po', 'arquiteto', '2026-10-02T11:00:00.000Z'),
+  ];
+
+  it('RN-712: escolha vinda de gesto segue o último handoff aceito', () => {
+    expect(
+      resolverDestinatario(['po', 'arquiteto'], 'po', { manual: false, handoffs: [...handoffs] }),
+    ).toBe('arquiteto');
+  });
+
+  it('RN-712, CASO DE FALHA: escolha MANUAL não é sobrescrita pelo handoff', () => {
+    expect(
+      resolverDestinatario(['po', 'arquiteto'], 'po', { manual: true, handoffs: [...handoffs] }),
+    ).toBe('po');
+  });
 });
 
 describe('ativadosSemJanela (RN-631, revisão do PR #759)', () => {

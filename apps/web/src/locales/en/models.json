@@ -111,6 +111,7 @@
       "clearUses": "Clear uses",
       "activateForTeam_one": "Activate and apply to {{count}} agent",
       "activateForTeam_other": "Activate and apply to all {{count}} agents",
+      "activateForTeamDetail": "Overwrites each agent’s own model, one call per agent.",
       "activateForTeamOwnerOnly": "Only the workspace owner activates models."
     },
     "syncReport": {

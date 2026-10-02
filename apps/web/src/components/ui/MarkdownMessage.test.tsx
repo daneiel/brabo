@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import uiPtBR from '../../locales/pt-BR/ui.json';
@@ -141,5 +141,18 @@ describe('MarkdownMessage', () => {
     // Nenhum <img> real foi criado — a string sobrevive como texto.
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText(/texto com <img src=x onerror=alert\(1\)> no meio/)).toBeInTheDocument();
+  });
+
+  it('RN-712: bloco de código longo nasce recolhido e abre com "Mostrar as N linhas"', () => {
+    const linhas = Array.from({ length: 80 }, (_, i) => `linha${i + 1}: valor`).join('\n');
+    renderComI18n(<MarkdownMessage text={'```yaml\n' + linhas + '\n```'} />);
+    expect(screen.queryByText(/linha80/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar as 80 linhas' }));
+    expect(screen.getByText(/linha80/)).toBeInTheDocument();
+  });
+
+  it('RN-712: bloco curto não ganha o alternador', () => {
+    renderComI18n(<MarkdownMessage text={'```sh\nls\n```'} />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

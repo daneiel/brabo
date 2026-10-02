@@ -17,6 +17,7 @@
     "autorDesconhecido": "Autor desconhecido"
   },
   "topbar": {
+    "iniciadaAs": "iniciada às {{hora}}",
     "voltarAoProjeto": "Voltar ao projeto",
     "nomeDaSessao": "Nome da sessão",
     "semNomeFicaHashtag": "Sem nome — a sessão fica {{hashtag}}",
@@ -107,6 +108,7 @@
     "infraTitulo": "{{de}} passou o bastão à Infra",
     "infraDetalhe": "Aceitar ativa o Infra Lead e já autoriza a subida do container: num projeto Container ou Pasta montada com o roteamento do Arquiteto pronto, ele elege a imagem e sobe o container sem outro clique. Continuam pedindo sua decisão a subida num projeto Runner local e o merge da PR de infra.",
     "infraBotao": "Aceitar handoff da Infra",
+    "manualAbrir": "Endereçar handoff a outro agente…",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
     "manualBotao": "Endereçar handoff",

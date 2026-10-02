@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:215`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:249`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1088` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -16726,8 +16726,8 @@ turno com autor humano — a divergência que esta regra declarava fechou.
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
   (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
   (`origemPorExtenso`), `:219` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:243` (`SessionLanguageIndicator`),
-  `:116` (`modoDaBarra`), `:360` (`AjustesAgrupados`);
+  `apps/web/src/routes/SessionTopbar.tsx:247` (`SessionLanguageIndicator`),
+  `:120` (`modoDaBarra`), `:364` (`AjustesAgrupados`);
   `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
 - **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
   1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
@@ -17281,7 +17281,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:147` (`podeDecidir`), `:274`
-  (`useRetomarTurnoDoLog`), `:873` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:881` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17629,13 +17629,13 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:175` (`agentesEmConversa`),
-  `:198` (`resolverDestinatario`), `:215` (`useDestinatarioDoChat`), `:100`
-  (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:256` (`destinatarioRow`), `:172`
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
+  `:214` (`resolverDestinatario`), `:249` (`useDestinatarioDoChat`), `:116`
+  (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
+  `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:528`
-  (`handoffIdDoEvento`), `:536` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:535`
+  (`handoffIdDoEvento`), `:543` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -17688,7 +17688,7 @@ Nenhuma mudança de api nem de engine.
 
 - **Onde:** `apps/web/src/lib/session-handoffs.ts:41` (`origemDoHandoff`),
   `:108` (`jaAtivo`), `:180` (`prontidaoJaDeclarada`), `:192`
-  (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:140`
+  (`arquiteturaJaDeclarada`); `apps/web/src/lib/session-destinatario.ts:156`
   (`useAtivosNoProjeto`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (manual com o Criativo ativo não esconde "Estou pronto"; manual com o
@@ -18540,7 +18540,7 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
 
 - **Código:** `apps/web/src/lib/painel-de-contexto.ts:16`
   (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
-  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:122`
+  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:126`
   (`movel`); `apps/web/src/components/ui/Table.tsx:13` (`largaNoMovel`),
   `:28` (`movel`); `apps/web/src/routes/ProjectRail.tsx:103` (`conteudo`),
   `:124` (`bordas`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
@@ -19256,7 +19256,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:977` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
   (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19907,7 +19907,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:270` (`agentesParaChamar`);
+  `apps/web/src/lib/session-destinatario.ts:306` (`agentesParaChamar`);
   `apps/web/src/routes/SessionPage.tsx:643` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
@@ -20343,7 +20343,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:24` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:437`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:335`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:346`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -20852,3 +20852,51 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …")
 - **Origem:** AT-368
+
+### RN-712 — O fio da sessão mostra o que acabou de acontecer, uma vez e legível {#rn-712}
+
+Medido no teste real de 02/10 (`loja-teste`): a faixa do turno mostrava
+Markdown cru, a resposta do formulário estruturado aparecia duas vezes, o
+seletor de handoff manual oferecia Dev Lead, QA e Infra desde o primeiro
+minuto da ideação, o "Para" ficava no PO com o Arquiteto já trabalhando, o
+botão "Iniciar ideação" reaparecia no meio da sessão e um docker-compose de 80
+linhas empurrava a conversa para fora da tela. Desde a AT-375:
+
+- **faixa do turno** — a prévia e as linhas expandidas passam por
+  `textoPlanoDoMarkdown`: `**`, `##`, réguas, tabelas e crases viram texto
+  corrido. A faixa é prévia; a resposta renderizada continua sendo a bolha do
+  fim do turno (RN-460), e o store do streaming não muda (RN-639);
+- **formulário respondido** — a api reenvia as respostas ao agente como
+  `chat.message` do usuário; a bolha cujo texto é EXATAMENTE o que a api monta
+  (`"<n>. <rótulo>: <resposta>"`), primeira mensagem de usuário depois da
+  resposta, sai do fio, porque o card respondido já as mostra. Mensagem
+  digitada que só pareça uma lista fica;
+- **destinatário** — a escolha feita no SELETOR do composer é manual e nunca é
+  sobrescrita. A que veio de um gesto (aceitar handoff nesta tela, "Estou
+  pronto") segue o destino do último handoff ACEITO, inclusive o aceito pelo
+  sistema (RN-660). Revisa a cláusula da RN-631 de que um aceite por outro
+  caminho "só acrescenta a opção" — só para escolha que não foi manual. Sem
+  escolha nenhuma e com duas opções o envio continua travado;
+- **handoff manual** — o seletor nasce recolhido atrás de um botão; a lista de
+  agentes não mudou;
+- **"Iniciar ideação"** — some do cabeçalho assim que algum agente entrou na
+  sessão (evento de agente ou handoff);
+- **cabeçalho** — o horário vira "iniciada às HH:MM:SS", e a origem do idioma
+  quebra em até duas linhas antes de elipsar, com o texto inteiro no `title`;
+- **bloco de código** — acima de 20 linhas nasce recolhido nas 8 primeiras,
+  com "Mostrar as N linhas".
+
+Fica de fora, medido: a primeira bolha do Criativo "modelo não registrado" vem
+do ENGINE — `criativo_server.ex` grava o texto acumulado com `modelName` nulo
+quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
+"", nil)`), não da tela.
+
+- **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
+  `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
+  `apps/web/src/lib/session-destinatario.ts:214` (`resolverDestinatario`),
+  `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
+- **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
+  `apps/web/src/lib/eco-de-formulario.test.ts`,
+  `apps/web/src/lib/session-destinatario.test.ts` ("RN-712"),
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx` ("RN-712")
+- **Origem:** AT-375

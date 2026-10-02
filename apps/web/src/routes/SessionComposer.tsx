@@ -1,4 +1,4 @@
-import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
+import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
 import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
@@ -31,7 +31,7 @@ export interface SessionComposerProps {
   opcoesDeDestinatario: string[];
   destinatario: string | null;
   precisaEscolherDestinatario: boolean;
-  escolherDestinatario: (agente: string) => void;
+  escolherDestinatario: (agente: string, manual?: boolean) => void;
   manualHandoffTarget: string;
   setManualHandoffTarget: Dispatch<SetStateAction<string>>;
   enviandoHandoffManual: boolean;
@@ -105,6 +105,7 @@ export function SessionComposer({
   handleReopen,
 }: SessionComposerProps) {
   const { t } = useTranslation('sessionPage');
+  const [handoffManualAberto, setHandoffManualAberto] = useState(false);
   return (
     <>
       {/*
@@ -215,7 +216,17 @@ export function SessionComposer({
         mensagem ter destinatário. Dois seletores iguais na mesma tela
         seria a mesma escolha em dois lugares.
       */}
-      {isActive && opcoesDeDestinatario.length > 0 && (
+      {/* RN-712: o seletor nasce RECOLHIDO — ele é o caso que a cadeia não
+          cobre, e aberto desde o primeiro minuto oferecia Dev Lead, QA e
+          Infra no meio da ideação. Um clique o abre. */}
+      {isActive && opcoesDeDestinatario.length > 0 && !handoffManualAberto && (
+        <div className={styles.manualHandoffRow}>
+          <Button variant="ghost" onClick={() => setHandoffManualAberto(true)}>
+            {t('handoff.manualAbrir')}
+          </Button>
+        </div>
+      )}
+      {isActive && opcoesDeDestinatario.length > 0 && handoffManualAberto && (
         <div className={styles.manualHandoffRow}>
           <Select
             aria-label={t('handoff.manualLabel')}
@@ -304,7 +315,7 @@ export function SessionComposer({
                 value={destinatario ?? ''}
                 disabled={streaming}
                 onChange={(e) => {
-                  if (e.target.value) escolherDestinatario(e.target.value);
+                  if (e.target.value) escolherDestinatario(e.target.value, true);
                 }}
               >
                 {destinatario === null && (

@@ -154,7 +154,9 @@ describe('ativar e aplicar ao time (RN-694)', () => {
 
     const botao = await screen.findByRole('button', { name: /Ativar e aplicar aos/ });
     // O aviso de sobrescrita da RN-476 vem junto.
-    expect(screen.getByText(/sobrescreve o modelo próprio de cada agente/)).toBeTruthy();
+    const explicacao = screen.getByText(/obrescreve o modelo próprio de cada agente/);
+    // AT-373: a explicação é linha própria e não começa com o "·" solto.
+    expect(explicacao.textContent?.startsWith('Sobrescreve')).toBe(true);
     expect(setModelsActive).not.toHaveBeenCalled();
     await waitFor(() => expect(botao).not.toBeDisabled());
     fireEvent.click(botao);
