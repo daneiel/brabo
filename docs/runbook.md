@@ -4192,6 +4192,41 @@ path by `.github/workflows/install-e2e.yml` on every final tag, which answers
 **off**, have **no verification**: nothing runs them, and the
 `up --remove-orphans` caveat was measured once by hand.
 
+### Local models in an installation {#modelos-locais-na-instalacao}
+
+Right after the broker, `install.sh` asks `Ligar os modelos locais? [s/N]`
+([RN-691](business-rules.md#rn-691)). It states the cost first — disk for the
+Ollama image and the models `ollama-model-loader` pulls on startup, RAM while a
+model is loaded — and what is lost without them: the semantic duplicate check
+of stories and rules is skipped, and agents have no local model. Only a typed
+"s" turns them on; without a terminal they stay off.
+
+Turning them on measures the host port before writing anything: `11434`, or the
+first free one up to `11443` (a native Ollama usually holds `11434`). The whole
+range busy is a named refusal with nothing written. `.env` gets `OLLAMA_PORT`
+and `llm` in the single `COMPOSE_PROFILES` line.
+
+To turn them on **later**, in the installation folder: pick a free port, then
+add `OLLAMA_PORT=<port>` to `.env`, append `llm` to the existing
+`COMPOSE_PROFILES` line with a comma (or create `COMPOSE_PROFILES=llm`), and run
+`docker compose -f docker/docker-compose.install.yml --env-file .env up -d --wait`.
+
+Verification: the question, the port measurement and the `.env` lines are
+proven by `scripts/dev/install-llm.spec.ts` on every PR. The install E2E
+answers *não* (pulling models would cost GBs per tag), so startup with the
+`llm` profile has **no end-to-end verification**.
+
+### Reinstalling from zero {#reinstalar-do-zero}
+
+When a previous installation is found (only the compose project named exactly
+`brabo` counts — the dev compose `brabo-dev` does not,
+[RN-692](business-rules.md#rn-692)), the migration runs backup, proves the
+restore, and then asks
+`Apagar os volumes e reinstalar? [s = restaurar / z = do zero / N = parar]`.
+`z` deletes and reinstalls **without restoring** the old data; the proven
+backup stays in the folder it names, and restoring it later is
+[Restore](#restore). Proven by `scripts/dev/install-llm.spec.ts`.
+
 ---
 
 ## Verifying a published artifact {#verificar-artefato-publicado}
@@ -4570,6 +4605,8 @@ workflow in **schedule** does not have the trigger the cell claims
 | Check the gate registry in the image | [Gate registry](#registro-de-gates) | `docker/smoke.sh` calls both routes against the production image; its gate functions by `scripts/ci/smoke-gates.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Install | [Installing](#instalando) | `.github/workflows/install-e2e.yml` (clean machine) and `scripts/dev/install*.spec.ts`; the migration path end to end: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the specs) |
 | Turn the installation's broker on or off | [The container broker in an installation](#broker-na-instalacao) | at install: `scripts/dev/install-broker.spec.ts` and `.github/workflows/install-e2e.yml`; turning it on later by hand, and off: none | every tag `.github/workflows/install-e2e.yml`; every PR `.github/workflows/ci.yml` (the spec); manual (later, and off) |
+| Turn the installation's local models on | [Local models in an installation](#modelos-locais-na-instalacao) | at install: `scripts/dev/install-llm.spec.ts`; turning them on later by hand: none | every PR `.github/workflows/ci.yml` (the spec); manual (later) |
+| Reinstall from zero over a previous installation | [Reinstalling from zero](#reinstalar-do-zero) | `scripts/dev/install-llm.spec.ts` | every PR `.github/workflows/ci.yml` |
 | Verify a published artifact | [Verifying a published artifact](#verificar-artefato-publicado) | the publishing workflows verify what they signed, in the same run: `.github/workflows/release.yml` (`cosign verify`) and `.github/workflows/build-runner-binaries.yml` (`cosign verify-blob`) | every tag `.github/workflows/release.yml` `.github/workflows/build-runner-binaries.yml` |
 | Check the written offer of source | [The written offer of source](#oferta-de-fonte-na-imagem) | `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` keeps each `COPY` and the Release asset; the five images built from the PR, read back by `.github/workflows/ci.yml`; the published artifacts carrying the file: none | every PR `.github/workflows/ci.yml` (the spec and the built images); manual (the published artifacts) |
 | Bump a third-party image | [Bumping a third-party image](#subindo-imagem-de-terceiro) | `scripts/ci/imagens-pinadas.ts`, `scripts/ci/imagens-pinadas.spec.ts` and `scripts/ci/imagens-do-compose.spec.ts` | every PR `.github/workflows/ci.yml` |

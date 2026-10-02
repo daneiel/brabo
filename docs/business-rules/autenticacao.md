@@ -200,8 +200,8 @@ sobrescrito, e o pepper dele é mantido — ou, sem pepper, nasce com o
 
 - **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:168`
   (`pepperAtual`), `:212` (`pepper`); `apps/api/src/main.ts:46` (a checagem de
-  boot); `install.sh:688` (`valor_no_env_anterior`), `:720` (`gerar_segredos`),
-  `:783` (`dizer_a_origem_do_pepper`); a variável nos três composes
+  boot); `install.sh:702` (`valor_no_env_anterior`), `:734` (`gerar_segredos`),
+  `:831` (`dizer_a_origem_do_pepper`); a variável nos três composes
   (`docker/docker-compose.yml`, `docker-compose.prod.yml`,
   `docker-compose.install.yml`), no `docker/smoke.sh` e no `.env.example`
 - **Teste:** `test/infrastructure/security/auth-key-material.spec.ts`
