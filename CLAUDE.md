@@ -242,6 +242,7 @@ estado lido do repositório e não da conversa.
 | O Infra Lead não anuncia subida de container que não fez: o lote todo roda antes do fim de turno da PR, e o fecho diz quando a subida não foi proposta (AT-264) | RN-668 |
 | A duplicata semântica de história e regra vira AVISO por embedding com limiar, e o gasto vira linha do metering (AT-171) | ADR 0198, RN-681 |
 | A consultiva sem agente pede um agente: o composer não envia sem destinatário e `POST .../chat` recusa com 422 `destinatario_ausente` (AT-254) | RN-682 |
+| O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo (AT-379/AT-378) | RN-706 |
 | O merge do repositório local é merge de verdade, e conflito é recusa nomeada (AT-377) | RN-704 |
 | A compactação de contexto não troca turnos por um marcador vazio, e a janela padrão vai a 128k (AT-366) | RN-702 |
 | O PO não anuncia o handoff sem fazê-lo: o servidor oferece ao Arquiteto com regras cobertas e toda história com tarefa (AT-364) | RN-700 |
@@ -2156,6 +2157,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   segunda orientação, fixa, que punha o formulário em português para autor
   `en`; ela diz "no idioma da sua resposta", e um teste reprova as 22
   ferramentas do harness se alguma voltar a fixar um.
+- O AMBIENTE do agente de execução chega pelo MESMO caminho (RN-706):
+  `Engine.Harness.AmbienteDoAgente.com_ambiente/2` roda no `ToolLoop` e a
+  fachada acrescenta a mensagem `system` efêmera (pasta real do `terminal`,
+  `/work/...` só com container `running`, imagem e rede do
+  `artifact.project_image`, git só tipado, o módulo e seus contratos) para
+  `dev-*` e `qa-*`. Não repita esses fatos em prompt de servidor.
 - O idioma DETECTADO nunca troca preferência sozinho (RN-624): a api só
   PERGUNTA (`detectionQuestion` na leitura do idioma da sessão), e só a
   resposta `confirm` grava `users.detected_language`; `decline` grava em

@@ -5,6 +5,7 @@ defmodule Engine.Sessions.EngineApiClient do
   """
 
   alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.PerfilDoAutor
   alias Engine.Harness.RoteamentoDeFerramenta
 
@@ -630,6 +631,7 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn(project_id, session_id, agent, messages, tools) do
     enviadas =
       messages
+      |> AmbienteDoAgente.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -700,6 +702,7 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
     enviadas =
       messages
+      |> AmbienteDoAgente.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 

@@ -20563,6 +20563,40 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   caso de falha; a frase do ADR 0118 não volta)
 - **Origem:** AT-358
 
+### RN-706 — O agente de execução sabe onde está: pasta, imagem, rede, git tipado e o próprio módulo {#rn-706}
+
+- **Regra:** os dev agents (`dev-*`) e os subagentes de QA (`qa-*`) recebem em
+  toda chamada de LLM uma mensagem `system` EFÊMERA de ambiente, pelo mesmo
+  caminho do idioma (RN-622) e do perfil do autor (RN-680) — nunca em
+  `state.messages`, nunca por servidor. Ela diz a pasta real em que o
+  `terminal` roda (o `workspace_root` do laço, traduzido para `/work` pela
+  mesma regra do `TerminalExecutor` quando há container `running`
+  REGISTRADO), a imagem e a rede do último `artifact.project_image`, que `git`
+  não se roda no terminal (use `git_commit`/`git_push`/`pr_open`) e, para o dev
+  agent, o MÓDULO dele: o que consome de outro módulo vem do contrato
+  (`listar_contratos_de_modulos`) e se usa por stub/mock, nunca reimplementado,
+  e arquivos de raiz que já existem na `dev` (`package.json`, lockfile) não se
+  recriam. Sem container `running`, a mensagem DIZ isso e não afirma `/work`.
+  Teto de 1 200 caracteres; falha de leitura vira mensagem ausente, nunca turno
+  derrubado.
+- **Medição (AT-379/AT-378, 02/10, loja-teste):** `dev-api` e `qa-automacao`
+  rodaram `cd /workspace` (nenhum prompt cita essa pasta); `git status` deu
+  exit 127 numa imagem sem git; o `dev-api` (módulo `api`) criou
+  `src/catalog.js` e `package.json`, os mesmos do `dev-catalog`, e o merge
+  conflitou.
+- **Onde:** `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`),
+  `:48` (`com_ambiente`), `:65` (`anexar`),
+  `apps/engine/lib/engine/harness/tool_loop.ex:87` (`com_ambiente`)
+- **Teste:** `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`
+  ("caminho feliz: com container running, a pasta é /work/.worktrees/<agente>";
+  caso de falha: "sem container running, não afirma /work")
+- **Lacuna declarada:** nenhum aviso no resultado do `git_commit` para arquivo
+  de outro módulo (o `module_map` não diz quais caminhos são de cada módulo,
+  então o aviso não seria determinístico) e nenhum bloqueio de commit, por
+  decisão do dono.
+- **Origem:** AT-379, AT-378
+
+
 ### RN-704 — O merge do repositório local é merge de verdade, e conflito é recusa nomeada {#rn-704}
 
 - **Regra:** `mergePullRequest` do provider `local` faz fast-forward só quando

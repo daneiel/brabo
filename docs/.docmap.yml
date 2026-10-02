@@ -290,6 +290,14 @@ rules:
   # `apps/engine/lib/engine/projects/` (onde mora o predicado de repositório
   # da RN-577) não era observado por regra nenhuma. Mudar uma recusa — ou o
   # predicado que ela lê — muda o que a RN afirma, com arquivo:linha.
+  # RN-706 — a mensagem efêmera de ambiente dos agentes de execução.
+  - id: ambiente-do-agente
+    watch:
+      - "apps/engine/lib/engine/harness/ambiente_do_agente.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
+
   - id: recusas-locais-de-proposta
     watch:
       - "apps/engine/lib/engine/infra/infra_lead_server.ex"

@@ -428,7 +428,7 @@ Extracted from the emission points: **100 identifiers**, of which **1** are not 
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `artifact.project_image` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
+- `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
