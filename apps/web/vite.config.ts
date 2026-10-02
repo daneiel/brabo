@@ -68,6 +68,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Node 25+ liga a Web Storage nativa: `globalThis.localStorage` passa a ser
+    // o do Node (sem `--localstorage-file`, inutilizável) e sombreia o do jsdom.
+    // A flag nos WORKERS desliga isso — mesmo efeito de
+    // `NODE_OPTIONS=--no-experimental-webstorage`, e inerte no Node 24 (AT-360).
+    execArgv: ['--no-experimental-webstorage'],
     coverage: {
       provider: 'v8',
       // Piso (ratchet), não meta: o valor medido em 2026-08-27 foi statements

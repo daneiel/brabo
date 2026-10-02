@@ -18,35 +18,32 @@ ARG DEV_GID=1000
 # hadolint ignore=DL3018
 RUN apk add --no-cache docker-cli
 
-# COREPACK_HOME fora do `$HOME`, e isto é load-bearing NESTE serviço — não
-# estética. O `corepack prepare` abaixo roda como ROOT, no build, e sem esta
-# variável o pnpm preparado fica em `/root/.cache/node/corepack`, ilegível para
-# o uid de runtime; o corepack então trata o pnpm como AUSENTE e tenta BAIXÁ-LO
-# no start. A única rede deste serviço é `broker`, `internal: true`, então a
-# tentativa morre com `getaddrinfo EAI_AGAIN registry.npmjs.org` e o container
-# sai com 1 — que foi exatamente o que aconteceu quando o ADR 0146 (RN-512) o
-# tirou do profile e ele passou a subir com `pnpm dev`.
-#
-# `docker/api/Dockerfile` tem o MESMO padrão de corepack e não sofre disso:
-# a api tem egress e o download em runtime funciona. A diferença nunca foi o
-# Dockerfile, foi a rede — e a rede é a primeira das cinco camadas de contenção
-# do ADR 0130, então quem cede é o caminho do pnpm, nunca ela.
-ENV COREPACK_HOME=/opt/corepack
-RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
+# pnpm sem corepack (AT-360): o Node 25+ não traz corepack. Tarball do registry
+# conferido contra o sha512 GRAVADO aqui (`npm view pnpm@<v> dist.integrity`, em
+# hex), instalado em /usr/local/bin. A versão bate com o `packageManager` do
+# package.json, então o pnpm nunca tenta baixar outra em runtime.
+ARG PNPM_VERSION=11.3.0
+ARG PNPM_SHA512=2c403d6594527287672b1f7056343a1f7c3634036a67ffabfcc2b3d7595d843768f8787148d1b57cf7956c90606bbd192857c363af19e96d2d0ec9ec5741d215
+RUN npm pack "pnpm@${PNPM_VERSION}" --silent \
+  && printf "%s  %s\n" "${PNPM_SHA512}" "pnpm-${PNPM_VERSION}.tgz" > /tmp/pnpm.sha512 \
+  && sha512sum -c /tmp/pnpm.sha512 && rm /tmp/pnpm.sha512 \
+  && npm i -g "./pnpm-${PNPM_VERSION}.tgz" \
+  && rm "pnpm-${PNPM_VERSION}.tgz"
+# Load-bearing NESTE serviço: a única rede dele é `broker`, `internal: true`
+# (primeira camada de contenção do ADR 0130). Com corepack, o pnpm preparado
+# como root ficava ilegível ao uid de runtime e o start tentava baixá-lo
+# (`EAI_AGAIN registry.npmjs.org`). Com o pnpm em /usr/local/bin não há cache
+# a ler nem download a tentar.
 
 # Só cria grupo/usuário quando o UID/GID pedido diverge do que a imagem já tem
 # — `node:24-alpine` já vem com o usuário "node" em 1000:1000.
 RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) \
   && (getent passwd "$DEV_UID" >/dev/null 2>&1 || adduser -D -u "$DEV_UID" -G "$(getent group "$DEV_GID" | cut -d: -f1)" devuser)
 
-# O cache preparado acima passa a ser do usuário de runtime. `chown` e não
-# `chmod a+rX`: o corepack ESCREVE nesse diretório (lock e last-known-good), e
-# um cache só-leitura reproduziria o mesmo erro por outro caminho.
-#
 # `/opt/broker-deps` no mesmo passo, e ANTES do `USER`: `/opt` é root, e é lá
 # que o install do build vai ser guardado para o entrypoint reconciliar.
 RUN mkdir -p /opt/broker-deps \
-  && chown -R "${DEV_UID}:${DEV_GID}" /opt/corepack /opt/broker-deps
+  && chown -R "${DEV_UID}:${DEV_GID}" /opt/broker-deps
 
 WORKDIR /workspace
 
@@ -75,7 +72,7 @@ COPY --chown=${DEV_UID}:${DEV_GID} packages/docker-port/package.json packages/do
 USER ${DEV_UID}:${DEV_GID}
 
 # O install MUDA DE MOMENTO: era o começo do `CMD`, passa a ser passo de BUILD.
-# É a mesma razão do bloco do corepack — em runtime não há registry alcançável,
+# É a mesma razão do bloco do pnpm — em runtime não há registry alcançável,
 # e a resposta certa não é abrir a rede, é tirar o registry do caminho quente.
 #
 # `--filter @brabo/broker...`: o broker e as dependências dele (incluindo

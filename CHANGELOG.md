@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Manutenção
+
+- **docker**: as seis imagens instalam o pnpm 11.3.0 do tarball do registry, com sha512 conferido no build, em vez de `corepack` (que o Node 25+ não traz); o broker de dev perde o `COREPACK_HOME` e continua subindo sem rede. A suíte do web passa a rodar também no Node 26 (`--no-experimental-webstorage` nos workers do Vitest) (AT-360).
+
 ### Novidades
 
 - **web**: a Visão geral de um projeto novo abre com "Primeiros passos" — chave de provedor, modelo aplicado ao time e primeira ideação, cada um com o link para onde se faz, e o cartão some quando os três estão feitos. Configurações passa a abrir pela credencial e pelos modelos; o aviso de conversão de modo só aparece com sessão ou com outro modo escolhido; "Ativar execução" só aparece quando há o que ativar; a Atividade sem sessão diz isso em vez de um esqueleto parado; a linha de modelos locais separa embedding de conversa; e o toast do "Atualizar catálogo" diz quantos modelos vieram, com "Ativar um modelo →" (AT-372, [RN-708](docs/business-rules.md#rn-708)).
