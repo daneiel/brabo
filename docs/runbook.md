@@ -1226,7 +1226,9 @@ or `indisponível`) and the PR stays in `awaiting_secops`. Since
 [RN-714](business-rules.md#rn-714) the gate never approves without static
 analysis: it stays pending and blocks the PR. After fixing the cause below,
 the gate runs again by itself — on the next engine restart, or once the
-`GateRescuer` finds the cycle stale (15 minutes). Before RN-714 the same
+`GateRescuer` finds the cycle stale (15 minutes). The error appears once per
+reason: a rescue that hits the same reason again only logs it on the engine
+server. Before RN-714 the same
 failure approved the gate. On the production and installation composes the
 engine runs with `read_only: true` and a tmpfs at `/home/engine`; when that
 tmpfs is created `root:root`, the engine user (uid 1000) cannot create

@@ -2974,7 +2974,7 @@ chamador de verdade, em paralelo e uma vez só por story.
 
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
-`criar_handoffs_appsec/3` (`secops_agent_server.ex:281`) cria um handoff por
+`criar_handoffs_appsec/3` (`secops_agent_server.ex:326`) cria um handoff por
 alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
@@ -2992,7 +2992,7 @@ criados:** o destino que já tem oferta pendente ou já está ativo no projeto n
 recebe outra, e isso não é falha.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:281` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:326` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -17891,7 +17891,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
    jeito; o que deixa de nascer é a oferta repetida.
 
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:281`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:326`
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1115`
   (`create_handoff_if_absent`);
@@ -20826,13 +20826,23 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `GateRescuer` o reexecuta no boot do engine e depois do limiar de staleness
   (`gate_rescue_stale_after_seconds`, 15 min). Não há botão de reexecutar
   gate na tela.
+- **Sem repetição (AT-386):** o resgate que reencontra o MESMO motivo não
+  grava outro `agent.error`: se o último evento do SecOps daquela task
+  (`agent.error` ou `artifact.secops_verdict`, lidos por tipo, cauda com teto)
+  já é este erro com o mesmo `reason`, fica só a linha de Logger do servidor.
+  Motivo diferente, um veredito no meio ou leitura que falha gravam de novo; o
+  `agent.error` passa a levar `taskId`.
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:110`
-  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:149`
-  (`sast_nao_rodou`)
+  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:157`
+  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:168`
+  (`erro_ja_registrado?`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("sem achados (gitleaks e semgrep limpos): approved"; casos de falha:
   "semgrep com saída inválida: gate pendente, sem veredito, motivo nomeado" e
-  "semgrep com binário ausente: gate pendente, sem veredito, motivo nomeado")
+  "semgrep com binário ausente: gate pendente, sem veredito, motivo nomeado";
+  AT-386: "primeiro resgate grava; o segundo, com o mesmo motivo, não",
+  "motivo diferente, ou veredito depois do erro, grava de novo", "o SAST que
+  volta a rodar aprova como sempre")
 - **Revisa:** [RN-707](#rn-707) ("o veredito do gate NÃO muda")
 - **Origem:** AT-380
 
