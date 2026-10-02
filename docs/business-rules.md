@@ -19313,7 +19313,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:753`
-  (`eleger_candidata`), `:1302` (`passo_da_subida`)
+  (`eleger_candidata`), `:1313` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
@@ -20784,3 +20784,30 @@ e o sumário acompanha a ordem.
   não lido não vira pendente") e `apps/web/src/routes/ProjectOverviewTab.test.tsx`
   ("primeiros passos (RN-708, AT-372)")
 - **Origem:** AT-372
+
+### RN-710 — O Workflows não é delegado sem CI que rode, e não pergunta a ninguém {#rn-710}
+
+No aceite da Infra, o `infra-workflows` respondia com uma pergunta ("qual é o
+provider do repositório do projeto?") que nenhum humano recebe — subagente não
+conversa —, e a delegação terminava `failed` com origem `modelo` e um
+`dev.error` genérico no fio (medido no loja-teste, 02/10). O projeto era
+`local`: repositório bare no servidor, sem runner de CI.
+
+- Provider `local` ou ausente: a delegação ao Workflows é **dispensada**
+  (`delegation` `dispensed`, com a justificativa nomeada — "repositório local
+  … não tem CI que rode"), e a PR de infra sai só com o que o Lead produziu.
+  Só `github` e `gitlab` delegam.
+- Quando delega, o prompt diz que o provider recebido JÁ é o do projeto e
+  proíbe perguntar.
+- O subagente que para com TEXTO em vez de chamar a ferramenta continua falha
+  nomeada reportada ao lead, mas o diagnóstico diz o que ele pediu: "pediu
+  informação que não recebeu, em vez de chamar emit_infra_delegation_result:
+  <texto>" (até 300 caracteres).
+
+- **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
+  `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1178` (`finalize`)
+- **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
+  e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
+  repositório local dispensa o Workflows …")
+- **Origem:** AT-368

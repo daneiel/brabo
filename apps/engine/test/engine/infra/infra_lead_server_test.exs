@@ -1707,4 +1707,27 @@ defmodule Engine.Infra.InfraLeadServerTest do
       0 -> Enum.reverse(acc)
     end
   end
+
+  test "RN-710: repositório local dispensa o Workflows com motivo e a PR sai só com o do Lead", %{
+    state: state
+  } do
+    Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => [], "gitProvider" => "local"})
+
+    Process.put(:fake_propose_action, %{"id" => "pa-infra-710", "status" => "executed"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()})
+    ])
+
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+    assert_received {:propose_action, "open_infra_pr", _actor, payload}
+    assert Enum.map(payload.files, & &1["path"]) == ["Dockerfile"]
+    refute_received {:llm_turn, "infra-workflows", _, _}
+
+    assert_received {:delegation_recorded,
+                     %{subagent: "infra-workflows", status: "dispensed", justification: motivo}}
+
+    assert motivo =~ "repositório local"
+  end
 end

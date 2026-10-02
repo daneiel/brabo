@@ -1178,7 +1178,14 @@ defmodule Engine.Infra.InfraLeadServer do
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
     infra_ctx = fetch_infra_ctx(state)
-    resultado_workflows = WorkflowsAgent.run(state.project_id, state.session_id, infra_ctx)
+
+    # RN-710: sem CI que rode (repositório `local` ou ausente), o Workflows é
+    # DISPENSADO com motivo nomeado e a PR segue só com o que o Lead fez.
+    resultado_workflows =
+      case WorkflowsAgent.dispensa(infra_ctx) do
+        :delegar -> WorkflowsAgent.run(state.project_id, state.session_id, infra_ctx)
+        {:dispensar, motivo} -> {:dispensed, motivo}
+      end
 
     emit_delegation_result(state, "infra-lead", resultado_lead)
     emit_delegation_result(state, "infra-workflows", resultado_workflows)
@@ -1256,6 +1263,10 @@ defmodule Engine.Infra.InfraLeadServer do
           failure_reason: "resultado inválido: #{inspect(reason)}"
         })
     end
+  end
+
+  defp emit_delegation_result(state, subagent, {:dispensed, motivo}) do
+    record_delegation(state, subagent, %{status: "dispensed", justification: motivo})
   end
 
   defp emit_delegation_result(state, subagent, {:blocked, info}) do
