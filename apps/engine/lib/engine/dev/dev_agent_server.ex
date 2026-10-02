@@ -80,8 +80,13 @@ defmodule Engine.Dev.DevAgentServer do
   alias Engine.Harness.ToolLoop
   alias Engine.Harness.Hooks
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Projects.ProjectRepository
   alias Engine.Runners.CredencialDeGit
   alias Engine.Sessions.EngineApiClient
+
+  # RN-715: o conflito de merge reusa o laço de correção sob este "gate".
+  @gate_conflito "conflito_de_merge"
+  @reentrega_do_conflito_ms 30_000
 
   # Marca da implementação no estado durável: a reidratação sobe o server
   # certo a partir dela (ver Engine.Dev.DevRehydrator).
@@ -337,6 +342,81 @@ defmodule Engine.Dev.DevAgentServer do
 
   def handle_info({:pr_settled, _}, state), do: {:noreply, state}
 
+  # RN-715: o merge da PR desta task foi recusado por conflito com a `dev`, e a
+  # api a devolveu (`in_progress`, gate zerado). Livre, o agente READOTA a
+  # branch da PR (`WorktreeManager.adopt/3`) e roda o laço de CORREÇÃO com o
+  # motivo — integrar a `dev`, resolver os arquivos, reenviar —, e o gate abre
+  # de novo do QA: os vereditos antigos não valem para a branch nova.
+  def handle_info({:merge_conflict, %{task_id: task_id} = conflito}, %{status: :idle} = state) do
+    slug = "task-" <> String.slice(to_string(task_id), 0, 8)
+    state = %{state | task_id: task_id, status: :working}
+
+    case AgentIo.worktree_manager().adopt(state.project_id, state.agent_id, slug) do
+      {:ok, %{path: path, branch: branch}} ->
+        state = %{state | worktree: path, branch: branch}
+        AgentIo.persist(state)
+
+        AgentIo.emit(state, "dev.working", %{
+          agentId: state.agent_id,
+          taskId: task_id,
+          branch: branch,
+          cause: "merge_conflict"
+        })
+
+        case ContextBuilder.fetch(state.project_id, state.session_id, task_id, state.module) do
+          {:ok, dev_context} ->
+            {:noreply, implement_correction(state, dev_context, achados_do_conflito(conflito))}
+
+          {:error, reason} ->
+            {:noreply,
+             state
+             |> AgentIo.block_task(
+               "falha ao montar contexto do conflito de merge",
+               inspect(reason),
+               "infra"
+             )
+             |> finish_task(:blocked)}
+        end
+
+      {:error, reason} ->
+        {:noreply,
+         state
+         |> AgentIo.block_task(
+           "não foi possível retomar a branch da PR em conflito",
+           inspect(reason),
+           "infra"
+         )
+         |> finish_task(:blocked)}
+    end
+  end
+
+  # Ocupado com outra coisa: tenta de novo mais tarde, em vez de perder o
+  # conflito (a entrega do `Wake` é at-most-once). Só em memória — restart na
+  # janela perde a reentrega, lacuna declarada na RN-715.
+  def handle_info({:merge_conflict, _} = msg, %{status: status} = state)
+      when status in [:working, :awaiting_gate, :awaiting_approval] do
+    Process.send_after(self(), msg, @reentrega_do_conflito_ms)
+    {:noreply, state}
+  end
+
+  # Disjuntor aberto (`idle_tripped`): o agente não pega trabalho até rearmar,
+  # e a task não pode ficar `in_progress` sem ninguém — bloqueia, nomeado.
+  def handle_info({:merge_conflict, %{task_id: task_id} = conflito}, state) do
+    _ =
+      EngineApiClient.mark_task_blocked(
+        state.project_id,
+        state.session_id,
+        task_id,
+        "conflito de merge sem dev agent disponível",
+        "o merge da PR foi recusado por conflito com a dev (#{Enum.join(Map.get(conflito, :conflicting_files, []), ", ")}) " <>
+          "e #{state.agent_id} está com o disjuntor aberto (#{state.status})",
+        state.agent_id,
+        "politica"
+      )
+
+    {:noreply, state}
+  end
+
   def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
     {:noreply, try_claim(state)}
   end
@@ -545,6 +625,36 @@ defmodule Engine.Dev.DevAgentServer do
   # obedecia ao enunciado e repunha o problema a cada volta, até estourar o
   # teto de correções. Visto na execução do critério de aceite (ADR 0020): três
   # correções seguidas devolvendo o mesmo achado do gitleaks.
+  # RN-715: o conflito entra pelo MESMO laço de correção, com um "gate" próprio
+  # que só existe aqui — é ele que escolhe o texto e o reabrir do gate.
+  defp achados_do_conflito(conflito) do
+    %{
+      gate: @gate_conflito,
+      reason:
+        "o merge da PR #{Map.get(conflito, :pull_request_id)} foi recusado por conflito com a dev",
+      diagnosis:
+        "arquivos em conflito: #{Enum.join(Map.get(conflito, :conflicting_files, []), ", ")}"
+    }
+  end
+
+  defp correction_message(%{gate: @gate_conflito} = findings) do
+    base = ProjectRepository.branch_de_trabalho()
+
+    %{
+      "role" => "user",
+      "content" =>
+        "#{String.capitalize(findings.reason)}. #{String.capitalize(findings.diagnosis)}.\n\n" <>
+          "Você está de volta na branch da PR (mesma branch, com os commits dela). " <>
+          "Traga a #{base} atual para a branch via `terminal` — `git fetch origin #{base}` e " <>
+          "`git merge origin/#{base}` —, resolva os conflitos nesses arquivos mantendo o que " <>
+          "a task pede e o que a #{base} já tem, e conclua o merge com commit.\n\n" <>
+          "Rode a suite de novo via `terminal` e só sinalize conclusão com `report_done` " <>
+          "depois de vê-la passar (exit 0). Os gates vão julgar a branch de novo. Se não " <>
+          "conseguir, use `report_blocked`.",
+      :pinned => true
+    }
+  end
+
   defp correction_message(findings) do
     %{
       "role" => "user",
@@ -570,7 +680,7 @@ defmodule Engine.Dev.DevAgentServer do
     # A PR já existe (mesma branch) — só commit+push, sem propose_pr de novo.
     AgentIo.propose_commit(state, summary)
     AgentIo.propose_push(state)
-    trigger_gate_recheck(state, findings.gate)
+    gate = trigger_gate_recheck(state, findings.gate)
 
     state = %{state | status: :awaiting_gate}
     AgentIo.persist(state)
@@ -578,7 +688,7 @@ defmodule Engine.Dev.DevAgentServer do
     AgentIo.emit(state, "dev.awaiting_gate", %{
       agentId: state.agent_id,
       taskId: state.task_id,
-      gate: findings.gate
+      gate: gate
     })
 
     state
@@ -626,11 +736,26 @@ defmodule Engine.Dev.DevAgentServer do
     |> finish_task(:blocked)
   end
 
-  defp trigger_gate_recheck(state, "qa"),
-    do: :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+  # Devolve o gate que vai julgar agora.
+  defp trigger_gate_recheck(state, "qa") do
+    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+    "qa"
+  end
 
-  defp trigger_gate_recheck(state, "secops"),
-    do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+  defp trigger_gate_recheck(state, "secops") do
+    :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+    "secops"
+  end
+
+  # RN-715: depois do conflito o fluxo de gates RECOMEÇA do QA (`open_gate`
+  # volta o `gate_status` a `awaiting_qa` e zera o contador) — os vereditos
+  # antigos eram sobre a branch antes de integrar a `dev`.
+  defp trigger_gate_recheck(state, @gate_conflito) do
+    _ =
+      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
+
+    trigger_gate_recheck(state, "qa")
+  end
 
   # A ferramenta ficou pendente de aprovação (ADR 0052). O agente PARA e retém
   # tudo — worktree, task e o `ctx` do laço, com o histórico de mensagens —, do

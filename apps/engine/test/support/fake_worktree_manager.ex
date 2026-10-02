@@ -9,6 +9,14 @@ defmodule Engine.Dev.FakeWorktreeManager do
     |> tap(fn _ -> send(self(), {:worktree_created, project_id, agent_id, slug}) end)
   end
 
+  def adopt(project_id, agent_id, slug) do
+    case Process.get(:fake_worktree_error) do
+      nil -> do_create(slug)
+      reason -> {:error, reason}
+    end
+    |> tap(fn _ -> send(self(), {:worktree_adopted, project_id, agent_id, slug}) end)
+  end
+
   defp do_create(slug) do
     path =
       Path.join(

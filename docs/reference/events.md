@@ -144,7 +144,7 @@ compaction summary, and the opening messages.
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | a dev agent claimed the task |
 | `backlog.task_status_changed` | — |
-| `backlog.task_merge_conflict` | the approved merge of the task's PR was refused by a merge conflict: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. The task stays `in_review`; the dev agent is NOT woken yet ([RN-705](../business-rules.md#rn-705)) |
+| `backlog.task_merge_conflict` | the approved merge of the task's PR was refused by a merge conflict: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. Since [RN-715](../business-rules.md#rn-715) the task goes back to `in_progress` and the owner dev agent is woken through the `task.merge_conflict` outbox row ([RN-705](../business-rules.md#rn-705)) |
 | `backlog.task_blocked` | fix-attempt cap exhausted, or an impediment was recorded |
 | `backlog.task_unblocked` | — |
 | `backlog.epic_without_story` | the PO ended a turn having created an epic and NO story for it. An epic doesn't generate a task — a story does —, so this is the state that stalls execution with no visible error. An explicit outcome in the [RN-059](../business-rules/custo.md#rn-059) pattern: a durable event with `origem`, `epicIds`/`epicTitles` and the message, plus the `agent.error` broadcast. Reported ONCE per occurrence, never in a loop ([RN-165](../business-rules/autenticacao.md#rn-165)) |

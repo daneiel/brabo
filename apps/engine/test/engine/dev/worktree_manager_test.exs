@@ -45,6 +45,31 @@ defmodule Engine.Dev.WorktreeManagerTest do
     {_, 0} = System.cmd("git", args, cd: cd, stderr_to_stdout: true)
   end
 
+  # RN-715: `adopt/3` é `add_worktree/4` com a própria branch da PR como base —
+  # o agente volta a ela com os commits que a PR já tem, mesmo depois de ter
+  # recriado o worktree para OUTRA task.
+  test "readotar a branch da PR preserva os commits dela", %{work_dir: work_dir} do
+    assert {:ok, wt} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a")
+    File.write!(Path.join(wt.path, "a.txt"), "trabalho da PR")
+    git(wt.path, ["add", "-A"])
+    git(wt.path, ["commit", "-m", "pr"])
+
+    assert {:ok, _} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-b")
+
+    assert {:ok, de_volta} =
+             WorktreeManager.add_worktree(work_dir, "dev-api", "task-a", "feature/task-a")
+
+    assert de_volta.branch == "feature/task-a"
+    assert File.read!(Path.join(de_volta.path, "a.txt")) == "trabalho da PR"
+  end
+
+  test "readotar branch que não existe: recusa nomeada", %{work_dir: work_dir} do
+    assert {:error, motivo} =
+             WorktreeManager.add_worktree(work_dir, "dev-api", "task-z", "feature/task-z")
+
+    assert motivo =~ "feature/task-z"
+  end
+
   @doc false
   # A regressão que isto pega: `remove_worktree/2` limpava o DIRETÓRIO e deixava
   # a BRANCH para trás. Como o nome dela vem do slug da task, retentar a mesma
