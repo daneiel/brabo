@@ -9894,8 +9894,8 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:400`
-  (`run_assessment/2`, a leitura única do histórico) e `:419`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:425`
+  (`run_assessment/2`, a leitura única do histórico) e `:455`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -13760,8 +13760,8 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
   `apps/api/src/domain/actions/decide.ts:278` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:925` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:981` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
+  `:931` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:987` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -15949,14 +15949,14 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:268`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:274`
   (`scopeRoot` só em `terminal`);
   `apps/api/src/domain/actions/decide.ts:578` (`terminalNoEscopo`, o único
   consumidor do escopo)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1077`
-  (`container`), `:1092` (`mounted`), `:1108` (`runner`), `:1123` (o caminho
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1083`
+  (`container`), `:1098` (`mounted`), `:1114` (`runner`), `:1123` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
-  da base), `:1147` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
+  da base), `:1153` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
   campo), `:1183` (evento anterior, sem o campo, pela mesma leitura);
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
   (a função pura, nos três modos e nos três casos de `indisponivel`)
@@ -17532,7 +17532,7 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
   (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:255`
   (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:30`
-  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:61` (`motivoDeRecusaDoSempreAprovar`),
+  (`TIPOS_SEM_SEMPRE_PERMITIR`), `:65` (`motivoDeRecusaDoSempreAprovar`),
   `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
 - **Teste:** `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
   ("ordem e idempotência (RN-642)": clique duplo, cliques concorrentes, ação
@@ -17843,7 +17843,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`travarOfertasDoDestino`);
   `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:88`
   (`substituirOfertasAoAtivar`);
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:295`
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:312`
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
@@ -19257,8 +19257,12 @@ segundo `executed` para o mesmo merge.
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
-  (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
+  (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
+
+  `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:647`
+  (`merge_ja_proposto`), `:670` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
   `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:473`;
   `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
@@ -19490,8 +19494,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:400` (`run_assessment`),
-  `:420` (`propor_parecer`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:425` (`run_assessment`),
+  `:421` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19692,11 +19696,11 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:334`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:347`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
-  (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:224`
+  (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:215`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
-  (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:301`
+  (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:317`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
   (aprovado ativa como quem aprovou — caminho feliz), `:129` (auto-aprovado:
@@ -20503,8 +20507,8 @@ bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
 kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
 histórias em que chamou `assess_implementability`.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:307` (`module_map_vigente`);
-  `:281` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:308` (`module_map_vigente`);
+  `:282` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:545` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
@@ -20909,3 +20913,47 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
   `apps/web/src/lib/session-destinatario.test.ts` ("RN-712"),
   `apps/web/src/components/ui/MarkdownMessage.test.tsx` ("RN-712")
 - **Origem:** AT-375
+
+### RN-709 — O cartão diz o tempo certo do verbo, o teto não oferece "sempre permitir", e o plano diz quanto custa e só sobe agente com tarefa {#rn-709}
+
+Medido no projeto de teste de 02/10. Quatro defeitos de um mesmo cartão de
+decisão, fechados juntos:
+
+- **O verbo segue o estado da ação (AT-371).** O cartão pendente de PR dizia
+  "abriu pull request (de ADR)" antes de abrir. `VERBO_DA_ACAO` fala da
+  PROPOSTA ("quer abrir pull request…") e `VERBO_DA_ACAO_EXECUTADA` dá o verbo
+  do que já aconteceu, só para os tipos cujo tempo muda; `verboDaAcao` recebe o
+  `status` e é a fonte única.
+- **PR de ADR e de infra são teto da RN-418 (AT-371).** `open_adr_pr` e
+  `open_infra_pr` entram em `TIPOS_SEM_SEMPRE_PERMITIR` (api e a cópia do web,
+  conferida por teste), como `pr_open` — "sempre permitir" recusa gravar o
+  padrão e o cartão não oferece o botão nem o "Modo automático". Fora do
+  terminal, as notas não falam mais de comando ("npm test", "roda qualquer
+  comando"): o tipo tipado tem nota própria.
+- **O plano mostra a estimativa (AT-381).** Ao propor `propose_execution_plan`
+  a api acrescenta ao payload `orcamentoPorTarefaMicros` — o orçamento por
+  tarefa VIGENTE, o mesmo que a ativação usa (setting do projeto ou o default
+  de US$ 0,50) —, e a frase do cartão diz "até US$ X (N tarefas × US$ Y) — é o
+  teto por tarefa, não o preço". Sem rota nova.
+- **Módulo sem tarefa não ganha agente (AT-381).** Aplicar o plano passa à
+  ativação os módulos com ≥ 1 tarefa (`modulosDoPlano`); os do `module_map`
+  sem tarefa ficam de fora e são ditos no resultado (`modulosSemTarefa`), ao
+  lado de `tarefasPorModulo`. O botão "Ativar execução" (sem plano) e o plano
+  sem `tarefas` seguem subindo o mapa inteiro. O resumo calculado chega ao
+  Dev Lead no texto do resultado da ferramenta (`resumo_do_plano/1`), para ele
+  citar os números em vez de recontar.
+
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:403` (`verboDaAcao`),
+  `apps/api/src/domain/actions/sempre-permitir.ts:33` (`TIPOS_SEM_SEMPRE_PERMITIR`),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
+  `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:116` (`execute`),
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:219` (`resumo_do_plano`)
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
+  estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
+  `apps/web/src/components/ApprovalCard.test.tsx` ("open_adr_pr pendente"),
+  `apps/api/test/domain/actions/sempre-permitir.spec.ts`,
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  ("módulos do plano"), `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts`,
+  `apps/engine/test/engine/agents/dev_lead_tools_test.exs` (`resumo_do_plano/1`)
+- **Origem:** AT-371, AT-381

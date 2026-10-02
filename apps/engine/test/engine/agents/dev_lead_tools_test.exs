@@ -324,4 +324,21 @@ defmodule Engine.Agents.DevLeadToolsTest do
       refute_received {:propose_action, "assess_implementability", _actor, _payload}
     end
   end
+
+  describe "resumo_do_plano/1 (AT-381, RN-709)" do
+    test "cita tarefas por módulo e os módulos sem tarefa" do
+      texto =
+        Engine.Agents.DevLeadTools.resumo_do_plano(%{
+          "tarefasPorModulo" => %{"api" => 13, "catalog" => 5},
+          "modulosSemTarefa" => ["server"]
+        })
+
+      assert texto =~ "api 13 · catalog 5"
+      assert texto =~ "Sem tarefa, sem agente: server"
+    end
+
+    test "sem resumo da api, nada é inventado" do
+      assert Engine.Agents.DevLeadTools.resumo_do_plano(%{}) == ""
+    end
+  end
 end

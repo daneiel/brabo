@@ -142,8 +142,10 @@
     },
     "notes": {
       "alwaysAllow": "Sempre permitir: grava em .brabo/permissions.json do projeto uma regra por segmento do comando, por verbo + subcomando (ex.: \"npm test\", \"git status\") — o próximo comando com o mesmo verbo e subcomando roda sem perguntar.",
+      "alwaysAllowTyped": "Sempre permitir: grava em .brabo/permissions.json do projeto uma regra para este tipo de ação — a próxima do mesmo tipo roda sem perguntar.",
       "alwaysAllowScoped": "Sempre permitir: libera este tipo de ação só para {{agent}}, não para os outros agentes do projeto.",
       "autoMode": "Modo automático: {{actor}} roda qualquer comando sem perguntar, inclusive fora da pasta do projeto. Continuam pedindo sua decisão git push, PR, deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
+      "autoModeTyped": "Modo automático: {{actor}} passa a ter as próximas ações aprovadas sem perguntar. Continuam pedindo sua decisão git push, PR, deploy, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
       "obsolete": "A ação já foi decidida por outro caminho; este card se atualiza sozinho."
     },
     "decided": {

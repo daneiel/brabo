@@ -249,3 +249,30 @@ describe('a hipótese do Psicólogo fala a mesma língua', () => {
     expect(descreverHipotese(hipotese('dismissed')).frase).toContain('nada mudou');
   });
 });
+
+describe('AT-371 — o verbo segue o estado da ação', () => {
+  it.each(['pr_open', 'open_adr_pr', 'open_infra_pr'])('%s pendente propõe; executada abriu', (tipo) => {
+    expect(verboDaAcao(tipo)).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'pending').verbo).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'executed').verbo).toMatch(/^abriu/);
+  });
+
+  it('tipo sem verbo executado mantém o da proposta', () => {
+    expect(verboDaAcao('terminal', 'executed')).toBe(verboDaAcao('terminal'));
+  });
+});
+
+describe('AT-381 — o plano mostra a estimativa de gasto', () => {
+  it('tarefas × orçamento por tarefa, dito como teto', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      tarefas: Array.from({ length: 18 }, (_, i) => ({ taskId: `t${i}`, modulo: 'api' })),
+      orcamentoPorTarefaMicros: 500_000,
+    });
+    expect(frase).toContain('até US$ 9,00 (18 tarefas × US$ 0,50)');
+    expect(frase).toContain('teto por tarefa, não o preço');
+  });
+
+  it('sem orçamento no payload, não inventa número', () => {
+    expect(fraseDaAcao('propose_execution_plan', { tarefas: [{ taskId: 't', modulo: 'api' }] })).not.toContain('US$');
+  });
+});
