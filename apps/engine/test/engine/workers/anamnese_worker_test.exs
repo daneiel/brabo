@@ -248,6 +248,27 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     assert_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
   end
 
+  # RN-695 (AT-355): o texto da análise é sobre a PESSOA e não é conversa —
+  # nunca vira `agent.response`, que o fio da sessão desenha como bolha.
+  test "o texto da análise sai como anamnese.analysis, nunca como agent.response", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    forcar_rodada!()
+    Process.put(:fake_anamnese_context, context())
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Analisando a janela do log… usuário (user-1)")
+    ])
+
+    assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "anamnese.analysis", payload: %{content: "Analisando" <> _}}}
+
+    refute_received {:event_appended, ^project_id, ^session_id, %{type: "agent.response"}}
+  end
+
   # A saída honesta. Sem ela, a Anamnese que descobria "não há membro elegível"
   # na PRIMEIRA iteração insistia em `emit_proficiency` com lista vazia até o
   # teto — 145 mil tokens de entrada e 4x o gasto do Criativo e do PO numa

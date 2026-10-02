@@ -99,6 +99,11 @@ export interface ContextoDaTimeline {
  * promoção (RN-126/RN-148), os cards de aprovação no eixo da RN-155 e as duas
  * passadas de apresentação (RN-172 e o colapso de "Passos do turno").
  */
+/** RN-695: o evento é da Anamnese, e por isso fica fora do fio da sessão. */
+export function ehDaAnamnese(event: SessionEvent): boolean {
+  return event.actor.kind === 'agent' && event.actor.id === 'anamnese';
+}
+
 export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   const {
     events,
@@ -386,6 +391,12 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   const filaDasMensagens = estadosNaFila(events);
 
   for (const event of events) {
+    // RN-695 (AT-355): a Anamnese NÃO fala no fio. A análise dela é sobre a
+    // PESSOA (e citava o id cru do usuário); mora em Configurações › Perfil de
+    // proficiência, e o painel de log continua mostrando os eventos dela.
+    // Evento antigo, gravado como `agent.response` antes da correção do engine,
+    // também sai daqui.
+    if (ehDaAnamnese(event)) continue;
     // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
     // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
     // aqui em vez de serem repetidos em cada `items.push`: um `push` que

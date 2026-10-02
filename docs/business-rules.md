@@ -16828,7 +16828,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:116`
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
   (`resolverIdioma`), `:74` (`idiomaAlvo`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
   (`idiomaDaResposta`)
@@ -17634,8 +17634,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:156` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:256` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:515`
-  (`handoffIdDoEvento`), `:523` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:528`
+  (`handoffIdDoEvento`), `:536` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18600,7 +18600,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:134` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:141` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19256,7 +19256,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:165` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:966` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:977` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:641`
   (`merge_ja_proposto`), `:664` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19832,7 +19832,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
   `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:97` (`resolverPerfil`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:213` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
@@ -20262,6 +20262,66 @@ existe como destino da mensagem do comando de terminal.
   ("sempre permitir" recusado, 400 `teto_do_sempre_permitir`)
 - **Origem:** AT-347, decisão do dono em 01/10
 
+### RN-695 — A análise da Anamnese não entra no fio da sessão {#rn-695}
+
+Medido no uso real da v7.0.0: o texto que o modelo da Anamnese escreve durante
+a rodada ("Analisando a janela do log… usuário (09824667-…)… Decisão de
+proficiência") aparecia como BOLHA no fio da sessão de ideação, entre o
+Criativo e o PO, com o UUID cru do usuário. A Anamnese não conversa com
+ninguém: ela analisa a PESSOA, e o que ela produz é o perfil
+([RN-680](#rn-680)).
+
+**A regra:** o texto da rodada é gravado como `anamnese.analysis`, nunca como
+`agent.response`. O `ToolLoop` aceita `response_event` no contexto (padrão
+`agent.response`, inalterado para todo outro consumidor) e a Anamnese o põe.
+O fio da sessão não desenha NENHUM evento cujo ator é o agente `anamnese` —
+inclusive o `agent.response` gravado antes da correção. O painel de log da
+sessão continua mostrando os eventos dela; o resultado mora em Configurações ›
+Perfil de proficiência, sem id cru. Nenhum marcador "perfil atualizado" entra
+no fio: fica de fora até alguém pedir.
+
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
+  `apps/engine/lib/engine/workers/anamnese_worker.ex:175` (`build_ctx`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:103` (`ehDaAnamnese`)
+- **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
+  (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
+  falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
+  (a resposta da Anamnese some do fio, a do Criativo fica)
+- **Origem:** AT-355
+
+### RN-696 — O nível de proficiência por competência chega aos agentes que conversam com a pessoa {#rn-696}
+
+Medido no código: até aqui o `proficiency_profiles` que a Anamnese grava não
+chegava a agente nenhum — só os FATOS do Psicólogo aceitos pela pessoa
+([RN-680](#rn-680)) iam no turno. O perfil era só tela.
+
+**A regra:** a api lê o nível por competência do AUTOR da mensagem neste
+projeto (`listByUser`) e o acrescenta ao MESMO texto `perfilDoAutor` que o
+engine põe como mensagem `system` efêmera no turno (`Engine.Harness.PerfilDoAutor`)
+— nenhum servidor de agente muda. Vai só `competência: nível`, com a
+orientação de calibrar quantas perguntas fazer; o `rationale` e as evidências
+NÃO vão, e nível fora da escala é descartado. Teto de 12 competências, e o
+texto inteiro segue sob o `TETO_DO_TEXTO` de 2 000 caracteres. Falha na leitura
+é log, e o turno segue sem ela, independente da leitura do grafo.
+`fatosDoPerfil` no `chat.message` continua contando só os fatos do Psicólogo.
+
+Fica FORA, e é decisão de produto pendente: o que a Anamnese observa sobre o
+comportamento do AGENTE (o laço, o usuário cancelando o turno) virar sinal de
+melhoria do produto, separado do perfil da pessoa.
+
+> **TODO(humano):** o sinal de melhoria do produto vindo da Anamnese é evento
+> (`anamnese.agent_signal`, sem sujeito pessoa) ou tabela própria, quem o lê
+> (Staff? uma tela de melhorias?) e por quanto tempo vive? É fronteira nova de
+> dado e pede ADR (0205 reservado).
+
+- **Onde:** `apps/api/src/domain/anamnese/proficiencia-do-autor.ts:22`
+  (`textoDaProficienciaDoAutor`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111`
+  (`resolverPerfil`), `:134` (`resolverProficiencia`)
+- **Teste:** `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:254`
+  (o nível vai, o rationale não), `:274` (leitura falha, a mensagem segue —
+  caso de falha); `apps/api/test/domain/anamnese/proficiencia-do-autor.spec.ts`
+- **Origem:** AT-356 (metade 1)
 ### RN-693 — Ativar o agente não é conversa: a dica de abertura fica no fio até a primeira mensagem, e os campos de texto da sessão não convidam o autofill {#rn-693}
 
 Medido no uso real da v7.0.0: "Iniciar ideação" grava `agent.activated` (e
