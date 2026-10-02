@@ -48,6 +48,32 @@ defmodule Engine.Infra.WorkflowsAgent do
   `{:blocked, %{reason:, diagnosis:, origin:}}`.
   """
   def run(project_id, session_id, ctx) do
+    run_delegado(project_id, session_id, ctx)
+  end
+
+  @doc """
+  RN-710 (AT-368): a delegação ao Workflows só existe quando há CI que rode.
+  `gitProvider` `"local"` (repositório bare no servidor) e `nil` (sem
+  repositório) não têm runner de CI — a delegação é DISPENSADA, com o motivo
+  nomeado, em vez de pedir ao subagente um arquivo que nada executaria.
+  Devolve `:delegar` ou `{:dispensar, justificativa}`.
+  """
+  def dispensa(ctx) do
+    case Map.get(ctx, "gitProvider") do
+      p when p in ["github", "gitlab"] ->
+        :delegar
+
+      "local" ->
+        {:dispensar,
+         "repositório local (bare no servidor) não tem CI que rode o pipeline — " <>
+           "Workflows não delegado"}
+
+      _ ->
+        {:dispensar, "projeto sem repositório provisionado — Workflows não delegado"}
+    end
+  end
+
+  defp run_delegado(project_id, session_id, ctx) do
     project_id
     |> build_ctx(session_id, ctx)
     |> ToolLoop.run()
@@ -84,10 +110,13 @@ defmodule Engine.Infra.WorkflowsAgent do
       CI do projeto — só isso: Dockerfiles e compose são responsabilidade do
       Lead, não sua.
 
-      FORMATO — decidido por `gitProvider` (#{provider || "desconhecido, use github"}):
+      FORMATO — decidido por `gitProvider` (#{provider || "desconhecido, use github"}),
+      que JÁ é o provider do repositório deste projeto:
       - "gitlab" → gere `.gitlab-ci.yml` na raiz do projeto.
-      - qualquer outro valor (`github`, `local`, ou desconhecido) → gere
-        `.github/workflows/ci.yml`.
+      - qualquer outro valor → gere `.github/workflows/ci.yml`.
+
+      NÃO PERGUNTE nada: você é um subagente e ninguém lê o seu texto. Tudo o
+      que você precisa está aqui; produza o arquivo com o que recebeu.
 
       CONHECIMENTO BASE — todo projeto que a Brabo provisiona já nasce com as
       três branches permanentes (dev, qa, main — escada de ambientes) e a
@@ -150,9 +179,29 @@ defmodule Engine.Infra.WorkflowsAgent do
       {"Workflows não concluiu o pipeline de CI",
        "desfecho inesperado do ToolLoop: #{inspect(other)}", "infra"}
 
+  # RN-710: subagente não conversa — texto no lugar do artefato é, quase
+  # sempre, uma pergunta a ninguém. O diagnóstico diz O QUE ele pediu.
+  defp parada_sem_ferramenta(ctx) do
+    texto =
+      ctx
+      |> Map.get(:messages, [])
+      |> List.last()
+      |> case do
+        %{"role" => "assistant", "content" => c} when is_binary(c) -> String.trim(c)
+        _ -> ""
+      end
+
+    if texto == "" do
+      "o modelo parou sem chamar emit_infra_delegation_result"
+    else
+      "pediu informação que não recebeu, em vez de chamar emit_infra_delegation_result: " <>
+        String.slice(texto, 0, 300)
+    end
+  end
+
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_infra_delegation_result", "modelo"}
+      nil -> {parada_sem_ferramenta(ctx), "modelo"}
       error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
     end
   end

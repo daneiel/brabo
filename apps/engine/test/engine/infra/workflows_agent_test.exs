@@ -148,4 +148,34 @@ defmodule Engine.Infra.WorkflowsAgentTest do
     assert reason =~ "Workflows"
     assert diagnosis =~ "emit_infra_delegation_result"
   end
+
+  test "RN-710: pergunta no lugar do artefato vira falha que diz o que foi pedido", %{
+    project_id: pid,
+    session_id: sid
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Primeiro, preciso confirmar: qual é o provider?")
+    ])
+
+    assert {:blocked, %{diagnosis: diagnosis, origin: "modelo"}} =
+             WorkflowsAgent.run(pid, sid, ctx("github"))
+
+    assert diagnosis =~ "pediu informação que não recebeu"
+    assert diagnosis =~ "qual é o provider"
+  end
+
+  test "RN-710: dispensa/1 delega só com provider que tem CI" do
+    assert WorkflowsAgent.dispensa(ctx("github")) == :delegar
+    assert WorkflowsAgent.dispensa(ctx("gitlab")) == :delegar
+    assert {:dispensar, m} = WorkflowsAgent.dispensa(ctx("local"))
+    assert m =~ "repositório local"
+    assert {:dispensar, _} = WorkflowsAgent.dispensa(ctx(nil))
+  end
+
+  test "o prompt proíbe perguntar", %{project_id: pid, session_id: sid} do
+    Process.put(:fake_llm_turns, [])
+    WorkflowsAgent.run(pid, sid, ctx("github"))
+    assert_received {:llm_turn, "infra-workflows", messages, _tools}
+    assert Enum.any?(messages, &String.contains?(&1["content"] || "", "NÃO PERGUNTE"))
+  end
 end

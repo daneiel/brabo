@@ -33,6 +33,13 @@ defmodule Engine.Infra.InfraLead do
      }}
   end
 
+  # RN-710: Workflows dispensado (sem CI que rode) — a PR leva só o do Lead.
+  def consolidar({:ok, lead}, {:dispensed, _motivo}),
+    do: {:ok, %{title: "infra: #{lead.summary}", files: lead.files}}
+
+  def consolidar({:blocked, info_lead}, {:dispensed, _motivo}),
+    do: bloqueio("Infra (Dockerfiles/compose)", info_lead)
+
   def consolidar({:blocked, info_lead}, {:ok, _workflows}),
     do: bloqueio("Infra (Dockerfiles/compose)", info_lead)
 
