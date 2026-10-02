@@ -206,6 +206,22 @@ describe('RN-178 — as regras de negócio leem do último para o primeiro, e pa
 });
 
 describe('RN-180 — o painel diz o que não está mostrando', () => {
+  it('RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0', async () => {
+    // Sessão com 268 eventos: a janela começa no 69 e as 5 regras ficaram antes.
+    eventos.mockReturnValue({
+      items: Array.from({ length: 200 }, (_, i) => ({
+        ...regra(69 + i, 'x'),
+        type: 'agent.response',
+        payload: { text: 'oi' },
+      })),
+    });
+
+    montar();
+
+    expect(await screen.findByText('0 na janela · há mais antes')).toBeTruthy();
+    expect(screen.getByText(/Nenhuma nos eventos carregados/)).toBeTruthy();
+  });
+
   it('com eventos anteriores à janela, a nota conta quantos faltam', async () => {
     // A sessão tem 41 eventos; o painel baixou do 42 em diante — os 41
     // primeiros não estão carregados, e o número sai de SUBTRAÇÃO sobre o

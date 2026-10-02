@@ -297,12 +297,20 @@ export function ContextAside({
             é mostrar o número real, não decidir por um mínimo. */}
         <Disclosure
           titulo={t('aside.regrasDeNegocio')}
-          trailing={businessRules.length}
+          // RN-701 (AT-365): com eventos ANTES da janela, o número é do
+          // recorte — "0" sozinho afirmaria que a sessão não tem regra.
+          trailing={
+            eventosAnteriores > 0
+              ? t('aside.contagemNaJanela', { count: businessRules.length })
+              : businessRules.length
+          }
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {businessRules.length === 0 ? (
-            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
+            <div className={styles.asideEmpty}>
+              {eventosAnteriores > 0 ? t('aside.nadaNaJanela') : t('aside.nadaAinda')}
+            </div>
           ) : (
             <>
               {regrasDaPagina.map((e) => {

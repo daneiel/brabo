@@ -91,6 +91,16 @@ rules:
     severity: warn
     note: "Presença e status da roster, e o que a árvore do time afirma sobre cada agente, são regra de negócio fora de domain/ (RN-090, RN-118, RN-287, RN-411, RN-568, RN-572); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
+  # O painel "Contexto da sessão" conta sobre a janela de eventos baixados, e
+  # o que ele afirma quando a janela não alcança o começo é regra (RN-180,
+  # RN-701).
+  - id: painel-de-contexto-da-sessao
+    watch:
+      - "apps/web/src/routes/ContextAside.tsx"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "O recorte do painel de contexto (RN-178, RN-180, RN-701); mudança aqui costuma mover o arquivo:linha dessas RNs."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
