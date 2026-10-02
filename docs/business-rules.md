@@ -20607,8 +20607,12 @@ decisão — NÃO foi corrigida aqui: o card do fio já decide pelo `status` da
 AÇÃO (`ApprovalCard`, `isPending`), e a leitura de ações é a cauda mais as
 pendentes (RN-637); o defeito não reproduz pelo código do web.
 
-> **TODO(humano):** medir a resposta de `GET .../actions?latest=true` da
-> sessão 17d41c20 para achar de onde vem a ação `pending` que reapareceu.
+Medição (02/10, no ambiente da AT-015): `GET .../actions?latest=true` da
+sessão 17d41c20 devolve as duas `open_adr_pr` como `executed`, e recarregar a
+sessão (com os blocos recolhidos abertos) não mostra nenhum "Aprovar". O
+cartão pendente apareceu só DURANTE a sessão ao vivo — estado transitório da
+tela, não da api nem da janela. A próxima rodada da AT-015 captura a rede no
+momento em que ele aparecer, antes de qualquer correção.
 
 - **Onde:** `apps/web/src/routes/ContextAside.tsx:302` (`trailing`), `:311`
   (`nadaNaJanela`)
