@@ -18992,7 +18992,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
-  (`add_worktree`), `:86` (`garantir_base`);
+  (`add_worktree`), `:93` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
@@ -19762,7 +19762,7 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:493`
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:508`
   (`daTarefaDoModulo`), `:247` (`claimNext`), `:235` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
@@ -19978,7 +19978,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
   (`run`), `:66` (`renderizar`);
   `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:434` (`module`), `:501`;
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:477` (`module`), `:501`;
   `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
 - **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
   (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
@@ -20655,6 +20655,57 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Origem:** AT-379, AT-378
 
 
+### RN-715 — O conflito de merge devolve a tarefa ao dev agent dono, e os gates julgam de novo {#rn-715}
+
+- **Regra:** quando o merge aprovado de uma PR é recusado por conflito com a
+  `dev` (`GitMergeConflictError`, [RN-704](#rn-704)), cada tarefa da PR que
+  está `in_review` volta a `in_progress` com `gate_status` zerado (os vereditos
+  antigos de QA/SecOps não valem para a branch que vai mudar), grava
+  `backlog.task_status_changed` com `cause: merge_conflict` e põe
+  `task.merge_conflict` na outbox, com o agente que propôs o `pr_open` (o
+  DONO), a PR e os arquivos em conflito. O engine entrega ao dono pelo
+  `Engine.Dev.Wake`; livre, ele READOTA a branch da PR (`WorktreeManager.adopt/3`,
+  a mesma `garantir_base`, sem perder os commits) e roda o laço de CORREÇÃO com
+  o motivo no texto: trazer `origin/dev` por `git fetch`/`git merge`, resolver
+  os arquivos, rodar a suite. No `report_done` propõe commit e push pelo
+  caminho de sempre (a política de aprovação vigente decide) e o gate RECOMEÇA
+  do QA (`open_gate` + QA), sem `pr_open` novo — a PR é a mesma branch.
+  Nenhum estado novo de tarefa: `in_progress` com a causa no evento.
+- **Desfechos nomeados:** dono sem linha em `dev_agent_states` — a tarefa é
+  BLOQUEADA (`conflito de merge sem dev agent para resolvê-lo`, origem `infra`);
+  dono com o disjuntor aberto (`idle_tripped`) — bloqueada, origem `politica`;
+  a branch não volta (`adopt` falha) — bloqueada, origem `infra`. Dono ocupado
+  (`working`/`awaiting_gate`/`awaiting_approval`) recebe o conflito de novo em
+  30 s. A recusa do merge ([RN-705](#rn-705)) não depende de nada disso: a
+  ação já está `failed`, com o motivo, antes de o engine agir. Tarefa que já
+  não está `in_review` (merge repetido) não é reaberta nem acorda ninguém, e
+  PR aberta por humano não tem dono a acordar.
+- **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
+  em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:321` (`reabrirPorConflitoDeMerge`),
+  `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:753` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
+  resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
+  revisão não é reaberta nem acorda ninguém"),
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs` (describe "conflito
+  de merge (RN-715)": readota, motivo no turno, commit+push sem PR nova, gate
+  reabre do QA; falhas: branch que não volta e disjuntor aberto),
+  `apps/engine/test/engine/workers/dev_agent_wake_worker_test.exs` ("dono que
+  não existe: bloqueia a task com motivo nomeado, nada calado"),
+  `apps/engine/test/engine/dev/worktree_manager_test.exs` ("readotar a branch
+  da PR preserva os commits dela")
+- **Lacuna declarada:** a reentrega ao dono ocupado mora em memória — restart
+  do engine nessa janela a perde, e a tarefa fica `in_progress` até
+  intervenção (mesma família da lacuna do `Engine.Dev.Wake`, ADR 0045). O
+  agente integra a `dev` por MERGE, não rebase: o push forçado que o rebase
+  exigiria não existe no executor de git. O `NoopDevAgentServer` não trata o
+  conflito.
+- **Origem:** AT-383
+
 ### RN-705 — A recusa de merge aparece na aba PRs, e a falha grava o tipo da ação {#rn-705}
 
 - **Regra:** a ação git que falha grava `execution_result` com o `kind` da
@@ -20688,7 +20739,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   de merge: mostra motivo e arquivos..."; "recusa de OUTRA PR não aparece
   nesta"), `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
   ("grava o autor ao abrir...")
-- **Lacuna declarada:** o conflito NÃO acorda o dev agent da tarefa para
+- **Lacuna declarada (fechada na [RN-715](#rn-715)):** o conflito NÃO acorda o dev agent da tarefa para
   rebasear e reenviar. O caminho que o QA usa (`DevAgentServer.correct/3`) só
   age com o agente em `:awaiting_gate` NA MESMA tarefa, e no merge o gate já
   terminou (`task.gate_resolved` com `done` leva o agente a `finish_task`, que

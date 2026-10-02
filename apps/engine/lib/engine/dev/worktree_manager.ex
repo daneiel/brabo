@@ -34,8 +34,21 @@ defmodule Engine.Dev.WorktreeManager do
   para `dev`.
   """
   def create(project_id, agent_id, task_slug) do
-    base = ProjectRepository.branch_de_trabalho()
+    criar(project_id, agent_id, task_slug, ProjectRepository.branch_de_trabalho())
+  end
 
+  @doc """
+  Readota a branch JÁ existente `feature/<slug>` de uma task (RN-715): o merge
+  da PR dela foi recusado por conflito com a `dev`, e o dono volta a trabalhar
+  NELA, com os commits que a PR já tem. É o `create/3` com a própria branch
+  como ponto de partida — a mesma `garantir_base` (local ou `origin/`), e o
+  `-B` redefine a branch para ela mesma, sem perder nada.
+  """
+  def adopt(project_id, agent_id, task_slug) do
+    criar(project_id, agent_id, task_slug, "feature/#{task_slug}")
+  end
+
+  defp criar(project_id, agent_id, task_slug, base) do
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
       if runner?(project_id) do

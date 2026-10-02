@@ -87,6 +87,8 @@ defmodule Engine.Outbox.Drain do
               "task.gate_resolved",
               "task.became_claimable",
               "task.pr_settled",
+              # RN-715: o merge da PR foi recusado por conflito — acorda o dono.
+              "task.merge_conflict",
               # ADR 0052: solta o dev agent que parou esperando a decisão de
               # uma ação. Sem esta linha o evento é emitido, fica no outbox e
               # nunca vira job — o agente espera para sempre.

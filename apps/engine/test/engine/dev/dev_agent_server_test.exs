@@ -786,4 +786,78 @@ defmodule Engine.Dev.DevAgentServerTest do
       refute_received {:task_claimed, _, _}
     end
   end
+
+  describe "conflito de merge (RN-715)" do
+    @conflito %{
+      task_id: "task-abc12345",
+      pull_request_id: "pr-6",
+      conflicting_files: ["package.json"]
+    }
+
+    test "livre: readota a branch da PR, recebe o motivo, reenvia e o gate reabre do QA", %{
+      state: state
+    } do
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_dev_context, %{
+        "task" => %{"id" => "task-abc12345", "title" => "Cadastro", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "Cadastro",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("report_done", %{"summary" => "dev integrada"})
+      ])
+
+      state = %{state | status: :idle}
+
+      assert {:noreply, new_state} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, state)
+
+      assert_received {:worktree_adopted, _, "dev-api", "task-task-abc"}
+      refute_received {:worktree_created, _, _, _}
+      assert_received {:llm_turn, _, mensagens, _}
+      assert Enum.any?(mensagens, &(to_string(Map.get(&1, "content", "")) =~ "package.json"))
+      assert_received {:propose_action, "git_commit", _, _}
+      assert_received {:propose_action, "git_push", _, _}
+      refute_received {:propose_action, "pr_open", _, _}
+      assert_received {:gate_opened, "task-abc12345", "dev-api"}
+      assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
+      assert new_state.status == :awaiting_gate
+      assert new_state.task_id == "task-abc12345"
+    end
+
+    test "falha ao readotar a branch: bloqueia nomeado, origem infra", %{state: state} do
+      Process.put(:fake_worktree_error, "branch sumiu")
+      Process.put(:fake_tasks, [])
+
+      assert {:noreply, _} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, %{state | status: :idle})
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "conflito"
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+    end
+
+    test "disjuntor aberto: bloqueia a task com motivo, sem trabalhar", %{state: state} do
+      state = %{state | status: :idle_tripped}
+
+      assert {:noreply, ^state} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, state)
+
+      assert_received {:task_blocked, "task-abc12345", _, diagnostico, "dev-api"}
+      assert diagnostico =~ "package.json"
+      refute_received {:worktree_adopted, _, _, _}
+    end
+  end
 end
