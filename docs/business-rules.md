@@ -20286,6 +20286,7 @@ reidratação continua trazendo ferramentas como texto.
   chamada leva o `assistant` com `toolCalls` logo antes do `tool` que o
   responde; a resposta final, sem ferramenta, não ganha a chave — caso de falha)
 - **Origem:** AT-350
+
 ### RN-694 — O catálogo de modelos tem busca, a credencial oferece o sync, e o primeiro modelo vai ao time num clique {#rn-694}
 
 Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
