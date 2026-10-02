@@ -156,3 +156,11 @@ overrides:
 #     causa, no `require` de `dynamic-variables.js`. São cinco majors de
 #     distância e o pai não tem versão nova; fechar o alerta custaria a
 #     documentação inteira.
+#     Remedido em 2026-10-02 (AT-359): `postman-collection@5.3.1` segue a
+#     última no npm (sem 5.3.2/6.x) e ainda pina `5.5.3`; quem a arrasta é
+#     `docusaurus-plugin-openapi-docs`/`-theme-openapi-docs` (5.1.2 aqui,
+#     5.2.0 a mais nova, ambas `postman-collection ^5.0.2`),
+#     `openapi-to-postmanv2@6.3.3` e `postman-code-generators@2.1.1` (as
+#     duas `^5.0.0`, ambas as mais novas). Nenhum pai sobe para fora do
+#     faker 5.5.3. Trocar/remover o plugin ou dispensar o alerta com
+#     justificativa é decisão do dono.
