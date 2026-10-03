@@ -87,8 +87,16 @@ RUN apk add --no-cache --virtual .binaries-build curl tar \
 # só pra instalar. Historicamente mais estável em glibc/Debian do que
 # Alpine/musl — mesmo tratamento best-effort do gitleaks acima
 # (Engine.Actions.SemgrepDetector degrada graciosamente se ausente).
+#
+# A versão é FIXA e é a MESMA do Dockerfile.prod (o spec
+# scripts/ci/semgrep-do-engine.spec.ts reprova a divergência). Sem versão o pip
+# pegou a 1.179.0, que não publica wheel `musllinux`: no Alpine ele monta o
+# pacote do sdist, SEM o `semgrep-core`, e todo scan sai com exit 2 ("Failed to
+# find semgrep-core") — o gate SecOps de dev ficava pendente para sempre.
+# Subir a versão exige wheel musllinux publicada no PyPI.
+ARG SEMGREP_VERSION=1.171.0
 RUN apk add --no-cache python3 py3-pip \
-  && (pip install --no-cache-dir --break-system-packages semgrep \
+  && (pip install --no-cache-dir --break-system-packages "semgrep==${SEMGREP_VERSION}" \
       || echo "[build] semgrep nao instalado -- SecOpsAgent detecta a ausencia em runtime")
 
 # yamllint (gate de QA de infra, Fase 4a) — valida a sintaxe do compose e do
