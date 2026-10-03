@@ -21395,7 +21395,7 @@ O kickoff do PO diz as três coisas.
   (`fechar_janela`), `apps/engine/lib/engine/workers/anamnese_worker.ex:104`
   (`dentro_do_teto_diario?`),
   `apps/engine/lib/engine/session_events/event.ex:194`
-  (`project_window_query`), `apps/engine/lib/engine/session_events/event.ex:177`
+  (`project_window_query`), `apps/engine/lib/engine/session_events/event.ex:202`
   (`count_anamnese_rounds_since`),
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:87`
   (`min_interacoes_proprias`),
