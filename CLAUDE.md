@@ -286,6 +286,7 @@ estado lido do repositório e não da conversa.
 | O crédito esgotado no provider pausa o dev com origem infra e diz como retomar (AT-407) | RN-726 |
 | A PR de infra mira `dev`, a sidebar abre só o projeto atual, e o assistente não convida o autofill (AT-411/412/413/415) | RN-729 |
 | A história draft se corrige e se arquiva, pelo PO e pelo usuário (AT-406) | ADR 0212, RN-727 |
+| O fecho do turno ganha o número real do que foi gravado (AT-414) | RN-731 |
 
 ## Estado atual e aberto
 
@@ -2202,7 +2203,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   RN-459 fechou os quatro que ainda terminavam calados — só PO e
   Criativo tinham corrigido antes; o Infra Lead, na RN-617); e o agente não anuncia ação que o
   código não vá executar — o que se promete é decidido pelo teto, nunca
-  por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e
+  por texto fixo (RN-163). E o número do que foi
+  gravado no turno é do SERVIDOR: o fecho do Criativo, do PO e do Arquiteto
+  ganha "Gravado neste turno: …" derivado das escritas `ok` do próprio turno
+  (`Engine.Agents.GravadoNoTurno`, RN-731), no idioma do turno (pt-BR, senão
+  en), nunca reescrevendo o texto do modelo. O Staff é o único SEM `kickoff/1` — sobe e
   fica ocioso até a primeira `user_message`, porque não há artefato de
   sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
   tela de Sessão narra em tempo real o que o agente está fazendo numa
