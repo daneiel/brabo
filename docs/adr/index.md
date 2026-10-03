@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 202 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 203 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -178,6 +178,7 @@ The project container's lifecycle, the image decision, the Docker port and the b
 | [0180](0180-container-com-o-dono-da-pasta.md) | The project container runs as the FOLDER'S OWNER (`--user uid:gid`, measured by the api, revalidated by the broker, never from a request body), so dev agents can write to `/work` under `--cap-drop ALL` (AT-247). Adds one field to the spec, opens no containment door |
 | [0190](0190-a-infra-sobe-o-container-no-aceite.md) | The Infra brings the container up ON ITS OWN when its handoff is accepted (AT-260, owner decision 01/10), revising ADR 0133's "never seeded" without editing it: the accept seeds `container_start: auto_approve` for the Infra agent, and the Infra Lead's SERVER — not the model, not a new tool — elects the routing candidate covering the most modules (first one on a tie) and proposes `container_start` before the first model call, through the SAME path as the tool, with the mode/state refusals (RN-566/610) and the no-broker 409 intact. `runner` keeps `container_start_via_runner` with approval, `container_remove` stays in the absolute cap, and the RN-668 closing stays true. Same owner decision (AT-262): the Dev Lead is offered BY THE INFRA, only with the project container `running` — the Architect's double handoff goes away, and ADR 0053/0085's "the Dev Lead comes from the Architect" changes without being edited |
 | [0199](0199-recurso-minimo-derivado-do-module-map.md) | The container's MINIMUM resources are DERIVED from the `module_map` (AT-261, owner decision 01/10): each module may declare `resources` (cpus, memoryMb, pidsLimit — all three or none), and `container_start` with resources omitted — always the case for the server's start on handoff acceptance (ADR 0190) — starts with the SUM over modules, because they all share ONE container. A module without a declaration floors the container at today's default instead of inventing a number; a map with no declarations gives exactly today's default. A sum above the ceiling is 400 to the Architect when the map is created; a request below the minimum is a named `failed` |
+| [0208](0208-a-infra-herda-a-rede-do-arquiteto.md) | The Infra INHERITS the network the Architect declared in `artifact.project_image` (AT-392, owner decision 02/10): the server start on handoff acceptance and the `propose_container_start` tool without `network` use the Architect's `egress`/`none` instead of a literal `none`, and still start without a click; revises ADR 0190 point 3, departs from ADR 0065 §4, and declares the price (egress reaches the host's published ports, ADR 0189). |
 
 ## The local runner {#tema-runner}
 
@@ -342,7 +343,7 @@ How documentation is generated, verified and published.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0207**.
+  is superseded — the next one is **0209**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

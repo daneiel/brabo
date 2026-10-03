@@ -616,7 +616,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     payload = %{
       imagem: Map.get(args, "imagem", ""),
-      network: Map.get(args, "network", "none"),
+      network: Map.get(args, "network") || rede_herdada(state.project_id),
       resources: Map.get(args, "resources", %{}),
       rationale: Map.get(args, "rationale", "")
     }
@@ -716,7 +716,7 @@ defmodule Engine.Infra.InfraLeadServer do
       # gravado ganha, lá, de onde veio cada número.
       payload = %{
         imagem: imagem,
-        network: "none",
+        network: rede_herdada(state.project_id),
         resources: %{},
         rationale: rationale_do_servidor(modulos, length(rotas))
       }
@@ -743,6 +743,12 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   defp subir_no_aceite(state, _sem_contexto), do: {state, nil}
+
+  # RN-723 (ADR 0208, revisa o ponto 3 do ADR 0190): a eleição da Infra
+  # HERDA a rede que o Arquiteto declarou na `artifact.project_image` dele,
+  # lida localmente (o mesmo Postgres, sem HTTP no laço). Sem decisão do
+  # Arquiteto, `none` como sempre.
+  defp rede_herdada(project_id), do: Event.rede_do_arquiteto(project_id) || "none"
 
   @doc """
   A eleição do servidor (RN-671): a candidata do MAIOR número de módulos, e no
