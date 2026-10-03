@@ -278,6 +278,7 @@ estado lido do repositório e não da conversa.
 | O engine sobe para OTP 29.1 porque o 27.3 aborta sob musl 1.2.6 em host com AMX (AT-398) | ADR 0209 |
 | A bolha do agente mostra só o fecho do turno; as voltas anteriores ficam em "Passos do turno" (AT-395) | RN-698 |
 | Node 26 nas imagens e nos workflows, sem o `ignore` do major (AT-360) | CHANGELOG |
+| O TanStack AI não é adotado no front; revisitar na 1.0 (AT-400) | tanstack-ai.md |
 
 ## Estado atual e aberto
 

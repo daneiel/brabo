@@ -96,6 +96,7 @@ const sidebars: SidebarsConfig = {
         'explanation/medicao-do-idioma',
         'explanation/medicao-do-jev',
         'explanation/auditoria-visual-rodada-29',
+        'explanation/tanstack-ai',
       ],
     },
     {
