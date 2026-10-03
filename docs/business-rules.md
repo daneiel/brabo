@@ -21811,3 +21811,29 @@ sem dizer qual.
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
 - **Origem:** AT-421 (TP-01 de 03/10, 2ª rodada: o Dev Lead gravou
   `reason: "{:final, …"` e a bolha despejou o JSON do 402)
+
+### RN-734 — O caminho OpenAI-compatível manda o teto de saída SEMPRE {#rn-734}
+
+- **Regra:** toda chamada de chat pelo dialeto `/chat/completions` (os
+  providers que nascem de `OpenAICompatibleProvider`, OpenRouter incluído)
+  leva o campo de teto de saída — `max_tokens` ou `max_completion_tokens`,
+  conforme `maxTokensField` — mesmo quando quem chama não define
+  `maxTokens`. Sem definição, o valor é `MAX_TOKENS_PADRAO` (4096), o MESMO
+  `DEFAULT_MAX_TOKENS` do `anthropic-provider.ts`, para o agente ter o mesmo
+  teto nos dois dialetos. O motivo é a RESERVA de crédito: sem o campo, o
+  OpenRouter reserva por chamada a saída MÁXIMA do modelo e recusa com 402
+  ("would exceed your available credits given your current in-flight
+  requests") com saldo que cobriria a chamada real. Hoje nenhum chamador
+  (engine → `llm-turn`) define `maxTokens`, então o padrão vale para todos
+  os agentes. Lacuna declarada: este dialeto não lê `finish_reason: "length"`,
+  então resposta cortada pelo teto NÃO é narrada (a RN-698 narra o teto de
+  ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
+  reserva explica o 402 do TP-01.
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
+  (`MAX_TOKENS_PADRAO`), `:445` (`flags`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
+  123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
+  `max_tokens` não vai)
+- **Origem:** AT-419 (TP-01 de 03/10: US$ 1,79 livres e 402 na chamada do Dev
+  Lead e na do dev agent)

@@ -442,6 +442,13 @@ interface OpenAICompatibleFlags {
 }
 ```
 
+The output cap field is sent on EVERY call (RN-734): `options.maxTokens`
+when the caller sets it, otherwise `MAX_TOKENS_PADRAO` (4096, the same
+default as the Anthropic provider). Without the field, OpenRouter reserves
+credit for the model's MAXIMUM output per in-flight call and answers 402
+even when the real call would fit the balance. A reply cut by this cap is
+not narrated yet: this dialect does not read `finish_reason: "length"`.
+
 Each flag exists because a real provider diverges. Don't add a flag without a
 provider that needs it.
 
