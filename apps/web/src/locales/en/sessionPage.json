@@ -82,6 +82,7 @@
     "modeloNaoGravado": "This response was recorded without the model's name",
     "modeloNaoRegistrado": "model not recorded",
     "falhaOrigem": "failure · origin {{origem}}",
+    "falhaProximoPasso": "The {{agente}} turn stopped because of this failure (origin {{origem}}). Send {{agente}} a message to continue.",
     "tetoDeIteracoes": "Stopped at the limit of {{max}} steps without finishing the turn. What was recorded so far is above; tell me how you'd like to continue."
   },
   "historia": {
@@ -197,7 +198,10 @@
     "logDeEventos": "Event log",
     "eventoCitado": "Cited event",
     "eventoCitadoNaoEncontrado": "The cited event wasn't found in this session.",
-    "erroCarregarLog": "Could not load the event log."
+    "erroCarregarLog": "Could not load the event log.",
+    "decisoes": "Recorded decisions",
+    "decisoesVazio": "No decision recorded in this session.",
+    "decisaoSemEscolha": "Decision with no recorded choice"
   },
   "turno": {
     "pensando": "Thinking…",

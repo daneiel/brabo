@@ -291,7 +291,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             era duplicar a mesma pergunta sem ganhar nada. */}
         <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
         <div className={styles.sectionSub}>{t('timeline.description')}</div>
-        <AgentTimelineTree events={overviewEvents} projectId={projectId} />
+        <AgentTimelineTree events={overviewEvents} projectId={projectId} compactarChamadas />
 
         <ExecutionSection
           projectId={projectId}

@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean;
   icon?: ReactNode;
   /** Rótulo visível, associado ao campo por id. */
-  label?: string;
+  label?: React.ReactNode;
   /** Mensagem de erro sob o campo. Também marca o input como inválido. */
   error?: string | null;
   /** Texto de apoio, mostrado quando não há erro. */

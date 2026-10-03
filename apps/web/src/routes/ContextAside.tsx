@@ -155,6 +155,22 @@ export function ContextAside({
     .filter((e) => e.type === 'artifact.business_rule')
     .sort((a, b) => b.seq - a.seq);
 
+  // AT-393: as decisões registradas (`artifact.decision_record`, RN-505) têm
+  // seção própria — não são PR nem backlog, e sem ela o painel dizia
+  // "nenhum artefato" numa sessão que decidiu coisas.
+  const decisoes = events
+    .filter((e) => e.type === 'artifact.decision_record')
+    .sort((a, b) => b.seq - a.seq)
+    .map((e) => {
+      const p = (e.payload ?? {}) as { choice?: unknown; context?: unknown };
+      return {
+        chave: e.id,
+        actorId: e.actor.id,
+        escolha: typeof p.choice === 'string' ? p.choice : '',
+        contexto: typeof p.context === 'string' ? p.context : '',
+      };
+    });
+
   // RN-178: acima de 5 regras a lista pagina em vez de crescer sem fim — o
   // painel tem a altura de uma coluna, e uma sessão de ideação passa
   // facilmente de vinte regras.
@@ -360,6 +376,29 @@ export function ContextAside({
                 </div>
               )}
             </>
+          )}
+        </Disclosure>
+      </div>
+
+      <div className={styles.asideSection}>
+        <Disclosure
+          titulo={t('aside.decisoes')}
+          trailing={decisoes.length}
+          padraoAberto
+          classNameCabecalho={styles.asideHeader}
+        >
+          {decisoes.length === 0 ? (
+            <div className={styles.asideEmpty}>{t('aside.decisoesVazio')}</div>
+          ) : (
+            decisoes.map((d) => (
+              <div key={d.chave} className={styles.asideItem} style={corDoAgente(d.actorId)}>
+                <AvatarDoAgente id={d.actorId} />
+                <span>
+                  <strong>{d.escolha || t('aside.decisaoSemEscolha')}</strong>
+                  {d.contexto && <span className={styles.asideEmpty}> — {d.contexto}</span>}
+                </span>
+              </div>
+            ))
           )}
         </Disclosure>
       </div>

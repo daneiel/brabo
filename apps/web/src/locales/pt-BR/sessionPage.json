@@ -82,6 +82,7 @@
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
     "falhaOrigem": "falha · origem {{origem}}",
+    "falhaProximoPasso": "O turno de {{agente}} parou por esta falha (origem {{origem}}). Mande uma mensagem para {{agente}} continuar.",
     "tetoDeIteracoes": "Parou no teto de {{max}} passos sem terminar o turno. O que ficou registrado até aqui está acima; diga como prefere seguir."
   },
   "historia": {
@@ -202,7 +203,10 @@
     "logDeEventos": "Log de eventos",
     "eventoCitado": "Evento citado",
     "eventoCitadoNaoEncontrado": "O evento citado não foi encontrado nesta sessão.",
-    "erroCarregarLog": "Não foi possível carregar o log de eventos."
+    "erroCarregarLog": "Não foi possível carregar o log de eventos.",
+    "decisoes": "Decisões registradas",
+    "decisoesVazio": "Nenhuma decisão registrada nesta sessão.",
+    "decisaoSemEscolha": "Decisão sem escolha registrada"
   },
   "turno": {
     "pensando": "Pensando…",

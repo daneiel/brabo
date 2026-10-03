@@ -84,7 +84,7 @@ const TECLAS_HORIZONTAL = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
  */
 export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
   const { t } = useTranslation('nav');
-  const refs = useRef(new Map<string, HTMLButtonElement | null>());
+  const refs = useRef(new Map<string, HTMLAnchorElement | null>());
   const navRef = useRef<HTMLElement>(null);
   const horizontal = useLayoutMovel();
   const teclas = horizontal ? TECLAS_HORIZONTAL : TECLAS_VERTICAL;
@@ -171,20 +171,28 @@ export function ProjectRail({ itens, active, onChange }: ProjectRailProps) {
   function folha(item: FolhaDoTrilho) {
     const ativo = item.key === active;
     return (
-      <button
+      // AT-394: cada aba tem ENDEREÇO (`?tab=<chave>`) — link de verdade, que
+      // abre em outra aba com o botão do meio/Ctrl. O clique simples continua
+      // trocando no lugar, e o contrato de teclado (ADR 0126) não muda: o
+      // `role="tab"` e as setas são os mesmos de quando era `<button>`.
+      <a
         key={item.key}
         ref={(el) => {
           refs.current.set(item.key, el);
         }}
-        type="button"
+        href={`?tab=${encodeURIComponent(item.key)}`}
         role="tab"
         aria-selected={ativo}
         className={[styles.item, ativo && styles.itemAtivo].filter(Boolean).join(' ')}
-        onClick={() => onChange(item.key)}
+        onClick={(e) => {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          onChange(item.key);
+        }}
       >
         <span className={styles.itemLabel}>{item.label}</span>
         {item.count !== undefined && <span className={styles.contador}>{item.count}</span>}
-      </button>
+      </a>
     );
   }
 

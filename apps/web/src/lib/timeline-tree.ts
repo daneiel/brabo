@@ -484,3 +484,37 @@ export function agruparPorInstancia(ramos: RamoDeAgente[]): GrupoDeAgente[] {
 
   return grupos;
 }
+
+/**
+ * Compacta as ferramentas de cada ramo (AT-394): um `tool.result` deixa de
+ * ser marco próprio — ele só repete a chamada que acabou de aparecer — e
+ * chamadas CONSECUTIVAS da mesma ferramenta viram UM marco, com a contagem no
+ * detalhe (`create_story ×24`). É uma LEITURA da Visão geral: a aba
+ * Executores continua com a árvore inteira, onde cada chamada se expande.
+ * "Consecutiva" ignora o `tool.result` no meio, e qualquer outro marco
+ * (resposta, artefato…) quebra a sequência.
+ */
+export function compactarFerramentas(ramos: RamoDeAgente[]): RamoDeAgente[] {
+  return ramos.map((ramo) => {
+    const marcos: Marco[] = [];
+    let contagem = 0;
+    let base = '';
+    for (const m of ramo.marcos) {
+      if (m.eventType === 'tool.result') continue;
+      const anterior = marcos[marcos.length - 1];
+      if (
+        m.eventType === 'tool.call' &&
+        anterior?.eventType === 'tool.call' &&
+        anterior.payload.tool === m.payload.tool
+      ) {
+        contagem += 1;
+        marcos[marcos.length - 1] = { ...m, detalhe: `${base} ×${contagem}`.trim() };
+        continue;
+      }
+      contagem = 1;
+      base = m.detalhe ?? '';
+      marcos.push(m);
+    }
+    return { ...ramo, marcos };
+  });
+}

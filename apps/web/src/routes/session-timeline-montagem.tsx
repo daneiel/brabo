@@ -892,6 +892,16 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                 {mensagem}
               </div>
+              {/* AT-393: o próximo gesto, só com o que o evento traz (ator e
+                  origem) — o turno parou e uma mensagem nova o retoma. */}
+              {event.actor.kind === 'agent' && (
+                <div className={styles.messageMeta} data-testid="falha-proximo-passo">
+                  {t('mensagens.falhaProximoPasso', {
+                    agente: nomeDoAgente(event.actor.id),
+                    origem,
+                  })}
+                </div>
+              )}
             </div>
           </div>
         ),
