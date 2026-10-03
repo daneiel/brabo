@@ -44,6 +44,7 @@
     "subspecialty_other": "{{count}} subspecialties"
   },
   "agentStatus": {
+    "creditExhausted": "model provider credit exhausted — top up and rearm to resume",
     "circuitBreaker": {
       "default": "circuit breaker triggered",
       "withCount_one": "circuit breaker: {{count}} consecutive blocked task",
@@ -91,6 +92,7 @@
       "devBlockedByContainer": "stopped: the project has no running container",
       "devError": "error",
       "devIdleTripped": "circuit breaker opened",
+      "devCreditExhausted": "provider credit exhausted",
       "prGateChanged": "gate changed"
     },
     "now": {

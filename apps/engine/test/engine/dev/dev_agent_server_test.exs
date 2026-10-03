@@ -611,6 +611,57 @@ defmodule Engine.Dev.DevAgentServerTest do
                        %{type: "dev.idle", payload: %{reason: "sem task pegável"}}}
     end
 
+    # RN-726 (AT-407): o 402 do provider não é defeito de código. Origem
+    # `infra`, motivo nomeado, contador intacto, e a próxima task NÃO é
+    # reivindicada — senão cada uma queimaria em 1 s até a parada automática.
+    test "402 do provider: origem infra, pausa sem idle_tripped e sem queimar a próxima task",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3}
+
+      Process.put(:fake_tasks, [
+        %{"id" => "task-c1", "title" => "T1"},
+        %{"id" => "task-c2", "title" => "T2"}
+      ])
+
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(
+        :fake_llm_turn_error,
+        "openrouter respondeu com status 402: This request would exceed your available credits"
+      )
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-c1", "crédito do provider esgotado", _, "dev-api"}
+      assert_received {:task_blocked_origin, "task-c1", "infra"}
+
+      assert_received {:event_appended, _, _,
+                       %{type: "dev.credit_exhausted", payload: %{motivo: "credito_esgotado"}}}
+
+      refute_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
+      refute_received {:task_blocked, "task-c2", _, _, _}
+      assert new_state.consecutive_blocked == 0
+      assert new_state.status == :idle_tripped
+      assert new_state.task_id == nil
+    end
+
+    test "erro que não é de crédito segue como antes: parou sem concluir, conta no disjuntor",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3}
+      Process.put(:fake_tasks, [%{"id" => "task-d1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "algo inesperado")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-d1", "parou sem concluir nem reportar bloqueio", _,
+                       "dev-api"}
+
+      assert_received {:task_blocked_origin, "task-d1", "codigo"}
+      refute_received {:event_appended, _, _, %{type: "dev.credit_exhausted"}}
+      assert new_state.consecutive_blocked == 1
+    end
+
     test "orçamento por task não vaza entre reivindicações da mesma sequência", %{
       state: state
     } do
@@ -859,5 +910,22 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert diagnostico =~ "package.json"
       refute_received {:worktree_adopted, _, _, _}
     end
+  end
+
+  defp contexto_minimo do
+    %{
+      "task" => %{"id" => "x", "title" => "x", "description" => ""},
+      "story" => %{
+        "id" => "st-1",
+        "title" => "x",
+        "description" => "",
+        "rf" => [],
+        "rnf" => [],
+        "dod" => [],
+        "dor" => []
+      },
+      "businessRules" => [],
+      "adrs" => []
+    }
   end
 end

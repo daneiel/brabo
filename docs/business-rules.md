@@ -13831,7 +13831,7 @@ lógico, monótono) à janela e ao parâmetro, que também passa a olhar
 evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
 da guarda, o mesmo dos outros dois fatos.
 
-- **Código:** `apps/web/src/lib/agent-status.ts:299` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:308` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
@@ -19025,7 +19025,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
   (`add_worktree`), `:93` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:277` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:300` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -21554,3 +21554,37 @@ sem dizer qual.
   `apps/api/test/domain/backlog/story-overlap.spec.ts` (título escapado casa
   com o normal; título diferente segue diferente)
 - **Origem:** AT-405, AT-408
+
+### RN-726 — Crédito do provedor esgotado pausa o dev agent, com origem `infra`, sem queimar as tarefas seguintes {#rn-726}
+
+- **Regra:** quando o provedor do modelo recusa por falta de CRÉDITO (HTTP 402,
+  ou o texto "available credits"/"add credits" do OpenRouter), o turno do dev
+  agent não é "parou sem concluir": a tarefa é bloqueada com o motivo
+  "crédito do provider esgotado" e origem `infra` (nunca `codigo`), o contador
+  da parada automática (RN-047) NÃO avança, e o agente NÃO reivindica a
+  próxima tarefa — fica em `idle_tripped` e emite `dev.credit_exhausted`
+  (`motivo: credito_esgotado`), nunca `dev.idle_tripped`. A retomada é o
+  Rearmar que já existia no painel do time, depois de recarregar o crédito; a
+  tarefa bloqueada volta pelo desbloqueio de sempre. A tela de Executores
+  mostra o agente `travado` com "crédito do provedor do modelo esgotado —
+  recarregue e rearme para retomar", e o sino diz o mesmo. O mesmo
+  reconhecimento faz `FalhaDeTurno.origem/1` devolver `infra` para o frame
+  final de crédito (vale para os agentes de gate, como o QA). A sessão conta
+  `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
+  Lacuna declarada: a api não tem código próprio para 402 (sai como
+  `upstream`); o reconhecimento é pelo texto normalizado.
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:98`
+  (`credito_esgotado?`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:868` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/agent_io.ex:254` (`pausar_por_credito`),
+  `apps/web/src/lib/agent-status.ts:194` (`breakerReasonFor`),
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  ("402 do provider: origem infra, pausa sem idle_tripped e sem queimar a
+  próxima task"; falha: "erro que não é de crédito segue como antes: parou sem
+  concluir, conta no disjuntor"),
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs` ("402 do provider
+  é infra e é reconhecido"), `apps/web/src/lib/agent-status.test.ts`
+  ("RN-726: dev.credit_exhausted é travado com motivo de crédito…")
+- **Origem:** AT-407 (TP-01 de 03/10: 402 do OpenRouter virou três tarefas
+  bloqueadas com origem `codigo` e a parada automática)

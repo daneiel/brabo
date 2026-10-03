@@ -69,6 +69,9 @@ defmodule Engine.Agents.FalhaDeTurno do
   # Erro que a própria api narrou no frame final — texto normalizado por ela.
   def origem({:final, texto}) when is_binary(texto) do
     cond do
+      # RN-726: provider sem crédito (402) é INFRA — falta saldo na conta, não
+      # há defeito do modelo nem do nosso código. Antes do padrão de provider.
+      credito_esgotado?(texto) -> "infra"
       texto =~ ~r/budget|orçamento/iu -> "politica"
       texto =~ ~r/credencial/iu -> "politica"
       texto =~ ~r/modelo vinculado|binding/iu -> "politica"
@@ -83,6 +86,20 @@ defmodule Engine.Agents.FalhaDeTurno do
   # Forma que este módulo não conhece. Mesma leitura: quem não soube classificar
   # foi o nosso código, e é aqui que a cláusula que falta deve nascer.
   def origem(_qualquer), do: "codigo"
+
+  @doc """
+  O provider recusou por falta de CRÉDITO (HTTP 402, ou o texto do OpenRouter
+  "exceed your available credits"/"add credits") — RN-726. Aceita o termo cru
+  ou o texto já inspecionado (`ctx.last_error` do `ToolLoop` é `inspect/1`).
+  """
+  @spec credito_esgotado?(term()) :: boolean()
+  def credito_esgotado?(nil), do: false
+
+  def credito_esgotado?(texto) when is_binary(texto) do
+    texto =~ ~r/status 402|\(402\)|available credits|add credits|insufficient credits/iu
+  end
+
+  def credito_esgotado?(outro), do: credito_esgotado?(inspect(outro))
 
   @doc """
   A frase que o agente diz no fio. Sempre nomeia o que falhou e o que NÃO

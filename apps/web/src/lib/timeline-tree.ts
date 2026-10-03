@@ -119,6 +119,7 @@ export type ChaveDeRotulo =
   | 'devBlockedByContainer'
   | 'devError'
   | 'devIdleTripped'
+  | 'devCreditExhausted'
   | 'prGateChanged';
 
 interface Traducao {
@@ -231,6 +232,7 @@ const TRADUCAO: Record<string, Traducao> = {
     detalhe: (p) => texto(p.reason),
   },
   'dev.idle_tripped': { tipo: 'trabalho', rotulo: 'devIdleTripped' },
+  'dev.credit_exhausted': { tipo: 'falha', rotulo: 'devCreditExhausted' },
   'pr.gate_changed': {
     tipo: 'gate',
     rotulo: 'prGateChanged',
