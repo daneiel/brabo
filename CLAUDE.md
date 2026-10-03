@@ -2130,6 +2130,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   event log, e o motivo NUNCA fica só em broadcast: `agent.error` é
   durável e o agente diz o que houve no fio (RN-059). Falha de UMA
   ferramenta no meio do laço segue a mesma régua (RN-163).
+  Toda ferramenta de agente roda por `Engine.Harness.ArgumentosDeFerramenta.executar/4`
+  (RN-719): lista/objeto que chega como string JSON é normalizado contra a
+  spec (inválido é recusa nomeada), e exceção dentro da ferramenta vira
+  `tool.result` `ok: false` com origem `codigo` e ENTRA no laço — servidor novo
+  despacha por ele, nunca chamando `run/2` direto.
 - Os SETE agentes conversacionais rodam laço bounded de tool use, com
   teto PRÓPRIO no servidor de cada um (Criativo e PO 12, Arquiteto, Dev
   Lead, UX Designer, Staff e Infra Lead 14 — raciocínio, não conversa
