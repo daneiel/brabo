@@ -201,3 +201,9 @@
   align-items: center;
   gap: 10px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .step.current .marker {
+    animation: none;
+  }
+}

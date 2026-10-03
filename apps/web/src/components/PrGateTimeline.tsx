@@ -9,6 +9,7 @@ import type {
 import { Badge } from './ui/Badge';
 import { Table, type TableColumn } from './ui/Table';
 import { AlertIcon, CheckIcon, ClockIcon, PrIcon } from './ui/icons';
+import { Shimmer } from './ui/Shimmer';
 import styles from './PrGateTimeline.module.css';
 
 export interface GateSubVerdict {
@@ -205,7 +206,9 @@ export function PrGateTimeline({
                 <span className={styles.marker}>
                   <StepIcon state={state} />
                 </span>
-                <span className={styles.stepLabel}>{t(step.label)}</span>
+                <span className={styles.stepLabel}>
+                  {state === 'current' ? <Shimmer>{t(step.label)}</Shimmer> : t(step.label)}
+                </span>
               </div>
               {i < steps.length - 1 && <span className={styles.connector} />}
             </div>
