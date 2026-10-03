@@ -14421,7 +14421,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1065`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1081`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14630,7 +14630,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:954` (`avisar_canal`);
+  `:607`, `:630`, `:969` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14813,11 +14813,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1032`
-  (`narrar_recusa_de_sessao_encerrada`), `:1342` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1047`
+  (`narrar_recusa_de_sessao_encerrada`), `:1357` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1031`
-  (`narrar_recusa_de_sessao_encerrada`), `:1333` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1047`
+  (`narrar_recusa_de_sessao_encerrada`), `:1357` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15806,9 +15806,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1798` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1821` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1797` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1821` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15892,9 +15892,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1742` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1765` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1741` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1765` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16839,11 +16839,11 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
-  (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:644`
+  (`IdiomaDaResposta`), `:737` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:633`
-  (`IdiomaDaResposta`), `:726` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:644`
+  (`IdiomaDaResposta`), `:737` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16940,11 +16940,11 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:260` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
-  (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:644`
+  (`IdiomaDaResposta`), `:737` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:633`
-  (`IdiomaDaResposta`), `:726` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:644`
+  (`IdiomaDaResposta`), `:737` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17207,11 +17207,11 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
-  (`llm_turn`), `:719` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:659`
+  (`llm_turn`), `:731` (`llm_turn_stream`);
 
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:648`
-  (`llm_turn`), `:720` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:659`
+  (`llm_turn`), `:731` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17917,7 +17917,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1130`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1146`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -20650,7 +20650,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
 
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:648`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:659`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:367` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
