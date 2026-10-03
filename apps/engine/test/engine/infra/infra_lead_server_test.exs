@@ -659,7 +659,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     ])
   end
 
-  defp decidir_imagem!(project_id) do
+  defp decidir_imagem!(project_id, extra \\ %{}) do
     # Numa sessão DIFERENTE da do Infra Lead, de propósito: o artefato do
     # Arquiteto vive na sessão dele, e a leitura é por projeto.
     sessao = Ecto.UUID.generate()
@@ -675,7 +675,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       [
         "evt-img-#{System.unique_integer([:positive])}",
         Ecto.UUID.dump!(sessao),
-        %{"image" => "node:22-bookworm-slim", "version" => 1}
+        Map.merge(%{"image" => "node:22-bookworm-slim", "version" => 1}, extra)
       ]
     )
   end
@@ -1260,6 +1260,46 @@ defmodule Engine.Infra.InfraLeadServerTest do
   end
 
   describe "a subida no aceite é passo do servidor (RN-671)" do
+    test "RN-723: a subida herda a rede `egress` que o Arquiteto declarou",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      decidir_imagem!(state.project_id, %{"network" => "egress"})
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{"id" => "pa-auto", "status" => "executed"}
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert {:propose_action, "container_start", _, payload} =
+               Enum.find(caixa(), &match?({:propose_action, "container_start", _, _}, &1))
+
+      assert payload.network == "egress"
+    end
+
+    test "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      decidir_imagem!(state.project_id, %{"network" => "host"})
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{"id" => "pa-auto", "status" => "executed"}
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert {:propose_action, "container_start", _, payload} =
+               Enum.find(caixa(), &match?({:propose_action, "container_start", _, _}, &1))
+
+      assert payload.network == "none"
+    end
+
     test "projeto `container` com roteamento: o servidor elege e propõe ANTES de o modelo falar",
          %{state: state} do
       insert_project!(state.project_id, "container")

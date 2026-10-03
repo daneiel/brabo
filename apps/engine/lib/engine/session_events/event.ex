@@ -129,6 +129,31 @@ defmodule Engine.SessionEvents.Event do
   end
 
   @doc """
+  A rede que o ARQUITETO declarou para o projeto (RN-723, ADR 0208): o
+  `network` da `artifact.project_image` mais recente emitida por ele
+  (`actor_id: "arquiteto"`), em qualquer sessão do projeto. A eleição da
+  Infra herda esse valor em vez de rebaixá-lo para `none`. `nil` quando o
+  Arquiteto nunca decidiu ou o valor não é um dos dois que a api aceita —
+  quem chama cai no `none` de sempre.
+  """
+  def rede_do_arquiteto(project_id) do
+    from(e in __MODULE__,
+      join: s in Engine.Sessions.ProjectSession,
+      on: e.session_id == s.id,
+      where: s.project_id == type(^project_id, :binary_id),
+      where: e.type == "artifact.project_image" and e.actor_id == "arquiteto",
+      order_by: [desc: e.created_at],
+      limit: 1,
+      select: e.payload
+    )
+    |> Repo.one()
+    |> case do
+      %{"network" => rede} when rede in ~w(none egress) -> rede
+      _ -> nil
+    end
+  end
+
+  @doc """
   Os `limit` eventos mais recentes da sessão, devolvidos em ordem de seq
   CRESCENTE (a query desce por seq pra pegar a cauda, o resultado volta
   cronológico pra ser lido como log).

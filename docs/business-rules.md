@@ -13606,7 +13606,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:875`
+  dispatch de `container_start` consultando antes de propor), `:881`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -15512,7 +15512,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
   (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:790`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:796`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15606,7 +15606,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:313`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:714`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1014`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1021`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
@@ -16045,10 +16045,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:875`
-  (`recusa_local_de_subida`), `:928` (`recusa_por_estado`), `:938`
-  (`recusa_ja_de_pe`), `:937` (`recusa_sem_imagem_decidida`), `:987`
-  (`recusa_pasta_nunca_confirmada`), `:998` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:881`
+  (`recusa_local_de_subida`), `:934` (`recusa_por_estado`), `:938`
+  (`recusa_ja_de_pe`), `:943` (`recusa_sem_imagem_decidida`), `:993`
+  (`recusa_pasta_nunca_confirmada`), `:1004` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16474,6 +16474,8 @@ deu e com as quatro ferramentas.
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
   (`handle_info`), `:373` (`drenar_correcao_pendente`), `:420`
   (`toolloop.limit_reached`), `:1058` (`concluir`);
+
+  (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:592`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -16482,7 +16484,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1683` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1723` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -19063,6 +19065,9 @@ roteamento, `runner`) e o modelo não a propôs.
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1141`
   (`registrar_subida`), `:1151` (`fechar_subida`), `:1155`
+
+  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
+  (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19325,14 +19330,17 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:753`
   (`eleger_candidata`), `:1320` (`passo_da_subida`)
+
+  `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
+  (`eleger_candidata`), `:1319` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
-  elege e propõe antes do modelo — caminho feliz), `:1353` (`mounted`), `:1363`
+  elege e propõe antes do modelo — caminho feliz), `:1395` (`mounted`), `:1405`
   (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
-  (negada pela política), `:1469` (`eleger_candidata/1`)
+  (negada pela política), `:1511` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
 
 ### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
@@ -19377,6 +19385,8 @@ instante, a oferta espera o fim do próximo turno dele.
   (`ALVOS_DA_CONFIRMACAO`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1062` (`oferecer_ao_dev_lead`),
   `:1058` (`concluir`), `:345` (`handle_info`), `:1075`
+
+  `:1057` (`concluir`), `:345` (`handle_info`), `:1074`
   (`topico_do_container`);
   `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
   `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
@@ -19440,7 +19450,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:776`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:782`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -20965,6 +20975,8 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1185` (`finalize`)
+
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1184` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21246,3 +21258,22 @@ ferramenta de agente que recebe id de história ou tarefa —
 - **Teste:** `apps/engine/test/engine/harness/id_do_backlog_test.exs` (prefixo
   único resolve; ambíguo e inexistente recusam nomeados)
 - **Origem:** AT-390
+
+### RN-723 — A Infra herda a rede que o Arquiteto declarou para o projeto {#rn-723}
+
+Decisão do dono em 02/10 ([ADR 0208](adr/0208-a-infra-herda-a-rede-do-arquiteto.md)),
+revisando a rede literal `none` da subida no aceite da [RN-671](#rn-671). A
+eleição da Infra usa o `network` da `artifact.project_image` mais recente
+emitida pelo Arquiteto (`actor_id: "arquiteto"`, qualquer sessão do projeto),
+lido localmente pelo engine; sem decisão dele, ou com valor fora de
+`none`/`egress`, segue `none`. Vale para a subida do servidor no aceite e para
+a tool `propose_container_start` sem `network`. A autonomia semeada não muda:
+`egress` sobe sem clique, e o preço (a rede `egress` alcança as portas
+publicadas da máquina, ADR 0189) está declarado no ADR.
+
+- **Código:** `apps/engine/lib/engine/session_events/event.ex:139` (`rede_do_arquiteto`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:751` (`rede_herdada`)
+- **Testes:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` —
+  "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
+  "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
+- **Origem:** AT-392
