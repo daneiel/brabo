@@ -19063,7 +19063,7 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
-  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1141`
+  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1147`
   (`registrar_subida`), `:1157` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
@@ -19328,7 +19328,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
-  `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:753`
+  `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1326` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
