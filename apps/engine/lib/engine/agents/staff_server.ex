@@ -214,9 +214,9 @@ defmodule Engine.Agents.StaffServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla) — ver o comentário
       # equivalente em `arquiteto_server.ex`/`dev_lead_server.ex`.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
         gravar_texto_do_turno(state, "", nil)
-        emit_falha(state, {:final, erro})
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->

@@ -385,6 +385,17 @@ frozen catalog price, as before ([ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-v
 The field name and shape do not change; what changes is the number the engine
 receives for the same call, which can be higher than the catalog one.
 
+#### Provider error code: `errorCode`
+
+Next to `error`, the `/llm-turn` body and the `final` frame of
+`/llm-turn-stream` carry an additive `errorCode` — the normalized `code` of the
+provider error ([ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
+`null` when there is no error or when the error isn't the provider's (budget,
+missing model binding). A provider 402 is `insufficient_credit`
+([RN-730](../business-rules.md#rn-730)): the engine decides "credit exhausted"
+by this code first (`FalhaDeTurno.credito_esgotado?/1`) and keeps the text match
+only as a fallback for an api older than the field ([RN-726](../business-rules.md#rn-726)).
+
 #### Spend reports do NOT go through here
 
 Metering is written on **this** path: each `/llm-turn` writes a row to

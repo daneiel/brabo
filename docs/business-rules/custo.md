@@ -227,7 +227,7 @@ foram raciocínio).
 
 - **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:270` (`cachedInputTokens`),
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:565` (`contagem`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:169` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
@@ -273,8 +273,8 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Where:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:199` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:216` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:215` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:232` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:266` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),

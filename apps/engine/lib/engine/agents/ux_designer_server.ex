@@ -228,9 +228,9 @@ defmodule Engine.Agents.UxDesignerServer do
       # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla): quem recebe o
       # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
       # `Map.put(resultado, :turno_assincrono, nil)`.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
         gravar_texto_do_turno(state, "", nil)
-        emit_falha(state, {:final, erro})
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->

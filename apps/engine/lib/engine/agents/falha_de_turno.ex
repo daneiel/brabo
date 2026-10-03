@@ -66,6 +66,11 @@ defmodule Engine.Agents.FalhaDeTurno do
   def origem({status, _corpo}) when is_integer(status) and status >= 500, do: "infra"
   def origem({status, _corpo}) when is_integer(status) and status >= 400, do: "codigo"
 
+  # Frame final com o `errorCode` do provider (RN-730): o código decide o
+  # crédito esgotado; o resto segue pela leitura do texto.
+  def origem({:final, texto, "insufficient_credit"}) when is_binary(texto), do: "infra"
+  def origem({:final, texto, _code}) when is_binary(texto), do: origem({:final, texto})
+
   # Erro que a própria api narrou no frame final — texto normalizado por ela.
   def origem({:final, texto}) when is_binary(texto) do
     cond do
@@ -95,6 +100,13 @@ defmodule Engine.Agents.FalhaDeTurno do
   @spec credito_esgotado?(term()) :: boolean()
   def credito_esgotado?(nil), do: false
 
+  # RN-730: o `code` normalizado pela api (ADR 0041) decide PRIMEIRO. O texto
+  # abaixo fica só como REDE: api anterior ao `errorCode`, e caminhos que só
+  # carregam a mensagem (o `last_error` do `ToolLoop` quando o código não veio).
+  def credito_esgotado?(%{"errorCode" => "insufficient_credit"}), do: true
+  def credito_esgotado?(%{"errorCode" => code}) when is_binary(code), do: false
+  def credito_esgotado?(%{"error" => texto}), do: credito_esgotado?(texto)
+
   def credito_esgotado?(texto) when is_binary(texto) do
     texto =~ ~r/status 402|\(402\)|available credits|add credits|insufficient credits/iu
   end
@@ -115,6 +127,7 @@ defmodule Engine.Agents.FalhaDeTurno do
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
   defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
   defp motivo({:final, texto}) when is_binary(texto), do: texto
+  defp motivo({:final, texto, _code}) when is_binary(texto), do: texto
   defp motivo({status, _}) when is_integer(status), do: "a api respondeu #{status}"
   defp motivo(%{__exception__: true} = erro), do: Exception.message(erro)
   defp motivo(outro), do: inspect(outro)

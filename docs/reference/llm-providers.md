@@ -395,6 +395,7 @@ is made by the chunk's `code`. The classes live in
 | provider status | `code` | means |
 | --- | --- | --- |
 | 401, 403 | `auth` | key missing, invalid, or without access to the model |
+| 402 | `insufficient_credit` | the provider account has no credit left (RN-730) |
 | 404 | `model_not_found` | the model doesn't exist on that provider |
 | 429 | `rate_limit` | quota or throughput exceeded |
 | 413, or 400 with a context marker | `context_length` | the prompt doesn't fit the window |

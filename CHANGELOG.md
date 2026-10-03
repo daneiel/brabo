@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **api/engine**: o HTTP 402 do provider de LLM vira o erro `insufficient_credit` (antes `upstream`), entregue ao engine como `errorCode` em `llm-turn` e `llm-turn/stream`; o engine reconhece crédito esgotado por esse código, e o texto fica só como rede (RN-730, AT-416).
 - **web**: a mensagem enviada a um agente com turno em curso aparece UMA vez no fio, com o mesmo autor antes e depois de o evento chegar, e no card do handoff ao Dev Lead "Ativar execução" vira botão secundário com o aviso de que pula o plano (RN-728, AT-409/AT-410).
 - **engine/api**: argumento de texto com escape unicode literal (`c\u00f3digo`) é decodificado no ponto comum das ferramentas, e a duplicata de história/regra compara o título decodificado; recusa "exige X" diz as chaves que chegaram, e `complete_story` nomeia o campo que falta (RN-725, AT-405/AT-408).
 - **api/web**: a PR de infra nasce de `dev` e mira `dev` (como a RN-664), com autor `infra[bot]`; em Aprovações, a PR de infra em revisão leva à aba PRs para o merge; abrir um projeto recolhe os outros na sidebar e rola até ele; os campos do assistente "Novo projeto" não convidam o autofill; o contador "PRs" da sidebar atualiza ao decidir o merge, e o lead de QA deixa de dizer "trabalhando" depois da falha do subagente (RN-729, AT-411/412/413/415).
