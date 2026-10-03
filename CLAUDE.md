@@ -284,6 +284,7 @@ estado lido do repositório e não da conversa.
 | A mensagem do usuário aparece uma vez no fio, e "Ativar execução" vira secundário no handoff ao Dev Lead (AT-409/AT-410) | RN-728 |
 | Escape unicode no texto da ferramenta, duplicata normalizada e recusa que diz o que chegou (AT-405/AT-408) | RN-725 |
 | O crédito esgotado no provider pausa o dev com origem infra e diz como retomar (AT-407) | RN-726 |
+| A PR de infra mira `dev`, a sidebar abre só o projeto atual, e o assistente não convida o autofill (AT-411/412/413/415) | RN-729 |
 
 ## Estado atual e aberto
 
@@ -1454,7 +1455,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   worktree do dev agent nasce de `dev`, a PR dele e a de ADR miram `dev`, e o
   gate julga o diff contra `dev` — os três juntos, nunca um só (o gate
   julgaria um diff que não é o da PR); repositório sem `dev` falha nomeado,
-  sem queda para a default. Formato funcao/descritivo,
+  sem queda para a default. A PR de INFRA (`open_infra_pr`) segue a
+  mesma régua desde a RN-729: `feature/infra-setup` nasce de `dev`, mira `dev`
+  e leva o autor `infra[bot]`. Formato funcao/descritivo,
   regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
   PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
   de barras), mas só quando o AUTOR é o próprio Dependabot
