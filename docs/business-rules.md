@@ -21756,3 +21756,18 @@ sem dizer qual.
   bloco de código com `\n` literal)
 - **Origem:** AT-417 (TP-01 de 03/10, 2ª rodada: a resposta final do Criativo
   gravada com "colis\u00e3o", "usu\u00e1rio" e mais três escapes na bolha)
+
+### RN-735 — A rede `none` da imagem do Arquiteto diz que não instala dependências {#rn-735}
+
+- **Regra:** a descrição de `choose_project_image` e o RESULTADO dela dizem
+  que, com rede `none`, nenhum gerenciador de pacotes (npm, pnpm, pip, mix,
+  cargo, go mod...) instala dependência no container, e que a Infra herda essa
+  rede (RN-723). Com `none`, o resultado pede ao modelo que chame a ferramenta
+  de novo com `egress` se a stack instala dependências. É AVISO, nunca recusa:
+  a api não adivinha a stack, e a contenção do broker (ADR 0130) não muda.
+- **Código:** `apps/engine/lib/engine/harness/tools/choose_project_image.ex:96`
+  (`mensagem_de_fixada`), `apps/engine/lib/engine/harness/tools/choose_project_image.ex:23`
+  (`spec`)
+- **Teste:** `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
+- **Origem:** AT-420 (TP-01 de 03/10: `node:22-bookworm-slim` com rede `none`,
+  e o dev agent não conseguiu `npm install`)
