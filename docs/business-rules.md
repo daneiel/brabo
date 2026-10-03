@@ -17202,7 +17202,7 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:260` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
   (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:146`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:164` (`toolRouterEnabled`);
@@ -20519,8 +20519,8 @@ reidratação (RN-580) devolve `passos` ANTES do `content`, no mesmo
 sete conversacionais (o Infra Lead também, sem `modelName`). Sem teto próprio
 para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
-- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:79` (`descarregar`);
-  `:103` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:83` (`descarregar`);
+  `:111` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
   `apps/web/src/routes/session-timeline-montagem.tsx:797` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
@@ -21275,7 +21275,7 @@ levantada dentro da ferramenta vira `tool.result` `ok: false` com
 turno continua.
 
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
-  (`executar`), `:73` (`coagir`), `:46` (`falha_interna?`);
+  (`executar`), `:73` (`coagir`), `:52` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
   `apps/engine/lib/engine/harness/tool_loop.ex:310` (`run_direct`);
   `apps/engine/lib/engine/agents/arquiteto_server.ex:338`
@@ -21544,8 +21544,8 @@ sem dizer qual.
 4. `complete_story` nomeia exatamente o que falta (`falta: business_rule_ids`),
    pela mesma régua de `missingForReady` da api, lida da história devolvida.
 
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:92`
-  (`decodificar_escapes`), `:135` (`chaves_recebidas`), `:145`
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88`
+  (`decodificar_escapes`), `:135` (`chaves_recebidas`), `:152`
   (`com_chaves_recebidas`); `apps/engine/lib/engine/harness/tools/complete_story.ex:80`
   (`faltam`); `apps/api/src/domain/backlog/story-overlap.ts:39`
   (`decodificarEscapesLiterais`), `:25` (`normalizarTitulo`);
@@ -21606,7 +21606,7 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:81` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:202`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:207`
   (`streamErrorCode`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:219`
   (`streamErrorCode`),
@@ -21750,7 +21750,7 @@ sem dizer qual.
   não cláusula da RN-725, porque a superfície é outra (resposta do modelo, não
   argumento de ferramenta) e a decisão sobre o delta é desta.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`),
-  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:92` (`decodificar_escapes`)
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88` (`decodificar_escapes`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs` (feliz:
   os cinco escapes medidos, no fecho e num passo; intacto: texto sem escape e
   bloco de código com `\n` literal)
@@ -21791,6 +21791,42 @@ sem dizer qual.
   confere os quatro atributos)
 - **Origem:** AT-418 (TP-01, 2ª rodada de 03/10)
 
+### RN-737 — A resposta cortada pelo teto de saída é sinalizada, não executada e dita {#rn-737}
+
+- **Regra:** a api lê o motivo de parada nos dois dialetos — `finish_reason:
+  "length"` no OpenAI-compatível (OpenRouter incluído) e `stop_reason:
+  "max_tokens"` no Anthropic — e, só quando a resposta foi cortada pelo teto
+  de saída (RN-734), devolve `truncated: true` na resposta de `llm-turn` e no
+  frame `final` de `llm-turn-stream` (campo aditivo; ausente no caso normal).
+  O engine anota o sinal no processo do turno, a cada chamada de LLM: (a) a
+  chamada de ferramenta de resposta cortada NÃO é executada — volta ao laço
+  como erro nomeado ("a resposta foi cortada pelo limite de tokens… Reenvie o
+  argumento em partes menores"), que o modelo lê e corrige (RN-163); (b) o
+  fecho de texto cortado ganha, DEPOIS do texto do modelo e sem reescrevê-lo,
+  a linha no idioma do turno (RN-622, molde da RN-731): `pt*` "Resposta
+  cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
+  off by the length limit.". O Ollama não lê o motivo de parada (fora do
+  escopo, declarado).
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:260`
+  (`cortadaPeloTeto`),
+  `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:204`
+  (`truncated`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:217`
+  (`truncated`),
+  `apps/engine/lib/engine/harness/resposta_cortada.ex:38` (`registrar`),
+  `:61` (`descarregar`),
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`),
+  `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
+- **Teste:** `apps/api/test/contract/llm-provider.contract.ts` ("resposta
+  cortada pelo teto de saída emite o sinal truncated" e "resposta normal não
+  traz o sinal de corte", rodados com servidor falso pelos harnesses
+  OpenAI-compatível e Anthropic),
+  `apps/engine/test/engine/harness/resposta_cortada_test.exs` (ferramenta de
+  resposta cortada não roda e volta erro nomeado; resposta normal roda; fecho
+  cortado ganha a linha em pt-BR sem reescrita; fecho normal intacto; pt/en)
+- **Origem:** AT-423 (lacuna declarada na RN-734)
+
 ### RN-733 — A falha de crédito diz o que fazer, e o `reason` nunca é a tupla {#rn-733}
 
 - **Regra:** o `reason` gravado no `agent.error` dos conversacionais, do
@@ -21825,8 +21861,8 @@ sem dizer qual.
   ("would exceed your available credits given your current in-flight
   requests") com saldo que cobriria a chamada real. Hoje nenhum chamador
   (engine → `llm-turn`) define `maxTokens`, então o padrão vale para todos
-  os agentes. Lacuna declarada: este dialeto não lê `finish_reason: "length"`,
-  então resposta cortada pelo teto NÃO é narrada (a RN-698 narra o teto de
+  os agentes. A resposta cortada pelo teto (`finish_reason: "length"`) é
+  lida e narrada desde a [RN-737](#rn-737) (a RN-698 narra o teto de
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`

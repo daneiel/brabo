@@ -396,6 +396,17 @@ missing model binding). A provider 402 is `insufficient_credit`
 by this code first (`FalhaDeTurno.credito_esgotado?/1`) and keeps the text match
 only as a fallback for an api older than the field ([RN-726](../business-rules.md#rn-726)).
 
+#### Response cut at the output cap: `truncated`
+
+When the provider closed the response at the output cap (`finish_reason:
+"length"` in the OpenAI-compatible dialect, `stop_reason: "max_tokens"` in
+Anthropic), the `/llm-turn` body and the `final` frame of `/llm-turn-stream`
+carry `truncated: true` ([RN-737](../business-rules.md#rn-737)). The field is
+additive and absent otherwise. The text and the `toolCalls` arguments are cut:
+the engine does not run a tool call from a truncated response (it returns a
+named tool error to the loop) and appends a short "cut off" line to a
+truncated closing text.
+
 #### Spend reports do NOT go through here
 
 Metering is written on **this** path: each `/llm-turn` writes a row to

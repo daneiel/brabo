@@ -339,7 +339,16 @@ export interface ChatToolCallsChunk {
   toolCalls: ToolCall[];
 }
 
+// A resposta foi CORTADA pelo teto de saída (`max_tokens`, RN-734): o
+// `finish_reason: "length"` do dialeto OpenAI-compatível ou o
+// `stop_reason: "max_tokens"` do Anthropic (RN-737). Aditivo — quem não o lê
+// segue como antes; o texto e as `tool_calls` que chegaram vêm truncados.
+export interface ChatTruncatedChunk {
+  type: "truncated";
+}
+
 export type ChatStreamChunk =
+  | ChatTruncatedChunk
   | ChatTextDeltaChunk
   | ChatUsageChunk
   | ChatErrorChunk

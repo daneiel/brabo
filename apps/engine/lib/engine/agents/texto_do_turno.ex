@@ -69,6 +69,7 @@ defmodule Engine.Agents.TextoDoTurno do
     case Enum.reject(pedacos ++ [ultimo || ""], &(&1 == "")) do
       [] ->
         Engine.Agents.GravadoNoTurno.descarregar()
+        Engine.Harness.RespostaCortada.descarregar()
         nil
 
       textos ->
@@ -82,6 +83,13 @@ defmodule Engine.Agents.TextoDoTurno do
           case Engine.Agents.GravadoNoTurno.descarregar() do
             nil -> String.trim_leading(fecho)
             linha -> String.trim_leading(fecho) <> "\n\n" <> linha
+          end
+
+        # RN-737: o teto de saída cortou a última resposta — dito, sem reescrever.
+        fecho =
+          case Engine.Harness.RespostaCortada.descarregar() do
+            nil -> fecho
+            linha -> fecho <> "\n\n" <> linha
           end
 
         base = %{content: fecho, modelName: modelo || visto}

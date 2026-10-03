@@ -687,6 +687,7 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().llm_turn(project_id, session_id, agent, enviadas, tools, catalogo_completo: true)
     end)
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+    |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
 
   # O menu restrito errou (o modelo não chamou ferramenta nenhuma)? Uma volta
@@ -761,6 +762,7 @@ defmodule Engine.Sessions.EngineApiClient do
       )
     end)
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+    |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
 
   # No stream só se repete quando NADA foi escrito para a pessoa: um delta já
