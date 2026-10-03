@@ -295,6 +295,7 @@ estado lido do repositório e não da conversa.
 | O caminho OpenAI-compatível manda `max_tokens` sempre (padrão 4096) (AT-419) | RN-734 |
 | O container sobe com `--init` e para na hora; a `/containers` relê a linha mesmo com a aprovação recusada (AT-422) | RN-738 |
 | A resposta cortada pelo limite de tokens é narrada, e o argumento de ferramenta cortado não é executado (AT-423) | RN-737 |
+| `SEM_AUTOFILL` ganha `aria-autocomplete` e o ignore do Proton Pass; o rótulo visível fica (AT-425) | RN-740 |
 
 ## Estado atual e aberto
 
