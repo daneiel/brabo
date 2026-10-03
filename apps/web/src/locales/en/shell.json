@@ -16,7 +16,8 @@
       "loadError": "Could not load the projects.",
       "retry": "try again",
       "expand": "Expand {{name}}",
-      "collapse": "Collapse {{name}}"
+      "collapse": "Collapse {{name}}",
+      "tabsAriaLabel": "Tabs of {{name}}"
     },
     "activities": {
       "label": "Activity",

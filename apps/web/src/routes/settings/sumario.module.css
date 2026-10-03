@@ -9,7 +9,7 @@
  * e mora dentro da largura máxima de 1040px que já existia ali: a moldura da
  * tela fica exatamente do tamanho que estava.
  *
- * A gramática visual é a do trilho do projeto (`ProjectRail.module.css`) —
+ * A gramática visual é a das abas do projeto (`AbasDoProjeto.module.css`) —
  * item de 13px em `--radius-sm`, ativo tingido com `color-mix(in srgb,
  * var(--accent) 12%, transparent)`, cabeçalho de grupo em mono minúsculo
  * `--text-muted`. É o mesmo gesto ("uma lista de destinos, um marcado"), e

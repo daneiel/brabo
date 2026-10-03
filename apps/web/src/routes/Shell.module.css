@@ -264,37 +264,9 @@
   text-overflow: ellipsis;
 }
 
-/* As abas do projeto, reveladas ao expandir a linha (RN-196). */
-.abasDoProjeto {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 2px 0 6px 30px;
-}
-
-.abaItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: 5px var(--space-2);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  text-decoration: none;
-}
-
-.abaItem:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-
-.abaRotulo {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* As abas do projeto, reveladas ao expandir a linha (RN-196), moram em
+   `AbasDoProjeto.module.css` desde o ADR 0211 — a lista que o trilho do
+   projeto tinha, agora a única navegação do projeto. */
 
 /* --- Seção Atividades (RN-198) ------------------------------------------ */
 
@@ -756,4 +728,34 @@
   flex: 1;
   min-height: 0;
   width: 100%;
+}
+
+/*
+ * Flyout do projeto aberto na trilha RECOLHIDA (ADR 0211): as mesmas abas da
+ * linha expandida, por cima do conteúdo, ao lado do quadrado do projeto.
+ * `position: fixed` porque a sidebar corta o que transborda (`overflow:
+ * hidden`). Fecha no Esc, ao escolher uma aba e ao clicar de novo no quadrado.
+ */
+.flyout {
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+}
+
+.flyoutTitulo {
+  display: block;
+  padding: 4px var(--space-2) 6px 22px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

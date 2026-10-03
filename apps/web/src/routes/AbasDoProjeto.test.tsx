@@ -1,28 +1,29 @@
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
-import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
-import navPtBR from '../locales/pt-BR/nav.json';
+import { AbasDoProjeto, itensDasAbas, type ItemDaLista } from './AbasDoProjeto';
+import shellPtBR from '../locales/pt-BR/shell.json';
 import { simularLayoutMovel } from '../test/match-media';
+import type { ContagensDeAba } from './project-tabs';
 
 /**
  * Instância REAL de i18next, própria do teste (mesmo padrão de
- * `Shell.test.tsx`): `ProjectRail` usa `useTranslation('nav')` só para o
+ * `Shell.test.tsx`): `AbasDoProjeto` usa `useTranslation('shell')` só para o
  * `aria-label` do trilho — sem recursos, `t()` devolveria a própria chave.
  * Os RÓTULOS das abas não passam por aqui: vêm prontos nos `itens`, resolvidos
- * por quem monta a lista (`ProjectPage`, contra `project-tabs.ts`).
+ * por quem monta a lista (`itensDasAbas`, contra `project-tabs.ts`).
  */
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
-    resources: { 'pt-BR': { nav: navPtBR } },
+    resources: { 'pt-BR': { shell: shellPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
-    defaultNS: 'nav',
-    ns: ['nav'],
+    defaultNS: 'shell',
+    ns: ['shell'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -30,7 +31,7 @@ function novaInstanciaI18n() {
 }
 
 /** A mesma FORMA que `GRUPOS_DO_PROJETO` entrega — solta, três grupos, soltas. */
-const ITENS: ItemDoTrilho[] = [
+const ITENS: ItemDaLista[] = [
   { tipo: 'aba', aba: { key: 'overview', label: 'Visão geral' } },
   {
     tipo: 'grupo',
@@ -81,24 +82,24 @@ const ORDEM_ACHATADA = [
   'Configurações',
 ];
 
-/** `ProjectRail` é totalmente controlado — este wrapper é o dono do estado,
- * o mesmo papel que `ProjectPage` cumpre de verdade. */
+/** `AbasDoProjeto` é totalmente controlado — este wrapper é o dono do estado,
+ * o mesmo papel que o `Shell` cumpre de verdade. */
 function Controlado({
   inicial,
   itens = ITENS,
 }: {
   inicial: string;
-  itens?: ItemDoTrilho[];
+  itens?: ItemDaLista[];
 }) {
   const [active, setActive] = useState(inicial);
   return (
     <I18nextProvider i18n={novaInstanciaI18n()}>
-      <ProjectRail itens={itens} active={active} onChange={setActive} />
+      <AbasDoProjeto projectId="p-1" nomeDoProjeto="Checkout" itens={itens} active={active} onChange={setActive} />
     </I18nextProvider>
   );
 }
 
-describe('ProjectRail — os três grupos ficam abertos ao mesmo tempo', () => {
+describe('AbasDoProjeto — os três grupos ficam abertos ao mesmo tempo', () => {
   it('as 12 abas aparecem juntas, na ordem declarada — nunca só o nível de topo', () => {
     render(<Controlado inicial="overview" />);
 
@@ -120,12 +121,12 @@ describe('ProjectRail — os três grupos ficam abertos ao mesmo tempo', () => {
 
     const lista = screen.getByRole('tablist');
     expect(lista).toHaveAttribute('aria-orientation', 'vertical');
-    expect(lista).toHaveAccessibleName('Abas do projeto');
+    expect(lista).toHaveAccessibleName('Abas de Checkout');
     expect(within(lista).getAllByRole('tab')).toHaveLength(12);
   });
 });
 
-describe('ProjectRail — a aba ativa e a troca de aba', () => {
+describe('AbasDoProjeto — a aba ativa e a troca de aba', () => {
   it('só a aba ativa é marcada, e clicar noutra move a marca', async () => {
     const usuario = userEvent.setup();
     render(<Controlado inicial="overview" />);
@@ -158,7 +159,7 @@ describe('ProjectRail — a aba ativa e a troca de aba', () => {
  * Os cinco contadores ficam SEPARADOS (decisão de produto — somá-los esconde
  * qual fila está pedindo atenção), e o grupo NÃO soma os filhos.
  */
-describe('ProjectRail — os cinco contadores', () => {
+describe('AbasDoProjeto — os cinco contadores', () => {
   it('cada fila mostra o próprio número, e nenhum grupo mostra soma', () => {
     render(<Controlado inicial="overview" />);
 
@@ -194,10 +195,8 @@ describe('ProjectRail — os cinco contadores', () => {
     );
 
     expect(screen.getByRole('tab', { name: 'Código' }).textContent).toBe('Código');
-    // `count: 0` chega até aqui só se quem monta a lista deixar — `ProjectPage`
-    // devolve `undefined` nesse caso —, mas quando chega o selo aparece: quem
-    // decide o que é ruído é o registro, não o trilho.
-    expect(screen.getByRole('tab', { name: /^Aprovações\s*0$/ })).toBeInTheDocument();
+    // Fila vazia (`count: 0`) também não ganha selo (ADR 0211).
+    expect(screen.getByRole('tab', { name: 'Aprovações' }).textContent).toBe('Aprovações');
   });
 });
 
@@ -206,7 +205,7 @@ describe('ProjectRail — os cinco contadores', () => {
  * (`GroupedTabs.tsx`, `onKeyDownDaLinha`, removida na mesma mudança), com o
  * eixo trocado: `ArrowDown`/`ArrowUp` no lugar de `ArrowRight`/`ArrowLeft`.
  */
-describe('ProjectRail — navegação por teclado', () => {
+describe('AbasDoProjeto — navegação por teclado', () => {
   it('ArrowDown avança um item, atravessando a fronteira de grupo', async () => {
     const usuario = userEvent.setup();
     render(<Controlado inicial="overview" />);
@@ -287,156 +286,76 @@ describe('ProjectRail — navegação por teclado', () => {
   });
 });
 
-/**
- * RN-643 (AT-316): abaixo do breakpoint móvel o trilho vira BARRA horizontal
- * rolável — as mesmas 12 folhas, o eixo do teclado girado junto.
- */
-describe('ProjectRail — barra horizontal no layout móvel (RN-643)', () => {
-  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
-  afterEach(() => {
-    largura?.restaurar();
-    largura = null;
-    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-  });
-
-  it('vira tablist HORIZONTAL com as 12 abas na mesma ordem, e traz a ativa para a faixa visível', () => {
-    largura = simularLayoutMovel(true);
-    const rolar = vi.fn();
-    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = rolar;
-
-    render(<Controlado inicial="settings" />);
-
-    const lista = screen.getByRole('tablist');
-    expect(lista).toHaveAttribute('aria-orientation', 'horizontal');
-    const abas = within(lista).getAllByRole('tab');
-    expect(abas.map((b) => b.textContent?.replace(/\d+$/, ''))).toEqual(ORDEM_ACHATADA);
-    expect(rolar).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
-    expect(rolar.mock.contexts[0]).toBe(screen.getByRole('tab', { name: 'Configurações' }));
-  });
-
-  it('as setas esquerda/direita andam, com volta; a seta para baixo não faz nada ali', async () => {
-    largura = simularLayoutMovel(true);
-    const usuario = userEvent.setup();
+/** ADR 0211: o que mudou ao sair do trilho e entrar na sidebar. */
+describe('AbasDoProjeto — dentro da sidebar (ADR 0211)', () => {
+  it('cada aba é link para o PROJETO dela, não um `?tab=` relativo à página atual', () => {
     render(<Controlado inicial="overview" />);
-
-    screen.getByRole('tab', { name: 'Visão geral' }).focus();
-    await usuario.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
-
-    await usuario.keyboard('{ArrowDown}');
-    expect(screen.getByRole('tab', { name: 'Executores' })).toHaveAttribute('aria-selected', 'true');
-
-    await usuario.keyboard('{ArrowLeft}{ArrowLeft}');
-    expect(screen.getByRole('tab', { name: 'Configurações' })).toHaveAttribute('aria-selected', 'true');
-  });
-
-  it('sem matchMedia (desktop) continua o trilho VERTICAL, e a seta direita não anda', async () => {
-    const usuario = userEvent.setup();
-    render(<Controlado inicial="overview" />);
-
-    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
-    screen.getByRole('tab', { name: 'Visão geral' }).focus();
-    await usuario.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Visão geral' })).toHaveAttribute('aria-selected', 'true');
-  });
-});
-
-/**
- * AT-330 (achado N8 da auditoria da Rodada 29): em 390px a aba ativa nascia
- * cortada ("Config…") — os contadores chegam depois e empurram a ativa para
- * fora — e nada dizia que a faixa rola.
- */
-describe('ProjectRail — a faixa móvel acompanha a ativa e diz que rola (AT-330)', () => {
-  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
-  afterEach(() => {
-    largura?.restaurar();
-    largura = null;
-    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-  });
-
-  /** Dá à faixa as medidas que o jsdom não calcula. */
-  function medidas(el: HTMLElement, { scrollWidth, clientWidth }: { scrollWidth: number; clientWidth: number }) {
-    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: scrollWidth });
-    Object.defineProperty(el, 'clientWidth', { configurable: true, value: clientWidth });
-  }
-
-  it('um contador que chega depois traz a aba ativa de volta para a faixa', () => {
-    largura = simularLayoutMovel(true);
-    const rolar = vi.fn();
-    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = rolar;
-    const semContador = ITENS.map((item) =>
-      item.tipo === 'grupo'
-        ? { ...item, abas: item.abas.map(({ count: _c, ...aba }) => aba) }
-        : item,
+    expect(screen.getByRole('tab', { name: 'Código' })).toHaveAttribute(
+      'href',
+      '/projects/p-1?tab=code',
     );
+  });
 
-    const tela = render(
+  it('roving tabindex: só a ativa entra no Tab; sem ativa, a primeira', () => {
+    const { unmount } = render(<Controlado inicial="code" />);
+    const paradas = () =>
+      screen.getAllByRole('tab').filter((a) => a.getAttribute('tabindex') === '0');
+    expect(paradas().map((a) => a.textContent)).toEqual(['Código']);
+    unmount();
+
+    render(
       <I18nextProvider i18n={novaInstanciaI18n()}>
-        <ProjectRail itens={semContador} active="settings" onChange={() => {}} />
+        <AbasDoProjeto projectId="p-1" nomeDoProjeto="Checkout" itens={ITENS} active={undefined} onChange={() => {}} />
       </I18nextProvider>,
     );
-    const chamadasAntes = rolar.mock.calls.length;
-
-    tela.rerender(
-      <I18nextProvider i18n={novaInstanciaI18n()}>
-        <ProjectRail itens={ITENS} active="settings" onChange={() => {}} />
-      </I18nextProvider>,
-    );
-
-    expect(rolar.mock.calls.length).toBeGreaterThan(chamadasAntes);
-    expect(rolar.mock.contexts.at(-1)).toBe(screen.getByRole('tab', { name: 'Configurações' }));
-
-    // Re-render com o MESMO conteúdo (array novo, mesmas abas) não rola de
-    // novo: quem rolou a faixa à mão não é puxado de volta a cada render.
-    const chamadasDepois = rolar.mock.calls.length;
-    tela.rerender(
-      <I18nextProvider i18n={novaInstanciaI18n()}>
-        <ProjectRail itens={[...ITENS]} active="settings" onChange={() => {}} />
-      </I18nextProvider>,
-    );
-    expect(rolar.mock.calls.length).toBe(chamadasDepois);
+    expect(paradas().map((a) => a.textContent)).toEqual(['Visão geral']);
+    expect(
+      screen.getAllByRole('tab').filter((a) => a.getAttribute('aria-selected') === 'true'),
+    ).toHaveLength(0);
   });
 
-  it('a borda com conteúdo escondido é marcada, e a marca acompanha a rolagem', () => {
-    largura = simularLayoutMovel(true);
-    render(<Controlado inicial="overview" />);
-    const faixa = screen.getByRole('tablist');
-    medidas(faixa, { scrollWidth: 900, clientWidth: 390 });
-
-    act(() => {
-      faixa.scrollLeft = 0;
-      fireEvent.scroll(faixa);
-    });
-    expect(faixa).toHaveAttribute('data-rola-fim');
-    expect(faixa).not.toHaveAttribute('data-rola-inicio');
-
-    act(() => {
-      faixa.scrollLeft = 200;
-      fireEvent.scroll(faixa);
-    });
-    expect(faixa).toHaveAttribute('data-rola-fim');
-    expect(faixa).toHaveAttribute('data-rola-inicio');
-
-    act(() => {
-      faixa.scrollLeft = 510;
-      fireEvent.scroll(faixa);
-    });
-    expect(faixa).not.toHaveAttribute('data-rola-fim');
-    expect(faixa).toHaveAttribute('data-rola-inicio');
+  it('no telefone continua VERTICAL: a lista mora na gaveta, não vira barra (RN-643)', () => {
+    const largura = simularLayoutMovel(true);
+    try {
+      render(<Controlado inicial="overview" />);
+      expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
+      expect(screen.getAllByRole('tab')).toHaveLength(12);
+    } finally {
+      largura.restaurar();
+    }
   });
 
-  it('caso de falha: faixa que cabe inteira não esmaece nada — nem no desktop', () => {
-    largura = simularLayoutMovel(true);
-    render(<Controlado inicial="overview" />);
-    const faixa = screen.getByRole('tablist');
-    medidas(faixa, { scrollWidth: 390, clientWidth: 390 });
-    act(() => {
-      fireEvent.scroll(faixa);
-    });
-    expect(faixa).not.toHaveAttribute('data-rola-fim');
-    expect(faixa).not.toHaveAttribute('data-rola-inicio');
+  it('clique com Ctrl deixa o navegador abrir o link noutra aba — não troca no lugar', () => {
+    const onChange = vi.fn();
+    render(
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <AbasDoProjeto projectId="p-1" nomeDoProjeto="Checkout" itens={ITENS} active="overview" onChange={onChange} />
+      </I18nextProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Código' }), { ctrlKey: true });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('tab', { name: 'Código' }));
+    expect(onChange).toHaveBeenCalledWith('code');
+  });
 
-    act(() => largura!.mudar(false));
-    expect(screen.getByRole('tablist')).not.toHaveAttribute('data-rola-fim');
+  it('itensDasAbas: com contagens, cada fila no SEU número; sem, nenhuma', () => {
+    const contagens: ContagensDeAba = {
+      promocoesPendentes: 4,
+      aprovacoesPendentes: 3,
+      hipotesesPendentes: 2,
+      prsPendentes: 1,
+      arquiteturaPendente: 5,
+    };
+    const folhas = (itens: ItemDaLista[]) =>
+      itens.flatMap((i) => (i.tipo === 'grupo' ? i.abas : [i.aba]));
+    const comNumero = folhas(itensDasAbas(contagens)).filter((f) => f.count);
+    expect(comNumero.map((f) => [f.key, f.count])).toEqual([
+      ['insights', 2],
+      ['prs', 1],
+      ['approvals', 3],
+      ['backlog', 4],
+      ['arquitetura', 5],
+    ]);
+    expect(folhas(itensDasAbas(undefined)).every((f) => f.count === undefined)).toBe(true);
   });
 });
