@@ -173,7 +173,7 @@ image: neo4j:5.26-community@sha256:5eb12ad77fa46ab73e23df9ea1f43f5c0f2a795234355
 ```
 
 ```dockerfile
-FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS deps
+FROM node:26.10.0-alpine3.24@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS deps
 ```
 
 With both present, Docker pulls by the digest: the tag is information for
@@ -294,9 +294,9 @@ digest receives no security update until someone changes the digest — the same
 debt the action SHAs carry. `.github/dependabot.yml` enables `github-actions`
 for that reason and, since ADR 0197, `docker-compose` (`/docker`) and `docker`
 (`/docker/*` and `/deploy/k8s/**`), each grouped into one weekly PR into `dev`.
-Both image ecosystems temporarily ignore the `node` MAJOR (AT-360): the
-move to Node 26 waits for it to become LTS (around the end of October 2026),
-and the ignore comes out in that PR.
+The temporary ignore of the `node` MAJOR (AT-360) came out with the move to
+Node 26 (owner's decision, 2026-10-02): both image ecosystems now propose
+`node` majors like any other update.
 Still manual, and declared in ADR 0197: `neo4j` and `ollama` also live in
 `deploy/k8s/base/`, the two ecosystems never share a PR, and a same-tag digest
 re-roll makes both PRs fail until a human joins them; the CloudNativePG

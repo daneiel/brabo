@@ -277,6 +277,7 @@ estado lido do repositório e não da conversa.
 | O `docs:generate` reescreve contagens, próximo ADR e refs deslocadas (AT-399) | documentation-workflow.md |
 | O engine sobe para OTP 29.1 porque o 27.3 aborta sob musl 1.2.6 em host com AMX (AT-398) | ADR 0209 |
 | A bolha do agente mostra só o fecho do turno; as voltas anteriores ficam em "Passos do turno" (AT-395) | RN-698 |
+| Node 26 nas imagens e nos workflows, sem o `ignore` do major (AT-360) | CHANGELOG |
 
 ## Estado atual e aberto
 
@@ -1283,7 +1284,7 @@ o RACIOCÍNIO da triagem, que continua valendo.
   uma plataforma — pinar o manifesto de `linux/amd64` quebraria `linux-arm64`
   sem aviso. Desde o ADR 0178 (AT-139) a TAG mora DENTRO da referência, antes
   do digest — `neo4j:5.26-community@sha256:…`, e no Dockerfile
-  `FROM node:24.11.1-alpine3.21@sha256:… AS deps` —, e NÃO num comentário, que
+  `FROM node:26.10.0-alpine3.24@sha256:… AS deps` —, e NÃO num comentário, que
   era a forma do ADR 0159: o Dependabot não lê comentário em formato nenhum e
   atualiza pin só de digest para o digest da `latest`, com o comentário
   mentindo e o lint verde. Com os dois, o Docker puxa pelo digest. Comentário

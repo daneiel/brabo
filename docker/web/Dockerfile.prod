@@ -9,7 +9,7 @@
 # Registrado como limitação no ADR 0024 (a saída é injeção em runtime, fora do
 # escopo desta sessão).
 # ---------------------------------------------------------------------------
-FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS build
+FROM node:26.10.0-alpine3.24@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS build
 
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_ENGINE_URL=http://localhost:4000

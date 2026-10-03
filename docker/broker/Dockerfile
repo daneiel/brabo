@@ -1,4 +1,4 @@
-FROM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80
 
 # UID/GID do usuário que roda o container — mesmo desenho de
 # `docker/api/Dockerfile`, e pela mesma razão: o que este processo escrever no
@@ -36,7 +36,7 @@ RUN npm pack "pnpm@${PNPM_VERSION}" --silent \
 # a ler nem download a tentar.
 
 # Só cria grupo/usuário quando o UID/GID pedido diverge do que a imagem já tem
-# — `node:24-alpine` já vem com o usuário "node" em 1000:1000.
+# — `node:26-alpine` já vem com o usuário "node" em 1000:1000.
 RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) \
   && (getent passwd "$DEV_UID" >/dev/null 2>&1 || adduser -D -u "$DEV_UID" -G "$(getent group "$DEV_GID" | cut -d: -f1)" devuser)
 

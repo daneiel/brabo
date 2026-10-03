@@ -46,7 +46,7 @@ permissions:
   # Escopado a este workflow: não amplia o que `packages: write` já permitia.
 
 env:
-  NODE_VERSION: '24.11.1'
+  NODE_VERSION: '26.10.0'
   PNPM_VERSION: '11.3.0'
   # O MESMO trivy do job `images` do `ci.yml` (ADR 0172). Duplicado, e não
   # num lugar só, porque `env:` de workflow não se importa de outro arquivo e

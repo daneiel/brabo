@@ -722,7 +722,7 @@ project workspace in `mounted` execution mode) is then already yours, no
 | `DEV_GID` | `1000` | your `id -g`, same reasoning |
 
 `1000`/`1000` matches both the most common single-developer Linux setup and
-the `node` user that `node:24-alpine` (the `api`/`web` base image) already
+the `node` user that `node:26-alpine` (the `api`/`web` base image) already
 ships — when your pair matches, the Dockerfiles reuse that built-in user
 instead of creating a new one. An environment that already has containers
 running as root from before this change needs a one-time `chown` of the
