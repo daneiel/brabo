@@ -1290,6 +1290,7 @@ reason in the URL.
 | POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
+| POST | `/internal/sessions/:sessionId/stories/:storyId/complete` | engine-service |
 | POST | `/internal/sessions/:sessionId/semantic-duplicate-check` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks` | engine-service |

@@ -152,6 +152,10 @@ defmodule Engine.Harness.Tools.EmitArtifact do
            kind: "business_rule",
            title: titulo
          }) do
+      {:ok, %{"status" => "warned", "message" => mensagem} = resposta}
+      when is_binary(mensagem) and mensagem != "" ->
+        "\n" <> mensagem <> pergunte_antes(ctx, resposta)
+
       {:ok, %{"message" => mensagem}} when is_binary(mensagem) and mensagem != "" ->
         "\n" <> mensagem
 
@@ -170,4 +174,16 @@ defmodule Engine.Harness.Tools.EmitArtifact do
   end
 
   defp aviso_semantico(_type, _payload, _ctx), do: ""
+
+  # RN-720 (AT-389): no PO, regra parecida com uma existente costuma ser a
+  # regra do usuário REESCRITA com outro valor ("R$ 10 por pedido" virou
+  # "R$ 10 por torrefador"). A regra já foi gravada — o aviso não a desfaz —,
+  # mas o PO não decide sozinho que a do usuário mudou: pergunta antes.
+  defp pergunte_antes(%{agent: "po"}, _resposta) do
+    "\nEsta regra parece ALTERAR uma regra que já existe. Não trate a sua versão como " <>
+      "a vigente: antes de escrever histórias com ela, pergunte ao usuário com " <>
+      "`ask_structured_questions` qual das duas vale."
+  end
+
+  defp pergunte_antes(_ctx, _resposta), do: ""
 end

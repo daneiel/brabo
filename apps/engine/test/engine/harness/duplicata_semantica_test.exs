@@ -79,6 +79,28 @@ defmodule Engine.Harness.DuplicataSemanticaTest do
       assert texto =~ @aviso
     end
 
+    test "no PO, o aviso manda perguntar ao usuário antes de alterar a regra (RN-720)", %{
+      ctx: ctx
+    } do
+      Process.put(:fake_semantic_duplicate, %{"status" => "warned", "message" => @aviso})
+
+      assert {:ok, texto} = EmitArtifact.run(regra("R$ 10 por torrefador"), %{ctx | agent: "po"})
+
+      assert texto =~ @aviso
+      assert texto =~ "ALTERAR uma regra"
+      assert texto =~ "ask_structured_questions"
+    end
+
+    test "fora do PO, ou sem aviso, não há a cláusula de perguntar", %{ctx: ctx} do
+      Process.put(:fake_semantic_duplicate, %{"status" => "warned", "message" => @aviso})
+      assert {:ok, texto} = EmitArtifact.run(regra("Regra do criativo"), ctx)
+      refute texto =~ "ALTERAR uma regra"
+
+      Process.put(:fake_semantic_duplicate, %{"status" => "clean", "message" => nil})
+      assert {:ok, texto} = EmitArtifact.run(regra("Regra limpa do PO"), %{ctx | agent: "po"})
+      refute texto =~ "ALTERAR uma regra"
+    end
+
     test "checagem PULADA também é dita ao modelo", %{ctx: ctx} do
       Process.put(:fake_semantic_duplicate, %{
         "status" => "skipped",

@@ -229,6 +229,7 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
       Tools.EmitArtifact.spec(),
       Tools.CreateEpic.spec(),
       Tools.CreateStory.spec(),
+      Tools.CompleteStory.spec(),
       Tools.CreateTask.spec(),
       Tools.CreateModuleMap.spec(),
       Tools.AssignStoryModules.spec(),

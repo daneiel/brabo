@@ -14419,7 +14419,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   (pergunta estruturada), `:170` (ferramenta), `:271` (omitidos por
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1050`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14628,7 +14628,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:938` (`avisar_canal`);
+  `:607`, `:630`, `:954` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14809,8 +14809,8 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1014`
-  (`narrar_recusa_de_sessao_encerrada`), `:1318` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1032`
+  (`narrar_recusa_de_sessao_encerrada`), `:1342` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15799,7 +15799,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1774` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1798` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15883,7 +15883,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1746` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1742` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16828,8 +16828,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:642`
-  (`IdiomaDaResposta`), `:714` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
+  (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16926,8 +16926,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
   `:260` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:642`
-  (`IdiomaDaResposta`), `:714` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
+  (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17190,8 +17190,8 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:636`
-  (`llm_turn`), `:708` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
+  (`llm_turn`), `:719` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17442,7 +17442,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:311`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:322`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -17856,7 +17856,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
-  `apps/engine/lib/engine/harness/tools/offer_handoff.ex:58`
+  `apps/engine/lib/engine/harness/tools/offer_handoff.ex:132`
   (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
   (`agente_ja_ativo`); `apps/api/src/db/migrations/0064_ciclo_de_vida_do_handoff.sql`
 - **Teste:** `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
@@ -17895,7 +17895,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:326`
   (`criar_handoffs_appsec/3`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1115`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19775,8 +19775,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:508`
-  (`daTarefaDoModulo`), `:247` (`claimNext`), `:235` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:519`
+  (`daTarefaDoModulo`), `:258` (`claimNext`), `:246` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:180` (`module`);
@@ -19983,7 +19983,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   (`execute`);
   `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
   (`execute`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:663`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:704`
   (`moduleContracts`);
   `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
   (`moduleContracts`);
@@ -20626,7 +20626,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   compose no fio. O pedido "Node puro, nenhuma dependência, sem rede, um módulo
   só" não virou artefato e o Arquiteto criou três módulos.
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:636`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:367` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -20703,7 +20703,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:321` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:332` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:753` (`trigger_gate_recheck`),
@@ -21277,3 +21277,62 @@ publicadas da máquina, ADR 0189) está declarado no ADR.
   "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
   "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
 - **Origem:** AT-392
+
+### RN-720 — O PO completa a história que já existe, e não oferece o handoff ao Arquiteto com regra descoberta {#rn-720}
+
+**Contexto:** no uso real da loja-teste-2 (02/10) o PO criou doze histórias
+sem regra ligada, leu em `listar_regras_de_negocio` que sete das oito regras
+estavam SEM cobertura, escreveu que não tinha ferramenta para editar história
+e chamou `offer_handoff` ao Arquiteto assim mesmo — afirmando no fio que a
+cobertura estava completa e que o sistema aceitaria sozinho. O aceite
+automático da [RN-660](#rn-660) não aconteceu (o critério não fechava), e a
+história que ele recriou disparou o aviso de duplicata semântica
+([RN-681](business-rules/custo.md#rn-681)).
+
+**A regra:**
+
+1. O PO tem `complete_story`: completa uma história `draft` EXISTENTE do
+   projeto — os `business_rule_ids` informados são SOMADOS aos já ligados
+   (completar nunca desliga regra; id que não é `artifact.business_rule` é
+   400), listas informadas e não vazias substituem as atuais e as omitidas
+   ficam. História que não é `draft` é 409; de outro projeto, 404. Depois de
+   gravar, a promoção segue o MESMO critério de `create_story`
+   (`isPromotable`; `auto` vai a `ready`, `manual` liga `proposedReady`), e a
+   escrita grava `backlog.story_completed`.
+2. `offer_handoff` do PO ao Arquiteto é RECUSADO, sem criar oferta, enquanto
+   houver regra sem história ou história `draft` incompleta (sem
+   `proposedReady`) — e o resultado lista as duas, com id e título, e manda
+   completar com `complete_story`. A cobertura é a da api
+   (`computeCoverage`, a mesma do aceite automático), nunca uma segunda conta
+   no engine; falha de leitura não vira recusa. Os outros agentes e destinos
+   não passam pela checagem.
+3. Quando o `emit_artifact` de `business_rule` do PO volta com o aviso de
+   semelhança (`status: warned`), o resultado acrescenta que a regra parece
+   ALTERAR uma existente e que ele deve perguntar ao usuário
+   (`ask_structured_questions`) qual vale antes de seguir (AT-389: o usuário
+   disse "taxa fixa de R$ 10", o Criativo registrou "R$ 10 por pedido" e o PO
+   emitiu "R$ 10 por torrefador"). A regra já gravada não é desfeita; o aviso
+   continua aviso.
+
+O kickoff do PO diz as três coisas.
+
+- **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:42`
+  (`CompleteStoryUseCase`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:530`
+  (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:41`
+  (`run`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:52`
+  (`recusa_por_cobertura`); `apps/engine/lib/engine/harness/tools/emit_artifact.ex:182`
+  (`pergunte_antes`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/complete-story.use-case.spec.ts`
+  (liga a regra e propõe a promoção; `auto` vai a `ready`; regra inexistente,
+  outro projeto e história `ready` recusados);
+  `apps/engine/test/engine/harness/tools/offer_handoff_test.exs` (describe
+  "cobertura (RN-720)": recusa com a lista, cobertura completa oferta e o
+  aceite automático segue); `apps/engine/test/engine/harness/tools/complete_story_test.exs`;
+  `apps/engine/test/engine/harness/duplicata_semantica_test.exs` (o aviso no
+  PO manda perguntar; fora do PO ou sem aviso, não)
+- **Lacuna declarada:** o servidor do PO continua oferecendo sozinho no fim
+  do turno pela RN-700, que já exigia cobertura; a recusa aqui é da
+  FERRAMENTA. Se a duplicata semântica avisou no caso real da loja-teste-2 não
+  foi medido nesta mudança (o banco daquela execução não foi lido).
+- **Origem:** AT-388, AT-389

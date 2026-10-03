@@ -2749,6 +2749,73 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/stories/{storyId}/complete": {
+      "post": {
+        "description": "`businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).",
+        "operationId": "InternalSessionsController_completeStoryRoute",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteStoryInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A business_rule_id does not reference an existing rule."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Story is not in this project."
+          },
+          "409": {
+            "description": "Story is no longer `draft`."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Completes an existing draft story instead of re-creating it",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/story-modules": {
       "post": {
         "description": "This is the cross-validation: a module that doesn't exist in the current map becomes an architecture pending item instead of slipping through unnoticed.",
@@ -15134,6 +15201,69 @@
           "path",
           "entries",
           "truncated"
+        ]
+      },
+      "CompleteStoryInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "description": {
+            "type": "string",
+            "example": "As a buyer, I want to pay by card."
+          },
+          "rf": {
+            "example": [
+              "The cart accepts up to 50 items"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rnf": {
+            "example": [
+              "Response under 200ms at p95"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dod": {
+            "example": [
+              "Unit tests green"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dor": {
+            "example": [
+              "Module defined"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "businessRuleIds": {
+            "example": [
+              "RN-014"
+            ],
+            "description": "ADDED to the rules the story already cites (completing never unlinks a rule); each new id has to reference an existing `artifact.business_rule`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "projectId"
         ]
       },
       "ConfirmacaoDeArquiteturaResponseDto": {

@@ -17,6 +17,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **web (projeto)**: a "Linha do tempo do time" da Visão geral funde chamadas seguidas da mesma ferramenta num marco com contagem (`create_story ×24`) e não lista mais "ferramenta respondeu" à parte — a aba Executores segue com a árvore inteira; cada aba do trilho é um link com endereço (`?tab=<chave>`, e `?tab=historias` abre Histórias), a URL acompanha a troca e o contrato de teclado do ADR 0126 não muda; e a confirmação do assistente de novo projeto alinha todos os valores à direita (AT-394).
 
 - **sessão**: abrir a aba Sessões deixa de trocar as ações que o fio da Sessão mostra pelas 200 mais antigas — as duas telas passam a fazer a mesma leitura (a cauda mais as pendentes), e o resumo da aba passa a contar a pendente nova de uma sessão longa (AT-365, RN-718).
+- **backlog**: o PO ganha `complete_story` para completar uma história `draft` existente (ligar regras, preencher RF/DoD/DoR) em vez de recriá-la, e `offer_handoff` ao Arquiteto passa a ser recusado, listando as regras sem história e as histórias incompletas, enquanto a cobertura não fechar; regra do PO que a duplicata semântica acusa parecida com uma existente manda perguntar ao usuário antes de seguir (AT-388, AT-389, RN-720).
 - **gates**: o gate SecOps pendente por SAST que não rodou deixa de gravar um `agent.error` idêntico no fio a cada resgate do `GateRescuer`; o erro aparece uma vez por motivo, e motivo novo ou veredito no meio voltam a gravar (AT-386, RN-714).
 
 ### Documentação

@@ -271,6 +271,7 @@ estado lido do repositório e não da conversa.
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
 | O modo automático libera push e PR de todo agente; merge protegido e sudo seguem manuais (AT-385) | ADR 0204, RN-713 |
 | A Infra herda a rede do Arquiteto na subida automática, `egress` incluído (AT-392) | ADR 0208, RN-723 |
+| O PO completa a história existente e não oferece o handoff com regra descoberta (AT-388/AT-389) | RN-720 |
 
 ## Estado atual e aberto
 

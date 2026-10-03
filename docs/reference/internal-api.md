@@ -969,6 +969,7 @@ instead of inventing an image outside it.
 | method | path |
 |---|---|
 | POST | `/epics` · `/stories` · `/tasks` |
+| POST | `/stories/:storyId/complete` (RN-720) |
 | POST | `/story-modules` |
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
