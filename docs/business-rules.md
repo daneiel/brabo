@@ -16837,9 +16837,9 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
   cache a cada troca de autor ou de idioma — cache não é observável hoje.
 
-- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:234`
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:254`
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
-  (`@sem_orientacao`), `:244` (`texto_do_turno`), `:296`
+  (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
   (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
@@ -16940,8 +16940,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 
 - **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:174`
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
-  (`@forma_curta`), `:244` (`texto_do_turno`), `:258` (`grava_artefato?`),
-  `:260` (`idioma_do_projeto_para_o_artefato`);
+  (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
+  `:280` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
   (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
 
@@ -20519,7 +20519,7 @@ reidratação (RN-580) devolve `passos` ANTES do `content`, no mesmo
 sete conversacionais (o Infra Lead também, sem `modelName`). Sem teto próprio
 para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
-- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:85` (`descarregar`);
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:79` (`descarregar`);
   `:103` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
   `apps/web/src/routes/session-timeline-montagem.tsx:797` (`passos`)
@@ -21679,3 +21679,29 @@ sem dizer qual.
   chamou `delete_story` e recebeu "ferramenta desconhecida"; as duplicatas
   ganharam tarefa e entraram no plano), decisão do dono de 03/10 ("PO e
   usuário")
+
+### RN-731 — O fecho do turno diz o que foi gravado com o número do servidor {#rn-731}
+
+- **Regra:** o número do que um agente conversacional gravou num turno é FATO
+  do servidor, nunca texto do modelo (RN-163). O Criativo, o PO e o Arquiteto
+  contam, no processo do turno, cada ferramenta de escrita que voltou `ok`
+  (`emit_artifact` por tipo — regra de negócio, decisão, nota, outro —,
+  `create_epic`, `create_story`, `update_story`, `archive_story`,
+  `create_task`), e o fecho da `agent.response` ganha, DEPOIS do texto do
+  modelo e sem reescrevê-lo, a linha "Gravado neste turno: N …". Ferramenta
+  recusada e leitura não contam; turno sem escrita não ganha linha; a contagem
+  morre com o turno. A linha sai no idioma do turno (RN-622): o do autor,
+  senão o do projeto; `pt*` em português ("Gravado neste turno: 1 regra de
+  negócio"), qualquer outro idioma — ou nenhum resolvido — em inglês
+  ("Recorded this turn: 2 business rules"), com singular e plural nos dois.
+- **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:43` (`anotar`),
+  `:62` (`descarregar`),
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:233` (`idioma_do_turno`),
+  `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
+- **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs` (feliz:
+  seis regras e uma decisão gravadas, uma recusada — o fecho "8 regras" do
+  modelo fica e ganha "6 regras de negócio, 1 decisão" ao lado; sem escrita:
+  nada acrescentado; pt-BR e en, singular e plural; idioma fora dos dois cai em en),
+  `apps/engine/test/engine/agents/criativo_server_test.exs`
+- **Origem:** AT-414 (TP-01 de 03/10: o Criativo fechou com "Registrei as 8
+  regras de negócio" e o painel tinha 6)

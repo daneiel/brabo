@@ -68,11 +68,20 @@ defmodule Engine.Agents.TextoDoTurno do
 
     case Enum.reject(pedacos ++ [ultimo || ""], &(&1 == "")) do
       [] ->
+        Engine.Agents.GravadoNoTurno.descarregar()
         nil
 
       textos ->
         {passos, [fecho]} = Enum.split(textos, -1)
-        base = %{content: String.trim_leading(fecho), modelName: modelo || visto}
+
+        # RN-731: o número do que foi gravado é FATO do servidor, nunca do texto.
+        fecho =
+          case Engine.Agents.GravadoNoTurno.descarregar() do
+            nil -> String.trim_leading(fecho)
+            linha -> String.trim_leading(fecho) <> "\n\n" <> linha
+          end
+
+        base = %{content: fecho, modelName: modelo || visto}
         if passos == [], do: base, else: Map.put(base, :passos, passos)
     end
   end

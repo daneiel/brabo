@@ -340,6 +340,7 @@ defmodule Engine.Agents.PoServer do
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
     result = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, result))
+    Engine.Agents.GravadoNoTurno.anotar(name, args, result, state.project_id)
 
     text =
       case result do
