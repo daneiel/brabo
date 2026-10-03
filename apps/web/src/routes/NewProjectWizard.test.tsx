@@ -246,6 +246,18 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     expect(campo.id).toBe('project-title');
     expect(campo.getAttribute('name')).toBe('project-title');
   });
+
+  it('RN-740: o campo de nome declara que não sugere nada e ignora o Proton Pass, sem mudar o rótulo', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const campo = await screen.findByLabelText('Nome do projeto');
+    expect(campo.getAttribute('aria-autocomplete')).toBe('none');
+    expect(campo.getAttribute('data-protonpass-ignore')).toBe('true');
+    expect(campo.getAttribute('aria-label')).toBeNull();
+  });
+
 });
 
 /**

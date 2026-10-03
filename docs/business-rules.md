@@ -20395,7 +20395,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 `data-form-type="other"`): cada foco abria o popup de autofill do navegador.
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
-  `:24` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
+  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
   (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:346`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
@@ -21785,11 +21785,26 @@ sem dizer qual.
   publicamente por 1Password, LastPass, Bitwarden e Dashlane, não medidos
   contra cada extensão aqui.
 - **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:893` (`project-title`),
-  `apps/web/src/lib/conversa-comecou.ts:24` (`SEM_AUTOFILL`)
+  `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-736: o campo
   de nome não ganha foco sozinho nem se chama \"name\"" e o de RN-729, que
   confere os quatro atributos)
 - **Origem:** AT-418 (TP-01, 2ª rodada de 03/10)
+
+### RN-740 — O campo "Nome do projeto" declara que não sugere nada, e o resto da lacuna é da extensão {#rn-740}
+
+- **Regra:** `SEM_AUTOFILL` acrescenta `aria-autocomplete="none"` (a árvore
+  acessível diz que o campo não oferece sugestão) e `data-protonpass-ignore`
+  (o atributo que o Proton Pass documenta). O rótulo visível e o nome
+  acessível continuam "Nome do projeto": trocar só o `aria-label` quebraria o
+  "rótulo no nome" (WCAG 2.5.3), e trocar o rótulo visível é decisão de
+  produto, não tomada. Medido no TP-01 de 03/10: o menu "Contact Info" abre ao
+  focar/digitar mesmo com os atributos da RN-736 — a extensão provavelmente
+  classifica pelo TEXTO do rótulo. Se o próximo TP-01 reproduzir com estes
+  atributos, a lacuna é da EXTENSÃO e fica declarada aqui.
+- **Onde:** `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-740: …")
+- **Origem:** AT-425 (TP-01, 3ª rodada de 03/10)
 
 ### RN-737 — A resposta cortada pelo teto de saída é sinalizada, não executada e dita {#rn-737}
 
