@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { useBacklog, useCoverage } from '../lib/hooks';
-import { promoteStories, returnStory } from '../lib/api-client';
+import {
+  useBacklog,
+  useCoverage,
+  useCurrentWorkspaceWithRole,
+} from '../lib/hooks';
+import {
+  archiveStory,
+  mensagemDaApi,
+  promoteStories,
+  returnStory,
+  updateStoryTitle,
+} from '../lib/api-client';
+import { roleAtLeast } from '../lib/roles';
+import { Input } from '../components/ui/Input';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -42,9 +54,35 @@ export function aguardandoPromocao(epics: Epic[] | undefined): Story[] {
   return epics.flatMap((e) => e.stories.filter((s) => s.proposedReady));
 }
 
+/**
+ * Por que os controles de corrigir uma história (RN-727) ficam inertes — o
+ * texto que a tela diz UMA vez, em vez de um tooltip em botão `disabled`.
+ * `null` quando a pessoa pode editar e arquivar. A régua é a da api
+ * (`recusaDeCorrecaoDeHistoria`): papel `developer` (o do endpoint), só
+ * `draft`, e sem tarefa `in_progress`/`in_review`.
+ */
+export function motivoDeCorrecaoInerte(
+  story: Pick<Story, 'status' | 'tasks'>,
+  podeEscrever: boolean,
+): { chave: string; count?: number } | null {
+  if (!podeEscrever) return { chave: 'storyNode.inertRole' };
+  if (story.status !== 'draft') return { chave: 'storyNode.inertStatus' };
+  const emExecucao = story.tasks.filter(
+    (t) => t.status === 'in_progress' || t.status === 'in_review',
+  ).length;
+  if (emExecucao > 0) {
+    return { chave: 'storyNode.inertRunning', count: emExecucao };
+  }
+  return null;
+}
+
 export function ProjectBacklogTab({ projectId }: { projectId: string }) {
   const { t } = useTranslation('backlog');
   const { data: epics } = useBacklog(projectId);
+  // RN-727: editar/arquivar pedem `developer` no ENDPOINT — o papel de
+  // WORKSPACE, com a lacuna declarada da RN-471 (o de projeto pode sobrepor).
+  const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
+  const podeEscrever = roleAtLeast(workspaceComPapel?.role, 'developer');
   const { data: coverage } = useCoverage(projectId);
   const propostas = aguardandoPromocao(epics);
 
@@ -59,7 +97,14 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
         {!epics || epics.length === 0 ? (
           <EmptyState>{t('empty.epics')}</EmptyState>
         ) : (
-          epics.map((epic) => <EpicNode key={epic.id} epic={epic} />)
+          epics.map((epic) => (
+            <EpicNode
+              key={epic.id}
+              epic={epic}
+              projectId={projectId}
+              podeEscrever={podeEscrever}
+            />
+          ))
         )}
       </div>
 
@@ -290,7 +335,15 @@ function PromotionQueue({
   );
 }
 
-function EpicNode({ epic }: { epic: Epic }) {
+function EpicNode({
+  epic,
+  projectId,
+  podeEscrever,
+}: {
+  epic: Epic;
+  projectId: string;
+  podeEscrever: boolean;
+}) {
   const { t } = useTranslation('backlog');
   const [open, setOpen] = useState(true);
   return (
@@ -316,7 +369,12 @@ function EpicNode({ epic }: { epic: Epic }) {
       {open && (
         <div className={styles.stories}>
           {epic.stories.map((story) => (
-            <StoryNode key={story.id} story={story} />
+            <StoryNode
+              key={story.id}
+              story={story}
+              projectId={projectId}
+              podeEscrever={podeEscrever}
+            />
           ))}
         </div>
       )}
@@ -324,9 +382,71 @@ function EpicNode({ epic }: { epic: Epic }) {
   );
 }
 
-function StoryNode({ story }: { story: Story }) {
+function StoryNode({
+  story,
+  projectId,
+  podeEscrever,
+}: {
+  story: Story;
+  projectId: string;
+  podeEscrever: boolean;
+}) {
   const { t } = useTranslation('backlog');
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [titulo, setTitulo] = useState(story.title);
+  const [arquivando, setArquivando] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const inerte = motivoDeCorrecaoInerte(story, podeEscrever);
+
+  async function aposCorrigir() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['backlog', projectId] }),
+      queryClient.invalidateQueries({ queryKey: ['coverage', projectId] }),
+    ]);
+  }
+
+  async function salvarTitulo() {
+    if (titulo.trim() === '' || ocupado) return;
+    setOcupado(true);
+    try {
+      await updateStoryTitle(projectId, story.id, titulo.trim());
+      setEditando(false);
+      await aposCorrigir();
+      showToast({ title: t('storyNode.toast.updated'), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: t('storyNode.toast.updateError'),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function confirmarArquivo() {
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      await archiveStory(projectId, story.id, motivo.trim() || undefined);
+      setArquivando(false);
+      await aposCorrigir();
+      showToast({ title: t('storyNode.toast.archived'), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: t('storyNode.toast.archiveError'),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   return (
     <div className={styles.story}>
       <button
@@ -354,6 +474,9 @@ function StoryNode({ story }: { story: Story }) {
         {story.returnedReason && (
           <Badge tone="danger">{t('storyNode.returned')}</Badge>
         )}
+        <span className={styles.count}>
+          {t('storyNode.taskCount', { count: story.tasks.length })}
+        </span>
       </button>
       {open && (
         <div className={styles.storyBody}>
@@ -381,7 +504,90 @@ function StoryNode({ story }: { story: Story }) {
               ))}
             </ul>
           )}
+          <div className={styles.storyActions}>
+            <Button
+              variant="ghost"
+              disabled={inerte !== null || ocupado}
+              onClick={() => {
+                setTitulo(story.title);
+                setEditando(true);
+              }}
+            >
+              {t('storyNode.editTitle')}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={inerte !== null || ocupado}
+              onClick={() => {
+                setMotivo('');
+                setArquivando(true);
+              }}
+            >
+              {t('storyNode.archive')}
+            </Button>
+          </div>
+          {inerte && (
+            <p className={styles.inertReason}>
+              {t(inerte.chave, { count: inerte.count })}
+            </p>
+          )}
         </div>
+      )}
+
+      {editando && (
+        <Modal
+          title={t('storyNode.editModalTitle')}
+          onClose={() => setEditando(false)}
+        >
+          <Input
+            label={t('storyNode.titleLabel')}
+            value={titulo}
+            maxLength={200}
+            onChange={(e) => setTitulo(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button
+              variant="primary"
+              loading={ocupado}
+              disabled={titulo.trim() === ''}
+              onClick={salvarTitulo}
+            >
+              {t('storyNode.save')}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditando(false)}>
+              {t('storyNode.cancel')}
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {arquivando && (
+        <Modal
+          title={t('storyNode.archiveModalTitle', { title: story.title })}
+          onClose={() => setArquivando(false)}
+        >
+          <p className={styles.description}>
+            {t('storyNode.archiveExplain', { count: story.tasks.length })}
+          </p>
+          <Textarea
+            label={t('storyNode.archiveReasonLabel')}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder={t('storyNode.archiveReasonPlaceholder')}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button
+              variant="danger"
+              loading={ocupado}
+              onClick={confirmarArquivo}
+            >
+              {t('storyNode.archiveConfirm')}
+            </Button>
+            <Button variant="ghost" onClick={() => setArquivando(false)}>
+              {t('storyNode.cancel')}
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );

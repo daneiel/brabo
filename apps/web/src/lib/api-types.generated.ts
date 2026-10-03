@@ -1142,6 +1142,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/stories/{storyId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archives a draft story
+         * @description The story and its tasks leave the backlog, coverage, plan and claim; the row stays and `backlog.story_archived` records it, with the PO as actor (RN-727).
+         */
+        post: operations["InternalSessionsController_archiveStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/stories/{storyId}/complete": {
         parameters: {
             query?: never;
@@ -1156,6 +1176,26 @@ export interface paths {
          * @description `businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).
          */
         post: operations["InternalSessionsController_completeStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/stories/{storyId}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Corrects the title and/or description of a draft story
+         * @description Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727).
+         */
+        post: operations["InternalSessionsController_updateStoryRoute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1647,7 +1687,7 @@ export interface paths {
         };
         /**
          * Returns the epic → story → task tree
-         * @description Nested and complete, in a single call. This is READ-ONLY: backlog is written by agents, through the `/internal/*` routes.
+         * @description Nested and complete, in a single call. ARCHIVED stories (RN-727) are not listed. Backlog is written by agents, through the `/internal/*` routes.
          */
         get: operations["BacklogController_backlog"];
         put?: never;
@@ -3400,6 +3440,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/stories/{storyId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archives a draft story (RN-727)
+         * @description The story leaves the backlog, the coverage, the promotion queue, the Dev Lead's plan and the claim — and so do its tasks. Nothing is deleted: the row stays with `archivedAt`, and `backlog.story_archived` records who, why and which tasks. Only a `draft` story with no task in execution.
+         */
+        post: operations["BacklogController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/stories/{storyId}/return": {
         parameters: {
             query?: never;
@@ -3418,6 +3478,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/stories/{storyId}/title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Corrects the title of a draft story (RN-727)
+         * @description Only a `draft` story with no task in execution (`in_progress`/`in_review`). Writes `backlog.story_updated` with the previous and the new title. Same role as the other backlog writes (promote/return).
+         */
+        patch: operations["BacklogController_updateTitle"];
         trace?: never;
     };
     "/projects/{projectId}/stories/promote": {
@@ -4725,6 +4805,22 @@ export interface components {
             pendencies: components["schemas"]["ArchitecturePendencyResponseDto"][];
             c4Diagram: components["schemas"]["EstadoDoC4DiagramaResponseDto"];
         };
+        ArchiveStoryDto: {
+            /**
+             * @description Optional; recorded in `backlog.story_archived`.
+             * @example Duplicate of "Register a user".
+             */
+            reason?: string;
+        };
+        ArchiveStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example Duplicate of "Register a user". */
+            reason?: string;
+        };
         AreaDeAgentesResponseDto: {
             /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
             id: string;
@@ -5749,6 +5845,17 @@ export interface components {
              * @example 2026-08-02T14:00:00.000Z
              */
             returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
             /**
              * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
@@ -9842,6 +9949,17 @@ export interface components {
             returnedAt: Record<string, never> | null;
             /**
              * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
+            /**
+             * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
              */
             createdAt: string;
@@ -9927,6 +10045,17 @@ export interface components {
              * @example 2026-08-02T14:00:00.000Z
              */
             returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
             /**
              * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
@@ -10165,6 +10294,24 @@ export interface components {
              * @example pt-BR
              */
             language?: string;
+        };
+        UpdateStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example Register a user */
+            title?: string;
+            /** @example As a visitor, I want to sign up. */
+            description?: string;
+        };
+        UpdateStoryTitleDto: {
+            /**
+             * @description Trimmed; 1 to 200 characters.
+             * @example Register a user
+             */
+            title: string;
         };
         UpdateUserPreferencesDto: {
             /**
@@ -12697,6 +12844,59 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_archiveStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_completeStoryRoute: {
         parameters: {
             query?: never;
@@ -12743,6 +12943,59 @@ export interface operations {
                 content?: never;
             };
             /** @description Story is no longer `draft`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_updateStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description No field, or an empty title. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -19807,6 +20060,74 @@ export interface operations {
             };
         };
     };
+    BacklogController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveStoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BacklogController_return: {
         parameters: {
             query?: never;
@@ -19854,6 +20175,74 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BacklogController_updateTitle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStoryTitleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Empty title or over 200 characters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -13,12 +13,19 @@ const listBacklog = vi.fn();
 const getCoverage = vi.fn();
 const promoteStories = vi.fn();
 const returnStory = vi.fn();
+const archiveStory = vi.fn();
+const updateStoryTitle = vi.fn();
+const listWorkspaces = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   listBacklog: (...args: unknown[]) => listBacklog(...args),
   getCoverage: (...args: unknown[]) => getCoverage(...args),
   promoteStories: (...args: unknown[]) => promoteStories(...args),
   returnStory: (...args: unknown[]) => returnStory(...args),
+  archiveStory: (...args: unknown[]) => archiveStory(...args),
+  updateStoryTitle: (...args: unknown[]) => updateStoryTitle(...args),
+  listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
+  mensagemDaApi: (e: unknown) => (e instanceof Error ? e.message : 'erro'),
 }));
 
 function story(over: Partial<Story> = {}): Story {
@@ -100,6 +107,11 @@ beforeEach(() => {
   getCoverage.mockResolvedValue({ rules: [], uncoveredCount: 0 });
   promoteStories.mockResolvedValue({ promoted: ['story-1'], failed: [] });
   returnStory.mockResolvedValue({ ok: true });
+  archiveStory.mockResolvedValue({ id: 'story-1' });
+  updateStoryTitle.mockResolvedValue({ id: 'story-1' });
+  listWorkspaces.mockResolvedValue([
+    { workspace: { id: 'w1' }, role: 'developer' },
+  ]);
 });
 
 describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', () => {
@@ -220,5 +232,105 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
 
     fireEvent.click(await screen.findByText('Cadastrar usuário'));
     expect(screen.getByText(/Faltou o caso de recusa/)).toBeTruthy();
+  });
+});
+
+describe('ProjectBacklogTab — corrigir história (RN-727)', () => {
+  function task(status: 'todo' | 'in_progress' | 'in_review' | 'done') {
+    return {
+      id: `t-${status}`,
+      storyId: 'story-1',
+      title: `tarefa ${status}`,
+      description: '',
+      status,
+      assignedTo: null,
+      blocked: false,
+      blockedReason: null,
+      gateStatus: null,
+      gateCorrectionCount: 0,
+      createdAt: '2026-08-02T00:00:00.000Z',
+      updatedAt: '2026-08-02T00:00:00.000Z',
+    };
+  }
+
+  async function abrirHistoria() {
+    // O título aparece no nó da árvore (a fila de promoção está vazia aqui).
+    fireEvent.click(await screen.findByText('Cadastrar usuário'));
+  }
+
+  it('mostra quantas tarefas a história tem', async () => {
+    listBacklog.mockResolvedValue([
+      epic([story({ proposedReady: false, tasks: [task('todo'), task('todo')] })]),
+    ]);
+    montar();
+    expect(await screen.findByText('2 tarefas')).toBeTruthy();
+  });
+
+  it('edita o título e arquiva com confirmação', async () => {
+    listBacklog.mockResolvedValue([
+      epic([story({ proposedReady: false, tasks: [task('todo')] })]),
+    ]);
+    montar();
+    await abrirHistoria();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Editar título').closest('button')?.disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByText('Editar título'));
+    fireEvent.change(screen.getByLabelText('Título'), {
+      target: { value: 'Cadastrar usuário novo' },
+    });
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() =>
+      expect(updateStoryTitle).toHaveBeenCalledWith(
+        'proj-1',
+        'story-1',
+        'Cadastrar usuário novo',
+      ),
+    );
+
+    fireEvent.click(screen.getByText('Arquivar'));
+    expect(
+      screen.getByText(/A história e a 1 tarefa dela saem do backlog/),
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Motivo (opcional)'), {
+      target: { value: 'duplicada' },
+    });
+    const botoes = screen.getAllByText('Arquivar');
+    fireEvent.click(botoes[botoes.length - 1]);
+    await waitFor(() =>
+      expect(archiveStory).toHaveBeenCalledWith('proj-1', 'story-1', 'duplicada'),
+    );
+  });
+
+  it('tarefa em execução deixa os controles inertes e diz por quê', async () => {
+    listBacklog.mockResolvedValue([
+      epic([story({ proposedReady: false, tasks: [task('in_progress')] })]),
+    ]);
+    montar();
+    await abrirHistoria();
+
+    expect(
+      await screen.findByText(/1 tarefa em execução — espere terminar/),
+    ).toBeTruthy();
+    expect(screen.getByText('Arquivar').closest('button')?.disabled).toBe(true);
+  });
+
+  it('papel abaixo de developer: inerte, com o motivo em texto', async () => {
+    listWorkspaces.mockResolvedValue([
+      { workspace: { id: 'w1' }, role: 'viewer' },
+    ]);
+    listBacklog.mockResolvedValue([epic([story({ proposedReady: false })])]);
+    montar();
+    await abrirHistoria();
+
+    expect(
+      await screen.findByText('Editar e arquivar pedem o papel developer ou acima.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Editar título').closest('button')?.disabled,
+    ).toBe(true);
   });
 });

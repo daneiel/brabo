@@ -12,6 +12,7 @@ import type {
   ActionType,
   Architecture,
   StoryPromotionMode,
+  Story,
   AgentArea,
   ParallelizationRequest,
   InfraArtifact,
@@ -797,6 +798,22 @@ export const returnStory = (
 ) =>
   post<{ ok: true }>(`/projects/${projectId}/stories/${storyId}/return`, {
     reason,
+  });
+// RN-727: corrigir o título e arquivar uma história `draft` sem tarefa em
+// execução. A recusa (409) traz `reason` nomeado e `message` para o toast.
+export const updateStoryTitle = (
+  projectId: string,
+  storyId: string,
+  title: string,
+) =>
+  patch<Omit<Story, 'tasks'>>(`/projects/${projectId}/stories/${storyId}/title`, { title });
+export const archiveStory = (
+  projectId: string,
+  storyId: string,
+  reason?: string,
+) =>
+  post<Omit<Story, 'tasks'>>(`/projects/${projectId}/stories/${storyId}/archive`, {
+    ...(reason ? { reason } : {}),
   });
 export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);

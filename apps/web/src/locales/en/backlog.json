@@ -58,7 +58,31 @@
   "storyNode": {
     "awaitingYou": "awaiting you",
     "returned": "returned",
-    "youReturned": "You returned to the PO:"
+    "youReturned": "You returned to the PO:",
+    "taskCount_one": "{{count}} task",
+    "taskCount_other": "{{count}} tasks",
+    "editTitle": "Edit title",
+    "archive": "Archive",
+    "editModalTitle": "Edit the story title",
+    "titleLabel": "Title",
+    "save": "Save",
+    "cancel": "Cancel",
+    "archiveModalTitle": "Archive \"{{title}}\"?",
+    "archiveExplain_one": "The story and its {{count}} task leave the backlog, the coverage and the plan. Nothing is deleted: the record stays in the session history.",
+    "archiveExplain_other": "The story and its {{count}} tasks leave the backlog, the coverage and the plan. Nothing is deleted: the record stays in the session history.",
+    "archiveReasonLabel": "Reason (optional)",
+    "archiveReasonPlaceholder": "E.g.: duplicate of another story.",
+    "archiveConfirm": "Archive",
+    "inertRole": "Editing and archiving need the developer role or above.",
+    "inertStatus": "Only a draft story can be edited or archived.",
+    "inertRunning_one": "{{count}} task in execution — wait for it to finish to edit or archive.",
+    "inertRunning_other": "{{count}} tasks in execution — wait for them to finish to edit or archive.",
+    "toast": {
+      "updated": "Title corrected",
+      "updateError": "Could not correct the title",
+      "archived": "Story archived",
+      "archiveError": "Could not archive"
+    }
   },
   "fieldLabels": {
     "rf": "RF",
