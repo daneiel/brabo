@@ -20517,13 +20517,13 @@ bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
 kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
 histórias em que chamou `assess_implementability`.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:308` (`module_map_vigente`);
-  `:282` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:324` (`module_map_vigente`);
+  `:309` (`spec_read_backlog`); `:325` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:335` (`module_map_vigente`);
   `:309` (`spec_read_backlog`); `:358` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:545` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
