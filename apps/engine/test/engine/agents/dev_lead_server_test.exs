@@ -371,6 +371,53 @@ defmodule Engine.Agents.DevLeadServerTest do
     assert final_state.turno_assincrono == nil
   end
 
+  # AT-421 (RN-733): o 402 com `errorCode` gravava `reason` com a tupla
+  # `{:final, …}` inspecionada e despejava o JSON do provider na bolha.
+  describe "crédito esgotado no frame final (RN-733)" do
+    @json_402 "crédito insuficiente em openrouter (402): {\"error\":{\"message\":\"This request would exceed\",\"code\":402}}"
+
+    test "pt-BR: frase curta, reason sem tupla, JSON só no diagnóstico", %{state: state} do
+      Process.put(:fake_llm_turns, [%{"error" => @json_402, "errorCode" => "insufficient_credit"}])
+
+      Engine.Harness.IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+        sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
+      end)
+
+      assert_received {:event_appended, _, _, %{type: "agent.error", payload: payload}}
+      assert payload.origem == "infra"
+
+      assert payload.mensagem ==
+               "Crédito do provedor do modelo esgotado — recarregue a chave e tente de novo."
+
+      refute payload.reason =~ "{:final"
+      assert payload.reason == @json_402
+    end
+
+    test "en: a mesma frase no idioma do turno", %{state: state} do
+      Process.put(:fake_llm_turns, [%{"error" => @json_402, "errorCode" => "insufficient_credit"}])
+
+      Engine.Harness.IdiomaDaResposta.com_idioma_do_autor("en", fn ->
+        sync_call(DevLeadServer, {:user_message, "hi", "en", "m-421"}, state)
+      end)
+
+      assert_received {:event_appended, _, _, %{type: "agent.error", payload: payload}}
+
+      assert payload.mensagem ==
+               "The model provider's credit is exhausted — top up the key and try again."
+
+      refute payload.reason =~ "{:final"
+    end
+
+    test "erro que não é de crédito mantém a mensagem de sempre", %{state: state} do
+      Process.put(:fake_llm_turns, [%{"error" => "upstream caiu", "errorCode" => "upstream"}])
+      sync_call(DevLeadServer, {:user_message, "e aí?"}, state)
+
+      assert_received {:event_appended, _, _, %{type: "agent.error", payload: payload}}
+      assert payload.mensagem =~ "Não consegui completar este turno: upstream caiu"
+      assert payload.reason == "upstream caiu"
+    end
+  end
+
   describe "suspensão em aprovação (ADR 0086, RN-284)" do
     # As três de sempre não bastam aqui: `sync_cast`/`sync_call` escondem a
     # volta pelo `handle_info`, mas o CENTRO desta feature é exatamente o que

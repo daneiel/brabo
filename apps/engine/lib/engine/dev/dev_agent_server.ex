@@ -232,7 +232,10 @@ defmodule Engine.Dev.DevAgentServer do
         # `status: :working` e `task_id` setado, e daí nenhum dos três
         # `handle_info/2` agia nunca mais — travado por uma falha
         # transitória de leitura de contexto.
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: FalhaDeTurno.diagnostico(reason)
+        })
 
         {:noreply,
          state
@@ -485,7 +488,10 @@ defmodule Engine.Dev.DevAgentServer do
         end
 
       {:error, reason} ->
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: FalhaDeTurno.diagnostico(reason)
+        })
 
         # RN-558: a recusa da credencial no runner tem motivo e ORIGEM próprios
         # (`politica`, ADR 0020) — nunca `codigo`, que mandaria quem tria a

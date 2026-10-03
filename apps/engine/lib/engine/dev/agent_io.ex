@@ -199,7 +199,12 @@ defmodule Engine.Dev.AgentIo do
         # eliminar. `:idle` é o único estado do qual um wake ainda resgata.
         state = %{state | status: :idle}
         persist(state)
-        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+
+        emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: Engine.Agents.FalhaDeTurno.diagnostico(reason)
+        })
+
         state
     end
   end

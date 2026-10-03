@@ -211,8 +211,8 @@ defmodule Engine.Harness.ToolLoop.Default do
   defp emit_falha(ctx, reason) do
     emit(ctx, "agent.error", %{
       origem: FalhaDeTurno.origem(reason),
-      mensagem: FalhaDeTurno.mensagem(reason),
-      reason: inspect(reason)
+      mensagem: FalhaDeTurno.mensagem(reason, ctx[:project_id]),
+      reason: FalhaDeTurno.diagnostico(reason)
     })
   end
 

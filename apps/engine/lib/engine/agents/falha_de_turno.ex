@@ -117,12 +117,43 @@ defmodule Engine.Agents.FalhaDeTurno do
   A frase que o agente diz no fio. Sempre nomeia o que falhou e o que NÃO
   aconteceu — "nada foi gasto" é a informação que a pessoa mais quer quando vê
   um erro de LLM.
+
+  Crédito do provider esgotado (RN-733) ganha frase CURTA e acionável no idioma
+  do turno (RN-622, `IdiomaDaResposta.idioma_do_turno/1`); o JSON do provider
+  fica só no `reason` (diagnóstico), nunca na bolha.
   """
-  @spec mensagem(term()) :: String.t()
-  def mensagem(reason) do
-    "Não consegui completar este turno: #{motivo(reason)}. " <>
-      "Nada foi gasto nesta tentativa. Você pode tentar de novo."
+  @spec mensagem(term(), String.t() | nil) :: String.t()
+  def mensagem(reason, project_id \\ nil) do
+    if credito?(reason) do
+      if portugues?(Engine.Harness.IdiomaDaResposta.idioma_do_turno(project_id)),
+        do: "Crédito do provedor do modelo esgotado — recarregue a chave e tente de novo.",
+        else: "The model provider's credit is exhausted — top up the key and try again."
+    else
+      "Não consegui completar este turno: #{motivo(reason)}. " <>
+        "Nada foi gasto nesta tentativa. Você pode tentar de novo."
+    end
   end
+
+  @doc """
+  O `reason` gravado no `agent.error` (diagnóstico, RN-733): o texto do frame
+  final quando há um — nunca a tupla `{:final, …}` inspecionada —; o resto,
+  `inspect/1` como sempre.
+  """
+  @spec diagnostico(term()) :: String.t()
+  def diagnostico({:final, texto}) when is_binary(texto), do: texto
+  def diagnostico({:final, texto, _code}) when is_binary(texto), do: texto
+  def diagnostico(outro), do: inspect(outro)
+
+  defp credito?({:final, _texto, "insufficient_credit"}), do: true
+  defp credito?({:final, texto, _code}) when is_binary(texto), do: credito_esgotado?(texto)
+  defp credito?({:final, texto}) when is_binary(texto), do: credito_esgotado?(texto)
+  defp credito?(_), do: false
+
+  # Sem idioma conhecido, pt-BR: é o idioma em que esta frase sempre saiu.
+  defp portugues?(idioma) when is_binary(idioma),
+    do: idioma |> String.downcase() |> String.starts_with?("pt")
+
+  defp portugues?(_), do: true
 
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
   defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
