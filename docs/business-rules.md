@@ -15604,7 +15604,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:313`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:710`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:714`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1014`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -16473,7 +16473,7 @@ deu e com as quatro ferramentas.
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
   (`handle_info`), `:373` (`drenar_correcao_pendente`), `:420`
-  (`toolloop.limit_reached`), `:1051` (`concluir`);
+  (`toolloop.limit_reached`), `:1058` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
   (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:592`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
@@ -19061,8 +19061,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
-  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1134`
-  (`registrar_subida`), `:1144` (`fechar_subida`), `:1148`
+  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1141`
+  (`registrar_subida`), `:1151` (`fechar_subida`), `:1155`
   (`desfecho_da_subida`); `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex`
   (a descrição da tool)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1075`
@@ -19324,7 +19324,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:753`
-  (`eleger_candidata`), `:1313` (`passo_da_subida`)
+  (`eleger_candidata`), `:1320` (`passo_da_subida`)
 - **Teste:** `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts:250`
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
@@ -19376,7 +19376,7 @@ instante, a oferta espera o fim do próximo turno dele.
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1062` (`oferecer_ao_dev_lead`),
-  `:1051` (`concluir`), `:345` (`handle_info`), `:1068`
+  `:1058` (`concluir`), `:345` (`handle_info`), `:1075`
   (`topico_do_container`);
   `apps/engine/lib/engine/workers/infra_oferece_dev_lead_worker.ex:29` (`perform`);
   `apps/engine/lib/engine/outbox/drain.ex:107` (`handlers_for`)
@@ -20491,8 +20491,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:448` (`fechar_handoff`);
-  `:489` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:453` (`fechar_handoff`);
+  `:496` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20519,7 +20519,7 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:308` (`module_map_vigente`);
   `:282` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:545` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
@@ -20956,7 +20956,7 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1178` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1185` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …")
@@ -21182,3 +21182,33 @@ vivo) continua escrevendo a lista à mão: invalidar não grava dado.
   correção é decisão separada. O mesmo teste prova que o cartão decidido não
   volta a pedir decisão: o que pareceu "voltar" no AT-365 era OUTRA ação.
 - **Origem:** AT-365
+
+### RN-719 — Ferramenta de agente aceita lista enviada como texto JSON, e exceção dentro dela volta ao laço {#rn-719}
+
+**Contexto:** medido ao vivo (02/10, Haiku 4.5 via OpenRouter), o modelo manda
+lista e objeto como STRING JSON (`"business_rule_ids": "[\"01M…\"]"`). Três
+desfechos: `create_story` descartava os ids calado (história ficava `draft`),
+outras ferramentas recusavam e custavam voltas, e `create_c4_diagram` fazia
+`Enum.map` numa string e derrubava o turno do Arquiteto com `agent.error`.
+
+**A regra:** toda ferramenta dos sete conversacionais e do `ToolLoop` roda por
+UM ponto, `Engine.Harness.ArgumentosDeFerramenta.executar/4`. Argumento cujo
+schema declara `array`/`object` e chega como string JSON válida do tipo vira o
+valor; string que não é recusa NOMEADA ("o campo X precisa ser uma lista"),
+antes de a ferramenta rodar. Campo declarado `string` nunca é tocado. Exceção
+levantada dentro da ferramenta vira `tool.result` `ok: false` com
+`origem: "codigo"`, e o erro entra no laço como qualquer outro (RN-163): o
+turno continua.
+
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
+  (`executar`), `:73` (`coagir`), `:46` (`falha_interna?`);
+  `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:310` (`run_direct`);
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:338`
+  (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
+  (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
+  `actors` em string JSON funciona; string não-JSON num campo array é recusa
+  nomeada; ferramenta que lança não encerra o turno do `ToolLoop` e grava
+  `tool.result` `ok: false`)
+- **Origem:** AT-387
