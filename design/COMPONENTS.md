@@ -412,6 +412,18 @@ tela só percebe que o botão desabilitou); e o spinner é `aria-hidden`, para
 não entrar no nome acessível. Em `prefers-reduced-motion` a animação para —
 o elemento **fica**, porque removê-lo mudaria o layout do botão.
 
+## Shimmer (texto em curso — ADR 0210)
+
+`components/ui/Shimmer.tsx`, adaptado do Shimmer do AI Elements: o texto fica
+em `--text-secondary` e um brilho em `--text-primary` corre por ele
+(`duration` 2s, largura `--spread` = comprimento × `spread`). Quando usar:
+TEXTO que diz que algo está em curso ("Pensando…", "Reunindo informações…",
+o status "trabalhando" do AgentCard). Quando NÃO usar: bloco que espera dado →
+`Skeleton`; botão que espera resposta → `loading`. O texto fica no DOM;
+`role`/`aria-live` são do contêiner de quem chama. Em
+`prefers-reduced-motion` a animação para e o texto fica, estático, na
+cor-base. É o único lugar do web que importa `motion`.
+
 ## Campo preenchido (segunda anatomia de input)
 
 O `Inputs/selects` acima segue valendo como default. Esta é a variante do

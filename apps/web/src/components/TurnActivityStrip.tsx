@@ -5,6 +5,7 @@ import type { EstadoDaAtividadeDoTurno } from '../lib/atividade-do-turno';
 import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
+import { Shimmer } from './ui/Shimmer';
 import { ChatIcon, TerminalIcon } from './ui/icons';
 import styles from './TurnActivityStrip.module.css';
 
@@ -63,7 +64,7 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
       <AvatarDoAgente id={agente ?? undefined} />
       <div className={styles.corpo}>
         <div className={styles.previa} title={previa ?? undefined}>
-          {previa ?? t('turno.pensando')}
+          {previa ?? <Shimmer>{t('turno.pensando')}</Shimmer>}
         </div>
         {linhasParaExpandir.length > 0 && (
           <Disclosure

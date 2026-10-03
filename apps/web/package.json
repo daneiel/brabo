@@ -22,6 +22,7 @@
     "@xterm/xterm": "^6.0.0",
     "i18next": "^26.3.6",
     "mermaid": "^11.16.1",
+    "motion": "^13.5.0",
     "phoenix": "^1.8.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

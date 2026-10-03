@@ -431,28 +431,6 @@
   composes: bubble from '../components/ui/ChatBubble.module.css';
 }
 
-.typing {
-  display: flex;
-  gap: 5px;
-  padding: 6px 0;
-}
-
-.typingDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--msg-color);
-  animation: bpulse 1s ease-in-out infinite;
-}
-
-.typingDot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.typingDot:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
 .composer {
   flex-shrink: 0;
   border-top: 1px solid var(--border);

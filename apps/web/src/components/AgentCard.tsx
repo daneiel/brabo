@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
+import { Shimmer } from './ui/Shimmer';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './AgentCard.module.css';
 
@@ -105,7 +106,7 @@ export function AgentCard({
           <div className={styles.role}>{agent.role}</div>
           <span className={styles.status} style={statusStyle}>
             <span className={[styles.statusDot, status === 'trabalhando' && styles.pulsing].filter(Boolean).join(' ')} />
-            {t(STATUS_LABEL_KEY[status])}
+            {status === 'trabalhando' ? <Shimmer>{t(STATUS_LABEL_KEY[status])}</Shimmer> : t(STATUS_LABEL_KEY[status])}
           </span>
         </div>
       </div>

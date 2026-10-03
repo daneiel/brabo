@@ -279,6 +279,7 @@ estado lido do repositório e não da conversa.
 | A bolha do agente mostra só o fecho do turno; as voltas anteriores ficam em "Passos do turno" (AT-395) | RN-698 |
 | Node 26 nas imagens e nos workflows, sem o `ignore` do major (AT-360) | CHANGELOG |
 | O TanStack AI não é adotado no front; revisitar na 1.0 (AT-400) | tanstack-ai.md |
+| O texto do turno do agente em curso ganha o Shimmer, com motion (AT-401) | ADR 0210 |
 
 ## Estado atual e aberto
 
@@ -913,6 +914,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
   local, isolado atrás de `lib/xterm-runtime.ts` com `import()` dinâmico.
+  `motion` (ADR 0210) para a animação de texto em curso, isolado atrás
+  de `components/ui/Shimmer.tsx` (`LazyMotion` + `domAnimation`, nenhum
+  outro arquivo o importa) e em grupo de vendor próprio `vendor-motion` em
+  `codeSplitting.groups`, fora da carga inicial.
   Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
   `.preload` que o router espera), e os painéis das abas do projeto também
   (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de

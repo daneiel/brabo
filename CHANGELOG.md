@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o texto do turno do agente em curso ("Pensando…" na faixa, "Reunindo informações…" no fio, que perde os três pontos) e o status "trabalhando" do card do agente na Visão geral e em Executores ganham o brilho do Shimmer do AI Elements, com a lib `motion` em chunk próprio fora da carga inicial; com movimento reduzido o texto fica estático (AT-401, ADR 0210).
 - **docs**: `pnpm docs:generate` passa a reescrever os números deriváveis da prosa — contagens de ADR e RN, o próximo ADR (e a linha repetida que um merge deixa), o recuo de `docs/adr/temas.yml` e a linha das refs `caminho:N` (`símbolo`) cujo símbolo tem ocorrência mais próxima única a até 40 linhas; o `docs:check` reprova com a mesma severidade e manda rodar o gerador (AT-399).
 - **sessão**: a bolha do agente conversacional mostra só o FECHO do turno; o texto das voltas anteriores vai no campo novo `passos` da `agent.response` e aparece recolhido em "Passos do turno", e a reidratação o devolve ao modelo antes do fecho (AT-395, revisão da RN-698).
 - **gates**: o ciclo de gate estacionado pelo resgate (parado há mais de 2 h) ganha o botão "Retomar gate" no aviso do fio da sessão e a rota `POST /projects/:projectId/tasks/:taskId/gates/:gate/resume` (`developer`; 409 `gate_nao_estacionado` quando não há o que retomar) — antes só voltava pelo terminal do operador (AT-397, RN-724, ADR 0207).
