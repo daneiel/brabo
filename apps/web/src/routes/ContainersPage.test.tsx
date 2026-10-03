@@ -408,6 +408,46 @@ describe('ContainersPage', () => {
     });
   });
 
+  // AT-422 (RN-738): a decisão executada relê a linha e o ciclo de vida.
+  it('aprovar container_stop relê a visão geral e o ciclo de vida do projeto', async () => {
+    const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ acaoPendente: acaoPendente() })],
+      refetch: vi.fn(),
+    });
+    approveAction.mockResolvedValue(acaoPendente({ status: 'executed' }));
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Aprovar' }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['containers-overview'] });
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['container-lifecycle', 'proj-1'] });
+    });
+    spy.mockRestore();
+  });
+
+  it('aprovação recusada pela api ainda relê a linha (nada de estado de antes)', async () => {
+    const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ acaoPendente: acaoPendente() })],
+      refetch: vi.fn(),
+    });
+    approveAction.mockRejectedValue(new Error('409'));
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Aprovar' }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['containers-overview'] });
+    });
+    spy.mockRestore();
+  });
+
   it('container_remove pendente: o card NÃO oferece "sempre permitir" (teto absoluto)', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,

@@ -67,8 +67,13 @@ function AcoesDoContainer({
     'parar' | 'remover' | 'subir' | null
   >(null);
 
+  // AT-422 (RN-738): a linha E o ciclo de vida do projeto. Sem poll novo —
+  // é o desfecho da decisão que diz quando reler.
   function invalidateContainers() {
     queryClient.invalidateQueries({ queryKey: ['containers-overview'] });
+    queryClient.invalidateQueries({
+      queryKey: ['container-lifecycle', item.projectId],
+    });
   }
 
   async function proporAcaoDeContainer(
@@ -171,33 +176,46 @@ function AcoesDoContainer({
     };
   }
 
+  // AT-422 (RN-738): a releitura vem no `finally` — a parada pode levar o
+  // tempo do `docker stop`, e uma recusa ou queda da chamada não pode deixar a
+  // linha afirmando o estado de antes. A PROMESSA volta ao card, que segura os
+  // botões e diz a recusa da api.
   async function aprovar() {
     if (!item.acaoPendente) return;
-    await approveAction(
-      item.projectId,
-      item.acaoPendente.sessionId,
-      item.acaoPendente.id,
-    );
-    invalidateContainers();
+    try {
+      await approveAction(
+        item.projectId,
+        item.acaoPendente.sessionId,
+        item.acaoPendente.id,
+      );
+    } finally {
+      invalidateContainers();
+    }
   }
   async function negar() {
     if (!item.acaoPendente) return;
-    await denyAction(
-      item.projectId,
-      item.acaoPendente.sessionId,
-      item.acaoPendente.id,
-    );
-    invalidateContainers();
+    try {
+      await denyAction(
+        item.projectId,
+        item.acaoPendente.sessionId,
+        item.acaoPendente.id,
+      );
+    } finally {
+      invalidateContainers();
+    }
   }
   async function sempreAprovar() {
     if (!item.acaoPendente) return;
-    await approveAlwaysAction(
-      item.projectId,
-      item.acaoPendente.sessionId,
-      item.acaoPendente.id,
-    );
-    invalidateContainers();
-    queryClient.invalidateQueries({ queryKey: ['permissions', item.projectId] });
+    try {
+      await approveAlwaysAction(
+        item.projectId,
+        item.acaoPendente.sessionId,
+        item.acaoPendente.id,
+      );
+    } finally {
+      invalidateContainers();
+      queryClient.invalidateQueries({ queryKey: ['permissions', item.projectId] });
+    }
   }
 
   // Uma proposta pendente de container (qualquer uma das quatro) SUBSTITUI os
@@ -208,9 +226,9 @@ function AcoesDoContainer({
       <ApprovalCard
         action={item.acaoPendente}
         detalheRecolhido
-        onApprove={() => void aprovar()}
-        onDeny={() => void negar()}
-        onAlwaysAllow={() => void sempreAprovar()}
+        onApprove={() => aprovar()}
+        onDeny={() => negar()}
+        onAlwaysAllow={() => sempreAprovar()}
       />
     );
   }

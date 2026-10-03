@@ -98,6 +98,9 @@ describe('DockerViaCli.start', () => {
     expect(run).toBeDefined();
     const args = run as string[];
     expect(args).toContain('--detach');
+    // AT-422 (RN-738): init que repassa o SIGTERM — sem ele, `stop` leva 10 s.
+    expect(args).toContain('--init');
+    expect(args.indexOf('--init')).toBeLessThan(args.indexOf('sleep'));
     expect(args.join(' ')).toContain(`--label ${ROTULO_GERENCIADO}=true`);
     // UM volume, destino constante. Se um dia aparecer um segundo `--volume`,
     // este número é o que reprova.

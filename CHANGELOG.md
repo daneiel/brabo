@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **docker-port/web**: container de projeto sobe com `--init` (broker e runner), e parar deixa de esperar 10 s e sair `Exited (137)`; na `/containers`, decidir a ação relê a linha e o ciclo de vida mesmo se a chamada falhar (RN-738, AT-422).
 - **engine**: `choose_project_image` avisa, na descrição e no resultado, que a rede `none` impede instalar dependências (npm/pip/mix/cargo...) e aponta `egress` (RN-735, AT-420).
 
 - O campo "Nome do projeto" do assistente deixa de ganhar foco sozinho e passa a se chamar `project-title`: o menu de contato de gerenciador de senha não abre mais sobre o passo (RN-736, AT-418).
