@@ -21911,3 +21911,23 @@ sem dizer qual.
   (aprovar relê visão geral e ciclo de vida; aprovação recusada ainda relê)
 - **Origem:** AT-422 (instalação local, 03/10: três paradas `executed` com a
   linha em "rodando" e `Exited (137)`)
+
+### RN-739 — O diagnóstico leva o corpo de erro do provider inteiro, e a bolha segue curta {#rn-739}
+
+- **Regra:** a mensagem do erro normalizado de provider (ADR 0041) leva o
+  corpo de erro até `LIMITE_DO_DETALHE` = 4 000 caracteres (era 200, e cortava
+  o JSON do OpenRouter antes do `metadata.reason`, que diz a natureza do
+  erro). Essa mensagem é o texto do frame final e vira, verbatim, o `reason`
+  do `agent.error` (`FalhaDeTurno.diagnostico/1`, RN-733). A frase da bolha
+  NÃO cresce com ela: fora do caso de crédito (que já tem frase curta), o
+  texto narrado entra na bolha cortado em 300 caracteres com "…".
+- **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:144`
+  (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:168`
+  (`@teto_da_bolha`), `:172` (`curto`)
+- **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
+  leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
+  teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+  (RN-739: o `reason` contém o `metadata`; erro longo corta na bolha e não no
+  diagnóstico)
+- **Origem:** AT-424 (TP-01, 3ª rodada, 03/10: `reason` cortado em
+  `…"code":402,"metadata":{"reason":"in…`)

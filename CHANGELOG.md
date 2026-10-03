@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Mudanças
 
 - **web**: os campos sem autofill (`SEM_AUTOFILL`, "Nome do projeto" incluído) ganham `aria-autocomplete="none"` e `data-protonpass-ignore`; rótulo inalterado, e a validação contra o gerenciador de senhas real fica para o próximo TP-01 (RN-740, AT-425).
+- **api/engine**: o erro normalizado de provider leva o corpo de erro até 4 000 caracteres (era 200), então o `reason` do `agent.error` guarda o `metadata.reason` do OpenRouter inteiro; a bolha do agente segue curta, cortada em 300 caracteres (RN-739, AT-424).
 - **docker-port/web**: container de projeto sobe com `--init` (broker e runner), e parar deixa de esperar 10 s e sair `Exited (137)`; na `/containers`, decidir a ação relê a linha e o ciclo de vida mesmo se a chamada falhar (RN-738, AT-422).
 - **api/engine**: resposta cortada pelo teto de saída (`finish_reason: "length"` / `stop_reason: "max_tokens"`) passa a ser sinalizada com `truncated: true` em `llm-turn` e no frame `final` do stream; o engine não executa chamada de ferramenta de resposta cortada (volta erro nomeado ao laço para o modelo reenviar em partes menores) e acrescenta ao fecho cortado "Resposta cortada pelo limite de tamanho." no idioma do turno (RN-737, AT-423).
 - **engine**: `choose_project_image` avisa, na descrição e no resultado, que a rede `none` impede instalar dependências (npm/pip/mix/cargo...) e aponta `egress` (RN-735, AT-420).

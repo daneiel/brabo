@@ -157,9 +157,21 @@ defmodule Engine.Agents.FalhaDeTurno do
 
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
   defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
-  defp motivo({:final, texto}) when is_binary(texto), do: texto
-  defp motivo({:final, texto, _code}) when is_binary(texto), do: texto
+  defp motivo({:final, texto}) when is_binary(texto), do: curto(texto)
+  defp motivo({:final, texto, _code}) when is_binary(texto), do: curto(texto)
   defp motivo({status, _}) when is_integer(status), do: "a api respondeu #{status}"
   defp motivo(%{__exception__: true} = erro), do: Exception.message(erro)
   defp motivo(outro), do: inspect(outro)
+
+  # RN-739: o diagnóstico leva o corpo do provider até 4 000 caracteres (para o
+  # `metadata.reason` não se perder); a BOLHA não — ela segue curta (RN-733).
+  @teto_da_bolha 300
+
+  defp curto(texto) when byte_size(texto) <= @teto_da_bolha, do: texto
+
+  defp curto(texto) do
+    if String.length(texto) <= @teto_da_bolha,
+      do: texto,
+      else: String.slice(texto, 0, @teto_da_bolha) <> "…"
+  end
 end

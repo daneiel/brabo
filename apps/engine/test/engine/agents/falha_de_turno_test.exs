@@ -151,4 +151,24 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.mensagem({:final, "status 402: add credits"}) =~ "esgotado"
     end
   end
+
+  describe "RN-739: o diagnóstico leva o corpo inteiro, a bolha segue curta" do
+    @corpo_402 "openrouter sem crédito (402): " <>
+                 ~s({"error":{"message":"This request requires more credits. ) <>
+                 String.duplicate("x", 400) <>
+                 ~s(","code":402,"metadata":{"reason":"insufficient_credits","provider_name":null}}})
+
+    test "o reason gravado contém o metadata inteiro" do
+      assert FalhaDeTurno.diagnostico({:final, @corpo_402, "insufficient_credit"}) =~
+               ~s("metadata":{"reason":"insufficient_credits","provider_name":null})
+    end
+
+    test "erro longo que não é crédito: a bolha corta, o diagnóstico não" do
+      corpo = "openrouter respondeu com status 500: " <> String.duplicate("y", 1_000)
+      msg = FalhaDeTurno.mensagem({:final, corpo, "upstream"})
+      assert String.length(msg) < 450
+      assert msg =~ "…"
+      assert FalhaDeTurno.diagnostico({:final, corpo, "upstream"}) == corpo
+    end
+  end
 end
