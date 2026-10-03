@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extrairRefs, novaLinha, reancorar } from './refs-com-simbolo.mjs';
+import { conferir, extrairRefs, novaLinha, reancorar } from './refs-com-simbolo.mjs';
 import { deduplicarProximoAdr, PROXIMO_ADR, substituirGrupo } from './reescrita.mjs';
 import { corrigirRecuo } from './temas-de-adr.mjs';
 
@@ -65,12 +65,18 @@ describe('reancorar — refs `caminho:N` (`símbolo`)', () => {
     expect(reescrever(doc)).toBe('- `src/a.ts:9` (`foo`), `:9`\n  (`foo`)');
   });
   it('mantém o resto do documento intocado, inclusive antes do item', () => {
-    const doc = '# t\n\ntexto\n\n- `src/a.ts:100` (`foo`)\n';
+    const doc = '# t\n\ntexto\n\n- `src/a.ts:20` (`foo`)\n';
     expect(reescrever(doc)).toBe('# t\n\ntexto\n\n- `src/a.ts:9` (`foo`)\n');
   });
   it('símbolo que sumiu do arquivo NÃO é reescrito — pede humano', () => {
     expect(novaLinha(arquivo, 1, 'sumiu')).toBeNull();
     expect(reescrever('- `src/a.ts:1` (`sumiu`)')).toBe('- `src/a.ts:1` (`sumiu`)');
+  });
+  it('deslocamento de 10 linhas reancora; de 60 não, e a ref segue sem bater', () => {
+    const linhas = (n: number) => [...Array.from({ length: n }, () => 'x'), 'function foo() {'];
+    expect(novaLinha(linhas(10), 1, 'foo')).toBe(11);
+    expect(novaLinha(linhas(60), 1, 'foo')).toBeNull();
+    expect(conferir(linhas(60), 1, 'foo').bate).toBe(false);
   });
   it('empate entre duas ocorrências NÃO é reescrito', () => {
     expect(novaLinha(['foo', 'x', 'foo'], 2, 'foo')).toBeNull();

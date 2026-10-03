@@ -75,7 +75,8 @@ same severity: a stale committed file still fails CI, and the fix is
 `pnpm docs:generate` plus a commit, as with generated files. What still
 needs a human: a phrase whose pattern stopped matching (`CEGO`), an ADR
 without a theme, a variable without a description, and a reference whose
-symbol left the file or ties between two nearest occurrences.
+symbol left the file, moved more than 40 lines, or ties between two nearest
+occurrences.
 
 The most expensive case was the **version announced in prose**: the
 README announced `v0.1.0` from Phase 5 all the way to v2.1.0 — seven
@@ -198,7 +199,8 @@ small because drift moves by dozens or hundreds of lines. When a
 reference doesn't match, the output names the nearest line where the
 symbol does appear. Since AT-399, `pnpm docs:generate` rewrites `N` to
 that line when the nearest occurrence is **unique** (no tie at the same
-distance); when the symbol is gone from the file, or two occurrences tie,
+distance) and at most **40 lines** away (`DISTANCIA_MAXIMA_DE_REANCORA`);
+when the symbol is gone from the file, moved further, or two occurrences tie,
 the reference is left alone and must be re-read by symbol by hand. The
 nearest occurrence may be a call rather than the definition — that is the
 price accepted for not hand-editing numbers across parallel PRs, and the

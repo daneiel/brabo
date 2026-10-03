@@ -225,11 +225,21 @@ export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN) {
 }
 
 /**
+ * Até quantas linhas do número antigo a reancoragem automática vai (AT-399).
+ * O dono aprovou reancorar quando o símbolo está a POUCAS linhas: um PR
+ * típico desloca dezenas. Mais longe que isso a ocorrência mais próxima pode
+ * ser uma CHAMADA longe da definição, e a ref "moveu longe" volta a pedir
+ * um humano que a releia pelo símbolo.
+ */
+export const DISTANCIA_MAXIMA_DE_REANCORA = 40;
+
+/**
  * A linha para onde a ref que NÃO bate pode ser reancorada pelo
  * `pnpm docs:generate` (AT-399): a ocorrência do símbolo mais próxima de `N`
  * no arquivo, desde que seja ÚNICA a essa distância. `null` — continua pedindo
  * um humano — quando o símbolo sumiu do arquivo ou há empate (duas ocorrências
- * à mesma distância: qual é a citada não é decidível).
+ * à mesma distância: qual é a citada não é decidível) ou a ocorrência está a
+ * mais de `DISTANCIA_MAXIMA_DE_REANCORA` linhas (moveu longe).
  */
 export function novaLinha(linhasDoArquivo, linha, simbolo) {
   const padroes = candidatos(simbolo).map(comoPalavra);
@@ -241,6 +251,7 @@ export function novaLinha(linhasDoArquivo, linha, simbolo) {
   const dist = (i) => Math.abs(i - linha);
   const menor = Math.min(...ocorrencias.map(dist));
   const maisPerto = ocorrencias.filter((i) => dist(i) === menor);
+  if (menor > DISTANCIA_MAXIMA_DE_REANCORA) return null;
   return maisPerto.length === 1 ? maisPerto[0] : null;
 }
 
