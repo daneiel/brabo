@@ -50,13 +50,13 @@ pnpm engine:test            # ExUnit
 ```
 
 Elixir **não** é obrigatório no host — o engine roda no container. Se for
-rodar fora do Docker, use a versão exata do projeto (**1.17.3 / OTP 27.1.2**):
+rodar fora do Docker, use a versão exata do projeto (**1.20.4 / OTP 29.1.1**):
 o `mix format` de versões diferentes produz saída diferente e deixa o
 `--check-formatted` do CI vermelho. Para formatar sem instalar:
 
 ```bash
 docker run --rm -v "$PWD/apps/engine:/app" -w /app \
-  hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3 mix format
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
 ```
 
 ## Quando o git pendura ou é recusado (máquina local, agentes em worktree)

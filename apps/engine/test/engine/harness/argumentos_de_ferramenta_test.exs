@@ -90,6 +90,19 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
   end
 
   test "ferramenta que lança não encerra o turno do ToolLoop" do
+    # O `ToolLoop` lê `:project_workspaces_root` ao montar o contexto, e
+    # outros testes APAGAM essa chave no `on_exit`: sem defini-la aqui, o
+    # resultado dependia da ordem da suíte.
+    anterior = Application.fetch_env(:engine, :project_workspaces_root)
+    Application.put_env(:engine, :project_workspaces_root, System.tmp_dir!())
+
+    on_exit(fn ->
+      case anterior do
+        {:ok, valor} -> Application.put_env(:engine, :project_workspaces_root, valor)
+        :error -> Application.delete_env(:engine, :project_workspaces_root)
+      end
+    end)
+
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.tool_call_response("explode", %{}),
       FakeEngineApiClient.final_response("segui")

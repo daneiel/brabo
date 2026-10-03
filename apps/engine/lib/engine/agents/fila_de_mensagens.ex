@@ -182,17 +182,21 @@ defmodule Engine.Agents.FilaDeMensagens do
   defp acordar(agente, session_id, project_id) do
     supervisor = Map.fetch!(supervisores(), agente)
 
+    # Os supervisores devolvem só `{:ok, _}`: a falha de subir o processo
+    # LANÇA (`CaseClauseError` sobre o `start_child`). Ela é contida aqui,
+    # por agente, para não abortar a varredura dos outros seis.
     case supervisor.start_agent(session_id, project_id) do
-      {:ok, _pid} ->
-        true
-
-      {:ok, _pid, _origem} ->
-        true
-
-      outro ->
-        Logger.warning("fila de mensagens: não consegui acordar #{agente}: #{inspect(outro)}")
-        false
+      {:ok, _pid} -> true
+      {:ok, _pid, _origem} -> true
     end
+  rescue
+    erro ->
+      Logger.warning("fila de mensagens: não consegui acordar #{agente}: #{inspect(erro)}")
+      false
+  catch
+    :exit, motivo ->
+      Logger.warning("fila de mensagens: não consegui acordar #{agente}: #{inspect(motivo)}")
+      false
   end
 
   # Os sete conversacionais e o supervisor que os sobe — os mesmos do

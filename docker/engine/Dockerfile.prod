@@ -6,13 +6,14 @@
 # existe (`bin/engine eval`), já que `mix ecto.migrate` não está disponível.
 
 # ---------------------------------------------------------------------------
-# Estágio 1: builder. Elixir 1.17.3 como o dev; OTP 27.3.4.18 / Alpine 3.24.2
-# (AT-361: o hexpm não publica OTP 27.1.2 sobre Alpine 3.24, então o OTP subiu
-# de patch DENTRO do 27, e o dev segue em 27.1.2/3.20.3). Builder e runtime
+# Estágio 1: builder. Elixir 1.20.4 / OTP 29.1.1 / Alpine 3.24.2, o MESMO do
+# dev (ADR 0209). O OTP 27 abortava no boot (`sys_sigaltstack(): Internal
+# error`) sob a musl 1.2.6 do Alpine 3.24 em host com AMX (erlang/otp#11349);
+# a correção existe só a partir do OTP 29.1. Builder e runtime
 # sobem JUNTOS — a versão do Alpine tem que casar com a do runtime, porque o
 # ERTS embarcado no release é linkado contra a musl desta imagem.
 # ---------------------------------------------------------------------------
-FROM hexpm/elixir:1.17.3-erlang-27.3.4.18-alpine-3.24.2@sha256:865b64a46c37e7f1e8daac25c108545550a02369ec180edf4730b30b5af501b2 AS builder
+FROM hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2@sha256:ad851f40ce103dcb4ad56f23877d99473ef5c013e09b9e57921ffe877ac6d6a9 AS builder
 
 # build-base: compilar as NIFs das deps nativas.
 # hadolint ignore=DL3018
