@@ -34,7 +34,7 @@ defmodule Engine.Agents.PoServer do
     TurnoOrfao
   }
 
-  alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
+  alias Engine.Harness.Tools.{CompleteStory, CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
   alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
   alias Engine.Sessions.EngineApiClient
@@ -126,6 +126,8 @@ defmodule Engine.Agents.PoServer do
          ListarMetricasDeProduto.spec(),
          CreateEpic.spec(),
          CreateStory.spec(),
+         # RN-720: completar a história existente em vez de recriá-la.
+         CompleteStory.spec(),
          CreateTask.spec(),
          # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
          # Criativo (RN-162) — o PO só passou a advertisá-la.
@@ -362,6 +364,7 @@ defmodule Engine.Agents.PoServer do
 
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
+  defp run_tool("complete_story", args, state), do: CompleteStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)
 
   defp run_tool("ask_structured_questions", args, state),
@@ -584,7 +587,14 @@ defmodule Engine.Agents.PoServer do
     tente recriar nem "consertar" uma história que voltou como completa.
     Toda história precisa de ao menos UMA tarefa (create_task) — história sem tarefa não
     conta como entregue: o Dev Lead distribui tarefas, não histórias.
-    Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto (toda
+    Cubra TODAS as regras com ao menos uma história. História que já existe e ficou
+    incompleta (sem `business_rule_ids`, RF, DoD ou DoR) se COMPLETA com complete_story —
+    nunca a recrie com create_story. offer_handoff ao arquiteto é RECUSADO enquanto houver
+    regra sem história ou história draft incompleta, e o resultado lista quais; nunca diga
+    ao usuário que a cobertura está completa sem a ferramenta ter aceitado.
+    Não reescreva uma regra do usuário: se emit_artifact avisar que a sua regra parece
+    alterar uma existente, pergunte ao usuário (ask_structured_questions) qual vale antes
+    de seguir. Quando o backlog estiver pronto (toda
     regra coberta, toda história com tarefa), ofereça um handoff ao arquiteto com
     offer_handoff(to_agent: "arquiteto") — CHAME a ferramenta; nunca escreva que fez o
     handoff sem chamá-la. Se você não chamar, o sistema oferece sozinho quando o critério fecha.
@@ -659,10 +669,9 @@ defmodule Engine.Agents.PoServer do
   # original continua no contexto, então o parecer que a contradiz precisa
   # dizer que vale mais.
   #
-  # O que o PO pode fazer está dito EXPLICITAMENTE porque não existe ferramenta
-  # de editar história — só `create_story`. Mandar "corrija a história" seria
-  # pedir o impossível, e um modelo diante de uma instrução impossível inventa
-  # uma ferramenta ou repete a chamada até esgotar o loop.
+  # O que o PO pode fazer está dito EXPLICITAMENTE. `complete_story` (RN-720)
+  # só completa história `draft` — não reescreve título nem desfaz regra —,
+  # então a recusa continua pedindo a versão corrigida por `create_story`.
   defp revision_message(story) do
     %{
       "role" => "user",

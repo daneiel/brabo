@@ -156,6 +156,17 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramenta `complete_story` do PO (RN-720): completa uma história `draft`
+  existente em vez de recriá-la. Devolve a história atualizada.
+  """
+  @callback complete_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
   A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198): chamada por
   `emit_artifact` DEPOIS de gravar a regra. `fields` leva `kind`
   (`"business_rule"`) e `title`; devolve `{:ok, %{"status" => ..., "message"
@@ -753,6 +764,11 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().create_epic(project_id, session_id, fields)
       |> avisar_canal(session_id, "backlog.epic_created", nil)
 
+  def complete_story(project_id, session_id, story_id, fields),
+    do:
+      impl().complete_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_completed", nil)
+
   def create_story(project_id, session_id, fields),
     do:
       impl().create_story(project_id, session_id, fields)
@@ -1134,6 +1150,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def create_story(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/stories",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def complete_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/complete",
       Map.put(fields, :projectId, project_id)
     )
   end

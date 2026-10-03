@@ -190,6 +190,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def complete_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_completed, story_id, fields})
+
+    case Process.get(:fake_complete_story_error) do
+      nil -> reply(:fake_complete_story, %{"id" => story_id, "status" => "ready"})
+      reason -> {:error, reason}
+    end
+  end
+
   # RN-681: a duplicata semântica de regra. Scriptável por
   # `:fake_semantic_duplicate` (o corpo de `{:ok, corpo}` ou `{:error, motivo}`);
   # sem script, "nada a comparar", que é o que a api responde a projeto vazio.
