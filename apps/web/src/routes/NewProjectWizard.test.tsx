@@ -222,6 +222,17 @@ describe('NewProjectWizard — o provider é da adoção', () => {
 
     expect(await screen.findByText('GitHub')).toBeTruthy();
   });
+
+  it('RN-729: o campo de nome não convida o autofill nem gerenciador de senha', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const campo = await screen.findByLabelText('Nome do projeto');
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+    expect(campo.getAttribute('data-1p-ignore')).toBe('true');
+    expect(campo.getAttribute('data-lpignore')).toBe('true');
+  });
 });
 
 /**

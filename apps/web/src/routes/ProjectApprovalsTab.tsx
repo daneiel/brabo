@@ -29,6 +29,7 @@ import {
   type SecOpsVerdictPayload,
   type Task,
 } from '../lib/api-types';
+import { pedirAba } from '../lib/contagens-do-projeto';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
@@ -573,12 +574,22 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
             ) : (
               <div className={styles.queue}>
                 {infraArtifacts.map((artifact) => (
-                  <PrGateTimeline
-                    key={artifact.id}
-                    task={artifact}
-                    prAction={infraPrActionFor(artifact.prActionId)}
-                    verdicts={infraVerdictsFor(artifact.prActionId)}
-                  />
+                  <div key={artifact.id}>
+                    <PrGateTimeline
+                      task={artifact}
+                      prAction={infraPrActionFor(artifact.prActionId)}
+                      verdicts={infraVerdictsFor(artifact.prActionId)}
+                    />
+                    {/* RN-729: a etapa "Você" diz ONDE agir — o merge mora na
+                        aba PRs, e o botão leva até ela pela moldura. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => pedirAba({ projectId, tab: 'prs' })}
+                    >
+                      {t('approvalsTab.infraPrs.mergeLink')}
+                    </Button>
+                  </div>
                 ))}
               </div>
             )

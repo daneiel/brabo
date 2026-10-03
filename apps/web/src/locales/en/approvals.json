@@ -237,7 +237,8 @@
       "eyebrow": "{{count}} from infra in QA/SecOps gates",
       "loading": "Loading infra PRs…",
       "error": "Couldn't load infra PRs.",
-      "empty": "No infra PR in review yet."
+      "empty": "No infra PR in review yet.",
+      "mergeLink": "Merge it in the PRs tab"
     },
     "permissions": {
       "title": "Project permissions",

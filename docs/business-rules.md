@@ -13832,6 +13832,8 @@ evento pode ter saído da janela e a aba volta a decidir só por ela — é o cu
 da guarda, o mesmo dos outros dois fatos.
 
 - **Código:** `apps/web/src/lib/agent-status.ts:308` (`AgregadoDaSessao`),
+
+- **Código:** `apps/web/src/lib/agent-status.ts:312` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
@@ -18215,8 +18217,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:563` (`execucao`), `:571`
-  (`origemDaAtividade`), `:578` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:579` (`execucao`), `:587`
+  (`origemDaAtividade`), `:594` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:253`
@@ -21588,3 +21590,40 @@ sem dizer qual.
   ("RN-726: dev.credit_exhausted é travado com motivo de crédito…")
 - **Origem:** AT-407 (TP-01 de 03/10: 402 do OpenRouter virou três tarefas
   bloqueadas com origem `codigo` e a parada automática)
+
+### RN-729 — A PR de infra mira `dev` e diz onde mergear; a sidebar abre só o projeto aberto {#rn-729}
+
+- **Regra:** quatro cláusulas medidas no TP-01 (03/10).
+  (1) A PR de infra (`open_infra_pr`) segue a [RN-664](#rn-664): a branch
+  `feature/infra-setup` nasce de `dev` e a PR mira `dev` — o worktree do dev
+  agent nasce de `dev`, então o Dockerfile mergeado em `main` nunca chegava a
+  ele. Repositório sem `dev` falha nomeado pelo provider, sem queda para a
+  default. A PR leva o autor `<agente>[bot]` (`infra[bot]` quando o ator não é
+  agente), a mesma identidade da [RN-705](#rn-705). Em Aprovações, cada PR de
+  infra em revisão ganha "Mergear na aba PRs", que troca a moldura para a aba
+  PRs (onde o merge mora). (2) Abrir um projeto RECOLHE os outros na sidebar
+  e rola a lista até ele; no Dashboard nenhum fica forçado expandido; o
+  chevron segue alternando à mão. (3) Os campos de texto do assistente "Novo
+  projeto" (nome, caminho, repositório adotado) levam `SEM_AUTOFILL`, o mesmo
+  conjunto da [RN-693](#rn-693). (4) Decidir um merge na aba PRs invalida a
+  fila inteira de pendentes do projeto, então o contador "PRs" da sidebar não
+  segue mostrando o merge já executado até o próximo poll; e o lead de QA (ou
+  SecOps) deixa de dizer "trabalhando" quando, depois do último parecer, um
+  subagente da área registra `delegation.failed` — passa a `falhou`. Nenhuma
+  query nem poll novo.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:61`
+  (`ExecuteInfraPrUseCase`),
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
+  `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
+  `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
+  `apps/web/src/routes/ProjectPrsTab.tsx:117` (`invalidateMergeActions`),
+  `apps/web/src/lib/agent-status.ts:214` (`gateStatus`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
+  ("a branch nasce de dev, a PR mira dev e leva infra[bot]"; falha:
+  "repositório sem dev falha nomeado, sem cair na default"),
+  `apps/web/src/routes/Shell.test.tsx` ("abrir um projeto recolhe o visitado
+  antes e rola até o aberto", "no Dashboard nenhum projeto fica forçado
+  expandido"), `apps/web/src/routes/NewProjectWizard.test.tsx` ("o campo de
+  nome não convida o autofill"), `apps/web/src/lib/agent-status.test.ts`
+  ("delegação falhada depois do parecer encerra o trabalhando")
+- **Origem:** AT-411, AT-412, AT-413, AT-415

@@ -538,6 +538,22 @@ export function Shell() {
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [flyoutAberto]);
 
+  // RN-729: abrir um projeto RECOLHE os outros — só ele fica expandido, e a
+  // lista rola até ele; sem projeto aberto (Dashboard), nenhum fica forçado
+  // expandido. Antes, o projeto visitado antes seguia aberto no topo e as
+  // abas do atual ficavam abaixo da dobra. O chevron segue alternando à mão.
+  const idDoProjetoAtual = currentProject?.id;
+  const blocoDoProjetoAtual = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const proximo = idDoProjetoAtual ? new Set([idDoProjetoAtual]) : new Set<string>();
+    setProjetosAbertos(proximo);
+    gravarProjetosAbertos(proximo);
+  }, [idDoProjetoAtual]);
+  useEffect(() => {
+    if (!idDoProjetoAtual) return;
+    blocoDoProjetoAtual.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [idDoProjetoAtual]);
+
   const projetosAbertosEfetivo = useMemo(() => {
     if (!currentProject) return projetosAbertos;
     if (projetosAbertos.has(currentProject.id)) return projetosAbertos;
@@ -785,7 +801,11 @@ export function Shell() {
                 const pendingApprovalsCount = summary?.pendingApprovalsCount ?? 0;
                 const aberto = projetosAbertosEfetivo.has(project.id);
                 return (
-                  <div key={project.id} className={styles.projetoBloco}>
+                  <div
+                    key={project.id}
+                    className={styles.projetoBloco}
+                    ref={project.id === idDoProjetoAtual ? blocoDoProjetoAtual : undefined}
+                  >
                     <div
                       className={[styles.navItem, pathname.startsWith(`/projects/${project.id}`) && styles.active]
                         .filter(Boolean)

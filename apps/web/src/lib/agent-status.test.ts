@@ -342,6 +342,31 @@ describe('deriveAgentRoster — status', () => {
   });
 });
 
+describe('deriveAgentRoster — o lead de QA depois da falha do subagente (RN-729)', () => {
+  it('awaiting_qa sem desfecho segue trabalhando', () => {
+    const roster = deriveAgentRoster(
+      [ev('pr.gate_changed', 'qa-agent', { gateStatus: 'awaiting_qa' })],
+      moduleMap,
+      true,
+      [],
+    );
+    expect(statusOf(roster, 'qa')).toBe('trabalhando');
+  });
+
+  it('delegação falhada depois do parecer encerra o trabalhando', () => {
+    const roster = deriveAgentRoster(
+      [
+        ev('infra.gate_changed', 'infra-gate', { gateStatus: 'awaiting_qa' }),
+        ev('delegation.failed', 'qa', { subagent: 'qa-automacao', area: 'qa' }),
+      ],
+      null,
+      false,
+      [],
+    );
+    expect(statusOf(roster, 'qa')).toBe('falhou');
+  });
+});
+
 describe('deriveAgentRoster — subagentes de área (Fase 8b/8c, no painel — Fase 8d)', () => {
   const gateEvent = ev('pr.gate_changed', 'qa-agent', { gateStatus: 'awaiting_qa' });
 
