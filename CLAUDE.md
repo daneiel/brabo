@@ -293,6 +293,7 @@ estado lido do repositório e não da conversa.
 | O nome do projeto no assistente sem autofoco, para o gerenciador de senhas não cobrir a página (AT-418) | RN-736 |
 | A falha do turno grava o texto do provider, e o crédito esgotado vira frase curta no idioma do turno (AT-421) | RN-733 |
 | O caminho OpenAI-compatível manda `max_tokens` sempre (padrão 4096) (AT-419) | RN-734 |
+| O container sobe com `--init` e para na hora; a `/containers` relê a linha mesmo com a aprovação recusada (AT-422) | RN-738 |
 
 ## Estado atual e aberto
 
@@ -1140,7 +1141,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   vira binário) e sim por decisão: um mecanismo, não dois. A contenção é o
   TIPO: sem campo para `privileged`/`cap_add`, rede é a união
   `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
-  constante — não há lista de mounts. `pidsLimit` entrou na spec no ADR 0130,
+  constante — não há lista de mounts. O `docker run` composto por `DockerViaCli` leva `--init` como CONSTANTE (RN-738):
+  o `sleep infinity` de espera é PID 1 e não recebe SIGTERM sem init, e `stop`
+  levava 10 s até o kill (`Exited (137)`). `pidsLimit` entrou na spec no ADR 0130,
   porque o artefato do Arquiteto sempre teve três números e descartar um faria
   ele prometer um teto que o container não recebe. Do lado do RUNNER, essa
   porta deixou de ser só provada por `--self-test-docker` (ADR 0112/0128) e

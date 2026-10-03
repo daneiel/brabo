@@ -14182,8 +14182,8 @@ instalação sem broker continua possível pelo agente.
   `true`); `apps/web/src/routes/containers-subida.test.ts:54` (`container` e
   `mounted` recusam antes da imagem), `:70` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
-  `apps/web/src/routes/ContainersPage.test.tsx:522` (botão inerte e o motivo
-  em texto, nunca propõe), `:594` (`runner` segue subindo)
+  `apps/web/src/routes/ContainersPage.test.tsx:562` (botão inerte e o motivo
+  em texto, nunca propõe), `:636` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -18151,7 +18151,7 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
 - **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
   (`ContainerImageGateNotice`), `:42` (`bloco`);
   `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
-  `apps/web/src/routes/ContainersPage.tsx:242` (`semContainer`), `:257`
+  `apps/web/src/routes/ContainersPage.tsx:261` (`semContainer`), `:276`
   (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
   (`.danger:disabled`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira
@@ -21837,3 +21837,26 @@ sem dizer qual.
   `max_tokens` não vai)
 - **Origem:** AT-419 (TP-01 de 03/10: US$ 1,79 livres e 402 na chamada do Dev
   Lead e na do dev agent)
+
+### RN-738 — Parar container de projeto é imediato, e a linha da `/containers` relê ao decidir {#rn-738}
+
+- **Regra:** todo container de projeto sobe com `--init` — CONSTANTE da
+  composição do `docker run` em `DockerViaCli`, nunca campo da spec (a
+  contenção é o tipo, ADR 0130); vale para o broker e para o runner, que usam
+  a mesma porta. O comando de espera (`sleep infinity`) era PID 1 sem handler
+  de SIGTERM, e o kernel não entrega sinal de ação padrão a PID 1: `docker
+  stop` esperava os 10 s e matava (`Exited (137)`). Medido em container
+  descartável: 10,25 s sem `--init`, 0,20 s com. Na página `/containers`,
+  decidir a ação pendente (aprovar, negar, sempre permitir) invalida
+  `['containers-overview']` e `['container-lifecycle', projectId]` no
+  `finally` — também quando a chamada falha ou cai —, e devolve a promessa ao
+  card. Nenhum poll novo (RN-579/632).
+- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+  `apps/web/src/routes/ContainersPage.tsx:72` (`invalidateContainers`), `:183`
+  (`aprovar`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (`run` leva
+  `--init` antes do comando), `apps/broker/src/contencao-do-brabo.spec.ts`
+  (os dois modos sobem com `--init`), `apps/web/src/routes/ContainersPage.test.tsx`
+  (aprovar relê visão geral e ciclo de vida; aprovação recusada ainda relê)
+- **Origem:** AT-422 (instalação local, 03/10: três paradas `executed` com a
+  linha em "rodando" e `Exited (137)`)

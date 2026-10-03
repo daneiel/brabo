@@ -567,6 +567,12 @@ export class DockerViaCli extends DockerPort {
     return [
       'run',
       '--detach',
+      // AT-422 (RN-738): o processo de espera (`sleep infinity`) vira PID 1 e
+      // o kernel não entrega SIGTERM a PID 1 sem handler — `docker stop`
+      // esperava os 10 s e matava (`Exited (137)`). O `tini` do `--init`
+      // repassa o sinal e a parada é imediata. CONSTANTE da composição, nunca
+      // campo da spec: o chamador não escreve opção de `run`.
+      '--init',
       '--name',
       nome,
       '--label',

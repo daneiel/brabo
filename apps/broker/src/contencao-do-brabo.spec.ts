@@ -126,6 +126,8 @@ describe('a contenção que sustenta o piloto automático (ADR 0189)', () => {
       expect(run).not.toContain('--pid');
       expect(run[run.indexOf('--network') + 1]).not.toBe('host');
       expect(run[run.indexOf('--cap-drop') + 1]).toBe('ALL');
+      // AT-422 (RN-738): o container sobe com init, e a parada é imediata.
+      expect(run).toContain('--init');
     });
   }
 
