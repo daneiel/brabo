@@ -465,6 +465,7 @@ What diverges is normalized, not hidden:
 | tool call arguments | already deserialized | sliced string, reassembled by index | `input_json_delta`, reassembled by the SDK |
 | response without `usage` | doesn't emit a chunk | counts locally with `estimated: true` | **impossible** — `usage` is mandatory in `message_start` |
 | `tool` role | its own message | `role: "tool"` + `tool_call_id` | `tool_result` block inside a `user` turn |
+| response cut at the output cap | not read | `finish_reason: "length"` → `truncated` chunk | `stop_reason: "max_tokens"` → `truncated` chunk |
 | `system` AFTER `user`/`tool` | kept in place, last item of `messages` | kept in place, last item of `messages` | **hoisted**: appended to the top-level `system` parameter (`\n\n`-joined after the prompt already there) and removed from `messages` |
 
 The Anthropic row is the costliest: results from parallel calls need to arrive in

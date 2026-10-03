@@ -225,9 +225,9 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:277` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:572` (`contagem`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:169` (`cachedInputTokens`),
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:283` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:580` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
@@ -273,10 +273,10 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Where:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:215` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:232` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:225` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:238` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:273` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:279` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
 - **Test:** `test/domain/llm/custo-da-chamada.spec.ts`,

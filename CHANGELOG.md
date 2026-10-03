@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Mudanças
 
 - **docker-port/web**: container de projeto sobe com `--init` (broker e runner), e parar deixa de esperar 10 s e sair `Exited (137)`; na `/containers`, decidir a ação relê a linha e o ciclo de vida mesmo se a chamada falhar (RN-738, AT-422).
+- **api/engine**: resposta cortada pelo teto de saída (`finish_reason: "length"` / `stop_reason: "max_tokens"`) passa a ser sinalizada com `truncated: true` em `llm-turn` e no frame `final` do stream; o engine não executa chamada de ferramenta de resposta cortada (volta erro nomeado ao laço para o modelo reenviar em partes menores) e acrescenta ao fecho cortado "Resposta cortada pelo limite de tamanho." no idioma do turno (RN-737, AT-423).
 - **engine**: `choose_project_image` avisa, na descrição e no resultado, que a rede `none` impede instalar dependências (npm/pip/mix/cargo...) e aponta `egress` (RN-735, AT-420).
 
 - O campo "Nome do projeto" do assistente deixa de ganhar foco sozinho e passa a se chamar `project-title`: o menu de contato de gerenciador de senha não abre mais sobre o passo (RN-736, AT-418).
